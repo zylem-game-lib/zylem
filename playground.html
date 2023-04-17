@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Zylem - Playground</title>
+		<style>
+			body {
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+	<body>
+		<main id="test-game"></main>
+		<script type="module">
+			import Zylem from './src/index.ts';
+
+			// Create a new game instance with all default settings
+			const game = Zylem.create({
+				id: 'test-game',
+				perspective: 'third-person',
+			});
+			game.start();
+		</script>
+	</body>
+</html>
