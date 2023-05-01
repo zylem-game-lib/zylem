@@ -13,14 +13,26 @@
 		</style>
 	</head>
 	<body>
-		<main id="test-game"></main>
 		<script type="module">
 			import Zylem from './src/index.ts';
 
 			// Create a new game instance with all default settings
 			const game = Zylem.create({
-				id: 'test-game',
-				perspective: 'third-person',
+				id: 'pong',
+				perspective: 'fixed-2d',
+				// interface could be stages: []
+				stage: {
+					children: () => {
+						return [
+							// ball: Zylem.Sphere,
+							{
+								name: 'paddle1',
+								type: Zylem.ZylemBox,
+							},
+							// paddle2: Zylem.ZylemBox,
+						];
+					},
+				},
 			});
 			game.start();
 		</script>

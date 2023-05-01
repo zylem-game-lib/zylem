@@ -9,9 +9,10 @@ import {
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { ZylemCamera } from './ZylemCamera';
 import RenderPass from './rendering/RenderPass';
-import { Entity } from '@interfaces/Entity';
+import { Entity, GameEntity } from '@interfaces/Entity';
 
 export class ZylemScene implements Entity {
+	type = 'Scene';
 	scene!: Scene;
 	screenResolution!: Vector2;
 	renderer!: WebGLRenderer;
@@ -37,9 +38,7 @@ export class ZylemScene implements Entity {
 		element.appendChild(this.renderer.domElement);
 	}
 
-	setup() {
-
-	}
+	setup() { }
 
 	destroy() { }
 
@@ -52,6 +51,7 @@ export class ZylemScene implements Entity {
 		let renderResolution = this.screenResolution.clone().divideScalar(2);
 		renderResolution.x |= 0;
 		renderResolution.y |= 0;
+		scene.add(this.zylemCamera.cameraRig);
 		this.composer.addPass(new RenderPass(renderResolution, scene, this.zylemCamera.camera));
 	}
 
@@ -71,11 +71,15 @@ export class ZylemScene implements Entity {
 	}
 
 	setupRenderer() {
-		let screenResolution = new Vector2(window.innerWidth, window.innerHeight);
+		const screenResolution = new Vector2(window.innerWidth, window.innerHeight);
 		this.screenResolution = screenResolution;
 
 		this.renderer = new WebGLRenderer({ antialias: false });
 		this.renderer.setSize(screenResolution.x, screenResolution.y);
 		this.composer = new EffectComposer(this.renderer);
+	}
+
+	addEntity(entity: GameEntity) {
+		this.scene.add(entity.mesh);
 	}
 }

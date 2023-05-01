@@ -1,19 +1,23 @@
-import { Entity } from '../interfaces/Entity';
+import { Entity, GameEntity } from '../interfaces/Entity';
 import * as CANNON from 'cannon-es';
 
 
 export class ZylemWorld implements Entity {
-	world?: CANNON.World;
+	type = 'World';
+	world: CANNON.World;
 
-	constructor() { }
-
-	setup() {
+	constructor() {
 		this.world = new CANNON.World({
-			gravity: new CANNON.Vec3(0, -9.82, 0),
+			// gravity: new CANNON.Vec3(0, -9.82, 0),
+			gravity: new CANNON.Vec3(0, -0.05, 0),
 		});
 	}
 
-	destroy() { }
+	addEntity(entity: GameEntity) {
+		this.world.addBody(entity.body);
+	}
+
+	setup() { }
 
 	update(delta: number) {
 		if (!this.world) {
@@ -21,4 +25,7 @@ export class ZylemWorld implements Entity {
 		}
 		this.world.fixedStep();
 	}
+
+	destroy() { }
+
 }

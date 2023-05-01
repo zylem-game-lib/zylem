@@ -1,6 +1,6 @@
-import { ZylemStage } from '@/ZylemStage';
+import { ZylemStage } from '@/stage/ZylemStage';
 import { Clock } from 'three';
-import { Options } from '../interfaces/Options';
+import { GameOptions } from '../interfaces/Game';
 import { PerspectiveType } from "../interfaces/Perspective";
 
 function Game({ app, stages = [] }: { app: HTMLElement | string, stages?: Function[] }) {
@@ -30,14 +30,15 @@ function Game({ app, stages = [] }: { app: HTMLElement | string, stages?: Functi
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
 
-export class ZylemGame implements Options {
-	id?: string;
+export class ZylemGame implements GameOptions {
+	id: string;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
+	stage: ZylemStage;
 	stages: Record<string, ZylemStage> = {};
 	currentStage: string = '';
 	clock: Clock;
 
-	constructor(options: Options) {
+	constructor(options: GameOptions) {
 		this.id = options.id;
 		// this.gamepad = new Gamepad();
 		this.clock = new Clock();
@@ -65,7 +66,10 @@ export class ZylemGame implements Options {
 		// 	}
 		// });
 		this.createCanvas();
-		this.createStage('test');
+		this.stage = new ZylemStage(this.id, options.stage);
+		this.stages[this.id] = this.stage;
+		this.currentStage = this.id;
+		// this.createStage();
 	}
 
 	async loadPhysics() {
@@ -128,8 +132,8 @@ export class ZylemGame implements Options {
 			console.error('No id provided for canvas');
 			return;
 		}
-		this.stages[id] = new ZylemStage(this.id);
-		this.currentStage = id;
+		// this.stages[id] = new ZylemStage(this.id);
+		// this.currentStage = id;
 	}
 
 	createCanvas() {
@@ -138,14 +142,16 @@ export class ZylemGame implements Options {
 			return;
 		}
 		const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
-		// TODO: Add a way to set the canvas size, not every app will want to fill the screen.
 		canvas.style.margin = '0';
 		canvas.style.padding = '0';
-		// canvas.style.border = '1px solid #000';
-		// canvas.style.width = 'calc(100vw - 2px)';
-		// canvas.style.height = 'calc(100vh - 2px)';
 		canvas.style.backgroundColor = '#0c2461';
-		document.querySelector(`#${this.id}`)!.appendChild(canvas);
+		let canvasWrapper = document.querySelector(`#${this.id}`)!;
+		if (!canvasWrapper) {
+			canvasWrapper = document.createElement('main');
+			canvasWrapper.setAttribute('id', this.id);
+			document.body.appendChild(canvasWrapper);
+		}
+		canvasWrapper.appendChild(canvas);
 		return canvas;
 	}
 }
