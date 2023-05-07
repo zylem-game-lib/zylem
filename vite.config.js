@@ -23,6 +23,6 @@ export default {
 		},
 	},
 	server: {
-		open: '/playground.html',
+		open: '/index.html',
 	},
 };
