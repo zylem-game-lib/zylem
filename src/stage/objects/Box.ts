@@ -1,10 +1,9 @@
-import * as THREE from 'three';
 import { Body, Box, Vec3 } from 'cannon-es';
 import { EntityOptions, GameEntity } from '@/interfaces/Entity';
 import { BoxGeometry, Mesh, MeshStandardMaterial } from 'three';
 
 // Box is a combination of a 3D mesh and a physics body
-export class ZylemBox implements GameEntity {
+export class ZylemBox implements GameEntity<ZylemBox> {
 	type: string;
 	mesh: Mesh;
 	body: Body;

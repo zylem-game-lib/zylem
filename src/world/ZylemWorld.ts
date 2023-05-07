@@ -2,7 +2,7 @@ import { Entity, GameEntity } from '../interfaces/Entity';
 import * as CANNON from 'cannon-es';
 
 
-export class ZylemWorld implements Entity {
+export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
 	world: CANNON.World;
 
@@ -13,7 +13,7 @@ export class ZylemWorld implements Entity {
 		});
 	}
 
-	addEntity(entity: GameEntity) {
+	addEntity(entity: GameEntity<any>) {
 		this.world.addBody(entity.body);
 	}
 

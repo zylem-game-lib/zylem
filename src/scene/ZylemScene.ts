@@ -11,7 +11,7 @@ import { ZylemCamera } from './ZylemCamera';
 import RenderPass from './rendering/RenderPass';
 import { Entity, GameEntity } from '@interfaces/Entity';
 
-export class ZylemScene implements Entity {
+export class ZylemScene implements Entity<ZylemScene> {
 	type = 'Scene';
 	scene!: Scene;
 	screenResolution!: Vector2;
@@ -79,7 +79,7 @@ export class ZylemScene implements Entity {
 		this.composer = new EffectComposer(this.renderer);
 	}
 
-	addEntity(entity: GameEntity) {
+	addEntity(entity: GameEntity<any>) {
 		this.scene.add(entity.mesh);
 	}
 }

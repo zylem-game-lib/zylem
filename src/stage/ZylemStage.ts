@@ -4,12 +4,12 @@ import { ZylemScene } from "../scene/ZylemScene";
 import { Entity, EntityBlueprint } from "../interfaces/Entity";
 import { ZylemBox } from "./objects";
 
-export class ZylemStage implements Entity {
+export class ZylemStage implements Entity<ZylemStage> {
 	type = 'Stage';
 	world: ZylemWorld;
 	scene: ZylemScene;
-	children: Array<Entity> = [];
-	blueprints: Array<EntityBlueprint> = [];
+	children: Array<Entity<any>> = [];
+	blueprints: Array<EntityBlueprint<any>> = [];
 
 	constructor(id: string, options: any) {
 		this.world = new ZylemWorld();
@@ -31,6 +31,7 @@ export class ZylemStage implements Entity {
 				this.world.world.addBody(entity.body);
 			}
 			this.children.push(entity);
+			blueprint.setup(entity);
 		}
 	}
 
