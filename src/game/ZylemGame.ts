@@ -1,3 +1,4 @@
+import GamePad from '@/input/ZylemGamePad';
 import { ZylemStage } from '@/stage/ZylemStage';
 import { Clock } from 'three';
 import { GameOptions } from '../interfaces/Game';
@@ -35,13 +36,16 @@ export class ZylemGame implements GameOptions {
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
 	stage: ZylemStage;
 	stages: Record<string, ZylemStage> = {};
+	blueprintOptions: GameOptions;
 	currentStage: string = '';
 	clock: Clock;
+	gamePad: GamePad;
 
 	constructor(options: GameOptions) {
 		this.id = options.id;
-		// this.gamepad = new Gamepad();
+		this.gamePad = new GamePad();
 		this.clock = new Clock();
+		this.blueprintOptions = options;
 		// this.pause = false;
 		// this._loop = loop;
 		// this._setup = setup;
@@ -86,7 +90,7 @@ export class ZylemGame implements GameOptions {
 	 * render scene
 	 */
 	async gameLoop() {
-		// const inputs = this.gamepad.getInputs();
+		const inputs = this.gamePad.getInputs();
 		const ticks = this.clock.getDelta();
 		// if (!this.pause) {
 		// 	this.stage().update({
@@ -107,6 +111,7 @@ export class ZylemGame implements GameOptions {
 		this.stages[this.currentStage].update(ticks);
 		const self = this;
 		requestAnimationFrame(() => {
+			this.blueprintOptions?.debug?.addInfo(this.gamePad.getDebugInfo());
 			self.gameLoop();
 		});
 	}
