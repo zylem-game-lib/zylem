@@ -80,8 +80,8 @@ export default class GamePad {
 			buttonY,
 			buttonSelect,
 			buttonStart,
-			moveUp: up ? 1 : 0,
-			moveDown: down ? 1 : 0,
+			moveUp: vertical < 0 ? 1 : 0,
+			moveDown: vertical > 0 ? 1 : 0,
 		};
 	}
 
