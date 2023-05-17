@@ -7,20 +7,24 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 	type: string;
 	mesh: Mesh;
 	body: Body;
+	_update: (delta: number, options: any) => void;
 
 	constructor(options: EntityOptions) {
 		this.type = 'Box';
 		this.mesh = this.createMesh();
 		this.body = this.createBody();
+		this._update = options.update;
 	}
 	setup() { }
 	destroy() { }
-	update(delta: number) {
+	update(delta: number, { inputs }: any) {
 		if (!this.body) {
 			return;
 		}
 		const { x, y, z } = this.body.position;
 		this.mesh.position.set(x, y, z);
+		const _inputs = inputs ?? { moveUp: false, moveDown: false };
+		this._update(delta, { inputs: _inputs, entity: this });
 	}
 
 	createMesh() {
@@ -50,5 +54,15 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 		});
 		this.body.position.set(0, 0, 0);
 		return this.body;
+	}
+
+	moveX(delta: number) {
+		this.body.applyLocalForce(new Vec3(delta, 0, 0), new Vec3(0, 0, 0));
+	}
+	moveY(delta: number) {
+		this.body.applyLocalForce(new Vec3(0, delta, 0), new Vec3(0, 0, 0));
+	}
+	moveZ(delta: number) {
+		this.body.applyLocalForce(new Vec3(0, 0, delta), new Vec3(0, 0, 0));
 	}
 }

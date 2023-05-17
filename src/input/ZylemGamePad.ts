@@ -58,6 +58,8 @@ export default class GamePad {
 				buttonY,
 				buttonSelect,
 				buttonStart,
+				moveUp: vertical < 0 ? 1 : 0,
+				moveDown: vertical > 0 ? 1 : 0,
 			};
 		}
 		const [x1, y1] = gamepad.axes;
@@ -78,6 +80,8 @@ export default class GamePad {
 			buttonY,
 			buttonSelect,
 			buttonStart,
+			moveUp: up ? 1 : 0,
+			moveDown: down ? 1 : 0,
 		};
 	}
 

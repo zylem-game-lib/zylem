@@ -1,4 +1,5 @@
 import GamePad from '@/input/ZylemGamePad';
+import { UpdateOptions } from '@/interfaces/Update';
 import { ZylemStage } from '@/stage/ZylemStage';
 import { Clock } from 'three';
 import { GameOptions } from '../interfaces/Game';
@@ -108,7 +109,12 @@ export class ZylemGame implements GameOptions {
 		// });
 
 		// this.stage().render();
-		this.stages[this.currentStage].update(ticks);
+		const stage = this.stages[this.currentStage];
+		const options = {
+			inputs,
+			entity: stage
+		} as unknown as UpdateOptions<ZylemStage>;
+		stage.update(ticks, options);
 		const self = this;
 		requestAnimationFrame(() => {
 			this.blueprintOptions?.debug?.addInfo(this.gamePad.getDebugInfo());

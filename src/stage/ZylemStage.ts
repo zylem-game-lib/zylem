@@ -3,6 +3,7 @@ import { ZylemWorld } from "../world/ZylemWorld";
 import { ZylemScene } from "../scene/ZylemScene";
 import { Entity, EntityBlueprint } from "../interfaces/Entity";
 import { ZylemBox } from "./objects";
+import { UpdateOptions } from "@/interfaces/Update";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	type = 'Stage';
@@ -23,7 +24,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 		this.scene.setup();
 		for (let blueprint of this.blueprints) {
 			// TODO: This should be a factory
-			const entity = new ZylemBox({});
+			const entity = new ZylemBox(blueprint);
 			if (entity.mesh) {
 				this.scene.scene.add(entity.mesh);
 			}
@@ -40,10 +41,13 @@ export class ZylemStage implements Entity<ZylemStage> {
 		this.scene.destroy();
 	}
 
-	update(delta: number) {
+	update(delta: number, options: UpdateOptions<Entity<any>>) {
 		this.world.update(delta);
 		for (let child of this.children) {
-			child.update(delta);
+			child.update(delta, {
+				inputs: options.inputs,
+				entity: child,
+			});
 		}
 		this.scene.update(delta);
 	}

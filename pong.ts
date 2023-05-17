@@ -16,7 +16,13 @@ const game = Zylem.create({
 					setup: (entity) => {
 						console.log(entity);
 					},
-					update: () => {
+					update: (delta, { entity, inputs }) => {
+						console.log(delta);
+						if (inputs[0].moveUp) {
+							entity.moveY(10);
+						} else if (inputs[0].moveDown) {
+							entity.moveY(-10);
+						}
 					},
 					destroy: () => {
 					}

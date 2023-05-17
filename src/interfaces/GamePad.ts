@@ -9,4 +9,7 @@ export interface ControllerInput {
 	buttonY: number;
 	buttonSelect: number;
 	buttonStart: number;
+
+	moveUp: number;
+	moveDown: number;
 }
