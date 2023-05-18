@@ -14,10 +14,25 @@ const game = Zylem.create({
 					name: 'paddle1',
 					type: ZylemBox,
 					setup: (entity) => {
-						console.log(entity);
+						entity.setPosition(20, 0, 0);
 					},
 					update: (delta, { entity, inputs }) => {
-						console.log(delta);
+						if (inputs[0].moveUp) {
+							entity.moveY(10);
+						} else if (inputs[0].moveDown) {
+							entity.moveY(-10);
+						}
+					},
+					destroy: () => {
+					}
+				},
+				{
+					name: 'paddle2',
+					type: ZylemBox,
+					setup: (entity) => {
+						entity.setPosition(-20, 0, 0);
+					},
+					update: (delta, { entity, inputs }) => {
 						if (inputs[0].moveUp) {
 							entity.moveY(10);
 						} else if (inputs[0].moveDown) {

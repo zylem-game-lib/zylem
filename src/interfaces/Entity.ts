@@ -24,4 +24,5 @@ export interface GameEntity<T> extends Entity<T> {
 
 export interface EntityOptions {
 	update: (delta: number, options: any) => void;
+	setup: (entity: any) => void;
 }
