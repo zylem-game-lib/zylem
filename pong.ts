@@ -1,7 +1,7 @@
 import Zylem from './src/index';
 import { PerspectiveType } from './src/interfaces/Perspective';
 
-const { ZylemBox } = Zylem;
+const { Box, Sphere } = Zylem.GameEntityType;
 
 const game = Zylem.create({
 	id: 'pong',
@@ -12,7 +12,7 @@ const game = Zylem.create({
 				// ball: Zylem.Sphere,
 				{
 					name: 'paddle1',
-					type: ZylemBox,
+					type: Box,
 					setup: (entity) => {
 						entity.setPosition(20, 0, 0);
 					},
@@ -28,7 +28,7 @@ const game = Zylem.create({
 				},
 				{
 					name: 'paddle2',
-					type: ZylemBox,
+					type: Box,
 					setup: (entity) => {
 						entity.setPosition(-20, 0, 0);
 					},
@@ -42,7 +42,10 @@ const game = Zylem.create({
 					destroy: () => {
 					}
 				},
-				// paddle2: Zylem.ZylemBox,
+				{
+					name: 'ball',
+					type: Sphere,
+				}
 			];
 		},
 	},
