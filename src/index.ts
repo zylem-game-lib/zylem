@@ -1,6 +1,6 @@
 import { ZylemGame } from './game/ZylemGame';
 import { GameOptions } from './interfaces/Game';
-import { ZylemBox } from './stage/objects';
+import { GameEntityType } from './interfaces/Entity';
 import { ZylemDebug } from './game/ZylemDebug';
 
 const debug = new ZylemDebug();
@@ -18,7 +18,7 @@ function create(options: GameOptions) {
 const Zylem = {
 	helloWorld,
 	create,
-	ZylemBox,
+	GameEntityType,
 };
 
 export default Zylem;

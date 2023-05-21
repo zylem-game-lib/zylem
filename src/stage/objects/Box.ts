@@ -4,23 +4,26 @@ import { BoxGeometry, Mesh, MeshStandardMaterial } from 'three';
 
 // Box is a combination of a 3D mesh and a physics body
 export class ZylemBox implements GameEntity<ZylemBox> {
-	type: string;
+	_type: string;
 	mesh: Mesh;
 	body: Body;
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: ZylemBox) => void;
 
 	constructor(options: EntityOptions) {
-		this.type = 'Box';
+		this._type = 'Box';
 		this.mesh = this.createMesh();
 		this.body = this.createBody();
 		this._update = options.update;
 		this._setup = options.setup;
 	}
+
 	setup() {
 		this._setup(this);
 	}
+
 	destroy() { }
+
 	update(delta: number, { inputs }: any) {
 		if (!this.body) {
 			return;
@@ -28,11 +31,13 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 		const { x, y, z } = this.body.position;
 		this.mesh.position.set(x, y, z);
 		const _inputs = inputs ?? { moveUp: false, moveDown: false };
+		if (this._update === undefined) {
+			return;
+		}
 		this._update(delta, { inputs: _inputs, entity: this });
 	}
 
 	createMesh() {
-		// const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
 		const geometry = new BoxGeometry(10, 10, 10);
 		const material = new MeshStandardMaterial({
 			color: 0xFFFFFF,
@@ -41,7 +46,6 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 			fog: true,
 		});
 		this.mesh = new Mesh(geometry, material);
-		// this.mesh.position.set(position.x, position.y, position.z);
 		this.mesh.position.set(0, 0, 0);
 		this.mesh.castShadow = true;
 		this.mesh.receiveShadow = true;
@@ -49,8 +53,6 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 	}
 
 	createBody() {
-		// this.body = new Box(new Vec3(size.x, size.y, size.z));
-		// this.body.position.set(position.x, position.y, position.z);
 		const box = new Box(new Vec3(1, 1, 1));
 		this.body = new Body({
 			mass: 1,
@@ -58,20 +60,6 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 		});
 		this.body.position.set(0, 0, 0);
 		return this.body;
-	}
-
-	moveX(delta: number) {
-		this.body.applyLocalForce(new Vec3(delta, 0, 0), new Vec3(0, 0, 0));
-	}
-	moveY(delta: number) {
-		this.body.applyLocalForce(new Vec3(0, delta, 0), new Vec3(0, 0, 0));
-	}
-	moveZ(delta: number) {
-		this.body.applyLocalForce(new Vec3(0, 0, delta), new Vec3(0, 0, 0));
-	}
-
-	setPosition(x: number, y: number, z: number) {
-		this.body.position.set(x, y, z);
 	}
 
 }

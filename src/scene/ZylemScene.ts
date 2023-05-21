@@ -12,7 +12,7 @@ import RenderPass from './rendering/RenderPass';
 import { Entity, GameEntity } from '@interfaces/Entity';
 
 export class ZylemScene implements Entity<ZylemScene> {
-	type = 'Scene';
+	_type = 'Scene';
 	scene!: Scene;
 	screenResolution!: Vector2;
 	renderer!: WebGLRenderer;

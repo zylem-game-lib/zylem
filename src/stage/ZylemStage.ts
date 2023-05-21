@@ -2,11 +2,12 @@
 import { ZylemWorld } from "../world/ZylemWorld";
 import { ZylemScene } from "../scene/ZylemScene";
 import { Entity, EntityBlueprint } from "../interfaces/Entity";
-import { ZylemBox } from "./objects";
+import { ZylemBox, ZylemSphere } from "./objects";
 import { UpdateOptions } from "@/interfaces/Update";
+import { Moveable } from "./objects/Moveable";
 
 export class ZylemStage implements Entity<ZylemStage> {
-	type = 'Stage';
+	_type = 'Stage';
 	world: ZylemWorld;
 	scene: ZylemScene;
 	children: Array<Entity<any>> = [];
@@ -23,8 +24,9 @@ export class ZylemStage implements Entity<ZylemStage> {
 		this.world.setup();
 		this.scene.setup();
 		for (let blueprint of this.blueprints) {
-			// TODO: This should be a factory
-			const entity = new ZylemBox(blueprint);
+			const BlueprintType = BlueprintMap[blueprint.type];
+			const MoveableType = Moveable(BlueprintType);
+			const entity = new MoveableType(blueprint);
 			if (entity.mesh) {
 				this.scene.scene.add(entity.mesh);
 			}
@@ -32,6 +34,14 @@ export class ZylemStage implements Entity<ZylemStage> {
 				this.world.world.addBody(entity.body);
 			}
 			this.children.push(entity);
+			if (typeof blueprint.setup !== 'function') {
+				console.warn(`Entity ${blueprint.name} is missing a setup function.`);
+				continue;
+			}
+			if (typeof blueprint.update !== 'function') {
+				console.warn(`Entity ${blueprint.name} is missing an update function.`);
+				continue;
+			}
 			blueprint.setup(entity);
 		}
 	}
@@ -51,4 +61,9 @@ export class ZylemStage implements Entity<ZylemStage> {
 		}
 		this.scene.update(delta);
 	}
+}
+
+const BlueprintMap = {
+	'Box': ZylemBox,
+	'Sphere': ZylemSphere,
 }
