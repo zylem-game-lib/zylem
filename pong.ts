@@ -9,7 +9,6 @@ const game = Zylem.create({
 	stage: {
 		children: () => {
 			return [
-				// ball: Zylem.Sphere,
 				{
 					name: 'paddle1',
 					type: Box,
@@ -18,9 +17,9 @@ const game = Zylem.create({
 					},
 					update: (delta, { entity, inputs }) => {
 						if (inputs[0].moveUp) {
-							entity.moveY(10);
+							entity.moveY(0.5);
 						} else if (inputs[0].moveDown) {
-							entity.moveY(-10);
+							entity.moveY(-0.5);
 						}
 					},
 					destroy: () => {
@@ -34,9 +33,9 @@ const game = Zylem.create({
 					},
 					update: (delta, { entity, inputs }) => {
 						if (inputs[0].moveUp) {
-							entity.moveY(10);
+							entity.moveY(0.5);
 						} else if (inputs[0].moveDown) {
-							entity.moveY(-10);
+							entity.moveY(-0.5);
 						}
 					},
 					destroy: () => {
@@ -45,6 +44,12 @@ const game = Zylem.create({
 				{
 					name: 'ball',
 					type: Sphere,
+					setup(entity) {
+						entity.setPosition(0, 0, 0);
+					},
+					update(delta, { entity, inputs }) {
+						entity.moveX(delta);
+					}
 				}
 			];
 		},
