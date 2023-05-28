@@ -38,7 +38,7 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 	}
 
 	createMesh() {
-		const geometry = new BoxGeometry(10, 10, 10);
+		const geometry = new BoxGeometry(2, 10, 1);
 		const material = new MeshStandardMaterial({
 			color: 0xFFFFFF,
 			emissiveIntensity: 0.5,
@@ -55,7 +55,7 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 	createBody() {
 		const box = new Box(new Vec3(1, 1, 1));
 		this.body = new Body({
-			mass: 1,
+			mass: 0,
 			shape: box,
 		});
 		this.body.position.set(0, 0, 0);

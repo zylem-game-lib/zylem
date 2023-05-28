@@ -5,6 +5,7 @@ import { Entity, EntityBlueprint } from "../interfaces/Entity";
 import { ZylemBox, ZylemSphere } from "./objects";
 import { UpdateOptions } from "@/interfaces/Update";
 import { Moveable } from "./objects/Moveable";
+import { Interactive } from "./objects/Interactive";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
@@ -26,7 +27,9 @@ export class ZylemStage implements Entity<ZylemStage> {
 		for (let blueprint of this.blueprints) {
 			const BlueprintType = BlueprintMap[blueprint.type];
 			const MoveableType = Moveable(BlueprintType);
-			const entity = new MoveableType(blueprint);
+			const InteractiveType = Interactive(MoveableType);
+
+			const entity = new InteractiveType(blueprint);
 			if (entity.mesh) {
 				this.scene.scene.add(entity.mesh);
 			}
@@ -34,12 +37,11 @@ export class ZylemStage implements Entity<ZylemStage> {
 				this.world.world.addBody(entity.body);
 			}
 			this.children.push(entity);
-			if (typeof blueprint.setup !== 'function') {
-				console.warn(`Entity ${blueprint.name} is missing a setup function.`);
-				continue;
-			}
 			if (typeof blueprint.update !== 'function') {
 				console.warn(`Entity ${blueprint.name} is missing an update function.`);
+			}
+			if (typeof blueprint.setup !== 'function') {
+				console.warn(`Entity ${blueprint.name} is missing a setup function.`);
 				continue;
 			}
 			blueprint.setup(entity);

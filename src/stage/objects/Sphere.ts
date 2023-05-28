@@ -38,7 +38,7 @@ export class ZylemSphere implements GameEntity<ZylemSphere> {
 	}
 
 	createMesh() {
-		const geometry = new SphereGeometry(10);
+		const geometry = new SphereGeometry(1);
 		const material = new MeshStandardMaterial({
 			color: 0xFFFFFF,
 			emissiveIntensity: 0.5,
@@ -53,7 +53,7 @@ export class ZylemSphere implements GameEntity<ZylemSphere> {
 	}
 
 	createBody() {
-		const sphere = new Sphere(10);
+		const sphere = new Sphere(1);
 		this.body = new Body({
 			mass: 1,
 			shape: sphere,
