@@ -1,9 +1,9 @@
 import { Body, Box, Vec3 } from 'cannon-es';
-import { EntityOptions, GameEntity } from '@/interfaces/Entity';
-import { BoxGeometry, Mesh, MeshStandardMaterial } from 'three';
+import { EntityClass, EntityOptions, GameEntity } from '@/interfaces/Entity';
+import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 
 // Box is a combination of a 3D mesh and a physics body
-export class ZylemBox implements GameEntity<ZylemBox> {
+export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
 	_type: string;
 	mesh: Mesh;
 	body: Body;
@@ -11,9 +11,10 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 	_setup: (entity: ZylemBox) => void;
 
 	constructor(options: EntityOptions) {
+		super();
 		this._type = 'Box';
-		this.mesh = this.createMesh();
-		this.body = this.createBody();
+		this.mesh = this.createMesh(options.shape);
+		this.body = this.createBody(options.shape);
 		this._update = options.update;
 		this._setup = options.setup;
 	}
@@ -37,8 +38,8 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 		this._update(delta, { inputs: _inputs, entity: this });
 	}
 
-	createMesh() {
-		const geometry = new BoxGeometry(2, 10, 1);
+	createMesh(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
+		const geometry = new BoxGeometry(vector3.x, vector3.y, vector3.z);
 		const material = new MeshStandardMaterial({
 			color: 0xFFFFFF,
 			emissiveIntensity: 0.5,
@@ -52,8 +53,8 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 		return this.mesh;
 	}
 
-	createBody() {
-		const box = new Box(new Vec3(1, 1, 1));
+	createBody(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
+		const box = new Box(new Vec3(vector3.x / 2, vector3.y / 2, vector3.z / 2));
 		this.body = new Body({
 			mass: 0,
 			shape: box,

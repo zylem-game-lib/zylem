@@ -30,13 +30,20 @@ export class ZylemStage implements Entity<ZylemStage> {
 			const InteractiveType = Interactive(MoveableType);
 
 			const entity = new InteractiveType(blueprint);
+			entity.name = blueprint.name;
 			if (entity.mesh) {
 				this.scene.scene.add(entity.mesh);
 			}
 			if (entity.body) {
-				this.world.world.addBody(entity.body);
+				this.world.addEntity(entity);
 			}
 			this.children.push(entity);
+			if (blueprint.props) {
+				entity._props = blueprint.props;
+			}
+			if (blueprint.collision) {
+				entity._collision = blueprint.collision;
+			}
 			if (typeof blueprint.update !== 'function') {
 				console.warn(`Entity ${blueprint.name} is missing an update function.`);
 			}
