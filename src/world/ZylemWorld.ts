@@ -17,6 +17,14 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 
 	addEntity(entity: GameEntity<any>) {
 		this.world.addBody(entity.body);
+		if (entity.constraintBodies) {
+			entity.constraintBodies.forEach(body => {
+				this.world.addBody(body);
+			});
+			entity.constraints?.forEach(constraint => {
+				this.world.addConstraint(constraint);
+			});
+		}
 		this.collisionDictionary.set(entity.body, entity);
 		entity.body.addEventListener('collide', (event: { body: any; contact: any; }) => {
 			const myEntity = this.collisionDictionary.get(event.body);

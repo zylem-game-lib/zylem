@@ -1,6 +1,9 @@
 import { Body } from "objects/Body";
 import { Mesh, Vector3 } from "three";
 import { UpdateOptions } from "./Update";
+import { Constraint, HingeConstraint, LockConstraint } from "cannon-es";
+
+export type AnyConstraint = HingeConstraint | Constraint | LockConstraint;
 
 export interface Entity<T> {
 	setup: (entity: T) => void;
@@ -35,6 +38,8 @@ export interface EntityBlueprint<T> extends Entity<T> {
 export interface GameEntity<T> extends Entity<T> {
 	mesh: Mesh;
 	body: Body;
+	constraintBodies?: Body[];
+	constraints?: AnyConstraint[];
 }
 
 export interface EntityOptions {

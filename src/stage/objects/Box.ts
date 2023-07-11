@@ -58,6 +58,7 @@ export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
 		this.body = new Body({
 			mass: 0,
 			shape: box,
+			fixedRotation: true,
 		});
 		this.body.position.set(0, 0, 0);
 		return this.body;

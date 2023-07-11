@@ -1,18 +1,22 @@
 // Sphere is a combination of a 3D mesh and a physics body
-import { Body, Sphere } from 'cannon-es';
+import { Body, Sphere, HingeConstraint, Vec3, Constraint } from 'cannon-es';
 import { Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
-import { EntityClass, EntityOptions, GameEntity } from "@/interfaces/Entity";
+import { EntityClass, EntityOptions, GameEntity, AnyConstraint } from "@/interfaces/Entity";
 
 export class ZylemSphere extends EntityClass implements GameEntity<ZylemSphere> {
 	_type: string;
 	mesh: Mesh;
 	body: Body;
+	constraintBodies: Body[];
+	constraints: AnyConstraint[];
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: ZylemSphere) => void;
 
 	constructor(options: EntityOptions) {
 		super();
 		this._type = 'Sphere';
+		this.constraints = [];
+		this.constraintBodies = [];
 		this.mesh = this.createMesh();
 		this.body = this.createBody();
 		this._update = options.update;
@@ -58,8 +62,12 @@ export class ZylemSphere extends EntityClass implements GameEntity<ZylemSphere> 
 		this.body = new Body({
 			mass: 1,
 			shape: sphere,
+			fixedRotation: true,
+			angularDamping: 1,
+			angularFactor: new Vec3(1, 1, 0),
 		});
 		this.body.position.set(0, 0, 0);
+
 		return this.body;
 	}
 }

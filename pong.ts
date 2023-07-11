@@ -22,9 +22,10 @@ const game = Zylem.create({
 						entity.setPosition(20, 0, 0);
 					},
 					update: (delta, { entity, inputs }) => {
-						if (inputs[0].moveUp) {
+						const { y } = entity.getPosition();
+						if (inputs[0].moveUp && y < 8) {
 							entity.moveY(0.5);
-						} else if (inputs[0].moveDown) {
+						} else if (inputs[0].moveDown && y > -8) {
 							entity.moveY(-0.5);
 						}
 					},
@@ -39,9 +40,10 @@ const game = Zylem.create({
 						entity.setPosition(-20, 0, 0);
 					},
 					update: (delta, { entity, inputs }) => {
-						if (inputs[0].moveUp) {
+						const { y } = entity.getPosition();
+						if (inputs[0].moveUp && y < 8) {
 							entity.moveY(0.5);
-						} else if (inputs[0].moveDown) {
+						} else if (inputs[0].moveDown && y > -8) {
 							entity.moveY(-0.5);
 						}
 					},
@@ -53,25 +55,31 @@ const game = Zylem.create({
 					type: Sphere,
 					shape: new Vector3(1, 1, 1),
 					props: {
-						direction: 1
+						dx: 1,
+						dy: 1
 					},
 					setup(entity) {
 						entity.setPosition(0, 0, 0);
 					},
 					update(delta, { entity, inputs }) {
-						const { direction } = entity.getProps();
-						if (direction === 1) {
+						const { dx } = entity.getProps();
+						const { x } = entity.getPosition();
+						if (dx === 1) {
 							entity.moveX(0.5);
-						} else if (direction === -1) {
+						} else if (dx === -1) {
 							entity.moveX(-0.5);
 						}
+						if (x > 25 || x < -25) {
+							entity.setPosition(0, 0, 0);
+						}
+
 					},
 					collision: (entity, other) => {
 						console.log(other.name);
 						if (other.name === 'paddle1') {
-							entity._props.direction = -1;
+							entity._props.dx = -1;
 						} else if (other.name === 'paddle2') {
-							entity._props.direction = 1;
+							entity._props.dx = 1;
 						}
 					},
 					destroy: () => { }
