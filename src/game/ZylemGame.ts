@@ -35,7 +35,7 @@ function Game({ app, stages = [] }: { app: HTMLElement | string, stages?: Functi
 export class ZylemGame implements GameOptions {
 	id: string;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
-	stage: ZylemStage;
+	stage?: ZylemStage;
 	stages: Record<string, ZylemStage> = {};
 	blueprintOptions: GameOptions;
 	currentStage: string = '';
@@ -71,17 +71,15 @@ export class ZylemGame implements GameOptions {
 		// 	}
 		// });
 		this.createCanvas();
-		this.stage = new ZylemStage(this.id, options.stage);
-		this.stages[this.id] = this.stage;
+		this.loadStage(options);
 		this.currentStage = this.id;
 		// this.createStage();
 	}
 
-	async loadPhysics() {
-		// await RAPIER.init();
-		// const world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
-
-		// return world;
+	async loadStage(options: GameOptions) {
+		this.stage = new ZylemStage(this.id);
+		this.stage.buildStage(options.stage);
+		this.stages[this.id] = this.stage;
 	}
 
 	/**

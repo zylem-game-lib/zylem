@@ -9,21 +9,28 @@ import { Interactive } from "./objects/Interactive";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
-	world: ZylemWorld;
-	scene: ZylemScene;
+	world: ZylemWorld | null;
+	scene: ZylemScene | null;
 	children: Array<Entity<any>> = [];
 	blueprints: Array<EntityBlueprint<any>> = [];
 
-	constructor(id: string, options: any) {
-		this.world = new ZylemWorld();
+	constructor(id: string) {
+		this.world = null;
 		this.scene = new ZylemScene(id);
-		this.blueprints = options.children() || [];
-		this.setup();
 	}
 
-	setup() {
-		this.world.setup();
-		this.scene.setup();
+	async buildStage(options: any) {
+		const physicsWorld = await ZylemWorld.loadPhysics();
+		this.world = new ZylemWorld(physicsWorld);
+		this.blueprints = options.children() || [];
+		await this.setup();
+	}
+
+	async setup() {
+		if (!this.scene || !this.world) {
+			this.logMissingEntities();
+			return;
+		}
 		for (let blueprint of this.blueprints) {
 			const BlueprintType = BlueprintMap[blueprint.type];
 			const MoveableType = Moveable(BlueprintType);
@@ -56,11 +63,15 @@ export class ZylemStage implements Entity<ZylemStage> {
 	}
 
 	destroy() {
-		this.world.destroy();
-		this.scene.destroy();
+		this.world?.destroy();
+		this.scene?.destroy();
 	}
 
 	update(delta: number, options: UpdateOptions<Entity<any>>) {
+		if (!this.scene || !this.world) {
+			this.logMissingEntities();
+			return;
+		}
 		this.world.update(delta);
 		for (let child of this.children) {
 			child.update(delta, {
@@ -69,6 +80,10 @@ export class ZylemStage implements Entity<ZylemStage> {
 			});
 		}
 		this.scene.update(delta);
+	}
+
+	logMissingEntities() {
+		console.warn("Zylem world or scene is null");
 	}
 }
 

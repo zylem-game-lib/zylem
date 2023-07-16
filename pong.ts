@@ -17,7 +17,7 @@ const game = Zylem.create({
 				{
 					name: 'paddle1',
 					type: Box,
-					shape: new Vector3(2, 10, 1),
+					size: new Vector3(2, 10, 1),
 					setup: (entity) => {
 						entity.setPosition(20, 0, 0);
 					},
@@ -35,7 +35,7 @@ const game = Zylem.create({
 				{
 					name: 'paddle2',
 					type: Box,
-					shape: new Vector3(2, 10, 1),
+					size: new Vector3(2, 10, 1),
 					setup: (entity) => {
 						entity.setPosition(-20, 0, 0);
 					},
@@ -53,7 +53,7 @@ const game = Zylem.create({
 				{
 					name: 'ball',
 					type: Sphere,
-					shape: new Vector3(1, 1, 1),
+					size: new Vector3(1, 1, 1),
 					props: {
 						dx: 1,
 						dy: 1

@@ -1,9 +1,6 @@
-import { Body } from "objects/Body";
+import { RigidBody } from "@dimforge/rapier3d-compat";
 import { Mesh, Vector3 } from "three";
 import { UpdateOptions } from "./Update";
-import { Constraint, HingeConstraint, LockConstraint } from "cannon-es";
-
-export type AnyConstraint = HingeConstraint | Constraint | LockConstraint;
 
 export interface Entity<T> {
 	setup: (entity: T) => void;
@@ -37,18 +34,35 @@ export interface EntityBlueprint<T> extends Entity<T> {
 
 export interface GameEntity<T> extends Entity<T> {
 	mesh: Mesh;
-	body: Body;
-	constraintBodies?: Body[];
-	constraints?: AnyConstraint[];
+	body: RigidBody;
+	constraintBodies?: RigidBody[];
+	_update: (delta: number, options: any) => void;
+	_setup: (entity: T) => void;
 }
 
 export interface EntityOptions {
 	update: (delta: number, options: any) => void;
 	setup: (entity: any) => void;
-	shape?: Vector3;
+	size?: Vector3;
 }
 
 export enum GameEntityType {
 	Box = 'Box',
 	Sphere = 'Sphere',
+}
+
+// TODO: use generic Entity class for shared methods
+export function update(this: GameEntity<EntityClass>, delta: number, { inputs }: any) {
+	if (!this.body) {
+		return;
+	}
+	const { x, y, z } = this.body.translation();
+	const { x: rx, y: ry, z: rz } = this.body.rotation();
+	this.mesh.position.set(x, y, z);
+	this.mesh.rotation.set(rx, ry, rz);
+	const _inputs = inputs ?? { moveUp: false, moveDown: false };
+	if (this._update === undefined) {
+		return;
+	}
+	this._update(delta, { inputs: _inputs, entity: this });
 }

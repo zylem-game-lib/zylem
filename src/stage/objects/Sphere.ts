@@ -1,22 +1,18 @@
 // Sphere is a combination of a 3D mesh and a physics body
-import { Body, Sphere, HingeConstraint, Vec3, Constraint } from 'cannon-es';
 import { Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
-import { EntityClass, EntityOptions, GameEntity, AnyConstraint } from "@/interfaces/Entity";
+import { RigidBody } from '@dimforge/rapier3d-compat';
+import { EntityClass, EntityOptions, GameEntity } from "@/interfaces/Entity";
 
 export class ZylemSphere extends EntityClass implements GameEntity<ZylemSphere> {
 	_type: string;
 	mesh: Mesh;
-	body: Body;
-	constraintBodies: Body[];
-	constraints: AnyConstraint[];
+	body: RigidBody;
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: ZylemSphere) => void;
 
 	constructor(options: EntityOptions) {
 		super();
 		this._type = 'Sphere';
-		this.constraints = [];
-		this.constraintBodies = [];
 		this.mesh = this.createMesh();
 		this.body = this.createBody();
 		this._update = options.update;
@@ -33,8 +29,10 @@ export class ZylemSphere extends EntityClass implements GameEntity<ZylemSphere> 
 		if (!this.body) {
 			return;
 		}
-		const { x, y, z } = this.body.position;
+		const { x, y, z } = this.body.translation();
+		const { x: rx, y: ry, z: rz } = this.body.rotation();
 		this.mesh.position.set(x, y, z);
+		this.mesh.rotation.set(rx, ry, rz);
 		const _inputs = inputs ?? { moveUp: false, moveDown: false };
 		if (this._update === undefined) {
 			return;
@@ -58,15 +56,10 @@ export class ZylemSphere extends EntityClass implements GameEntity<ZylemSphere> 
 	}
 
 	createBody() {
-		const sphere = new Sphere(1);
-		this.body = new Body({
-			mass: 1,
-			shape: sphere,
-			fixedRotation: true,
-			angularDamping: 1,
-			angularFactor: new Vec3(1, 1, 0),
-		});
-		this.body.position.set(0, 0, 0);
+		// const { world } = this.stageRef;
+		// let colliderDesc = RAPIER.ColliderDesc.ball(radius);
+		// colliderDesc.setSensor(isSensor);
+		// world.createCollider(colliderDesc, this.body);
 
 		return this.body;
 	}
