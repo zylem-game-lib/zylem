@@ -8,7 +8,7 @@
 	"keywords": [],
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "vite preview",
+		"start": "vite",
 		"dev": "vite",
 		"build": "vite build",
 		"serve": "vite preview"
