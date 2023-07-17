@@ -41,9 +41,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 			if (entity.mesh) {
 				this.scene.scene.add(entity.mesh);
 			}
-			if (entity.body) {
-				this.world.addEntity(entity);
-			}
+			this.world.addEntity(entity);
 			this.children.push(entity);
 			if (blueprint.props) {
 				entity._props = blueprint.props;

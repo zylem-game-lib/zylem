@@ -1,12 +1,14 @@
 import { EntityClass, EntityOptions, GameEntity } from '@/interfaces/Entity';
-import { RigidBody } from '@dimforge/rapier3d-compat';
+import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
 import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 
 // Box is a combination of a 3D mesh and a physics body
 export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
 	_type: string;
 	mesh: Mesh;
-	body: RigidBody;
+	body?: RigidBody;
+	size?: Vector3;
+	bodyDescription: RigidBodyDesc;
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: ZylemBox) => void;
 
@@ -14,7 +16,7 @@ export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
 		super();
 		this._type = 'Box';
 		this.mesh = this.createMesh(options.size);
-		this.body = this.createBody(options.size);
+		this.bodyDescription = this.createBodyDescription();
 		this._update = options.update;
 		this._setup = options.setup;
 	}
@@ -41,6 +43,7 @@ export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
 	}
 
 	createMesh(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
+		this.size = vector3;
 		const geometry = new BoxGeometry(vector3.x, vector3.y, vector3.z);
 		const material = new MeshStandardMaterial({
 			color: 0xFFFFFF,
@@ -55,15 +58,30 @@ export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
 		return this.mesh;
 	}
 
-	createBody(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
-		// const box = new Box(new Vec3(vector3.x / 2, vector3.y / 2, vector3.z / 2));
-		// this.body = new Body({
-		// 	mass: 0,
-		// 	shape: box,
-		// 	fixedRotation: true,
-		// });
-		// this.body.position.set(0, 0, 0);
-		return this.body;
+	createBodyDescription() {
+		let rigidBodyDesc = new RigidBodyDesc(RigidBodyType.Dynamic)
+			.setTranslation(0, 0, 0)
+			// .setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0})
+			// .setLinvel(1.0, 3.0, 4.0)
+			// .setAngvel({ x: 3.0, y: 0.0, z: 1.0 })
+			.setGravityScale(1.0)
+			.setCanSleep(true)
+			.setCcdEnabled(false);
+
+		return rigidBodyDesc;
+	}
+
+	createCollider(isSensor: boolean = false) {
+		const size = this.size || new Vector3(1, 1, 1);
+		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
+		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
+		colliderDesc.setSensor(isSensor);
+		if (isSensor) {
+			// "KINEMATIC_FIXED" will only sense actors moving through the sensor
+			colliderDesc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;
+			// colliderDesc.setActiveHooks(RAPIER.ActiveHooks.FILTER_INTERSECTION_PAIRS);
+		}
+		return colliderDesc;
 	}
 
 }

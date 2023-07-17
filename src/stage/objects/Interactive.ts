@@ -22,8 +22,10 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			if (!this.body) {
 				return;
 			}
-			const { x, y, z } = this.body.position;
+			const { x, y, z } = this.body.translation();
+			const { x: rx, y: ry, z: rz } = this.body.rotation();
 			this.mesh.position.set(x, y, z);
+			this.mesh.rotation.set(rx, ry, rz);
 			const _inputs = inputs ?? { moveUp: false, moveDown: false };
 			if (this._update === undefined) {
 				return;

@@ -4,11 +4,11 @@ import RAPIER from '@dimforge/rapier3d-compat';
 export class ZylemWorld implements Entity<ZylemWorld> {
 	_type = 'World';
 	world: RAPIER.World;
-	collisionDictionary: Map<RAPIER.RigidBody, Entity<any>>;
+	collisionDictionary: Map<number, Entity<any>>;
 
 	static async loadPhysics() {
 		await RAPIER.init();
-		const physicsWorld = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
+		const physicsWorld = new RAPIER.World({ x: 0.0, y: 0.0, z: 0.0 });
 
 		return physicsWorld;
 	}
@@ -19,7 +19,13 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	addEntity(entity: GameEntity<any>) {
-		this.collisionDictionary.set(entity.body, entity);
+		const rigidBody = this.world.createRigidBody(entity.bodyDescription);
+		entity.body = rigidBody;
+		entity.body.lockRotations(true, true);
+		entity.body.lockTranslations(true, true);
+		const colliderDesc = entity.createCollider();
+		this.world.createCollider(colliderDesc, entity.body);
+		this.collisionDictionary.set(entity.body.handle, entity);
 	}
 
 	setup() { }
@@ -28,7 +34,27 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		if (!this.world) {
 			return;
 		}
-		// this.world.fixedStep();
+		this.updateColliders();
+		this.world.step();
+	}
+
+	updateColliders() {
+		const dictionaryRef = this.collisionDictionary;
+		for (let [, collider] of dictionaryRef) {
+			const gameEntity = collider as GameEntity<any>;
+			if (!gameEntity.body) {
+				continue;
+			}
+			this.world.contactsWith(gameEntity.body.collider(0), (otherCollider) => {
+				const entity = dictionaryRef.get(otherCollider.handle);
+				if (!entity) {
+					return;
+				}
+				if (entity._collision) {
+					entity._collision(entity, gameEntity);
+				}
+			})
+		}
 	}
 
 	destroy() { }

@@ -1,4 +1,4 @@
-import { RigidBody } from "@dimforge/rapier3d-compat";
+import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 import { Mesh, Vector3 } from "three";
 import { UpdateOptions } from "./Update";
 
@@ -34,8 +34,10 @@ export interface EntityBlueprint<T> extends Entity<T> {
 
 export interface GameEntity<T> extends Entity<T> {
 	mesh: Mesh;
-	body: RigidBody;
+	body?: RigidBody;
+	bodyDescription: RigidBodyDesc;
 	constraintBodies?: RigidBody[];
+	createCollider: (isSensor?: boolean) => ColliderDesc;
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: T) => void;
 }
@@ -44,6 +46,7 @@ export interface EntityOptions {
 	update: (delta: number, options: any) => void;
 	setup: (entity: any) => void;
 	size?: Vector3;
+	radius?: number;
 }
 
 export enum GameEntityType {
