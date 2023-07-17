@@ -86,7 +86,7 @@ export default class GamePad {
 	}
 
 	getInputs(): ControllerInput[] {
-		return [this.getInputAtIndex(0)];
+		return [this.getInputAtIndex(0), this.getInputAtIndex(1)];
 	}
 
 	getDebugInfo(): string {
