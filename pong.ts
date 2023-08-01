@@ -15,6 +15,24 @@ const board = {
 	left: 20
 };
 
+const paddleUpdate = (delta, { entity, inputs }, inputKey, boardPositionX) => {
+	const { y } = entity.getPosition();
+	const { moveUp, moveDown } = inputs[inputKey];
+	if (moveUp) {
+		entity.moveY(paddleSpeed);
+	} else if (moveDown) {
+		entity.moveY(-paddleSpeed);
+	}
+	if (y > board.top) {
+		entity.moveY(0);
+		entity.setPosition(boardPositionX, board.top, 0);
+	}
+	if (y < board.bottom) {
+		entity.moveY(0);
+		entity.setPosition(boardPositionX, board.bottom, 0);
+	}
+}
+
 const game = Zylem.create({
 	id: 'pong',
 	perspective: PerspectiveType.Fixed2D,
@@ -33,25 +51,9 @@ const game = Zylem.create({
 						entity.setPosition(board.left, 0, 0);
 					},
 					update: (delta, { entity, inputs }) => {
-						const { y } = entity.getPosition();
-						const { moveUp, moveDown } = inputs[0];
-						if (moveUp) {
-							entity.moveY(paddleSpeed);
-						} else if (moveDown) {
-							entity.moveY(-paddleSpeed);
-						}
-						if (y > board.top) {
-							entity.setPosition(board.left, board.top - ballBuffer, 0);
-						}
-						if (y < board.bottom) {
-							entity.setPosition(board.left, board.bottom + ballBuffer, 0);
-						}
-						if (!moveUp && !moveDown) {
-							entity.moveY(0);
-						}
+						paddleUpdate(delta, { entity, inputs }, 0, board.left);
 					},
-					destroy: () => {
-					}
+					destroy: () => { }
 				},
 				{
 					name: 'paddle2',
@@ -61,25 +63,9 @@ const game = Zylem.create({
 						entity.setPosition(board.right, 0, 0);
 					},
 					update: (delta, { entity, inputs }) => {
-						const { y } = entity.getPosition();
-						const { moveUp, moveDown } = inputs[1];
-						if (moveUp) {
-							entity.moveY(paddleSpeed);
-						} else if (moveDown) {
-							entity.moveY(-paddleSpeed);
-						}
-						if (y > board.top) {
-							entity.setPosition(board.right, board.top - ballBuffer, 0);
-						}
-						if (y < board.bottom) {
-							entity.setPosition(board.right, board.bottom + ballBuffer, 0);
-						}
-						if (!moveUp && !moveDown) {
-							entity.moveY(0);
-						}
+						paddleUpdate(delta, { entity, inputs }, 0, board.right);
 					},
-					destroy: () => {
-					}
+					destroy: () => { }
 				},
 				{
 					name: 'ball',
