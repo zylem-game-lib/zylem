@@ -12,7 +12,8 @@
 		"esModuleInterop": true,
 		"paths": {
 			"@/*": ["./src/*"],
-			"@interfaces/*": ["./src/interfaces/*"]
+			"@interfaces/*": ["./src/interfaces/*"],
+			"@state/*": ["./src/state/*"]
 		}
 	},
 	"include": ["src"]

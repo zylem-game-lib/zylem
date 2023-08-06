@@ -4,6 +4,7 @@ import { ZylemStage } from '@/stage/ZylemStage';
 import { Clock } from 'three';
 import { GameOptions } from '../interfaces/Game';
 import { PerspectiveType } from "../interfaces/Perspective";
+import { GameState } from '@state/index';
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
@@ -19,6 +20,7 @@ export class ZylemGame implements GameOptions {
 	gamePad: GamePad;
 
 	constructor(options: GameOptions) {
+		GameState.state.perspective = options.perspective;
 		this.id = options.id;
 		this.gamePad = new GamePad();
 		this.clock = new Clock();

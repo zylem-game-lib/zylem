@@ -6,6 +6,8 @@ export default {
 	resolve: {
 		alias: {
 			'@': path.resolve(__dirname, './src'),
+			'@interfaces': path.resolve(__dirname, './src/interfaces'),
+			'@state': path.resolve(__dirname, './src/state'),
 		},
 	},
 	build: {
@@ -13,16 +15,11 @@ export default {
 			entry: 'src/index.ts',
 			name: 'Zylem',
 		},
-		rollupOptions: {
-			external: /^lit/,
-			output: {
-				globals: {
-					lit: 'Lit',
-				},
-			},
-		},
 	},
 	server: {
-		open: '/index.html',
+		open: '../index.html',
+	},
+	preview: {
+		port: 8080,
 	},
 };
