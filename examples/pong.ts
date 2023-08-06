@@ -1,12 +1,14 @@
 import { Vector3 } from 'three';
-import Zylem from './src/index';
-import { PerspectiveType } from './src/interfaces/Perspective';
+import Zylem from '../src/index';
+import { PerspectiveType } from '../src/interfaces/Perspective';
 
 const { Box, Sphere } = Zylem.GameEntityType;
 
 const paddleSpeed = 20.0;
 const ballSpeed = 10.0;
 const ballBuffer = 0.5;
+const ballSize = 0.25;
+const paddleSize = new Vector3(0.5, 8, 1);
 const goalBuffer = 25.0;
 const board = {
 	top: 10,
@@ -22,6 +24,8 @@ const paddleUpdate = (delta, { entity, inputs }, inputKey, boardPositionX) => {
 		entity.moveY(paddleSpeed);
 	} else if (moveDown) {
 		entity.moveY(-paddleSpeed);
+	} else {
+		entity.moveY(0);
 	}
 	if (y > board.top) {
 		entity.moveY(0);
@@ -46,7 +50,7 @@ const game = Zylem.create({
 				{
 					name: 'paddle1',
 					type: Box,
-					size: new Vector3(0.5, 8, 1),
+					size: paddleSize,
 					setup: (entity) => {
 						entity.setPosition(board.left, 0, 0);
 					},
@@ -58,7 +62,7 @@ const game = Zylem.create({
 				{
 					name: 'paddle2',
 					type: Box,
-					size: new Vector3(0.5, 8, 1),
+					size: paddleSize,
 					setup: (entity) => {
 						entity.setPosition(board.right, 0, 0);
 					},
@@ -70,7 +74,7 @@ const game = Zylem.create({
 				{
 					name: 'ball',
 					type: Sphere,
-					size: new Vector3(1, 1, 1),
+					radius: ballSize,
 					props: {
 						dx: 1,
 						dy: 0
