@@ -6,6 +6,8 @@ import { ZylemBox, ZylemSphere } from "./objects";
 import { UpdateOptions } from "@/interfaces/Update";
 import { Moveable } from "./objects/Moveable";
 import { Interactive } from "./objects/Interactive";
+import { StageState } from "@/state";
+import { StageOptions } from "@/interfaces/Game";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
@@ -14,12 +16,14 @@ export class ZylemStage implements Entity<ZylemStage> {
 	children: Array<Entity<any>> = [];
 	blueprints: Array<EntityBlueprint<any>> = [];
 
-	constructor(id: string) {
+	constructor() {
 		this.world = null;
-		this.scene = new ZylemScene(id);
+		this.scene = null;
 	}
 
-	async buildStage(options: any) {
+	async buildStage(options: StageOptions, id: string) {
+		StageState.state.backgroundColor = options.backgroundColor;
+		this.scene = new ZylemScene(id);
 		const physicsWorld = await ZylemWorld.loadPhysics();
 		this.world = new ZylemWorld(physicsWorld);
 		this.blueprints = options.children() || [];

@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { Color, Vector3 } from 'three';
 import Zylem from '../src/index';
 import { PerspectiveType } from '../src/interfaces/Perspective';
 
@@ -45,6 +45,7 @@ const game = Zylem.create({
 		p2Score: 0,
 	},
 	stage: {
+		backgroundColor: Color.NAMES.darkblue,
 		children: () => {
 			return [
 				{

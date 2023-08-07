@@ -2,7 +2,7 @@ import GamePad from '@/input/ZylemGamePad';
 import { UpdateOptions } from '@/interfaces/Update';
 import { ZylemStage } from '@/stage/ZylemStage';
 import { Clock } from 'three';
-import { GameOptions } from '../interfaces/Game';
+import { GameOptions, StageOptions } from '../interfaces/Game';
 import { PerspectiveType } from "../interfaces/Perspective";
 import { GameState } from '@state/index';
 
@@ -12,7 +12,7 @@ import { GameState } from '@state/index';
 export class ZylemGame implements GameOptions {
 	id: string;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
-	stage?: ZylemStage;
+	stage: StageOptions;
 	stages: Record<string, ZylemStage> = {};
 	blueprintOptions: GameOptions;
 	currentStage: string = '';
@@ -26,14 +26,15 @@ export class ZylemGame implements GameOptions {
 		this.clock = new Clock();
 		this.blueprintOptions = options;
 		this.createCanvas();
-		this.loadStage(options);
+		this.stage = options.stage;
+		this.loadStage(this.stage);
 		this.currentStage = this.id;
 	}
 
-	async loadStage(options: GameOptions) {
-		this.stage = new ZylemStage(this.id);
-		this.stage.buildStage(options.stage);
-		this.stages[this.id] = this.stage;
+	async loadStage(options: StageOptions) {
+		const stage = new ZylemStage();
+		stage.buildStage(options, this.id);
+		this.stages[this.id] = stage;
 	}
 
 	/**

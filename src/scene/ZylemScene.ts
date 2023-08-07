@@ -10,6 +10,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { ZylemCamera } from './ZylemCamera';
 import RenderPass from './rendering/RenderPass';
 import { Entity, GameEntity } from '@interfaces/Entity';
+import { StageState } from '@/state';
 
 export class ZylemScene implements Entity<ZylemScene> {
 	_type = 'Scene';
@@ -21,7 +22,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	constructor(id: string) {
 		const scene = new Scene();
-		scene.background = new Color(0x5843c1);
+		scene.background = new Color(StageState.state.backgroundColor);
 
 		this.setupRenderer();
 		this.setupLighting(scene);
