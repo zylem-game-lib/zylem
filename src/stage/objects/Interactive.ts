@@ -18,7 +18,7 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			this._destroy(this);
 		}
 
-		update(delta: number, { inputs }: any) {
+		update(delta: number, { inputs, globals }: any) {
 			if (!this.body) {
 				return;
 			}
@@ -30,7 +30,7 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			if (this._update === undefined) {
 				return;
 			}
-			this._update(delta, { inputs: _inputs, entity: this });
+			this._update(delta, { inputs: _inputs, entity: this, globals });
 		}
 
 	};

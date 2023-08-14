@@ -46,6 +46,15 @@ const game = Zylem.create({
 	},
 	stage: {
 		backgroundColor: Color.NAMES.darkblue,
+		conditions: [
+			(globals, game) => {
+				if (globals.p1Score > 3) {
+					console.log("p1 wins!");
+					globals.p1Score = 0;
+					game.reset();
+				}
+			}
+		],
 		children: () => {
 			return [
 				{
@@ -83,7 +92,7 @@ const game = Zylem.create({
 					setup(entity) {
 						entity.setPosition(0, 0, 0);
 					},
-					update(delta, { entity, inputs }) {
+					update(delta, { entity, inputs, globals }) {
 						const { dx, dy } = entity.getProps();
 						const { x, y } = entity.getPosition();
 						if (dx === 1) {
@@ -91,8 +100,15 @@ const game = Zylem.create({
 						} else if (dx === -1) {
 							entity.moveXY(-ballSpeed, dy);
 						}
-						if (x > goalBuffer || x < -goalBuffer) {
+						if (x > goalBuffer) {
 							entity.setPosition(0, 0, 0);
+							globals.p1Score++;
+							console.log(globals.p1Score);
+						}
+						if (x < -goalBuffer) {
+							entity.setPosition(0, 0, 0);
+							globals.p2Score++;
+							console.log(globals.p2Score);
 						}
 						if (y <= board.bottom || y >= board.top) {
 							entity._props.dy *= -1;
@@ -105,10 +121,8 @@ const game = Zylem.create({
 							const yPos = board.top - ballBuffer;
 							entity.setPosition(x, yPos, 0);
 						}
-
 					},
 					collision: (entity, other) => {
-						console.log(other.name);
 						if (other.name === 'paddle1') {
 							entity._props.dx = -1;
 						} else if (other.name === 'paddle2') {

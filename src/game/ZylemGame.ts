@@ -12,6 +12,7 @@ import { GameState } from '@state/index';
 export class ZylemGame implements GameOptions {
 	id: string;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
+	globals: any;
 	stage: StageOptions;
 	stages: Record<string, ZylemStage> = {};
 	blueprintOptions: GameOptions;
@@ -21,6 +22,7 @@ export class ZylemGame implements GameOptions {
 
 	constructor(options: GameOptions) {
 		GameState.state.perspective = options.perspective;
+		GameState.state.globals = options.globals;
 		this.id = options.id;
 		this.gamePad = new GamePad();
 		this.clock = new Clock();
@@ -53,6 +55,9 @@ export class ZylemGame implements GameOptions {
 			entity: stage
 		} as unknown as UpdateOptions<ZylemStage>;
 		stage.update(ticks, options);
+		stage.conditions.forEach(condition => {
+			condition(GameState.state.globals, this);
+		});
 		const self = this;
 		requestAnimationFrame(() => {
 			this.blueprintOptions?.debug?.addInfo(this.gamePad.getDebugInfo());
@@ -62,6 +67,11 @@ export class ZylemGame implements GameOptions {
 
 	start() {
 		this.gameLoop();
+	}
+
+	reset() {
+		// TODO: this needs cleanup
+		this.loadStage(this.stage);
 	}
 
 	createStage(id: string) {

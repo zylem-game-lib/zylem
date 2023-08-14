@@ -6,13 +6,14 @@ import { ZylemBox, ZylemSphere } from "./objects";
 import { UpdateOptions } from "@/interfaces/Update";
 import { Moveable } from "./objects/Moveable";
 import { Interactive } from "./objects/Interactive";
-import { StageState } from "@/state";
-import { StageOptions } from "@/interfaces/Game";
+import { GameState, StageState } from "@/state";
+import { Conditions, StageOptions } from "@/interfaces/Game";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
+	conditions: Conditions<any>[] = [];
 	children: Array<Entity<any>> = [];
 	blueprints: Array<EntityBlueprint<any>> = [];
 
@@ -27,6 +28,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 		const physicsWorld = await ZylemWorld.loadPhysics();
 		this.world = new ZylemWorld(physicsWorld);
 		this.blueprints = options.children() || [];
+		this.conditions = options.conditions;
 		await this.setup();
 	}
 
@@ -79,6 +81,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 			child.update(delta, {
 				inputs: options.inputs,
 				entity: child,
+				globals: GameState.state.globals
 			});
 		}
 		this.scene.update(delta);
