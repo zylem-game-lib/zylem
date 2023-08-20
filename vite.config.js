@@ -10,6 +10,7 @@ export default {
 			'@state': path.resolve(__dirname, './src/state'),
 		},
 	},
+	assetsInclude: ['**/*.gltf', '**/*.wav'],
 	build: {
 		lib: {
 			entry: 'src/index.ts',

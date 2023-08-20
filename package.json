@@ -16,6 +16,7 @@
 	"dependencies": {
 		"@dimforge/rapier3d": "^0.11.2",
 		"@dimforge/rapier3d-compat": "^0.11.2",
+		"@types/howler": "^2.2.8",
 		"esbuild": "^0.17.16",
 		"function-bind": "^1.1.1",
 		"has": "^1.0.3",

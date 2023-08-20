@@ -2,12 +2,17 @@ import { Color, Vector3 } from 'three';
 import Zylem from '../src/index';
 import { PerspectiveType } from '../src/interfaces/Perspective';
 
+const { Howl } = Zylem;
 const { Box, Sphere } = Zylem.GameEntityType;
+
+const sound = new Howl({
+	src: '/assets/bounce.wav',
+});
 
 const paddleSpeed = 20.0;
 const ballSpeed = 10.0;
-const ballBuffer = 0.5;
-const ballSize = 0.25;
+const ballBuffer = 0.25;
+const ballRadius = 0.25;
 const paddleSize = new Vector3(0.5, 8, 1);
 const goalBuffer = 25.0;
 const board = {
@@ -84,7 +89,7 @@ const game = Zylem.create({
 				{
 					name: 'ball',
 					type: Sphere,
-					radius: ballSize,
+					radius: ballRadius,
 					props: {
 						dx: 1,
 						dy: 0
@@ -95,41 +100,36 @@ const game = Zylem.create({
 					update(delta, { entity, inputs, globals }) {
 						const { dx, dy } = entity.getProps();
 						const { x, y } = entity.getPosition();
-						if (dx === 1) {
-							entity.moveXY(ballSpeed, dy);
-						} else if (dx === -1) {
-							entity.moveXY(-ballSpeed, dy);
-						}
 						if (x > goalBuffer) {
 							entity.setPosition(0, 0, 0);
 							globals.p1Score++;
-							console.log(globals.p1Score);
 						}
 						if (x < -goalBuffer) {
 							entity.setPosition(0, 0, 0);
 							globals.p2Score++;
-							console.log(globals.p2Score);
-						}
-						if (y <= board.bottom || y >= board.top) {
-							entity._props.dy *= -1;
 						}
 						if (y < board.bottom) {
 							const yPos = board.bottom + ballBuffer;
 							entity.setPosition(x, yPos, 0);
+							entity._props.dy *= -1;
 						}
 						if (y > board.top) {
 							const yPos = board.top - ballBuffer;
 							entity.setPosition(x, yPos, 0);
+							entity._props.dy *= -1;
 						}
+						const velX = dx * ballSpeed;
+						entity.moveXY(velX, dy);
 					},
 					collision: (entity, other) => {
+						sound.play();
 						if (other.name === 'paddle1') {
 							entity._props.dx = -1;
 						} else if (other.name === 'paddle2') {
 							entity._props.dx = 1;
 						}
-						entity._props.dy = other.getVelocity().y / 2;
-						entity._props.dy += Math.random() * (other.getVelocity().y / 16);
+						entity._props.dy += (other.getVelocity().y / 8);
+						entity._props.dy = Math.min(entity._props.dy, paddleSpeed / 2);
 					},
 					destroy: () => { }
 				}
