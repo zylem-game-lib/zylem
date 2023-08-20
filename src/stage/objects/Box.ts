@@ -61,11 +61,8 @@ export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
 	createBodyDescription() {
 		let rigidBodyDesc = new RigidBodyDesc(RigidBodyType.Dynamic)
 			.setTranslation(0, 0, 0)
-			// .setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0})
-			// .setLinvel(1.0, 3.0, 4.0)
-			// .setAngvel({ x: 3.0, y: 0.0, z: 1.0 })
 			.setGravityScale(1.0)
-			.setCanSleep(true)
+			.setCanSleep(false)
 			.setCcdEnabled(false);
 
 		return rigidBodyDesc;

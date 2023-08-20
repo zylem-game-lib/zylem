@@ -1,5 +1,5 @@
 // Sphere is a combination of a 3D mesh and a physics body
-import { Mesh, MeshStandardMaterial, SphereGeometry, Vector3 } from 'three';
+import { Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
 import { EntityClass, EntityOptions, GameEntity } from "@/interfaces/Entity";
 
@@ -60,12 +60,8 @@ export class ZylemSphere extends EntityClass implements GameEntity<ZylemSphere> 
 
 	createBodyDescription() {
 		let rigidBodyDesc = new RigidBodyDesc(RigidBodyType.Dynamic)
-			// .setTranslation(0, 0, 0)
-			// .setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0})
-			// .setLinvel(1.0, 3.0, 4.0)
-			// .setAngvel({ x: 3.0, y: 0.0, z: 1.0 })
 			.setGravityScale(1.0)
-			.setCanSleep(true)
+			.setCanSleep(false)
 			.setCcdEnabled(false);
 
 		return rigidBodyDesc;
