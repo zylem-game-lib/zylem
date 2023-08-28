@@ -7,6 +7,7 @@ const { Box, Sphere } = Zylem.GameEntityType;
 
 const sound = new Howl({
 	src: '/assets/bounce.wav',
+	volume: 0.1,
 });
 
 const paddleSpeed = 20.0;
