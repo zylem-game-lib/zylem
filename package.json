@@ -23,6 +23,7 @@
 		"howler": "^2.2.3",
 		"is-core-module": "^2.12.0",
 		"nanoid": "^3.3.6",
+		"nipplejs": "^0.10.1",
 		"path-parse": "^1.0.7",
 		"picocolors": "^1.0.0",
 		"postcss": "^8.4.21",
