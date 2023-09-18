@@ -14,7 +14,7 @@ const paddleSpeed = 20.0;
 const ballSpeed = 10.0;
 const ballBuffer = 0.25;
 const ballRadius = 0.25;
-const paddleSize = new Vector3(0.5, 8, 1);
+const paddleSize = new Vector3(0.5, 4, 1);
 const goalBuffer = 25.0;
 const board = {
 	top: 10,
@@ -45,22 +45,53 @@ const paddleUpdate = (delta, { entity, inputs }, inputKey, boardPositionX) => {
 
 const game = Zylem.create({
 	id: 'pong',
-	perspective: PerspectiveType.Fixed2D,
+	perspective: PerspectiveType.Flat2D,
 	globals: {
 		p1Score: 0,
 		p2Score: 0,
+		centerText: 'Score',
+		winner: 0
 	},
 	stage: {
-		backgroundColor: Color.NAMES.darkblue,
+		backgroundColor: Color.NAMES.black,
 		conditions: [
 			(globals, game) => {
-				if (globals.p1Score > 3) {
-					console.log("p1 wins!");
-					globals.p1Score = 0;
-					game.reset();
+				if (globals.winner !== 0) {
+					return;
+				}
+				if (globals.p1Score === 3) {
+					globals.centerText = "P1 Wins!";
+					globals.winner = 1;
+					setTimeout(() => {
+						game.reset();
+					}, 2000);
+				}
+				if (globals.p2Score === 3) {
+					globals.winner = 2;
+					globals.centerText = "P2 Wins!";
+					setTimeout(() => {
+						game.reset();
+					}, 2000);
 				}
 			}
 		],
+		setup: (scene, HUD) => {
+			HUD.createText({
+				text: 'Score',
+				binding: 'centerText',
+				position: new Vector3(0, 10, 0)
+			});
+			HUD.createText({
+				text: '0',
+				binding: 'p1Score',
+				position: new Vector3(-5, 10, 0)
+			});
+			HUD.createText({
+				text: '0',
+				binding: 'p2Score',
+				position: new Vector3(5, 10, 0)
+			});
+		},
 		children: () => {
 			return [
 				{
@@ -98,7 +129,7 @@ const game = Zylem.create({
 					setup(entity) {
 						entity.setPosition(0, 0, 0);
 					},
-					update(delta, { entity, inputs, globals }) {
+					update(_delta, { entity, globals }) {
 						const { dx, dy } = entity.getProps();
 						const { x, y } = entity.getPosition();
 						if (x > goalBuffer) {
