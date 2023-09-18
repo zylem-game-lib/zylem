@@ -5,15 +5,20 @@ import {
 	WebGLRenderer,
 	AmbientLight,
 	DirectionalLight,
+	Object3D,
+	Vector3,
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { ZylemCamera } from './ZylemCamera';
 import RenderPass from './rendering/RenderPass';
 import { Entity, GameEntity } from '@interfaces/Entity';
 import { StageState } from '@/state';
+import { ZylemHUD } from '@/game/ZylemHUD';
 
 export class ZylemScene implements Entity<ZylemScene> {
 	_type = 'Scene';
+	_setup?: (scene: ZylemScene, HUD: ZylemHUD) => void;
+	_hud: ZylemHUD | null = null;
 	scene!: Scene;
 	screenResolution!: Vector2;
 	renderer!: WebGLRenderer;
@@ -39,12 +44,23 @@ export class ZylemScene implements Entity<ZylemScene> {
 		element.appendChild(this.renderer.domElement);
 	}
 
-	setup() { }
+	setup() {
+		if (this._setup) {
+			this._hud = new ZylemHUD();
+			this._setup(this, this._hud);
+			this._hud._hudText.forEach(hudText => {
+				this.add(hudText.sprite, hudText.position);
+			});
+		}
+	}
 
 	destroy() { }
 
 	update(delta: number) {
 		this.composer.render(delta);
+		if (this._hud) {
+			this._hud.update();
+		}
 	}
 
 	setupCamera(scene: Scene) {
@@ -57,7 +73,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	setupLighting(scene: Scene) {
-		const ambientLight = new AmbientLight(0xffffff, 0.8);
+		const ambientLight = new AmbientLight(0xffffff, 0.5);
 		scene.add(ambientLight);
 
 		const directionalLight = new DirectionalLight(0xffffff, 1);
@@ -78,6 +94,11 @@ export class ZylemScene implements Entity<ZylemScene> {
 		this.renderer = new WebGLRenderer({ antialias: false });
 		this.renderer.setSize(screenResolution.x, screenResolution.y);
 		this.composer = new EffectComposer(this.renderer);
+	}
+
+	add(object: Object3D, position: Vector3 = new Vector3(0, 0, 0)) {
+		object.position.set(position.x, position.y, position.z);
+		this.scene.add(object);
 	}
 
 	addEntity(entity: GameEntity<any>) {

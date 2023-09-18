@@ -25,6 +25,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 	async buildStage(options: StageOptions, id: string) {
 		StageState.state.backgroundColor = options.backgroundColor;
 		this.scene = new ZylemScene(id);
+		this.scene._setup = options.setup;
 		const physicsWorld = await ZylemWorld.loadPhysics();
 		this.world = new ZylemWorld(physicsWorld);
 		this.blueprints = options.children() || [];
@@ -37,6 +38,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 			this.logMissingEntities();
 			return;
 		}
+		this.scene.setup();
 		for (let blueprint of this.blueprints) {
 			const BlueprintType = BlueprintMap[blueprint.type];
 			const MoveableType = Moveable(BlueprintType);
