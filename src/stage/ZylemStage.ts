@@ -92,6 +92,10 @@ export class ZylemStage implements Entity<ZylemStage> {
 	logMissingEntities() {
 		console.warn("Zylem world or scene is null");
 	}
+
+	resize(width: number, height: number) {
+		this.scene?.updateRenderer(width, height);
+	}
 }
 
 const BlueprintMap = {

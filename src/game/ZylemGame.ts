@@ -20,6 +20,7 @@ export class ZylemGame implements GameOptions {
 	currentStage: string = '';
 	clock: Clock;
 	gamePad: GamePad;
+	_canvasWrapper: Element | null;
 
 	constructor(options: GameOptions) {
 		GameState.state.perspective = options.perspective;
@@ -29,6 +30,7 @@ export class ZylemGame implements GameOptions {
 		this.gamePad = new GamePad();
 		this.clock = new Clock();
 		this.blueprintOptions = options;
+		this._canvasWrapper = null;
 		this.createCanvas();
 		this.stage = options.stage;
 		this.loadStage(this.stage);
@@ -88,6 +90,17 @@ export class ZylemGame implements GameOptions {
 		// this.currentStage = id;
 	}
 
+	handleResize() {
+		const rawWidth = window.innerWidth;
+		const rawHeight = window.innerHeight;
+		const width = `${window.innerWidth}px`;
+		const height = `${window.innerHeight}px`;
+		const canvas = this._canvasWrapper?.querySelector('canvas');
+		canvas?.style.setProperty('width', width);
+		canvas?.style.setProperty('height', height);
+		this.stages[this.id].resize(rawWidth, rawHeight);
+	}
+
 	createCanvas() {
 		if (!this.id) {
 			console.error('No id provided for canvas');
@@ -104,6 +117,10 @@ export class ZylemGame implements GameOptions {
 			document.body.appendChild(canvasWrapper);
 		}
 		canvasWrapper.appendChild(canvas);
+		this._canvasWrapper = canvasWrapper;
+		window.addEventListener("resize", () => {
+			this.handleResize();
+		});
 		return canvas;
 	}
 }

@@ -96,6 +96,11 @@ export class ZylemScene implements Entity<ZylemScene> {
 		this.composer = new EffectComposer(this.renderer);
 	}
 
+	updateRenderer(width: number, height: number) {
+		this.screenResolution = new Vector2(width, height);
+		this.renderer.setSize(this.screenResolution.x, this.screenResolution.y);
+	}
+
 	add(object: Object3D, position: Vector3 = new Vector3(0, 0, 0)) {
 		object.position.set(position.x, position.y, position.z);
 		this.scene.add(object);
