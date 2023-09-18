@@ -13,6 +13,7 @@ export class ZylemGame implements GameOptions {
 	id: string;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
 	globals: any;
+	_initialGlobals: any;
 	stage: StageOptions;
 	stages: Record<string, ZylemStage> = {};
 	blueprintOptions: GameOptions;
@@ -23,6 +24,7 @@ export class ZylemGame implements GameOptions {
 	constructor(options: GameOptions) {
 		GameState.state.perspective = options.perspective;
 		GameState.state.globals = options.globals;
+		this._initialGlobals = { ...options.globals };
 		this.id = options.id;
 		this.gamePad = new GamePad();
 		this.clock = new Clock();
@@ -69,8 +71,11 @@ export class ZylemGame implements GameOptions {
 		this.gameLoop();
 	}
 
-	reset() {
+	reset(resetGlobals = true) {
 		// TODO: this needs cleanup
+		if (resetGlobals) {
+			GameState.state.globals = { ...this._initialGlobals };
+		}
 		this.loadStage(this.stage);
 	}
 
