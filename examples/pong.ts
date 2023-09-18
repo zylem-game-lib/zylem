@@ -10,9 +10,10 @@ const sound = new Howl({
 	volume: 0.1,
 });
 
+const speed = 10.0;
 const paddleSpeed = 20.0;
-const ballSpeed = 10.0;
-const ballBuffer = 0.25;
+let ballSpeed = 10.0;
+const ballBuffer = 0.5;
 const ballRadius = 0.25;
 const paddleSize = new Vector3(0.5, 4, 1);
 const goalBuffer = 25.0;
@@ -49,7 +50,7 @@ const game = Zylem.create({
 	globals: {
 		p1Score: 0,
 		p2Score: 0,
-		centerText: 'Score',
+		centerText: '',
 		winner: 0
 	},
 	stage: {
@@ -59,16 +60,17 @@ const game = Zylem.create({
 				if (globals.winner !== 0) {
 					return;
 				}
-				if (globals.p1Score === 3) {
-					globals.centerText = "P1 Wins!";
+				const p1Wins = globals.p1Score === 3;
+				const p2Wins = globals.p2Score === 3;
+				if (p1Wins) {
 					globals.winner = 1;
-					setTimeout(() => {
-						game.reset();
-					}, 2000);
+					globals.centerText = "P1 Wins!";
 				}
-				if (globals.p2Score === 3) {
+				if (p2Wins) {
 					globals.winner = 2;
 					globals.centerText = "P2 Wins!";
+				}
+				if (p1Wins || p2Wins) {
 					setTimeout(() => {
 						game.reset();
 					}, 2000);
@@ -77,9 +79,9 @@ const game = Zylem.create({
 		],
 		setup: (scene, HUD) => {
 			HUD.createText({
-				text: 'Score',
+				text: '',
 				binding: 'centerText',
-				position: new Vector3(0, 10, 0)
+				position: new Vector3(0, 0, 0)
 			});
 			HUD.createText({
 				text: '0',
@@ -114,7 +116,7 @@ const game = Zylem.create({
 						entity.setPosition(board.right, 0, 0);
 					},
 					update: (delta, { entity, inputs }) => {
-						paddleUpdate(delta, { entity, inputs }, 0, board.right);
+						paddleUpdate(delta, { entity, inputs }, 1, board.right);
 					},
 					destroy: () => { }
 				},
@@ -135,10 +137,12 @@ const game = Zylem.create({
 						if (x > goalBuffer) {
 							entity.setPosition(0, 0, 0);
 							globals.p1Score++;
+							ballSpeed = speed;
 						}
 						if (x < -goalBuffer) {
 							entity.setPosition(0, 0, 0);
 							globals.p2Score++;
+							ballSpeed = speed;
 						}
 						if (y < board.bottom) {
 							const yPos = board.bottom + ballBuffer;
@@ -162,6 +166,7 @@ const game = Zylem.create({
 						}
 						entity._props.dy += (other.getVelocity().y / 8);
 						entity._props.dy = Math.min(entity._props.dy, paddleSpeed / 2);
+						ballSpeed += 0.5;
 					},
 					destroy: () => { }
 				}
