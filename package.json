@@ -32,6 +32,7 @@
 		"source-map-js": "^1.0.2",
 		"supports-preserve-symlinks-flag": "^1.0.0",
 		"three": "^0.151.3",
+		"three-spritetext": "^1.8.1",
 		"valtio": "^1.11.1"
 	},
 	"devDependencies": {

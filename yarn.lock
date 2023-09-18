@@ -2422,7 +2422,12 @@ test-exclude@^6.0.0:
     glob "^7.1.4"
     minimatch "^3.0.4"
 
-three@^0.151.3:
+three-spritetext@^1.8.1:
+  version "1.8.1"
+  resolved "https://registry.npmjs.org/three-spritetext/-/three-spritetext-1.8.1.tgz"
+  integrity sha512-pohv5CcdeUtAPLi9KhG0kcDLj3gmzdIFK/QlgsTJe+U07oQFSj+K0DLPQKbNDPWAK+7YzhulkRcjWdVIQ5F7nw==
+
+three@^0.151.3, three@>=0.86.0:
   version "0.151.3"
   resolved "https://registry.npmjs.org/three/-/three-0.151.3.tgz"
   integrity sha512-+vbuqxFy8kzLeO5MgpBHUvP/EAiecaDwDuOPPDe6SbrZr96kccF0ktLngXc7xA7bzyd3N0t2f6mw3Z9y6JCojQ==
