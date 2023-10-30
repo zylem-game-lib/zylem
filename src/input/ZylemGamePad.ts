@@ -43,10 +43,12 @@ export default class GamePad {
 		const down = this.keyboardInput.get("ArrowDown") || false;
 		const left = this.keyboardInput.get("ArrowLeft") || false;
 		const right = this.keyboardInput.get("ArrowRight") || false;
-		const z = this.keyboardInput.get("z") || false;
-		const x = this.keyboardInput.get("x") || false;
+		const w = this.keyboardInput.get("w") || false;
 		const a = this.keyboardInput.get("a") || false;
 		const s = this.keyboardInput.get("s") || false;
+		const d = this.keyboardInput.get("d") || false;
+		const z = this.keyboardInput.get("z") || false;
+		const x = this.keyboardInput.get("x") || false;
 		const enter = this.keyboardInput.get("Enter") || false;
 		const space = this.keyboardInput.get(" ") || false;
 		let horizontal = right ? 1 : left ? -1 : 0;
@@ -55,6 +57,9 @@ export default class GamePad {
 		let buttonB = x ? 1 : 0;
 		let buttonX = a ? 1 : 0;
 		let buttonY = s ? 1 : 0;
+		// Hacks, not very intuitive
+		let buttonW = w ? 1 : 0;
+		let buttonD = d ? 1 : 0;
 		let buttonSelect = enter ? 1 : 0;
 		let buttonStart = space ? 1 : 0;
 		if (!connected || !gamepad) {
@@ -65,6 +70,8 @@ export default class GamePad {
 				buttonB,
 				buttonX,
 				buttonY,
+				buttonW,
+				buttonD,
 				buttonSelect,
 				buttonStart,
 				moveUp: vertical < 0 ? 1 : 0,
@@ -91,6 +98,9 @@ export default class GamePad {
 			buttonStart,
 			moveUp: vertical < 0 ? 1 : 0,
 			moveDown: vertical > 0 ? 1 : 0,
+			// Not used for controllers
+			buttonW,
+			buttonD,
 		};
 	}
 
