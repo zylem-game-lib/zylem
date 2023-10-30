@@ -1,4 +1,4 @@
-import Zylem from '../src/index';
+import Zylem from '../../src/index';
 import { Vector3 } from 'three';
 import { board, BoardSide } from './board';
 const { Box } = Zylem.GameEntityType;
@@ -19,12 +19,16 @@ export function Paddle(inputKey, side: BoardSide, y = 0) {
 		},
 		update: (_delta, { entity, inputs }) => {
 			const { y } = entity.getPosition();
-			const { moveUp, moveDown } = inputs[inputKey];
+			const { moveUp, moveDown, buttonW, buttonY } = inputs[inputKey];
+			// console.log(inputs);
+			// TODO: kind of hacky should handle this better
+			let upPressed = (inputKey) ? buttonW : moveUp;
+			let downPressed = (inputKey) ? buttonY : moveDown;
 			const canMoveUp = y < board.top;
 			const canMoveDown = y > board.bottom;
-			if (moveUp && canMoveUp) {
+			if (upPressed && canMoveUp) {
 				entity.moveY(paddleSpeed);
-			} else if (moveDown && canMoveDown) {
+			} else if (downPressed && canMoveDown) {
 				entity.moveY(-paddleSpeed);
 			} else {
 				entity.moveY(0);
