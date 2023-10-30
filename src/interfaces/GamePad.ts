@@ -7,6 +7,8 @@ export interface ControllerInput {
 	buttonB: number;
 	buttonX: number;
 	buttonY: number;
+	buttonW: number;
+	buttonD: number;
 	buttonSelect: number;
 	buttonStart: number;
 
