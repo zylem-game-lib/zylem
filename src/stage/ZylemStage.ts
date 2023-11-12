@@ -40,7 +40,6 @@ export class ZylemStage implements Entity<ZylemStage> {
 		}
 		this.scene.setup();
 		for (let blueprint of this.blueprints) {
-			console.log(blueprint);
 			const BlueprintType = BlueprintMap[blueprint.type];
 			const MoveableType = Moveable(BlueprintType);
 			const InteractiveType = Interactive(MoveableType);
@@ -55,7 +54,6 @@ export class ZylemStage implements Entity<ZylemStage> {
 					entity[key] = blueprint.props[key];
 				}
 			}
-			console.log(entity);
 			this.world.addEntity(entity);
 			this.children.push(entity);
 			if (blueprint.collision) {

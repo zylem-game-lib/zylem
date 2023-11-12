@@ -14,4 +14,6 @@ export interface ControllerInput {
 
 	moveUp: number;
 	moveDown: number;
+	moveRight: number;
+	moveLeft: number;
 }

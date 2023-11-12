@@ -76,6 +76,8 @@ export default class GamePad {
 				buttonStart,
 				moveUp: vertical < 0 ? 1 : 0,
 				moveDown: vertical > 0 ? 1 : 0,
+				moveRight: horizontal > 0 ? 1 : 0,
+				moveLeft: horizontal < 0 ? 1 : 0,
 			};
 		}
 		const [x1, y1] = gamepad.axes;
@@ -98,6 +100,8 @@ export default class GamePad {
 			buttonStart,
 			moveUp: vertical < 0 ? 1 : 0,
 			moveDown: vertical > 0 ? 1 : 0,
+			moveRight: horizontal > 0 ? 1 : 0,
+			moveLeft: horizontal < 0 ? 1 : 0,
 			// Not used for controllers
 			buttonW,
 			buttonD,
