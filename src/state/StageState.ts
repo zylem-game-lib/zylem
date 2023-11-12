@@ -1,10 +1,17 @@
 import { StageOptions } from '@interfaces/Game';
 import { Color } from 'three';
-import { proxy, useSnapshot, subscribe } from 'valtio';
 
-const state = proxy({
+const initialState = {
 	backgroundColor: Color.NAMES.cornflowerblue,
-	children: () => { }
-} as StageOptions);
+} as StageOptions;
 
-export { state, useSnapshot, subscribe }
+// TODO: Hack until a new state management lib is implemented
+//@ts-ignore
+const stageState = window['__game__']['stageState'] = initialState;
+
+const setStageState = (key: string, value: any) => {
+	//@ts-ignore
+	window['__game__'].stageState[key] = value;
+}
+
+export { stageState, setStageState };

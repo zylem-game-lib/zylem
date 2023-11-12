@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { GameState } from '@state/index';
+import { gameState } from '@state/index';
 import SpriteText from 'three-spritetext';
 
 export interface HUDTextOptions {
@@ -41,7 +41,7 @@ export class ZylemHUD {
 			if (!binding) {
 				return;
 			}
-			const globals = GameState.state.globals;
+			const globals = gameState.globals;
 			const value = `${globals[binding]}`;
 			if (value) {
 				hud.sprite.text = value;

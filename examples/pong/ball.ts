@@ -19,46 +19,49 @@ export function Ball(startY = 0) {
 		props: {
 			dx: 1,
 			dy: 0,
-			speed: 10.0
+			speed: 10
 		},
 		setup(entity) {
 			entity.setPosition(0, startY, 0);
 		},
-		update(_delta, { entity, globals }) {
-			const { dx, dy } = entity.getProps();
-			const { x, y } = entity.getPosition();
+		update(_delta, { entity: ball, globals }) {
+			const { dx, dy } = ball;
+			const { x, y } = ball.getPosition();
+
 			if (x > goalBuffer) {
-				entity.setPosition(0, startY, 0);
-				globals.p1Score++;
-				entity._props.speed = minSpeed;
-				entity._props.dy = 0;
+				ball.setPosition(0, startY, 0);
+				globals.p1Score++;;
+				ball.speed = minSpeed;
+				ball.dy = 0;
 			} else if (x < -goalBuffer) {
-				entity.setPosition(0, startY, 0);
+				ball.setPosition(0, startY, 0);
 				globals.p2Score++;
-				entity._props.speed = minSpeed;
-				entity._props.dy = 0;
+				ball.speed = minSpeed;
+				ball.dy = 0;
 			}
+
 			if (y < board.bottom) {
-				entity.setPosition(x, board.bottom, 0);
-				entity._props.dy = Math.abs(entity._props.dy);
+				ball.setPosition(x, board.bottom, 0);
+				ball.dy = Math.abs(ball.dy);
 			} else if (y > board.top) {
-				entity.setPosition(x, board.top, 0);
-				entity._props.dy = -(Math.abs(entity._props.dy));
+				ball.setPosition(x, board.top, 0);
+				ball.dy = -(Math.abs(ball.dy));
 			}
-			const velX = dx * entity._props.speed;
-			entity.moveXY(velX, dy);
+
+			const velX = dx * ball.speed;
+			ball.moveXY(velX, dy);
 		},
-		collision: (entity, other) => {
+		collision: (ball, paddle) => {
 			sound.play();
-			if (other._props.side === BoardSide.LEFT) {
-				entity._props.dx = 1;
-			} else if (other._props.side === BoardSide.RIGHT) {
-				entity._props.dx = -1;
+			if (paddle.side === BoardSide.LEFT) {
+				ball.dx = 1;
+			} else if (paddle.side === BoardSide.RIGHT) {
+				ball.dx = -1;
 			}
-			const paddleSpeed = other.getVelocity().y;
-			entity._props.dy += (paddleSpeed / 8);
-			entity._props.dy = Math.min(entity._props.dy, maxSpeed);
-			entity._props.speed = Math.min(entity._props.speed + 0.5, maxSpeed);
+			const paddleSpeed = paddle.getVelocity().y;
+			ball.dy += (paddleSpeed / 8);
+			ball.dy = Math.min(ball.dy, maxSpeed);
+			ball.speed = Math.min(ball.speed + 0.5, maxSpeed);
 		},
 		destroy: () => { }
 	}

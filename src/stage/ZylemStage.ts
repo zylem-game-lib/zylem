@@ -6,7 +6,7 @@ import { ZylemBox, ZylemSphere } from "./objects";
 import { UpdateOptions } from "@/interfaces/Update";
 import { Moveable } from "./objects/Moveable";
 import { Interactive } from "./objects/Interactive";
-import { GameState, StageState } from "@/state";
+import { gameState, setStageState } from "@/state";
 import { Conditions, StageOptions } from "@/interfaces/Game";
 
 export class ZylemStage implements Entity<ZylemStage> {
@@ -23,7 +23,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 	}
 
 	async buildStage(options: StageOptions, id: string) {
-		StageState.state.backgroundColor = options.backgroundColor;
+		setStageState('backgroundColor', options.backgroundColor);
 		this.scene = new ZylemScene(id);
 		this.scene._setup = options.setup;
 		const physicsWorld = await ZylemWorld.loadPhysics();
@@ -40,6 +40,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 		}
 		this.scene.setup();
 		for (let blueprint of this.blueprints) {
+			console.log(blueprint);
 			const BlueprintType = BlueprintMap[blueprint.type];
 			const MoveableType = Moveable(BlueprintType);
 			const InteractiveType = Interactive(MoveableType);
@@ -49,11 +50,14 @@ export class ZylemStage implements Entity<ZylemStage> {
 			if (entity.mesh) {
 				this.scene.scene.add(entity.mesh);
 			}
+			if (blueprint.props) {
+				for (let key in blueprint.props) {
+					entity[key] = blueprint.props[key];
+				}
+			}
+			console.log(entity);
 			this.world.addEntity(entity);
 			this.children.push(entity);
-			if (blueprint.props) {
-				entity._props = blueprint.props;
-			}
 			if (blueprint.collision) {
 				entity._collision = blueprint.collision;
 			}
@@ -83,7 +87,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 			child.update(delta, {
 				inputs: options.inputs,
 				entity: child,
-				globals: GameState.state.globals
+				globals: gameState.globals
 			});
 		}
 		this.scene.update(delta);

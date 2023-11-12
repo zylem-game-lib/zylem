@@ -7,22 +7,12 @@ export interface Entity<T> {
 	destroy: () => void;
 	update: (delta: number, options: UpdateOptions<Entity<T>>) => void;
 	_type: string;
-	_props?: { [key: string]: any };
 	_collision?: (entity: any, other: any) => void;
 	name?: string;
 	tag?: Set<string>;
 }
 
-export abstract class EntityClass {
-	_props?: { [key: string]: any };
-
-	getProps(key: string = '') {
-		if (key === '') {
-			return this._props;
-		}
-		return this._props ? this._props[key] : null;
-	}
-}
+export abstract class EntityClass<T extends Record<string, any> = any> { }
 
 export interface EntityBlueprint<T> extends Entity<T> {
 	name: string;

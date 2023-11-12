@@ -4,7 +4,7 @@ import { ZylemStage } from '@/stage/ZylemStage';
 import { Clock } from 'three';
 import { GameOptions, StageOptions } from '../interfaces/Game';
 import { PerspectiveType } from "../interfaces/Perspective";
-import { GameState } from '@state/index';
+import { gameState, setGameState } from '@state/index';
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
@@ -23,8 +23,8 @@ export class ZylemGame implements GameOptions {
 	_canvasWrapper: Element | null;
 
 	constructor(options: GameOptions) {
-		GameState.state.perspective = options.perspective;
-		GameState.state.globals = options.globals;
+		setGameState('perspective', options.perspective);
+		setGameState('globals', options.globals);
 		this._initialGlobals = { ...options.globals };
 		this.id = options.id;
 		this.gamePad = new GamePad();
@@ -60,7 +60,7 @@ export class ZylemGame implements GameOptions {
 		} as unknown as UpdateOptions<ZylemStage>;
 		stage.update(ticks, options);
 		stage.conditions.forEach(condition => {
-			condition(GameState.state.globals, this);
+			condition(gameState.globals, this);
 		});
 		const self = this;
 		requestAnimationFrame(() => {
@@ -76,7 +76,7 @@ export class ZylemGame implements GameOptions {
 	reset(resetGlobals = true) {
 		// TODO: this needs cleanup
 		if (resetGlobals) {
-			GameState.state.globals = { ...this._initialGlobals };
+			setGameState('globals', { ...this._initialGlobals });
 		}
 		this.loadStage(this.stage);
 	}

@@ -17,8 +17,8 @@ export function Paddle(inputKey, side: BoardSide, y = 0) {
 		setup: (entity) => {
 			entity.setPosition(board[side], y, 0);
 		},
-		update: (_delta, { entity, inputs }) => {
-			const { y } = entity.getPosition();
+		update: (_delta, { entity: paddle, inputs }) => {
+			const { y } = paddle.getPosition();
 			const { moveUp, moveDown, buttonW, buttonY } = inputs[inputKey];
 			// console.log(inputs);
 			// TODO: kind of hacky should handle this better
@@ -27,11 +27,11 @@ export function Paddle(inputKey, side: BoardSide, y = 0) {
 			const canMoveUp = y < board.top;
 			const canMoveDown = y > board.bottom;
 			if (upPressed && canMoveUp) {
-				entity.moveY(paddleSpeed);
+				paddle.moveY(paddleSpeed);
 			} else if (downPressed && canMoveDown) {
-				entity.moveY(-paddleSpeed);
+				paddle.moveY(-paddleSpeed);
 			} else {
-				entity.moveY(0);
+				paddle.moveY(0);
 			}
 		},
 		destroy: () => { }

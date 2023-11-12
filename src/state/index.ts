@@ -1,2 +1,2 @@
-export * as GameState from './GameState';
-export * as StageState from './StageState';
+export { gameState, setGameState } from './GameState';
+export { stageState, setStageState } from './StageState';
