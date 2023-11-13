@@ -18,8 +18,8 @@ export function Paddle() {
 		update: (_delta, { entity: paddle, inputs }) => {
 			const { x } = paddle.getPosition();
 			const { moveRight, moveLeft } = inputs[0];
-			const canMoveRight = x < board.right - 4;
-			const canMoveLeft = x > board.left + 4;
+			const canMoveRight = x < board.right;
+			const canMoveLeft = x > board.left;
 			if (moveRight && canMoveRight) {
 				paddle.moveX(paddleSpeed);
 			} else if (moveLeft && canMoveLeft) {

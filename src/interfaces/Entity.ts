@@ -2,7 +2,7 @@ import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compa
 import { Mesh, Vector3 } from "three";
 import { UpdateOptions } from "./Update";
 
-export interface Entity<T> {
+export interface Entity<T = any> {
 	setup: (entity: T) => void;
 	destroy: () => void;
 	update: (delta: number, options: UpdateOptions<Entity<T>>) => void;

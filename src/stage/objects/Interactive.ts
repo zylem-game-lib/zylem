@@ -19,7 +19,11 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 		}
 
 		update(delta: number, { inputs, globals }: any) {
+			// TODO: it's possible that we want to create an entity without a body or mesh?
 			if (!this.body) {
+				return;
+			}
+			if (!this.mesh) {
 				return;
 			}
 			const { x, y, z } = this.body.translation();

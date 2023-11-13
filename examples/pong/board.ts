@@ -6,6 +6,6 @@ export enum BoardSide {
 export const board = {
 	top: 10,
 	bottom: -10,
-	left: -20,
-	right: 20
+	left: -15,
+	right: 15
 };

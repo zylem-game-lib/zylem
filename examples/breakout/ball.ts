@@ -44,13 +44,28 @@ export function Ball(startY = 0) {
 			const velY = dy * ball.speed;
 			ball.moveXY(dx, velY);
 		},
-		collision: (ball, paddle) => {
-			sound.play();
-			const paddleSpeed = paddle.getVelocity().x;
-			ball.dx += (paddleSpeed / 8);
-			ball.dx = Math.min(ball.dx, maxSpeed);
-			ball.dy = 1;
-			ball.speed = Math.min(ball.speed + 0.5, maxSpeed);
+		collision: (ball, other) => {
+			if (other.name === 'paddle') {
+				sound.play();
+				const paddleSpeed = other.getVelocity().x;
+				ball.dx += (paddleSpeed / 8);
+				ball.dx = Math.min(ball.dx, maxSpeed);
+				ball.dy = 1;
+				ball.speed = Math.min(ball.speed + 0.5, maxSpeed);
+			}
+			if (other.name === 'brick') {
+				const { x, y } = ball.getPosition();
+				const { y: brickY } = other.getPosition();
+				sound.play();
+				other.health--;
+				if (brickY > y) {
+					ball.setPosition(x, brickY - 0.5, 0);
+					ball.dy = -1;
+				} else if (brickY < y) {
+					ball.setPosition(x, brickY + 0.5, 0);
+					ball.dy = 1;
+				}
+			}
 		},
 		destroy: () => { }
 	}

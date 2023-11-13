@@ -1,6 +1,7 @@
-import { Vector3 } from 'three';
+import { Color, Vector3 } from 'three';
 import Zylem from '../../src';
 const { Box } = Zylem.GameEntityType;
+const { destroy } = Zylem;
 
 export function Brick(posX, posY) {
 	return {
@@ -8,24 +9,23 @@ export function Brick(posX, posY) {
 		type: Box,
 		size: new Vector3(2, 0.5, 1),
 		props: {
-			health: 2
+			health: 2,
 		},
 		setup: (entity) => {
 			entity.setPosition(posX, posY, 0);
 		},
 		update: (_delta, { entity: brick }) => {
-			// console.log(brick);
-		},
-		collision: (brick, other) => {
-			if (other.name === 'ball') {
-				brick.health--;
+			if (brick.health === 1) {
+				brick.mesh.material.color = new Color('aqua');
 			}
+		},
+		collision: (brick) => {
 			if (brick.health === 0) {
-				brick.setPosition(-100, -100, 0);
+				destroy(brick);
 			}
 		},
-		destroy: () => {
-
+		destroy: (globals) => {
+			console.log('destroy: ', globals);
 		}
 	}
 }
