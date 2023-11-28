@@ -6,7 +6,7 @@ import { ZylemBox, ZylemSphere } from "./objects";
 import { UpdateOptions } from "@/interfaces/Update";
 import { Moveable } from "./objects/Moveable";
 import { Interactive } from "./objects/Interactive";
-import { gameState, setStageState } from "@/state";
+import { gameState, setGameState, setStageState } from "@/state";
 import { Conditions, StageOptions } from "@/interfaces/Game";
 
 export class ZylemStage implements Entity<ZylemStage> {
@@ -28,7 +28,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 		this.scene._setup = options.setup;
 		const physicsWorld = await ZylemWorld.loadPhysics();
 		this.world = new ZylemWorld(physicsWorld);
-		this.blueprints = options.children() || [];
+		this.blueprints = options.children({ gameState, setGameState }) || [];
 		this.conditions = options.conditions;
 		await this.setup();
 	}
@@ -58,6 +58,9 @@ export class ZylemStage implements Entity<ZylemStage> {
 			this.children.push(entity);
 			if (blueprint.collision) {
 				entity._collision = blueprint.collision;
+			}
+			if (blueprint.destroy) {
+				entity._destroy = blueprint.destroy;
 			}
 			if (typeof blueprint.update !== 'function') {
 				console.warn(`Entity ${blueprint.name} is missing an update function.`);

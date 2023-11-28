@@ -29,6 +29,6 @@ export type Conditions<T> = (globals: Concrete<T>, game: ZylemGame, HUD?: ZylemH
 export interface StageOptions {
 	backgroundColor: number;
 	setup: (scene: ZylemScene, HUD: ZylemHUD) => void;
-	children: () => any[];
+	children: (globals?: any) => any[];
 	conditions: Array<Conditions<GameOptions["globals"]>>;
 }

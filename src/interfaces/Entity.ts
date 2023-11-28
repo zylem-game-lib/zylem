@@ -7,7 +7,8 @@ export interface Entity<T = any> {
 	destroy: () => void;
 	update: (delta: number, options: UpdateOptions<Entity<T>>) => void;
 	_type: string;
-	_collision?: (entity: any, other: any) => void;
+	_collision?: (entity: any, other: any, globals?: any) => void;
+	_destroy?: (globals?: any) => void;
 	name?: string;
 	tag?: Set<string>;
 }

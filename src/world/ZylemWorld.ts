@@ -1,4 +1,5 @@
 import { Entity, GameEntity } from '../interfaces/Entity';
+import { gameState } from '../state';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
@@ -51,7 +52,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 					return;
 				}
 				if (entity._collision) {
-					entity._collision(entity, gameEntity);
+					entity._collision(entity, gameEntity, { gameState });
 				}
 			})
 		}

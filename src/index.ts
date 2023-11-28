@@ -1,4 +1,5 @@
 import { ZylemGame } from './game/ZylemGame';
+import { gameState } from './state';
 import { GameOptions } from './interfaces/Game';
 import { Entity, GameEntityType } from './interfaces/Entity';
 import { ZylemDebug } from './game/ZylemDebug';
@@ -27,7 +28,7 @@ function destroy(entity: Entity) {
 	// @ts-ignore
 	entity.mesh = undefined;
 	// @ts-ignore
-	entity.body.setEnabled(false)
+	entity.body.setEnabled(false);
 }
 
 const Zylem = {

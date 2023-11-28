@@ -1,4 +1,5 @@
 import { Constructor } from "./Composable";
+import { gameState } from "@/state";
 
 export function Interactive<CBase extends Constructor>(Base: CBase) {
 	return class Interactive extends Base {
@@ -15,7 +16,7 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			if (this._destroy === undefined) {
 				return;
 			}
-			this._destroy(this);
+			this._destroy(gameState);
 		}
 
 		update(delta: number, { inputs, globals }: any) {
@@ -30,6 +31,7 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			const { x: rx, y: ry, z: rz } = this.body.rotation();
 			this.mesh.position.set(x, y, z);
 			this.mesh.rotation.set(rx, ry, rz);
+			// TODO: inputs should not go here
 			const _inputs = inputs ?? { moveUp: false, moveDown: false };
 			if (this._update === undefined) {
 				return;
