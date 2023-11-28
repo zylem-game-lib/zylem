@@ -24,8 +24,9 @@ export function Brick(posX, posY) {
 				destroy(brick);
 			}
 		},
-		destroy: (globals) => {
-			console.log('destroy: ', globals);
+		destroy: (gameState) => {
+			gameState.globals.bricks--;
+			gameState.globals.score += 100;
 		}
 	}
 }

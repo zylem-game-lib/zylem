@@ -10,6 +10,13 @@ const sound = new Howl({
 const maxSpeed = 18.0;
 
 export function Ball(startY = 0) {
+	const resetBall = (ball) => {
+		ball.setPosition(0, startY, 0);
+		ball.dy = -1;
+		ball.dx = 0;
+		ball.speed = 10;
+	}
+
 	return {
 		name: 'ball',
 		type: Sphere,
@@ -20,15 +27,17 @@ export function Ball(startY = 0) {
 			speed: 10
 		},
 		setup(entity) {
-			entity.setPosition(0, startY, 0);
+			resetBall(entity);
 		},
+		// Update is being called multiple times per collision
 		update(_delta, { entity: ball, globals }) {
 			const { dx, dy } = ball;
 			const { x, y } = ball.getPosition();
 
-			if (y < board.bottom) {
-				ball.setPosition(x, board.bottom, 0);
-				ball.dy = Math.abs(ball.dy);
+			if (y < board.bottom - 5 && globals.lives > 0) {
+				resetBall(ball);
+				globals.lives--;
+				return;
 			} else if (y > board.top) {
 				ball.setPosition(x, board.top, 0);
 				ball.dy = -(Math.abs(ball.dy));
@@ -44,7 +53,7 @@ export function Ball(startY = 0) {
 			const velY = dy * ball.speed;
 			ball.moveXY(dx, velY);
 		},
-		collision: (ball, other) => {
+		collision: (ball, other, { gameState }) => {
 			if (other.name === 'paddle') {
 				sound.play();
 				const paddleSpeed = other.getVelocity().x;
@@ -65,6 +74,9 @@ export function Ball(startY = 0) {
 					ball.setPosition(x, brickY + 0.5, 0);
 					ball.dy = 1;
 				}
+			}
+			if (other.health > 0) {
+				gameState.globals.score += 25;
 			}
 		},
 		destroy: () => { }
