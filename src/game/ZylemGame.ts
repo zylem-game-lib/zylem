@@ -22,6 +22,10 @@ export class ZylemGame implements GameOptions {
 	gamePad: GamePad;
 	_canvasWrapper: Element | null;
 
+	previousTimeStamp: number = 0;
+	// TODO: startTimeStamp could be nice for total game time
+	startTimeStamp: number = 0;
+
 	constructor(options: GameOptions) {
 		setGameState('perspective', options.perspective);
 		setGameState('globals', options.globals);
@@ -49,28 +53,32 @@ export class ZylemGame implements GameOptions {
 	 * update physics
 	 * render scene
 	 */
-	async gameLoop() {
+	async gameLoop(_timeStamp: number) {
 		const inputs = this.gamePad.getInputs();
 		const ticks = this.clock.getDelta();
+		if (this.previousTimeStamp !== _timeStamp) {
+			const stage = this.stages[this.currentStage];
+			const options = {
+				inputs,
+				entity: stage
+			} as unknown as UpdateOptions<ZylemStage>;
+			stage.update(ticks, options);
+			stage.conditions.forEach(condition => {
+				condition(gameState.globals, this);
+			});
+		}
 
-		const stage = this.stages[this.currentStage];
-		const options = {
-			inputs,
-			entity: stage
-		} as unknown as UpdateOptions<ZylemStage>;
-		stage.update(ticks, options);
-		stage.conditions.forEach(condition => {
-			condition(gameState.globals, this);
-		});
-		const self = this;
-		requestAnimationFrame(() => {
-			this.blueprintOptions?.debug?.addInfo(this.gamePad.getDebugInfo());
-			self.gameLoop();
+		// TODO: this.blueprintOptions?.debug?.addInfo(this.gamePad.getDebugInfo());
+		this.previousTimeStamp = _timeStamp;
+		requestAnimationFrame((timeStamp) => {
+			this.gameLoop(timeStamp);
 		});
 	}
 
 	start() {
-		this.gameLoop();
+		requestAnimationFrame(async (timeStamp) => {
+			this.gameLoop(timeStamp);
+		});
 	}
 
 	reset(resetGlobals = true) {
