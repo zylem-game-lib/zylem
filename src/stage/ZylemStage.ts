@@ -2,7 +2,7 @@
 import { ZylemWorld } from "../world/ZylemWorld";
 import { ZylemScene } from "../scene/ZylemScene";
 import { Entity, EntityBlueprint } from "../interfaces/Entity";
-import { ZylemBox, ZylemSphere } from "./objects";
+import { ZylemBox, ZylemSphere, ZylemSprite } from "./objects";
 import { UpdateOptions } from "@/interfaces/Update";
 import { Moveable } from "./objects/Moveable";
 import { Interactive } from "./objects/Interactive";
@@ -106,4 +106,5 @@ export class ZylemStage implements Entity<ZylemStage> {
 const BlueprintMap = {
 	'Box': ZylemBox,
 	'Sphere': ZylemSphere,
+	'Sprite': ZylemSprite,
 }

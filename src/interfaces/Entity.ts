@@ -38,11 +38,13 @@ export interface EntityOptions {
 	setup: (entity: any) => void;
 	size?: Vector3;
 	radius?: number;
+	images?: string[];
 }
 
 export enum GameEntityType {
 	Box = 'Box',
 	Sphere = 'Sphere',
+	Sprite = 'Sprite',
 }
 
 // TODO: use generic Entity class for shared methods

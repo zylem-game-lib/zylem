@@ -1,5 +1,4 @@
 import { ZylemGame } from './game/ZylemGame';
-import { gameState } from './state';
 import { GameOptions } from './interfaces/Game';
 import { Entity, GameEntityType } from './interfaces/Entity';
 import { ZylemDebug } from './game/ZylemDebug';
@@ -10,7 +9,7 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 const debug = new ZylemDebug();
 
 function create(options: GameOptions) {
-	debug.appendToDOM();
+	// debug.appendToDOM();
 	options.debug = debug;
 	return new ZylemGame(options);
 }
