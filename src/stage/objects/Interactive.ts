@@ -39,5 +39,10 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			this._update(delta, { inputs: _inputs, entity: this, globals });
 		}
 
+		spawn(T: any, options: any) {
+			const stage = this.stageRef;
+			stage?.spawnEntity(T(options));
+		}
+
 	};
 }

@@ -17,6 +17,7 @@ export class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> 
 	images?: string[] | undefined;
 	spriteIndex: number = 0;
 	sprites: Sprite[] = [];
+	size: Vector3 = new Vector3(1, 1, 1);
 
 	constructor(options: EntityOptions) {
 		super();
@@ -48,8 +49,8 @@ export class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> 
 
 	createMesh(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
 		this.createSpritesFromImages();
-
-		const geometry = new BoxGeometry(1, 1, 1);
+		this.size = vector3;
+		const geometry = new BoxGeometry(vector3.x, vector3.y, vector3.z);
 		// TODO: attach to scene directly mesh is probably suboptimal
 		const material2 = new MeshStandardMaterial({
 			transparent: true,
@@ -74,6 +75,7 @@ export class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> 
 			const spriteMap = textureLoader.load('assets/' + image);
 			const material = new SpriteMaterial({
 				map: spriteMap,
+				transparent: true,
 			});
 			const sprite = new Sprite(material);
 			sprite.position.normalize();
@@ -82,7 +84,8 @@ export class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> 
 	}
 
 	createCollider(isSensor: boolean = false) {
-		const size = new Vector3(1, 1, 1);
+		const { x, y, z } = this.size;
+		const size = new Vector3(x, y, z);
 		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
 		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
 		colliderDesc.setSensor(isSensor);

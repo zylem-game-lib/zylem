@@ -40,37 +40,45 @@ export class ZylemStage implements Entity<ZylemStage> {
 		}
 		this.scene.setup();
 		for (let blueprint of this.blueprints) {
-			const BlueprintType = BlueprintMap[blueprint.type];
-			const MoveableType = Moveable(BlueprintType);
-			const InteractiveType = Interactive(MoveableType);
-
-			const entity = new InteractiveType(blueprint);
-			entity.name = blueprint.name;
-			if (entity.mesh) {
-				this.scene.scene.add(entity.mesh);
-			}
-			if (blueprint.props) {
-				for (let key in blueprint.props) {
-					entity[key] = blueprint.props[key];
-				}
-			}
-			this.world.addEntity(entity);
-			this.children.push(entity);
-			if (blueprint.collision) {
-				entity._collision = blueprint.collision;
-			}
-			if (blueprint.destroy) {
-				entity._destroy = blueprint.destroy;
-			}
-			if (typeof blueprint.update !== 'function') {
-				console.warn(`Entity ${blueprint.name} is missing an update function.`);
-			}
-			if (typeof blueprint.setup !== 'function') {
-				console.warn(`Entity ${blueprint.name} is missing a setup function.`);
-				continue;
-			}
-			blueprint.setup(entity);
+			this.spawnEntity(blueprint, {});
 		}
+	}
+
+	spawnEntity(blueprint: EntityBlueprint<any>, options: any) {
+		if (!this.scene || !this.world) {
+			return;
+		}
+		const BlueprintType = BlueprintMap[blueprint.type];
+		const MoveableType = Moveable(BlueprintType);
+		const InteractiveType = Interactive(MoveableType);
+
+		const entity = new InteractiveType(blueprint);
+		entity.name = blueprint.name;
+		if (entity.mesh) {
+			this.scene.scene.add(entity.mesh);
+		}
+		if (blueprint.props) {
+			for (let key in blueprint.props) {
+				entity[key] = blueprint.props[key];
+			}
+		}
+		entity.stageRef = this;
+		this.world.addEntity(entity);
+		this.children.push(entity);
+		if (blueprint.collision) {
+			entity._collision = blueprint.collision;
+		}
+		if (blueprint.destroy) {
+			entity._destroy = blueprint.destroy;
+		}
+		if (typeof blueprint.update !== 'function') {
+			console.warn(`Entity ${blueprint.name} is missing an update function.`);
+		}
+		if (typeof blueprint.setup !== 'function') {
+			console.warn(`Entity ${blueprint.name} is missing a setup function.`);
+			return;
+		}
+		blueprint.setup(entity);
 	}
 
 	destroy() {
