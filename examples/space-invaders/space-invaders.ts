@@ -11,13 +11,6 @@ const game = Zylem.create({
 		score: 0,
 		lives: 3,
 		invaders: 0,
-		invaderSpeed: 0.5,
-		invaderDirection: 1,
-		invaderDrop: 0.5,
-		invaderDropSpeed: 0.5,
-		invaderFireRate: 0.01,
-		invaderFireChance: 0.01,
-		invaderFireSpeed: 0.5,
 	},
 	stage: {
 		backgroundColor: Color.NAMES.black,
@@ -42,7 +35,7 @@ const game = Zylem.create({
 		},
 		children: ({ gameState }) => {
 			const invaders: any[] = [];
-			for (let i = -8; i <= 8; i += 4) {
+			for (let i = -8; i <= 8; i += 2) {
 				for (let j = 8; j >= 4; j -= 2) {
 					const invader = Invader(i, j);
 					invaders.push(invader);
