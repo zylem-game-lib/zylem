@@ -11,9 +11,9 @@ import {
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { ZylemCamera } from './ZylemCamera';
 import RenderPass from './rendering/RenderPass';
-import { Entity, GameEntity } from '@interfaces/Entity';
-import { stageState } from '@/state';
-import { ZylemHUD } from '@/game/ZylemHUD';
+import { Entity, GameEntity } from '../interfaces/Entity';
+import { stageState } from '../state';
+import { ZylemHUD } from '../game/ZylemHUD';
 
 export class ZylemScene implements Entity<ZylemScene> {
 	_type = 'Scene';

@@ -41,4 +41,4 @@ const Zylem = {
 	RAPIER
 };
 
-export default Zylem;
+export { Zylem };

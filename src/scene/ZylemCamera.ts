@@ -1,6 +1,6 @@
 import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera } from 'three';
-import { gameState } from '@state/index';
-import { PerspectiveType } from '@interfaces/Perspective';
+import { gameState } from '../state/index';
+import { PerspectiveType } from '../interfaces/Perspective';
 
 export class ZylemCamera {
 	cameraRig: Object3D;

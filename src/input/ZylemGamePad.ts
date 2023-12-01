@@ -1,10 +1,10 @@
 import { ControllerInput, GamePadConnections } from "../interfaces/GamePad";
-import { isMobile } from "@/device/Mobile";
+import { isMobile } from "../device/Mobile";
 import nipplejs, { JoystickManager } from 'nipplejs';
 
 export default class GamePad {
 	hasSupport = true;
-	mobileGamepad: JoystickManager;
+	mobileGamepad?: JoystickManager | null;
 	lastConnection = -1;
 	connections: GamePadConnections = new Map();
 	keyboardInput = new Map<string, boolean>();

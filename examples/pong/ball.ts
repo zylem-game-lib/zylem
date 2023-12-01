@@ -1,4 +1,4 @@
-import Zylem from '../../src/index';
+import { Zylem } from '../../src/main';
 const { Sphere } = Zylem.GameEntityType;
 import { board, BoardSide } from './board';
 const { Howl } = Zylem;

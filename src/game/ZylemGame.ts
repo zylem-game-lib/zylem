@@ -1,10 +1,10 @@
-import GamePad from '@/input/ZylemGamePad';
-import { UpdateOptions } from '@/interfaces/Update';
-import { ZylemStage } from '@/stage/ZylemStage';
+import GamePad from '../input/ZylemGamePad';
+import { UpdateOptions } from '../interfaces/Update';
+import { ZylemStage } from '../stage/ZylemStage';
 import { Clock } from 'three';
 import { GameOptions, StageOptions } from '../interfaces/Game';
 import { PerspectiveType } from "../interfaces/Perspective";
-import { gameState, setGameState } from '@state/index';
+import { gameState, setGameState } from '../state/index';
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.

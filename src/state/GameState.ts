@@ -1,5 +1,5 @@
-import { GameOptions } from '@interfaces/Game';
-import { PerspectiveType } from '@interfaces/Perspective';
+import { GameOptions } from '../interfaces/Game';
+import { PerspectiveType } from '../interfaces/Perspective';
 
 const state = {
 	id: '',

@@ -1,4 +1,4 @@
-import Zylem from '../../src/index';
+import { Zylem } from '../../src/main';
 import { Vector3 } from 'three';
 import { board } from './board';
 const { Box } = Zylem.GameEntityType;

@@ -3,11 +3,11 @@ import { ZylemWorld } from "../world/ZylemWorld";
 import { ZylemScene } from "../scene/ZylemScene";
 import { Entity, EntityBlueprint } from "../interfaces/Entity";
 import { ZylemBox, ZylemSphere, ZylemSprite } from "./objects";
-import { UpdateOptions } from "@/interfaces/Update";
+import { UpdateOptions } from "../interfaces/Update";
 import { Moveable } from "./objects/Moveable";
 import { Interactive } from "./objects/Interactive";
-import { gameState, setGameState, setStageState } from "@/state";
-import { Conditions, StageOptions } from "@/interfaces/Game";
+import { gameState, setGameState, setStageState } from "../state";
+import { Conditions, StageOptions } from "../interfaces/Game";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';

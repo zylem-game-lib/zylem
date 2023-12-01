@@ -1,4 +1,4 @@
-import { StageOptions } from '@interfaces/Game';
+import { StageOptions } from '../interfaces/Game';
 import { Color } from 'three';
 
 const initialState = {

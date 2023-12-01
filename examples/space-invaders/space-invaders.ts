@@ -1,5 +1,5 @@
 import { Color } from "three";
-import Zylem from "../../src";
+import { Zylem } from "../../src/main";
 import { PerspectiveType } from "../../src/interfaces/Perspective";
 import { Invader } from "./invader";
 import { Player } from "./player";

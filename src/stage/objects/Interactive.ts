@@ -1,5 +1,5 @@
 import { Constructor } from "./Composable";
-import { gameState } from "@/state";
+import { gameState } from "../../state";
 
 export function Interactive<CBase extends Constructor>(Base: CBase) {
 	return class Interactive extends Base {

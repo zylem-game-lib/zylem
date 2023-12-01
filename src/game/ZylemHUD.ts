@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { gameState } from '@state/index';
+import { gameState } from '../state/index';
 import SpriteText from 'three-spritetext';
 
 export interface HUDTextOptions {

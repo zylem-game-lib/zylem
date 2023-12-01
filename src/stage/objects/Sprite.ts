@@ -1,6 +1,6 @@
-import { EntityClass, EntityOptions, GameEntity } from "@/interfaces/Entity";
+import { EntityClass, EntityOptions, GameEntity } from "../../interfaces/Entity";
 import { RigidBody, RigidBodyDesc, ColliderDesc, RigidBodyType, ActiveCollisionTypes } from "@dimforge/rapier3d-compat";
-import { Mesh, BufferGeometry, Material, Vector3, TextureLoader, SRGBColorSpace, SpriteMaterial, Sprite, PlaneGeometry, BoxGeometry, MeshStandardMaterial } from "three";
+import { Mesh, BufferGeometry, Material, Vector3, TextureLoader, SpriteMaterial, Sprite, BoxGeometry, MeshStandardMaterial } from "three";
 
 export class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> {
 	mesh: Mesh<BufferGeometry, Material | Material[]>;

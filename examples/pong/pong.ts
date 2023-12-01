@@ -1,4 +1,4 @@
-import Zylem from '../../src/index';
+import { Zylem } from '../../src/main';
 import { Color, Vector3 } from 'three';
 import { PerspectiveType } from '../../src/interfaces/Perspective';
 import { BoardSide } from './board';

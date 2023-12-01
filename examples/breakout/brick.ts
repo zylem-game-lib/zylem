@@ -1,5 +1,5 @@
+import { Zylem } from '../../src/main';
 import { Color, Vector3 } from 'three';
-import Zylem from '../../src';
 const { Box } = Zylem.GameEntityType;
 const { destroy } = Zylem;
 
