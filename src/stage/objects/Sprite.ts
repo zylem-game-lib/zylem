@@ -72,7 +72,7 @@ export class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> 
 	createSpritesFromImages() {
 		const textureLoader = new TextureLoader();
 		this.images?.forEach((image) => {
-			const spriteMap = textureLoader.load('assets/' + image);
+			const spriteMap = textureLoader.load(image);
 			const material = new SpriteMaterial({
 				map: spriteMap,
 				transparent: true,

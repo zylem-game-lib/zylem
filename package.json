@@ -1,6 +1,6 @@
 {
 	"name": "@tcool86/zylem",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"description": "A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.",
 	"license": "MIT",
 	"author": "Tim Cool",
