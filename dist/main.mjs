@@ -26734,7 +26734,7 @@ class ZM extends ua {
     var g;
     const I = new ah();
     (g = this.images) == null || g.forEach((C) => {
-      const B = I.load("assets/" + C), i = new Qi({
+      const B = I.load(C), i = new Qi({
         map: B,
         transparent: !0
       }), E = new Qo(i);
