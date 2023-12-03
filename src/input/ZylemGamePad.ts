@@ -18,7 +18,10 @@ export default class GamePad {
 		window.addEventListener("gamepaddisconnected", ({ gamepad }) => this.connections.delete(gamepad.index));
 		window.addEventListener("keydown", ({ key }) => this.keyboardInput.set(key, true));
 		window.addEventListener("keyup", ({ key }) => this.keyboardInput.set(key, false));
-		this.mobileGamepad = nipplejs.create({ mode: 'dynamic' });
+		// TODO: restrick virtual joystick to screen area
+		if (isMobile()) {
+			this.mobileGamepad = nipplejs.create({ mode: 'dynamic' });
+		}
 	}
 
 	scanGamePads() {
