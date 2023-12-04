@@ -13,7 +13,7 @@ export function Paddle() {
 		size: paddleSize,
 		props: {},
 		setup: (entity) => {
-			entity.setPosition(10, -10, 0);
+			entity.setPosition(0, -10, 0);
 		},
 		update: (_delta, { entity: paddle, inputs }) => {
 			const { x } = paddle.getPosition();
