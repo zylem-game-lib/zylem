@@ -24,6 +24,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 	renderer!: WebGLRenderer;
 	composer!: EffectComposer;
 	zylemCamera!: ZylemCamera;
+	containerElement: HTMLElement | null = null;
 
 	constructor(id: string) {
 		const scene = new Scene();
@@ -41,6 +42,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 		if (element.firstChild) {
 			element.removeChild(element.firstChild);
 		}
+		this.containerElement = element;
 		element.appendChild(this.renderer.domElement);
 	}
 
@@ -88,7 +90,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	setupRenderer() {
-		const screenResolution = new Vector2(window.innerWidth, window.innerHeight);
+		const width = this.containerElement?.clientWidth || window.innerWidth;
+		const height = this.containerElement?.clientHeight || window.innerHeight;
+		const screenResolution = new Vector2(width, height);
 		this.screenResolution = screenResolution;
 
 		this.renderer = new WebGLRenderer({ antialias: false });

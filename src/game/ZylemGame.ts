@@ -87,6 +87,7 @@ export class ZylemGame implements GameOptions {
 			setGameState('globals', { ...this._initialGlobals });
 		}
 		this.loadStage(this.stage);
+		this.delayedResize();
 	}
 
 	createStage(id: string) {
@@ -99,14 +100,20 @@ export class ZylemGame implements GameOptions {
 	}
 
 	handleResize() {
-		const rawWidth = window.innerWidth;
-		const rawHeight = window.innerHeight;
-		const width = `${window.innerWidth}px`;
-		const height = `${window.innerHeight}px`;
+		const rawWidth = this._canvasWrapper?.clientWidth || window.innerWidth;
+		const rawHeight = this._canvasWrapper?.clientHeight || window.innerHeight;
+		const width = `${rawWidth}px`;
+		const height = `${rawHeight}px`;
 		const canvas = this._canvasWrapper?.querySelector('canvas');
 		canvas?.style.setProperty('width', width);
 		canvas?.style.setProperty('height', height);
 		this.stages[this.id].resize(rawWidth, rawHeight);
+	}
+
+	delayedResize() {
+		setTimeout(() => {
+			this.handleResize();
+		}, 0);
 	}
 
 	createCanvas() {
@@ -124,8 +131,11 @@ export class ZylemGame implements GameOptions {
 			canvasWrapper.setAttribute('id', this.id);
 			document.body.appendChild(canvasWrapper);
 		}
+		canvas.style.setProperty('width', `${canvasWrapper.clientWidth}px`);
+		canvas.style.setProperty('height', `${canvasWrapper.clientHeight}px`);
 		canvasWrapper.appendChild(canvas);
 		this._canvasWrapper = canvasWrapper;
+		this.delayedResize();
 		window.addEventListener("resize", () => {
 			this.handleResize();
 		});
