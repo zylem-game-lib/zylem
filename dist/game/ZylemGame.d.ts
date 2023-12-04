@@ -30,6 +30,7 @@ export declare class ZylemGame implements GameOptions {
     reset(resetGlobals?: boolean): void;
     createStage(id: string): void;
     handleResize(): void;
+    delayedResize(): void;
     createCanvas(): HTMLElement | undefined;
 }
 export default ZylemGame;

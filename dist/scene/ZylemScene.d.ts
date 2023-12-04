@@ -12,6 +12,7 @@ export declare class ZylemScene implements Entity<ZylemScene> {
     renderer: WebGLRenderer;
     composer: EffectComposer;
     zylemCamera: ZylemCamera;
+    containerElement: HTMLElement | null;
     constructor(id: string);
     setup(): void;
     destroy(): void;
