@@ -9,6 +9,8 @@ import { gameState, setGameState } from '../state/index';
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
 
+const TIMESTAMP_DELTA = 16;
+
 export class ZylemGame implements GameOptions {
 	id: string;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
@@ -56,7 +58,9 @@ export class ZylemGame implements GameOptions {
 	async gameLoop(_timeStamp: number) {
 		const inputs = this.gamePad.getInputs();
 		const ticks = this.clock.getDelta();
-		if (this.previousTimeStamp !== _timeStamp) {
+		const delta = this.previousTimeStamp ? _timeStamp - this.previousTimeStamp : TIMESTAMP_DELTA;
+
+		if (this.previousTimeStamp !== _timeStamp && delta >= TIMESTAMP_DELTA) {
 			const stage = this.stages[this.currentStage];
 			const options = {
 				inputs,
@@ -66,10 +70,9 @@ export class ZylemGame implements GameOptions {
 			stage.conditions.forEach(condition => {
 				condition(gameState.globals, this);
 			});
+			this.previousTimeStamp = _timeStamp;
 		}
 
-		// TODO: this.blueprintOptions?.debug?.addInfo(this.gamePad.getDebugInfo());
-		this.previousTimeStamp = _timeStamp;
 		requestAnimationFrame((timeStamp) => {
 			this.gameLoop(timeStamp);
 		});
