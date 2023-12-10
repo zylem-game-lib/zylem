@@ -39,7 +39,7 @@
 		"build:watch": "tsc && vite build --watch && typedoc",
 		"test": "npx jest",
 		"start": "vite",
-		"dev": "vite && typedoc",
+		"dev": "vite --host && typedoc",
 		"serve": "vite preview",
 		"docs": "yarn typedoc"
 	},
