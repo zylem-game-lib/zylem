@@ -41,4 +41,4 @@ const Zylem = {
 	RAPIER
 };
 
-export { Zylem };
+export { Zylem, Howl, THREE, RAPIER };
