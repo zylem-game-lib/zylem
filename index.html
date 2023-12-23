@@ -6,21 +6,31 @@
 		<title>Zylem - Playground</title>
 		<style>
 			body {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				width: 100vw;
+				height: 100vh;
 				margin: 0;
 				padding: 0;
 				overflow: hidden;
 			}
+			.game-container {
+				width: 90%;
+				height: 90%;
+			}
 		</style>
 	</head>
 
-	<body style="display: flex">
-		<div style="width: 30vw; height: 100%">testing</div>
-		<div id="breakout" style="width: 1280px; height: 768px"></div>
+	<body>
 		<!-- <script src="./examples/pong/pong.ts" type="module"></script> -->
-		<script src="./examples/breakout/breakout.ts" type="module"></script>
-		<!-- <script
+		<!-- <script src="./examples/breakout/breakout.ts" type="module"></script> -->
+		<div class="game-container">
+			<main id="space-invaders"></main>
+		</div>
+		<script
 			src="./examples/space-invaders/space-invaders.ts"
 			type="module"
-		></script> -->
+		></script>
 	</body>
 </html>
