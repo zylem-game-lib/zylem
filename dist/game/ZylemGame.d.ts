@@ -1,10 +1,12 @@
 import GamePad from '../input/ZylemGamePad';
 import { ZylemStage } from '../stage/ZylemStage';
 import { Clock } from 'three';
-import { GameOptions, StageOptions } from '../interfaces/Game';
+import { GameOptions, GameRatio, StageOptions } from '../interfaces/Game';
 import { PerspectiveType } from "../interfaces/Perspective";
 export declare class ZylemGame implements GameOptions {
     id: string;
+    ratio: GameRatio;
+    _targetRatio: number;
     perspective: PerspectiveType;
     globals: any;
     _initialGlobals: any;
@@ -29,8 +31,10 @@ export declare class ZylemGame implements GameOptions {
     start(): void;
     reset(resetGlobals?: boolean): void;
     createStage(id: string): void;
-    handleResize(): void;
     delayedResize(): void;
-    createCanvas(): HTMLElement | undefined;
+    handleResize(): void;
+    setCanvasSize(width: number, height: number): void;
+    createInitialStyles(): void;
+    createCanvas(): void;
 }
 export default ZylemGame;

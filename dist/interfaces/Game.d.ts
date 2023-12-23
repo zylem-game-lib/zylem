@@ -5,8 +5,10 @@ import { PerspectiveType } from './Perspective';
 import ZylemGame from '@/game/ZylemGame';
 import { ZylemScene } from '@/scene/ZylemScene';
 import { ZylemHUD } from '@/game/ZylemHUD';
+export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
 export interface GameOptions {
     id: string;
+    ratio?: GameRatio;
     perspective: PerspectiveType;
     globals: Record<string, any>;
     stage: StageOptions;

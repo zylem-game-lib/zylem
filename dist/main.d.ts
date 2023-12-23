@@ -14,4 +14,4 @@ declare const Zylem: {
     THREE: typeof THREE;
     RAPIER: typeof RAPIER;
 };
-export { Zylem };
+export { Zylem, Howl, THREE, RAPIER };
