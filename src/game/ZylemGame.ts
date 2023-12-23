@@ -2,7 +2,7 @@ import GamePad from '../input/ZylemGamePad';
 import { UpdateOptions } from '../interfaces/Update';
 import { ZylemStage } from '../stage/ZylemStage';
 import { Clock } from 'three';
-import { GameOptions, StageOptions } from '../interfaces/Game';
+import { GameOptions, GameRatio, StageOptions } from '../interfaces/Game';
 import { PerspectiveType } from "../interfaces/Perspective";
 import { gameState, setGameState } from '../state/index';
 
@@ -13,6 +13,8 @@ const TIMESTAMP_DELTA = 16;
 
 export class ZylemGame implements GameOptions {
 	id: string;
+	ratio: GameRatio;
+	_targetRatio: number;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
 	globals: any;
 	_initialGlobals: any;
@@ -33,6 +35,8 @@ export class ZylemGame implements GameOptions {
 		setGameState('globals', options.globals);
 		this._initialGlobals = { ...options.globals };
 		this.id = options.id;
+		this.ratio = options.ratio ?? '16:9';
+		this._targetRatio = Number(this.ratio.split(':')[0]) / Number(this.ratio.split(':')[1]);
 		this.gamePad = new GamePad();
 		this.clock = new Clock();
 		this.blueprintOptions = options;
@@ -102,21 +106,50 @@ export class ZylemGame implements GameOptions {
 		// this.currentStage = id;
 	}
 
-	handleResize() {
-		const rawWidth = this._canvasWrapper?.clientWidth || window.innerWidth;
-		const rawHeight = this._canvasWrapper?.clientHeight || window.innerHeight;
-		const width = `${rawWidth}px`;
-		const height = `${rawHeight}px`;
-		const canvas = this._canvasWrapper?.querySelector('canvas');
-		canvas?.style.setProperty('width', width);
-		canvas?.style.setProperty('height', height);
-		this.stages[this.id].resize(rawWidth, rawHeight);
-	}
-
 	delayedResize() {
 		setTimeout(() => {
 			this.handleResize();
 		}, 0);
+	}
+
+	handleResize() {
+		const rawWidth = this._canvasWrapper?.clientWidth || window.innerWidth;
+		const rawHeight = this._canvasWrapper?.clientHeight || window.innerHeight;
+		const targetRatio = this._targetRatio;
+		let calculatedWidth, calculatedHeight;
+		if (rawWidth / rawHeight > targetRatio) {
+			calculatedWidth = rawHeight * targetRatio;
+			calculatedHeight = rawHeight;
+		} else {
+			calculatedWidth = rawWidth;
+			calculatedHeight = rawWidth / targetRatio;
+		}
+		this.setCanvasSize(calculatedWidth, calculatedHeight);
+		this.stages[this.id].resize(calculatedWidth, calculatedHeight);
+	}
+
+	setCanvasSize(width: number, height: number) {
+		if (this._canvasWrapper?.firstElementChild) {
+			const canvas = this._canvasWrapper?.querySelector('canvas') as HTMLCanvasElement;
+			canvas?.style.setProperty('width', `${width}px`);
+			canvas?.style.setProperty('height', `${height}px`);
+		}
+	}
+
+	createInitialStyles() {
+		const styleElement = document.createElement("style");
+		styleElement.textContent = `
+			.zylem-game-view {
+				width: 100%;
+				height: 100%;
+			}
+			.zylem-game-view canvas {
+				margin: 0;
+				padding: 0;
+				background-color: #0c2461;
+			}
+		`;
+		document.head.appendChild(styleElement);
 	}
 
 	createCanvas() {
@@ -124,25 +157,21 @@ export class ZylemGame implements GameOptions {
 			console.error('No id provided for canvas');
 			return;
 		}
+		this.createInitialStyles();
 		const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas');
-		canvas.style.margin = '0';
-		canvas.style.padding = '0';
-		canvas.style.backgroundColor = '#0c2461';
 		let canvasWrapper = document.querySelector(`#${this.id}`)!;
 		if (!canvasWrapper) {
-			canvasWrapper = document.createElement('main');
+			canvasWrapper = document.createElement('main') as HTMLElement;
 			canvasWrapper.setAttribute('id', this.id);
 			document.body.appendChild(canvasWrapper);
 		}
-		canvas.style.setProperty('width', `${canvasWrapper.clientWidth}px`);
-		canvas.style.setProperty('height', `${canvasWrapper.clientHeight}px`);
+		canvasWrapper.classList.add('zylem-game-view');
 		canvasWrapper.appendChild(canvas);
 		this._canvasWrapper = canvasWrapper;
 		this.delayedResize();
 		window.addEventListener("resize", () => {
 			this.handleResize();
 		});
-		return canvas;
 	}
 }
 

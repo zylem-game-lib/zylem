@@ -102,7 +102,8 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	updateRenderer(width: number, height: number) {
 		this.screenResolution = new Vector2(width, height);
-		this.renderer.setSize(this.screenResolution.x, this.screenResolution.y);
+		this.renderer.setSize(this.screenResolution.x, this.screenResolution.y, true);
+		this.composer.setSize(this.screenResolution.x, this.screenResolution.y);
 	}
 
 	add(object: Object3D, position: Vector3 = new Vector3(0, 0, 0)) {
