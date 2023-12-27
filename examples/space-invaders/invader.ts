@@ -20,12 +20,12 @@ function InvaderBullet({ x = 0, y = -8, health = 2 }) {
 			const { y } = bullet.getPosition();
 			bullet.moveXY(Math.sin(y) * 8, -15);
 			if (y < -10) {
-				destroy(bullet);
+				bullet.destroy();
 			}
 		},
 		collision: (bullet, other, { gameState }) => {
 			if (other.name.includes('player')) {
-				destroy(bullet);
+				bullet.destroy();
 				other.health--;
 			}
 		},

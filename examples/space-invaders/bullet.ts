@@ -1,7 +1,6 @@
 import { Zylem } from '../../src/main';
 import { Vector3 } from 'three';
 const { Sprite } = Zylem.GameEntityType;
-const { destroy } = Zylem;
 
 const bulletSize = new Vector3(0.1, 0.1, 0.1);
 
@@ -19,13 +18,13 @@ export function Bullet({ x = 0, y = -8, health = 2 }) {
 			const { y } = bullet.getPosition();
 			bullet.moveXY(Math.sin(y), 15);
 			if (y > 10) {
-				destroy(bullet);
+				bullet.destroy();
 			}
 		},
 		collision: (bullet, other, { gameState }) => {
 			if (other.name.includes('invader')) {
-				destroy(bullet);
-				destroy(other);
+				bullet.destroy();
+				other.destroy();
 				gameState.globals.score += 10;
 			}
 		},
