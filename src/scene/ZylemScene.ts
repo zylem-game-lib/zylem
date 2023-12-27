@@ -95,7 +95,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 		const screenResolution = new Vector2(width, height);
 		this.screenResolution = screenResolution;
 
-		this.renderer = new WebGLRenderer({ antialias: false });
+		this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
 		this.renderer.setSize(screenResolution.x, screenResolution.y);
 		this.composer = new EffectComposer(this.renderer);
 	}
@@ -112,6 +112,6 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	addEntity(entity: GameEntity<any>) {
-		this.scene.add(entity.mesh);
+		this.scene.add(entity.group);
 	}
 }

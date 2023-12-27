@@ -1,9 +1,8 @@
-import { EntityClass, EntityOptions, GameEntity } from "../../interfaces/Entity";
+import { EntityOptions, GameEntity } from "../../interfaces/Entity";
 import { RigidBody, RigidBodyDesc, ColliderDesc, RigidBodyType, ActiveCollisionTypes } from "@dimforge/rapier3d-compat";
-import { Mesh, BufferGeometry, Material, Vector3, TextureLoader, SpriteMaterial, Sprite, BoxGeometry, MeshStandardMaterial } from "three";
+import { Mesh, BufferGeometry, Material, Vector3, TextureLoader, SpriteMaterial, Sprite, BoxGeometry, MeshStandardMaterial, SRGBColorSpace, Texture, Group } from "three";
 
-export class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> {
-	mesh: Mesh<BufferGeometry, Material | Material[]>;
+export class ZylemSprite implements GameEntity<ZylemSprite> {
 	body?: RigidBody | undefined;
 	bodyDescription: RigidBodyDesc;
 	constraintBodies?: RigidBody[] | undefined;
@@ -17,13 +16,14 @@ export class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> 
 	images?: string[] | undefined;
 	spriteIndex: number = 0;
 	sprites: Sprite[] = [];
+	group: Group;
 	size: Vector3 = new Vector3(1, 1, 1);
 
 	constructor(options: EntityOptions) {
-		super();
 		this._type = 'Sprite';
 		this.images = options.images;
-		this.mesh = this.createMesh(options.size);
+		this.group = new Group();
+		this.createSprites(options.size);
 		this.bodyDescription = this.createBodyDescription();
 		this._update = options.update;
 		this._setup = options.setup;
@@ -47,32 +47,24 @@ export class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> 
 		return rigidBodyDesc;
 	}
 
-	createMesh(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
+	createSprites(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
 		this.createSpritesFromImages();
 		this.size = vector3;
-		const geometry = new BoxGeometry(vector3.x, vector3.y, vector3.z);
-		// TODO: attach to scene directly mesh is probably suboptimal
-		const material2 = new MeshStandardMaterial({
-			transparent: true,
-			opacity: 0,
-		});
-		this.mesh = new Mesh(geometry, material2);
 		this.sprites.forEach((sprite, index) => {
 			if (this.spriteIndex === index) {
 				sprite.visible = true;
 			} else {
 				sprite.visible = false;
 			}
-			this.mesh.add(sprite);
+			this.group.add(sprite);
 		});
-		this.mesh.position.set(0, 0, 0);
-		return this.mesh;
+		this.group.position.set(0, 0, 0);
 	}
 
 	createSpritesFromImages() {
 		const textureLoader = new TextureLoader();
 		this.images?.forEach((image) => {
-			const spriteMap = textureLoader.load(image);
+			const spriteMap: Texture = textureLoader.load(image);
 			const material = new SpriteMaterial({
 				map: spriteMap,
 				transparent: true,

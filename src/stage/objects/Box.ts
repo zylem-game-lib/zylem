@@ -1,10 +1,11 @@
-import { EntityClass, EntityOptions, GameEntity } from '../../interfaces/Entity';
+import { EntityOptions, GameEntity } from '../../interfaces/Entity';
 import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
-import { BoxGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 
 // Box is a combination of a 3D mesh and a physics body
-export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
+export class ZylemBox implements GameEntity<ZylemBox> {
 	_type: string;
+	group: Group;
 	mesh: Mesh;
 	body?: RigidBody;
 	size?: Vector3;
@@ -13,9 +14,10 @@ export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
 	_setup: (entity: ZylemBox) => void;
 
 	constructor(options: EntityOptions) {
-		super();
 		this._type = 'Box';
 		this.mesh = this.createMesh(options.size);
+		this.group = new Group();
+		this.group.add(this.mesh);
 		this.bodyDescription = this.createBodyDescription();
 		this._update = options.update;
 		this._setup = options.setup;
@@ -33,8 +35,8 @@ export class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
 		}
 		const { x, y, z } = this.body.translation();
 		const { x: rx, y: ry, z: rz } = this.body.rotation();
-		this.mesh.position.set(x, y, z);
-		this.mesh.rotation.set(rx, ry, rz);
+		this.group.position.set(x, y, z);
+		this.group.rotation.set(rx, ry, rz);
 		const _inputs = inputs ?? { moveUp: false, moveDown: false };
 		if (this._update === undefined) {
 			return;

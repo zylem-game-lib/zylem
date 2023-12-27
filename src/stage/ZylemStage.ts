@@ -54,8 +54,8 @@ export class ZylemStage implements Entity<ZylemStage> {
 
 		const entity = new InteractiveType(blueprint);
 		entity.name = blueprint.name;
-		if (entity.mesh) {
-			this.scene.scene.add(entity.mesh);
+		if (entity.group) {
+			this.scene.scene.add(entity.group);
 		}
 		if (blueprint.props) {
 			for (let key in blueprint.props) {

@@ -1,10 +1,11 @@
 // Sphere is a combination of a 3D mesh and a physics body
-import { Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
+import { Group, Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
 import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
-import { EntityClass, EntityOptions, GameEntity } from "../../interfaces/Entity";
+import { EntityOptions, GameEntity } from "../../interfaces/Entity";
 
-export class ZylemSphere extends EntityClass implements GameEntity<ZylemSphere> {
+export class ZylemSphere implements GameEntity<ZylemSphere> {
 	_type: string;
+	group: Group;
 	mesh: Mesh;
 	body?: RigidBody;
 	bodyDescription: RigidBodyDesc;
@@ -13,9 +14,10 @@ export class ZylemSphere extends EntityClass implements GameEntity<ZylemSphere> 
 	_setup: (entity: ZylemSphere) => void;
 
 	constructor(options: EntityOptions) {
-		super();
 		this._type = 'Sphere';
 		this.mesh = this.createMesh(options.radius);
+		this.group = new Group();
+		this.group.add(this.mesh);
 		this.bodyDescription = this.createBodyDescription();
 		this._update = options.update;
 		this._setup = options.setup;

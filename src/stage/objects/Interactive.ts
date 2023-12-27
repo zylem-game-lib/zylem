@@ -17,6 +17,8 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 				return;
 			}
 			this._destroy(gameState);
+			this.body.setEnabled(false);
+			this.stageRef.scene.scene.remove(this.group);
 		}
 
 		update(delta: number, { inputs, globals }: any) {
@@ -24,13 +26,10 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			if (!this.body) {
 				return;
 			}
-			if (!this.mesh) {
-				return;
-			}
 			const { x, y, z } = this.body.translation();
 			const { x: rx, y: ry, z: rz } = this.body.rotation();
-			this.mesh.position.set(x, y, z);
-			this.mesh.rotation.set(rx, ry, rz);
+			this.group.position.set(x, y, z);
+			this.group.rotation.set(rx, ry, rz);
 			// TODO: inputs should not go here
 			const _inputs = inputs ?? { moveUp: false, moveDown: false };
 			if (this._update === undefined) {
