@@ -1,6 +1,6 @@
 import { EntityOptions, GameEntity } from "../../interfaces/Entity";
 import { RigidBody, RigidBodyDesc, ColliderDesc, RigidBodyType, ActiveCollisionTypes } from "@dimforge/rapier3d-compat";
-import { Mesh, BufferGeometry, Material, Vector3, TextureLoader, SpriteMaterial, Sprite, BoxGeometry, MeshStandardMaterial, SRGBColorSpace, Texture, Group } from "three";
+import { Vector3, TextureLoader, SpriteMaterial, Sprite, Texture, Group } from "three";
 
 export class ZylemSprite implements GameEntity<ZylemSprite> {
 	body?: RigidBody | undefined;
@@ -47,15 +47,16 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 		return rigidBodyDesc;
 	}
 
-	createSprites(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
+	createSprites(size: Vector3 | undefined = new Vector3(1, 1, 1)) {
 		this.createSpritesFromImages();
-		this.size = vector3;
+		this.size = size;
 		this.sprites.forEach((sprite, index) => {
 			if (this.spriteIndex === index) {
 				sprite.visible = true;
 			} else {
 				sprite.visible = false;
 			}
+			sprite.scale.set(size.x, size.y, size.z);
 			this.group.add(sprite);
 		});
 		this.group.position.set(0, 0, 0);

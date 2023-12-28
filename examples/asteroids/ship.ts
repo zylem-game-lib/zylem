@@ -41,7 +41,7 @@ export function Ship(x = 0, y = 0) {
 	return {
 		name: `ship`,
 		type: Sprite,
-		size: new Vector3(1, 1, 1),
+		size: new Vector3(2, 2, 1),
 		images: ['asteroids/ship-idle.png', 'asteroids/ship-thrust.png'],
 		props: {
 			velocity: new Vector3(0, 0, 0),

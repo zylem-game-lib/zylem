@@ -18,6 +18,7 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			}
 			this._destroy(gameState);
 			this.body.setEnabled(false);
+			// TODO: refactor stageRef with accessor
 			this.stageRef.scene.scene.remove(this.group);
 		}
 
