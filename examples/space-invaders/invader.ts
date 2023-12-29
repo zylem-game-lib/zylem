@@ -2,8 +2,8 @@ import { Zylem } from '../../src/main';
 import { Vector3 } from 'three';
 const { Sprite } = Zylem.GameEntityType;
 
-const invaderSize = new Vector3(0.3, 0.3, 0.3);
-const bulletSize = new Vector3(0.1, 0.1, 0.1);
+const invaderSize = new Vector3(1, 1, 0.3);
+const bulletSize = new Vector3(1, 1, 0.1);
 
 function InvaderBullet({ x = 0, y = -8, health = 2 }) {
 	return {

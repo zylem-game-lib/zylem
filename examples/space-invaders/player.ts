@@ -3,7 +3,7 @@ import { Vector3 } from 'three';
 import { Bullet } from './bullet';
 const { Sprite } = Zylem.GameEntityType;
 
-const playerSize = new Vector3(0.5, 0.5, 0.1);
+const playerSize = new Vector3(1, 1, 0.1);
 
 export function Player(x = 0, y = -8, health = 2) {
 	return {
