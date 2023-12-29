@@ -27,10 +27,12 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 	group: Group;
 
 	size: Vector3 = new Vector3(1, 1, 1);
+	collisionSize: Vector3 | null = null;
 
 	constructor(options: EntityOptions) {
 		this._type = 'Sprite';
 		this.images = options.images;
+		this.collisionSize = options.collisionSize ?? this.collisionSize;
 		this.group = new Group();
 		this.createSprites(options.size);
 		this.bodyDescription = this.createBodyDescription();
@@ -89,7 +91,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 	}
 
 	createCollider(isSensor: boolean = false) {
-		const { x, y, z } = this.size;
+		const { x, y, z } = this.collisionSize ?? this.size;
 		const size = new Vector3(x, y, z);
 		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
 		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);

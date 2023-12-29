@@ -35,6 +35,7 @@ export interface EntityOptions {
 	update: (delta: number, options: any) => void;
 	setup: (entity: any) => void;
 	size?: Vector3;
+	collisionSize?: Vector3 | null;
 	radius?: number;
 	images?: string[];
 	color?: THREE.Color;
