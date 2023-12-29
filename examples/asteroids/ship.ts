@@ -40,6 +40,7 @@ export function Ship(x = 0, y = 0) {
 		name: `ship`,
 		type: Sprite,
 		size: new Vector3(2, 2, 1),
+		collisionSize: new Vector3(1, 1, 1),
 		images: [{
 			name: 'idle',
 			file: 'asteroids/ship-idle.png'
