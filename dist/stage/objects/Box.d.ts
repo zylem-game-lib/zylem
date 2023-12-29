@@ -1,8 +1,9 @@
-import { EntityClass, EntityOptions, GameEntity } from '../../interfaces/Entity';
+import { EntityOptions, GameEntity } from '../../interfaces/Entity';
 import { ColliderDesc, RigidBody, RigidBodyDesc } from '@dimforge/rapier3d-compat';
-import { Mesh, Vector3 } from 'three';
-export declare class ZylemBox extends EntityClass implements GameEntity<ZylemBox> {
+import { Group, Mesh, Vector3 } from 'three';
+export declare class ZylemBox implements GameEntity<ZylemBox> {
     _type: string;
+    group: Group;
     mesh: Mesh;
     body?: RigidBody;
     size?: Vector3;

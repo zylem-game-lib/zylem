@@ -1,12 +1,14 @@
-import { Mesh } from 'three';
+import { Group, Mesh, Color } from 'three';
 import { ColliderDesc, RigidBody, RigidBodyDesc } from '@dimforge/rapier3d-compat';
-import { EntityClass, EntityOptions, GameEntity } from "../../interfaces/Entity";
-export declare class ZylemSphere extends EntityClass implements GameEntity<ZylemSphere> {
+import { EntityOptions, GameEntity } from "../../interfaces/Entity";
+export declare class ZylemSphere implements GameEntity<ZylemSphere> {
     _type: string;
+    group: Group;
     mesh: Mesh;
     body?: RigidBody;
     bodyDescription: RigidBodyDesc;
     radius?: number;
+    color: Color;
     _update: (delta: number, options: any) => void;
     _setup: (entity: ZylemSphere) => void;
     constructor(options: EntityOptions);

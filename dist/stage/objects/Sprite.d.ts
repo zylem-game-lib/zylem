@@ -1,8 +1,7 @@
-import { EntityClass, EntityOptions, GameEntity } from "../../interfaces/Entity";
+import { EntityOptions, GameEntity } from "../../interfaces/Entity";
 import { RigidBody, RigidBodyDesc, ColliderDesc } from "@dimforge/rapier3d-compat";
-import { Mesh, BufferGeometry, Material, Vector3, Sprite } from "three";
-export declare class ZylemSprite extends EntityClass implements GameEntity<ZylemSprite> {
-    mesh: Mesh<BufferGeometry, Material | Material[]>;
+import { Vector3, Sprite, Group } from "three";
+export declare class ZylemSprite implements GameEntity<ZylemSprite> {
     body?: RigidBody | undefined;
     bodyDescription: RigidBodyDesc;
     constraintBodies?: RigidBody[] | undefined;
@@ -16,13 +15,18 @@ export declare class ZylemSprite extends EntityClass implements GameEntity<Zylem
     images?: string[] | undefined;
     spriteIndex: number;
     sprites: Sprite[];
+    _spriteMap: Map<string, number>;
+    group: Group;
     size: Vector3;
+    collisionSize: Vector3 | null;
     constructor(options: EntityOptions);
     setup(): void;
     update(delta: number, { inputs }: any): void;
     destroy(): void;
     createBodyDescription(): RigidBodyDesc;
-    createMesh(vector3?: Vector3 | undefined): Mesh<BufferGeometry, Material | Material[]>;
+    createSprites(size?: Vector3 | undefined): void;
     createSpritesFromImages(): void;
     createCollider(isSensor?: boolean): ColliderDesc;
+    setSprite(index: number | string): void;
+    setAnimation(animation: string): void;
 }
