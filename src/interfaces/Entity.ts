@@ -37,6 +37,7 @@ export interface EntityOptions {
 	size?: Vector3;
 	radius?: number;
 	images?: string[];
+	color?: THREE.Color;
 }
 
 export enum GameEntityType {
@@ -60,3 +61,5 @@ export function update(this: GameEntity<Entity>, delta: number, { inputs }: any)
 	}
 	this._update(delta, { inputs: _inputs, entity: this });
 }
+
+export type OptionalVector = { x?: number, y?: number, z?: number };

@@ -23,6 +23,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		const rigidBody = this.world.createRigidBody(entity.bodyDescription);
 		entity.body = rigidBody;
 		entity.body.lockRotations(true, true);
+		// entity.body.setEnabledRotations(false, false, true, true);
 		entity.body.lockTranslations(true, true);
 		const colliderDesc = entity.createCollider();
 		this.world.createCollider(colliderDesc, entity.body);

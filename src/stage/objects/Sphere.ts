@@ -1,5 +1,5 @@
 // Sphere is a combination of a 3D mesh and a physics body
-import { Group, Mesh, MeshStandardMaterial, SphereGeometry } from 'three';
+import { Group, Mesh, MeshStandardMaterial, SphereGeometry, Color } from 'three';
 import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
 import { EntityOptions, GameEntity } from "../../interfaces/Entity";
 
@@ -10,11 +10,13 @@ export class ZylemSphere implements GameEntity<ZylemSphere> {
 	body?: RigidBody;
 	bodyDescription: RigidBodyDesc;
 	radius?: number;
+	color: Color = new Color(0xFFFFFF);
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: ZylemSphere) => void;
 
 	constructor(options: EntityOptions) {
 		this._type = 'Sphere';
+		this.color = options.color ?? this.color;
 		this.mesh = this.createMesh(options.radius);
 		this.group = new Group();
 		this.group.add(this.mesh);
@@ -48,7 +50,7 @@ export class ZylemSphere implements GameEntity<ZylemSphere> {
 		this.radius = radius;
 		const geometry = new SphereGeometry(radius);
 		const material = new MeshStandardMaterial({
-			color: 0xFFFFFF,
+			color: this.color,
 			emissiveIntensity: 0.5,
 			lightMapIntensity: 0.5,
 			fog: true,
