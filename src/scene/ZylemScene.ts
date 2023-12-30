@@ -7,6 +7,7 @@ import {
 	DirectionalLight,
 	Object3D,
 	Vector3,
+	TextureLoader
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { ZylemCamera } from './ZylemCamera';
@@ -29,6 +30,11 @@ export class ZylemScene implements Entity<ZylemScene> {
 	constructor(id: string) {
 		const scene = new Scene();
 		scene.background = new Color(stageState.backgroundColor);
+		if (stageState.backgroundImage) {
+			const loader = new TextureLoader();
+			const texture = loader.load(stageState.backgroundImage);
+			scene.background = texture;
+		}
 
 		this.setupRenderer();
 		this.setupLighting(scene);
