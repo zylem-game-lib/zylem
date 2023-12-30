@@ -31,7 +31,6 @@ export class ZylemGame implements GameOptions {
 	startTimeStamp: number = 0;
 
 	constructor(options: GameOptions) {
-		setGameState('perspective', options.perspective);
 		setGameState('globals', options.globals);
 		this._initialGlobals = { ...options.globals };
 		this.id = options.id;

@@ -11,7 +11,6 @@ export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
 export interface GameOptions {
 	id: string;
 	ratio?: GameRatio,
-	perspective: PerspectiveType;
 	globals: Record<string, any>;
 	stage: StageOptions;
 	// TODO: use stage interface
@@ -30,6 +29,8 @@ type Concrete<Type> = {
 export type Conditions<T> = (globals: Concrete<T>, game: ZylemGame, HUD?: ZylemHUD) => void;
 
 export interface StageOptions {
+	perspective: PerspectiveType;
+	backgroundImage?: string;
 	backgroundColor: number;
 	setup: (scene: ZylemScene, HUD: ZylemHUD) => void;
 	children: (globals?: any) => any[];
