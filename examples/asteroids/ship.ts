@@ -1,8 +1,8 @@
-import { Zylem } from '../../src/main';
-import { boardHeight, boardWidth, wrapAroundBoard } from './board';
+import { Zylem, THREE } from '../../src/main';
+import { boardHeight, boardWidth } from './board';
 
-const { Sprite, Sphere } = Zylem.GameEntityType;
-const { Vector3, Color } = Zylem.THREE;
+const { Sprite, Sphere } = Zylem;
+const { Vector3, Color } = THREE;
 
 export function Bullet({ position = new Vector3(0, 0, 0), velX = 0, velY = 0 }) {
 	return {

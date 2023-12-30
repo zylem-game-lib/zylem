@@ -1,8 +1,8 @@
-import { Zylem } from '../../src/main';
+import { Zylem, THREE } from '../../src/main';
 import { wrapAroundBoard } from './board';
 
-const { Sprite } = Zylem.GameEntityType;
-const { Vector3 } = Zylem.THREE;
+const { Sprite } = Zylem;
+const { Vector3 } = THREE;
 
 // TODO: write mappings in engine
 const kXSM = 4;

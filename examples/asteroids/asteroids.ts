@@ -1,17 +1,18 @@
-import { Zylem } from '../../src/main';
+import { Zylem, THREE } from '../../src/main';
 import { Ship } from './ship';
 import { Rock } from './rock';
-const { Color } = Zylem.THREE;
+const { Color } = THREE;
+const { Flat2D } = Zylem;
 
 const game = Zylem.create({
 	id: 'asteroids',
-	// @ts-ignore TODO: expose perspective type
-	perspective: 'flat-2d',
 	globals: {
 		score: 0,
 		lives: 3,
 	},
 	stage: {
+		perspective: Flat2D,
+		backgroundImage: 'asteroids/space-bg.png',
 		backgroundColor: Color.NAMES.black,
 		conditions: [
 			(globals, game) => {
