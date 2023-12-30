@@ -1,5 +1,5 @@
 import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
-import { Group, Mesh, Sprite, Vector3 } from "three";
+import { Group, Vector3 } from "three";
 import { UpdateOptions } from "./Update";
 
 export interface Entity<T = any> {
@@ -15,7 +15,7 @@ export interface Entity<T = any> {
 
 export interface EntityBlueprint<T> extends Entity<T> {
 	name: string;
-	type: GameEntityType;
+	type: EntityType;
 	props?: { [key: string]: any };
 	shape?: Vector3;
 	collision?: (entity: Entity<T>, other: Entity<T>) => void;
@@ -41,7 +41,7 @@ export interface EntityOptions {
 	color?: THREE.Color;
 }
 
-export enum GameEntityType {
+export enum EntityType {
 	Box = 'Box',
 	Sphere = 'Sphere',
 	Sprite = 'Sprite',

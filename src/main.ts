@@ -1,6 +1,7 @@
 import { ZylemGame } from './game/ZylemGame';
 import { GameOptions } from './interfaces/Game';
-import { GameEntityType } from './interfaces/Entity';
+import { EntityType } from './interfaces/Entity';
+import { PerspectiveType } from './interfaces/Perspective';
 import { ZylemDebug } from './game/ZylemDebug';
 import { Howl } from 'howler';
 import * as THREE from 'three';
@@ -16,12 +17,8 @@ function create(options: GameOptions) {
 
 const Zylem = {
 	create,
-	GameEntityType,
-
-	// Third party libs
-	Howl,
-	THREE,
-	RAPIER
+	...EntityType,
+	...PerspectiveType
 };
 
 export { Zylem, Howl, THREE, RAPIER };
