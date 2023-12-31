@@ -1,6 +1,4 @@
 import { ZylemDebug } from '@/game/ZylemDebug';
-import { ZylemStage } from '@/stage/ZylemStage';
-import { Entity } from './Entity';
 import { PerspectiveType } from './Perspective';
 import ZylemGame from '@/game/ZylemGame';
 import { ZylemScene } from '@/scene/ZylemScene';

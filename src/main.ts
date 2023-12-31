@@ -1,5 +1,5 @@
 import { ZylemGame } from './game/ZylemGame';
-import { GameOptions } from './interfaces/Game';
+import { GameOptions, StageOptions } from './interfaces/Game';
 import { EntityType } from './interfaces/Entity';
 import { PerspectiveType } from './interfaces/Perspective';
 import { ZylemDebug } from './game/ZylemDebug';
@@ -15,10 +15,19 @@ function create(options: GameOptions) {
 	return new ZylemGame(options);
 }
 
+interface Zylem {
+	create: (options: GameOptions) => ZylemGame;
+	EntityType: typeof EntityType;
+	PerspectiveType: typeof PerspectiveType;
+}
+
 const Zylem = {
 	create,
 	...EntityType,
 	...PerspectiveType
 };
 
+namespace Zylem { };
+
 export { Zylem, Howl, THREE, RAPIER };
+export type { GameOptions, StageOptions };

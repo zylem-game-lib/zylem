@@ -1,11 +1,16 @@
 import { ZylemGame } from './game/ZylemGame';
-import { GameOptions } from './interfaces/Game';
+import { GameOptions, StageOptions } from './interfaces/Game';
 import { EntityType } from './interfaces/Entity';
 import { PerspectiveType } from './interfaces/Perspective';
 import { Howl } from 'howler';
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 declare function create(options: GameOptions): ZylemGame;
+interface Zylem {
+    create: (options: GameOptions) => ZylemGame;
+    EntityType: typeof EntityType;
+    PerspectiveType: typeof PerspectiveType;
+}
 declare const Zylem: {
     FirstPerson: PerspectiveType.FirstPerson;
     ThirdPerson: PerspectiveType.ThirdPerson;
@@ -17,4 +22,6 @@ declare const Zylem: {
     Sprite: EntityType.Sprite;
     create: typeof create;
 };
+declare namespace Zylem { }
 export { Zylem, Howl, THREE, RAPIER };
+export type { GameOptions, StageOptions };
