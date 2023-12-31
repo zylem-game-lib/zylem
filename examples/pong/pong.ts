@@ -1,20 +1,22 @@
 import { Zylem } from '../../src/main';
 import { Color, Vector3 } from 'three';
-import { PerspectiveType } from '../../src/interfaces/Perspective';
 import { BoardSide } from './board';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
 
+const { Flat2D } = Zylem;
+
 const game = Zylem.create({
 	id: 'pong',
-	perspective: PerspectiveType.Flat2D,
 	globals: {
 		p1Score: 0,
 		p2Score: 0,
 		centerText: '',
 		winner: 0
 	},
-	stage: {
+	stages: [{
+		id: 'stage-1',
+		perspective: Flat2D,
 		backgroundColor: Color.NAMES.black,
 		conditions: [
 			(globals, game) => {
@@ -38,7 +40,7 @@ const game = Zylem.create({
 				}
 			}
 		],
-		setup: (scene, HUD) => {
+		setup: ({ scene, HUD }) => {
 			HUD.createText({
 				text: '',
 				binding: 'centerText',
@@ -62,6 +64,6 @@ const game = Zylem.create({
 				Ball(),
 			];
 		},
-	},
+	}],
 });
 game.start();

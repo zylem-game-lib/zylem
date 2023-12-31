@@ -1,7 +1,6 @@
-import { Zylem } from '../../src/main';
-const { Sphere } = Zylem.GameEntityType;
+import { Zylem, Howl } from '../../src/main';
+const { Sphere } = Zylem;
 import { board, BoardSide } from './board';
-const { Howl } = Zylem;
 
 const sound = new Howl({
 	src: '/assets/bounce.wav',
