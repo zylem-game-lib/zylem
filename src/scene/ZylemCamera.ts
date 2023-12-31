@@ -1,5 +1,5 @@
 import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera } from 'three';
-import { gameState } from '../state/index';
+import { stageState } from '../state/index';
 import { PerspectiveType } from '../interfaces/Perspective';
 
 export class ZylemCamera {
@@ -12,7 +12,7 @@ export class ZylemCamera {
 
 		const z = 25;
 		const position = new Vector3(0, 0, z);
-		const gamePerspective = gameState.perspective as PerspectiveType;
+		const gamePerspective = stageState.perspective as PerspectiveType;
 		this.camera = this[gamePerspective](aspectRatio, position);
 		this.cameraRig = new Object3D();
 		this.cameraRig.position.set(0, 0, z);

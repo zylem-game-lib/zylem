@@ -1,9 +1,7 @@
 import { GameOptions } from '../interfaces/Game';
-import { PerspectiveType } from '../interfaces/Perspective';
 
 const state = {
 	id: '',
-	perspective: PerspectiveType.ThirdPerson,
 	globals: {},
 	stage: {},
 	stages: {},

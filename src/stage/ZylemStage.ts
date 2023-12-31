@@ -24,7 +24,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 	}
 
 	async buildStage(options: StageOptions, id: string) {
-		setGameState('perspective', options.perspective);
+		setStageState('perspective', options.perspective);
 		setStageState('backgroundColor', options.backgroundColor);
 		setStageState('backgroundImage', options.backgroundImage);
 		this.scene = new ZylemScene(id);
