@@ -13,7 +13,7 @@ export interface Entity<T = any> {
 }
 export interface EntityBlueprint<T> extends Entity<T> {
     name: string;
-    type: GameEntityType;
+    type: EntityType;
     props?: {
         [key: string]: any;
     };
@@ -37,8 +37,9 @@ export interface EntityOptions {
     radius?: number;
     images?: string[];
     color?: THREE.Color;
+    static?: boolean;
 }
-export declare enum GameEntityType {
+export declare enum EntityType {
     Box = "Box",
     Sphere = "Sphere",
     Sprite = "Sprite"

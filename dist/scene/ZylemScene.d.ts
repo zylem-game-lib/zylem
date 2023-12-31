@@ -3,9 +3,10 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { ZylemCamera } from './ZylemCamera';
 import { Entity, GameEntity } from '../interfaces/Entity';
 import { ZylemHUD } from '../game/ZylemHUD';
+import { SetupCallback } from '~/interfaces/Game';
 export declare class ZylemScene implements Entity<ZylemScene> {
     _type: string;
-    _setup?: (scene: ZylemScene, HUD: ZylemHUD) => void;
+    _setup?: SetupCallback;
     _hud: ZylemHUD | null;
     scene: Scene;
     screenResolution: Vector2;
