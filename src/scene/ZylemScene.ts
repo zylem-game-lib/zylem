@@ -15,10 +15,11 @@ import RenderPass from './rendering/RenderPass';
 import { Entity, GameEntity } from '../interfaces/Entity';
 import { stageState } from '../state';
 import { ZylemHUD } from '../game/ZylemHUD';
+import { SetupCallback } from '~/interfaces/Game';
 
 export class ZylemScene implements Entity<ZylemScene> {
 	_type = 'Scene';
-	_setup?: (scene: ZylemScene, HUD: ZylemHUD) => void;
+	_setup?: SetupCallback;
 	_hud: ZylemHUD | null = null;
 	scene!: Scene;
 	screenResolution!: Vector2;
@@ -55,7 +56,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 	setup() {
 		if (this._setup) {
 			this._hud = new ZylemHUD();
-			this._setup(this, this._hud);
+			this._setup({ scene: this, HUD: this._hud });
 			this._hud._hudText.forEach(hudText => {
 				this.add(hudText.sprite, hudText.position);
 			});

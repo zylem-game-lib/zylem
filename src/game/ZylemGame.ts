@@ -14,16 +14,19 @@ const TIMESTAMP_DELTA = 16;
 export class ZylemGame implements GameOptions {
 	id: string;
 	ratio: GameRatio;
-	_targetRatio: number;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
 	globals: any;
-	_initialGlobals: any;
-	stage: StageOptions;
-	stages: Record<string, ZylemStage> = {};
+	// @deprecated - use stages instead
+	stage?: StageOptions;
+	stages: StageOptions[] = [];
 	blueprintOptions: GameOptions;
 	currentStage: string = '';
 	clock: Clock;
 	gamePad: GamePad;
+
+	_targetRatio: number;
+	_initialGlobals: any;
+	_stageMap: Record<string, ZylemStage> = {};
 	_canvasWrapper: Element | null;
 
 	previousTimeStamp: number = 0;
@@ -41,7 +44,9 @@ export class ZylemGame implements GameOptions {
 		this.blueprintOptions = options;
 		this._canvasWrapper = null;
 		this.createCanvas();
-		this.stage = options.stage;
+		// @deprecated - use stages instead
+		this.stage = options.stages[0];
+		this.stages = options.stages ?? [{ id: 'default-stage', ...options?.stage }];
 		this.loadStage(this.stage);
 		this.currentStage = this.id;
 	}
@@ -49,7 +54,7 @@ export class ZylemGame implements GameOptions {
 	async loadStage(options: StageOptions) {
 		const stage = new ZylemStage();
 		stage.buildStage(options, this.id);
-		this.stages[this.id] = stage;
+		this._stageMap[this.id] = stage;
 	}
 
 	/**
@@ -64,7 +69,7 @@ export class ZylemGame implements GameOptions {
 		const delta = this.previousTimeStamp ? _timeStamp - this.previousTimeStamp : TIMESTAMP_DELTA;
 
 		if (this.previousTimeStamp !== _timeStamp && delta >= TIMESTAMP_DELTA) {
-			const stage = this.stages[this.currentStage];
+			const stage = this._stageMap[this.currentStage];
 			const options = {
 				inputs,
 				entity: stage
@@ -92,8 +97,13 @@ export class ZylemGame implements GameOptions {
 		if (resetGlobals) {
 			setGameState('globals', { ...this._initialGlobals });
 		}
-		this.loadStage(this.stage);
+		const stageOption = this.stages.find(stage => stage.id === this.currentStage);
+		this.loadStage(stageOption ?? this.stages[0]);
 		this.delayedResize();
+	}
+
+	getStage(id: string) {
+		return this._stageMap[id];
 	}
 
 	createStage(id: string) {
@@ -124,7 +134,7 @@ export class ZylemGame implements GameOptions {
 			calculatedHeight = rawWidth / targetRatio;
 		}
 		this.setCanvasSize(calculatedWidth, calculatedHeight);
-		this.stages[this.id].resize(calculatedWidth, calculatedHeight);
+		this._stageMap[this.id].resize(calculatedWidth, calculatedHeight);
 	}
 
 	setCanvasSize(width: number, height: number) {

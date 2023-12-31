@@ -12,9 +12,13 @@ export interface GameOptions {
 	id: string;
 	ratio?: GameRatio,
 	globals: Record<string, any>;
-	stage: StageOptions;
-	// TODO: use stage interface
-	stages?: Record<string, Entity<ZylemStage>>;
+	/**
+	 * Individual stage options
+	 *
+	 * @deprecated use stages instead
+	*/
+	stage?: StageOptions;
+	stages: StageOptions[]; // TODO: use stage interface
 	debug?: ZylemDebug;
 }
 
@@ -28,11 +32,24 @@ type Concrete<Type> = {
 // the object literal that was just created above
 export type Conditions<T> = (globals: Concrete<T>, game: ZylemGame, HUD?: ZylemHUD) => void;
 
+export interface SetupCallbackOptions {
+	scene: ZylemScene;
+	world?: ZylemWorld;
+	camera?: ZylemCamera;
+	HUD: ZylemHUD;
+};
+
+export type SetupCallback = (options: SetupCallbackOptions) => void;
+
 export interface StageOptions {
+	id?: string;
+	gravity?: Vector3;
 	perspective: PerspectiveType;
 	backgroundImage?: string;
-	backgroundColor: number;
-	setup: (scene: ZylemScene, HUD: ZylemHUD) => void;
+	backgroundColor: Color | number;
+	setup: SetupCallback;
 	children: (globals?: any) => any[];
 	conditions: Array<Conditions<GameOptions["globals"]>>;
+	// TODO: define generalized interface for update options
+	update?: (delta: number, options: any) => void;
 }
