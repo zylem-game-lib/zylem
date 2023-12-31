@@ -1,5 +1,5 @@
 import { Zylem, THREE } from '../../src/main';
-import { wrapAroundBoard } from './board';
+import { boardHeight, boardWidth } from './board';
 
 const { Sprite } = Zylem;
 const { Vector3 } = THREE;
@@ -74,8 +74,7 @@ export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 				}
 				asteroid.hitCooldown = 0;
 			}
-			const { newPosX, newPosY } = wrapAroundBoard(x, y);
-			asteroid.setPosition(newPosX, newPosY, 1 / health);
+			asteroid.wrapAroundXY(boardWidth, boardHeight);
 		},
 		collision: (asteroid: any, other: any, { gameState }: any) => {
 			if (asteroid.health < 1) {

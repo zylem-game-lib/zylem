@@ -10,7 +10,7 @@ const game = Zylem.create({
 		score: 0,
 		lives: 3,
 	},
-	stage: {
+	stages: [{
 		perspective: Flat2D,
 		backgroundImage: 'asteroids/space-bg.png',
 		backgroundColor: Color.NAMES.black,
@@ -21,7 +21,7 @@ const game = Zylem.create({
 				}
 			}
 		],
-		setup: (scene, HUD) => {
+		setup: ({ scene, HUD }) => {
 			HUD.createText({
 				text: '0',
 				binding: 'score',
@@ -42,7 +42,7 @@ const game = Zylem.create({
 				Rock({ x: -2, y: -12, startingHealth: 4 }),
 			]
 		},
-	},
+	}],
 });
 
 game.start();
