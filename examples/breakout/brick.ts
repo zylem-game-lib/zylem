@@ -1,6 +1,6 @@
 import { Zylem } from '../../src/main';
 import { Color, Vector3 } from 'three';
-const { Box } = Zylem.GameEntityType;
+const { Box } = Zylem;
 
 export function Brick(posX, posY) {
 	return {
