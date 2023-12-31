@@ -1,6 +1,6 @@
 import { Zylem } from '../../src/main';
 import { Vector3 } from 'three';
-const { Sprite } = Zylem.GameEntityType;
+const { Sprite } = Zylem;
 
 const invaderSize = new Vector3(1, 1, 0.3);
 const bulletSize = new Vector3(1, 1, 0.1);
