@@ -1,6 +1,6 @@
 import { EntityOptions, GameEntity } from '../../interfaces/Entity';
 import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3, Color } from 'three';
 
 // Box is a combination of a 3D mesh and a physics body
 export class ZylemBox implements GameEntity<ZylemBox> {
@@ -9,12 +9,16 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 	mesh: Mesh;
 	body?: RigidBody;
 	size?: Vector3;
+	static: boolean = false;
+	color: Color = new Color(0xFFFFFF);
 	bodyDescription: RigidBodyDesc;
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: ZylemBox) => void;
 
 	constructor(options: EntityOptions) {
 		this._type = 'Box';
+		this.color = options.color ?? this.color;
+		this.static = options.static ?? this.static;
 		this.mesh = this.createMesh(options.size);
 		this.group = new Group();
 		this.group.add(this.mesh);
@@ -48,9 +52,9 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 		this.size = vector3;
 		const geometry = new BoxGeometry(vector3.x, vector3.y, vector3.z);
 		const material = new MeshStandardMaterial({
-			color: 0xFFFFFF,
-			emissiveIntensity: 0.5,
-			lightMapIntensity: 0.5,
+			color: this.color,
+			emissiveIntensity: 1,
+			lightMapIntensity: 1,
 			fog: true,
 		});
 		this.mesh = new Mesh(geometry, material);
@@ -61,7 +65,8 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 	}
 
 	createBodyDescription() {
-		let rigidBodyDesc = new RigidBodyDesc(RigidBodyType.Dynamic)
+		const type = this.static ? RigidBodyType.Fixed : RigidBodyType.Dynamic;
+		let rigidBodyDesc = new RigidBodyDesc(type)
 			.setTranslation(0, 0, 0)
 			.setGravityScale(1.0)
 			.setCanSleep(false)

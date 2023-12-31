@@ -8,6 +8,7 @@ import { Moveable } from "./objects/Moveable";
 import { Interactive } from "./objects/Interactive";
 import { gameState, setGameState, setStageState } from "../state";
 import { Conditions, StageOptions } from "../interfaces/Game";
+import { Vector3 } from "three";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
@@ -28,7 +29,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 		setStageState('backgroundImage', options.backgroundImage);
 		this.scene = new ZylemScene(id);
 		this.scene._setup = options.setup;
-		const physicsWorld = await ZylemWorld.loadPhysics();
+		const physicsWorld = await ZylemWorld.loadPhysics(options.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
 		this.blueprints = options.children({ gameState, setGameState }) || [];
 		this.conditions = options.conditions;

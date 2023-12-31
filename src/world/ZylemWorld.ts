@@ -1,3 +1,4 @@
+import { Vector3 } from 'three';
 import { Entity, GameEntity } from '../interfaces/Entity';
 import { gameState } from '../state';
 import RAPIER from '@dimforge/rapier3d-compat';
@@ -7,10 +8,9 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	world: RAPIER.World;
 	collisionDictionary: Map<number, Entity<any>>;
 
-	static async loadPhysics() {
+	static async loadPhysics(gravity: Vector3) {
 		await RAPIER.init();
-		const physicsWorld = new RAPIER.World({ x: 0.0, y: 0.0, z: 0.0 });
-
+		const physicsWorld = new RAPIER.World(gravity);
 		return physicsWorld;
 	}
 
@@ -24,7 +24,10 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		entity.body = rigidBody;
 		entity.body.lockRotations(true, true);
 		// entity.body.setEnabledRotations(false, false, true, true);
-		entity.body.lockTranslations(true, true);
+		// TODO: kind of a hack, but if there's no gravity lock the translations
+		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
+			entity.body.lockTranslations(true, true);
+		}
 		const colliderDesc = entity.createCollider();
 		this.world.createCollider(colliderDesc, entity.body);
 		this.collisionDictionary.set(entity.body.handle, entity);

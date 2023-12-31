@@ -5,6 +5,9 @@ import { PerspectiveType } from './Perspective';
 import ZylemGame from '@/game/ZylemGame';
 import { ZylemScene } from '@/scene/ZylemScene';
 import { ZylemHUD } from '@/game/ZylemHUD';
+import { Color, Vector3 } from 'three';
+import { ZylemCamera } from '~/scene/ZylemCamera';
+import { ZylemWorld } from '~/world/ZylemWorld';
 
 export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
 

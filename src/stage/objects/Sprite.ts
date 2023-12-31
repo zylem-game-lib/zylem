@@ -53,6 +53,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 			.setTranslation(0, 0, 0)
 			.setGravityScale(1.0)
 			.setCanSleep(false)
+			// .setAdditionalMass(1)
 			.setCcdEnabled(false);
 
 		return rigidBodyDesc;

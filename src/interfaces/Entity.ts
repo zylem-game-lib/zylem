@@ -39,6 +39,7 @@ export interface EntityOptions {
 	radius?: number;
 	images?: string[];
 	color?: THREE.Color;
+	static?: boolean;
 }
 
 export enum EntityType {
