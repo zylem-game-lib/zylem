@@ -11,6 +11,7 @@ const game = create({
 		score: 0,
 		lives: 3,
 		time: 0,
+		actualTime: 0,
 	},
 	stages: [
 		{
@@ -44,13 +45,13 @@ const game = create({
 					Ground(new Vector3(30, -4, 0)),
 				];
 			},
-			update: (delta, { camera, inputs, globals }) => {
-				// const { score, time } = globals;
-				// globals.time = time + delta;
-				// camera.position.x += 0.1;
-				// if (inputs[0].buttonB) {
-				// 	globals.score = score + 1;
-				// }
+			update: (delta, { camera, stage, inputs, globals }) => {
+				const player = stage.getEntityByName('player');
+				const { x, y } = player.getPosition();
+				camera.moveCamera(new Vector3(x, y, 0));
+				const { actualTime } = globals;
+				globals.actualTime = actualTime + delta;
+				globals.time = Math.round(actualTime);
 			}
 		}
 	],

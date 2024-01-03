@@ -12,10 +12,13 @@ import { Vector3 } from "three";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
+	// TODO: update options with type
+	_update: ((delta: number, options: any) => void) | null = null;
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
 	conditions: Conditions<any>[] = [];
 	children: Array<Entity<any>> = [];
+	_childrenMap: Map<string, Entity<any>> = new Map();
 	blueprints: Array<EntityBlueprint<any>> = [];
 
 	constructor() {
@@ -29,6 +32,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 		setStageState('backgroundImage', options.backgroundImage);
 		this.scene = new ZylemScene(id);
 		this.scene._setup = options.setup;
+		this._update = options.update ?? null;
 		const physicsWorld = await ZylemWorld.loadPhysics(options.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
 		this.blueprints = options.children({ gameState, setGameState }) || [];
@@ -68,6 +72,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 		entity.stageRef = this;
 		this.world.addEntity(entity);
 		this.children.push(entity);
+		this._childrenMap.set(entity.name, entity);
 		if (blueprint.collision) {
 			entity._collision = blueprint.collision;
 		}
@@ -102,7 +107,23 @@ export class ZylemStage implements Entity<ZylemStage> {
 				globals: gameState.globals
 			});
 		}
+		if (this._update) {
+			this._update(delta, {
+				camera: this.scene.zylemCamera,
+				inputs: options.inputs,
+				stage: this,
+				globals: gameState.globals
+			});
+		}
 		this.scene.update(delta);
+	}
+
+	getEntityByName(name: string) {
+		const entity = this._childrenMap.get(name);
+		if (!entity) {
+			console.warn(`Entity ${name} not found`);
+		}
+		return entity ?? null;
 	}
 
 	logMissingEntities() {

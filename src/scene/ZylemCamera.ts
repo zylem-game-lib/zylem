@@ -88,6 +88,10 @@ export class ZylemCamera {
 		// this.camera.lookAt(entityPosition);
 	}
 
+	moveCamera(position: Vector3) {
+		this.cameraRig.position.set(position.x, position.y, position.z);
+	}
+
 	// followEntity(entity: Entity) {
 	// 	this.follow = entity;
 	// }

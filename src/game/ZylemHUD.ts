@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 import { gameState } from '../state/index';
 import SpriteText from 'three-spritetext';
+import { ZylemCamera } from '~/scene/ZylemCamera';
 
 export interface HUDTextOptions {
 	text: string;
@@ -16,9 +17,11 @@ export interface HUDText {
 
 export class ZylemHUD {
 	_hudText: HUDText[];
+	cameraRef: ZylemCamera;
 
-	constructor() {
+	constructor(zylemCamera: ZylemCamera) {
 		this._hudText = [];
+		this.cameraRef = zylemCamera;
 	}
 
 	createText({ text, binding, position }: HUDTextOptions) {
@@ -36,6 +39,7 @@ export class ZylemHUD {
 		if (!this._hudText) {
 			return;
 		}
+		const { x: camX, y: camY, z: camZ } = this.cameraRef.cameraRig.position;
 		this._hudText.forEach(hud => {
 			const { binding } = hud;
 			if (!binding) {
@@ -44,6 +48,8 @@ export class ZylemHUD {
 			const globals = gameState.globals;
 			const value = `${globals[binding]}`;
 			if (value) {
+				const { x, y, z } = hud.position;
+				hud.sprite.position.set(x + camX, y + camY, z + camZ);
 				hud.sprite.text = value;
 			}
 		})

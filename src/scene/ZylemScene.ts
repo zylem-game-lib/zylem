@@ -55,7 +55,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	setup() {
 		if (this._setup) {
-			this._hud = new ZylemHUD();
+			this._hud = new ZylemHUD(this.zylemCamera);
 			this._setup({ scene: this, HUD: this._hud });
 			this._hud._hudText.forEach(hudText => {
 				this.add(hudText.sprite, hudText.position);

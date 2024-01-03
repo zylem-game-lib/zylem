@@ -20,6 +20,7 @@ export interface GameOptions {
 	*/
 	stage?: StageOptions;
 	stages: StageOptions[]; // TODO: use stage interface
+	update?: (delta: number, options: any) => void;
 	debug?: ZylemDebug;
 }
 
