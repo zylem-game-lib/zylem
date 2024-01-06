@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import SpriteText from 'three-spritetext';
+import { ZylemCamera } from '~/scene/ZylemCamera';
 export interface HUDTextOptions {
     text: string;
     binding: string;
@@ -12,7 +13,8 @@ export interface HUDText {
 }
 export declare class ZylemHUD {
     _hudText: HUDText[];
-    constructor();
+    cameraRef: ZylemCamera;
+    constructor(zylemCamera: ZylemCamera);
     createText({ text, binding, position }: HUDTextOptions): void;
     update(): void;
 }

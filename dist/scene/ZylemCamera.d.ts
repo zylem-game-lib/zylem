@@ -11,4 +11,5 @@ export declare class ZylemCamera {
     [PerspectiveType.Isometric](aspectRatio: number, position: Vector3): Camera;
     update(): void;
     moveFollowCamera(): void;
+    moveCamera(position: Vector3): void;
 }

@@ -18,6 +18,7 @@ export interface GameOptions {
     */
     stage?: StageOptions;
     stages: StageOptions[];
+    update?: (delta: number, options: any) => void;
     debug?: ZylemDebug;
 }
 type Concrete<Type> = {
