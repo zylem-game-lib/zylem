@@ -34,6 +34,10 @@ See Game properties
 
 - create(options: EntityOptions)
 - group: Group
+- setup(options: SetupOptions)
+- update(options: UpdateOptions)
+- collision(options: CollisionOptions)
+- name: string
 - spawn(T)
 - spawnRelative(T)
 - destroy()
@@ -44,12 +48,21 @@ See Game properties
 - Sphere
 - Plane
 - Sprite
+  - images: Image[]
+  - animations: Animation[]
+  - sheets: Sheet[]
 - Text
 - Level
 - Model
 - Actor
 - Camera
 - Light
+
+### Entity Modifiers
+
+- Trigger
+- Physics (NMI)
+- Shader
 
 ### Ideas
 
