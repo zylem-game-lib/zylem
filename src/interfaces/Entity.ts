@@ -1,6 +1,7 @@
 import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 import { Group, Vector3 } from "three";
 import { UpdateOptions } from "./Update";
+import { SpriteAnimation, SpriteImage } from "~/stage/objects";
 
 export interface Entity<T = any> {
 	setup: (entity: T) => void;
@@ -37,7 +38,8 @@ export interface EntityOptions {
 	size?: Vector3;
 	collisionSize?: Vector3 | null;
 	radius?: number;
-	images?: string[];
+	images?: SpriteImage[];
+	animations?: SpriteAnimation<EntityOptions['images']>[];
 	color?: THREE.Color;
 	static?: boolean;
 }
