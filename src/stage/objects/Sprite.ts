@@ -66,6 +66,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 	createBodyDescription() {
 		let rigidBodyDesc = new RigidBodyDesc(RigidBodyType.Dynamic)
 			.setTranslation(0, 0, 0)
+			.lockRotations()
 			.setGravityScale(1.0)
 			.setCanSleep(false)
 			// .setAdditionalMass(1)

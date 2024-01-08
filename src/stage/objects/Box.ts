@@ -33,20 +33,7 @@ export class ZylemBox implements GameEntity<ZylemBox> {
 
 	destroy() { }
 
-	update(delta: number, { inputs }: any) {
-		if (!this.body) {
-			return;
-		}
-		const { x, y, z } = this.body.translation();
-		const { x: rx, y: ry, z: rz } = this.body.rotation();
-		this.group.position.set(x, y, z);
-		this.group.rotation.set(rx, ry, rz);
-		const _inputs = inputs ?? { moveUp: false, moveDown: false };
-		if (this._update === undefined) {
-			return;
-		}
-		this._update(delta, { inputs: _inputs, entity: this });
-	}
+	update(delta: number, { inputs }: any) { }
 
 	createMesh(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
 		this.size = vector3;

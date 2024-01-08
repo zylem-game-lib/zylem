@@ -24,7 +24,7 @@ export function Moveable<CBase extends Constructor>(Base: CBase) {
 		}
 
 		moveForwardXY(delta: number) {
-			const { z } = this.rotation;
+			const z = this._rotation2DAngle;
 			const deltaX = Math.sin(-z) * delta;
 			const deltaY = Math.cos(-z) * delta;
 			this.velocity.x += deltaX;
@@ -33,7 +33,7 @@ export function Moveable<CBase extends Constructor>(Base: CBase) {
 		}
 
 		velocity: Vector3 = new Vector3(0, 0, 0);
-		rotation: Vector3 = new Vector3(0, 0, 0);
+		_rotation2DAngle: number = 0;
 
 		_normalizeAngleTo2Pi(angle: number) {
 			const normalized = angle % (2 * Math.PI);
@@ -41,9 +41,9 @@ export function Moveable<CBase extends Constructor>(Base: CBase) {
 		}
 
 		rotate(delta: number) {
-			this.rotation.z += delta;
-			this.rotation.z = this._normalizeAngleTo2Pi(this.rotation.z);
-			this.setRotationZ(this.rotation.z);
+			this._rotation2DAngle += delta;
+			this._rotation2DAngle = this._normalizeAngleTo2Pi(this._rotation2DAngle);
+			this.setRotationZ(this._rotation2DAngle);
 		}
 
 		rotateY(delta: number) {
@@ -63,7 +63,19 @@ export function Moveable<CBase extends Constructor>(Base: CBase) {
 		}
 
 		setRotationZ(z: number) {
-			this.body.setRotation({ w: 1, x: 0, y: 0, z: z }, true);
+			const halfAngle = z / 2;
+			const w = Math.cos(halfAngle);
+			const zComponent = Math.sin(halfAngle);
+
+			this.body.setRotation({ w: w, x: 0, y: 0, z: zComponent }, true);
+		}
+
+		setRotation(x: number, y: number, z: number) {
+			this.body.setRotation({ w: 1, x, y, z }, true);
+		}
+
+		getRotation(): any {
+			return this.body.rotation();
 		}
 
 		setPosition(x: number, y: number, z: number) {
@@ -78,10 +90,10 @@ export function Moveable<CBase extends Constructor>(Base: CBase) {
 			return this.body.linvel();
 		}
 
-		getDirectionXY(): OptionalVector {
+		getDirection2D(): OptionalVector {
 			return {
-				x: Math.sin(-this.rotation.z),
-				y: Math.cos(-this.rotation.z),
+				x: Math.sin(-this._rotation2DAngle),
+				y: Math.cos(-this._rotation2DAngle),
 			};
 		}
 
