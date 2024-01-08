@@ -2,9 +2,12 @@ import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCame
 import { stageState } from '../state/index';
 import { PerspectiveType } from '../interfaces/Perspective';
 
+const zModifier = 45;
+
 export class ZylemCamera {
 	cameraRig: Object3D;
 	camera: Camera;
+	_perspective: PerspectiveType;
 	// follow: Entity | null;
 
 	constructor(screenResolution: Vector2) {
@@ -13,6 +16,7 @@ export class ZylemCamera {
 		const z = 25;
 		const position = new Vector3(0, 0, z);
 		const gamePerspective = stageState.perspective as PerspectiveType;
+		this._perspective = gamePerspective;
 		this.camera = this[gamePerspective](aspectRatio, position);
 		this.cameraRig = new Object3D();
 		this.cameraRig.position.set(0, 0, z);
@@ -22,7 +26,7 @@ export class ZylemCamera {
 
 	[PerspectiveType.ThirdPerson](aspectRatio: number): Camera {
 		console.warn('Third person camera not fully implemented');
-		return new PerspectiveCamera(45, aspectRatio, 0.1, 1000);
+		return new PerspectiveCamera(zModifier, aspectRatio, 0.1, 1000);
 	}
 
 	[PerspectiveType.Fixed2D](aspectRatio: number, position: Vector3): Camera {
@@ -89,7 +93,8 @@ export class ZylemCamera {
 	}
 
 	moveCamera(position: Vector3) {
-		this.cameraRig.position.set(position.x, position.y, position.z);
+		const adjustedZ = (this._perspective !== PerspectiveType.Flat2D) ? position.z + zModifier : position.z;
+		this.cameraRig.position.set(position.x, position.y, adjustedZ);
 	}
 
 	// followEntity(entity: Entity) {
