@@ -10,7 +10,7 @@ export declare function Moveable<CBase extends Constructor>(Base: CBase): {
         moveXY(deltaX: number, deltaY: number): void;
         moveForwardXY(delta: number): void;
         velocity: Vector3;
-        rotation: Vector3;
+        _rotation2DAngle: number;
         _normalizeAngleTo2Pi(angle: number): number;
         rotate(delta: number): void;
         rotateY(delta: number): void;
@@ -18,10 +18,12 @@ export declare function Moveable<CBase extends Constructor>(Base: CBase): {
         setRotationY(y: number): void;
         setRotationX(x: number): void;
         setRotationZ(z: number): void;
+        setRotation(x: number, y: number, z: number): void;
+        getRotation(): any;
         setPosition(x: number, y: number, z: number): void;
         getPosition(): Vector3;
         getVelocity(): Vector3;
-        getDirectionXY(): OptionalVector;
+        getDirection2D(): OptionalVector;
         wrapAroundXY(boundsX: number, boundsY: number): void;
     };
 } & CBase;
