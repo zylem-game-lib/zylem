@@ -2,7 +2,7 @@ import { Zylem, THREE } from "../../src/main";
 import { Ground } from "./ground";
 import { Player } from "./player";
 
-const { create, Flat2D } = Zylem;
+const { create, Flat2D, ThirdPerson } = Zylem;
 const { Color, Vector3 } = THREE;
 
 const game = create({
@@ -16,7 +16,7 @@ const game = create({
 	stages: [
 		{
 			id: 'level-1',
-			perspective: Flat2D,
+			perspective: ThirdPerson,
 			gravity: new Vector3(0, -10, 0),
 			backgroundColor: new Color(0xA1ADFF),
 			conditions: [
@@ -41,8 +41,9 @@ const game = create({
 			children: ({ gameState }) => {
 				return [
 					Player(),
-					Ground(),
-					Ground(new Vector3(30, -4, 0)),
+					Ground({}),
+					Ground({ position: new Vector3(30, -4, 0), rotation: new Vector3(0, 0, 0) }),
+					Ground({ position: new Vector3(-30, -4, 0), rotation: new Vector3(0, 0, 0) }),
 				];
 			},
 			update: (delta, { camera, stage, inputs, globals }) => {

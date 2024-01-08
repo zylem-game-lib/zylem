@@ -81,8 +81,8 @@ export function Ship(x = 0, y = 0) {
 				player.bulletCurrent = 0;
 				const bulletSpeed = 50;
 				const spawnDistance = 1.5;
-				const bulletVelX = player.getDirectionXY().x * bulletSpeed;
-				const bulletVelY = player.getDirectionXY().y * bulletSpeed;
+				const bulletVelX = player.getDirection2D().x * bulletSpeed;
+				const bulletVelY = player.getDirection2D().y * bulletSpeed;
 
 				player.spawnRelative(Bullet, { velX: bulletVelX, velY: bulletVelY }, { x: spawnDistance, y: spawnDistance });
 			}
