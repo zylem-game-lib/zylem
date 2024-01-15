@@ -1,6 +1,19 @@
 import { EntityOptions, GameEntity } from "../../interfaces/Entity";
 import { RigidBody, RigidBodyDesc, ColliderDesc, RigidBodyType, ActiveCollisionTypes } from "@dimforge/rapier3d-compat";
-import { Vector3, TextureLoader, SpriteMaterial, Sprite, Texture, Group, Vector2 } from "three";
+import {
+	Vector3,
+	TextureLoader,
+	SpriteMaterial,
+	Sprite,
+	Texture,
+	Group,
+	Color,
+	BoxGeometry,
+	BufferGeometry,
+	MeshPhongMaterial,
+	Mesh,
+	Box3
+} from "three";
 
 // TODO: make these classes more composable
 
@@ -17,6 +30,9 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 	bodyDescription: RigidBodyDesc;
 	constraintBodies?: RigidBody[] | undefined;
 	sensor?: boolean = false;
+	_debug: boolean = false;
+	debugColor?: Color = new Color(Color.NAMES.limegreen);
+	_debugMesh?: Mesh | undefined;
 
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: ZylemSprite) => void;
@@ -48,6 +64,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 		this.images = options.images;
 		this.animations = options.animations;
 		this.collisionSize = options.collisionSize ?? this.collisionSize;
+		this._debug = options.debug ?? false;
 		this.sensor = options.sensor;
 		this.group = new Group();
 		this.createSprites(options.size);
@@ -72,7 +89,6 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 			.lockRotations()
 			.setGravityScale(gravityScale)
 			.setCanSleep(false)
-			// .setAdditionalMass(1)
 			.setCcdEnabled(false);
 
 		return rigidBodyDesc;
@@ -143,6 +159,9 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 			colliderDesc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;
 			// colliderDesc.setActiveHooks(RAPIER.ActiveHooks.FILTER_INTERSECTION_PAIRS);
 		}
+		if (this._debug) {
+			this.createDebugMesh(new BoxGeometry(x, y, z));
+		}
 		return colliderDesc;
 	}
 
@@ -186,5 +205,13 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 				this._currentAnimationTime = frames[this._currentAnimationIndex].time
 			}
 		}
+	}
+
+	createDebugMesh(geometry: BufferGeometry) {
+		const color = this.debugColor;
+		const debugMaterial = new MeshPhongMaterial({ color });
+		debugMaterial.wireframe = true;
+		debugMaterial.needsUpdate = true;
+		this._debugMesh = new Mesh(geometry, debugMaterial);
 	}
 }

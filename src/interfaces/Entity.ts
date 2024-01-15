@@ -1,5 +1,5 @@
 import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
-import { Group, Vector3 } from "three";
+import { Color, Group, Vector3 } from "three";
 import { UpdateOptions } from "./Update";
 import { SpriteAnimation, SpriteImage } from "~/stage/objects";
 
@@ -28,6 +28,8 @@ export interface GameEntity<T> extends Entity<T> {
 	bodyDescription: RigidBodyDesc;
 	constraintBodies?: RigidBody[];
 	sensor?: boolean;
+	debug?: boolean;
+	debugColor?: Color;
 	createCollider: (isSensor?: boolean) => ColliderDesc;
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: T) => void;
@@ -39,6 +41,8 @@ export interface EntityOptions {
 	size?: Vector3;
 	collisionSize?: Vector3 | null;
 	sensor?: boolean;
+	debug?: boolean;
+	debugColor?: Color;
 	radius?: number;
 	images?: SpriteImage[];
 	animations?: SpriteAnimation<EntityOptions['images']>[];

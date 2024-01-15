@@ -35,6 +35,10 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			this.group.position.set(x, y, z);
 			this.group.setRotationFromQuaternion(new Quaternion(rx, ry, rz, rw));
 
+			if (this._debug) {
+				this._debugMesh.position.set(x, y, z);
+			}
+
 			if (this.sprites) {
 				this.sprites.forEach((sprite: Sprite) => {
 					sprite.material.rotation = this._rotation2DAngle;

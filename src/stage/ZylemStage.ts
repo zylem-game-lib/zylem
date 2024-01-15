@@ -87,6 +87,9 @@ export class ZylemStage implements Entity<ZylemStage> {
 			return;
 		}
 		blueprint.setup(entity);
+		if (entity._debug) {
+			this.scene.scene.add(entity._debugMesh);
+		}
 	}
 
 	destroy() {
