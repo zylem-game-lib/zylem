@@ -24,4 +24,5 @@ export declare class ZylemScene implements Entity<ZylemScene> {
     updateRenderer(width: number, height: number): void;
     add(object: Object3D, position?: Vector3): void;
     addEntity(entity: GameEntity<any>): void;
+    debugScene(): void;
 }

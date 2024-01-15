@@ -20,6 +20,7 @@ declare const Zylem: {
     Box: EntityType.Box;
     Sphere: EntityType.Sphere;
     Sprite: EntityType.Sprite;
+    Zone: EntityType.Zone;
     create: typeof create;
 };
 declare namespace Zylem { }

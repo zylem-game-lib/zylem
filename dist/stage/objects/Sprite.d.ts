@@ -1,6 +1,6 @@
 import { EntityOptions, GameEntity } from "../../interfaces/Entity";
 import { RigidBody, RigidBodyDesc, ColliderDesc } from "@dimforge/rapier3d-compat";
-import { Vector3, Sprite, Group } from "three";
+import { Vector3, Sprite, Group, Color, BufferGeometry, Mesh } from "three";
 export type SpriteImage = {
     name: string;
     file: string;
@@ -15,6 +15,10 @@ export declare class ZylemSprite implements GameEntity<ZylemSprite> {
     body?: RigidBody | undefined;
     bodyDescription: RigidBodyDesc;
     constraintBodies?: RigidBody[] | undefined;
+    sensor?: boolean;
+    _debug: boolean;
+    debugColor?: Color;
+    _debugMesh?: Mesh | undefined;
     _update: (delta: number, options: any) => void;
     _setup: (entity: ZylemSprite) => void;
     _type: string;
@@ -46,4 +50,5 @@ export declare class ZylemSprite implements GameEntity<ZylemSprite> {
     createCollider(isSensor?: boolean): ColliderDesc;
     setSprite(key: string): void;
     setAnimation(name: string, delta: number): void;
+    createDebugMesh(geometry: BufferGeometry): void;
 }
