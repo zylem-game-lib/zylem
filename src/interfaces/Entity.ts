@@ -27,6 +27,7 @@ export interface GameEntity<T> extends Entity<T> {
 	body?: RigidBody;
 	bodyDescription: RigidBodyDesc;
 	constraintBodies?: RigidBody[];
+	sensor?: boolean;
 	createCollider: (isSensor?: boolean) => ColliderDesc;
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: T) => void;
@@ -37,6 +38,7 @@ export interface EntityOptions {
 	setup: (entity: any) => void;
 	size?: Vector3;
 	collisionSize?: Vector3 | null;
+	sensor?: boolean;
 	radius?: number;
 	images?: SpriteImage[];
 	animations?: SpriteAnimation<EntityOptions['images']>[];

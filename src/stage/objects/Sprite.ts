@@ -16,6 +16,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 	body?: RigidBody | undefined;
 	bodyDescription: RigidBodyDesc;
 	constraintBodies?: RigidBody[] | undefined;
+	sensor?: boolean = false;
 
 	_update: (delta: number, options: any) => void;
 	_setup: (entity: ZylemSprite) => void;
@@ -47,6 +48,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 		this.images = options.images;
 		this.animations = options.animations;
 		this.collisionSize = options.collisionSize ?? this.collisionSize;
+		this.sensor = options.sensor;
 		this.group = new Group();
 		this.createSprites(options.size);
 		this.createAnimations();
@@ -64,10 +66,11 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 	destroy() { }
 
 	createBodyDescription() {
+		const gravityScale = (this.sensor) ? 0.0 : 1.0;
 		let rigidBodyDesc = new RigidBodyDesc(RigidBodyType.Dynamic)
 			.setTranslation(0, 0, 0)
 			.lockRotations()
-			.setGravityScale(1.0)
+			.setGravityScale(gravityScale)
 			.setCanSleep(false)
 			// .setAdditionalMass(1)
 			.setCcdEnabled(false);

@@ -23,12 +23,13 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		const rigidBody = this.world.createRigidBody(entity.bodyDescription);
 		entity.body = rigidBody;
 		entity.body.lockRotations(true, true);
-		// entity.body.setEnabledRotations(false, false, true, true);
-		// TODO: kind of a hack, but if there's no gravity lock the translations
+		let useSensor = false;
 		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
 			entity.body.lockTranslations(true, true);
+		} else {
+			useSensor = entity.sensor ?? false;
 		}
-		const colliderDesc = entity.createCollider();
+		const colliderDesc = entity.createCollider(useSensor);
 		this.world.createCollider(colliderDesc, entity.body);
 		this.collisionDictionary.set(entity.body.handle, entity);
 	}
@@ -58,7 +59,16 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				if (entity._collision) {
 					entity._collision(entity, gameEntity, { gameState });
 				}
-			})
+			});
+			this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
+				const entity = dictionaryRef.get(otherCollider.handle);
+				if (!entity) {
+					return;
+				}
+				if (entity._collision) {
+					entity._collision(entity, gameEntity, { gameState });
+				}
+			});
 		}
 	}
 
