@@ -1,6 +1,6 @@
 {
 	"name": "@tcool86/zylem",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.",
 	"license": "MIT",
 	"author": "Tim Cool",
@@ -59,7 +59,8 @@
 		"source-map-js": "^1.0.2",
 		"supports-preserve-symlinks-flag": "^1.0.0",
 		"three": "^0.151.3",
-		"three-spritetext": "^1.8.1"
+		"three-spritetext": "^1.8.1",
+		"vite-plugin-string": "^1.2.2"
 	},
 	"devDependencies": {
 		"@babel/preset-typescript": "^7.21.4",
