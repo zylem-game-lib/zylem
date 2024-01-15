@@ -1,5 +1,5 @@
-import { ZylemWorld } from "../world/ZylemWorld";
-import { ZylemScene } from "../scene/ZylemScene";
+import { ZylemWorld } from "../collision/ZylemWorld";
+import { ZylemScene } from "../rendering/ZylemScene";
 import { Entity, EntityBlueprint } from "../interfaces/Entity";
 import { UpdateOptions } from "../interfaces/Update";
 import { Conditions, StageOptions } from "../interfaces/Game";

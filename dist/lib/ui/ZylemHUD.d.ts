@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
 import SpriteText from 'three-spritetext';
-import { ZylemCamera } from '~/scene/ZylemCamera';
+import { ZylemCamera } from '~/lib/rendering/ZylemCamera';
 export interface HUDTextOptions {
     text: string;
     binding: string;

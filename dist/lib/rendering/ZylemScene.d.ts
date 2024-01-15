@@ -2,8 +2,8 @@ import { Scene, Vector2, WebGLRenderer, Object3D, Vector3 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { ZylemCamera } from './ZylemCamera';
 import { Entity, GameEntity } from '../interfaces/Entity';
-import { ZylemHUD } from '../game/ZylemHUD';
-import { SetupCallback } from '~/interfaces/Game';
+import { ZylemHUD } from '../ui/ZylemHUD';
+import { SetupCallback } from '~/lib/interfaces/Game';
 export declare class ZylemScene implements Entity<ZylemScene> {
     _type: string;
     _setup?: SetupCallback;

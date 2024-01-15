@@ -1,11 +1,11 @@
-import { ZylemDebug } from '@/game/ZylemDebug';
+import { ZylemDebug } from '~/lib/core/ZylemDebug';
 import { PerspectiveType } from './Perspective';
-import ZylemGame from '@/game/ZylemGame';
-import { ZylemScene } from '@/scene/ZylemScene';
-import { ZylemHUD } from '@/game/ZylemHUD';
+import ZylemGame from '~/lib/core/ZylemGame';
+import { ZylemScene } from '~/lib/rendering/ZylemScene';
+import { ZylemHUD } from '~/lib/ui/ZylemHUD';
 import { Color, Vector3 } from 'three';
-import { ZylemCamera } from '~/scene/ZylemCamera';
-import { ZylemWorld } from '~/world/ZylemWorld';
+import { ZylemCamera } from '~/lib/rendering/ZylemCamera';
+import { ZylemWorld } from '~/lib/collision/ZylemWorld';
 export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
 export interface GameOptions {
     id: string;

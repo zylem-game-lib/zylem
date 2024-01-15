@@ -1,7 +1,7 @@
 import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 import { Color, Group, Vector3 } from "three";
 import { UpdateOptions } from "./Update";
-import { SpriteAnimation, SpriteImage } from "~/stage/objects";
+import { SpriteAnimation, SpriteImage } from "~/lib/entities";
 export interface Entity<T = any> {
     setup: (entity: T) => void;
     destroy: () => void;

@@ -1,4 +1,4 @@
-import { EntityOptions, GameEntity } from "../../interfaces/Entity";
+import { EntityOptions, GameEntity } from "../interfaces/Entity";
 import { RigidBody, RigidBodyDesc, ColliderDesc } from "@dimforge/rapier3d-compat";
 import { Vector3, Sprite, Group, Color, BufferGeometry, Mesh } from "three";
 export type SpriteImage = {
