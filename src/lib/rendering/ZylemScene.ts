@@ -12,11 +12,11 @@ import {
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { ZylemCamera } from './ZylemCamera';
-import RenderPass from './rendering/RenderPass';
+import RenderPass from './RenderPass';
 import { Entity, GameEntity } from '../interfaces/Entity';
+import { ZylemHUD } from '../ui/ZylemHUD';
+import { SetupCallback } from '~/lib/interfaces/Game';
 import { stageState } from '../state';
-import { ZylemHUD } from '../game/ZylemHUD';
-import { SetupCallback } from '~/interfaces/Game';
 
 export class ZylemScene implements Entity<ZylemScene> {
 	_type = 'Scene';

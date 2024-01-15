@@ -1,7 +1,7 @@
 // Sphere is a combination of a 3D mesh and a physics body
 import { Group, Mesh, MeshStandardMaterial, SphereGeometry, Color } from 'three';
 import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
-import { EntityOptions, GameEntity } from "../../interfaces/Entity";
+import { EntityOptions, GameEntity } from "../interfaces/Entity";
 
 export class ZylemSphere implements GameEntity<ZylemSphere> {
 	_type: string;

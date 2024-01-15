@@ -1,5 +1,5 @@
 import { ControllerInput, GamePadConnections } from "../interfaces/GamePad";
-import { isMobile } from "../device/Mobile";
+import { isMobile } from "../device/mobile";
 import nipplejs, { JoystickManager } from 'nipplejs';
 
 export default class GamePad {

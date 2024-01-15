@@ -1,4 +1,4 @@
-import { EntityOptions, GameEntity } from '../../interfaces/Entity';
+import { EntityOptions, GameEntity } from '../interfaces/Entity';
 import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3, Color } from 'three';
 

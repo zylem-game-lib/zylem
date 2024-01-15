@@ -1,7 +1,7 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
 import { BoxGeometry, Color, Group, Mesh, MeshPhongMaterial, Vector3 } from "three";
-import { Entity, EntityOptions, GameEntity } from "~/interfaces/Entity";
-import { UpdateOptions } from "~/interfaces/Update";
+import { Entity, EntityOptions, GameEntity } from "~/lib/interfaces/Entity";
+import { UpdateOptions } from "~/lib/interfaces/Update";
 
 export class ZylemZone implements GameEntity<ZylemZone> {
 	_type: string;

@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import fragmentShader from './fragment-shaders/standard.fx?raw';
-import vertexShader from './vertex-shaders/standard.fx?raw';
+import fragmentShader from './shaders/fragment/standard.fx?raw';
+import vertexShader from './shaders/vertex/standard.fx?raw';
 import { WebGLRenderer, WebGLRenderTarget } from "three";
 import { Pass, FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 

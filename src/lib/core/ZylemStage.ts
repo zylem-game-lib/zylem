@@ -1,15 +1,15 @@
 // Zylem Stage should combine a world with a scene
-import { ZylemWorld } from "../world/ZylemWorld";
-import { ZylemScene } from "../scene/ZylemScene";
+import { ZylemWorld } from "../collision/ZylemWorld";
+import { ZylemScene } from "../rendering/ZylemScene";
 import { Entity, EntityBlueprint } from "../interfaces/Entity";
-import { ZylemBox, ZylemSphere, ZylemSprite } from "./objects";
+import { ZylemBox, ZylemSphere, ZylemSprite } from "../entities";
 import { UpdateOptions } from "../interfaces/Update";
-import { Moveable } from "./objects/Moveable";
-import { Interactive } from "./objects/Interactive";
+import { Moveable } from "../behaviors/Moveable";
+import { Interactive } from "../behaviors/Interactive";
 import { gameState, setGameState, setStageState } from "../state";
 import { Conditions, StageOptions } from "../interfaces/Game";
 import { Vector3 } from "three";
-import { ZylemZone } from "./objects/Zone";
+import { ZylemZone } from "../entities/Zone";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
