@@ -21039,7 +21039,7 @@ typeof __THREE_DEVTOOLS__ < "u" && __THREE_DEVTOOLS__.dispatchEvent(new CustomEv
   revision: _E
 } }));
 typeof window < "u" && (window.__THREE__ ? console.warn("WARNING: Multiple instances of Three.js being imported.") : window.__THREE__ = _E);
-const gU = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const BU = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ACESFilmicToneMapping: In,
   AddEquation: ZC,
@@ -25770,7 +25770,7 @@ var De = Object.freeze({ __proto__: null, version: fh, Vector3: ea, VectorOps: u
 }, DebugRenderBuffers: qa, DebugRenderPipeline: ua, get QueryFilterFlags() {
   return TE;
 }, QueryPipeline: da, init: uh, CharacterCollision: fa, KinematicCharacterController: Ya });
-const CU = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const QU = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   get ActiveCollisionTypes() {
     return CC;
@@ -26136,7 +26136,20 @@ class yM {
     this.cameraRig.position.set(A.x, A.y, I);
   }
 }
-class kM extends Ho {
+const kM = `uniform sampler2D tDiffuse;
+varying vec2 vUv;
+
+void main() {
+	vec4 texel = texture2D( tDiffuse, vUv );
+
+	gl_FragColor = texel;
+}`, MM = `varying vec2 vUv;
+
+void main() {
+	vUv = uv;
+	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+}`;
+class UM extends Ho {
   constructor(I, g, C) {
     super();
     P(this, "fsQuad");
@@ -26165,26 +26178,12 @@ class kM extends Ho {
           value: new EI(this.resolution.x, this.resolution.y, 1 / this.resolution.x, 1 / this.resolution.y)
         }
       },
-      // vertexShader: vertexShader,
-      vertexShader: `varying vec2 vUv;
-
-			void main() {
-				vUv = uv;
-				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-			}`,
-      // fragmentShader: fragmentShader
-      fragmentShader: `uniform sampler2D tDiffuse;
-			varying vec2 vUv;
-			
-			void main() {
-				vec4 texel = texture2D( tDiffuse, vUv );
-			
-				gl_FragColor = texel;
-			}`
+      vertexShader: MM,
+      fragmentShader: kM
     });
   }
 }
-function MM(i, A) {
+function KM(i, A) {
   var I = i == null ? null : typeof Symbol < "u" && i[Symbol.iterator] || i["@@iterator"];
   if (I != null) {
     var g, C, B, Q, E = [], t = !0, e = !1;
@@ -26210,22 +26209,22 @@ function MM(i, A) {
     return E;
   }
 }
-function UM(i, A) {
+function NM(i, A) {
   if (!(i instanceof A))
     throw new TypeError("Cannot call a class as a function");
 }
 function kD(i, A) {
   for (var I = 0; I < A.length; I++) {
     var g = A[I];
-    g.enumerable = g.enumerable || !1, g.configurable = !0, "value" in g && (g.writable = !0), Object.defineProperty(i, HM(g.key), g);
+    g.enumerable = g.enumerable || !1, g.configurable = !0, "value" in g && (g.writable = !0), Object.defineProperty(i, TM(g.key), g);
   }
 }
-function KM(i, A, I) {
+function JM(i, A, I) {
   return A && kD(i.prototype, A), I && kD(i, I), Object.defineProperty(i, "prototype", {
     writable: !1
   }), i;
 }
-function NM(i, A) {
+function FM(i, A) {
   if (typeof A != "function" && A !== null)
     throw new TypeError("Super expression must either be null or a function");
   i.prototype = Object.create(A && A.prototype, {
@@ -26248,7 +26247,7 @@ function ne(i, A) {
     return g.__proto__ = C, g;
   }, ne(i, A);
 }
-function JM() {
+function RM() {
   if (typeof Reflect > "u" || !Reflect.construct || Reflect.construct.sham)
     return !1;
   if (typeof Proxy == "function")
@@ -26260,20 +26259,20 @@ function JM() {
     return !1;
   }
 }
-function FM(i) {
+function pM(i) {
   if (i === void 0)
     throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
   return i;
 }
-function RM(i, A) {
+function dM(i, A) {
   if (A && (typeof A == "object" || typeof A == "function"))
     return A;
   if (A !== void 0)
     throw new TypeError("Derived constructors may only return object or undefined");
-  return FM(i);
+  return pM(i);
 }
-function pM(i) {
-  var A = JM();
+function qM(i) {
+  var A = RM();
   return function() {
     var g = PE(i), C;
     if (A) {
@@ -26281,24 +26280,24 @@ function pM(i) {
       C = Reflect.construct(g, arguments, B);
     } else
       C = g.apply(this, arguments);
-    return RM(this, C);
+    return dM(this, C);
   };
 }
 function MD(i, A) {
-  return qM(i) || MM(i, A) || Lh(i, A) || YM();
+  return fM(i) || KM(i, A) || Lh(i, A) || HM();
 }
 function eE(i) {
-  return dM(i) || uM(i) || Lh(i) || fM();
+  return uM(i) || YM(i) || Lh(i) || LM();
 }
-function dM(i) {
+function uM(i) {
   if (Array.isArray(i))
     return he(i);
 }
-function qM(i) {
+function fM(i) {
   if (Array.isArray(i))
     return i;
 }
-function uM(i) {
+function YM(i) {
   if (typeof Symbol < "u" && i[Symbol.iterator] != null || i["@@iterator"] != null)
     return Array.from(i);
 }
@@ -26319,15 +26318,15 @@ function he(i, A) {
     g[I] = i[I];
   return g;
 }
-function fM() {
+function LM() {
   throw new TypeError(`Invalid attempt to spread non-iterable instance.
 In order to be iterable, non-array objects must have a [Symbol.iterator]() method.`);
 }
-function YM() {
+function HM() {
   throw new TypeError(`Invalid attempt to destructure non-iterable instance.
 In order to be iterable, non-array objects must have a [Symbol.iterator]() method.`);
 }
-function LM(i, A) {
+function mM(i, A) {
   if (typeof i != "object" || i === null)
     return i;
   var I = i[Symbol.toPrimitive];
@@ -26339,8 +26338,8 @@ function LM(i, A) {
   }
   return (A === "string" ? String : Number)(i);
 }
-function HM(i) {
-  var A = LM(i, "string");
+function TM(i) {
+  var A = mM(i, "string");
   return typeof A == "symbol" ? A : String(A);
 }
 var LB = typeof window < "u" && window.THREE ? window.THREE : {
@@ -26349,14 +26348,14 @@ var LB = typeof window < "u" && window.THREE ? window.THREE : {
   SpriteMaterial: Bi,
   SRGBColorSpace: lg,
   Texture: UI
-}, mM = /* @__PURE__ */ function(i) {
-  NM(I, i);
-  var A = pM(I);
+}, xM = /* @__PURE__ */ function(i) {
+  FM(I, i);
+  var A = qM(I);
   function I() {
     var g, C = arguments.length > 0 && arguments[0] !== void 0 ? arguments[0] : "", B = arguments.length > 1 && arguments[1] !== void 0 ? arguments[1] : 10, Q = arguments.length > 2 && arguments[2] !== void 0 ? arguments[2] : "rgba(255, 255, 255, 1)";
-    return UM(this, I), g = A.call(this, new LB.SpriteMaterial()), g._text = "".concat(C), g._textHeight = B, g._color = Q, g._backgroundColor = !1, g._padding = 0, g._borderWidth = 0, g._borderRadius = 0, g._borderColor = "white", g._strokeWidth = 0, g._strokeColor = "white", g._fontFace = "system-ui", g._fontSize = 90, g._fontWeight = "normal", g._canvas = document.createElement("canvas"), g._genCanvas(), g;
+    return NM(this, I), g = A.call(this, new LB.SpriteMaterial()), g._text = "".concat(C), g._textHeight = B, g._color = Q, g._backgroundColor = !1, g._padding = 0, g._borderWidth = 0, g._borderRadius = 0, g._borderColor = "white", g._strokeWidth = 0, g._strokeColor = "white", g._fontFace = "system-ui", g._fontSize = 90, g._fontWeight = "normal", g._canvas = document.createElement("canvas"), g._genCanvas(), g;
   }
-  return KM(I, [{
+  return JM(I, [{
     key: "text",
     get: function() {
       return this._text;
@@ -26529,14 +26528,14 @@ var LB = typeof window < "u" && window.THREE ? window.THREE : {
     }
   }]), I;
 }(LB.Sprite);
-class TM {
+class bM {
   constructor(A) {
     P(this, "_hudText");
     P(this, "cameraRef");
     this._hudText = [], this.cameraRef = A;
   }
   createText({ text: A, binding: I, position: g }) {
-    const C = new mM(A);
+    const C = new xM(A);
     C.textHeight = 2;
     const B = {
       sprite: C,
@@ -26561,7 +26560,7 @@ class TM {
     });
   }
 }
-class xM {
+class OM {
   constructor(A) {
     P(this, "_type", "Scene");
     P(this, "_setup");
@@ -26584,7 +26583,7 @@ class xM {
     g.firstChild && g.removeChild(g.firstChild), this.containerElement = g, g.appendChild(this.renderer.domElement), this.debugScene();
   }
   setup() {
-    this._setup && (this._hud = new TM(this.zylemCamera), this._setup({ scene: this, HUD: this._hud }), this._hud._hudText.forEach((A) => {
+    this._setup && (this._hud = new bM(this.zylemCamera), this._setup({ scene: this, HUD: this._hud }), this._hud._hudText.forEach((A) => {
       this.add(A.sprite, A.position);
     }));
   }
@@ -26596,7 +26595,7 @@ class xM {
   setupCamera(A) {
     this.zylemCamera = new yM(this.screenResolution);
     let I = this.screenResolution.clone().divideScalar(2);
-    I.x |= 0, I.y |= 0, A.add(this.zylemCamera.cameraRig), this.composer.addPass(new kM(I, A, this.zylemCamera.camera));
+    I.x |= 0, I.y |= 0, A.add(this.zylemCamera.cameraRig), this.composer.addPass(new UM(I, A, this.zylemCamera.camera));
   }
   setupLighting(A) {
     const I = new Aa(16777215, 0.5);
@@ -26623,7 +26622,7 @@ class xM {
     this.scene.add(g);
   }
 }
-class bM {
+class vM {
   constructor(A) {
     P(this, "_type");
     P(this, "group");
@@ -26664,7 +26663,7 @@ class bM {
     return C.setSensor(A), A && (C.activeCollisionTypes = CC.KINEMATIC_FIXED), C;
   }
 }
-class OM {
+class ZM {
   constructor(A) {
     P(this, "_type");
     P(this, "group");
@@ -26709,7 +26708,7 @@ class OM {
     return C.setSensor(A), A && (C.activeCollisionTypes = CC.KINEMATIC_FIXED), C;
   }
 }
-class vM {
+class WM {
   constructor(A) {
     P(this, "body");
     P(this, "bodyDescription");
@@ -26806,7 +26805,7 @@ class vM {
     g.wireframe = !0, g.needsUpdate = !0, this._debugMesh = new MI(A, g);
   }
 }
-function ZM(i) {
+function PM(i) {
   return class extends i {
     constructor() {
       super(...arguments);
@@ -26879,7 +26878,7 @@ function ZM(i) {
     }
   };
 }
-function WM(i) {
+function _M(i) {
   return class extends i {
     setup() {
       this._setup !== void 0 && this._setup(this);
@@ -26909,7 +26908,7 @@ function WM(i) {
     }
   };
 }
-class PM {
+class jM {
   constructor(A) {
     P(this, "_type");
     P(this, "debug");
@@ -26963,7 +26962,7 @@ class PM {
   update(A, I) {
   }
 }
-class _M {
+class VM {
   constructor() {
     P(this, "_type", "Stage");
     // TODO: update options with type
@@ -26977,7 +26976,7 @@ class _M {
     this.world = null, this.scene = null;
   }
   async buildStage(A, I) {
-    yt("perspective", A.perspective), yt("backgroundColor", A.backgroundColor), yt("backgroundImage", A.backgroundImage), this.scene = new xM(I), this.scene._setup = A.setup, this._update = A.update ?? null;
+    yt("perspective", A.perspective), yt("backgroundColor", A.backgroundColor), yt("backgroundImage", A.backgroundImage), this.scene = new OM(I), this.scene._setup = A.setup, this._update = A.update ?? null;
     const g = await lD.loadPhysics(A.gravity ?? new U(0, 0, 0));
     this.world = new lD(g), this.blueprints = A.children({ gameState: wC, setGameState: Nt }) || [], this.conditions = A.conditions, await this.setup();
   }
@@ -26993,7 +26992,7 @@ class _M {
   spawnEntity(A, I) {
     if (!this.scene || !this.world)
       return;
-    const g = jM[A.type], C = ZM(g), B = WM(C), Q = new B(A);
+    const g = XM[A.type], C = PM(g), B = _M(C), Q = new B(A);
     if (Q.name = A.name, Q.group && this.scene.scene.add(Q.group), A.props)
       for (let E in A.props)
         Q[E] = A.props[E];
@@ -27038,13 +27037,13 @@ class _M {
     (g = this.scene) == null || g.updateRenderer(A, I);
   }
 }
-const jM = {
-  Box: bM,
-  Sphere: OM,
-  Sprite: vM,
-  Zone: PM
+const XM = {
+  Box: vM,
+  Sphere: ZM,
+  Sprite: WM,
+  Zone: jM
 }, UD = 16;
-class VM {
+class zM {
   constructor(A) {
     P(this, "id");
     P(this, "ratio");
@@ -27067,7 +27066,7 @@ class VM {
     Nt("globals", A.globals), this._initialGlobals = { ...A.globals }, this.id = A.id, this.ratio = A.ratio ?? "16:9", this._targetRatio = Number(this.ratio.split(":")[0]) / Number(this.ratio.split(":")[1]), this.gamePad = new Cr(), this.clock = new Do(), this.blueprintOptions = A, this._canvasWrapper = null, this.createCanvas(), this.stage = A.stages[0], this.stages = A.stages ?? [{ id: "default-stage", ...A == null ? void 0 : A.stage }], this.loadStage(this.stage), this.currentStage = this.id;
   }
   async loadStage(A) {
-    const I = new _M();
+    const I = new VM();
     I.buildStage(A, this.id), this._stageMap[this.id] = I;
   }
   /**
@@ -28381,18 +28380,18 @@ var SQ = typeof globalThis < "u" ? globalThis : typeof window < "u" ? window : t
     };
   })();
 })(mh);
-const XM = new Hh();
-function zM(i) {
-  return i.debug = XM, new VM(i);
+const $M = new Hh();
+function AU(i) {
+  return i.debug = $M, new zM(i);
 }
-const iU = {
-  create: zM,
+const oU = {
+  create: AU,
   ...re,
   ...Kg
-}, EU = mh.Howl;
+}, tU = mh.Howl;
 export {
-  EU as Howl,
-  CU as RAPIER,
-  gU as THREE,
-  iU as Zylem
+  tU as Howl,
+  QU as RAPIER,
+  BU as THREE,
+  oU as Zylem
 };
