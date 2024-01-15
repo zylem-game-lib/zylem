@@ -34,6 +34,7 @@ function InvaderBullet({ x = 0, y = -8, health = 2 }) {
 
 export function Invader(x = 0, y = 0, health = 2) {
 	return {
+		debug: true,
 		name: `invader_${x}_${y}`,
 		type: Sprite,
 		size: invaderSize,

@@ -13,6 +13,7 @@ export function Player() {
 	return {
 		name: `player`,
 		type: Sprite,
+		debug: true,
 		images: [{
 			name: 'idle',
 			file: 'platformer/idle.png'
@@ -51,6 +52,7 @@ export function Player() {
 			loop: true,
 		}],
 		size: new Vector3(2, 2, 1),
+		collisionSize: new Vector3(0.5, 2, 1),
 		props: {
 			jumpState: JumpState.Idle,
 			jumpTime: 0.25,

@@ -29,6 +29,7 @@ const resolveRockSize = (health: number, variant: number) => {
 export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 	const rockVariant = Math.floor(Math.random() * 2);
 	return {
+		debug: true,
 		name: `rock`,
 		type: Sprite,
 		size: new Vector3(startingHealth * 0.5, startingHealth * 0.5, startingHealth),

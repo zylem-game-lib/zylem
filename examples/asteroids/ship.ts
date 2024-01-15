@@ -6,6 +6,7 @@ const { Vector3, Color } = THREE;
 
 export function Bullet({ position = new Vector3(0, 0, 0), velX = 0, velY = 0 }) {
 	return {
+		debug: true,
 		name: `bullet`,
 		type: Sphere,
 		radius: 0.1,
@@ -37,6 +38,7 @@ export function Bullet({ position = new Vector3(0, 0, 0), velX = 0, velY = 0 }) 
 
 export function Ship(x = 0, y = 0) {
 	return {
+		debug: true,
 		name: `ship`,
 		type: Sprite,
 		size: new Vector3(2, 2, 1),
