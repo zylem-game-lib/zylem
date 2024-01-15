@@ -9,6 +9,7 @@ import { Interactive } from "./objects/Interactive";
 import { gameState, setGameState, setStageState } from "../state";
 import { Conditions, StageOptions } from "../interfaces/Game";
 import { Vector3 } from "three";
+import { ZylemZone } from "./objects/Zone";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
@@ -142,4 +143,5 @@ const BlueprintMap = {
 	'Box': ZylemBox,
 	'Sphere': ZylemSphere,
 	'Sprite': ZylemSprite,
+	'Zone': ZylemZone
 }

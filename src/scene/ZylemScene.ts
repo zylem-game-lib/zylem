@@ -7,7 +7,8 @@ import {
 	DirectionalLight,
 	Object3D,
 	Vector3,
-	TextureLoader
+	TextureLoader,
+	GridHelper
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import { ZylemCamera } from './ZylemCamera';
@@ -51,6 +52,8 @@ export class ZylemScene implements Entity<ZylemScene> {
 		}
 		this.containerElement = element;
 		element.appendChild(this.renderer.domElement);
+		// TODO: this needs to be exposed at the stage options level
+		this.debugScene();
 	}
 
 	setup() {
@@ -120,5 +123,13 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	addEntity(entity: GameEntity<any>) {
 		this.scene.add(entity.group);
+	}
+
+	debugScene() {
+		const size = 1000;
+		const divisions = 100;
+
+		const gridHelper = new GridHelper(size, divisions);
+		this.scene.add(gridHelper);
 	}
 }

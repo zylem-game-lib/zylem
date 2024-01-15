@@ -61,6 +61,9 @@ See Game properties
 ### Entity Modifiers
 
 - Trigger
+  - Entered
+  - Held => Time
+  - Exit
 - Physics (NMI)
 - Shader
 

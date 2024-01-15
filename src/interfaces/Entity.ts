@@ -54,6 +54,7 @@ export enum EntityType {
 	Box = 'Box',
 	Sphere = 'Sphere',
 	Sprite = 'Sprite',
+	Zone = 'Zone'
 }
 
 // TODO: use generic Entity class for shared methods
