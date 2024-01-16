@@ -1,2 +1,2 @@
-export { gameState, setGameState } from './GameState';
-export { stageState, setStageState } from './StageState';
+export { gameState, setGlobalState } from './GameState';
+export { stageState, setStageBackgroundColor, setStageBackgroundImage, setStagePerspective } from './StageState';

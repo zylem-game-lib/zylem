@@ -1,23 +1,17 @@
-import { ZylemDebug } from '~/lib/core/ZylemDebug';
+import { ZylemDebug } from '~/lib/core/Debug';
 import { PerspectiveType } from './Perspective';
-import ZylemGame from '~/lib/core/ZylemGame';
-import { ZylemScene } from '~/lib/rendering/ZylemScene';
-import { ZylemHUD } from '~/lib/ui/ZylemHUD';
+import ZylemGame from '~/lib/core/Game';
+import { ZylemScene } from '~/lib/rendering/Scene';
+import { ZylemHUD } from '~/lib/ui/HUD';
 import { Color, Vector3 } from 'three';
-import { ZylemCamera } from '~/lib/rendering/ZylemCamera';
-import { ZylemWorld } from '~/lib/collision/ZylemWorld';
+import { ZylemCamera } from '~/lib/rendering/Camera';
+import { ZylemWorld } from '~/lib/collision/World';
 export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
-export interface GameOptions {
+export interface GameBlueprint {
     id: string;
     ratio?: GameRatio;
     globals: Record<string, any>;
-    /**
-     * Individual stage options
-     *
-     * @deprecated use stages instead
-    */
-    stage?: StageOptions;
-    stages: StageOptions[];
+    stages: StageBlueprint[];
     update?: (delta: number, options: any) => void;
     debug?: ZylemDebug;
 }
@@ -32,7 +26,7 @@ export interface SetupCallbackOptions {
     HUD: ZylemHUD;
 }
 export type SetupCallback = (options: SetupCallbackOptions) => void;
-export interface StageOptions {
+export interface StageBlueprint {
     id?: string;
     gravity?: Vector3;
     perspective: PerspectiveType;
@@ -40,7 +34,7 @@ export interface StageOptions {
     backgroundColor: Color | number;
     setup: SetupCallback;
     children: (globals?: any) => any[];
-    conditions: Array<Conditions<GameOptions["globals"]>>;
+    conditions: Array<Conditions<GameBlueprint["globals"]>>;
     update?: (delta: number, options: any) => void;
 }
 export {};

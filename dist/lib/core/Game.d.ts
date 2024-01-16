@@ -1,16 +1,16 @@
-import GamePad from '../input/ZylemGamePad';
-import { ZylemStage } from './ZylemStage';
+import GamePad from '../input/GamePad';
+import { ZylemStage } from './Stage';
 import { Clock } from 'three';
-import { GameOptions, GameRatio, StageOptions } from '../interfaces/Game';
+import { GameBlueprint, GameRatio, StageBlueprint } from '../interfaces/game';
 import { PerspectiveType } from "../interfaces/Perspective";
-export declare class ZylemGame implements GameOptions {
+export declare class ZylemGame implements GameBlueprint {
     id: string;
     ratio: GameRatio;
     perspective: PerspectiveType;
     globals: any;
-    stage?: StageOptions;
-    stages: StageOptions[];
-    blueprintOptions: GameOptions;
+    stage?: StageBlueprint;
+    stages: StageBlueprint[];
+    blueprintOptions: GameBlueprint;
     currentStage: string;
     clock: Clock;
     gamePad: GamePad;
@@ -20,8 +20,8 @@ export declare class ZylemGame implements GameOptions {
     _canvasWrapper: Element | null;
     previousTimeStamp: number;
     startTimeStamp: number;
-    constructor(options: GameOptions);
-    loadStage(options: StageOptions): Promise<void>;
+    constructor(options: GameBlueprint);
+    loadStage(options: StageBlueprint): Promise<void>;
     /**
      * Main game loop
      * process user input

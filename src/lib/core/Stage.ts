@@ -1,15 +1,21 @@
 // Zylem Stage should combine a world with a scene
-import { ZylemWorld } from "../collision/ZylemWorld";
-import { ZylemScene } from "../rendering/ZylemScene";
-import { Entity, EntityBlueprint } from "../interfaces/Entity";
+import { ZylemWorld } from "../collision/World";
+import { ZylemScene } from "../rendering/Scene";
+import { Entity, EntityBlueprint } from "../interfaces/entity";
 import { ZylemBox, ZylemSphere, ZylemSprite } from "../entities";
 import { UpdateOptions } from "../interfaces/Update";
 import { Moveable } from "../behaviors/Moveable";
 import { Interactive } from "../behaviors/Interactive";
-import { gameState, setGameState, setStageState } from "../state";
-import { Conditions, StageOptions } from "../interfaces/Game";
+import { Conditions, StageBlueprint } from "../interfaces/game";
 import { Vector3 } from "three";
 import { ZylemZone } from "../entities/Zone";
+import {
+	gameState,
+	setGlobalState,
+	setStagePerspective,
+	setStageBackgroundColor,
+	setStageBackgroundImage
+} from "../state";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
@@ -27,16 +33,16 @@ export class ZylemStage implements Entity<ZylemStage> {
 		this.scene = null;
 	}
 
-	async buildStage(options: StageOptions, id: string) {
-		setStageState('perspective', options.perspective);
-		setStageState('backgroundColor', options.backgroundColor);
-		setStageState('backgroundImage', options.backgroundImage);
+	async buildStage(options: StageBlueprint, id: string) {
+		setStagePerspective(options.perspective);
+		setStageBackgroundColor(options.backgroundColor);
+		setStageBackgroundImage(options.backgroundImage);
 		this.scene = new ZylemScene(id);
 		this.scene._setup = options.setup;
 		this._update = options.update ?? null;
 		const physicsWorld = await ZylemWorld.loadPhysics(options.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
-		this.blueprints = options.children({ gameState, setGameState }) || [];
+		this.blueprints = options.children({ gameState, setGlobalState }) || [];
 		this.conditions = options.conditions;
 		await this.setup();
 	}

@@ -1,22 +1,17 @@
-import { GameOptions } from '../interfaces/Game';
+import { GameBlueprint } from '../interfaces/game';
+import { observable } from '@simplyianm/legend-state';
 
-const state = {
+const state$ = observable({
 	id: '',
 	globals: {},
-	stage: {},
 	stages: {},
 	debug: {},
-} as GameOptions;
+} as GameBlueprint);
 
-// TODO: Hack until a new state management lib is implemented
-//@ts-ignore
-window['__game__'] = {};
-//@ts-ignore
-const gameState = window['__game__']['gameState'] = state;
+const gameState = state$.get();
 
-const setGameState = (key: string, value: any) => {
-	//@ts-ignore
-	window['__game__'].gameState[key] = value;
+const setGlobalState = (value: any) => {
+	state$.globals.set(value);
 }
 
-export { gameState, setGameState };
+export { gameState, setGlobalState };

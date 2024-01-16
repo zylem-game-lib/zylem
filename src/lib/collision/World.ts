@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { Entity, GameEntity } from '../interfaces/Entity';
+import { Entity, GameEntity } from '../interfaces/entity';
 import { gameState } from '../state';
 import RAPIER from '@dimforge/rapier3d-compat';
 

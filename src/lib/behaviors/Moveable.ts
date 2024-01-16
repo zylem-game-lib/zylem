@@ -1,6 +1,6 @@
 import { Vector3 } from "three";
 import { Constructor } from "./Composable";
-import { OptionalVector } from "~/lib/interfaces/Entity";
+import { OptionalVector } from "~/lib/interfaces/entity";
 
 // TODO: moveable needs to change
 export function Moveable<CBase extends Constructor>(Base: CBase) {

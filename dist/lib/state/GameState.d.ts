@@ -1,4 +1,4 @@
-import { GameOptions } from '../interfaces/Game';
-declare const gameState: GameOptions;
-declare const setGameState: (key: string, value: any) => void;
-export { gameState, setGameState };
+import { GameBlueprint } from '../interfaces/game';
+declare const gameState: GameBlueprint;
+declare const setGlobalState: (value: any) => void;
+export { gameState, setGlobalState };

@@ -1,25 +1,25 @@
-import GamePad from '../input/ZylemGamePad';
+import GamePad from '../input/GamePad';
 import { UpdateOptions } from '../interfaces/Update';
-import { ZylemStage } from './ZylemStage';
+import { ZylemStage } from './Stage';
 import { Clock } from 'three';
-import { GameOptions, GameRatio, StageOptions } from '../interfaces/Game';
+import { GameBlueprint, GameRatio, StageBlueprint } from '../interfaces/game';
 import { PerspectiveType } from "../interfaces/Perspective";
-import { gameState, setGameState } from '../state/index';
+import { gameState, setGlobalState } from '../state/index';
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
 
 const TIMESTAMP_DELTA = 16;
 
-export class ZylemGame implements GameOptions {
+export class ZylemGame implements GameBlueprint {
 	id: string;
 	ratio: GameRatio;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
 	globals: any;
 	// @deprecated - use stages instead
-	stage?: StageOptions;
-	stages: StageOptions[] = [];
-	blueprintOptions: GameOptions;
+	stage?: StageBlueprint;
+	stages: StageBlueprint[] = [];
+	blueprintOptions: GameBlueprint;
 	currentStage: string = '';
 	clock: Clock;
 	gamePad: GamePad;
@@ -33,8 +33,8 @@ export class ZylemGame implements GameOptions {
 	// TODO: startTimeStamp could be nice for total game time
 	startTimeStamp: number = 0;
 
-	constructor(options: GameOptions) {
-		setGameState('globals', options.globals);
+	constructor(options: GameBlueprint) {
+		setGlobalState(options.globals);
 		this._initialGlobals = { ...options.globals };
 		this.id = options.id;
 		this.ratio = options.ratio ?? '16:9';
@@ -46,12 +46,12 @@ export class ZylemGame implements GameOptions {
 		this.createCanvas();
 		// @deprecated - use stages instead
 		this.stage = options.stages[0];
-		this.stages = options.stages ?? [{ id: 'default-stage', ...options?.stage }];
+		this.stages = options.stages ?? [{ id: 'default-stage', ...this.stage }];
 		this.loadStage(this.stage);
 		this.currentStage = this.id;
 	}
 
-	async loadStage(options: StageOptions) {
+	async loadStage(options: StageBlueprint) {
 		const stage = new ZylemStage();
 		stage.buildStage(options, this.id);
 		this._stageMap[this.id] = stage;
@@ -95,7 +95,7 @@ export class ZylemGame implements GameOptions {
 	reset(resetGlobals = true) {
 		// TODO: this needs cleanup
 		if (resetGlobals) {
-			setGameState('globals', { ...this._initialGlobals });
+			setGlobalState({ ...this._initialGlobals });
 		}
 		const stageOption = this.stages.find(stage => stage.id === this.currentStage);
 		this.loadStage(stageOption ?? this.stages[0]);

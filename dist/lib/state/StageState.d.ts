@@ -1,4 +1,6 @@
-import { StageOptions } from '../interfaces/Game';
-declare const stageState: StageOptions;
-declare const setStageState: (key: string, value: any) => void;
-export { stageState, setStageState };
+import { StageBlueprint } from '../interfaces/game';
+declare const stageState: Pick<StageBlueprint, "backgroundColor" | "backgroundImage" | "perspective">;
+declare const setStageBackgroundColor: (value: any) => void;
+declare const setStageBackgroundImage: (value: any) => void;
+declare const setStagePerspective: (value: any) => void;
+export { stageState, setStageBackgroundColor, setStageBackgroundImage, setStagePerspective };

@@ -1,5 +1,5 @@
 import { Constructor } from "./Composable";
-import { OptionalVector } from "~/lib/interfaces/Entity";
+import { OptionalVector } from "~/lib/interfaces/entity";
 export declare function Interactive<CBase extends Constructor>(Base: CBase): {
     new (...args: any[]): {
         [x: string]: any;

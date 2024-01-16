@@ -1,6 +1,6 @@
 import { Constructor } from "./Composable";
 import { Vector3, Quaternion, Sprite } from "three";
-import { OptionalVector } from "~/lib/interfaces/Entity";
+import { OptionalVector } from "~/lib/interfaces/entity";
 import { gameState } from "../state";
 
 export function Interactive<CBase extends Constructor>(Base: CBase) {

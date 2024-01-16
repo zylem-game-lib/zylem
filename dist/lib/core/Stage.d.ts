@@ -1,8 +1,8 @@
-import { ZylemWorld } from "../collision/ZylemWorld";
-import { ZylemScene } from "../rendering/ZylemScene";
-import { Entity, EntityBlueprint } from "../interfaces/Entity";
+import { ZylemWorld } from "../collision/World";
+import { ZylemScene } from "../rendering/Scene";
+import { Entity, EntityBlueprint } from "../interfaces/entity";
 import { UpdateOptions } from "../interfaces/Update";
-import { Conditions, StageOptions } from "../interfaces/Game";
+import { Conditions, StageBlueprint } from "../interfaces/game";
 export declare class ZylemStage implements Entity<ZylemStage> {
     _type: string;
     _update: ((delta: number, options: any) => void) | null;
@@ -13,7 +13,7 @@ export declare class ZylemStage implements Entity<ZylemStage> {
     _childrenMap: Map<string, Entity<any>>;
     blueprints: Array<EntityBlueprint<any>>;
     constructor();
-    buildStage(options: StageOptions, id: string): Promise<void>;
+    buildStage(options: StageBlueprint, id: string): Promise<void>;
     setup(): Promise<void>;
     spawnEntity(blueprint: EntityBlueprint<any>, options: any): void;
     destroy(): void;

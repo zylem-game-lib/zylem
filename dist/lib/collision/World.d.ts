@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { Entity, GameEntity } from '../interfaces/Entity';
+import { Entity, GameEntity } from '../interfaces/entity';
 import RAPIER from '@dimforge/rapier3d-compat';
 export declare class ZylemWorld implements Entity<ZylemWorld> {
     _type: string;

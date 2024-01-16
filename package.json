@@ -1,6 +1,6 @@
 {
 	"name": "@tcool86/zylem",
-	"version": "0.1.6",
+	"version": "0.1.7",
 	"description": "A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.",
 	"license": "MIT",
 	"author": "Tim Cool",
@@ -46,6 +46,7 @@
 	"dependencies": {
 		"@dimforge/rapier3d": "^0.11.2",
 		"@dimforge/rapier3d-compat": "^0.11.2",
+		"@simplyianm/legend-state": "^1.6.2",
 		"@types/howler": "^2.2.11",
 		"function-bind": "^1.1.1",
 		"has": "^1.0.3",

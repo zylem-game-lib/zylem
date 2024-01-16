@@ -1,17 +1,26 @@
-import { StageOptions } from '../interfaces/Game';
+import { StageBlueprint } from '../interfaces/game';
 import { Color } from 'three';
+import { observable } from '@simplyianm/legend-state';
+import { PerspectiveType } from '../interfaces/Perspective';
 
-const initialState = {
+const stageState$ = observable({
 	backgroundColor: Color.NAMES.cornflowerblue,
-} as StageOptions;
+	backgroundImage: '',
+	perspective: PerspectiveType
+} as unknown as Pick<StageBlueprint, 'backgroundColor' | 'backgroundImage' | 'perspective'>);
 
-// TODO: Hack until a new state management lib is implemented
-//@ts-ignore
-const stageState = window['__game__']['stageState'] = initialState;
+const stageState = stageState$.get();
 
-const setStageState = (key: string, value: any) => {
-	//@ts-ignore
-	window['__game__'].stageState[key] = value;
+const setStageBackgroundColor = (value: any) => {
+	stageState$.backgroundColor.set(value);
 }
 
-export { stageState, setStageState };
+const setStageBackgroundImage = (value: any) => {
+	stageState$.backgroundImage.set(value);
+}
+
+const setStagePerspective = (value: any) => {
+	stageState$.perspective.set(value);
+}
+
+export { stageState, setStageBackgroundColor, setStageBackgroundImage, setStagePerspective };
