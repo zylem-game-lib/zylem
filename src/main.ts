@@ -31,4 +31,4 @@ const Zylem = {
 namespace Zylem { };
 
 export { Zylem, Howl, THREE, RAPIER };
-export type { GameBlueprint, StageBlueprint, Vect3 };
+export type { GameBlueprint as ZylemGame, StageBlueprint as ZylemStage, Vect3 };
