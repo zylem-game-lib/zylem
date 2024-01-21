@@ -1,13 +1,17 @@
 import { Zylem, THREE } from "../../src/main";
+import { settings } from './settings';
 
 const { Sprite } = Zylem;
 const { Vector3 } = THREE;
+const { groundLevel } = settings;
 
 enum JumpState {
 	Idle,
 	Jumping,
 	Falling,
 };
+
+//Entity<Player, Sprite, Collision>
 
 export function Player() {
 	return {
@@ -63,7 +67,7 @@ export function Player() {
 			movingLeft: false,
 		},
 		setup: (entity: any) => {
-			entity.setPosition(0, 0, 0);
+			entity.setPosition(0, groundLevel + 5, 0);
 		},
 		update: (_delta: number, { entity: player, inputs }: any) => {
 			const { moveLeft, moveRight, buttonA, buttonB } = inputs[0];

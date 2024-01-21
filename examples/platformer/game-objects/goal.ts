@@ -1,6 +1,8 @@
 import { Zylem, THREE } from '../../../src/main';
+import { settings } from '../settings';
 const { Vector3, Color } = THREE;
 const { Zone } = Zylem;
+const { groundLevel } = settings;
 
 export function Goal() {
 	return {
@@ -9,19 +11,25 @@ export function Goal() {
 		name: 'goal',
 		props: {
 			hasEntered: false,
+			holdLogTimer: 1,
+			holdCurrent: 0,
 		},
-		size: new Vector3(20, 20, 20),
+		size: new Vector3(20, 8, 20),
 		setup(entity: any) {
-			entity.setPosition(30, 0, 0);
+			entity.setPosition(30, groundLevel - 2, 0);
 		},
 		onEnter: (other: any, { gameState }: any) => {
-
+			console.log('Entered: ', other);
 		},
 		onExit: (other: any, { gameState }: any) => {
-
+			console.log('Exited: ', other);
 		},
-		onHeld: (other: any, delta: number, { gameState }: any) => {
-
+		onHeld: (other: any, delta: number, { entity: goal, gameState }: any) => {
+			const { holdLogTimer } = goal;
+			goal.holdCurrent += delta;
+			if (goal.holdCurrent > holdLogTimer) {
+				console.log('Holding... ', other);
+			}
 		},
 		update: (delta, { entity: goal }: any) => {
 			if (!goal._debugMesh) {

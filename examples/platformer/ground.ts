@@ -3,7 +3,7 @@ import { Zylem, THREE } from "../../src/main";
 const { Box } = Zylem;
 const { Vector3, Color } = THREE;
 
-export function Ground({ position = new Vector3(0, -6, 0), rotation = new Vector3(0, 0, 0) }) {
+export function Ground({ position = new Vector3(0, 0, 0), rotation = new Vector3(0, 0, 0) }) {
 	return {
 		name: `ground`,
 		type: Box,
