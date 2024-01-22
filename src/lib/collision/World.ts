@@ -6,7 +6,8 @@ import RAPIER from '@dimforge/rapier3d-compat';
 export class ZylemWorld implements Entity<ZylemWorld> {
 	_type = 'World';
 	world: RAPIER.World;
-	collisionDictionary: Map<number, Entity<any>>;
+	collisionMap: Map<number, Entity<any>> = new Map();
+	collisionBehaviorMap: Map<number, Entity<any>> = new Map();
 
 	static async loadPhysics(gravity: Vector3) {
 		await RAPIER.init();
@@ -16,7 +17,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 
 	constructor(world: RAPIER.World) {
 		this.world = world;
-		this.collisionDictionary = new Map();
 	}
 
 	addEntity(entity: GameEntity<any>) {
@@ -31,7 +31,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		}
 		const colliderDesc = entity.createCollider(useSensor);
 		this.world.createCollider(colliderDesc, entity.body);
-		this.collisionDictionary.set(entity.body.handle, entity);
+		this.collisionMap.set(entity.body.handle, entity);
 	}
 
 	setup() { }
@@ -40,13 +40,30 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		if (!this.world) {
 			return;
 		}
-		this.updateColliders();
+		this.updateColliders(delta);
+		this.updatePostCollisionBehaviors(delta);
 		this.world.step();
 	}
 
-	updateColliders() {
-		const dictionaryRef = this.collisionDictionary;
-		for (let [, collider] of dictionaryRef) {
+	updatePostCollisionBehaviors(delta: number) {
+		const dictionaryRef = this.collisionBehaviorMap;
+		for (let [id, collider] of dictionaryRef) {
+			const gameEntity = collider as GameEntity<any>;
+			// @ts-ignore
+			if (!gameEntity._internalPostCollisionBehavior) {
+				return;
+			}
+			// @ts-ignore
+			const active = gameEntity._internalPostCollisionBehavior({ entity: gameEntity, delta });
+			if (!active) {
+				this.collisionBehaviorMap.delete(id);
+			}
+		}
+	}
+
+	updateColliders(delta: number) {
+		const dictionaryRef = this.collisionMap;
+		for (let [id, collider] of dictionaryRef) {
 			const gameEntity = collider as GameEntity<any>;
 			if (!gameEntity.body) {
 				continue;
@@ -67,6 +84,12 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				}
 				if (entity._collision) {
 					entity._collision(entity, gameEntity, { gameState });
+				}
+				// @ts-ignore
+				if (entity._internalCollisionBehavior) {
+					// @ts-ignore
+					entity._internalCollisionBehavior({ entity, other: gameEntity, delta });
+					this.collisionBehaviorMap.set(otherCollider.handle, entity);
 				}
 			});
 		}

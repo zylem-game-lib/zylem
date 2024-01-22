@@ -18,17 +18,19 @@ export function Goal() {
 		setup(entity: any) {
 			entity.setPosition(30, groundLevel - 2, 0);
 		},
-		onEnter: (other: any, { gameState }: any) => {
+		onEnter: ({ other, gameState }) => {
 			console.log('Entered: ', other);
 		},
-		onExit: (other: any, { gameState }: any) => {
+		onExit: ({ other, gameState }) => {
 			console.log('Exited: ', other);
 		},
-		onHeld: (other: any, delta: number, { entity: goal, gameState }: any) => {
+		onHeld: ({ delta, other, entity: goal, gameState, heldTime }) => {
 			const { holdLogTimer } = goal;
 			goal.holdCurrent += delta;
 			if (goal.holdCurrent > holdLogTimer) {
 				console.log('Holding... ', other);
+				console.log('Held time: ', heldTime);
+				goal.holdCurrent = 0;
 			}
 		},
 		update: (delta, { entity: goal }: any) => {
