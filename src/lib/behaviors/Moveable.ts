@@ -1,5 +1,5 @@
 import { Vector3 } from "three";
-import { Constructor } from "./Composable";
+import { Constructor } from "../core/composable";
 import { OptionalVector } from "~/lib/interfaces/entity";
 
 // TODO: moveable needs to change

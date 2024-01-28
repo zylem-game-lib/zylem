@@ -1,9 +1,9 @@
-import GamePad from '../input/GamePad';
-import { UpdateOptions } from '../interfaces/Update';
-import { ZylemStage } from './Stage';
+import GamePad from '../input/game-pad';
+import { UpdateOptions } from '../interfaces/update';
+import { ZylemStage } from './stage';
 import { Clock } from 'three';
 import { GameBlueprint, GameRatio, StageBlueprint } from '../interfaces/game';
-import { PerspectiveType } from "../interfaces/Perspective";
+import { PerspectiveType } from "../interfaces/perspective";
 import { gameState, setGlobalState } from '../state/index';
 
 // We should have an abstraction for entering, exiting, and updating.

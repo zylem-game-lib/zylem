@@ -1,11 +1,11 @@
-import { ZylemDebug } from '~/lib/core/Debug';
-import { PerspectiveType } from './Perspective';
-import ZylemGame from '~/lib/core/Game';
-import { ZylemScene } from '~/lib/rendering/Scene';
-import { ZylemHUD } from '~/lib/ui/HUD';
+import { ZylemDebug } from '~/lib/core/debug';
+import { PerspectiveType } from './perspective';
+import ZylemGame from '~/lib/core/game';
+import { ZylemScene } from '~/lib/rendering/scene';
+import { ZylemHUD } from '~/lib/ui/hud';
 import { Color, Vector3 } from 'three';
-import { ZylemCamera } from '~/lib/rendering/Camera';
-import { ZylemWorld } from '~/lib/collision/World';
+import { ZylemCamera } from '~/lib/rendering/camera';
+import { ZylemWorld } from '~/lib/collision/world';
 
 export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
 

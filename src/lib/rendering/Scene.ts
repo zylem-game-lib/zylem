@@ -11,10 +11,10 @@ import {
 	GridHelper
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
-import { ZylemCamera } from './Camera';
-import RenderPass from './RenderPass';
+import { ZylemCamera } from './camera';
+import RenderPass from './render-pass';
 import { Entity, GameEntity } from '../interfaces/entity';
-import { ZylemHUD } from '../ui/HUD';
+import { ZylemHUD } from '../ui/hud';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
 

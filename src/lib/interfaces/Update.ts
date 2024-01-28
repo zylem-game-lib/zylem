@@ -1,4 +1,4 @@
-import { ControllerInput } from "./GamePad";
+import { ControllerInput } from "./game-pad";
 
 export interface UpdateOptions<T> {
 	inputs: ControllerInput[];

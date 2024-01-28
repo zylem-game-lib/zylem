@@ -1,12 +1,13 @@
-import { ZylemGame } from './lib/core/Game';
+import { ZylemGame } from './lib/core/game';
 import { GameBlueprint, StageBlueprint } from './lib/interfaces/game';
 import { EntityType } from './lib/interfaces/entity';
-import { PerspectiveType } from './lib/interfaces/Perspective';
-import { ZylemDebug } from './lib/core/Debug';
+import { PerspectiveType } from './lib/interfaces/perspective';
+import { ZylemDebug } from './lib/core/debug';
 import { Howl } from 'howler';
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
-import { Vect3 } from './lib/interfaces/Utility';
+import { Vect3 } from './lib/interfaces/utility';
+import { Entity } from './lib/core/entity';
 
 const debug = new ZylemDebug();
 
@@ -26,6 +27,7 @@ const Zylem = {
 	create,
 	...EntityType,
 	...PerspectiveType,
+	Entity
 };
 
 namespace Zylem { };

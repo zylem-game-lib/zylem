@@ -1,4 +1,4 @@
-import { Constructor } from "./Composable";
+import { Constructor } from "../core/composable";
 import { Vector3, Quaternion, Sprite } from "three";
 import { OptionalVector } from "~/lib/interfaces/entity";
 import { gameState } from "../state";

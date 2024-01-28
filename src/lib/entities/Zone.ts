@@ -1,7 +1,7 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
 import { BoxGeometry, Color, Group, Mesh, MeshPhongMaterial, Vector3 } from "three";
 import { Entity, EntityOptions, GameEntity } from "~/lib/interfaces/entity";
-import { UpdateOptions } from "~/lib/interfaces/Update";
+import { UpdateOptions } from "~/lib/interfaces/update";
 
 export type InternalCollisionParams = {
 	delta: number;

@@ -1,14 +1,14 @@
 // Zylem Stage should combine a world with a scene
-import { ZylemWorld } from "../collision/World";
-import { ZylemScene } from "../rendering/Scene";
+import { ZylemWorld } from "../collision/world";
+import { ZylemScene } from "../rendering/scene";
 import { Entity, EntityBlueprint } from "../interfaces/entity";
 import { ZylemBox, ZylemSphere, ZylemSprite } from "../entities";
-import { UpdateOptions } from "../interfaces/Update";
-import { Moveable } from "../behaviors/Moveable";
-import { Interactive } from "../behaviors/Interactive";
+import { UpdateOptions } from "../interfaces/update";
+import { Moveable } from "../behaviors/moveable";
+import { Interactive } from "../behaviors/interactive";
 import { Conditions, StageBlueprint } from "../interfaces/game";
 import { Vector3 } from "three";
-import { ZylemZone } from "../entities/Zone";
+import { ZylemZone } from "../entities/zone";
 import {
 	gameState,
 	setGlobalState,
@@ -62,11 +62,12 @@ export class ZylemStage implements Entity<ZylemStage> {
 		if (!this.scene || !this.world) {
 			return;
 		}
-		const BlueprintType = BlueprintMap[blueprint.type];
-		const MoveableType = Moveable(BlueprintType);
-		const InteractiveType = Interactive(MoveableType);
+		const entity = blueprint.createFromBlueprint();
+		// const BlueprintType = BlueprintMap[blueprint.type];
+		// const MoveableType = Moveable(BlueprintType);
+		// const InteractiveType = Interactive(MoveableType);
 
-		const entity = new InteractiveType(blueprint);
+		// const entity = new InteractiveType(blueprint);
 		entity.name = blueprint.name;
 		if (entity.group) {
 			this.scene.scene.add(entity.group);

@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 import { gameState } from '../state/index';
 import SpriteText from 'three-spritetext';
-import { ZylemCamera } from '~/lib/rendering/Camera';
+import { ZylemCamera } from '~/lib/rendering/camera';
 
 export interface HUDTextOptions {
 	text: string;

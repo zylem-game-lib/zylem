@@ -1,4 +1,4 @@
-import { ControllerInput, GamePadConnections } from "../interfaces/GamePad";
+import { ControllerInput, GamePadConnections } from "../interfaces/game-pad";
 import { isMobile } from "../device/mobile";
 import nipplejs, { JoystickManager } from 'nipplejs';
 
