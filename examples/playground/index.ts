@@ -7,21 +7,25 @@ const { create } = Zylem;
 
 const box = NewBox(() => {
 	return {
+		static: true,
 		setup() {
 			console.log('concrete setup');
 		},
 		update({ }) {
 			console.log('concrete update');
 		},
-		size: new Vector3(1, 1, 1)
+		destroy() {
+
+		}
 	}
-})
+});
 
 
 export function LevelOne(): ZylemStage {
 	return {
 		perspective: PerspectiveType.ThirdPerson,
 		backgroundColor: new Color('#554400'),
+		gravity: new Vector3(0, -1, 0),
 		setup: ({ }) => {
 
 		},
