@@ -2,6 +2,7 @@ import { Constructor } from "../core/composable";
 import { Vector3, Quaternion, Sprite } from "three";
 import { OptionalVector } from "~/lib/interfaces/entity";
 import { gameState } from "../state";
+import { EntityParameters } from "../core/entity";
 
 export function Interactive<CBase extends Constructor>(Base: CBase) {
 	return class Interactive extends Base {
@@ -24,7 +25,7 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 			this.stageRef.scene.scene.remove(this.group);
 		}
 
-		update(delta: number, { inputs, globals }: any) {
+		i_update(delta: number, { inputs, globals }: any) {
 			// TODO: it's possible that we want to create an entity without a body or mesh?
 			if (!this.body) {
 				return;
@@ -50,6 +51,14 @@ export function Interactive<CBase extends Constructor>(Base: CBase) {
 				return;
 			}
 			this._update(delta, { inputs: _inputs, entity: this, globals });
+		}
+
+		updateMovement(params: EntityParameters<this>) {
+			const { x, y, z } = this.body.translation();
+			const { x: rx, y: ry, z: rz, w: rw } = this.body.rotation();
+
+			this.group.position.set(x, y, z);
+			this.group.setRotationFromQuaternion(new Quaternion(rx, ry, rz, rw));
 		}
 
 		spawn(T: any, options: any) {

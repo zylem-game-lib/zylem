@@ -4,8 +4,6 @@ import { ZylemScene } from "../rendering/scene";
 import { Entity, EntityBlueprint } from "../interfaces/entity";
 import { ZylemBox, ZylemSphere, ZylemSprite } from "../entities";
 import { UpdateOptions } from "../interfaces/update";
-import { Moveable } from "../behaviors/moveable";
-import { Interactive } from "../behaviors/interactive";
 import { Conditions, StageBlueprint } from "../interfaces/game";
 import { Vector3 } from "three";
 import { ZylemZone } from "../entities/zone";
@@ -63,11 +61,6 @@ export class ZylemStage implements Entity<ZylemStage> {
 			return;
 		}
 		const entity = blueprint.createFromBlueprint();
-		// const BlueprintType = BlueprintMap[blueprint.type];
-		// const MoveableType = Moveable(BlueprintType);
-		// const InteractiveType = Interactive(MoveableType);
-
-		// const entity = new InteractiveType(blueprint);
 		entity.name = blueprint.name;
 		if (entity.group) {
 			this.scene.scene.add(entity.group);

@@ -1,3 +1,4 @@
+import { Group } from 'three';
 import { GameEntityOptions, OptionalVector, UpdateFunction } from '../interfaces/entity';
 import { Entity, EntityParameters } from './entity';
 
@@ -5,6 +6,7 @@ export class GameEntity extends Entity {
 	protected type: string;
 	protected _setup: () => void;
 	protected _update: UpdateFunction<GameEntity>;
+	protected group = new Group();
 
 	constructor(options: GameEntityOptions<GameEntity>) {
 		super();

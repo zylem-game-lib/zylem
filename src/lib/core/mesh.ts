@@ -1,4 +1,4 @@
-import { BoxGeometry, Color, Mesh, MeshStandardMaterial, Vector3 } from "three";
+import { BoxGeometry, Color, Group, Mesh, MeshStandardMaterial, Vector3 } from "three";
 import { Constructor } from "./composable";
 
 export abstract class MeshObject {
@@ -7,7 +7,12 @@ export abstract class MeshObject {
 }
 
 export interface BoxMeshInterface {
-	createMesh: () => void;
+	createMesh: (params: CreateMeshParameters) => void;
+}
+
+export type CreateMeshParameters = {
+	group: Group;
+	vector3?: Vector3 | undefined;
 }
 
 export function BoxMesh<CBase extends Constructor>(Base: CBase) {
@@ -16,7 +21,7 @@ export function BoxMesh<CBase extends Constructor>(Base: CBase) {
 		color: Color = new Color('blue');
 		mesh: Mesh = new Mesh(undefined, undefined);
 
-		createMesh(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
+		createMesh({ group = new Group(), vector3 = new Vector3(1, 1, 1) }) {
 			this.size = vector3;
 			const geometry = new BoxGeometry(vector3.x, vector3.y, vector3.z);
 			const material = new MeshStandardMaterial({
@@ -29,6 +34,7 @@ export function BoxMesh<CBase extends Constructor>(Base: CBase) {
 			this.mesh.position.set(0, 0, 0);
 			this.mesh.castShadow = true;
 			this.mesh.receiveShadow = true;
+			group.add(this.mesh);
 		}
 	}
 }
