@@ -1,18 +1,20 @@
 import { Color, Vector3 } from "three";
 import { PerspectiveType } from "../../src/lib/interfaces/perspective";
 import { Zylem, ZylemStage } from "../../src/main";
-import { NewBox } from "../../src/lib/entities";
+import { Box } from "../../src/lib/entities";
 
 const { create } = Zylem;
 
-const box = NewBox(() => {
+const box = Box(() => {
 	return {
 		static: true,
-		setup() {
+		setup({ entity, globals }) {
+			console.log(entity);
+			console.log(globals);
 			console.log('concrete setup');
 		},
 		update({ }) {
-			console.log('concrete update');
+			// console.log('concrete update');
 		},
 		destroy() {
 

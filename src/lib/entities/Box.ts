@@ -1,78 +1,57 @@
-import { EntityOptions, GameEntity } from '../interfaces/entity';
-import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3, Color } from 'three';
+import { Vector3 } from "three";
+import { LifecycleParameters, UpdateParameters } from "../core/entity";
+import { GameEntity } from "../core/game-entity";
+import { GameEntityOptions } from "../interfaces/entity";
+import { BoxMesh, CreateMeshParameters } from "../core/mesh";
+import { BoxCollision, CreateCollisionParameters } from "../collision/collision";
+import { Interactive } from "../behaviors/interactive";
+import { applyComposition } from "../core/composable";
 
-// Box is a combination of a 3D mesh and a physics body
-export class ZylemBox implements GameEntity<ZylemBox> {
-	_type: string;
-	group: Group;
-	mesh: Mesh;
-	body?: RigidBody;
+type ZylemBoxOptions = GameEntityOptions<GameEntity> & {
 	size?: Vector3;
-	static: boolean = false;
-	color: Color = new Color(0xFFFFFF);
-	bodyDescription: RigidBodyDesc;
-	_update: (delta: number, options: any) => void;
-	_setup: (entity: ZylemBox) => void;
+	static?: boolean;
+}
 
-	constructor(options: EntityOptions) {
-		this._type = 'Box';
-		this.color = options.color ?? this.color;
-		this.static = options.static ?? this.static;
-		this.mesh = this.createMesh(options.size);
-		this.group = new Group();
-		this.group.add(this.mesh);
-		this.bodyDescription = this.createBodyDescription();
-		this._update = options.update;
-		this._setup = options.setup;
+export class ZylemBox extends GameEntity {
+	private createMesh(params: CreateMeshParameters) { }
+	private createCollision(params: CreateCollisionParameters) { }
+
+	protected type = 'Box';
+	_static: boolean = false;
+
+	constructor(initializer: () => ZylemBoxOptions) {
+		const bluePrint = initializer();
+		super(bluePrint);
+		this._static = bluePrint.static ?? false;
 	}
 
-	setup() {
-		this._setup(this);
+	public createFromBlueprint(): this {
+		this.createMesh({ group: this.group });
+		this.createCollision({ isDynamicBody: !this._static });
+		return this;
 	}
 
-	destroy() { }
-
-	update(delta: number, { inputs }: any) { }
-
-	createMesh(vector3: Vector3 | undefined = new Vector3(1, 1, 1)) {
-		this.size = vector3;
-		const geometry = new BoxGeometry(vector3.x, vector3.y, vector3.z);
-		const material = new MeshStandardMaterial({
-			color: this.color,
-			emissiveIntensity: 1,
-			lightMapIntensity: 1,
-			fog: true,
-		});
-		this.mesh = new Mesh(geometry, material);
-		this.mesh.position.set(0, 0, 0);
-		this.mesh.castShadow = true;
-		this.mesh.receiveShadow = true;
-		return this.mesh;
+	public setup(params: LifecycleParameters<this>) {
+		super.setup(params);
+		this._setup(params);
 	}
 
-	createBodyDescription() {
-		const type = this.static ? RigidBodyType.Fixed : RigidBodyType.Dynamic;
-		let rigidBodyDesc = new RigidBodyDesc(type)
-			.setTranslation(0, 0, 0)
-			.setGravityScale(1.0)
-			.setCanSleep(false)
-			.setCcdEnabled(false);
-
-		return rigidBodyDesc;
+	public update(params: UpdateParameters<this>): void {
+		super.update(params);
+		this._update(params);
 	}
 
-	createCollider(isSensor: boolean = false) {
-		const size = this.size || new Vector3(1, 1, 1);
-		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
-		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
-		colliderDesc.setSensor(isSensor);
-		if (isSensor) {
-			// "KINEMATIC_FIXED" will only sense actors moving through the sensor
-			colliderDesc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;
-			// colliderDesc.setActiveHooks(RAPIER.ActiveHooks.FILTER_INTERSECTION_PAIRS);
-		}
-		return colliderDesc;
+	public destroy(params: LifecycleParameters<this>): void {
+		super.destroy(params);
+		this._destroy(params);
 	}
+}
 
+export type BoxType = Omit<ZylemBox, '_update' | 'createFromBlueprint'>;
+
+export function Box(initializer: () => ZylemBoxOptions): BoxType {
+	const composition = [BoxMesh, BoxCollision, Interactive];
+	const BoxComposition = applyComposition(composition, ZylemBox);
+
+	return new BoxComposition(initializer) as BoxType;
 }

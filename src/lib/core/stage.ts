@@ -2,7 +2,7 @@
 import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
 import { Entity, EntityBlueprint } from "../interfaces/entity";
-import { ZylemBox, ZylemSphere, ZylemSprite } from "../entities";
+import { ZylemSphere, ZylemSprite } from "../entities";
 import { UpdateOptions } from "../interfaces/update";
 import { Conditions, StageBlueprint } from "../interfaces/game";
 import { Vector3 } from "three";
@@ -87,7 +87,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 			console.warn(`Entity ${blueprint.name} is missing a setup function.`);
 			return;
 		}
-		blueprint.setup(entity);
+		blueprint.setup({ entity });
 		if (entity._debug) {
 			this.scene.scene.add(entity._debugMesh);
 		}
@@ -140,7 +140,6 @@ export class ZylemStage implements Entity<ZylemStage> {
 }
 
 const BlueprintMap = {
-	'Box': ZylemBox,
 	'Sphere': ZylemSphere,
 	'Sprite': ZylemSprite,
 	'Zone': ZylemZone

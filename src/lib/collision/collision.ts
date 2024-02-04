@@ -13,7 +13,6 @@ export type CreateCollisionParameters = {
 
 export function BoxCollision<CBase extends Constructor>(Base: CBase) {
 	return class BoxCollision extends Base {
-		body: RigidBody | null = null;
 		bodyDescription: RigidBodyDesc | null = null;
 		debugCollision: boolean = false;
 		debugColor: Color = new Color().setColorName('green');
