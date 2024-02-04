@@ -6,7 +6,7 @@ import { BoxMesh } from "../core/mesh";
 import { BoxCollision } from "../collision/collision";
 import { applyMixins } from "../core/composable";
 import { ZylemMaterial } from '../core/material';
-import { Moveable } from "../behaviors/n-moveable";
+import { Moveable } from "../behaviors/moveable";
 
 type TexturePath = string | null;
 type SizeVector = Vector3 | null;
