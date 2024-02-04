@@ -3,15 +3,15 @@ import { DestroyFunction, GameEntityOptions, OptionalVector, SetupFunction, Upda
 import { Entity, LifecycleParameters, UpdateParameters } from './entity';
 import { RigidBody } from '@dimforge/rapier3d-compat';
 
-export class GameEntity extends Entity {
+export class GameEntity<T> extends Entity {
 	protected type: string;
-	protected _setup: SetupFunction<GameEntity>;
-	protected _destroy: DestroyFunction<GameEntity>;
-	protected _update: UpdateFunction<GameEntity>;
+	protected _setup: SetupFunction<T>;
+	protected _update: UpdateFunction<T>;
+	protected _destroy: DestroyFunction<T>;
 	protected group = new Group();
 	protected body: RigidBody | null = null;
 
-	constructor(options: GameEntityOptions<GameEntity>) {
+	constructor(options: GameEntityOptions<T>) {
 		super();
 		this.type = GameEntity.name;
 		this._update = options.update;

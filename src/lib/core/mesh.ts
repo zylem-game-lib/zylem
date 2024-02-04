@@ -1,10 +1,4 @@
-import { BoxGeometry, Color, Group, Mesh, MeshStandardMaterial, Vector3 } from "three";
-import { Constructor } from "./composable";
-
-export abstract class MeshObject {
-	public texture: any;
-	public shader: any;
-}
+import { BoxGeometry, Color, Group, Material, Mesh, MeshStandardMaterial, Vector3 } from "three";
 
 export interface BoxMeshInterface {
 	createMesh: (params: CreateMeshParameters) => void;
@@ -13,28 +7,22 @@ export interface BoxMeshInterface {
 export type CreateMeshParameters = {
 	group: Group;
 	vector3?: Vector3 | undefined;
+	materials: Material[];
 }
 
-export function BoxMesh<CBase extends Constructor>(Base: CBase) {
-	return class BoxMesh extends Base {
-		size: Vector3 = new Vector3(1, 1, 1);
-		color: Color = new Color('blue');
-		mesh: Mesh = new Mesh(undefined, undefined);
+export class BoxMesh {
+	size: Vector3 = new Vector3(1, 1, 1);
+	mesh: Mesh | null = null;
 
-		createMesh({ group = new Group(), vector3 = new Vector3(1, 1, 1) }) {
-			this.size = vector3;
-			const geometry = new BoxGeometry(vector3.x, vector3.y, vector3.z);
-			const material = new MeshStandardMaterial({
-				color: this.color,
-				emissiveIntensity: 1,
-				lightMapIntensity: 1,
-				fog: true,
-			});
-			this.mesh = new Mesh(geometry, material);
-			this.mesh.position.set(0, 0, 0);
-			this.mesh.castShadow = true;
-			this.mesh.receiveShadow = true;
-			group.add(this.mesh);
-		}
+	createMesh({ group = new Group(), vector3 = new Vector3(1, 1, 1), materials }: CreateMeshParameters) {
+		this.size = vector3;
+		const geometry = new BoxGeometry(vector3.x, vector3.y, vector3.z);
+		// TODO: allow for multiple materials requires geometry groups
+		// may not need geometry groups for shaders though
+		this.mesh = new Mesh(geometry, materials.at(-1));
+		this.mesh.position.set(0, 0, 0);
+		this.mesh.castShadow = true;
+		this.mesh.receiveShadow = true;
+		group.add(this.mesh);
 	}
 }

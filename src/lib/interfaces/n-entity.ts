@@ -9,15 +9,15 @@ export type SetupFunction<T> = (params: LifecycleParameters<T>) => void;
 export type DestroyFunction<T> = (params: LifecycleParameters<T>) => void;
 
 export interface GameEntityOptions<T> {
-	update: UpdateFunction<T>;
 	setup: SetupFunction<T>;
+	update: UpdateFunction<T>;
 	destroy: DestroyFunction<T>;
 }
 
 export interface Entity<T = any> {
 	setup: (entity: T) => void;
 	destroy: () => void;
-	update: (delta: number, options: UpdateOptions<Entity<T>>) => void;
+	update: any; //UpdateFunction<T>;
 	_type: string;
 	_collision?: (entity: any, other: any, globals?: any) => void;
 	_destroy?: (globals?: any) => void;

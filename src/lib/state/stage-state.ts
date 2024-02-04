@@ -1,7 +1,7 @@
 import { StageBlueprint } from '../interfaces/game';
 import { Color } from 'three';
 import { observable } from '@simplyianm/legend-state';
-import { PerspectiveType } from '../interfaces/perspective';
+import { PerspectiveType } from '../interfaces/n-perspective';
 
 const stageState$ = observable({
 	backgroundColor: Color.NAMES.cornflowerblue,

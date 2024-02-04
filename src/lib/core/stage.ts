@@ -105,7 +105,8 @@ export class ZylemStage implements Entity<ZylemStage> {
 		}
 		this.world.update(delta);
 		for (let child of this.children) {
-			child.update(delta, {
+			child.update({
+				delta,
 				inputs: options.inputs,
 				entity: child,
 				globals: gameState.globals

@@ -1,6 +1,6 @@
 import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera } from 'three';
 import { stageState } from '../state/index';
-import { PerspectiveType } from '../interfaces/perspective';
+import { PerspectiveType } from '../interfaces/n-perspective';
 
 const zModifier = 45;
 

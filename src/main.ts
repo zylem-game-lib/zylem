@@ -1,8 +1,8 @@
-import { ZylemGame } from './lib/core/game';
+import { ZylemGame } from './lib/core/n-game';
 import { GameBlueprint, StageBlueprint } from './lib/interfaces/game';
 import { EntityType } from './lib/interfaces/entity';
-import { PerspectiveType } from './lib/interfaces/perspective';
-import { ZylemDebug } from './lib/core/debug';
+import { PerspectiveType } from './lib/interfaces/n-perspective';
+import { ZylemDebug } from './lib/core/n-debug';
 import { Howl } from 'howler';
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';

@@ -1,5 +1,16 @@
 export type Constructor = new (...args: any[]) => {};
 
-export function applyComposition<T>(composition: any[] = [], base: T) {
-	return composition.reduce((accumulation, component) => component(accumulation), base);
+export function applyMixins(derivedCtor: any, constructors: any[]) {
+	constructors.forEach((baseCtor) => {
+		Object.getOwnPropertyNames(baseCtor.prototype).forEach((name) => {
+			Object.defineProperty(
+				derivedCtor.prototype,
+				name,
+				Object.getOwnPropertyDescriptor(baseCtor.prototype, name) ||
+				Object.create(null)
+			);
+		});
+	});
 }
+
+export type With<BaseType, ObjectKey extends string, ComposedType> = BaseType & { [k in ObjectKey]: ComposedType };

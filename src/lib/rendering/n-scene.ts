@@ -11,10 +11,10 @@ import {
 	GridHelper
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
-import { ZylemCamera } from './camera';
+import { ZylemCamera } from './n-camera';
 import RenderPass from './render-pass';
 import { Entity, GameEntity } from '../interfaces/entity';
-import { ZylemHUD } from '../ui/hud';
+import { ZylemHUD } from '../ui/n-hud';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
 
@@ -59,7 +59,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 	setup() {
 		if (this._setup) {
 			this._hud = new ZylemHUD(this.zylemCamera);
-			this._setup({ scene: this, HUD: this._hud });
+			this._setup({ scene: this, camera: this.zylemCamera, HUD: this._hud });
 			this._hud._hudText.forEach(hudText => {
 				this.add(hudText.sprite, hudText.position);
 			});

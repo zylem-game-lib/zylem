@@ -3,7 +3,7 @@ import { UpdateOptions } from '../interfaces/update';
 import { ZylemStage } from './stage';
 import { Clock } from 'three';
 import { GameBlueprint, GameRatio, StageBlueprint } from '../interfaces/game';
-import { PerspectiveType } from "../interfaces/perspective";
+import { PerspectiveType } from "../interfaces/n-perspective";
 import { gameState, setGlobalState } from '../state/index';
 
 // We should have an abstraction for entering, exiting, and updating.
