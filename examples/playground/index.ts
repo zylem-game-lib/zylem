@@ -1,5 +1,5 @@
 import { Color, Vector3 } from "three";
-import { PerspectiveType } from "../../src/lib/interfaces/n-perspective";
+import { PerspectiveType } from "../../src/lib/interfaces/perspective";
 import { Zylem, ZylemStage } from "../../src/main";
 import { Box } from "../../src/lib/entities";
 
