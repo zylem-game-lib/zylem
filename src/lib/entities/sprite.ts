@@ -1,21 +1,22 @@
-import { EntityOptions, GameEntity } from "../interfaces/entity";
-import { RigidBody, RigidBodyDesc, ColliderDesc, RigidBodyType, ActiveCollisionTypes } from "@dimforge/rapier3d-compat";
 import {
 	Vector3,
 	TextureLoader,
 	SpriteMaterial,
-	Sprite,
+	Sprite as ThreeSprite,
 	Texture,
-	Group,
 	Color,
-	BoxGeometry,
 	BufferGeometry,
 	MeshPhongMaterial,
 	Mesh,
-	Box3
 } from "three";
-
-// TODO: make these classes more composable
+import { applyMixins } from "../core/composable";
+import { ZylemMaterial } from "../core/material";
+import { GameEntity } from "../core/game-entity";
+import { LifecycleParameters, UpdateParameters } from "../core/entity";
+import { SpriteCollision } from "../collision/collision";
+import { Moveable } from "../behaviors/moveable";
+import { ZylemBlueColor } from "../interfaces/utility";
+import { GameEntityOptions } from "../interfaces/entity";
 
 export type SpriteImage = { name: string, file: string };
 export type SpriteAnimation<T extends SpriteImage[] | undefined> = {
@@ -25,73 +26,63 @@ export type SpriteAnimation<T extends SpriteImage[] | undefined> = {
 	loop: boolean;
 };
 
-export class ZylemSprite implements GameEntity<ZylemSprite> {
-	body?: RigidBody | undefined;
-	bodyDescription: RigidBodyDesc;
-	constraintBodies?: RigidBody[] | undefined;
-	sensor?: boolean = false;
-	_debug: boolean = false;
-	debugColor?: Color = new Color(Color.NAMES.limegreen);
-	_debugMesh?: Mesh | undefined;
-
-	_update: (delta: number, options: any) => void;
-	_setup: (entity: ZylemSprite) => void;
-	_type: string;
-	_collision?: ((entity: any, other: any, globals?: any) => void) | undefined;
-	_destroy?: ((globals?: any) => void) | undefined;
-
-	name?: string | undefined;
-	tag?: Set<string> | undefined;
-
+type ZylemSpriteOptions = GameEntityOptions<ZylemSprite> & {
+	static?: boolean;
+	color?: Color;
 	images?: SpriteImage[] | undefined;
+	animations?: SpriteAnimation<any>[] | undefined;
+	size?: Vector3;
+	collisionSize?: Vector3;
+}
+
+export class ZylemSprite extends GameEntity<ZylemSprite> {
+	protected type = 'Sprite';
+	_static: boolean = false;
+	_sensor: boolean = false;
+
+	_images?: SpriteImage[] | undefined;
 	spriteIndex: number = 0;
-	sprites: Sprite[] = [];
+	sprites: ThreeSprite[] = [];
 	_spriteMap: Map<string, number> = new Map();
-	group: Group;
-	animations?: SpriteAnimation<typeof this.images>[] | undefined;
-	// TODO: create proper types for internal animations
-	_animations: Map<string, any> = new Map();
+
+	_animations?: SpriteAnimation<typeof this._images>[] | undefined;
+	_mappedAnimations: Map<string, any> = new Map(); // TODO: create proper types for internal animations
 	_currentAnimation: any = null;
 	_currentAnimationFrame: string = '';
 	_currentAnimationIndex: number = 0;
 	_currentAnimationTime: number = 0;
 
-	size: Vector3 = new Vector3(1, 1, 1);
-	collisionSize: Vector3 | null = null;
+	constructor(options: ZylemSpriteOptions) {
+		const bluePrint = options;
+		super(bluePrint);
+		this._static = bluePrint.static ?? false;
+		this._color = bluePrint.color ?? ZylemBlueColor;
+		this._size = bluePrint.size ?? new Vector3(1, 1, 1);
+		this._images = bluePrint.images ?? [];
+		this._animations = bluePrint.animations ?? [];
 
-	constructor(options: EntityOptions) {
-		this._type = 'Sprite';
-		this.images = options.images;
-		this.animations = options.animations;
-		this.collisionSize = options.collisionSize ?? this.collisionSize;
-		this._debug = options.debug ?? false;
-		this.sensor = options.sensor;
-		this.group = new Group();
-		this.createSprites(options.size);
+	}
+
+	public createFromBlueprint(): this {
+		this.createSprites(this._size);
 		this.createAnimations();
-		this.bodyDescription = this.createBodyDescription();
-		this._update = options.update;
-		this._setup = options.setup;
+		this.createCollision({ isDynamicBody: !this._static, isSensor: this._sensor });
+		return this;
 	}
 
-	setup() {
-		this._setup(this);
+	public setup(params: LifecycleParameters<ZylemSprite>) {
+		super.setup({ ...params, entity: this });
+		this._setup({ ...params, entity: this });
 	}
 
-	update(delta: number, { inputs }: any) { }
+	public update(params: UpdateParameters<ZylemSprite>): void {
+		super.update({ ...params, entity: this });
+		this._update({ ...params, entity: this });
+	}
 
-	destroy() { }
-
-	createBodyDescription() {
-		const gravityScale = (this.sensor) ? 0.0 : 1.0;
-		let rigidBodyDesc = new RigidBodyDesc(RigidBodyType.Dynamic)
-			.setTranslation(0, 0, 0)
-			.lockRotations()
-			.setGravityScale(gravityScale)
-			.setCanSleep(false)
-			.setCcdEnabled(false);
-
-		return rigidBodyDesc;
+	public destroy(params: LifecycleParameters<ZylemSprite>): void {
+		super.destroy({ ...params, entity: this });
+		this._destroy({ ...params, entity: this });
 	}
 
 	createSprites(size: Vector3 | undefined = new Vector3(1, 1, 1)) {
@@ -111,7 +102,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 
 	createSpritesFromImages() {
 		const textureLoader = new TextureLoader();
-		this.images?.forEach((image: SpriteImage, index) => {
+		this._images?.forEach((image: SpriteImage, index: number) => {
 			const file = typeof image === 'string' ? image : image.file;
 			const name = typeof image === 'string' ? `${index}` : image.name;
 
@@ -122,7 +113,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 				map: spriteMap,
 				transparent: true,
 			});
-			const sprite = new Sprite(material);
+			const sprite = new ThreeSprite(material);
 			sprite.position.normalize();
 			this.sprites.push(sprite);
 			this._spriteMap.set(name, index);
@@ -130,7 +121,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 	}
 
 	createAnimations() {
-		this.animations?.forEach((animation, index) => {
+		this._animations?.forEach((animation, index) => {
 			const { name = "anim-1", loop = false, frames, speed = 1 } = animation;
 			const internalAnimation = {
 				frames: frames.flatMap((frame: string, index: number) => {
@@ -144,25 +135,8 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 				}),
 				loop,
 			}
-			this._animations.set(name, internalAnimation);
+			this._mappedAnimations.set(name, internalAnimation);
 		});
-	}
-
-	createCollider(isSensor: boolean = false) {
-		const { x, y, z } = this.collisionSize ?? this.size;
-		const size = new Vector3(x, y, z);
-		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
-		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
-		colliderDesc.setSensor(isSensor);
-		if (isSensor) {
-			// "KINEMATIC_FIXED" will only sense actors moving through the sensor
-			colliderDesc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;
-			// colliderDesc.setActiveHooks(RAPIER.ActiveHooks.FILTER_INTERSECTION_PAIRS);
-		}
-		if (this._debug) {
-			this.createDebugMesh(new BoxGeometry(x, y, z));
-		}
-		return colliderDesc;
 	}
 
 	setSprite(key: string) {
@@ -182,7 +156,7 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 	}
 
 	setAnimation(name: string, delta: number) {
-		const animation = this._animations.get(name);
+		const animation = this._mappedAnimations.get(name);
 		const { loop, frames } = animation;
 		const frame = frames[this._currentAnimationIndex]
 		if (name === this._currentAnimation) {
@@ -214,4 +188,14 @@ export class ZylemSprite implements GameEntity<ZylemSprite> {
 		debugMaterial.needsUpdate = true;
 		this._debugMesh = new Mesh(geometry, debugMaterial);
 	}
+}
+
+class _Sprite { };
+
+export interface ZylemSprite extends ZylemMaterial, SpriteCollision, Moveable, _Sprite { };
+
+export function Sprite(options: ZylemSpriteOptions): ZylemSprite {
+	applyMixins(ZylemSprite, [ZylemMaterial, SpriteCollision, Moveable, _Sprite]);
+
+	return new ZylemSprite(options) as ZylemSprite;
 }

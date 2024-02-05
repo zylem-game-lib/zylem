@@ -64,4 +64,16 @@ export class GameEntity<T> extends Entity {
 		// stage?.spawnEntity(T(options));
 	}
 
+	// TODO: consider placing more mesh + material + collision handling in the game entity
+	// _debug: boolean = false;
+	// debugColor?: Color = new Color(Color.NAMES.limegreen);
+	// _debugMesh?: Mesh | undefined;
+	// createDebugMesh(geometry: BufferGeometry) {
+	// 	const color = this.debugColor;
+	// 	const debugMaterial = new MeshPhongMaterial({ color });
+	// 	debugMaterial.wireframe = true;
+	// 	debugMaterial.needsUpdate = true;
+	// 	this._debugMesh = new Mesh(geometry, debugMaterial);
+	// }
+
 }

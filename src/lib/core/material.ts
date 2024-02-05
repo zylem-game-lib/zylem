@@ -9,12 +9,28 @@ const shaderDictionary = {
 	}
 }
 
+export type TexturePath = string | null;
+
+export interface CreateMaterialsOptions {
+	texture: TexturePath;
+	color: Color;
+	repeat: Vector2;
+}
+
 export class ZylemMaterial {
 	materials: Material[] = [];
 
-	applyTexture(texturePath: string, repeat: Vector2 = new Vector2(1, 1)) {
+	createMaterials({ texture, color, repeat }: CreateMaterialsOptions) {
+		if (!this.materials) {
+			this.materials = [];
+		}
+		this.applyMaterial(color);
+		this.applyTexture(texture, repeat);
+	}
+
+	applyTexture(texturePath: TexturePath, repeat: Vector2 = new Vector2(1, 1)) {
 		const loader = new TextureLoader();
-		const texture = loader.load(texturePath);
+		const texture = loader.load(texturePath as string);
 		texture.repeat = repeat;
 		texture.wrapS = RepeatWrapping;
 		texture.wrapT = RepeatWrapping;
@@ -31,9 +47,7 @@ export class ZylemMaterial {
 			lightMapIntensity: 0.5,
 			fog: true,
 		});
-		if (!this.materials) {
-			this.materials = [];
-		}
+
 		this.materials.push(material);
 	}
 

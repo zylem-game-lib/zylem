@@ -6,7 +6,7 @@ import { ZylemDebug } from './lib/core/debug';
 import { Howl } from 'howler';
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
-import { Vect3 } from './lib/interfaces/n-utility';
+import { Vect3 } from './lib/interfaces/utility';
 import { Entity } from './lib/core/entity';
 
 const debug = new ZylemDebug();

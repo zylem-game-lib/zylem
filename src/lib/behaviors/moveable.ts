@@ -2,7 +2,6 @@ import { RigidBody, Vector } from "@dimforge/rapier3d-compat";
 import { Vector3 } from "three";
 import { OptionalVector } from "~/lib/interfaces/entity";
 
-
 export class Moveable {
 	[x: string]: any;
 

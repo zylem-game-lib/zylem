@@ -1,86 +1,68 @@
 // Sphere is a combination of a 3D mesh and a physics body
-import { Group, Mesh, MeshStandardMaterial, SphereGeometry, Color } from 'three';
-import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
-import { EntityOptions, GameEntity } from "../interfaces/entity";
+import { Color, Vector2 } from 'three';
+import { TexturePath, ZylemMaterial } from '../core/material';
+import { GameEntity } from '../core/game-entity';
+import { GameEntityOptions } from '../interfaces/entity';
+import { ZylemBlueColor } from '../interfaces/utility';
+import { LifecycleParameters, UpdateParameters } from '../core/entity';
+import { SphereMesh } from '../core/mesh';
+import { SphereCollision } from '../collision/collision';
+import { Moveable } from '../behaviors/moveable';
+import { applyMixins } from '../core/composable';
 
-export class ZylemSphere implements GameEntity<ZylemSphere> {
-	_type: string;
-	group: Group;
-	mesh: Mesh;
-	body?: RigidBody;
-	bodyDescription: RigidBodyDesc;
+type ZylemSphereOptions = GameEntityOptions<ZylemSphere> & {
 	radius?: number;
-	color: Color = new Color(0xFFFFFF);
-	_update: (delta: number, options: any) => void;
-	_setup: (entity: ZylemSphere) => void;
+	static?: boolean;
+	texture?: TexturePath;
+	color?: Color;
+}
 
-	constructor(options: EntityOptions) {
-		this._type = 'Sphere';
-		this.color = options.color ?? this.color;
-		this.mesh = this.createMesh(options.radius);
-		this.group = new Group();
-		this.group.add(this.mesh);
-		this.bodyDescription = this.createBodyDescription();
-		this._update = options.update;
-		this._setup = options.setup;
+export class ZylemSphere extends GameEntity<ZylemSphere> {
+	protected type = 'Sphere';
+	_static: boolean = false;
+	_texture: TexturePath = null;
+	_radius: number = 1;
+	_color: Color = ZylemBlueColor;
+	_repeat: Vector2 = new Vector2(1, 1);
+
+	constructor(options: ZylemSphereOptions) {
+		const bluePrint = options;
+		super(bluePrint);
+		this._static = bluePrint.static ?? false;
+		this._texture = bluePrint.texture ?? null;
+		this._radius = bluePrint.radius ?? 1;
+		this._color = bluePrint.color ?? ZylemBlueColor;
 	}
 
-	setup() {
-		this._setup(this);
+	public createFromBlueprint(): this {
+		this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat });
+		this.createMesh({ group: this.group, radius: this._radius, materials: this.materials });
+		this.createCollision({ isDynamicBody: !this._static });
+		return this;
 	}
 
-	destroy() { }
-
-	update(delta: number, { inputs }: any) {
-		if (!this.body) {
-			return;
-		}
-		const { x, y, z } = this.body.translation();
-		const { x: rx, y: ry, z: rz } = this.body.rotation();
-		this.mesh.position.set(x, y, z);
-		this.mesh.rotation.set(rx, ry, rz);
-		const _inputs = inputs ?? { moveUp: false, moveDown: false };
-		if (this._update === undefined) {
-			return;
-		}
-		this._update(delta, { inputs: _inputs, entity: this });
+	public setup(params: LifecycleParameters<ZylemSphere>) {
+		super.setup({ ...params, entity: this });
+		this._setup({ ...params, entity: this });
 	}
 
-	createMesh(radius: number | undefined = 1) {
-		this.radius = radius;
-		const geometry = new SphereGeometry(radius);
-		const material = new MeshStandardMaterial({
-			color: this.color,
-			emissiveIntensity: 0.5,
-			lightMapIntensity: 0.5,
-			fog: true,
-		});
-		this.mesh = new Mesh(geometry, material);
-		this.mesh.position.set(0, 0, 0);
-		this.mesh.castShadow = true;
-		this.mesh.receiveShadow = true;
-		return this.mesh;
+	public update(params: UpdateParameters<ZylemSphere>): void {
+		super.update({ ...params, entity: this });
+		this._update({ ...params, entity: this });
 	}
 
-	createBodyDescription() {
-		let rigidBodyDesc = new RigidBodyDesc(RigidBodyType.Dynamic)
-			.setGravityScale(1.0)
-			.setCanSleep(false)
-			.setCcdEnabled(false);
-
-		return rigidBodyDesc;
+	public destroy(params: LifecycleParameters<ZylemSphere>): void {
+		super.destroy({ ...params, entity: this });
+		this._destroy({ ...params, entity: this });
 	}
+}
 
-	createCollider(isSensor: boolean = false) {
-		const radius = this.radius || 1;
-		const half = radius / 2;
-		let colliderDesc = ColliderDesc.ball(half);
-		colliderDesc.setSensor(isSensor);
-		if (isSensor) {
-			// "KINEMATIC_FIXED" will only sense actors moving through the sensor
-			colliderDesc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;
-			// colliderDesc.setActiveHooks(RAPIER.ActiveHooks.FILTER_INTERSECTION_PAIRS);
-		}
-		return colliderDesc;
-	}
+class _Sphere { };
+
+export interface ZylemSphere extends ZylemMaterial, SphereMesh, SphereCollision, Moveable, _Sphere { };
+
+export function Sphere(options: ZylemSphereOptions): ZylemSphere {
+	applyMixins(ZylemSphere, [ZylemMaterial, SphereMesh, SphereCollision, Moveable, _Sphere]);
+
+	return new ZylemSphere(options) as ZylemSphere;
 }

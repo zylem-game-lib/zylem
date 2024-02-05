@@ -1,6 +1,5 @@
 import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 import { Color, Group, Vector3 } from "three";
-import { UpdateOptions } from "./update";
 import { SpriteAnimation, SpriteImage } from "~/lib/entities";
 import { LifecycleParameters, UpdateParameters } from "../core/entity";
 
@@ -12,6 +11,8 @@ export interface GameEntityOptions<T> {
 	setup: SetupFunction<T>;
 	update: UpdateFunction<T>;
 	destroy: DestroyFunction<T>;
+	props?: { [key: string]: any };
+	name?: string;
 }
 
 export interface Entity<T = any> {
@@ -64,7 +65,6 @@ export interface EntityOptions {
 }
 
 export enum EntityType {
-	Box = 'Box',
 	Sphere = 'Sphere',
 	Sprite = 'Sprite',
 	Zone = 'Zone'
