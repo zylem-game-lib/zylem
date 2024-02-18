@@ -56,6 +56,8 @@
 		"nipplejs": "^0.10.1",
 		"path-parse": "^1.0.7",
 		"picocolors": "^1.0.0",
+		"pixi-viewport": "^5.0.2",
+		"pixi.js": "^7.4.0",
 		"resolve": "^1.22.3",
 		"source-map-js": "^1.0.2",
 		"supports-preserve-symlinks-flag": "^1.0.0",

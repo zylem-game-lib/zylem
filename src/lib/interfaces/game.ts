@@ -6,6 +6,7 @@ import { ZylemHUD } from '~/lib/ui/hud';
 import { Color, Vector3 } from 'three';
 import { ZylemCamera } from '~/lib/rendering/camera';
 import { ZylemWorld } from '~/lib/collision/world';
+import { UpdateFunction } from './entity';
 
 export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
 
@@ -14,7 +15,7 @@ export interface GameBlueprint {
 	ratio?: GameRatio,
 	globals: Record<string, any>;
 	stages: StageBlueprint[]; // TODO: use stage interface
-	update?: (delta: number, options: any) => void;
+	update?: UpdateFunction<this>;
 	debug?: ZylemDebug;
 }
 
@@ -32,7 +33,7 @@ export interface SetupCallbackOptions {
 	scene: ZylemScene;
 	world?: ZylemWorld;
 	camera?: ZylemCamera;
-	HUD: ZylemHUD;
+	HUD?: ZylemHUD;
 };
 
 export type SetupCallback = (options: SetupCallbackOptions) => void;
@@ -46,6 +47,5 @@ export interface StageBlueprint {
 	setup: SetupCallback;
 	children: (globals?: any) => any[];
 	conditions: Array<Conditions<GameBlueprint["globals"]>>;
-	// TODO: define generalized interface for update options
-	update?: (delta: number, options: any) => void;
+	update?: UpdateFunction<any> | null;
 }

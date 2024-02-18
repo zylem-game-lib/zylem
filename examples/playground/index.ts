@@ -1,15 +1,14 @@
-import { Color, Vector3 } from "three";
+import { Color, Vector2, Vector3 } from "three";
 import { PerspectiveType } from "../../src/lib/interfaces/perspective";
 import { Zylem, ZylemStage } from "../../src/main";
-import { Box, Sphere, Sprite } from "../../src/lib/entities";
+import { Box, Plane, Sphere, Sprite } from "../../src/lib/entities";
 
 const { create } = Zylem;
 
 const box = Box({
-	static: true,
 	texture: 'playground/wood-box.jpg',
 	setup({ entity, globals }) {
-		entity.setPosition(0, 3, 30);
+		entity.setPosition(9, 3, 30);
 		entity.setRotation(14, 16, 4);
 	},
 	update({ delta, entity, globals }) {
@@ -20,16 +19,33 @@ const box = Box({
 	}
 });
 
+const ground = Plane({
+	tile: new Vector2(50, 80),
+	texture: 'playground/grass.jpg',
+	setup({ entity, globals }) {
+	},
+	update({ delta, entity, globals, inputs }) {
+
+	},
+	destroy({ entity, globals }) {
+		console.log(entity);
+	}
+})
+
 const sphere = Sphere({
 	radius: 2,
-	static: true,
 	texture: 'playground/rain-man.png',
 	setup({ entity, globals }) {
 		entity.setPosition(-7, 3, 30);
 		entity.setRotation(0, -0.25, 0);
 	},
-	update({ delta, entity, globals }) {
-		// console.log(entity);
+	update({ delta, entity, globals, inputs }) {
+		const { moveLeft, moveRight } = inputs[0];
+		if (moveRight) {
+			entity.moveX(5);
+		} else if (moveLeft) {
+			entity.moveX(-5);
+		}
 	},
 	destroy({ entity, globals }) {
 		console.log(entity);
@@ -37,7 +53,6 @@ const sphere = Sphere({
 });
 
 const sprite = Sprite({
-	static: true,
 	images: [{
 		name: 'idle',
 		file: 'platformer/idle.png'
@@ -78,15 +93,20 @@ export function LevelOne(): ZylemStage {
 		perspective: PerspectiveType.ThirdPerson,
 		backgroundColor: new Color('#554400'),
 		gravity: new Vector3(0, -1, 0),
-		setup: ({ camera }) => {
+		setup: ({ camera, HUD }) => {
 			camera.moveCamera(new Vector3(0, 5, 0));
 			console.log(camera);
+			// HUD.createUI();
+		},
+		update() {
+			// HUD.renderDebug()
 		},
 		children: ({ }) => {
 			return [
 				box,
 				sphere,
-				sprite
+				sprite,
+				ground
 			]
 		},
 		conditions: [

@@ -14,14 +14,13 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { ZylemCamera } from './camera';
 import RenderPass from './render-pass';
 import { Entity, GameEntity } from '../interfaces/entity';
-import { ZylemHUD } from '../ui/hud';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
+import { UpdateParameters } from '../core/entity';
 
 export class ZylemScene implements Entity<ZylemScene> {
 	_type = 'Scene';
 	_setup?: SetupCallback;
-	_hud: ZylemHUD | null = null;
 	scene!: Scene;
 	screenResolution!: Vector2;
 	renderer!: WebGLRenderer;
@@ -58,21 +57,14 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	setup() {
 		if (this._setup) {
-			this._hud = new ZylemHUD(this.zylemCamera);
-			this._setup({ scene: this, camera: this.zylemCamera, HUD: this._hud });
-			this._hud._hudText.forEach(hudText => {
-				this.add(hudText.sprite, hudText.position);
-			});
+			this._setup({ scene: this, camera: this.zylemCamera });
 		}
 	}
 
 	destroy() { }
 
-	update(delta: number) {
+	update({ delta }: UpdateParameters<any>) {
 		this.composer.render(delta);
-		if (this._hud) {
-			this._hud.update();
-		}
 	}
 
 	setupCamera(scene: Scene) {

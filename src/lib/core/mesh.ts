@@ -1,4 +1,4 @@
-import { BoxGeometry, Group, Material, Mesh, SphereGeometry, Vector3 } from "three";
+import { BoxGeometry, Group, Material, Mesh, PlaneGeometry, SphereGeometry, Vector2, Vector3 } from "three";
 
 export interface BoxMeshInterface {
 	createMesh: (params: CreateMeshParameters) => void;
@@ -6,6 +6,7 @@ export interface BoxMeshInterface {
 
 export type CreateMeshParameters = {
 	group: Group;
+	tile?: Vector2;
 	vector3?: Vector3 | undefined;
 	radius?: number;
 	materials: Material[];
@@ -38,6 +39,22 @@ export class SphereMesh extends BaseMesh {
 	createMesh({ group = new Group(), radius = 1, materials }: CreateMeshParameters) {
 		this.radius = radius;
 		const geometry = new SphereGeometry(radius);
+		this.mesh = new Mesh(geometry, materials.at(-1));
+		this.mesh.position.set(0, 0, 0);
+		this.mesh.castShadow = true;
+		this.mesh.receiveShadow = true;
+		group.add(this.mesh);
+	}
+}
+
+export class PlaneMesh extends BaseMesh {
+	tile: Vector2 = new Vector2(1, 1);
+
+	createMesh({ group = new Group(), tile = new Vector2(1, 1), materials }: CreateMeshParameters) {
+		this.tile = tile;
+
+		// const geometry = new PlaneGeometry(tile.x, tile.y, tile.x, tile.y);
+		const geometry = new BoxGeometry(tile.x, 0.5, tile.y);
 		this.mesh = new Mesh(geometry, materials.at(-1));
 		this.mesh.position.set(0, 0, 0);
 		this.mesh.castShadow = true;

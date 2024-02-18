@@ -60,7 +60,6 @@ export class ZylemSprite extends GameEntity<ZylemSprite> {
 		this._size = bluePrint.size ?? new Vector3(1, 1, 1);
 		this._images = bluePrint.images ?? [];
 		this._animations = bluePrint.animations ?? [];
-
 	}
 
 	public createFromBlueprint(): this {

@@ -1,12 +1,8 @@
-// Zylem Stage should combine a world with a scene
 import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
-import { Entity, EntityBlueprint } from "../interfaces/entity";
-import { ZylemSphere, ZylemSprite } from "../entities";
-import { UpdateOptions } from "../interfaces/update";
+import { Entity, EntityBlueprint, UpdateFunction } from "../interfaces/entity";
 import { Conditions, StageBlueprint } from "../interfaces/game";
 import { Vector3 } from "three";
-import { ZylemZone } from "../entities/zone";
 import {
 	gameState,
 	setGlobalState,
@@ -14,13 +10,15 @@ import {
 	setStageBackgroundColor,
 	setStageBackgroundImage
 } from "../state";
+import { ZylemHUD } from "../ui/hud";
+import { UpdateParameters } from "./entity";
 
 export class ZylemStage implements Entity<ZylemStage> {
 	_type = 'Stage';
-	// TODO: update options with type
-	_update: ((delta: number, options: any) => void) | null = null;
+	_update: UpdateFunction<ZylemStage> | null;
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
+	HUD: ZylemHUD | null;
 	conditions: Conditions<any>[] = [];
 	children: Array<Entity<any>> = [];
 	_childrenMap: Map<string, Entity<any>> = new Map();
@@ -29,17 +27,24 @@ export class ZylemStage implements Entity<ZylemStage> {
 	constructor() {
 		this.world = null;
 		this.scene = null;
+		this.HUD = null;
+		this._update = () => { };
 	}
 
 	async buildStage(options: StageBlueprint, id: string) {
+		// TODO: consider moving globals out
 		setStagePerspective(options.perspective);
 		setStageBackgroundColor(options.backgroundColor);
 		setStageBackgroundImage(options.backgroundImage);
+
 		this.scene = new ZylemScene(id);
 		this.scene._setup = options.setup;
-		this._update = options.update ?? null;
+
 		const physicsWorld = await ZylemWorld.loadPhysics(options.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
+
+		this._update = options.update ?? null;
+
 		this.blueprints = options.children({ gameState, setGlobalState }) || [];
 		this.conditions = options.conditions;
 		await this.setup();
@@ -50,6 +55,8 @@ export class ZylemStage implements Entity<ZylemStage> {
 			this.logMissingEntities();
 			return;
 		}
+		this.HUD = new ZylemHUD();
+		this.HUD.createUI();
 		this.scene.setup();
 		for (let blueprint of this.blueprints) {
 			this.spawnEntity(blueprint, {});
@@ -98,7 +105,8 @@ export class ZylemStage implements Entity<ZylemStage> {
 		this.scene?.destroy();
 	}
 
-	update(delta: number, options: UpdateOptions<Entity<any>>) {
+	update(params: UpdateParameters<ZylemStage>) {
+		const { delta, entity, inputs, globals } = params;
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
 			return;
@@ -107,20 +115,26 @@ export class ZylemStage implements Entity<ZylemStage> {
 		for (let child of this.children) {
 			child.update({
 				delta,
-				inputs: options.inputs,
+				inputs,
 				entity: child,
 				globals: gameState.globals
 			});
 		}
 		if (this._update) {
-			this._update(delta, {
-				camera: this.scene.zylemCamera,
-				inputs: options.inputs,
-				stage: this,
+			this._update({
+				delta,
+				// camera: this.scene.zylemCamera,
+				inputs,
+				entity,
 				globals: gameState.globals
 			});
 		}
-		this.scene.update(delta);
+		this.scene.update({
+			delta,
+			inputs,
+			entity,
+			globals: gameState.globals
+		});
 	}
 
 	getEntityByName(name: string) {
@@ -138,10 +152,4 @@ export class ZylemStage implements Entity<ZylemStage> {
 	resize(width: number, height: number) {
 		this.scene?.updateRenderer(width, height);
 	}
-}
-
-const BlueprintMap = {
-	'Sphere': ZylemSphere,
-	'Sprite': ZylemSprite,
-	'Zone': ZylemZone
 }

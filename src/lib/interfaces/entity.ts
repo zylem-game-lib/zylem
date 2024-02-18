@@ -18,7 +18,7 @@ export interface GameEntityOptions<T> {
 export interface Entity<T = any> {
 	setup: (entity: T) => void;
 	destroy: () => void;
-	update: any; //UpdateFunction<T>;
+	update: UpdateFunction<T>;
 	_type: string;
 	_collision?: (entity: any, other: any, globals?: any) => void;
 	_destroy?: (globals?: any) => void;
