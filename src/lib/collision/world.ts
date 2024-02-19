@@ -2,6 +2,7 @@ import { Vector3 } from 'three';
 import { Entity, GameEntity } from '../interfaces/entity';
 import { gameState } from '../state';
 import RAPIER from '@dimforge/rapier3d-compat';
+import { UpdateParameters } from '../core/entity';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	_type = 'World';
@@ -36,7 +37,8 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 
 	setup() { }
 
-	update(delta: number) {
+	update(params: UpdateParameters<any>) {
+		const { delta } = params;
 		if (!this.world) {
 			return;
 		}

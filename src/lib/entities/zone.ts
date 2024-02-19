@@ -1,7 +1,9 @@
-import { ActiveCollisionTypes, ColliderDesc, RigidBody, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { BoxGeometry, Color, Group, Mesh, MeshPhongMaterial, Vector3 } from "three";
-import { Entity, EntityOptions, GameEntity } from "~/lib/interfaces/entity";
-import { UpdateOptions } from "~/lib/interfaces/update";
+import { Vector3 } from "three";
+import { GameEntityOptions } from "~/lib/interfaces/entity";
+import { BoxCollision } from "../collision/collision";
+import { applyMixins } from "../core/composable";
+import { GameEntity } from "../core/game-entity";
+import { LifecycleParameters, UpdateParameters } from "../core/entity";
 
 export type InternalCollisionParams = {
 	delta: number;
@@ -21,85 +23,43 @@ export type OnHeldParams = {
 export type OnEnterParams = Pick<OnHeldParams, 'entity' | 'other' | 'gameGlobals'>;
 export type OnExitParams = Pick<OnHeldParams, 'entity' | 'other' | 'gameGlobals'>;
 
-export type ZoneOptions = EntityOptions & {
+export type ZylemZoneOptions = GameEntityOptions<ZylemZone> & {
+	size?: Vector3;
+	static?: boolean;
 	onEnter: (params: OnEnterParams) => void;
 	onHeld: (params: OnHeldParams) => void;
 	onExit: (params: OnExitParams) => void;
 }
 
-export class ZylemZone implements GameEntity<ZylemZone> {
-	_type: string;
-	debug?: boolean | undefined;
-	debugColor?: Color = new Color(Color.NAMES.limegreen);
-	_debugMesh?: Mesh | undefined;
-
-	_collision?: ((entity: any, other: any, globals?: any) => void) | undefined;
-	_destroy?: ((globals?: any) => void) | undefined;
-	name?: string | undefined;
-	tag?: Set<string> | undefined;
-
-	area?: RigidBody | undefined;
-	size?: Vector3;
-	radius?: number;
-
-	group: Group;
-	body?: RigidBody | undefined;
-	bodyDescription: RigidBodyDesc;
-	constraintBodies?: RigidBody[] | undefined;
-	sensor?: boolean | undefined;
+export class ZylemZone extends GameEntity<ZylemZone> {
+	protected type = 'Zone';
+	_size: Vector3 | null = null;
+	_static: boolean = false;
+	// _collision?: ((entity: any, other: any, globals?: any) => void) | undefined;
 
 	_enteredZone: Map<string, number> = new Map();
 	_exitedZone: Map<string, number> = new Map();
 	_zoneEntities: Map<string, GameEntity<any>> = new Map();
 
-	// User defined customized events
-	_update: (delta: number, options: any) => void;
-	_setup: (entity: ZylemZone) => void;
 	_onEnter: (params: OnEnterParams) => void;
 	_onHeld: (params: OnHeldParams) => void;
 	_onExit: (params: OnExitParams) => void;
 
-	constructor(options: ZoneOptions) {
-		this._type = 'Zone';
-		this._update = options.update;
-		this._setup = options.setup;
-		this._onHeld = options.onHeld;
-		this._onEnter = options.onEnter;
-		this._onExit = options.onExit;
-		this.size = options.size;
-		this.group = new Group();
-		if (options.debug) {
-			this._debugMesh = this.createDebugMesh(options);
-			this.group.add(this._debugMesh);
-		}
-		this.bodyDescription = this.createBodyDescription();
+	constructor(options: ZylemZoneOptions) {
+		const bluePrint = options;
+		super(bluePrint);
+		this._onHeld = bluePrint.onHeld;
+		this._onEnter = bluePrint.onEnter;
+		this._onExit = bluePrint.onExit;
+		this._static = bluePrint.static ?? true;
+		this._size = bluePrint.size ?? new Vector3(1, 1, 1);
+		// TODO: isSensor needs to be a property of game entity
+		// this.isSensor = true;
 	}
 
-	createBodyDescription() {
-		let rigidBodyDesc = new RigidBodyDesc(RigidBodyType.Fixed)
-			.setTranslation(0, 0, 0)
-			.setCanSleep(false)
-			.setCcdEnabled(false);
-
-		return rigidBodyDesc;
-	}
-
-	createCollider(isSensor: boolean = true) {
-		const size = this.size || new Vector3(1, 1, 1);
-		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
-		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
-		colliderDesc.setSensor(true);
-		colliderDesc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;
-		return colliderDesc;
-	}
-
-	createDebugMesh(options: Pick<EntityOptions, 'debugColor' | 'size'>) {
-		this.debugColor = options.debugColor ?? this.debugColor;
-		const debugMaterial = new MeshPhongMaterial({ color: this.debugColor });
-		debugMaterial.wireframe = true;
-		debugMaterial.needsUpdate = true;
-		const { x, y, z } = options.size ?? new Vector3(1, 1, 1);
-		return new Mesh(new BoxGeometry(x, y, z), debugMaterial);
+	public createFromBlueprint(): this {
+		this.createCollision({ isDynamicBody: !this._static });
+		return this;
 	}
 
 	_internalPostCollisionBehavior({ entity, delta }: InternalCollisionParams) {
@@ -121,8 +81,8 @@ export class ZylemZone implements GameEntity<ZylemZone> {
 
 	entered(other: GameEntity<any>) {
 		// TODO: needs hard id
-		this._enteredZone.set(other.name!, 1);
-		this._onEnter({ entity: this, other, gameGlobals: {} });
+		// this._enteredZone.set(other.name!, 1);
+		// this._onEnter({ entity: this, other, gameGlobals: {} });
 	}
 
 	exited(delta: number, key: string) {
@@ -139,18 +99,35 @@ export class ZylemZone implements GameEntity<ZylemZone> {
 	}
 
 	held(delta: number, other: GameEntity<any>) {
-		const heldTime = this._enteredZone.get(other.name!) ?? 0;
-		this._enteredZone.set(other.name!, heldTime + delta);
-		this._exitedZone.set(other.name!, 1);
-		this._onHeld({ delta, entity: this, other, gameGlobals: {}, heldTime });
+		// const heldTime = this._enteredZone.get(other.name!) ?? 0;
+		// this._enteredZone.set(other.name!, heldTime + delta);
+		// this._exitedZone.set(other.name!, 1);
+		// this._onHeld({ delta, entity: this, other, gameGlobals: {}, heldTime });
 	}
 
-	setup(entity: ZylemZone) {
-		this._setup(this);
-	};
+	public setup(params: LifecycleParameters<ZylemZone>) {
+		super.setup({ ...params, entity: this });
+		this._setup({ ...params, entity: this });
+	}
 
-	destroy() { };
+	public update(params: UpdateParameters<ZylemZone>): void {
+		super.update({ ...params, entity: this });
+		this._update({ ...params, entity: this });
+	}
 
-	update(delta: number, options: UpdateOptions<Entity<ZylemZone>>) { };
+	public destroy(params: LifecycleParameters<ZylemZone>): void {
+		super.destroy({ ...params, entity: this });
+		this._destroy({ ...params, entity: this });
+	}
 
+}
+
+class _Zone {};
+
+export interface ZylemZone extends BoxCollision, _Zone { };
+
+export function Zone(options: ZylemZoneOptions): ZylemZone {
+	applyMixins(ZylemZone, [BoxCollision, _Zone]);
+
+	return new ZylemZone(options) as ZylemZone;
 }
