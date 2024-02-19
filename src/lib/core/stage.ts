@@ -2,7 +2,7 @@ import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
 import { Entity, EntityBlueprint, UpdateFunction } from "../interfaces/entity";
 import { Conditions, StageBlueprint } from "../interfaces/game";
-import { Vector3 } from "three";
+import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, Scene, Vector3 } from "three";
 import {
 	gameState,
 	setGlobalState,
@@ -12,9 +12,10 @@ import {
 } from "../state";
 import { ZylemHUD } from "../ui/hud";
 import { UpdateParameters } from "./entity";
+import { World } from "@dimforge/rapier3d-compat";
 
 export class ZylemStage implements Entity<ZylemStage> {
-	_type = 'Stage';
+	type = 'Stage';
 	_update: UpdateFunction<ZylemStage> | null;
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
@@ -23,6 +24,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 	children: Array<Entity<any>> = [];
 	_childrenMap: Map<string, Entity<any>> = new Map();
 	blueprints: Array<EntityBlueprint<any>> = [];
+	_debugLines: LineSegments | null = null;
 
 	constructor() {
 		this.world = null;
@@ -67,6 +69,14 @@ export class ZylemStage implements Entity<ZylemStage> {
 		if (!this.scene || !this.world) {
 			return;
 		}
+		this._debugLines = new LineSegments(
+			new BufferGeometry(),
+			new LineBasicMaterial({
+				color: 0xffffff, // overriden by world colors
+				vertexColors: true,
+			})
+		);
+		this.scene.scene.add(this._debugLines);
 		const entity = blueprint.createFromBlueprint();
 		entity.name = blueprint.name;
 		if (entity.group) {
@@ -111,7 +121,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 			this.logMissingEntities();
 			return;
 		}
-		this.world.update(delta);
+		this.world.update(params);
 		for (let child of this.children) {
 			child.update({
 				delta,
@@ -135,6 +145,23 @@ export class ZylemStage implements Entity<ZylemStage> {
 			entity,
 			globals: gameState.globals
 		});
+		this.debugStage(this.world.world);
+	}
+
+	debugStage(world: World) {
+		if (!this._debugLines) {
+			return;
+		}
+		const { vertices, colors } = world.debugRender();
+		this._debugLines.visible = true;
+		this._debugLines.geometry.setAttribute(
+			"position",
+			new BufferAttribute(vertices, 3),
+		);
+		this._debugLines.geometry.setAttribute(
+			"color",
+			new BufferAttribute(colors, 4),
+		);
 	}
 
 	getEntityByName(name: string) {
