@@ -1,5 +1,6 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
 import { Color, Vector2, Vector3 } from "three";
+import { SizeVector } from "../interfaces/utility";
 
 export interface BoxCollisionInterface {
 	createCollision: (params: CreateCollisionParameters) => void;
@@ -27,7 +28,7 @@ export class BaseCollision {
 }
 
 export class BoxCollision extends BaseCollision {
-	size: Vector3 = new Vector3(1, 1, 1);
+	_size: SizeVector = new Vector3(1, 1, 1);
 
 	createCollision({ isDynamicBody = true }) {
 		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
@@ -40,7 +41,7 @@ export class BoxCollision extends BaseCollision {
 	}
 
 	createCollider(isSensor: boolean = false) {
-		const size = this.size || new Vector3(1, 1, 1);
+		const size = this._size || new Vector3(1, 1, 1);
 		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
 		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
 		colliderDesc.setSensor(isSensor);
@@ -93,8 +94,7 @@ export class SphereCollision extends BaseCollision {
 
 	createCollider(isSensor: boolean = false) {
 		const radius = this.radius || 1;
-		const half = radius / 2;
-		let colliderDesc = ColliderDesc.ball(half);
+		let colliderDesc = ColliderDesc.ball(radius);
 		colliderDesc.setSensor(isSensor);
 		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
 		return colliderDesc;

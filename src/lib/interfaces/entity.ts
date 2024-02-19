@@ -19,7 +19,7 @@ export interface Entity<T = any> {
 	setup: (entity: T) => void;
 	destroy: () => void;
 	update: UpdateFunction<T>;
-	_type: string;
+	type: string;
 	_collision?: (entity: any, other: any, globals?: any) => void;
 	_destroy?: (globals?: any) => void;
 	name?: string;

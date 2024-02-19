@@ -5,7 +5,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { UpdateParameters } from '../core/entity';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
-	_type = 'World';
+	type = 'World';
 	world: RAPIER.World;
 	collisionMap: Map<number, Entity<any>> = new Map();
 	collisionBehaviorMap: Map<number, Entity<any>> = new Map();
@@ -29,6 +29,10 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			entity.body.lockTranslations(true, true);
 		} else {
 			useSensor = entity.sensor ?? false;
+		}
+		// TODO: useSensor should be set within entity class
+		if (entity.type === 'Zone') {
+			useSensor = true;
 		}
 		const colliderDesc = entity.createCollider(useSensor);
 		this.world.createCollider(colliderDesc, entity.body);

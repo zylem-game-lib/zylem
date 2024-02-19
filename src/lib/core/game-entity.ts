@@ -4,6 +4,7 @@ import { Entity, LifecycleParameters, UpdateParameters } from './entity';
 import { RigidBody } from '@dimforge/rapier3d-compat';
 
 export class GameEntity<T> extends Entity {
+	public uuid: string;
 	protected type: string;
 	protected _setup: SetupFunction<T>;
 	protected _update: UpdateFunction<T>;
@@ -14,6 +15,7 @@ export class GameEntity<T> extends Entity {
 	constructor(options: GameEntityOptions<T>) {
 		super();
 		this.type = GameEntity.name;
+		this.uuid = `${this.type}-${Math.random() * 999999}`; // TODO: use package for assigning uuid
 		this._update = options.update;
 		this._setup = options.setup;
 		this._destroy = options.destroy;

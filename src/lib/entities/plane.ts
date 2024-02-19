@@ -11,6 +11,7 @@ import { ZylemBlueColor } from "../interfaces/utility";
 
 type ZylemPlaneOptions = GameEntityOptions<ZylemPlane> & {
 	tile?: Vector2;
+	repeat?: Vector2;
 	static?: boolean;
 	texture?: TexturePath;
 	color?: Color;
@@ -30,6 +31,7 @@ export class ZylemPlane extends GameEntity<ZylemPlane> {
 		this._static = bluePrint.static ?? true;
 		this._texture = bluePrint.texture ?? null;
 		this._tile = bluePrint.tile ?? new Vector2(1, 1);
+		this._repeat = bluePrint.repeat ?? new Vector2(1, 1);
 		this._color = bluePrint.color ?? ZylemBlueColor;
 	}
 

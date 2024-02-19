@@ -7,9 +7,7 @@ import { BoxCollision } from "../collision/collision";
 import { applyMixins } from "../core/composable";
 import { TexturePath, ZylemMaterial } from '../core/material';
 import { Moveable } from "../behaviors/moveable";
-import { ZylemBlueColor } from "../interfaces/utility";
-
-type SizeVector = Vector3 | null;
+import { SizeVector, ZylemBlueColor } from "../interfaces/utility";
 
 type ZylemBoxOptions = GameEntityOptions<ZylemBox> & {
 	size?: SizeVector;
