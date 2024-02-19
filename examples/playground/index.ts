@@ -1,7 +1,7 @@
 import { Color, Vector2, Vector3 } from "three";
 import { PerspectiveType } from "../../src/lib/interfaces/perspective";
 import { Zylem, ZylemStage } from "../../src/main";
-import { Box, Plane, Sphere, Sprite } from "../../src/lib/entities";
+import { Box, Plane, Sphere, Sprite, Zone } from "../../src/lib/entities";
 
 const { create } = Zylem;
 
@@ -19,8 +19,28 @@ const box = Box({
 	}
 });
 
+const zone = Zone({
+	size: new Vector3(5,20,30),
+	setup({ entity }) {
+		entity.setPosition(10, 3, 20);
+	},
+	update({ entity }) {
+		// console.log(entity);
+	},
+	destroy() {
+
+	},
+	onEnter({ entity, other }) {
+		console.log('Entered: ', other);
+	},
+	onExit({ entity, other }) {
+		console.log('Exited: ', other);
+	}
+})
+
 const ground = Plane({
 	tile: new Vector2(50, 80),
+	repeat: new Vector2(4, 6),
 	texture: 'playground/grass.jpg',
 	setup({ entity, globals }) {
 	},
@@ -40,12 +60,7 @@ const sphere = Sphere({
 		entity.setRotation(0, -0.25, 0);
 	},
 	update({ delta, entity, globals, inputs }) {
-		const { moveLeft, moveRight } = inputs[0];
-		if (moveRight) {
-			entity.moveX(5);
-		} else if (moveLeft) {
-			entity.moveX(-5);
-		}
+		
 	},
 	destroy({ entity, globals }) {
 		console.log(entity);
@@ -78,9 +93,19 @@ const sprite = Sprite({
 	setup({ entity, globals }) {
 		entity.setPosition(0, 5, 30);
 	},
-	update({ delta, entity, globals }) {
+	update({ delta, entity, inputs, globals }) {
 		// console.log(entity);
 		entity.setAnimation('run', delta);
+		const { moveLeft, moveRight } = inputs[0];
+		if (moveRight) {
+			entity.moveX(5);
+			entity.setAnimation('run', delta * 2);
+		} else if (moveLeft) {
+			entity.moveX(-5);
+			entity.setAnimation('run', delta * 2);
+		} else {
+			entity.moveX(0);
+		}
 	},
 	destroy({ entity, globals }) {
 		console.log(entity);
@@ -96,17 +121,19 @@ export function LevelOne(): ZylemStage {
 		setup: ({ camera, HUD }) => {
 			camera.moveCamera(new Vector3(0, 5, 0));
 			console.log(camera);
-			// HUD.createUI();
+			// TODO: HUD needs to come through on setup
+			console.log(HUD);
 		},
 		update() {
-			// HUD.renderDebug()
+
 		},
 		children: ({ }) => {
 			return [
 				box,
 				sphere,
 				sprite,
-				ground
+				ground,
+				zone,
 			]
 		},
 		conditions: [
