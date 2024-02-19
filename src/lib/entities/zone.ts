@@ -4,6 +4,8 @@ import { BoxCollision } from "../collision/collision";
 import { applyMixins } from "../core/composable";
 import { GameEntity } from "../core/game-entity";
 import { LifecycleParameters, UpdateParameters } from "../core/entity";
+import { Moveable } from "../behaviors/moveable";
+import { SizeVector } from "../interfaces/utility";
 
 export type InternalCollisionParams = {
 	delta: number;
@@ -33,7 +35,7 @@ export type ZylemZoneOptions = GameEntityOptions<ZylemZone> & {
 
 export class ZylemZone extends GameEntity<ZylemZone> {
 	protected type = 'Zone';
-	_size: Vector3 | null = null;
+	_size: SizeVector = null;
 	_static: boolean = false;
 	// _collision?: ((entity: any, other: any, globals?: any) => void) | undefined;
 
@@ -70,10 +72,10 @@ export class ZylemZone extends GameEntity<ZylemZone> {
 	}
 
 	_internalCollisionBehavior({ entity, other, delta }: InternalCollisionParams) {
-		const hasEntered = entity._enteredZone.get(other.name);
+		const hasEntered = entity._enteredZone.get(other.uuid);
 		if (!hasEntered) {
 			entity.entered(other);
-			entity._zoneEntities.set(other.name!, other);
+			entity._zoneEntities.set(other.uuid, other);
 		} else {
 			entity.held(delta, other);
 		}
@@ -81,8 +83,10 @@ export class ZylemZone extends GameEntity<ZylemZone> {
 
 	entered(other: GameEntity<any>) {
 		// TODO: needs hard id
-		// this._enteredZone.set(other.name!, 1);
-		// this._onEnter({ entity: this, other, gameGlobals: {} });
+		this._enteredZone.set(other.uuid, 1);
+		if (this._onEnter) {
+			this._onEnter({ entity: this, other, gameGlobals: {} });
+		}
 	}
 
 	exited(delta: number, key: string) {
@@ -92,17 +96,19 @@ export class ZylemZone extends GameEntity<ZylemZone> {
 			this._exitedZone.delete(key);
 			this._enteredZone.delete(key);
 			const other = this._zoneEntities.get(key);
-			this._onExit({ entity: this, other, gameGlobals: {} });
+			if (this._onExit) {
+				this._onExit({ entity: this, other, gameGlobals: {} });
+			}
 			return;
 		}
 		this._exitedZone.set(key, 1 + delta);
 	}
 
 	held(delta: number, other: GameEntity<any>) {
-		// const heldTime = this._enteredZone.get(other.name!) ?? 0;
-		// this._enteredZone.set(other.name!, heldTime + delta);
-		// this._exitedZone.set(other.name!, 1);
-		// this._onHeld({ delta, entity: this, other, gameGlobals: {}, heldTime });
+		const heldTime = this._enteredZone.get(other.uuid) ?? 0;
+		this._enteredZone.set(other.uuid, heldTime + delta);
+		this._exitedZone.set(other.uuid, 1);
+		this._onHeld({ delta, entity: this, other, gameGlobals: {}, heldTime });
 	}
 
 	public setup(params: LifecycleParameters<ZylemZone>) {
@@ -124,10 +130,10 @@ export class ZylemZone extends GameEntity<ZylemZone> {
 
 class _Zone {};
 
-export interface ZylemZone extends BoxCollision, _Zone { };
+export interface ZylemZone extends BoxCollision, Moveable, _Zone { };
 
 export function Zone(options: ZylemZoneOptions): ZylemZone {
-	applyMixins(ZylemZone, [BoxCollision, _Zone]);
+	applyMixins(ZylemZone, [BoxCollision, Moveable, _Zone]);
 
 	return new ZylemZone(options) as ZylemZone;
 }
