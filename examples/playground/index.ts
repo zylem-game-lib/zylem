@@ -1,7 +1,7 @@
 import { Color, Vector2, Vector3 } from "three";
 import { PerspectiveType } from "../../src/lib/interfaces/perspective";
 import { Zylem, ZylemStage } from "../../src/main";
-import { Box, Plane, Sphere, Sprite, Zone } from "../../src/lib/entities";
+import { Actor, Box, Plane, Sphere, Sprite, Zone } from "../../src/lib/entities";
 
 const { create } = Zylem;
 
@@ -20,7 +20,7 @@ const box = Box({
 });
 
 const zone = Zone({
-	size: new Vector3(5,20,30),
+	size: new Vector3(5, 20, 30),
 	setup({ entity }) {
 		entity.setPosition(10, 3, 20);
 	},
@@ -36,7 +36,7 @@ const zone = Zone({
 	onExit({ entity, other }) {
 		console.log('Exited: ', other);
 	}
-})
+});
 
 const ground = Plane({
 	tile: new Vector2(50, 80),
@@ -50,13 +50,13 @@ const ground = Plane({
 	destroy({ entity, globals }) {
 		console.log(entity);
 	}
-})
+});
 
 const sphere = Sphere({
 	radius: 2,
 	texture: 'playground/rain-man.png',
 	setup({ entity, globals }) {
-		entity.setPosition(-7, 3, 30);
+		entity.setPosition(-10, 3, 30);
 		entity.setRotation(0, -0.25, 0);
 	},
 	update({ delta, entity, globals, inputs }) {
@@ -91,7 +91,7 @@ const sprite = Sprite({
 	size: new Vector3(1, 1, 1),
 	collisionSize: new Vector3(0.5, 1, 1),
 	setup({ entity, globals }) {
-		entity.setPosition(0, 5, 30);
+		entity.setPosition(-2, 2, 30);
 	},
 	update({ delta, entity, inputs, globals }) {
 		// console.log(entity);
@@ -110,7 +110,21 @@ const sprite = Sprite({
 	destroy({ entity, globals }) {
 		console.log(entity);
 	}
-})
+});
+
+const actor = Actor({
+	animations: ['playground/run.fbx'],
+	// static: true,
+	setup({ entity, globals }) {
+		entity.setPosition(0, 4, 30);
+	},
+	update({ delta, entity, inputs, globals }) {
+		
+	},
+	destroy({ entity, globals }) {
+		console.log(entity);
+	}
+});
 
 
 export function LevelOne(): ZylemStage {
@@ -129,6 +143,7 @@ export function LevelOne(): ZylemStage {
 		},
 		children: ({ }) => {
 			return [
+				actor,
 				box,
 				sphere,
 				sprite,
