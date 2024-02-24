@@ -62,11 +62,11 @@ export class ZylemSprite extends GameEntity<ZylemSprite> {
 		this._animations = bluePrint.animations ?? [];
 	}
 
-	public createFromBlueprint(): this {
+	async createFromBlueprint(): Promise<this> {
 		this.createSprites(this._size);
 		this.createAnimations();
 		this.createCollision({ isDynamicBody: !this._static, isSensor: this._sensor });
-		return this;
+		return Promise.resolve(this);
 	}
 
 	public setup(params: LifecycleParameters<ZylemSprite>) {

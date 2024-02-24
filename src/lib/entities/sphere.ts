@@ -34,11 +34,11 @@ export class ZylemSphere extends GameEntity<ZylemSphere> {
 		this._color = bluePrint.color ?? ZylemBlueColor;
 	}
 
-	public createFromBlueprint(): this {
+	async createFromBlueprint(): Promise<this> {
 		this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat });
 		this.createMesh({ group: this.group, radius: this._radius, materials: this.materials });
 		this.createCollision({ isDynamicBody: !this._static });
-		return this;
+		return Promise.resolve(this);
 	}
 
 	public setup(params: LifecycleParameters<ZylemSphere>) {

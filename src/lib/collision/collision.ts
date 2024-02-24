@@ -79,6 +79,28 @@ export class PlaneCollision extends BaseCollision {
 	}
 }
 
+export class ActorCollision extends BaseCollision {
+	height: number = 1;
+	radius: number = 1;
+
+	createCollision({ isDynamicBody = true }) {
+		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
+		this.bodyDescription = new RigidBodyDesc(type)
+			.setTranslation(0, 0, 0)
+			.setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0 })
+			.setGravityScale(1.0)
+			.setCanSleep(false)
+			.setCcdEnabled(false);
+	}
+
+	createCollider(isSensor: boolean = false) {
+		let colliderDesc = ColliderDesc.capsule(0.5, 1);
+		colliderDesc.setSensor(isSensor);
+		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
+		return colliderDesc;
+	}
+}
+
 export class SphereCollision extends BaseCollision {
 	radius: number = 1;
 

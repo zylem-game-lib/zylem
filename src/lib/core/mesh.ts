@@ -1,4 +1,4 @@
-import { BoxGeometry, Group, Material, Mesh, PlaneGeometry, SphereGeometry, Vector2, Vector3 } from "three";
+import { BoxGeometry, Group, Material, Mesh, Object3D, PlaneGeometry, SphereGeometry, Vector2, Vector3 } from "three";
 
 export interface BoxMeshInterface {
 	createMesh: (params: CreateMeshParameters) => void;
@@ -9,6 +9,7 @@ export type CreateMeshParameters = {
 	tile?: Vector2;
 	vector3?: Vector3 | undefined;
 	radius?: number;
+	object?: Object3D | null;
 	materials: Material[];
 }
 
@@ -60,5 +61,17 @@ export class PlaneMesh extends BaseMesh {
 		this.mesh.castShadow = true;
 		this.mesh.receiveShadow = true;
 		group.add(this.mesh);
+	}
+}
+
+export class ActorMesh extends BaseMesh {
+
+	createMesh({ group = new Group(), object }: CreateMeshParameters) {
+		if (!object) {
+			console.log('actor is missing object');
+			return;
+		}
+		object.position.set(0, 0, 0);
+		group.add(object);
 	}
 }

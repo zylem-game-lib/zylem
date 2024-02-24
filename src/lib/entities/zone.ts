@@ -59,9 +59,9 @@ export class ZylemZone extends GameEntity<ZylemZone> {
 		// this.isSensor = true;
 	}
 
-	public createFromBlueprint(): this {
+	async createFromBlueprint(): Promise<this> {
 		this.createCollision({ isDynamicBody: !this._static });
-		return this;
+		return Promise.resolve(this);
 	}
 
 	_internalPostCollisionBehavior({ entity, delta }: InternalCollisionParams) {

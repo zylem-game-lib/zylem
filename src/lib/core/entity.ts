@@ -9,7 +9,7 @@ export interface UpdateParameters<T> {
 export type LifecycleParameters<T> = Pick<UpdateParameters<T>, 'entity' | 'globals'>;
 
 export abstract class Entity {
-	public abstract createFromBlueprint(): this;
+	public abstract createFromBlueprint(): Promise<this>;
 
 	public abstract setup(params: LifecycleParameters<this>): void;
 

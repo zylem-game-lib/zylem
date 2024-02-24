@@ -33,7 +33,7 @@ export interface EntityBlueprint<T> extends Entity<T> {
 	shape?: Vector3;
 	collision?: (entity: Entity<T>, other: Entity<T>) => void;
 
-	createFromBlueprint: () => T;
+	createFromBlueprint: () => Promise<T>;
 }
 
 export interface GameEntity<T> extends Entity<T> {

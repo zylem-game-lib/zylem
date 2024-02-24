@@ -21,7 +21,7 @@ export class GameEntity<T> extends Entity {
 		this._destroy = options.destroy;
 	}
 
-	public createFromBlueprint(): this {
+	public createFromBlueprint(): Promise<this> {
 		throw new Error('Method not implemented.');
 	}
 
@@ -30,6 +30,7 @@ export class GameEntity<T> extends Entity {
 	}
 
 	public update(params: UpdateParameters<this>): void {
+		// console.log(params);
 		this.movement();
 	}
 

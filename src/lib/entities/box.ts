@@ -33,11 +33,11 @@ export class ZylemBox extends GameEntity<ZylemBox> {
 		this._color = bluePrint.color ?? ZylemBlueColor;
 	}
 
-	public createFromBlueprint(): this {
+	async createFromBlueprint(): Promise<this> {
 		this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat });
 		this.createMesh({ group: this.group, materials: this.materials });
 		this.createCollision({ isDynamicBody: !this._static });
-		return this;
+		return Promise.resolve(this);
 	}
 
 	public setup(params: LifecycleParameters<ZylemBox>) {

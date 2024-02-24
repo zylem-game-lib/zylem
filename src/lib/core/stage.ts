@@ -2,7 +2,7 @@ import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
 import { Entity, EntityBlueprint, UpdateFunction } from "../interfaces/entity";
 import { Conditions, StageBlueprint } from "../interfaces/game";
-import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, Scene, Vector3 } from "three";
+import { BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments, Vector3 } from "three";
 import {
 	gameState,
 	setGlobalState,
@@ -61,11 +61,11 @@ export class ZylemStage implements Entity<ZylemStage> {
 		this.HUD.createUI();
 		this.scene.setup();
 		for (let blueprint of this.blueprints) {
-			this.spawnEntity(blueprint, {});
+			await this.spawnEntity(blueprint, {});
 		}
 	}
 
-	spawnEntity(blueprint: EntityBlueprint<any>, options: any) {
+	async spawnEntity(blueprint: EntityBlueprint<any>, options: any) {
 		if (!this.scene || !this.world) {
 			return;
 		}
@@ -77,7 +77,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 			})
 		);
 		this.scene.scene.add(this._debugLines);
-		const entity = blueprint.createFromBlueprint();
+		const entity = await blueprint.createFromBlueprint();
 		entity.name = blueprint.name;
 		if (entity.group) {
 			this.scene.scene.add(entity.group);
