@@ -1,5 +1,5 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { Color, Vector2, Vector3 } from "three";
+import { BufferGeometry, Color, Object3D, SkinnedMesh, Vector2, Vector3 } from "three";
 import { SizeVector } from "../interfaces/utility";
 
 export interface BoxCollisionInterface {
@@ -67,10 +67,10 @@ export class PlaneCollision extends BaseCollision {
 
 	createCollider(isSensor: boolean = false) {
 		const tile = this.tile || new Vector2(1, 1);
-		// const float32Array: Float32Array = new Float32Array(1);
-		// let colliderDesc = ColliderDesc.heightfield(tile.x, tile.y, float32Array, new Vector3(1, 1, 1));
-		const half = { x: tile.x / 2, y: 1 / 2, z: tile.y / 2 };
-		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
+		const float32Array: Float32Array = new Float32Array(1);
+		let colliderDesc = ColliderDesc.heightfield(tile.x, tile.y, float32Array, new Vector3(1, 1, 1));
+		// const half = { x: tile.x / 2, y: 1 / 2, z: tile.y / 2 };
+		// let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
 		colliderDesc.setSensor(isSensor);
 		// "KINEMATIC_FIXED" will only sense actors moving through the sensor
 		// colliderDesc.setActiveHooks(RAPIER.ActiveHooks.FILTER_INTERSECTION_PAIRS);
@@ -83,7 +83,7 @@ export class ActorCollision extends BaseCollision {
 	height: number = 1;
 	radius: number = 1;
 
-	createCollision({ isDynamicBody = true }) {
+	createCollision({ isDynamicBody = true, object }: { isDynamicBody: boolean, object: Object3D | null}) {
 		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
 		this.bodyDescription = new RigidBodyDesc(type)
 			.setTranslation(0, 0, 0)
@@ -91,10 +91,19 @@ export class ActorCollision extends BaseCollision {
 			.setGravityScale(1.0)
 			.setCanSleep(false)
 			.setCcdEnabled(false);
+		if (!object) {
+			console.warn('missing object');
+			return;
+		}
+		// TODO: assign height and radius based on actor geometry
+		const skinnedMesh = object.children[0] as SkinnedMesh;
+		let geometry = skinnedMesh.geometry as BufferGeometry;
+		console.log(geometry);
 	}
 
 	createCollider(isSensor: boolean = false) {
 		let colliderDesc = ColliderDesc.capsule(0.5, 1);
+		console.log('ACTOR COLLIDER', colliderDesc);
 		colliderDesc.setSensor(isSensor);
 		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
 		return colliderDesc;

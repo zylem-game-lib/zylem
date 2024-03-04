@@ -32,6 +32,32 @@ export class ZylemActor extends GameEntity<ZylemActor> {
 		this._animationFileNames = bluePrint.animations || [];
 	}
 
+	async createFromBlueprint(): Promise<this> {
+		await this.load(this._animationFileNames);
+		// TODO: consider refactor to not have to pass materials
+		this.createMesh({ group: this.group, object: this._object, materials: [] });
+		this.createCollision({ isDynamicBody: !this._static, object: this._object });
+		this._currentAction?.play();
+		return Promise.resolve(this);
+	}
+
+	public setup(params: LifecycleParameters<ZylemActor>) {
+		super.setup({ ...params, entity: this });
+		this._setup({ ...params, entity: this });
+	}
+
+	public update(params: UpdateParameters<ZylemActor>): void {
+		const { delta } = params;
+		super.update({ ...params, entity: this });
+		this._mixer!.update(delta);
+		this._update({ ...params, entity: this });
+	}
+
+	public destroy(params: LifecycleParameters<ZylemActor>): void {
+		super.destroy({ ...params, entity: this });
+		this._destroy({ ...params, entity: this });
+	}
+
 	loadFile(file: string): Promise<AnimationClip> {
 		return new Promise((resolve, reject) => {
 			return this._fbxLoader.load(
@@ -79,30 +105,16 @@ export class ZylemActor extends GameEntity<ZylemActor> {
 		return this;
 	}
 
-	async createFromBlueprint(): Promise<this> {
-		await this.load(this._animationFileNames);
-		// TODO: consider refactor to not have to pass materials
-		this.createMesh({ group: this.group, object: this._object, materials: [] });
-		this.createCollision({ isDynamicBody: !this._static });
-		this._currentAction?.play();
-		return Promise.resolve(this);
-	}
-
-	public setup(params: LifecycleParameters<ZylemActor>) {
-		super.setup({ ...params, entity: this });
-		this._setup({ ...params, entity: this });
-	}
-
-	public update(params: UpdateParameters<ZylemActor>): void {
-		const { delta } = params;
-		super.update({ ...params, entity: this });
-		this._mixer!.update(delta);
-		this._update({ ...params, entity: this });
-	}
-
-	public destroy(params: LifecycleParameters<ZylemActor>): void {
-		super.destroy({ ...params, entity: this });
-		this._destroy({ ...params, entity: this });
+	animate(animationIndex: number) {
+		if (this._actions.length === 0) { return; }
+		if (this._animationIndex === animationIndex) {
+			return;
+		}
+		const previousIndex = this._animationIndex;
+		this._currentAction = this._actions[animationIndex];
+		this._currentAction.play();
+		this._actions[previousIndex].stop();
+		this._animationIndex = animationIndex;
 	}
 }
 

@@ -112,20 +112,25 @@ const sprite = Sprite({
 	}
 });
 
-const actor = Actor({
-	animations: ['playground/run.fbx'],
-	// static: true,
-	setup({ entity, globals }) {
-		entity.setPosition(0, 4, 30);
-	},
-	update({ delta, entity, inputs, globals }) {
-		
-	},
-	destroy({ entity, globals }) {
-		console.log(entity);
-	}
-});
+const actorFactory = (pos: Vector3) => {
+	return Actor({
+		animations: ['playground/run.fbx'],
+		// static: true,
+		setup({ entity, globals }) {
+			entity.setPosition(pos.x, pos.y, pos.z);
+		},
+		update({ delta, entity, inputs, globals }) {
+			
+		},
+		destroy({ entity, globals }) {
+			console.log(entity);
+		}
+	});
+}
 
+const actor = actorFactory(new Vector3(-3, 4, 20));
+const actor2 = actorFactory(new Vector3(0, 4, 10));
+const actor3 = actorFactory(new Vector3(3, 4, 30));
 
 export function LevelOne(): ZylemStage {
 	return {
@@ -143,7 +148,9 @@ export function LevelOne(): ZylemStage {
 		},
 		children: ({ }) => {
 			return [
+				actor3,
 				actor,
+				actor2,
 				box,
 				sphere,
 				sprite,

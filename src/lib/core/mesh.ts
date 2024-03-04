@@ -54,8 +54,8 @@ export class PlaneMesh extends BaseMesh {
 	createMesh({ group = new Group(), tile = new Vector2(1, 1), materials }: CreateMeshParameters) {
 		this.tile = tile;
 
-		// const geometry = new PlaneGeometry(tile.x, tile.y, tile.x, tile.y);
-		const geometry = new BoxGeometry(tile.x, 0.5, tile.y);
+		const geometry = new PlaneGeometry(tile.x, tile.y, tile.x, tile.y);
+		// const geometry = new BoxGeometry(tile.x, 0.5, tile.y);
 		this.mesh = new Mesh(geometry, materials.at(-1));
 		this.mesh.position.set(0, 0, 0);
 		this.mesh.castShadow = true;
@@ -71,7 +71,7 @@ export class ActorMesh extends BaseMesh {
 			console.log('actor is missing object');
 			return;
 		}
-		object.position.set(0, 0, 0);
+		object.position.set(0, -1.2, 0);
 		group.add(object);
 	}
 }
