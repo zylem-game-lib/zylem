@@ -9,14 +9,14 @@ import {
 	MeshPhongMaterial,
 	Mesh,
 } from "three";
-import { applyMixins } from "../../core/composable";
+import { Mixin, settings } from "ts-mixer";
+
 import { ZylemMaterial } from "../../core/material";
-import { GameEntity } from "../../core/game-entity";
-import { LifecycleParameters, UpdateParameters } from "../../core/entity";
-import { SpriteCollision } from "../../collision/collision";
+import { EntityParameters, GameEntity } from "../../core";
 import { Moveable } from "../../behaviors/moveable";
 import { ZylemBlueColor } from "../../interfaces/utility";
 import { GameEntityOptions } from "../../interfaces/entity";
+import { SpriteCollision } from './index';
 
 export type SpriteImage = { name: string, file: string };
 export type SpriteAnimation<T extends SpriteImage[] | undefined> = {
@@ -26,7 +26,7 @@ export type SpriteAnimation<T extends SpriteImage[] | undefined> = {
 	loop: boolean;
 };
 
-type ZylemSpriteOptions = GameEntityOptions<ZylemSprite> & {
+type ZylemSpriteOptions = {
 	static?: boolean;
 	color?: Color;
 	images?: SpriteImage[] | undefined;
@@ -35,10 +35,15 @@ type ZylemSpriteOptions = GameEntityOptions<ZylemSprite> & {
 	collisionSize?: Vector3;
 }
 
-export class ZylemSprite extends GameEntity<ZylemSprite> {
+type SpriteOptions = GameEntityOptions<ZylemSpriteOptions, ZylemSprite>;
+
+settings.initFunction = 'init';
+
+export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollision, Moveable) {
 	protected type = 'Sprite';
-	_static: boolean = false;
 	_sensor: boolean = false;
+	_size: Vector3;
+	_debugMesh: Mesh | null;
 
 	_images?: SpriteImage[] | undefined;
 	spriteIndex: number = 0;
@@ -52,14 +57,18 @@ export class ZylemSprite extends GameEntity<ZylemSprite> {
 	_currentAnimationIndex: number = 0;
 	_currentAnimationTime: number = 0;
 
-	constructor(options: ZylemSpriteOptions) {
-		const bluePrint = options;
-		super(bluePrint);
-		this._static = bluePrint.static ?? false;
-		this._color = bluePrint.color ?? ZylemBlueColor;
-		this._size = bluePrint.size ?? new Vector3(1, 1, 1);
-		this._images = bluePrint.images ?? [];
-		this._animations = bluePrint.animations ?? [];
+	constructor(options: SpriteOptions) {
+		super(options as GameEntityOptions<{}, unknown>);
+		this._static = options.static ?? false;
+		this._color = options.color ?? ZylemBlueColor;
+		this._size = options.size ?? new Vector3(1, 1, 1);
+		this._images = options.images ?? [];
+		this._animations = options.animations ?? [];
+		this._debugMesh = null;
+	}
+
+	init() {
+		this.createFromBlueprint();
 	}
 
 	async createFromBlueprint(): Promise<this> {
@@ -69,18 +78,18 @@ export class ZylemSprite extends GameEntity<ZylemSprite> {
 		return Promise.resolve(this);
 	}
 
-	public setup(params: LifecycleParameters<ZylemSprite>) {
-		super.setup({ ...params, entity: this });
+	public setup(params: EntityParameters<ZylemSprite>): void {
+		super.setup(params);
 		this._setup({ ...params, entity: this });
 	}
 
-	public update(params: UpdateParameters<ZylemSprite>): void {
-		super.update({ ...params, entity: this });
+	public update(params: EntityParameters<ZylemSprite>): void {
+		super.update(params);
 		this._update({ ...params, entity: this });
 	}
 
-	public destroy(params: LifecycleParameters<ZylemSprite>): void {
-		super.destroy({ ...params, entity: this });
+	public destroy(params: EntityParameters<ZylemSprite>): void {
+		super.destroy(params);
 		this._destroy({ ...params, entity: this });
 	}
 
@@ -189,12 +198,6 @@ export class ZylemSprite extends GameEntity<ZylemSprite> {
 	}
 }
 
-class _Sprite { };
-
-export interface ZylemSprite extends ZylemMaterial, SpriteCollision, Moveable, _Sprite { };
-
-export function Sprite(options: ZylemSpriteOptions): ZylemSprite {
-	applyMixins(ZylemSprite, [ZylemMaterial, SpriteCollision, Moveable, _Sprite]);
-
+export function Sprite(options: SpriteOptions): ZylemSprite {
 	return new ZylemSprite(options) as ZylemSprite;
 }
