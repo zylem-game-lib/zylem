@@ -1,6 +1,7 @@
 import { Color, Material, MeshPhongMaterial, MeshStandardMaterial, RepeatWrapping, ShaderMaterial, TextureLoader, Vector2 } from "three";
 import fragmentShader from '../rendering/shaders/fragment/pixelated.fx?raw';
 import vertexShader from '../rendering/shaders/vertex/standard.fx?raw';
+import { ZylemBlueColor } from "../interfaces/utility";
 
 const shaderDictionary = {
 	test: {
@@ -18,6 +19,9 @@ export interface CreateMaterialsOptions {
 }
 
 export class ZylemMaterial {
+	_color: Color = ZylemBlueColor;
+	_texture: TexturePath = null;
+	_repeat: Vector2 = new Vector2(1, 1);
 	materials: Material[] = [];
 
 	createMaterials({ texture, color, repeat }: CreateMaterialsOptions) {

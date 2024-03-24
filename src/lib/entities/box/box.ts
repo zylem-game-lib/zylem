@@ -1,14 +1,12 @@
 import { Vector3, Color } from "three";
 import { Mixin, settings } from 'ts-mixer';
 
-import { EntityParameters } from "../../core/entity";
-import { GameEntity } from "../../core/game-entity";
+import { EntityParameters, GameEntity } from "../../core";
 import { GameEntityOptions } from "../../interfaces/entity";
 import { TexturePath, ZylemMaterial } from '../../core/material';
 import { Moveable } from "../../behaviors/moveable";
 import { SizeVector, ZylemBlueColor } from "../../interfaces/utility";
-import { BoxMesh } from "./mesh";
-import { BoxCollision } from "./collision";
+import { BoxMesh, BoxCollision } from "./index";
 
 type ZylemBoxOptions = {
 	size?: SizeVector;

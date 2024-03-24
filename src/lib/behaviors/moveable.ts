@@ -1,9 +1,10 @@
 import { RigidBody, Vector } from "@dimforge/rapier3d-compat";
 import { Vector3 } from "three";
+import { Mixin } from "ts-mixer";
 import { OptionalVector } from "~/lib/interfaces/entity";
+import { GameEntity } from "../core/game-entity";
 
-export class Moveable {
-	[x: string]: any;
+export class Moveable extends Mixin(GameEntity) {
 
 	moveX(delta: number) {
 		(this.body as RigidBody).setLinvel(new Vector3(delta, 0, 0), true);
@@ -53,11 +54,11 @@ export class Moveable {
 	}
 
 	setRotationY(y: number) {
-		this.body.setRotation({ w: 1, x: 0, y: y, z: 0 }, true);
+		this.body!.setRotation({ w: 1, x: 0, y: y, z: 0 }, true);
 	}
 
 	setRotationX(x: number) {
-		this.body.setRotation({ w: 1, x: x, y: 0, z: 0 }, true);
+		this.body!.setRotation({ w: 1, x: x, y: 0, z: 0 }, true);
 	}
 
 	setRotationZ(z: number) {
@@ -74,23 +75,23 @@ export class Moveable {
 	}
 
 	setRotation(x: number, y: number, z: number) {
-		this.body.setRotation({ w: 1, x, y, z }, true);
+		this.body!.setRotation({ w: 1, x, y, z }, true);
 	}
 
 	getRotation(): any {
-		return this.body.rotation();
+		return this.body!.rotation();
 	}
 
 	setPosition(x: number, y: number, z: number) {
-		this.body.setTranslation({ x, y, z }, true);
+		this.body!.setTranslation({ x, y, z }, true);
 	}
 
 	getPosition(): Vector {
-		return this.body.translation();
+		return this.body!.translation();
 	}
 
 	getVelocity(): Vector {
-		return this.body.linvel();
+		return this.body!.linvel();
 	}
 
 	getDirection2D(): OptionalVector {

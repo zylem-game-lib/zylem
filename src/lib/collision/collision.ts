@@ -12,6 +12,7 @@ export type CreateCollisionParameters = {
 }
 
 export class BaseCollision {
+	_static: boolean = false;
 	bodyDescription: RigidBodyDesc | null = null;
 	debugCollision: boolean = false;
 	debugColor: Color = new Color().setColorName('green');
@@ -47,30 +48,6 @@ export class BoxCollision extends BaseCollision {
 		colliderDesc.setSensor(isSensor);
 		// "KINEMATIC_FIXED" will only sense actors moving through the sensor
 		// colliderDesc.setActiveHooks(RAPIER.ActiveHooks.FILTER_INTERSECTION_PAIRS);
-		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
-		return colliderDesc;
-	}
-}
-
-export class PlaneCollision extends BaseCollision {
-
-	createCollision({ isDynamicBody = false }) {
-		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
-		this.bodyDescription = new RigidBodyDesc(type)
-			.setTranslation(0, 0, 0)
-			.setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0 })
-			.setGravityScale(1.0)
-			.setCanSleep(false)
-			.setCcdEnabled(false);
-	}
-
-	createCollider(isSensor: boolean = false) {
-		//@ts-ignore
-		let colliderDesc = ColliderDesc.heightfield(
-			//@ts-ignore
-			this.subdivisions, this.subdivisions, new Float32Array(this.heights), this.size
-		);
-		colliderDesc.setSensor(isSensor);
 		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
 		return colliderDesc;
 	}
