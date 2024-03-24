@@ -1,9 +1,9 @@
 import { Vector3 } from "three";
-import { GameEntityOptions } from "~/lib/interfaces/entity";
+import { Mixin } from "ts-mixer";
+
+import { GameEntityOptions } from "../../interfaces/entity";
 import { BoxCollision } from "../../collision/collision";
-import { applyMixins } from "../../core/composable";
-import { GameEntity } from "../../core/game-entity";
-import { LifecycleParameters, UpdateParameters } from "../../core/entity";
+import { GameEntity, EntityParameters } from "../../core";
 import { Moveable } from "../../behaviors/moveable";
 import { SizeVector } from "../../interfaces/utility";
 
@@ -25,7 +25,7 @@ export type OnHeldParams = {
 export type OnEnterParams = Pick<OnHeldParams, 'entity' | 'other' | 'gameGlobals'>;
 export type OnExitParams = Pick<OnHeldParams, 'entity' | 'other' | 'gameGlobals'>;
 
-export type ZylemZoneOptions = GameEntityOptions<ZylemZone> & {
+export type ZylemZoneOptions = {
 	size?: Vector3;
 	static?: boolean;
 	onEnter: (params: OnEnterParams) => void;
@@ -33,11 +33,12 @@ export type ZylemZoneOptions = GameEntityOptions<ZylemZone> & {
 	onExit: (params: OnExitParams) => void;
 }
 
-export class ZylemZone extends GameEntity<ZylemZone> {
+type ZoneOptions = GameEntityOptions<ZylemZoneOptions, ZylemZone>;
+
+export class ZylemZone extends Mixin(GameEntity, BoxCollision, Moveable) {
 	protected type = 'Zone';
 	_size: SizeVector = null;
 	_static: boolean = false;
-	// _collision?: ((entity: any, other: any, globals?: any) => void) | undefined;
 
 	_enteredZone: Map<string, number> = new Map();
 	_exitedZone: Map<string, number> = new Map();
@@ -47,16 +48,13 @@ export class ZylemZone extends GameEntity<ZylemZone> {
 	_onHeld: (params: OnHeldParams) => void;
 	_onExit: (params: OnExitParams) => void;
 
-	constructor(options: ZylemZoneOptions) {
-		const bluePrint = options;
-		super(bluePrint);
-		this._onHeld = bluePrint.onHeld;
-		this._onEnter = bluePrint.onEnter;
-		this._onExit = bluePrint.onExit;
-		this._static = bluePrint.static ?? true;
-		this._size = bluePrint.size ?? new Vector3(1, 1, 1);
-		// TODO: isSensor needs to be a property of game entity
-		// this.isSensor = true;
+	constructor(options: ZoneOptions) {
+		super(options as GameEntityOptions<{}, unknown>);
+		this._onHeld = options.onHeld || (() => { });
+		this._onEnter = options.onEnter || (() => { });
+		this._onExit = options.onExit || (() => { });
+		this._static = options.static ?? true;
+		this._size = options.size ?? new Vector3(1, 1, 1);
 	}
 
 	async createFromBlueprint(): Promise<this> {
@@ -111,29 +109,23 @@ export class ZylemZone extends GameEntity<ZylemZone> {
 		this._onHeld({ delta, entity: this, other, gameGlobals: {}, heldTime });
 	}
 
-	public setup(params: LifecycleParameters<ZylemZone>) {
-		super.setup({ ...params, entity: this });
+	public setup(params: EntityParameters<ZylemZone>): void {
+		super.setup(params);
 		this._setup({ ...params, entity: this });
 	}
 
-	public update(params: UpdateParameters<ZylemZone>): void {
-		super.update({ ...params, entity: this });
+	public update(params: EntityParameters<ZylemZone>): void {
+		super.update(params);
 		this._update({ ...params, entity: this });
 	}
 
-	public destroy(params: LifecycleParameters<ZylemZone>): void {
-		super.destroy({ ...params, entity: this });
+	public destroy(params: EntityParameters<ZylemZone>): void {
+		super.destroy(params);
 		this._destroy({ ...params, entity: this });
 	}
 
 }
 
-class _Zone { };
-
-export interface ZylemZone extends BoxCollision, Moveable, _Zone { };
-
-export function Zone(options: ZylemZoneOptions): ZylemZone {
-	applyMixins(ZylemZone, [BoxCollision, Moveable, _Zone]);
-
+export function Zone(options: ZoneOptions): ZylemZone {
 	return new ZylemZone(options) as ZylemZone;
 }

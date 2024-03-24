@@ -13,6 +13,7 @@ export type CreateCollisionParameters = {
 
 export class BaseCollision {
 	_static: boolean = false;
+	_isSensor: boolean = false;
 	bodyDescription: RigidBodyDesc | null = null;
 	debugCollision: boolean = false;
 	debugColor: Color = new Color().setColorName('green');
