@@ -1,19 +1,20 @@
+import { AnimationAction, AnimationClip, AnimationMixer, Object3D } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
-import { LifecycleParameters, UpdateParameters } from "../core/entity";
-import { GameEntity } from "../core/game-entity";
-import { GameEntityOptions } from "../interfaces/entity";
-import { AnimationAction, AnimationClip, AnimationMixer, Group, Object3D } from 'three';
-import { Moveable } from '../behaviors/moveable';
-import { applyMixins } from '../core/composable';
-import { ActorCollision } from '../collision/collision';
-import { ActorMesh } from '../core/mesh';
+import { Mixin } from 'ts-mixer';
 
-type ZylemActorOptions = GameEntityOptions<ZylemActor> & {
+import { EntityParameters, GameEntity } from "../../core";
+import { GameEntityOptions } from "../../interfaces/entity";
+import { Moveable } from '../../behaviors/moveable';
+import { ActorMesh, ActorCollision } from './index';
+
+type ZylemActorOptions = {
 	static?: boolean;
 	animations?: string[];
 }
 
-export class ZylemActor extends GameEntity<ZylemActor> {
+type ActorOptions = GameEntityOptions<ZylemActorOptions, ZylemActor>;
+
+export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Moveable) {
 	protected type = 'Actor';
 	_static: boolean = false;
 	_fbxLoader: FBXLoader = new FBXLoader();
@@ -21,15 +22,18 @@ export class ZylemActor extends GameEntity<ZylemActor> {
 	_mixer: AnimationMixer | null = null;
 	_actions: AnimationAction[] = [];
 	_animations: AnimationClip[] | null = null;
-	_animationFileNames: string[] = []; 
+	_animationFileNames: string[] = [];
 	_currentAction: AnimationAction | null = null;
 	_animationIndex: number = 0;
 
 	constructor(options: ZylemActorOptions) {
-		const bluePrint = options;
-		super(bluePrint);
-		this._static = bluePrint.static ?? false;
-		this._animationFileNames = bluePrint.animations || [];
+		super(options as GameEntityOptions<{}, unknown>);
+		this._static = options.static ?? false;
+		this._animationFileNames = options.animations || [];
+	}
+
+	init() {
+		this.createFromBlueprint();
 	}
 
 	async createFromBlueprint(): Promise<this> {
@@ -41,20 +45,20 @@ export class ZylemActor extends GameEntity<ZylemActor> {
 		return Promise.resolve(this);
 	}
 
-	public setup(params: LifecycleParameters<ZylemActor>) {
-		super.setup({ ...params, entity: this });
+	public setup(params: EntityParameters<ZylemActor>): void {
+		super.setup(params);
 		this._setup({ ...params, entity: this });
 	}
 
-	public update(params: UpdateParameters<ZylemActor>): void {
+	public update(params: EntityParameters<ZylemActor>): void {
 		const { delta } = params;
-		super.update({ ...params, entity: this });
+		super.update(params);
 		this._mixer!.update(delta);
 		this._update({ ...params, entity: this });
 	}
 
-	public destroy(params: LifecycleParameters<ZylemActor>): void {
-		super.destroy({ ...params, entity: this });
+	public destroy(params: EntityParameters<ZylemActor>): void {
+		super.destroy(params);
 		this._destroy({ ...params, entity: this });
 	}
 
@@ -118,12 +122,6 @@ export class ZylemActor extends GameEntity<ZylemActor> {
 	}
 }
 
-class _Actor {};
-
-export interface ZylemActor extends Moveable, ActorMesh, ActorCollision, _Actor {};
-
-export function Actor(options: ZylemActorOptions): ZylemActor {
-	applyMixins(ZylemActor, [Moveable, ActorMesh, ActorCollision, _Actor]);
-
+export function Actor(options: ActorOptions): ZylemActor {
 	return new ZylemActor(options) as ZylemActor;
 }

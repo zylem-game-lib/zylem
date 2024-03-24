@@ -1,11 +1,11 @@
 import { Vector3 } from "three";
 import { GameEntityOptions } from "~/lib/interfaces/entity";
-import { BoxCollision } from "../collision/collision";
-import { applyMixins } from "../core/composable";
-import { GameEntity } from "../core/game-entity";
-import { LifecycleParameters, UpdateParameters } from "../core/entity";
-import { Moveable } from "../behaviors/moveable";
-import { SizeVector } from "../interfaces/utility";
+import { BoxCollision } from "../../collision/collision";
+import { applyMixins } from "../../core/composable";
+import { GameEntity } from "../../core/game-entity";
+import { LifecycleParameters, UpdateParameters } from "../../core/entity";
+import { Moveable } from "../../behaviors/moveable";
+import { SizeVector } from "../../interfaces/utility";
 
 export type InternalCollisionParams = {
 	delta: number;
@@ -128,7 +128,7 @@ export class ZylemZone extends GameEntity<ZylemZone> {
 
 }
 
-class _Zone {};
+class _Zone { };
 
 export interface ZylemZone extends BoxCollision, Moveable, _Zone { };
 

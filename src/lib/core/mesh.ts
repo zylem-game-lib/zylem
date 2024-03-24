@@ -34,28 +34,3 @@ export class BoxMesh extends BaseMesh {
 	}
 }
 
-export class SphereMesh extends BaseMesh {
-	radius: number = 1;
-
-	createMesh({ group = new Group(), radius = 1, materials }: CreateMeshParameters) {
-		this.radius = radius;
-		const geometry = new SphereGeometry(radius);
-		this.mesh = new Mesh(geometry, materials.at(-1));
-		this.mesh.position.set(0, 0, 0);
-		this.mesh.castShadow = true;
-		this.mesh.receiveShadow = true;
-		group.add(this.mesh);
-	}
-}
-
-export class ActorMesh extends BaseMesh {
-
-	createMesh({ group = new Group(), object }: CreateMeshParameters) {
-		if (!object) {
-			console.log('actor is missing object');
-			return;
-		}
-		object.position.set(0, -1.2, 0);
-		group.add(object);
-	}
-}

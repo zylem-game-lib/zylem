@@ -57,7 +57,7 @@ const sphere = Sphere({
 	radius: 2,
 	texture: 'playground/rain-man.png',
 	setup({ entity, globals }) {
-		entity.setPosition(-10, 3, 30);
+		entity.setPosition(-6, 3, 30);
 		entity.setRotation(0, -0.25, 0);
 	},
 	update({ delta, entity, globals, inputs }) {

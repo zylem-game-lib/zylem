@@ -9,14 +9,14 @@ import {
 	MeshPhongMaterial,
 	Mesh,
 } from "three";
-import { applyMixins } from "../core/composable";
-import { ZylemMaterial } from "../core/material";
-import { GameEntity } from "../core/game-entity";
-import { LifecycleParameters, UpdateParameters } from "../core/entity";
-import { SpriteCollision } from "../collision/collision";
-import { Moveable } from "../behaviors/moveable";
-import { ZylemBlueColor } from "../interfaces/utility";
-import { GameEntityOptions } from "../interfaces/entity";
+import { applyMixins } from "../../core/composable";
+import { ZylemMaterial } from "../../core/material";
+import { GameEntity } from "../../core/game-entity";
+import { LifecycleParameters, UpdateParameters } from "../../core/entity";
+import { SpriteCollision } from "../../collision/collision";
+import { Moveable } from "../../behaviors/moveable";
+import { ZylemBlueColor } from "../../interfaces/utility";
+import { GameEntityOptions } from "../../interfaces/entity";
 
 export type SpriteImage = { name: string, file: string };
 export type SpriteAnimation<T extends SpriteImage[] | undefined> = {

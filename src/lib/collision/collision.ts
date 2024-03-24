@@ -53,59 +53,6 @@ export class BoxCollision extends BaseCollision {
 	}
 }
 
-export class ActorCollision extends BaseCollision {
-	height: number = 1;
-	radius: number = 1;
-
-	createCollision({ isDynamicBody = true, object }: { isDynamicBody: boolean, object: Object3D | null }) {
-		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
-		this.bodyDescription = new RigidBodyDesc(type)
-			.setTranslation(0, 0, 0)
-			.setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0 })
-			.setGravityScale(1.0)
-			.setCanSleep(false)
-			.setCcdEnabled(false);
-		if (!object) {
-			console.warn('missing object');
-			return;
-		}
-		// TODO: assign height and radius based on actor geometry
-		const skinnedMesh = object.children[0] as SkinnedMesh;
-		let geometry = skinnedMesh.geometry as BufferGeometry;
-		console.log(geometry);
-	}
-
-	createCollider(isSensor: boolean = false) {
-		let colliderDesc = ColliderDesc.capsule(0.5, 1);
-		console.log('ACTOR COLLIDER', colliderDesc);
-		colliderDesc.setSensor(isSensor);
-		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
-		return colliderDesc;
-	}
-}
-
-export class SphereCollision extends BaseCollision {
-	radius: number = 1;
-
-	createCollision({ isDynamicBody = true }) {
-		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
-		this.bodyDescription = new RigidBodyDesc(type)
-			.setTranslation(0, 0, 0)
-			.setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0 })
-			.setGravityScale(1.0)
-			.setCanSleep(false)
-			.setCcdEnabled(false);
-	}
-
-	createCollider(isSensor: boolean = false) {
-		const radius = this.radius || 1;
-		let colliderDesc = ColliderDesc.ball(radius);
-		colliderDesc.setSensor(isSensor);
-		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
-		return colliderDesc;
-	}
-}
-
 export class SpriteCollision extends BaseCollision {
 	collisionSize: Vector3 = new Vector3(1, 1, 1);
 	size: Vector3 = new Vector3(1, 1, 1);
