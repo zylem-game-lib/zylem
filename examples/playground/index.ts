@@ -41,6 +41,7 @@ const zone = Zone({
 const ground = Plane({
 	tile: new Vector2(50, 80),
 	repeat: new Vector2(4, 6),
+	static: true,
 	texture: 'playground/grass.jpg',
 	setup({ entity, globals }) {
 	},
@@ -60,7 +61,7 @@ const sphere = Sphere({
 		entity.setRotation(0, -0.25, 0);
 	},
 	update({ delta, entity, globals, inputs }) {
-		
+
 	},
 	destroy({ entity, globals }) {
 		console.log(entity);
@@ -120,7 +121,7 @@ const actorFactory = (pos: Vector3) => {
 			entity.setPosition(pos.x, pos.y, pos.z);
 		},
 		update({ delta, entity, inputs, globals }) {
-			
+
 		},
 		destroy({ entity, globals }) {
 			console.log(entity);
@@ -183,3 +184,13 @@ const game = create({
 });
 
 game.start();
+
+
+
+/**
+ * 
+ * Game()
+ * Stage()
+ * Act()
+ * 
+ */

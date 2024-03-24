@@ -11,7 +11,7 @@ import {
 	setStageBackgroundImage
 } from "../state";
 import { ZylemHUD } from "../ui/hud";
-import { UpdateParameters } from "./entity";
+import { EntityParameters } from "./entity";
 import { World } from "@dimforge/rapier3d-compat";
 
 export class ZylemStage implements Entity<ZylemStage> {
@@ -63,20 +63,19 @@ export class ZylemStage implements Entity<ZylemStage> {
 		for (let blueprint of this.blueprints) {
 			await this.spawnEntity(blueprint, {});
 		}
+		this._debugLines = new LineSegments(
+			new BufferGeometry(),
+			new LineBasicMaterial({ vertexColors: true })
+		);
+		this.scene.scene.add(this._debugLines);
+		this._debugLines.visible = true;
 	}
 
 	async spawnEntity(blueprint: EntityBlueprint<any>, options: any) {
 		if (!this.scene || !this.world) {
 			return;
 		}
-		this._debugLines = new LineSegments(
-			new BufferGeometry(),
-			new LineBasicMaterial({
-				color: 0xffffff, // overriden by world colors
-				vertexColors: true,
-			})
-		);
-		this.scene.scene.add(this._debugLines);
+
 		const entity = await blueprint.createFromBlueprint();
 		entity.name = blueprint.name;
 		if (entity.group) {
@@ -105,9 +104,6 @@ export class ZylemStage implements Entity<ZylemStage> {
 			return;
 		}
 		blueprint.setup({ entity });
-		if (entity._debug) {
-			this.scene.scene.add(entity._debugMesh);
-		}
 	}
 
 	destroy() {
@@ -115,7 +111,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 		this.scene?.destroy();
 	}
 
-	update(params: UpdateParameters<ZylemStage>) {
+	update(params: EntityParameters<ZylemStage>) {
 		const { delta, entity, inputs, globals } = params;
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
@@ -153,7 +149,6 @@ export class ZylemStage implements Entity<ZylemStage> {
 			return;
 		}
 		const { vertices, colors } = world.debugRender();
-		this._debugLines.visible = true;
 		this._debugLines.geometry.setAttribute(
 			"position",
 			new BufferAttribute(vertices, 3),

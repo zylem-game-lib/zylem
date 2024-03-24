@@ -16,10 +16,10 @@ import RenderPass from './render-pass';
 import { Entity, GameEntity } from '../interfaces/entity';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
-import { UpdateParameters } from '../core/entity';
+import { EntityParameters } from '../core/entity';
 
 export class ZylemScene implements Entity<ZylemScene> {
-	_type = 'Scene';
+	type = 'Scene';
 	_setup?: SetupCallback;
 	scene!: Scene;
 	screenResolution!: Vector2;
@@ -63,7 +63,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	destroy() { }
 
-	update({ delta }: UpdateParameters<any>) {
+	update({ delta }: EntityParameters<any>) {
 		this.composer.render(delta);
 	}
 

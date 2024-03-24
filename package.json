@@ -63,6 +63,7 @@
 		"supports-preserve-symlinks-flag": "^1.0.0",
 		"three": "^0.151.3",
 		"three-spritetext": "^1.8.1",
+		"ts-mixer": "^6.0.4",
 		"vite-plugin-string": "^1.2.2"
 	},
 	"devDependencies": {

@@ -1,19 +1,19 @@
 import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 import { Color, Group, Vector3 } from "three";
 import { SpriteAnimation, SpriteImage } from "~/lib/entities";
-import { LifecycleParameters, UpdateParameters } from "../core/entity";
+import { EntityParameters } from "../core/entity";
 
-export type UpdateFunction<T> = (params: UpdateParameters<T>) => void;
-export type SetupFunction<T> = (params: LifecycleParameters<T>) => void;
-export type DestroyFunction<T> = (params: LifecycleParameters<T>) => void;
+export type UpdateFunction<T> = (params: EntityParameters<T>) => void;
+export type SetupFunction<T> = (params: EntityParameters<T>) => void;
+export type DestroyFunction<T> = (params: EntityParameters<T>) => void;
 
-export interface GameEntityOptions<T> {
+interface BaseGameEntityOptions<T> {
 	setup: SetupFunction<T>;
 	update: UpdateFunction<T>;
 	destroy: DestroyFunction<T>;
-	props?: { [key: string]: any };
-	name?: string;
 }
+
+export type GameEntityOptions<Options, T> = Partial<Options> & BaseGameEntityOptions<T>;
 
 export interface Entity<T = any> {
 	setup: (entity: T) => void;

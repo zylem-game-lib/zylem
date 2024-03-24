@@ -53,7 +53,6 @@ export class BoxCollision extends BaseCollision {
 }
 
 export class PlaneCollision extends BaseCollision {
-	tile: Vector2 = new Vector2(1, 1);
 
 	createCollision({ isDynamicBody = false }) {
 		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
@@ -66,14 +65,12 @@ export class PlaneCollision extends BaseCollision {
 	}
 
 	createCollider(isSensor: boolean = false) {
-		const tile = this.tile || new Vector2(1, 1);
-		const float32Array: Float32Array = new Float32Array(1);
-		let colliderDesc = ColliderDesc.heightfield(tile.x, tile.y, float32Array, new Vector3(1, 1, 1));
-		// const half = { x: tile.x / 2, y: 1 / 2, z: tile.y / 2 };
-		// let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
+		//@ts-ignore
+		let colliderDesc = ColliderDesc.heightfield(
+			//@ts-ignore
+			this.subdivisions, this.subdivisions, new Float32Array(this.heights), this.size
+		);
 		colliderDesc.setSensor(isSensor);
-		// "KINEMATIC_FIXED" will only sense actors moving through the sensor
-		// colliderDesc.setActiveHooks(RAPIER.ActiveHooks.FILTER_INTERSECTION_PAIRS);
 		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
 		return colliderDesc;
 	}
@@ -83,7 +80,7 @@ export class ActorCollision extends BaseCollision {
 	height: number = 1;
 	radius: number = 1;
 
-	createCollision({ isDynamicBody = true, object }: { isDynamicBody: boolean, object: Object3D | null}) {
+	createCollision({ isDynamicBody = true, object }: { isDynamicBody: boolean, object: Object3D | null }) {
 		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
 		this.bodyDescription = new RigidBodyDesc(type)
 			.setTranslation(0, 0, 0)

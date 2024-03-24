@@ -4,7 +4,7 @@ import { Clock } from 'three';
 import { GameBlueprint, GameRatio, StageBlueprint } from '../interfaces/game';
 import { PerspectiveType } from "../interfaces/perspective";
 import { gameState, setGlobalState } from '../state/index';
-import { UpdateParameters } from './entity';
+import { EntityParameters } from './entity';
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
@@ -67,14 +67,16 @@ export class ZylemGame implements GameBlueprint {
 		const inputs = this.gamePad.getInputs();
 		const ticks = this.clock.getDelta();
 		const delta = this.previousTimeStamp ? _timeStamp - this.previousTimeStamp : TIMESTAMP_DELTA;
+		const isFixedTime = delta >= TIMESTAMP_DELTA;
+		const isNotLastTime = this.previousTimeStamp !== _timeStamp;
 
-		if (this.previousTimeStamp !== _timeStamp && delta >= TIMESTAMP_DELTA) {
+		if (isNotLastTime && isFixedTime) {
 			const stage = this._stageMap[this.currentStage];
 			const options = {
 				inputs,
 				entity: stage,
 				delta: ticks,
-			} as UpdateParameters<ZylemStage>;
+			} as EntityParameters<ZylemStage>;
 			stage.update(options);
 			stage.conditions.forEach(condition => {
 				condition(gameState.globals, this);

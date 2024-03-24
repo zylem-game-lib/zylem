@@ -1,5 +1,5 @@
-import { Vector3, Color, Vector2 } from "three";
-import { LifecycleParameters, UpdateParameters } from "../core/entity";
+import { Color, Vector2 } from "three";
+import { EntityParameters } from "../core/entity";
 import { GameEntity } from "../core/game-entity";
 import { GameEntityOptions } from "../interfaces/entity";
 import { PlaneMesh } from "../core/mesh";
@@ -42,17 +42,17 @@ export class ZylemPlane extends GameEntity<ZylemPlane> {
 		return Promise.resolve(this);
 	}
 
-	public setup(params: LifecycleParameters<ZylemPlane>) {
+	public setup(params: EntityParameters<ZylemPlane>) {
 		super.setup({ ...params, entity: this });
 		this._setup({ ...params, entity: this });
 	}
 
-	public update(params: UpdateParameters<ZylemPlane>): void {
+	public update(params: EntityParameters<ZylemPlane>): void {
 		super.update({ ...params, entity: this });
 		this._update({ ...params, entity: this });
 	}
 
-	public destroy(params: LifecycleParameters<ZylemPlane>): void {
+	public destroy(params: EntityParameters<ZylemPlane>): void {
 		super.destroy({ ...params, entity: this });
 		this._destroy({ ...params, entity: this });
 	}
