@@ -3,7 +3,7 @@ import { Vector3 } from "three";
 import { BaseCollision } from "~/lib/collision/collision";
 import { SizeVector } from "~/lib/interfaces/utility";
 
-export class BoxCollision extends BaseCollision {
+export class ZoneCollision extends BaseCollision {
 	_size: SizeVector = new Vector3(1, 1, 1);
 
 	createCollider(isSensor: boolean = false) {

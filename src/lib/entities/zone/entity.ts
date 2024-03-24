@@ -2,10 +2,9 @@ import { Vector3 } from "three";
 import { Mixin } from "ts-mixer";
 
 import { GameEntityOptions } from "../../interfaces/entity";
-import { BoxCollision } from "../../collision/collision";
 import { GameEntity, EntityParameters } from "../../core";
 import { Moveable } from "../../behaviors/moveable";
-import { SizeVector } from "../../interfaces/utility";
+import { ZoneCollision } from "./index";
 
 export type InternalCollisionParams = {
 	delta: number;
@@ -35,10 +34,8 @@ export type ZylemZoneOptions = {
 
 type ZoneOptions = GameEntityOptions<ZylemZoneOptions, ZylemZone>;
 
-export class ZylemZone extends Mixin(GameEntity, BoxCollision, Moveable) {
+export class ZylemZone extends Mixin(GameEntity, ZoneCollision, Moveable) {
 	protected type = 'Zone';
-	_size: SizeVector = null;
-	_static: boolean = false;
 
 	_enteredZone: Map<string, number> = new Map();
 	_exitedZone: Map<string, number> = new Map();
@@ -80,7 +77,6 @@ export class ZylemZone extends Mixin(GameEntity, BoxCollision, Moveable) {
 	}
 
 	entered(other: GameEntity<any>) {
-		// TODO: needs hard id
 		this._enteredZone.set(other.uuid, 1);
 		if (this._onEnter) {
 			this._onEnter({ entity: this, other, gameGlobals: {} });
@@ -88,7 +84,6 @@ export class ZylemZone extends Mixin(GameEntity, BoxCollision, Moveable) {
 	}
 
 	exited(delta: number, key: string) {
-		// TODO: needs hard id
 		const hasExited = this._exitedZone.get(key);
 		if (hasExited && hasExited > 1 + delta) {
 			this._exitedZone.delete(key);
