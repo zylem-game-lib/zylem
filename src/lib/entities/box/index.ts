@@ -1,3 +1,3 @@
 export * from './collision';
 export * from './mesh';
-export * from './box';
+export * from './entity';
