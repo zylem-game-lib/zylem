@@ -1,9 +1,11 @@
+import { ZylemCamera } from "./camera";
 
 export interface EntityParameters<T> {
 	delta: number;
 	inputs: any; // TODO: inputs type
 	entity: T;
 	globals: any; // TODO: define globals type
+	camera: ZylemCamera;
 }
 
 export abstract class Entity {

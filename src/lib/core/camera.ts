@@ -1,4 +1,5 @@
-import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera } from 'three';
+import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, WebGLRenderer } from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { stageState } from '../state/index';
 import { PerspectiveType } from '../interfaces/perspective';
 
@@ -7,13 +8,15 @@ const zModifier = 45;
 export class ZylemCamera {
 	cameraRig: Object3D;
 	camera: Camera;
+	renderer: WebGLRenderer;
 	_perspective: PerspectiveType;
+	orbitControls: OrbitControls | null = null;
 	// follow: Entity | null;
 
-	constructor(screenResolution: Vector2) {
+	constructor(screenResolution: Vector2, renderer: WebGLRenderer) {
 		let aspectRatio = screenResolution.x / screenResolution.y;
 
-		const z = 25;
+		const z = 15;
 		const position = new Vector3(0, 0, z);
 		const gamePerspective = stageState.perspective as PerspectiveType;
 		this._perspective = gamePerspective;
@@ -22,6 +25,8 @@ export class ZylemCamera {
 		this.cameraRig.position.set(0, 0, z);
 		this.cameraRig.add(this.camera);
 		this.camera.lookAt(new Vector3(0, 0, 0));
+
+		this.renderer = renderer;
 	}
 
 	[PerspectiveType.ThirdPerson](aspectRatio: number): Camera {
@@ -82,6 +87,13 @@ export class ZylemCamera {
 		// if (this.follow) {
 		// 	this.moveFollowCamera();
 		// }
+		if (this.orbitControls === null) {
+			// debugger;
+			this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
+		}
+		this.orbitControls.update();
+		// this.camera.rotateZ(0.01);
+		// this.camera.rotateY(0.001);
 	}
 
 	moveFollowCamera() {

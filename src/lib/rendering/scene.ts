@@ -11,12 +11,13 @@ import {
 	GridHelper
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
-import { ZylemCamera } from './camera';
+import { ZylemCamera } from '../core/camera';
 import RenderPass from './render-pass';
 import { Entity, GameEntity } from '../interfaces/entity';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
 import { EntityParameters } from '../core/entity';
+import { ThirdPersonCamera } from '../entities/camera/third-person';
 
 export class ZylemScene implements Entity<ZylemScene> {
 	type = 'Scene';
@@ -25,7 +26,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 	screenResolution!: Vector2;
 	renderer!: WebGLRenderer;
 	composer!: EffectComposer;
-	zylemCamera!: ZylemCamera;
+	zylemCamera!: ThirdPersonCamera;
 	containerElement: HTMLElement | null = null;
 
 	constructor(id: string) {
@@ -64,11 +65,12 @@ export class ZylemScene implements Entity<ZylemScene> {
 	destroy() { }
 
 	update({ delta }: EntityParameters<any>) {
+		this.zylemCamera.update();
 		this.composer.render(delta);
 	}
 
 	setupCamera(scene: Scene) {
-		this.zylemCamera = new ZylemCamera(this.screenResolution);
+		this.zylemCamera = new ThirdPersonCamera(this.screenResolution, this.renderer);
 		let renderResolution = this.screenResolution.clone().divideScalar(2);
 		renderResolution.x |= 0;
 		renderResolution.y |= 0;

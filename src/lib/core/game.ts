@@ -63,7 +63,7 @@ export class ZylemGame implements GameBlueprint {
 	 * update physics
 	 * render scene
 	 */
-	async gameLoop(_timeStamp: number) {
+	loop(_timeStamp: number) {
 		const inputs = this.gamePad.getInputs();
 		const ticks = this.clock.getDelta();
 		const delta = this.previousTimeStamp ? _timeStamp - this.previousTimeStamp : TIMESTAMP_DELTA;
@@ -76,21 +76,19 @@ export class ZylemGame implements GameBlueprint {
 				inputs,
 				entity: stage,
 				delta: ticks,
-			} as EntityParameters<ZylemStage>;
+				camera: stage.scene?.zylemCamera
+			} as unknown as EntityParameters<ZylemStage>;
 			stage.update(options);
 			stage.conditions.forEach(condition => {
 				condition(gameState.globals, this);
 			});
 			this.previousTimeStamp = _timeStamp;
 		}
-
-		this.runLoop();
+		requestAnimationFrame(this.loop.bind(this));
 	}
 
-	async runLoop() {
-		requestAnimationFrame(async (timeStamp) => {
-			this.gameLoop(timeStamp);
-		});
+	runLoop() {
+		requestAnimationFrame(this.loop.bind(this));
 	}
 
 	start() {

@@ -7,23 +7,26 @@ import {
 } from '../interfaces/entity';
 import { Entity, EntityParameters } from './entity';
 import { RigidBody } from '@dimforge/rapier3d-compat';
+import { EntityBehavior } from '../behaviors/behavior';
 
 export class GameEntity<T> implements Entity {
 	public uuid: string;
+
+	public group = new Group();
+	public body: RigidBody | null = null;
+	public controlledRotation = false;
 
 	protected type: string = 'Entity';
 	protected _setup: SetupFunction<T>;
 	protected _update: UpdateFunction<T>;
 	protected _destroy: DestroyFunction<T>;
 
-	protected group = new Group();
-	protected body: RigidBody | null = null;
 
 	constructor(options: GameEntityOptions<{}, T>) {
 		this.uuid = `${Math.random() * 999999}`; // TODO: use package for assigning uuid
-		this._setup = options.setup;
-		this._update = options.update;
-		this._destroy = options.destroy;
+		this._setup = options.setup || (() => { });
+		this._update = options.update || (() => { });
+		this._destroy = options.destroy || (() => { });
 	}
 
 	protected createUuid(type: string) {
@@ -48,15 +51,22 @@ export class GameEntity<T> implements Entity {
 			return;
 		}
 		const { x, y, z } = this.body.translation();
-		const { x: rx, y: ry, z: rz, w: rw } = this.body.rotation();
 
 		this.group.position.set(x, y, z);
-		this.group.setRotationFromQuaternion(new Quaternion(rx, ry, rz, rw));
+		if (!this.controlledRotation) {
+			const { x: rx, y: ry, z: rz, w: rw } = this.body.rotation();
+			this.group.setRotationFromQuaternion(new Quaternion(rx, ry, rz, rw));
+		}
 	}
 
 	public destroy(params: EntityParameters<any>): void {
 		console.log(params);
 		this.removeFromScene();
+	}
+
+	// TODO: implement entity behaviors
+	public use(behavior: EntityBehavior) {
+		behavior.update();
 	}
 
 	private removeFromScene() {
