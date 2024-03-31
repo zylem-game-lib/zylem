@@ -2,7 +2,7 @@ import { Color, Vector3 } from 'three';
 import { gameState } from '../state/index';
 import SpriteText from 'three-spritetext';
 import { Application, TextStyle, Text, Graphics, Color as PColor, utils } from 'pixi.js';
-import { ZylemCamera } from '~/lib/rendering/camera';
+import { ZylemCamera } from '~/lib/core/camera';
 import { World } from '@dimforge/rapier3d-compat';
 
 export interface HUDTextOptions {
@@ -76,10 +76,10 @@ export class ZylemHUD {
 			lineJoin: 'round',
 		});
 
-		const richText = new Text('Rich text with a lot of options and across multiple lines', style);
+		const richText = new Text('HUD test', style);
 
 		richText.x = 100;
-		richText.y = 220;
+		richText.y = 100;
 
 		app.stage.addChild(richText);
 	}
