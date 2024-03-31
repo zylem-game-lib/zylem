@@ -18,16 +18,22 @@ export class ActorCollision extends BaseCollision {
 			console.warn('missing object');
 			return;
 		}
-		// TODO: assign height and radius based on actor geometry
 		const skinnedMesh = object.children[0] as SkinnedMesh;
-		let geometry = skinnedMesh.geometry as BufferGeometry;
-		console.log(geometry);
+		const geometry = skinnedMesh.geometry as BufferGeometry;
+
+		geometry.computeBoundingBox();
+		if (geometry.boundingBox) {
+			const maxY = geometry.boundingBox.max.y;
+			const minY = geometry.boundingBox.min.y;
+			this.height = maxY - minY;
+		}
 	}
 
 	createCollider(isSensor: boolean = false) {
-		let colliderDesc = ColliderDesc.capsule(0.5, 1);
-		console.log('ACTOR COLLIDER', colliderDesc);
+		// TODO: consider using offsets
+		let colliderDesc = ColliderDesc.capsule(this.height / 2, 1);
 		colliderDesc.setSensor(isSensor);
+		colliderDesc.setTranslation(0, this.height / 2, 0);
 		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
 		return colliderDesc;
 	}

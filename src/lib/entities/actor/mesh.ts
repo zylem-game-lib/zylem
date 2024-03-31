@@ -8,7 +8,7 @@ export class ActorMesh extends BaseMesh {
 			console.log('actor is missing object');
 			return;
 		}
-		object.position.set(0, -1.2, 0);
+		object.position.set(0, 0, 0);
 		group.add(object);
 	}
 }
