@@ -4,7 +4,7 @@ import ZylemGame from '~/lib/core/game';
 import { ZylemScene } from '~/lib/rendering/scene';
 import { ZylemHUD } from '~/lib/ui/hud';
 import { Color, Vector3 } from 'three';
-import { ZylemCamera } from '~/lib/rendering/camera';
+import { ZylemCamera } from '~/lib/core/camera';
 import { ZylemWorld } from '~/lib/collision/world';
 import { UpdateFunction } from './entity';
 

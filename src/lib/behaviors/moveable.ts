@@ -1,5 +1,5 @@
 import { RigidBody, Vector } from "@dimforge/rapier3d-compat";
-import { Vector3 } from "three";
+import { Euler, Vector3 } from "three";
 import { Mixin } from "ts-mixer";
 import { OptionalVector } from "~/lib/interfaces/entity";
 import { GameEntity } from "../core/game-entity";
@@ -22,6 +22,14 @@ export class Moveable extends Mixin(GameEntity) {
 		(this.body as RigidBody).setLinvel(new Vector3(deltaX, deltaY, 0), true);
 	}
 
+	moveXZ(deltaX: number, deltaZ: number) {
+		(this.body as RigidBody).setLinvel(new Vector3(deltaX, 0, deltaZ), true);
+	}
+
+	resetVelocity() {
+		(this.body as RigidBody).setLinearDamping(5);
+	}
+
 	moveForwardXY(delta: number) {
 		const z = this._rotation2DAngle;
 		const deltaX = Math.sin(-z) * delta;
@@ -37,6 +45,21 @@ export class Moveable extends Mixin(GameEntity) {
 	_normalizeAngleTo2Pi(angle: number) {
 		const normalized = angle % (2 * Math.PI);
 		return normalized >= 0 ? normalized : normalized + 2 * Math.PI;
+	}
+
+	rotateInDirection(moveVector: Vector3) {
+		let rotate = Math.atan2(-moveVector.x, moveVector.z);
+		this.rotateYEuler(rotate);
+	}
+
+	rotateYEuler(amount: number) {
+		this.rotateEuler(new Vector3(0, -amount, 0));
+	}
+
+	rotateEuler(rotation: Vector3) {
+		const { x, y, z } = rotation;
+		const euler = new Euler(x, y, z);
+		this.group.setRotationFromEuler(euler);
 	}
 
 	rotate(delta: number) {

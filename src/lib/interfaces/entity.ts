@@ -8,9 +8,9 @@ export type SetupFunction<T> = (params: EntityParameters<T>) => void;
 export type DestroyFunction<T> = (params: EntityParameters<T>) => void;
 
 interface BaseGameEntityOptions<T> {
-	setup: SetupFunction<T>;
-	update: UpdateFunction<T>;
-	destroy: DestroyFunction<T>;
+	setup?: SetupFunction<T>;
+	update?: UpdateFunction<T>;
+	destroy?: DestroyFunction<T>;
 }
 
 export type GameEntityOptions<Options, T> = Partial<Options> & BaseGameEntityOptions<T>;
