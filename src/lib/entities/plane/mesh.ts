@@ -48,7 +48,12 @@ export class PlaneMesh extends BaseMesh {
 		// store height data into column-major-order matrix array
 		for (let i = 0; i <= subdivisions; ++i) {
 			for (let j = 0; j <= subdivisions; ++j) {
-				heights.push(columsRows.get(j).get(i));
+				const row = columsRows.get(j);
+				if (!row) {
+					continue;
+				}
+				const data = row.get(i);
+				heights.push(data);
 			}
 		}
 		this.heights = heights;

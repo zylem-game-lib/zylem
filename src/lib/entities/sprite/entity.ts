@@ -94,6 +94,7 @@ export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollisio
 	}
 
 	createSprites(size: Vector3 | undefined = new Vector3(1, 1, 1)) {
+		this.sprites = [];
 		this.createSpritesFromImages();
 		this.size = size;
 		this.sprites.forEach((sprite, index) => {
