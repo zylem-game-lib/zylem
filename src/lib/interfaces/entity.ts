@@ -41,6 +41,7 @@ export interface GameEntity<T> extends Entity<T> {
 	body?: RigidBody;
 	bodyDescription: RigidBodyDesc;
 	constraintBodies?: RigidBody[];
+	controlledRotation?: boolean;
 	sensor?: boolean;
 	debug?: boolean;
 	debugColor?: Color;

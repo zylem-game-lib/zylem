@@ -23,7 +23,10 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	addEntity(entity: GameEntity<any>) {
 		const rigidBody = this.world.createRigidBody(entity.bodyDescription);
 		entity.body = rigidBody;
-		entity.body.lockRotations(true, true);
+		if (entity.controlledRotation) {
+			entity.body.lockRotations(true, true);
+			// this.world.createCharacterController(0.5);
+		}
 		let useSensor = false;
 		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
 			entity.body.lockTranslations(true, true);

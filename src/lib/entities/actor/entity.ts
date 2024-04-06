@@ -40,6 +40,7 @@ export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Mov
 		await this.load(this._animationFileNames);
 		// TODO: consider refactor to not have to pass materials
 		this.createMesh({ group: this.group, object: this._object, materials: [] });
+		this.controlledRotation = true;
 		this.createCollision({ isDynamicBody: !this._static, object: this._object });
 		this._currentAction?.play();
 		return Promise.resolve(this);
