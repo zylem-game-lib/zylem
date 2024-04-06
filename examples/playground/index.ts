@@ -96,7 +96,6 @@ const actor = Actor({
 	setup({ entity, globals }) {
 		entity.setPosition(0, 4, 0);
 		entity.animate(0);
-		entity.controlledRotation = true;
 	},
 	update({ delta, entity, inputs, globals, camera }) {
 		const { horizontal, vertical } = inputs[0];
