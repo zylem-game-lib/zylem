@@ -173,7 +173,6 @@ export function LevelOne(): ZylemStage {
 	}
 }
 
-
 const game = create({
 	id: 'playground',
 	globals: {
@@ -192,6 +191,35 @@ game.start();
 /**
  * 
 
+Game({
+	// gameOptions
+})
+	.stages()
+	.start()
+	.end()
+
+Stage({
+	// stageOptions
+	
+})
+	.children()
+	.start()
+	.setup()
+	.update()
+	.end()
+
+Box({
+	// Box options
+})
+	.setup((params) => {
+
+	})
+	.update((params) => {
+
+	})
+	.destroy((params) => {
+
+	})
 
 Game({
 	globals: {

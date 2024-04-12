@@ -7,23 +7,40 @@ import { GameEntity } from "../core/game-entity";
 export class Moveable extends Mixin(GameEntity) {
 
 	moveX(delta: number) {
-		(this.body as RigidBody).setLinvel(new Vector3(delta, 0, 0), true);
+		const movementVector = new Vector3(delta, 0, 0);
+		this.moveEntity(movementVector);
 	}
 
 	moveY(delta: number) {
-		(this.body as RigidBody).setLinvel(new Vector3(0, delta, 0), true);
+		const movementVector = new Vector3(0, delta, 0);
+		this.moveEntity(movementVector);
 	}
 
 	moveZ(delta: number) {
-		(this.body as RigidBody).setLinvel(new Vector3(0, 0, delta), true);
+		const movementVector = new Vector3(0, 0, delta);
+		this.moveEntity(movementVector);
 	}
 
 	moveXY(deltaX: number, deltaY: number) {
-		(this.body as RigidBody).setLinvel(new Vector3(deltaX, deltaY, 0), true);
+		const movementVector = new Vector3(deltaX, deltaY, 0);
+		this.moveEntity(movementVector);
 	}
 
 	moveXZ(deltaX: number, deltaZ: number) {
-		(this.body as RigidBody).setLinvel(new Vector3(deltaX, 0, deltaZ), true);
+		const movementVector = new Vector3(deltaX, 0, deltaZ);
+		this.moveEntity(movementVector);
+	}
+
+	moveEntity(movementVector: Vector3) {
+		let finalMovement = movementVector;
+		if (this.characterController && this.collider) {
+			this.characterController.computeColliderMovement(
+				this.collider,
+				movementVector
+			);
+			finalMovement = this.characterController.computedMovement() as Vector3;
+		}
+		(this.body as RigidBody).setLinvel(finalMovement, true);
 	}
 
 	resetVelocity() {

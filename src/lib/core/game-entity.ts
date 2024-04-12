@@ -6,7 +6,7 @@ import {
 	GameEntityOptions,
 } from '../interfaces/entity';
 import { Entity, EntityParameters } from './entity';
-import { RigidBody } from '@dimforge/rapier3d-compat';
+import { Collider, KinematicCharacterController, RigidBody } from '@dimforge/rapier3d-compat';
 import { EntityBehavior } from '../behaviors/behavior';
 
 export class GameEntity<T> implements Entity {
@@ -15,6 +15,8 @@ export class GameEntity<T> implements Entity {
 	public group = new Group();
 	public body: RigidBody | null = null;
 	public controlledRotation = false;
+	public characterController: null | KinematicCharacterController = null;
+	public collider: null | Collider = null;
 
 	protected type: string = 'Entity';
 	protected _setup: SetupFunction<T>;

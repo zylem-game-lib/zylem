@@ -1,4 +1,4 @@
-import { BoxGeometry, Group, Material, Mesh, Object3D, SphereGeometry, Vector2, Vector3 } from "three";
+import { BoxGeometry, Group, Material, Mesh, Object3D, Vector2, Vector3 } from "three";
 
 export interface BoxMeshInterface {
 	createMesh: (params: CreateMeshParameters) => void;

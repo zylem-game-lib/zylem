@@ -1,4 +1,4 @@
-import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
+import { Collider, ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 import { Color, Group, Vector3 } from "three";
 import { SpriteAnimation, SpriteImage } from "~/lib/entities";
 import { EntityParameters } from "../core/entity";
@@ -41,7 +41,9 @@ export interface GameEntity<T> extends Entity<T> {
 	body?: RigidBody;
 	bodyDescription: RigidBodyDesc;
 	constraintBodies?: RigidBody[];
+	collider: Collider;
 	controlledRotation?: boolean;
+	characterController?: any;
 	sensor?: boolean;
 	debug?: boolean;
 	debugColor?: Color;

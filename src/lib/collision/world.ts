@@ -2,7 +2,7 @@ import { Vector3 } from 'three';
 import { Entity, GameEntity } from '../interfaces/entity';
 import { gameState } from '../state';
 import RAPIER from '@dimforge/rapier3d-compat';
-import { UpdateParameters } from '../core/entity';
+import { EntityParameters } from '../core/entity';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
@@ -23,10 +23,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	addEntity(entity: GameEntity<any>) {
 		const rigidBody = this.world.createRigidBody(entity.bodyDescription);
 		entity.body = rigidBody;
-		if (entity.controlledRotation) {
-			entity.body.lockRotations(true, true);
-			// this.world.createCharacterController(0.5);
-		}
 		let useSensor = false;
 		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
 			entity.body.lockTranslations(true, true);
@@ -38,13 +34,21 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			useSensor = true;
 		}
 		const colliderDesc = entity.createCollider(useSensor);
-		this.world.createCollider(colliderDesc, entity.body);
+		const collider = this.world.createCollider(colliderDesc, entity.body);
+		if (entity.controlledRotation) {
+			entity.body.lockRotations(true, true);
+			entity.characterController = this.world.createCharacterController(0.01);
+			entity.characterController.setMaxSlopeClimbAngle(45 * Math.PI / 180);
+			entity.characterController.setMinSlopeSlideAngle(30 * Math.PI / 180);
+			entity.characterController.enableSnapToGround(0.5);
+			entity.collider = collider;
+		}
 		this.collisionMap.set(entity.body.handle, entity);
 	}
 
 	setup() { }
 
-	update(params: UpdateParameters<any>) {
+	update(params: EntityParameters<any>) {
 		const { delta } = params;
 		if (!this.world) {
 			return;
