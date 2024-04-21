@@ -38,9 +38,10 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		if (entity.controlledRotation) {
 			entity.body.lockRotations(true, true);
 			entity.characterController = this.world.createCharacterController(0.01);
+			entity.characterController.setUp({ x: 0.0, y: 1.0, z: 0.0 });
 			entity.characterController.setMaxSlopeClimbAngle(45 * Math.PI / 180);
-			entity.characterController.setMinSlopeSlideAngle(30 * Math.PI / 180);
-			entity.characterController.enableSnapToGround(0.5);
+			entity.characterController.setMinSlopeSlideAngle(45 * Math.PI / 180);
+			entity.characterController.enableSnapToGround(0.01);
 			entity.collider = collider;
 		}
 		this.collisionMap.set(entity.body.handle, entity);

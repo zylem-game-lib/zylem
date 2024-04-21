@@ -44,7 +44,6 @@ export class ZylemStage implements Entity<ZylemStage> {
 
 		const physicsWorld = await ZylemWorld.loadPhysics(options.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
-
 		this._update = options.update ?? null;
 
 		this.blueprints = options.children({ gameState, setGlobalState }) || [];
@@ -78,7 +77,9 @@ export class ZylemStage implements Entity<ZylemStage> {
 
 		const entity = await blueprint.createFromBlueprint();
 		entity.name = blueprint.name;
+		console.log(entity.name);
 		if (entity.group) {
+			console.log(entity.group);
 			this.scene.scene.add(entity.group);
 		}
 		if (blueprint.props) {

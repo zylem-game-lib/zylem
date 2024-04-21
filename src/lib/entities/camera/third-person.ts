@@ -17,7 +17,7 @@ export class ThirdPersonCamera extends Mixin(ZylemCamera) {
 			return;
 		}
 		const desiredCameraPosition = this.target.group.position.clone().add(this.distance);
-		this.camera.position.lerp(desiredCameraPosition, 0.01);
+		this.camera.position.lerp(desiredCameraPosition, 0.1);
 		this.camera.lookAt(this.target.group.position);
 	}
 }

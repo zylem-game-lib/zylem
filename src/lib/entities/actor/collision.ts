@@ -10,7 +10,7 @@ export class ActorCollision extends BaseCollision {
 		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
 		this.bodyDescription = new RigidBodyDesc(type)
 			.setTranslation(0, 0, 0)
-			.setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0 })
+			// .setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0 })
 			.setGravityScale(1.0)
 			.setCanSleep(false)
 			.setCcdEnabled(false);

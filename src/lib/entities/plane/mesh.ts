@@ -30,7 +30,8 @@ export class PlaneMesh extends BaseMesh {
 			let row = Math.floor(Math.abs((vertices as any)[i] + (this.size.x / 2)) / dx);
 			let column = Math.floor(Math.abs((vertices as any)[i + 1] - (this.size.z / 2)) / dy);
 			// generate height for this column & row
-			const randomHeight = Math.random() * 2;
+			// const randomHeight = 0.1;
+			const randomHeight = Math.random() * 0.4;
 			(vertices as any)[i + 2] = randomHeight;
 			// store height
 			if (!columsRows.get(column)) {

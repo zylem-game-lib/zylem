@@ -53,7 +53,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 		this.containerElement = element;
 		element.appendChild(this.renderer.domElement);
 		// TODO: this needs to be exposed at the stage options level
-		this.debugScene();
+		// this.debugScene();
 	}
 
 	setup() {

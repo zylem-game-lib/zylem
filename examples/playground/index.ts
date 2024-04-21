@@ -33,6 +33,12 @@ const ground = Plane({
 	texture: 'playground/grass.jpg',
 });
 
+// const ground = Box({
+// 	static: true,
+// 	texture: 'playground/grass.jpg',
+// 	size: new Vector3(100, 0.5, 100),
+// });
+
 const sphere = Sphere({
 	radius: 2,
 	texture: 'playground/rain-man.png',
@@ -100,37 +106,26 @@ const actor = Actor({
 	update({ delta, entity, inputs, globals, camera }) {
 		const { horizontal, vertical } = inputs[0];
 		let movement = new Vector3();
-		movement.setX(horizontal * 5);
-		movement.setZ(vertical * 5);
+		movement.setX(horizontal * 10);
+		movement.setZ(vertical * 10);
 
 		const { camera: threeCamera } = camera;
 
 		const forward = new Vector3(0, 0, 1).applyQuaternion(threeCamera.quaternion);
 		const right = new Vector3(1, 0, 0).applyQuaternion(threeCamera.quaternion);
 
-		// const { x: ex, y: ey, z: ez } = entity.getPosition();
 		if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
 			moving = true;
-			const deltaVector = new Vector3(movement.x, 0, movement.z)
+			const deltaVector = new Vector3(movement.x, -9, movement.z)
 				.addScaledVector(right, movement.x)
 				.addScaledVector(forward, movement.z);
-			entity.moveXZ(deltaVector.x, deltaVector.z);
+			entity.moveEntity(deltaVector);
 			lastMovement = movement;
 		} else {
 			moving = false;
-			entity.resetVelocity();
+			const deltaVector = new Vector3(0, -9, 0);
+			entity.moveEntity(deltaVector);
 		}
-		// const { x: ex, y: ey, z: ez } = entity.getPosition();
-		// if (Math.abs(horizontal) > 0.1 || Math.abs(vertical) > 0.1) {
-		// 	moving = true;
-		// 	const deltaVector = new Vector3(ex, ey, ez)
-		// 		.addScaledVector(right, movement.x * delta)
-		// 		.addScaledVector(forward, movement.z * delta);
-		// 	entity.setPosition(deltaVector.x, ey, deltaVector.z);
-		// 	lastMovement = movement;
-		// } else {
-		// 	moving = false;
-		// }
 		if (moving) {
 			entity.animate(1);
 		} else {

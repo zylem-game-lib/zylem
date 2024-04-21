@@ -32,12 +32,9 @@ export class ZylemPlane extends Mixin(GameEntity, ZylemMaterial, PlaneMesh, Plan
 		this._color = options.color ?? ZylemBlueColor;
 	}
 
-	init() {
-		this.createFromBlueprint();
-	}
-
 	async createFromBlueprint(): Promise<this> {
 		this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat });
+		console.log('creating plane mesh');
 		this.createMesh({ group: this.group, tile: this._tile!, materials: this.materials });
 		this.createCollision({ isDynamicBody: !this._static });
 		return Promise.resolve(this);

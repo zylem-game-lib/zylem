@@ -33,13 +33,15 @@ export class Moveable extends Mixin(GameEntity) {
 
 	moveEntity(movementVector: Vector3) {
 		let finalMovement = movementVector;
-		if (this.characterController && this.collider) {
-			this.characterController.computeColliderMovement(
-				this.collider,
-				movementVector
-			);
-			finalMovement = this.characterController.computedMovement() as Vector3;
-		}
+		// if (this.characterController && this.collider) {
+		// 	// TODO: add gravity from game globals
+		// finalMovement = new Vector3().addVectors(movementVector, new Vector3(0, -9, 0));
+		// 	this.characterController.computeColliderMovement(
+		// 		this.collider,
+		// 		movementVector
+		// 	);
+		// 	finalMovement = this.characterController.computedMovement() as Vector3;
+		// }
 		(this.body as RigidBody).setLinvel(finalMovement, true);
 	}
 

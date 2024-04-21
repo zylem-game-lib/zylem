@@ -24,6 +24,9 @@ class ZylemBox extends Mixin(GameEntity, ZylemMaterial, BoxMesh, BoxCollision, M
 	protected type = 'Box';
 
 	constructor(options: BoxOptions) {
+		if (!options) {
+			return;
+		}
 		super(options as GameEntityOptions<{}, unknown>);
 		this._static = options.static ?? false;
 		this._texture = options.texture ?? null;
@@ -31,13 +34,12 @@ class ZylemBox extends Mixin(GameEntity, ZylemMaterial, BoxMesh, BoxCollision, M
 		this._color = options.color ?? ZylemBlueColor;
 	}
 
-	init() {
-		this.createFromBlueprint();
-	}
+	// init() {
+	// }
 
 	async createFromBlueprint(): Promise<ZylemBox> {
 		this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat });
-		this.createMesh({ group: this.group, materials: this.materials });
+		this.createMesh({ group: this.group, size: this._size, materials: this.materials });
 		this.createCollision({ isDynamicBody: !this._static });
 		return Promise.resolve(this);
 	}

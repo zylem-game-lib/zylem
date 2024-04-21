@@ -67,10 +67,6 @@ export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollisio
 		this._debugMesh = null;
 	}
 
-	init() {
-		this.createFromBlueprint();
-	}
-
 	async createFromBlueprint(): Promise<this> {
 		this.createSprites(this._size);
 		this.createAnimations();

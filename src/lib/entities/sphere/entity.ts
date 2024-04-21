@@ -31,9 +31,9 @@ export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, Sp
 		this._color = options.color ?? ZylemBlueColor;
 	}
 
-	init() {
-		this.createFromBlueprint();
-	}
+	// init() {
+
+	// }
 
 	async createFromBlueprint(): Promise<this> {
 		this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat });

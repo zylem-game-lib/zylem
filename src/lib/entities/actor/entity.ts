@@ -32,10 +32,6 @@ export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Mov
 		this._animationFileNames = options.animations || [];
 	}
 
-	init() {
-		this.createFromBlueprint();
-	}
-
 	async createFromBlueprint(): Promise<this> {
 		await this.load(this._animationFileNames);
 		// TODO: consider refactor to not have to pass materials
