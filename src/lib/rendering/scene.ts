@@ -11,7 +11,6 @@ import {
 	GridHelper
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
-import { ZylemCamera } from '../core/camera';
 import RenderPass from './render-pass';
 import { Entity, GameEntity } from '../interfaces/entity';
 import { SetupCallback } from '~/lib/interfaces/game';
@@ -64,7 +63,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	destroy() { }
 
-	update({ delta }: EntityParameters<any>) {
+	update({ delta }: Partial<EntityParameters<ZylemScene>>) {
 		this.zylemCamera.update();
 		this.composer.render(delta);
 	}

@@ -113,7 +113,7 @@ export class ZylemStage implements Entity<ZylemStage> {
 	}
 
 	update(params: EntityParameters<ZylemStage>) {
-		const { delta, entity, inputs, globals, camera } = params;
+		const { delta } = params;
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
 			return;
@@ -121,29 +121,14 @@ export class ZylemStage implements Entity<ZylemStage> {
 		this.world.update(params);
 		for (let child of this.children) {
 			child.update({
-				delta,
-				inputs,
+				...params,
 				entity: child,
-				globals: gameState.globals,
-				camera
 			});
 		}
 		if (this._update) {
-			this._update({
-				delta,
-				camera,
-				inputs,
-				entity,
-				globals: gameState.globals
-			});
+			this._update(params);
 		}
-		this.scene.update({
-			delta,
-			inputs,
-			entity,
-			camera,
-			globals: gameState.globals
-		});
+		this.scene.update({ delta });
 		this.debugStage(this.world.world);
 	}
 

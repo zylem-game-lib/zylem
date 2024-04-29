@@ -16,8 +16,6 @@ export class ZylemGame implements GameBlueprint {
 	ratio: GameRatio;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
 	globals: any;
-	// @deprecated - use stages instead
-	stage?: StageBlueprint;
 	stages: StageBlueprint[] = [];
 	blueprintOptions: GameBlueprint;
 	currentStage: string = '';
@@ -42,12 +40,11 @@ export class ZylemGame implements GameBlueprint {
 		this.gamePad = new GamePad();
 		this.clock = new Clock();
 		this.blueprintOptions = options;
+		// TODO: split out canvas into GameCanvas
 		this._canvasWrapper = null;
 		this.createCanvas();
-		// @deprecated - use stages instead
-		this.stage = options.stages[0];
-		this.stages = options.stages ?? [{ id: 'default-stage', ...this.stage }];
-		this.loadStage(this.stage);
+		this.stages = options.stages ?? [{ id: 'default-stage', ...this.stages[0] }];
+		this.loadStage(this.stages[0]);
 		this.currentStage = this.id;
 	}
 
