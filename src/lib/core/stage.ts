@@ -1,66 +1,93 @@
 import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
-import { Entity, EntityBlueprint, UpdateFunction } from "../interfaces/entity";
-import { Conditions, StageBlueprint } from "../interfaces/game";
-import { BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments, Vector3 } from "three";
+import { EntityBlueprint, GameEntityOptions } from "../interfaces/entity";
+import { Conditions } from "../interfaces/game";
+import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, Vector3 } from "three";
 import {
-	gameState,
-	setGlobalState,
 	setStagePerspective,
 	setStageBackgroundColor,
 	setStageBackgroundImage
 } from "../state";
 import { ZylemHUD } from "../ui/hud";
-import { EntityParameters } from "./entity";
+import { EntityParameters, GameEntity } from "./";
 import { World } from "@dimforge/rapier3d-compat";
+import { Mixin } from "ts-mixer";
+import { PerspectiveType } from "../interfaces/perspective";
+import { ZylemBlueColor } from "../interfaces/utility";
+import { BaseEntity } from "./base-entity";
 
-export class ZylemStage implements Entity<ZylemStage> {
-	type = 'Stage';
-	_update: UpdateFunction<ZylemStage> | null;
+type ZylemStageOptions = {
+	perspective: PerspectiveType;
+	backgroundColor: Color;
+	backgroundImage: String;
+	gravity: Vector3;
+	children: () => GameEntity<any>[];
+}
+
+type StageOptions = GameEntityOptions<ZylemStageOptions, ZylemStage>;
+
+export class ZylemStage extends Mixin(BaseEntity) {
+	protected type = 'Stage';
+
+	perspective: PerspectiveType;
+	backgroundColor: Color;
+	backgroundImage: String;
+	gravity: Vector3;
+
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
 	HUD: ZylemHUD | null;
 	conditions: Conditions<any>[] = [];
-	children: Array<Entity<any>> = [];
-	_childrenMap: Map<string, Entity<any>> = new Map();
+
+	children: Array<GameEntity<any>> = [];
+	_childrenMap: Map<string, GameEntity<any>> = new Map();
+
 	blueprints: Array<EntityBlueprint<any>> = [];
+
 	_debugLines: LineSegments | null = null;
 
-	constructor() {
+	constructor(options: StageOptions) {
+		super(options as GameEntityOptions<{}, unknown>);
 		this.world = null;
 		this.scene = null;
 		this.HUD = null;
-		this._update = () => { };
+		this.perspective = options.perspective ?? PerspectiveType.ThirdPerson;
+		this.backgroundColor = options.backgroundColor ?? ZylemBlueColor;
+		this.backgroundImage = options.backgroundImage ?? '';
+		this.gravity = options.gravity ?? new Vector3(0, 0, 0);
+		this.children = options.children ? options.children() : [];
 	}
 
-	async buildStage(options: StageBlueprint, id: string) {
+	public async createFromBlueprint(): Promise<ZylemStage> {
+
+		return Promise.resolve(this);
+	}
+
+	async buildStage(id: string) {
 		// TODO: consider moving globals out
-		setStagePerspective(options.perspective);
-		setStageBackgroundColor(options.backgroundColor);
-		setStageBackgroundImage(options.backgroundImage);
+		setStagePerspective(this.perspective);
+		setStageBackgroundColor(this.backgroundColor);
+		setStageBackgroundImage(this.backgroundImage);
 
 		this.scene = new ZylemScene(id);
-		this.scene._setup = options.setup;
 
-		const physicsWorld = await ZylemWorld.loadPhysics(options.gravity ?? new Vector3(0, 0, 0));
+		const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
-		this._update = options.update ?? null;
 
-		this.blueprints = options.children({ gameState, setGlobalState }) || [];
-		this.conditions = options.conditions;
-		await this.setup();
+		this.HUD = new ZylemHUD();
+		this.HUD.createUI();
+
+		this.scene.setup();
+		for (let child of this.children) {
+			this.spawnEntity(child, {});
+		}
 	}
 
-	async setup() {
+	public async setup(params: EntityParameters<ZylemStage>) {
+		super.setup(params);
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
 			return;
-		}
-		this.HUD = new ZylemHUD();
-		this.HUD.createUI();
-		this.scene.setup();
-		for (let blueprint of this.blueprints) {
-			await this.spawnEntity(blueprint, {});
 		}
 		this._debugLines = new LineSegments(
 			new BufferGeometry(),
@@ -68,51 +95,11 @@ export class ZylemStage implements Entity<ZylemStage> {
 		);
 		this.scene.scene.add(this._debugLines);
 		this._debugLines.visible = true;
+		this._setup({ ...params });
 	}
 
-	async spawnEntity(blueprint: EntityBlueprint<any>, options: any) {
-		if (!this.scene || !this.world) {
-			return;
-		}
-
-		const entity = await blueprint.createFromBlueprint();
-		entity.name = blueprint.name;
-		console.log(entity.name);
-		if (entity.group) {
-			console.log(entity.group);
-			this.scene.scene.add(entity.group);
-		}
-		if (blueprint.props) {
-			for (let key in blueprint.props) {
-				entity[key] = blueprint.props[key];
-			}
-		}
-		entity.stageRef = this;
-		this.world.addEntity(entity);
-		this.children.push(entity);
-		this._childrenMap.set(entity.name, entity);
-		if (blueprint.collision) {
-			entity._collision = blueprint.collision;
-		}
-		if (blueprint.destroy) {
-			entity._destroy = blueprint.destroy;
-		}
-		if (typeof blueprint.update !== 'function') {
-			console.warn(`Entity ${blueprint.name} is missing an update function.`);
-		}
-		if (typeof blueprint.setup !== 'function') {
-			console.warn(`Entity ${blueprint.name} is missing a setup function.`);
-			return;
-		}
-		blueprint.setup({ entity });
-	}
-
-	destroy() {
-		this.world?.destroy();
-		this.scene?.destroy();
-	}
-
-	update(params: EntityParameters<ZylemStage>) {
+	public update(params: EntityParameters<ZylemStage>): void {
+		super.update(params);
 		const { delta } = params;
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
@@ -126,10 +113,40 @@ export class ZylemStage implements Entity<ZylemStage> {
 			});
 		}
 		if (this._update) {
-			this._update(params);
+			this._update({ ...params, entity: this });
 		}
 		this.scene.update({ delta });
 		this.debugStage(this.world.world);
+	}
+
+	public destroy(params: EntityParameters<ZylemStage>): void {
+		super.destroy(params);
+		this.world?.destroy();
+		this.scene?.destroy();
+		this._destroy({ ...params, entity: this });
+	}
+
+	async spawnEntity(child: GameEntity<any>, options: any) {
+		if (!this.scene || !this.world) {
+			return;
+		}
+
+		const entity = await child.createFromBlueprint();
+		// entity.name = child.name;
+		// console.log(entity.name);
+		if (entity.group) {
+			console.log(entity.group);
+			this.scene.scene.add(entity.group);
+		}
+		// if (blueprint.props) {
+		// 	for (let key in blueprint.props) {
+		// 		entity[key] = blueprint.props[key];
+		// 	}
+		// }
+		entity.stageRef = this;
+		this.world.addEntity(entity);
+		child.setup({ entity });
+		this._childrenMap.set(entity.uuid, entity);
 	}
 
 	debugStage(world: World) {
@@ -162,4 +179,8 @@ export class ZylemStage implements Entity<ZylemStage> {
 	resize(width: number, height: number) {
 		this.scene?.updateRenderer(width, height);
 	}
+}
+
+export function Stage(options: StageOptions, ...acts: Function[]): ZylemStage {
+	return new ZylemStage(options) as ZylemStage;
 }

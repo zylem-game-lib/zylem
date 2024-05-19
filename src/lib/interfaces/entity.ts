@@ -7,13 +7,19 @@ export type UpdateFunction<T> = (params: EntityParameters<T>) => void;
 export type SetupFunction<T> = (params: EntityParameters<T>) => void;
 export type DestroyFunction<T> = (params: EntityParameters<T>) => void;
 
-interface BaseGameEntityOptions<T> {
+export interface BaseEntityOptions<T> {
 	setup?: SetupFunction<T>;
 	update?: UpdateFunction<T>;
 	destroy?: DestroyFunction<T>;
 }
 
-export type GameEntityOptions<Options, T> = Partial<Options> & BaseGameEntityOptions<T>;
+export type CollisionOption<T> = (entity: any, other: any, globals?: any) => void;
+
+export type GameEntityOptions<Options, T> = Partial<Options> & BaseEntityOptions<T> & {
+	collision?: CollisionOption<T>;
+	name?: string;
+	tag?: Set<string>;
+};
 
 export interface Entity<T = any> {
 	setup: (entity: T) => void;
@@ -28,10 +34,10 @@ export interface Entity<T = any> {
 
 export interface EntityBlueprint<T> extends Entity<T> {
 	name: string;
-	type: EntityType;
+	// type: EntityType;
 	props?: { [key: string]: any };
 	shape?: Vector3;
-	collision?: (entity: Entity<T>, other: Entity<T>) => void;
+	collision?: (entity: Entity<T>, other: Entity<T>, globals?: any) => void;
 
 	createFromBlueprint: () => Promise<T>;
 }
@@ -65,12 +71,6 @@ export interface EntityOptions {
 	animations?: SpriteAnimation<EntityOptions['images']>[];
 	color?: THREE.Color;
 	static?: boolean;
-}
-
-export enum EntityType {
-	Sphere = 'Sphere',
-	Sprite = 'Sprite',
-	Zone = 'Zone'
 }
 
 // TODO: use generic Entity class for shared methods

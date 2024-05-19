@@ -1,9 +1,12 @@
 import { Color, Vector2, Vector3 } from "three";
 import { PerspectiveType } from "../../src/lib/interfaces/perspective";
-import { Zylem, ZylemStage } from "../../src/main";
+import { Zylem } from "../../src/main";
 import { Actor, Box, Plane, Sphere, Sprite, Zone } from "../../src/lib/entities";
+import { Stage } from "../../src/lib/core/stage";
+import { actionOnRelease, actionWithCooldown } from "../../src/lib/behaviors/actions";
 
-const { create } = Zylem;
+const { Game, Util } = Zylem;
+const { actionOnPress } = Util;
 
 const box = Box({
 	texture: 'playground/wood-box.jpg',
@@ -27,17 +30,11 @@ const zone = Zone({
 });
 
 const ground = Plane({
-	tile: new Vector2(50, 80),
+	tile: new Vector2(200, 200),
 	repeat: new Vector2(4, 6),
 	static: true,
 	texture: 'playground/grass.jpg',
 });
-
-// const ground = Box({
-// 	static: true,
-// 	texture: 'playground/grass.jpg',
-// 	size: new Vector3(100, 0.5, 100),
-// });
 
 const sphere = Sphere({
 	radius: 2,
@@ -75,7 +72,6 @@ const sprite = Sprite({
 		entity.setPosition(-2, 2, 30);
 	},
 	update({ delta, entity, inputs, globals }) {
-		// console.log(entity);
 		entity.setAnimation('run', delta);
 		const { moveLeft, moveRight } = inputs[0];
 		if (moveRight) {
@@ -90,85 +86,107 @@ const sprite = Sprite({
 	},
 	destroy({ entity, globals }) {
 		console.log(entity);
-	}
+	},
 });
 
 
 let lastMovement = new Vector3();
 let moving = false;
-const actor = Actor({
-	animations: ['playground/idle.fbx', 'playground/run.fbx'],
-	static: false,
-	setup({ entity, globals }) {
-		entity.setPosition(0, 4, 0);
-		entity.animate(0);
-	},
-	update({ delta, entity, inputs, globals, camera }) {
-		const { horizontal, vertical } = inputs[0];
-		let movement = new Vector3();
-		movement.setX(horizontal * 10);
-		movement.setZ(vertical * 10);
-
-		const { camera: threeCamera } = camera;
-
-		const forward = new Vector3(0, 0, 1).applyQuaternion(threeCamera.quaternion);
-		const right = new Vector3(1, 0, 0).applyQuaternion(threeCamera.quaternion);
-
-		if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
-			moving = true;
-			const deltaVector = new Vector3(movement.x, -9, movement.z)
-				.addScaledVector(right, movement.x)
-				.addScaledVector(forward, movement.z);
-			entity.moveEntity(deltaVector);
-			lastMovement = movement;
-		} else {
-			moving = false;
-			const deltaVector = new Vector3(0, -9, 0);
-			entity.moveEntity(deltaVector);
-		}
-		if (moving) {
-			entity.animate(1);
-		} else {
+const actorFactory = (positionX) => {
+	return Actor({
+		animations: ['playground/idle.fbx', 'playground/run.fbx'],
+		static: false,
+		setup({ entity, globals }) {
+			entity.setPosition(positionX, 4, 0);
 			entity.animate(0);
-		}
-		entity.rotateInDirection(lastMovement);
-	},
-});
+		},
+		update({ delta, entity, inputs, globals, camera }) {
+			const { horizontal, vertical } = inputs[0];
+			let movement = new Vector3();
+			movement.setX(horizontal * 10);
+			movement.setZ(vertical * 10);
 
-export function LevelOne(): ZylemStage {
-	return {
-		perspective: PerspectiveType.ThirdPerson,
-		backgroundColor: new Color('#554400'),
-		gravity: new Vector3(0, -9, 0),
-		setup: ({ camera }) => {
-			camera.moveCamera(new Vector3(0, 5, 0));
-			camera.target = actor;
-		},
-		update({ inputs }) {
-			// console.log(inputs);
-			// CharacterController(actor);
-		},
-		children: ({ }) => {
-			return [
-				actor,
-				box,
-				sphere,
-				sprite,
-				ground,
-				zone,
-			]
-		},
-		conditions: [
-			(globals, game) => {
-				if (globals.lives <= 0) {
-					game.reset();
-				}
+			const { camera: threeCamera } = camera;
+
+			const forward = new Vector3(0, 0, 1).applyQuaternion(threeCamera.quaternion);
+			const right = new Vector3(1, 0, 0).applyQuaternion(threeCamera.quaternion);
+
+			if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
+				moving = true;
+				const deltaVector = new Vector3(movement.x, -9, movement.z)
+					.addScaledVector(right, movement.x)
+					.addScaledVector(forward, movement.z);
+				entity.moveEntity(deltaVector);
+				lastMovement = movement;
+			} else {
+				moving = false;
+				const deltaVector = new Vector3(0, -9, 0);
+				entity.moveEntity(deltaVector);
 			}
-		]
-	}
+			if (moving) {
+				entity.animate(1);
+			} else {
+				entity.animate(0);
+			}
+			entity.rotateInDirection(lastMovement);
+		},
+		collision: function (entity: any, other: any, globals?: any): void {
+			throw new Error("Function not implemented.");
+		}
+	})
 }
 
-const game = create({
+const actor = actorFactory(0);
+const actor2 = actorFactory(5);
+const actor3 = actorFactory(-5);
+
+let cameraIndex = 0;
+let targets = [actor, actor2, actor3];
+
+const stage = Stage({
+	perspective: PerspectiveType.ThirdPerson,
+	backgroundColor: new Color('#88BBFF'),
+	gravity: new Vector3(0, -9, 0),
+	setup: ({ camera }) => {
+		camera.moveCamera(new Vector3(0, 8, 10));
+		camera.target = actor;
+	},
+	update: ({ camera, inputs }) => {
+		const { buttonB, buttonA } = inputs[0];
+
+		actionOnPress(buttonB, () => {
+			cameraIndex++;
+			if (cameraIndex > 2) {
+				cameraIndex = 0;
+			}
+			camera.target = targets[cameraIndex];
+			console.log('start cooldown')
+			actionWithCooldown({ timer: 5000, immediate: false }, () => {
+				console.log('5 sec cooldown')
+			}, () => {
+
+			});
+		});
+
+		actionOnRelease(buttonA, () => {
+			actor.moveY(100);
+		});
+	},
+	children: () => {
+		return [
+			actor,
+			actor2,
+			actor3,
+			box,
+			sphere,
+			sprite,
+			ground,
+			zone,
+		]
+	},
+})
+
+const game = Game({
 	id: 'playground',
 	globals: {
 		score: 0,
@@ -176,88 +194,7 @@ const game = create({
 		time: 0,
 		actualTime: 0,
 	},
-	stages: [
-		LevelOne(),
-	],
+	stages: [stage]
 });
 
 game.start();
-
-/**
- * 
-
-Game({
-	// gameOptions
-})
-	.stages()
-	.start()
-	.end()
-
-Stage({
-	// stageOptions
-	
-})
-	.children()
-	.start()
-	.setup()
-	.update()
-	.end()
-
-Box({
-	// Box options
-})
-	.setup((params) => {
-
-	})
-	.update((params) => {
-
-	})
-	.destroy((params) => {
-
-	})
-
-Game({
-	globals: {
-		score: 0,
-		lives: 3,
-		time: 0,
-		actualTime: 0,
-	},
-	stages: [
-		Stage({
-			perspective: PerspectiveType.ThirdPerson,
-			backgroundColor: new Color('#554400'),
-			gravity: new Vector3(0, -1, 0),
-			children: [
-				Actor({
-					animations: ['playground/run.fbx'],
-					setup({ entity, globals }) {
-						entity.setPosition(pos.x, pos.y, pos.z);
-						entity.animate(0);
-					}
-				}),
-				Plane({
-					tile: new Vector2(50, 80),
-					repeat: new Vector2(4, 6),
-					static: true,
-					texture: 'playground/grass.jpg',
-				});
-			]
-		})
-	]
-})
-
-
-
-
-
-
- */
-
-/**
- * 
- * Game()
- * Stage()
- * Act()
- * 
- */

@@ -1,27 +1,21 @@
-import { Zylem } from '../../src/main';
-import { Vector3 } from 'three';
+import { Color, Vector3 } from 'three';
 import { board, BoardSide } from './board';
-const { Box } = Zylem;
+import { Box } from "../../src/lib/entities";
 
 const paddleSpeed = 20.0;
-const paddleSize = new Vector3(0.5, 4, 1);
+const paddleSize = new Vector3(1, 4, 1);
 
 export function Paddle(inputKey, side: BoardSide, y = 0) {
-	return {
-		name: `paddle_${side}`,
-		type: Box,
+	return Box({
 		size: paddleSize,
-		props: {
-			side: side,
-		},
-		setup: (entity) => {
+		name: inputKey ? 'right' : 'left',
+		color: new Color(1, 1, 1),
+		setup: ({ entity }) => {
 			entity.setPosition(board[side], y, 0);
 		},
-		update: (_delta, { entity: paddle, inputs }) => {
+		update: ({ entity: paddle, inputs }) => {
 			const { y } = paddle.getPosition();
 			const { moveUp, moveDown, buttonW, buttonY } = inputs[inputKey];
-			// console.log(inputs);
-			// TODO: kind of hacky should handle this better
 			let upPressed = (inputKey) ? buttonW : moveUp;
 			let downPressed = (inputKey) ? buttonY : moveDown;
 			const canMoveUp = y < board.top;
@@ -35,5 +29,5 @@ export function Paddle(inputKey, side: BoardSide, y = 0) {
 			}
 		},
 		destroy: () => { }
-	}
+	});
 }

@@ -1,34 +1,31 @@
 import { Group, Quaternion } from 'three';
 import {
-	SetupFunction,
-	UpdateFunction,
-	DestroyFunction,
+	CollisionOption,
 	GameEntityOptions,
 } from '../interfaces/entity';
-import { Entity, EntityParameters } from './entity';
+import { EntityParameters } from './entity';
 import { Collider, KinematicCharacterController, RigidBody } from '@dimforge/rapier3d-compat';
 import { EntityBehavior } from '../behaviors/behavior';
+import { BaseEntity } from './base-entity';
 
-export class GameEntity<T> implements Entity {
-	public uuid: string;
-
+export class GameEntity<T> extends BaseEntity<T> {
 	public group = new Group();
 	public body: RigidBody | null = null;
 	public controlledRotation = false;
 	public characterController: null | KinematicCharacterController = null;
 	public collider: null | Collider = null;
+	public name: string = '';
 
-	protected type: string = 'Entity';
-	protected _setup: SetupFunction<T>;
-	protected _update: UpdateFunction<T>;
-	protected _destroy: DestroyFunction<T>;
+	protected type: string = 'GameEntity';
 
+	_collision: CollisionOption<T> | null = null;
+	static counter = 0;
 
-	constructor(options: GameEntityOptions<{}, T>) {
-		this.uuid = `${Math.random() * 999999}`; // TODO: use package for assigning uuid
-		this._setup = options.setup || (() => { });
-		this._update = options.update || (() => { });
-		this._destroy = options.destroy || (() => { });
+	constructor(options: GameEntityOptions<{ collision?: CollisionOption<T> }, T>) {
+		super(options);
+		this._collision = options.collision || null;
+		GameEntity.counter++;
+		this.name = options.name || `entity-${GameEntity.counter}`;
 	}
 
 	protected createUuid(type: string) {
@@ -40,12 +37,23 @@ export class GameEntity<T> implements Entity {
 		throw new Error('Method not implemented.');
 	}
 
-	public setup(_params: EntityParameters<any>) {
-		this.createUuid(_params.entity.type);
-	}
+	public setup(_params: Partial<EntityParameters<any>>) { }
 
 	public update(_params: EntityParameters<any>): void {
 		this.movement();
+	}
+
+	public destroy(params: EntityParameters<any>): void {
+		console.log(params);
+		this.removeFromScene();
+	}
+
+	public collision(entity: GameEntity<T>, other: GameEntity<T>) {
+		if (this._collision === null) {
+			console.warn('_collision Method not implemented');
+			return;
+		}
+		this._collision(entity, other);
 	}
 
 	private movement() {
@@ -59,11 +67,6 @@ export class GameEntity<T> implements Entity {
 			const { x: rx, y: ry, z: rz, w: rw } = this.body.rotation();
 			this.group.setRotationFromQuaternion(new Quaternion(rx, ry, rz, rw));
 		}
-	}
-
-	public destroy(params: EntityParameters<any>): void {
-		console.log(params);
-		this.removeFromScene();
 	}
 
 	// TODO: implement entity behaviors

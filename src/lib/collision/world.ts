@@ -26,6 +26,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		let useSensor = false;
 		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
 			entity.body.lockTranslations(true, true);
+			entity.body.lockRotations(true, true);
 		} else {
 			useSensor = entity.sensor ?? false;
 		}

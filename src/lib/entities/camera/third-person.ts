@@ -3,10 +3,8 @@ import { Mixin } from "ts-mixer";
 import { GameEntity } from "~/lib/core";
 import { ZylemCamera } from "~/lib/core/camera";
 
-
 export class ThirdPersonCamera extends Mixin(ZylemCamera) {
 	distance: Vector3 = new Vector3(0, 0, -30);
-	target: GameEntity<any> | null = null;
 
 	setup() {
 

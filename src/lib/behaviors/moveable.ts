@@ -32,6 +32,9 @@ export class Moveable extends Mixin(GameEntity) {
 	}
 
 	moveEntity(movementVector: Vector3) {
+		if (!this.body) {
+			return;
+		}
 		let finalMovement = movementVector;
 		// if (this.characterController && this.collider) {
 		// 	// TODO: add gravity from game globals

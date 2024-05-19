@@ -1,9 +1,7 @@
-import { Color, Vector3 } from 'three';
-import { gameState } from '../state/index';
+import { Vector3 } from 'three';
+// import { gameState } from '../state/index';
 import SpriteText from 'three-spritetext';
-import { Application, TextStyle, Text, Graphics, Color as PColor, utils } from 'pixi.js';
-import { ZylemCamera } from '~/lib/core/camera';
-import { World } from '@dimforge/rapier3d-compat';
+import { Application, TextStyle, Text, Graphics } from 'pixi.js';
 
 export interface HUDTextOptions {
 	text: string;
@@ -65,9 +63,9 @@ export class ZylemHUD {
 			fontWeight: 'bold',
 			fill: ['#ffffff', '#00ff99'], // gradient
 			stroke: '#4a1850',
-			strokeThickness: 5,
+			strokeThickness: 4,
 			dropShadow: true,
-			dropShadowColor: '#000000',
+			dropShadowColor: '#0000FF',
 			dropShadowBlur: 4,
 			dropShadowAngle: Math.PI / 6,
 			dropShadowDistance: 6,
@@ -78,10 +76,19 @@ export class ZylemHUD {
 
 		const richText = new Text('HUD test', style);
 
-		richText.x = 100;
+		richText.x = 150 + (Math.random() * 40);
 		richText.y = 100;
 
 		app.stage.addChild(richText);
+
+		const width = canvas.width;
+		const height = canvas.height;
+		const frame = new Graphics();
+
+		frame.lineStyle({ width: 6, color: 0x0000FF });
+		frame.drawRect(0, 0, width, height);
+
+		app.stage.addChild(frame);
 	}
 
 	update() {

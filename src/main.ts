@@ -1,33 +1,58 @@
-import { ZylemGame } from './lib/core/game';
-import { GameBlueprint, StageBlueprint } from './lib/interfaces/game';
-import { EntityType } from './lib/interfaces/entity';
-import { PerspectiveType } from './lib/interfaces/perspective';
-import { ZylemDebug } from './lib/core/debug';
-import { Howl } from 'howler';
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
+import { Howl } from 'howler';
+
+import { ZylemGame } from './lib/core/game';
+import { GameBlueprint, StageBlueprint } from './lib/interfaces/game';
+import { PerspectiveType } from './lib/interfaces/perspective';
+import { ZylemDebug } from './lib/core/debug';
 import { Vect3 } from './lib/interfaces/utility';
 import { Entity } from './lib/core/entity';
+import { Stage } from './lib/core/stage';
+import * as actions from './lib/behaviors/actions';
 
 const debug = new ZylemDebug();
+// debug.appendToDOM();
+// options.debug = debug;
 
-function create(options: GameBlueprint) {
-	// debug.appendToDOM();
-	options.debug = debug;
-	return new ZylemGame(options);
+async function buildGame(options: GameBlueprint) {
+	await options.stages[0].buildStage(options.id);
+	const game = new ZylemGame(options, options.stages[0]);
+	return game;
+}
+
+function Game(options: GameBlueprint) {
+	return {
+		start: async () => {
+			const game = await buildGame(options);
+			game.start();
+		},
+		pause: async () => { },
+		end: async () => { }
+	}
+}
+
+interface Game {
+	start: () => {};
+	pause: () => {};
+	end: () => {};
 }
 
 interface Zylem {
-	create: (options: GameBlueprint) => ZylemGame;
-	EntityType: typeof EntityType;
+	Game: (options: GameBlueprint) => Game;
 	PerspectiveType: typeof PerspectiveType;
 }
 
+const Util = {
+	...actions
+}
+
 const Zylem = {
-	create,
-	...EntityType,
+	Game,
 	...PerspectiveType,
-	Entity
+	Entity,
+	Stage,
+	Util
 };
 
 namespace Zylem { };

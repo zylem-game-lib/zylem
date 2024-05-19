@@ -50,6 +50,10 @@ export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Mov
 	public update(params: EntityParameters<ZylemActor>): void {
 		const { delta } = params;
 		super.update(params);
+		// TODO: mixer update called 
+		if (!this._mixer) {
+			return;
+		}
 		this._mixer!.update(delta);
 		this._update({ ...params, entity: this });
 	}

@@ -29,7 +29,9 @@ export class ZylemMaterial {
 			this.materials = [];
 		}
 		this.applyMaterial(color);
-		this.applyTexture(texture, repeat);
+		if (texture) {
+			this.applyTexture(texture, repeat);
+		}
 	}
 
 	applyTexture(texturePath: TexturePath, repeat: Vector2 = new Vector2(1, 1)) {

@@ -2,6 +2,7 @@ import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCame
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { stageState } from '../state/index';
 import { PerspectiveType } from '../interfaces/perspective';
+import { GameEntity } from './game-entity';
 
 const zModifier = 45;
 
@@ -11,7 +12,7 @@ export class ZylemCamera {
 	renderer: WebGLRenderer;
 	_perspective: PerspectiveType;
 	orbitControls: OrbitControls | null = null;
-	// follow: Entity | null;
+	target: GameEntity<any> | null = null;
 
 	constructor(screenResolution: Vector2, renderer: WebGLRenderer) {
 		let aspectRatio = screenResolution.x / screenResolution.y;
@@ -37,13 +38,21 @@ export class ZylemCamera {
 	[PerspectiveType.Fixed2D](aspectRatio: number, position: Vector3): Camera {
 		const frustumSize = position.z;
 		const distance = position.distanceTo(new Vector3(0, 0, 0));
+		// const orthographicCamera = new OrthographicCamera(
+		// 	frustumSize * aspectRatio / -2,
+		// 	frustumSize * aspectRatio / 2,
+		// 	frustumSize / 2,
+		// 	frustumSize / -2,
+		// 	0.1,
+		// 	1000 //distance * 2
+		// );
 		const orthographicCamera = new OrthographicCamera(
-			frustumSize * aspectRatio / -2,
-			frustumSize * aspectRatio / 2,
-			frustumSize / 2,
-			frustumSize / -2,
-			0.1,
-			distance * 2
+			10 * (-aspectRatio),
+			10 * (aspectRatio),
+			10,
+			-10,
+			0,
+			2000
 		);
 
 		orthographicCamera.position.copy(position);

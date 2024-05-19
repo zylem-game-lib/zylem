@@ -1,22 +1,20 @@
 import GamePad from '../input/game-pad';
-import { ZylemStage } from './stage';
 import { Clock } from 'three';
 import { GameBlueprint, GameRatio, StageBlueprint } from '../interfaces/game';
 import { PerspectiveType } from "../interfaces/perspective";
 import { gameState, setGlobalState } from '../state/index';
 import { EntityParameters } from './entity';
+import { ZylemStage } from './stage';
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
-
-const TIMESTAMP_DELTA = 16;
 
 export class ZylemGame implements GameBlueprint {
 	id: string;
 	ratio: GameRatio;
 	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
 	globals: any;
-	stages: StageBlueprint[] = [];
+	stages: ZylemStage[] = [];
 	blueprintOptions: GameBlueprint;
 	currentStage: string = '';
 	clock: Clock;
@@ -27,11 +25,11 @@ export class ZylemGame implements GameBlueprint {
 	_stageMap: Record<string, ZylemStage> = {};
 	_canvasWrapper: Element | null;
 
-	previousTimeStamp: number = 0;
-	// TODO: startTimeStamp could be nice for total game time
-	startTimeStamp: number = 0;
+	totalTime: number = 0;
 
-	constructor(options: GameBlueprint) {
+	static logcount = 0;
+
+	constructor(options: GameBlueprint, loadedStage: ZylemStage) {
 		setGlobalState(options.globals);
 		this._initialGlobals = { ...options.globals };
 		this.id = options.id;
@@ -43,14 +41,13 @@ export class ZylemGame implements GameBlueprint {
 		// TODO: split out canvas into GameCanvas
 		this._canvasWrapper = null;
 		this.createCanvas();
-		this.stages = options.stages ?? [{ id: 'default-stage', ...this.stages[0] }];
-		this.loadStage(this.stages[0]);
+		this.stages = [loadedStage];
+		this._stageMap[this.id] = loadedStage;
 		this.currentStage = this.id;
 	}
 
-	async loadStage(options: StageBlueprint) {
-		const stage = new ZylemStage();
-		stage.buildStage(options, this.id);
+	async loadStage(stage: ZylemStage) {
+		await stage.buildStage(this.id);
 		this._stageMap[this.id] = stage;
 	}
 
@@ -60,31 +57,35 @@ export class ZylemGame implements GameBlueprint {
 	 * update physics
 	 * render scene
 	 */
-	loop(_timeStamp: number) {
+	loop(timeStamp: number) {
 		const inputs = this.gamePad.getInputs();
 		const ticks = this.clock.getDelta();
-		const delta = this.previousTimeStamp ? _timeStamp - this.previousTimeStamp : TIMESTAMP_DELTA;
-		const isFixedTime = delta >= TIMESTAMP_DELTA;
-		const isNotLastTime = this.previousTimeStamp !== _timeStamp;
+		const stage = this._stageMap[this.currentStage];
+		const options = {
+			inputs,
+			entity: stage,
+			delta: ticks,
+			camera: stage.scene?.zylemCamera
+		} as unknown as EntityParameters<ZylemStage>;
 
-		if (isNotLastTime && isFixedTime) {
-			const stage = this._stageMap[this.currentStage];
-			const options = {
-				inputs,
-				entity: stage,
-				delta: ticks,
-				camera: stage.scene?.zylemCamera
-			} as unknown as EntityParameters<ZylemStage>;
-			stage.update(options);
-			stage.conditions.forEach(condition => {
-				condition(gameState.globals, this);
-			});
-			this.previousTimeStamp = _timeStamp;
-		}
-		requestAnimationFrame(this.loop.bind(this));
+		stage.update(options);
+		stage.conditions.forEach(condition => {
+			condition(gameState.globals, this);
+		});
+		this.totalTime += ticks;
+
+		setTimeout(() => requestAnimationFrame(this.loop.bind(this)), 0);
 	}
 
 	runLoop() {
+		const stage = this._stageMap[this.currentStage];
+		stage.setup({
+			entity: stage,
+			inputs: this.gamePad.getInputs(),
+			camera: stage.scene!.zylemCamera,
+			delta: 0,
+			globals: undefined
+		});
 		requestAnimationFrame(this.loop.bind(this));
 	}
 
@@ -97,7 +98,8 @@ export class ZylemGame implements GameBlueprint {
 		if (resetGlobals) {
 			setGlobalState({ ...this._initialGlobals });
 		}
-		const stageOption = this.stages.find(stage => stage.id === this.currentStage);
+		console.log('reset called');
+		const stageOption = this.stages.find(stage => stage.uuid === this.currentStage);
 		this.loadStage(stageOption ?? this.stages[0]);
 		this.delayedResize();
 	}
@@ -175,7 +177,6 @@ export class ZylemGame implements GameBlueprint {
 			document.body.appendChild(canvasWrapper);
 		}
 		canvasWrapper.classList.add('zylem-game-view');
-		canvasWrapper.appendChild(canvas);
 		this._canvasWrapper = canvasWrapper;
 		this.delayedResize();
 		window.addEventListener("resize", () => {

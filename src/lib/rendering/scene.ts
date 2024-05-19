@@ -17,6 +17,7 @@ import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
 import { EntityParameters } from '../core/entity';
 import { ThirdPersonCamera } from '../entities/camera/third-person';
+import { ZylemCamera } from '../core/camera';
 
 export class ZylemScene implements Entity<ZylemScene> {
 	type = 'Scene';
@@ -25,7 +26,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 	screenResolution!: Vector2;
 	renderer!: WebGLRenderer;
 	composer!: EffectComposer;
-	zylemCamera!: ThirdPersonCamera;
+	zylemCamera!: ZylemCamera;
 	containerElement: HTMLElement | null = null;
 
 	constructor(id: string) {

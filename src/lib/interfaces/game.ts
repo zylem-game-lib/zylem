@@ -7,6 +7,7 @@ import { Color, Vector3 } from 'three';
 import { ZylemCamera } from '~/lib/core/camera';
 import { ZylemWorld } from '~/lib/collision/world';
 import { UpdateFunction } from './entity';
+import { ZylemStage } from '../core/stage';
 
 export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
 
@@ -14,7 +15,7 @@ export interface GameBlueprint {
 	id: string;
 	ratio?: GameRatio,
 	globals: Record<string, any>;
-	stages: StageBlueprint[]; // TODO: use stage interface
+	stages: ZylemStage[];
 	update?: UpdateFunction<this>;
 	debug?: ZylemDebug;
 }
