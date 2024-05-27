@@ -5,6 +5,7 @@ const state$ = observable({
 	id: '',
 	globals: {},
 	debug: {},
+	time: 0
 } as unknown as GameBlueprint);
 
 const setGlobalState = (value: any) => {

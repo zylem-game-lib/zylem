@@ -1,6 +1,6 @@
 import GamePad from '../input/game-pad';
 import { Clock } from 'three';
-import { GameBlueprint, GameRatio, StageBlueprint } from '../interfaces/game';
+import { GameBlueprint, GameRatio } from '../interfaces/game';
 import { PerspectiveType } from "../interfaces/perspective";
 import { setGlobalState } from '../state/index';
 import { EntityParameters } from './entity';
@@ -73,7 +73,7 @@ export class ZylemGame implements GameBlueprint {
 
 		stage.update(options);
 		this.totalTime += ticks;
-
+		state$.time.set(this.totalTime);
 		setTimeout(() => requestAnimationFrame(this.loop.bind(this)), 0);
 	}
 

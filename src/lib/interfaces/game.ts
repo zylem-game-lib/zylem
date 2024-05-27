@@ -18,6 +18,7 @@ export interface GameBlueprint {
 	stages: ZylemStage[];
 	update?: UpdateFunction<this>;
 	debug?: ZylemDebug;
+	time?: number;
 }
 
 type Concrete<Type> = {
