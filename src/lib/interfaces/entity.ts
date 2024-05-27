@@ -11,6 +11,7 @@ export interface BaseEntityOptions<T> {
 	setup?: SetupFunction<T>;
 	update?: UpdateFunction<T>;
 	destroy?: DestroyFunction<T>;
+	custom?: { [key: string]: any };
 }
 
 export type CollisionOption<T> = (entity: any, other: any, globals?: any) => void;

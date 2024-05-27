@@ -8,18 +8,21 @@ import { Entity, EntityParameters } from './entity';
 
 export class BaseEntity<T> implements Entity {
 	public uuid: string;
+	public _custom: { [key: string]: any };
 
 	protected type: string = 'BaseEntity';
 	protected _setup: SetupFunction<T>;
 	protected _update: UpdateFunction<T>;
 	protected _destroy: DestroyFunction<T>;
 
+	static entityCount = 1;
 
 	constructor(options: BaseEntityOptions<T>) {
-		this.uuid = `${Math.random() * 999999}`; // TODO: use package for assigning uuid
+		this.uuid = `${++BaseEntity.entityCount}`; // TODO: use package for assigning uuid
 		this._setup = options.setup || (() => { });
 		this._update = options.update || (() => { });
 		this._destroy = options.destroy || (() => { });
+		this._custom = options.custom || {};
 	}
 
 	protected createUuid(type: string) {
@@ -37,6 +40,8 @@ export class BaseEntity<T> implements Entity {
 
 	public update(_params: EntityParameters<any>): void { }
 
-	public destroy(_params: EntityParameters<any>): void { }
+	public destroy(_params: EntityParameters<any>): void {
+		// this._destroy({})
+	}
 
 }

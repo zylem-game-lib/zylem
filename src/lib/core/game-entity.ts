@@ -7,6 +7,7 @@ import { EntityParameters } from './entity';
 import { Collider, KinematicCharacterController, RigidBody } from '@dimforge/rapier3d-compat';
 import { EntityBehavior } from '../behaviors/behavior';
 import { BaseEntity } from './base-entity';
+import { state$ } from '../state';
 
 export class GameEntity<T> extends BaseEntity<T> {
 	public group = new Group();
@@ -43,8 +44,7 @@ export class GameEntity<T> extends BaseEntity<T> {
 		this.movement();
 	}
 
-	public destroy(params: EntityParameters<any>): void {
-		console.log(params);
+	public destroy(_params: EntityParameters<any>): void {
 		this.removeFromScene();
 	}
 
@@ -53,7 +53,7 @@ export class GameEntity<T> extends BaseEntity<T> {
 			console.warn('_collision Method not implemented');
 			return;
 		}
-		this._collision(entity, other);
+		this._collision(entity, other, state$.globals);
 	}
 
 	private movement() {

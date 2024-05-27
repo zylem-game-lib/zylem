@@ -6,7 +6,8 @@ import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments
 import {
 	setStagePerspective,
 	setStageBackgroundColor,
-	setStageBackgroundImage
+	setStageBackgroundImage,
+	state$
 } from "../state";
 import { ZylemHUD } from "../ui/hud";
 import { EntityParameters, GameEntity } from "./";
@@ -22,7 +23,7 @@ type ZylemStageOptions = {
 	backgroundImage: String;
 	gravity: Vector3;
 	conditions: Conditions<any>[];
-	children: () => GameEntity<any>[];
+	children: ({ globals }: any) => GameEntity<any>[];
 }
 
 type StageOptions = GameEntityOptions<ZylemStageOptions, ZylemStage>;
@@ -56,7 +57,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		this.backgroundColor = options.backgroundColor ?? ZylemBlueColor;
 		this.backgroundImage = options.backgroundImage ?? '';
 		this.gravity = options.gravity ?? new Vector3(0, 0, 0);
-		this.children = options.children ? options.children() : [];
+		this.children = options.children ? options.children({ globals: state$.globals }) : [];
 		this.conditions = options.conditions ?? [];
 	}
 
@@ -133,20 +134,17 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		}
 
 		const entity = await child.createFromBlueprint();
-		// entity.name = child.name;
-		// console.log(entity.name);
 		if (entity.group) {
-			console.log(entity.group);
 			this.scene.scene.add(entity.group);
 		}
-		// if (blueprint.props) {
-		// 	for (let key in blueprint.props) {
-		// 		entity[key] = blueprint.props[key];
-		// 	}
-		// }
 		entity.stageRef = this;
 		this.world.addEntity(entity);
 		child.setup({ entity });
+		if (child._custom) {
+			for (let key in child._custom) {
+				entity[key] = child._custom[key];
+			}
+		}
 		this._childrenMap.set(entity.uuid, entity);
 	}
 
