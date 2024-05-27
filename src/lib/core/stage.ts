@@ -21,6 +21,7 @@ type ZylemStageOptions = {
 	backgroundColor: Color;
 	backgroundImage: String;
 	gravity: Vector3;
+	conditions: Conditions<any>[];
 	children: () => GameEntity<any>[];
 }
 
@@ -56,6 +57,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		this.backgroundImage = options.backgroundImage ?? '';
 		this.gravity = options.gravity ?? new Vector3(0, 0, 0);
 		this.children = options.children ? options.children() : [];
+		this.conditions = options.conditions ?? [];
 	}
 
 	public async createFromBlueprint(): Promise<ZylemStage> {

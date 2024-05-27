@@ -19,7 +19,6 @@ export class ZylemHUD {
 	static defaultStyleParams = {
 		fontFamily: 'Tahoma',
 		fontSize: 36,
-		fontStyle: 'italic',
 		fontWeight: 'bold',
 		fill: ['#000', ZylemBlue],
 		stroke: '#fff',
@@ -78,8 +77,16 @@ export class ZylemHUD {
 		const textStyle = new TextStyle(useOptions.style);
 		const richText = new Text(text, textStyle);
 
-		richText.x = useOptions?.position?.x ?? x;
-		richText.y = useOptions?.position?.y ?? y;
+		const screenWidth = this._app.stage.width;
+		const screenHeight = this._app.stage.height;
+
+		const percentX = useOptions?.position?.x ?? x;
+		const percentY = useOptions?.position?.y ?? y;
+
+		richText.x = screenWidth / (100 / percentX);
+		richText.y = screenHeight / (100 / percentY);
+
+		richText.anchor.set(0.5, 0.5);
 
 		const addedText = this._app.stage.addChild(richText);
 		if (options?.binding && options.update) {

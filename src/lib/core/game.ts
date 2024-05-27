@@ -6,6 +6,7 @@ import { setGlobalState } from '../state/index';
 import { EntityParameters } from './entity';
 import { ZylemStage } from './stage';
 import { getGlobalState, state$ } from '../state/game-state';
+import { observe } from '@simplyianm/legend-state';
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
@@ -71,9 +72,6 @@ export class ZylemGame implements GameBlueprint {
 		} as unknown as EntityParameters<ZylemStage>;
 
 		stage.update(options);
-		stage.conditions.forEach(condition => {
-			condition(getGlobalState(), this);
-		});
 		this.totalTime += ticks;
 
 		setTimeout(() => requestAnimationFrame(this.loop.bind(this)), 0);
@@ -88,6 +86,14 @@ export class ZylemGame implements GameBlueprint {
 			delta: 0,
 			HUD: stage.HUD,
 			globals: state$.globals,
+		});
+		stage.conditions.forEach(({ bindings, callback }) => {
+			bindings.forEach((key) => {
+				observe(() => {
+					state$.globals[key].get();
+					callback(state$.globals, this);
+				});
+			})
 		});
 		requestAnimationFrame(this.loop.bind(this));
 	}

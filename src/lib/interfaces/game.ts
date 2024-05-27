@@ -28,7 +28,10 @@ type Concrete<Type> = {
 // i.e. in the stage creation
 // I want the "globals" variable to have proper type checking against
 // the object literal that was just created above
-export type Conditions<T> = (globals: Concrete<T>, game: ZylemGame, HUD?: ZylemHUD) => void;
+export type Conditions<T> = {
+	bindings: string[];
+	callback: (globals: Concrete<T>, game: ZylemGame) => void;
+};
 
 export interface SetupCallbackOptions {
 	scene: ZylemScene;
