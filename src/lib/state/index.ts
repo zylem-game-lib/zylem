@@ -1,4 +1,4 @@
-export { gameState, setGlobalState } from './game-state';
+export { setGlobalState, state$ } from './game-state';
 export {
 	stageState,
 	setStageBackgroundColor,

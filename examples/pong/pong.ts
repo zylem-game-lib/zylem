@@ -1,5 +1,5 @@
 import { Zylem } from '../../src/main';
-import { Color, Vector3 } from 'three';
+import { Color, Vector2 } from 'three';
 import { BoardSide } from './board';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
@@ -11,10 +11,8 @@ const paddle2 = Paddle(1, BoardSide.RIGHT);
 const ball = Ball();
 
 const stage = Stage({
-	// id: 'stage-1',
 	perspective: Flat2D,
 	backgroundColor: new Color(0, 0, 0),
-	// gravity: new Vector3(0, -4, 0),
 	// conditions: [
 	// 	(globals, game) => {
 	// 		if (globals.winner !== 0) {
@@ -37,24 +35,21 @@ const stage = Stage({
 	// 		}
 	// 	}
 	// ],
-	setup: ({ camera }) => {
-		// camera.moveCamera(new Vector3(0, 0, 90));
-		// camera.target = ball;
-		// HUD.createText({
-		// 	text: '',
-		// 	binding: 'centerText',
-		// 	position: new Vector3(0, 0, 0)
-		// });
-		// HUD.createText({
-		// 	text: '0',
-		// 	binding: 'p1Score',
-		// 	position: new Vector3(-5, 10, 0)
-		// });
-		// HUD.createText({
-		// 	text: '0',
-		// 	binding: 'p2Score',
-		// 	position: new Vector3(5, 10, 0)
-		// });
+	setup: ({ camera, HUD, globals }) => {
+		HUD.addText('0', {
+			binding: 'p1Score',
+			update: (element, value) => {
+				element.text = value;
+			},
+			position: new Vector2(200, 10)
+		});
+		HUD.addText('0', {
+			binding: 'p2Score',
+			update: (element, value) => {
+				element.text = value;
+			},
+			position: new Vector2(400, 10)
+		});
 	},
 	children: () => {
 		return [
@@ -73,7 +68,6 @@ const game = Game({
 	globals: {
 		p1Score: 0,
 		p2Score: 0,
-		centerText: '',
 		winner: 0
 	},
 	stages: [stage],

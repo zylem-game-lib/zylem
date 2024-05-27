@@ -24,16 +24,17 @@ export function Ball(startY = 0) {
 			entity.setPosition(0, startY, 0);
 		},
 		update({ entity: ball, globals }) {
+			const { p1Score, p2Score } = globals;
 			const { x, y } = ball.getPosition();
 
 			if (x > goalBuffer) {
 				ball.setPosition(0, startY, 0);
-				// globals.p1Score++;;
+				p1Score.set(p1Score.get() + 1);
 				speed = minSpeed;
 				dy = 0;
 			} else if (x < -goalBuffer) {
 				ball.setPosition(0, startY, 0);
-				// globals.p2Score++;
+				p2Score.set(p2Score.get() + 1);
 				speed = minSpeed;
 				dy = 0;
 			}

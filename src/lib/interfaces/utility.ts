@@ -5,5 +5,6 @@ import { Vector3 } from '@dimforge/rapier3d-compat';
 export type Vect3 = ThreeVector3 | Vector3;
 
 export const ZylemBlueColor = new Color('#3A3EA0');
+export const ZylemBlue = '#3A3EA0';
 
 export type SizeVector = Vect3 | null;

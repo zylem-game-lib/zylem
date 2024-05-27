@@ -7,10 +7,12 @@ const state$ = observable({
 	debug: {},
 } as unknown as GameBlueprint);
 
-const gameState = state$.get();
-
 const setGlobalState = (value: any) => {
 	state$.globals.set(value);
 }
 
-export { gameState, setGlobalState };
+const getGlobalState = () => {
+	return state$.globals.get();
+}
+
+export { setGlobalState, getGlobalState, state$ };

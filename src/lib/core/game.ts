@@ -2,9 +2,10 @@ import GamePad from '../input/game-pad';
 import { Clock } from 'three';
 import { GameBlueprint, GameRatio, StageBlueprint } from '../interfaces/game';
 import { PerspectiveType } from "../interfaces/perspective";
-import { gameState, setGlobalState } from '../state/index';
+import { setGlobalState } from '../state/index';
 import { EntityParameters } from './entity';
 import { ZylemStage } from './stage';
+import { getGlobalState, state$ } from '../state/game-state';
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
@@ -31,7 +32,7 @@ export class ZylemGame implements GameBlueprint {
 
 	constructor(options: GameBlueprint, loadedStage: ZylemStage) {
 		setGlobalState(options.globals);
-		this._initialGlobals = { ...options.globals };
+		this._initialGlobals = getGlobalState();
 		this.id = options.id;
 		this.ratio = options.ratio ?? '16:9';
 		this._targetRatio = Number(this.ratio.split(':')[0]) / Number(this.ratio.split(':')[1]);
@@ -65,12 +66,13 @@ export class ZylemGame implements GameBlueprint {
 			inputs,
 			entity: stage,
 			delta: ticks,
-			camera: stage.scene?.zylemCamera
+			camera: stage.scene?.zylemCamera,
+			globals: state$.globals,
 		} as unknown as EntityParameters<ZylemStage>;
 
 		stage.update(options);
 		stage.conditions.forEach(condition => {
-			condition(gameState.globals, this);
+			condition(getGlobalState(), this);
 		});
 		this.totalTime += ticks;
 
@@ -84,7 +86,8 @@ export class ZylemGame implements GameBlueprint {
 			inputs: this.gamePad.getInputs(),
 			camera: stage.scene!.zylemCamera,
 			delta: 0,
-			globals: undefined
+			HUD: stage.HUD,
+			globals: state$.globals,
 		});
 		requestAnimationFrame(this.loop.bind(this));
 	}

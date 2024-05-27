@@ -9,7 +9,6 @@ export class BoxMesh extends BaseMesh {
 		this.mesh.position.set(0, 0, 0);
 		this.mesh.castShadow = true;
 		this.mesh.receiveShadow = true;
-		console.log('box mesh created');
 		group.add(this.mesh);
 	}
 }

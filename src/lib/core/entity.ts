@@ -1,11 +1,15 @@
+import { ZylemHUD } from "../ui/hud";
 import { ZylemCamera } from "./camera";
+
+export type Globals = any;
 
 export interface EntityParameters<T> {
 	delta: number;
 	inputs: any; // TODO: inputs type
 	entity: T;
-	globals: any; // TODO: define globals type
+	globals: Globals;
 	camera: ZylemCamera;
+	HUD: ZylemHUD;
 }
 
 export abstract class Entity {

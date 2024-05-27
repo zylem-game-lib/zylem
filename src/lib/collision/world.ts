@@ -1,8 +1,9 @@
 import { Vector3 } from 'three';
-import { Entity, GameEntity } from '../interfaces/entity';
-import { gameState } from '../state';
 import RAPIER from '@dimforge/rapier3d-compat';
+
+import { Entity, GameEntity } from '../interfaces/entity';
 import { EntityParameters } from '../core/entity';
+import { state$ } from '../state';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
@@ -89,7 +90,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 					return;
 				}
 				if (entity._collision) {
-					entity._collision(entity, gameEntity, { gameState });
+					entity._collision(entity, gameEntity, state$.globals);
 				}
 			});
 			this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
@@ -98,7 +99,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 					return;
 				}
 				if (entity._collision) {
-					entity._collision(entity, gameEntity, { gameState });
+					entity._collision(entity, gameEntity, state$.globals);
 				}
 				// @ts-ignore
 				if (entity._internalCollisionBehavior) {

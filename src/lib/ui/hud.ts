@@ -1,38 +1,36 @@
-import { Vector3 } from 'three';
-// import { gameState } from '../state/index';
-import SpriteText from 'three-spritetext';
+import { Vector2 } from 'three';
 import { Application, TextStyle, Text, Graphics } from 'pixi.js';
+import { ZylemBlue } from '../interfaces/utility';
+import { observe } from '@simplyianm/legend-state';
+import { state$ } from '../state/game-state';
 
 export interface HUDTextOptions {
-	text: string;
-	binding: string;
-	position: Vector3;
-}
-
-export interface HUDText {
-	sprite: SpriteText;
-	binding: string;
-	position: Vector3;
+	binding?: string | null;
+	bindings?: string[] | null;
+	update: null | ((element: Text, value: any) => void);
+	position?: Vector2;
+	style?: any;
 }
 
 export class ZylemHUD {
 	_app: Application | null = null;
-	_hudText: HUDText[];
+	_hudText: Map<string, Text>;
+
+	static defaultStyleParams = {
+		fontFamily: 'Tahoma',
+		fontSize: 36,
+		fontStyle: 'italic',
+		fontWeight: 'bold',
+		fill: ['#000', ZylemBlue],
+		stroke: '#fff',
+		strokeThickness: 4,
+		wordWrap: true,
+		wordWrapWidth: 440,
+		lineJoin: 'round',
+	};
 
 	constructor() {
-		this._hudText = [];
-		// this.cameraRef = zylemCamera;
-	}
-
-	createText({ text, binding, position }: HUDTextOptions) {
-		const spriteText = new SpriteText(text);
-		spriteText.textHeight = 2;
-		const hudText = {
-			sprite: spriteText,
-			binding,
-			position
-		}
-		this._hudText.push(hudText);
+		this._hudText = new Map();
 	}
 
 	createUI() {
@@ -56,58 +54,41 @@ export class ZylemHUD {
 		});
 		this._app = app;
 		document.body.appendChild(canvas);
-		const style = new TextStyle({
-			fontFamily: 'Tahoma',
-			fontSize: 36,
-			fontStyle: 'italic',
-			fontWeight: 'bold',
-			fill: ['#ffffff', '#00ff99'], // gradient
-			stroke: '#4a1850',
-			strokeThickness: 4,
-			dropShadow: true,
-			dropShadowColor: '#0000FF',
-			dropShadowBlur: 4,
-			dropShadowAngle: Math.PI / 6,
-			dropShadowDistance: 6,
-			wordWrap: true,
-			wordWrapWidth: 440,
-			lineJoin: 'round',
-		});
-
-		const richText = new Text('HUD test', style);
-
-		richText.x = 150 + (Math.random() * 40);
-		richText.y = 100;
-
-		app.stage.addChild(richText);
 
 		const width = canvas.width;
 		const height = canvas.height;
 		const frame = new Graphics();
 
-		frame.lineStyle({ width: 6, color: 0x0000FF });
+		frame.lineStyle({ width: 6, color: ZylemBlue });
 		frame.drawRect(0, 0, width, height);
 
 		app.stage.addChild(frame);
 	}
 
-	update() {
-		if (!this._hudText) {
+	addText(text: string, options?: HUDTextOptions, x: number = 0, y: number = 0): void {
+		if (!this._app) {
+			console.warn('Missing HUD to add text to');
 			return;
 		}
-		// const { x: camX, y: camY, z: camZ } = this.cameraRef.cameraRig.position;
-		// this._hudText.forEach(hud => {
-		// 	const { binding } = hud;
-		// 	if (!binding) {
-		// 		return;
-		// 	}
-		// 	const globals = gameState.globals;
-		// 	const value = `${globals[binding]}`;
-		// 	if (value) {
-		// 		const { x, y, z } = hud.position;
-		// 		hud.sprite.position.set(x + camX, y + camY, z + camZ);
-		// 		hud.sprite.text = value;
-		// 	}
-		// })
+
+		const useOptions: HUDTextOptions = options
+			? { ...options, style: options.style ?? ZylemHUD.defaultStyleParams }
+			: { bindings: null, update: null, style: ZylemHUD.defaultStyleParams };
+
+		const textStyle = new TextStyle(useOptions.style);
+		const richText = new Text(text, textStyle);
+
+		richText.x = useOptions?.position?.x ?? x;
+		richText.y = useOptions?.position?.y ?? y;
+
+		const addedText = this._app.stage.addChild(richText);
+		if (options?.binding && options.update) {
+			const key = options.binding;
+			const updateFn = options.update;
+			observe(() => {
+				const value = state$.globals[key].get();
+				updateFn(addedText, value);
+			});
+		}
 	}
 }

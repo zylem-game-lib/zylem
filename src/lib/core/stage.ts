@@ -36,7 +36,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
-	HUD: ZylemHUD | null;
+	HUD: ZylemHUD;
 	conditions: Conditions<any>[] = [];
 
 	children: Array<GameEntity<any>> = [];
@@ -50,7 +50,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		super(options as GameEntityOptions<{}, unknown>);
 		this.world = null;
 		this.scene = null;
-		this.HUD = null;
+		this.HUD = new ZylemHUD();
 		this.perspective = options.perspective ?? PerspectiveType.ThirdPerson;
 		this.backgroundColor = options.backgroundColor ?? ZylemBlueColor;
 		this.backgroundImage = options.backgroundImage ?? '';
@@ -74,7 +74,6 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
 
-		this.HUD = new ZylemHUD();
 		this.HUD.createUI();
 
 		this.scene.setup();
@@ -95,7 +94,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		);
 		this.scene.scene.add(this._debugLines);
 		this._debugLines.visible = true;
-		this._setup({ ...params });
+		this._setup({ ...params, HUD: this.HUD });
 	}
 
 	public update(params: EntityParameters<ZylemStage>): void {
