@@ -92,21 +92,25 @@ const sprite = Sprite({
 
 let lastMovement = new Vector3();
 let moving = false;
-const actorFactory = (positionX) => {
+const actorFactory = (positionX, positionZ = 0) => {
 	return Actor({
 		animations: ['playground/idle.fbx', 'playground/run.fbx'],
 		static: false,
 		setup({ entity, globals }) {
-			entity.setPosition(positionX, 4, 0);
+			entity.setPosition(positionX, 4, positionZ);
 			entity.animate(0);
 		},
 		update({ delta, entity, inputs, globals, camera }) {
-			const { horizontal, vertical } = inputs[0];
-			let movement = new Vector3();
-			movement.setX(horizontal * 10);
-			movement.setZ(vertical * 10);
-
+			let { horizontal, vertical } = inputs[0];
 			const { camera: threeCamera } = camera;
+			if (camera?.target?.uuid !== entity.uuid) {
+				horizontal = 0;
+				vertical = 0;
+			}
+
+			let movement = new Vector3();
+			movement.setX(horizontal * 12);
+			movement.setZ(vertical * 12);
 
 			const forward = new Vector3(0, 0, 1).applyQuaternion(threeCamera.quaternion);
 			const right = new Vector3(1, 0, 0).applyQuaternion(threeCamera.quaternion);
@@ -136,9 +140,9 @@ const actorFactory = (positionX) => {
 	})
 }
 
-const actor = actorFactory(0);
-const actor2 = actorFactory(5);
-const actor3 = actorFactory(-5);
+const actor = actorFactory(0, 0);
+const actor2 = actorFactory(15, 10);
+const actor3 = actorFactory(-15, 10);
 
 let cameraIndex = 0;
 let targets = [actor, actor2, actor3];
