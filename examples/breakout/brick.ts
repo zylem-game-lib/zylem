@@ -1,31 +1,35 @@
-import { Zylem } from '../../src/main';
 import { Color, Vector3 } from 'three';
-const { Box } = Zylem;
+import { Box } from "../../src/lib/entities";
 
 export function Brick(posX, posY) {
-	return {
+	return Box({
 		name: `brick`,
-		type: Box,
-		size: new Vector3(2, 0.5, 1),
-		props: {
-			health: 2,
+		color: new Color('#F30'),
+		custom: {
+			health: 2
 		},
-		setup: (entity) => {
+		size: new Vector3(2, 0.5, 1),
+		setup: ({ entity }) => {
 			entity.setPosition(posX, posY, 0);
 		},
-		update: (_delta, { entity: brick }) => {
-			if (brick.health === 1) {
-				brick.mesh.material.color = new Color('aqua');
-			}
+		update: ({ entity: brick }) => {
+			// if (brick.health === 1) {
+			// TODO: easy function for changing color
+			// brick.mesh.material.color = new Color('aqua');
+			// }
 		},
-		collision: (brick) => {
+		collision: (brick, other, globals) => {
 			if (brick.health === 0) {
-				brick.destroy();
+				// TODO: params should be available without explicitly passing
+				brick.destroy({ globals });
 			}
 		},
-		destroy: (gameState) => {
-			gameState.globals.bricks--;
-			gameState.globals.score += 100;
+		destroy: ({ globals }) => {
+			const { bricks, score } = globals;
+			const brickCount = bricks.get() - 1;
+			bricks.set(brickCount);
+			const newScore = score.get() + 100;
+			score.set(newScore);
 		}
-	}
+	})
 }
