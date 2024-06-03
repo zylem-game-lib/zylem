@@ -5,7 +5,11 @@ const state$ = observable({
 	id: '',
 	globals: {},
 	debug: {},
-	time: 0
+	time: 0,
+	elements: {
+		hud: null,
+		game: null
+	}
 } as unknown as GameBlueprint);
 
 const setGlobalState = (value: any) => {

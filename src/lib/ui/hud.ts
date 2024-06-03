@@ -1,5 +1,5 @@
 import { Vector2 } from 'three';
-import { Application, TextStyle, Text, Graphics } from 'pixi.js';
+import { Application, TextStyle, Text, Graphics, FillStyle } from 'pixi.js';
 import { ZylemBlue } from '../interfaces/utility';
 import { observe } from '@simplyianm/legend-state';
 import { state$ } from '../state/game-state';
@@ -14,7 +14,8 @@ export interface HUDTextOptions {
 
 export class ZylemHUD {
 	_app: Application | null = null;
-	_hudText: Map<string, Text>;
+	_hudText: Map<Vector2, Text>;
+	_frame: Graphics;
 
 	static defaultStyleParams = {
 		fontFamily: 'Tahoma',
@@ -30,6 +31,7 @@ export class ZylemHUD {
 
 	constructor() {
 		this._hudText = new Map();
+		this._frame = new Graphics();
 	}
 
 	createUI() {
@@ -56,12 +58,15 @@ export class ZylemHUD {
 
 		const width = canvas.width;
 		const height = canvas.height;
-		const frame = new Graphics();
 
-		frame.lineStyle({ width: 6, color: ZylemBlue });
-		frame.drawRect(0, 0, width, height);
+		this.updateFrame(width, height);
+		app.stage.addChild(this._frame);
+	}
 
-		app.stage.addChild(frame);
+	updateFrame(width: number, height: number) {
+		this._frame.clear();
+		this._frame.lineStyle({ width: 6, color: ZylemBlue });
+		this._frame.drawRect(0, 0, width, height);
 	}
 
 	addText(text: string, options?: HUDTextOptions, x: number = 0, y: number = 0): void {
@@ -80,11 +85,12 @@ export class ZylemHUD {
 		const screenWidth = this._app.stage.width;
 		const screenHeight = this._app.stage.height;
 
-		const percentX = useOptions?.position?.x ?? x;
-		const percentY = useOptions?.position?.y ?? y;
+		const usePosition = new Vector2(
+			useOptions?.position?.x ?? x,
+			useOptions?.position?.y ?? y
+		);
 
-		richText.x = screenWidth / (100 / percentX);
-		richText.y = screenHeight / (100 / percentY);
+		this.updateTextPosition(usePosition, richText, screenWidth, screenHeight);
 
 		richText.anchor.set(0.5, 0.5);
 
@@ -96,6 +102,27 @@ export class ZylemHUD {
 				const value = state$.globals[key].get();
 				updateFn(addedText, value);
 			});
+		}
+		this._hudText.set(usePosition, richText);
+	}
+
+	updateTextPosition(position: Vector2, text: Text, width: number, height: number) {
+		const percentX = position.x;
+		const percentY = position.y;
+
+		text.x = width / (100 / percentX);
+		text.y = height / (100 / percentY);
+	}
+
+	resize(width: number, height: number) {
+		if (this._app) {
+			this._app.view.width = width;
+			this._app.view.height = height;
+			this.updateFrame(width, height);
+			this._hudText.forEach((value, key) => {
+				this.updateTextPosition(key, value, width, height);
+			});
+			this._app.resize();
 		}
 	}
 }

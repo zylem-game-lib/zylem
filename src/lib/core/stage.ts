@@ -2,7 +2,7 @@ import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
 import { EntityBlueprint, GameEntityOptions } from "../interfaces/entity";
 import { Conditions } from "../interfaces/game";
-import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, Vector3 } from "three";
+import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from "three";
 import {
 	setStagePerspective,
 	setStageBackgroundColor,
@@ -59,6 +59,11 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		this.gravity = options.gravity ?? new Vector3(0, 0, 0);
 		this.children = options.children ? options.children({ globals: state$.globals }) : [];
 		this.conditions = options.conditions ?? [];
+
+		const self = this;
+		window.onresize = function () {
+			self.resize(window.innerWidth, window.innerHeight);
+		};
 	}
 
 	public async createFromBlueprint(): Promise<ZylemStage> {
@@ -176,7 +181,13 @@ export class ZylemStage extends Mixin(BaseEntity) {
 	}
 
 	resize(width: number, height: number) {
-		this.scene?.updateRenderer(width, height);
+		if (this.scene) {
+			const camera = this.scene.zylemCamera.camera as PerspectiveCamera;
+			camera.aspect = width / height;
+			camera.updateProjectionMatrix();
+			this.scene.updateRenderer(width, height);
+			this.HUD.resize(width, height);
+		}
 	}
 }
 
