@@ -5,24 +5,25 @@ import { Ball } from './ball';
 import { Brick } from './brick';
 
 const { Flat2D, Game, Stage } = Zylem;
-
+let brickCount = 0;
 const stage = Stage({
 	perspective: Flat2D,
 	backgroundColor: new Color('#000'),
 	conditions: [
 		{
-			bindings: ['score'],
+			bindings: ['score', 'bricks', 'lives'],
 			callback: (globals, game) => {
-				if (globals.score.get() > 0 && globals.bricks.get() === 0) {
+				const { score, bricks, lives } = globals;
+				if (score.get() > 0 && bricks.get() === 0) {
 					game.reset();
 				}
-				if (globals.lives.get() === 0) {
+				if (lives.get() === 0) {
 					game.reset();
 				}
 			}
 		}
 	],
-	setup: ({ HUD }) => {
+	setup: ({ HUD, globals }) => {
 		HUD.addText('0', {
 			binding: 'score',
 			update: (element, value) => {
@@ -37,10 +38,10 @@ const stage = Stage({
 			},
 			position: new Vector2(25, 10)
 		});
+		globals.bricks.set(brickCount);
 	},
 	children: ({ globals }) => {
 		const bricks: any[] = [];
-		let brickCount = 0;
 		for (let i = -8; i <= 8; i += 4) {
 			for (let j = 8; j >= 4; j -= 2) {
 				const brick = Brick(i, j);
@@ -48,7 +49,6 @@ const stage = Stage({
 				brickCount++;
 			}
 		}
-		globals.bricks.set(brickCount);
 		return [
 			Paddle(),
 			Ball(),

@@ -48,7 +48,7 @@ export function Ball(startY = 0) {
 			const velY = dy * speed;
 			ball.moveXY(dx, velY);
 		},
-		collision: (ball, other, { globals }) => {
+		collision: (ball, other, globals) => {
 			if (other.name === 'paddle') {
 				sound.play();
 				const paddleSpeed = other.getVelocity().x;
@@ -62,7 +62,6 @@ export function Ball(startY = 0) {
 				const { y: brickY } = other.getPosition();
 				sound.play();
 				other.health--;
-				console.log(other);
 				if (brickY > y) {
 					ball.setPosition(x, brickY - 0.5, 0);
 					dy = -1;
