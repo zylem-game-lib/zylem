@@ -16,8 +16,9 @@ const debug = new ZylemDebug();
 // options.debug = debug;
 
 async function buildGame(options: GameBlueprint) {
+	const bluePrintCopy = { ...options };
 	await options.stages[0].buildStage(options.id);
-	const game = new ZylemGame(options, options.stages[0]);
+	const game = new ZylemGame(bluePrintCopy, options.stages[0]);
 	return game;
 }
 
@@ -27,8 +28,15 @@ function Game(options: GameBlueprint) {
 			const game = await buildGame(options);
 			game.start();
 		},
-		pause: async () => { },
-		end: async () => { }
+		pause: async () => {
+		},
+		end: async () => {
+
+		},
+		reset: async (game: ZylemGame) => {
+			// TODO: implement actual reset
+			window.location.reload();
+		}
 	}
 }
 

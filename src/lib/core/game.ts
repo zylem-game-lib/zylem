@@ -40,7 +40,7 @@ export class ZylemGame implements GameBlueprint {
 		this._targetRatio = Number(this.ratio.split(':')[0]) / Number(this.ratio.split(':')[1]);
 		this.gamePad = new GamePad();
 		this.clock = new Clock();
-		this.blueprintOptions = options;
+		this.blueprintOptions = { ...options };
 		this.stages = [loadedStage];
 		this._stageMap[loadedStage.uuid] = loadedStage;
 		this.currentStageId = loadedStage.uuid;
@@ -100,14 +100,12 @@ export class ZylemGame implements GameBlueprint {
 		this.runLoop();
 	}
 
-	reset(resetGlobals = true) {
-		// TODO: this needs cleanup
+	async reset(resetGlobals = true) {
+		// TODO: implement actual reset
 		clearTimeout(this.timeoutId);
 		if (resetGlobals) {
 			setGlobalState({ ...this._initialGlobals });
 		}
-		const stageOption = this.stages.find(stage => stage.uuid === this.currentStageId);
-		this.loadStage(stageOption ?? this.stages[0]);
 	}
 
 	getStage(id: string) {

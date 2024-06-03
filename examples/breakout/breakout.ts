@@ -15,10 +15,10 @@ const stage = Stage({
 			callback: (globals, game) => {
 				const { score, bricks, lives } = globals;
 				if (score.get() > 0 && bricks.get() === 0) {
-					game.reset();
+					breakout.reset(game);
 				}
 				if (lives.get() === 0) {
-					game.reset();
+					breakout.reset(game);
 				}
 			}
 		}
@@ -29,14 +29,14 @@ const stage = Stage({
 			update: (element, value) => {
 				element.text = `Score: ${value}`;
 			},
-			position: new Vector2(50, 10)
+			position: new Vector2(50, 5)
 		});
 		HUD.addText('0', {
 			binding: 'lives',
 			update: (element, value) => {
 				element.text = `Lives: ${value}`;
 			},
-			position: new Vector2(25, 10)
+			position: new Vector2(25, 5)
 		});
 		globals.bricks.set(brickCount);
 	},
