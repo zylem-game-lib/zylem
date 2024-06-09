@@ -13,10 +13,9 @@ export function Brick(posX, posY) {
 			entity.setPosition(posX, posY, 0);
 		},
 		update: ({ entity: brick }) => {
-			// if (brick.health === 1) {
-			// TODO: easy function for changing color
-			// brick.mesh.material.color = new Color('aqua');
-			// }
+			if ((brick as any).health === 1) {
+				brick.setColor(new Color('#ff0'));
+			}
 		},
 		collision: (brick, other, globals) => {
 			if (brick.health === 0) {

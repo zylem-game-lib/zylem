@@ -11,7 +11,7 @@ export function Paddle() {
 		size: paddleSize,
 		color: new Color(1, 1, 1),
 		setup: ({ entity }) => {
-			entity.setPosition(0, -10, 0);
+			entity.setPosition(0, -9, 0);
 		},
 		update: ({ entity: paddle, inputs }) => {
 			const { x } = paddle.getPosition();
