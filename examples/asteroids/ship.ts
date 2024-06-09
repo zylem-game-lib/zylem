@@ -4,7 +4,7 @@ import { Bullet } from './bullet';
 import { Sprite } from "../../src/lib/entities";
 import { actionOnPress } from '../../src/lib/behaviors/actions';
 
-const { Vector3, Color } = THREE;
+const { Vector3 } = THREE;
 
 export function Ship(x = 0, y = 0) {
 	return Sprite({
