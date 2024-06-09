@@ -43,6 +43,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 
 	children: Array<GameEntity<any>> = [];
 	_childrenMap: Map<string, GameEntity<any>> = new Map();
+	_removalMap: Map<string, GameEntity<any>> = new Map();
 
 	blueprints: Array<EntityBlueprint<any>> = [];
 
@@ -86,7 +87,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 
 		this.scene.setup();
 		for (let child of this.children) {
-			this.spawnEntity(child, {});
+			this.spawnEntity(child);
 		}
 	}
 
@@ -113,12 +114,18 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			return;
 		}
 		this.world.update(params);
-		for (let child of this.children) {
+		this._childrenMap.forEach((child, uuid) => {
+			const needsRemoval = this._removalMap.get(uuid);
+			if (needsRemoval) {
+				this._childrenMap.delete(uuid);
+				this._removalMap.delete(uuid);
+				return;
+			}
 			child.update({
 				...params,
 				entity: child,
 			});
-		}
+		});
 		if (this._update) {
 			this._update({ ...params, entity: this });
 		}
@@ -133,7 +140,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		this._destroy({ ...params, entity: this });
 	}
 
-	async spawnEntity(child: GameEntity<any>, options: any) {
+	async spawnEntity(child: GameEntity<any>) {
 		if (!this.scene || !this.world) {
 			return;
 		}
@@ -144,13 +151,23 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		}
 		entity.stageRef = this;
 		this.world.addEntity(entity);
-		child.setup({ entity });
 		if (child._custom) {
 			for (let key in child._custom) {
+				if (entity[key]) { continue; }
 				entity[key] = child._custom[key];
 			}
 		}
+		child.setup({ entity });
 		this._childrenMap.set(entity.uuid, entity);
+	}
+
+	setForRemoval(entity: GameEntity<any>) {
+		if (this.world) {
+			this.world.setForRemoval(entity);
+		}
+		entity.group.clear();
+		entity.group.removeFromParent();
+		this._removalMap.set(entity.uuid, entity);
 	}
 
 	debugStage(world: World) {

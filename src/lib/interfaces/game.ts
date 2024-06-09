@@ -1,9 +1,7 @@
-import { ZylemDebug } from '~/lib/core/debug';
-import { PerspectiveType } from './perspective';
 import ZylemGame from '~/lib/core/game';
+import { ZylemDebug } from '~/lib/core/debug';
 import { ZylemScene } from '~/lib/rendering/scene';
 import { ZylemHUD } from '~/lib/ui/hud';
-import { Color, Vector3 } from 'three';
 import { ZylemCamera } from '~/lib/core/camera';
 import { ZylemWorld } from '~/lib/collision/world';
 import { UpdateFunction } from './entity';
@@ -42,15 +40,3 @@ export interface SetupCallbackOptions {
 };
 
 export type SetupCallback = (options: SetupCallbackOptions) => void;
-
-export interface StageBlueprint {
-	id?: string;
-	gravity?: Vector3;
-	perspective: PerspectiveType;
-	backgroundImage?: string;
-	backgroundColor: Color | number;
-	setup: SetupCallback;
-	children: (globals?: any) => any[];
-	conditions: Array<Conditions<GameBlueprint["globals"]>>;
-	update?: UpdateFunction<any> | null;
-}

@@ -13,6 +13,7 @@ import { Mixin, settings } from "ts-mixer";
 
 import { ZylemMaterial } from "../../core/material";
 import { EntityParameters, GameEntity } from "../../core";
+import { EntitySpawner } from "../../behaviors/entity-spawner";
 import { Moveable } from "../../behaviors/moveable";
 import { ZylemBlueColor } from "../../interfaces/utility";
 import { GameEntityOptions } from "../../interfaces/entity";
@@ -39,7 +40,7 @@ type SpriteOptions = GameEntityOptions<ZylemSpriteOptions, ZylemSprite>;
 
 settings.initFunction = 'init';
 
-export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollision, Moveable) {
+export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollision, Moveable, EntitySpawner) {
 	protected type = 'Sprite';
 	_sensor: boolean = false;
 	_size: Vector3;
@@ -65,6 +66,7 @@ export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollisio
 		this._images = options.images ?? [];
 		this._animations = options.animations ?? [];
 		this._debugMesh = null;
+		this.controlledRotation = true;
 	}
 
 	async createFromBlueprint(): Promise<this> {
@@ -81,6 +83,9 @@ export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollisio
 
 	public update(params: EntityParameters<ZylemSprite>): void {
 		super.update(params);
+		if (this._rotation2DAngle !== 0) {
+			this.group.rotation.z = this._rotation2DAngle;
+		}
 		this._update({ ...params, entity: this });
 	}
 
@@ -154,9 +159,16 @@ export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollisio
 		this.sprites.forEach((sprite, i) => {
 			if (this.spriteIndex === i) {
 				sprite.visible = true;
+				sprite.material.rotation = this._rotation2DAngle;
 			} else {
 				sprite.visible = false;
 			}
+		});
+	}
+
+	setColor(color: Color) {
+		this.sprites.forEach((sprite, i) => {
+			sprite.material.color = new Color(color);
 		});
 	}
 

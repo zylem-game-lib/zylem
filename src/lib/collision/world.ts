@@ -11,6 +11,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	world: RAPIER.World;
 	collisionMap: Map<number, Entity<any>> = new Map();
 	collisionBehaviorMap: Map<number, Entity<any>> = new Map();
+	_removalMap: Map<number, Entity<any>> = new Map();
 
 	static async loadPhysics(gravity: Vector3) {
 		await RAPIER.init();
@@ -22,7 +23,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		this.world = world;
 	}
 
-	addEntity(entity: GameEntity<any>) {
+	addEntity(entity: any) {
 		const rigidBody = this.world.createRigidBody(entity.bodyDescription);
 		entity.body = rigidBody;
 		let useSensor = false;
@@ -50,6 +51,23 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		this.collisionMap.set(entity.body.handle, entity);
 	}
 
+	setForRemoval(entity: any) {
+		if (entity.body) {
+			this._removalMap.set(entity.body.handle, entity);
+		}
+	}
+
+	destroyEntity(entity: GameEntity<any>) {
+		if (entity.body) {
+			this.collisionMap.delete(entity.body.handle);
+			this._removalMap.delete(entity.body.handle);
+			if (entity.collider) {
+				this.world.removeCollider(entity.collider, true);
+			}
+			this.world.removeRigidBody(entity.body);
+		}
+	}
+
 	setup() { }
 
 	update(params: EntityParameters<any>) {
@@ -65,7 +83,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	updatePostCollisionBehaviors(delta: number) {
 		const dictionaryRef = this.collisionBehaviorMap;
 		for (let [id, collider] of dictionaryRef) {
-			const gameEntity = collider as GameEntity<any>;
+			const gameEntity = collider as any;
 			// @ts-ignore
 			if (!gameEntity._internalPostCollisionBehavior) {
 				return;
@@ -81,8 +99,12 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	updateColliders(delta: number) {
 		const dictionaryRef = this.collisionMap;
 		for (let [id, collider] of dictionaryRef) {
-			const gameEntity = collider as GameEntity<any>;
+			const gameEntity = collider as any;
 			if (!gameEntity.body) {
+				continue;
+			}
+			if (this._removalMap.get(gameEntity.body.handle)) {
+				this.destroyEntity(gameEntity);
 				continue;
 			}
 			this.world.contactsWith(gameEntity.body.collider(0), (otherCollider) => {

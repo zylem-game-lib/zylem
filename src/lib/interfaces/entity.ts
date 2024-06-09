@@ -74,20 +74,4 @@ export interface EntityOptions {
 	static?: boolean;
 }
 
-// TODO: use generic Entity class for shared methods
-export function update(this: GameEntity<Entity>, delta: number, { inputs }: any) {
-	if (!this.body) {
-		return;
-	}
-	const { x, y, z } = this.body.translation();
-	const { x: rx, y: ry, z: rz } = this.body.rotation();
-	this.group.position.set(x, y, z);
-	this.group.rotation.set(rx, ry, rz);
-	const _inputs = inputs ?? { moveUp: false, moveDown: false };
-	if (this._update === undefined) {
-		return;
-	}
-	this._update(delta, { inputs: _inputs, entity: this });
-}
-
 export type OptionalVector = { x?: number, y?: number, z?: number };

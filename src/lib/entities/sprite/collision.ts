@@ -24,9 +24,6 @@ export class SpriteCollision extends BaseCollision {
 		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
 		colliderDesc.setSensor(isSensor);
 		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
-		// if (this._debug) {
-		// 	this.createDebugMesh(new BoxGeometry(x, y, z));
-		// }
 		return colliderDesc;
 	}
 }
