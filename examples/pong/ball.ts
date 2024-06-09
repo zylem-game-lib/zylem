@@ -1,7 +1,7 @@
 import { Howl } from '../../src/main';
 
 import { Sphere } from "../../src/lib/entities";
-import { board, BoardSide } from './board';
+import { board } from './board';
 import { Color } from 'three';
 
 const sound = new Howl({

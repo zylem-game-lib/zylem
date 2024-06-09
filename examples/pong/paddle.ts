@@ -3,7 +3,7 @@ import { board, BoardSide } from './board';
 import { Box } from "../../src/lib/entities";
 
 const paddleSpeed = 20.0;
-const paddleSize = new Vector3(1, 4, 1);
+const paddleSize = new Vector3(0.5, 4, 1);
 
 export function Paddle(inputKey, side: BoardSide, y = 0) {
 	return Box({
