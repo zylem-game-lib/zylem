@@ -97,7 +97,6 @@ export class ZylemCamera {
 		// 	this.moveFollowCamera();
 		// }
 		if (this.orbitControls === null) {
-			// debugger;
 			this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
 		}
 		this.orbitControls.update();

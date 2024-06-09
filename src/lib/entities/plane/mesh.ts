@@ -24,7 +24,6 @@ export class PlaneMesh extends BaseMesh {
 		const dy = this.size.z / subdivisions;
 		// store height data in map column-row map
 		const columsRows = new Map();
-		// debugger;
 		for (let i = 0; i < vertices.length; i += 3) {
 			// translate into colum / row indices
 			let row = Math.floor(Math.abs((vertices as any)[i] + (this.size.x / 2)) / dx);
