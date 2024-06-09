@@ -40,8 +40,6 @@ export class BaseEntity<T> implements Entity {
 
 	public update(_params: EntityParameters<any>): void { }
 
-	public destroy(_params: EntityParameters<any>): void {
-		// this._destroy({})
-	}
+	public destroy(_params: EntityParameters<any>): void { }
 
 }

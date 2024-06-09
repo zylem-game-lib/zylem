@@ -3,8 +3,10 @@ import { Euler, Vector3 } from "three";
 import { Mixin } from "ts-mixer";
 import { OptionalVector } from "~/lib/interfaces/entity";
 import { GameEntity } from "../core/game-entity";
+import { EntityErrors } from "../core/errors";
+import { PerspectiveType } from "../interfaces/perspective";
 
-export class Moveable extends Mixin(GameEntity) {
+export class Moveable extends Mixin(GameEntity, EntityErrors) {
 
 	moveX(delta: number) {
 		const movementVector = new Vector3(delta, 0, 0);
@@ -33,23 +35,25 @@ export class Moveable extends Mixin(GameEntity) {
 
 	moveEntity(movementVector: Vector3) {
 		if (!this.body) {
+			this.errorEntityBody();
 			return;
 		}
 		let finalMovement = movementVector;
-		// if (this.characterController && this.collider) {
-		// 	// TODO: add gravity from game globals
-		// finalMovement = new Vector3().addVectors(movementVector, new Vector3(0, -9, 0));
-		// 	this.characterController.computeColliderMovement(
-		// 		this.collider,
-		// 		movementVector
-		// 	);
-		// 	finalMovement = this.characterController.computedMovement() as Vector3;
-		// }
-		(this.body as RigidBody).setLinvel(finalMovement, true);
+		if (this.stageRef) {
+			const { perspective } = this.stageRef;
+			if (perspective === PerspectiveType.Fixed2D || perspective === PerspectiveType.Flat2D) {
+				finalMovement.set(movementVector.x, movementVector.y, 0);
+			}
+		}
+		this.body.setLinvel(finalMovement, true);
 	}
 
 	resetVelocity() {
-		(this.body as RigidBody).setLinearDamping(5);
+		if (!this.body) {
+			this.errorEntityBody();
+			return;
+		}
+		this.body.setLinearDamping(5);
 	}
 
 	moveForwardXY(delta: number) {

@@ -1,7 +1,8 @@
 import { Vector3 } from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 
-import { Entity, GameEntity } from '../interfaces/entity';
+import { Entity } from '../interfaces/entity';
+import { GameEntity } from '../core/game-entity';
 import { EntityParameters } from '../core/entity';
 import { state$ } from '../state';
 

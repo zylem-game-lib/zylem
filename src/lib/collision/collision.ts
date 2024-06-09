@@ -1,6 +1,5 @@
-import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { BufferGeometry, Color, Object3D, SkinnedMesh, Vector2, Vector3 } from "three";
-import { SizeVector } from "../interfaces/utility";
+import { RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
+import { Color, Vector3 } from "three";
 
 export interface BoxCollisionInterface {
 	createCollision: (params: CreateCollisionParameters) => void;
@@ -22,7 +21,6 @@ export class BaseCollision {
 		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
 		this.bodyDescription = new RigidBodyDesc(type)
 			.setTranslation(0, 0, 0)
-			// .setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0 })
 			.setGravityScale(1.0)
 			.setCanSleep(false)
 			.setCcdEnabled(false);
