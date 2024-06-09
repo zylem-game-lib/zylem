@@ -66,6 +66,7 @@ export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollisio
 		this._images = options.images ?? [];
 		this._animations = options.animations ?? [];
 		this._debugMesh = null;
+		this.collisionSize = options.collisionSize ?? this.collisionSize;
 		this.controlledRotation = true;
 	}
 
