@@ -1,7 +1,7 @@
-import { Zylem, THREE } from '../../src/main';
+import { THREE } from '../../src/main';
 import { boardHeight, boardWidth } from './board';
 
-const { Sprite } = Zylem;
+import { Sprite } from "../../src/lib/entities";
 const { Vector3 } = THREE;
 
 // TODO: write mappings in engine
@@ -28,13 +28,32 @@ const resolveRockSize = (health: number, variant: number) => {
 
 export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 	const rockVariant = Math.floor(Math.random() * 2);
-	return {
-		debug: true,
+	return Sprite({
 		name: `rock`,
-		type: Sprite,
 		size: new Vector3(startingHealth * 0.5, startingHealth * 0.5, startingHealth),
-		images: ['asteroids/rock-large.png', 'asteroids/rock-medium.png', 'asteroids/rock-medium.png', 'asteroids/rock-small.png', 'asteroids/rock-x-small.png'],
-		props: {
+		images: [
+			{
+				name: 'idle',
+				file: 'asteroids/rock-large.png'
+			},
+			{
+				name: 'idle',
+				file: 'asteroids/rock-medium.png'
+			},
+			{
+				name: 'idle',
+				file: 'asteroids/rock-medium.png'
+			},
+			{
+				name: 'idle',
+				file: 'asteroids/rock-small.png'
+			},
+			{
+				name: 'idle',
+				file: 'asteroids/rock-x-small.png'
+			}
+		],
+		custom: {
 			health: startingHealth,
 			variant: rockVariant,
 			hit: false,
@@ -42,15 +61,15 @@ export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 			velX: 0,
 			velY: 0,
 		},
-		setup: (entity: any) => {
+		setup: ({ entity }) => {
 			entity.setPosition(x, y, 1);
-			const speed = 5 - entity.health;
+			const speed = 5 - (entity as any).health;
 			const randX = Math.random() * speed * (Math.random() * 1 > 0.5 ? -1 : 1);
 			const randY = Math.random() * speed * (Math.random() * 1 > 0.5 ? -1 : 1);
-			entity.velX = randX;
-			entity.velY = randY;
+			(entity as any).velX = randX;
+			(entity as any).velY = randY;
 		},
-		update: (_delta: number, { entity: asteroid }: any) => {
+		update: ({ delta, entity: asteroid }: any) => {
 			const { health, variant, hit, hitCooldown, velX, velY } = asteroid;
 			const { x, y } = asteroid.getPosition();
 			const image = resolveRockSize(health, variant);
@@ -64,7 +83,8 @@ export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 			} else {
 				asteroid.destroy();
 			}
-			asteroid.hitCooldown += _delta;
+			asteroid.hitCooldown += delta;
+			asteroid.wrapAroundXY(boardWidth, boardHeight);
 			if (hit && hitCooldown >= 1) {
 				asteroid.health--;
 				asteroid.hit = false;
@@ -75,16 +95,17 @@ export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 				}
 				asteroid.hitCooldown = 0;
 			}
-			asteroid.wrapAroundXY(boardWidth, boardHeight);
 		},
-		collision: (asteroid: any, other: any, { gameState }: any) => {
+		collision: (asteroid: any, other: any, globals) => {
+			const { lives } = globals;
 			if (asteroid.health < 1) {
 				asteroid.destroy();
 			}
 			if (asteroid.health >= 1 && asteroid.hitCooldown >= 1 && other.name === 'ship') {
-				gameState.globals.lives--;
+				const newLives = lives.get() - 1;
+				lives.set(newLives);
 				asteroid.hit = true;
 			}
 		}
-	}
+	})
 }
