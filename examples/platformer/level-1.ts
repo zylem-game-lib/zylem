@@ -1,40 +1,49 @@
-import { Zylem, THREE, ZylemStage } from "../../src/main";
+import { Vector2 } from "three";
+import { Zylem, THREE } from "../../src/main";
 import { Coin } from "./game-objects/coin";
 import { Goal } from "./game-objects/goal";
 import { Ground } from "./ground";
 import { Player } from "./player";
 import { settings } from "./settings";
 
-const { ThirdPerson } = Zylem;
+const { ThirdPerson, Stage } = Zylem;
 const { Color, Vector3 } = THREE;
 const { groundLevel } = settings;
 
-export function LevelOne(): ZylemStage {
-	return {
-		id: 'level-1',
+export function LevelOne() {
+	return Stage({
 		perspective: ThirdPerson,
 		gravity: new Vector3(0, -10, 0),
 		backgroundColor: new Color(0xA1ADFF),
 		conditions: [
-			(globals, game) => {
-				if (globals.lives <= 0) {
-					game.reset();
+			{
+				bindings: ['score', 'lives'],
+				callback: (globals, game) => {
+					const { lives } = globals;
+					if (lives.get() <= 0) {
+						game.reset();
+					}
 				}
 			}
 		],
-		setup: ({ scene, HUD }) => {
-			HUD.createText({
-				text: '0',
+		setup: ({ HUD, camera, entity: stage }) => {
+			camera.moveCamera(new Vector3(0, 8, 20));
+			HUD.addText('0', {
 				binding: 'score',
-				position: { x: -10, y: 0, z: 10 }
+				update: (element, value) => {
+					element.text = `Score: ${value}`;
+				},
+				position: new Vector2(50, 5)
 			});
-			HUD.createText({
-				text: '0',
+			HUD.addText('0', {
 				binding: 'time',
-				position: { x: 15, y: 0, z: 10 }
+				update: (element, value) => {
+					element.text = `Time: ${value}`;
+				},
+				position: new Vector2(25, 5)
 			});
 		},
-		children: ({ gameState }) => {
+		children: () => {
 			const coins: any[] = [];
 			for (let i = 28; i < 70; i += 2) {
 				const coin = Coin({ position: new Vector3(i, groundLevel - 3, 0) });
@@ -49,13 +58,16 @@ export function LevelOne(): ZylemStage {
 				Goal()
 			];
 		},
-		update: (delta, { camera, stage, inputs, globals }) => {
-			const player = stage.getEntityByName('player');
-			const { x, y } = player.getPosition();
-			camera.moveCamera(new Vector3(x, y, 0));
-			const { actualTime } = globals;
-			globals.actualTime = actualTime + delta;
-			globals.time = Math.round(actualTime);
+		update: ({ delta, camera, entity, globals }) => {
+			if (!camera.target) {
+				const player = entity.getEntityByName('player');
+				if (player) {
+					camera.target = player;
+				}
+			}
+			const { actualTime, time } = globals;
+			actualTime.set(actualTime.get() + delta);
+			time.set(Math.round(actualTime.get()));
 		}
-	}
+	})
 };

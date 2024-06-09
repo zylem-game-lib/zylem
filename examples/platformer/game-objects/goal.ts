@@ -1,39 +1,37 @@
-import { Zylem, THREE } from '../../../src/main';
+import { THREE } from '../../../src/main';
 import { settings } from '../settings';
 const { Vector3, Color } = THREE;
-const { Zone } = Zylem;
+import { Zone } from "../../../src/lib/entities";
 const { groundLevel } = settings;
 
 export function Goal() {
-	return {
-		debug: true,
-		type: Zone,
+	return Zone({
 		name: 'goal',
-		props: {
+		custom: {
 			hasEntered: false,
 			holdLogTimer: 1,
 			holdCurrent: 0,
 		},
 		size: new Vector3(20, 8, 20),
-		setup(entity: any) {
+		setup({ entity }) {
 			entity.setPosition(30, groundLevel - 2, 0);
 		},
-		onEnter: ({ other, gameState }) => {
+		onEnter: ({ other }) => {
 			console.log('Entered: ', other);
 		},
-		onExit: ({ other, gameState }) => {
+		onExit: ({ other }) => {
 			console.log('Exited: ', other);
 		},
-		onHeld: ({ delta, other, entity: goal, gameState, heldTime }) => {
-			const { holdLogTimer } = goal;
-			goal.holdCurrent += delta;
-			if (goal.holdCurrent > holdLogTimer) {
+		onHeld: ({ delta, other, entity: goal, heldTime }) => {
+			const { holdLogTimer } = goal as any;
+			(goal as any).holdCurrent += delta;
+			if ((goal as any).holdCurrent > holdLogTimer) {
 				console.log('Holding... ', other);
 				console.log('Held time: ', heldTime);
-				goal.holdCurrent = 0;
+				(goal as any).holdCurrent = 0;
 			}
 		},
-		update: (delta, { entity: goal }: any) => {
+		update: ({ entity: goal }: any) => {
 			if (!goal._debugMesh) {
 				return;
 			}
@@ -43,10 +41,10 @@ export function Goal() {
 			}
 			goal.hasEntered = false;
 		},
-		collision: (goal: any, other: any, { gameState }: any) => {
+		collision: (goal: any, other: any) => {
 			if (other.name === 'player') {
 				goal.hasEntered = true;
 			}
 		}
-	}
+	})
 }

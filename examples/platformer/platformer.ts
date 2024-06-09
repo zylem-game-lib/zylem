@@ -1,10 +1,9 @@
 import { Zylem } from "../../src/main";
+const { Game } = Zylem;
 import { LevelOne } from "./level-1";
 
-const { create } = Zylem;
-
-const game = create({
-	id: 'platformer',
+const platformer = Game({
+	id: 'playground',
 	globals: {
 		score: 0,
 		lives: 3,
@@ -16,4 +15,4 @@ const game = create({
 	],
 });
 
-game.start();
+platformer.start();

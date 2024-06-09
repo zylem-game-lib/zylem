@@ -1,20 +1,17 @@
-import { Zylem, THREE } from "../../src/main";
+import { THREE } from "../../src/main";
+import { Box } from "../../src/lib/entities";
 
-const { Box } = Zylem;
 const { Vector3, Color } = THREE;
 
 export function Ground({ position = new Vector3(0, 0, 0), rotation = new Vector3(0, 0, 0) }) {
-	return {
+	return Box({
 		name: `ground`,
-		type: Box,
 		static: true,
 		size: new Vector3(50, 2, 5),
-		color: Color.NAMES.yellowgreen,
-		props: {},
-		setup: (entity: any) => {
+		color: new Color(Color.NAMES.yellowgreen),
+		setup: ({ entity }) => {
 			entity.setPosition(position.x, position.y, position.z);
 			entity.setRotation(rotation.x, rotation.y, rotation.z);
-		},
-		update: (_delta: number, { entity, inputs }: any) => { },
-	}
+		}
+	})
 }

@@ -1,7 +1,7 @@
-import { Zylem, THREE } from "../../src/main";
+import { THREE } from "../../src/main";
+import { Sprite } from "../../src/lib/entities";
 import { settings } from './settings';
 
-const { Sprite } = Zylem;
 const { Vector3 } = THREE;
 const { groundLevel } = settings;
 
@@ -11,13 +11,9 @@ enum JumpState {
 	Falling,
 };
 
-//Entity<Player, Sprite, Collision>
-
 export function Player() {
-	return {
+	return Sprite({
 		name: `player`,
-		type: Sprite,
-		debug: true,
 		images: [{
 			name: 'idle',
 			file: 'platformer/idle.png'
@@ -42,8 +38,7 @@ export function Player() {
 		}, {
 			name: 'jump-left',
 			file: 'platformer/jump-left.png'
-		}
-		],
+		}],
 		animations: [{
 			name: 'run',
 			frames: ['run-1', 'idle', 'run-2'],
@@ -57,7 +52,7 @@ export function Player() {
 		}],
 		size: new Vector3(2, 2, 1),
 		collisionSize: new Vector3(0.5, 2, 1),
-		props: {
+		custom: {
 			jumpState: JumpState.Idle,
 			jumpTime: 0.25,
 			jumpTimer: 0,
@@ -66,15 +61,15 @@ export function Player() {
 			onGround: false,
 			movingLeft: false,
 		},
-		setup: (entity: any) => {
+		setup: ({ entity }) => {
 			entity.setPosition(0, groundLevel + 5, 0);
 		},
-		update: (_delta: number, { entity: player, inputs }: any) => {
-			const { moveLeft, moveRight, buttonA, buttonB } = inputs[0];
+		update: ({ delta, entity: player, inputs }: any) => {
+			const { moveLeft, moveRight, buttonA } = inputs[0];
 			let { x: velX, y: velY } = player.getVelocity();
 
 			if (!player.onGround) {
-				velY += player.gravity * _delta;
+				velY += player.gravity * delta;
 			}
 
 			if (player.jumpState === JumpState.Idle) {
@@ -85,11 +80,11 @@ export function Player() {
 			if (moveLeft) {
 				velX = -10;
 				player.movingLeft = true;
-				player.setAnimation('run-left', _delta);
+				player.setAnimation('run-left', delta);
 			} else if (moveRight) {
 				velX = 10;
 				player.movingLeft = false;
-				player.setAnimation('run', _delta);
+				player.setAnimation('run', delta);
 			} else {
 				velX = 0;
 			}
@@ -102,7 +97,7 @@ export function Player() {
 			) {
 				velY = player.jumpVelocity;
 				player.jumpState = JumpState.Jumping;
-				player.jumpTimer += _delta;
+				player.jumpTimer += delta;
 				player.onGround = false;
 			}
 
@@ -128,5 +123,5 @@ export function Player() {
 				entity.jumpTimer = 0;
 			}
 		}
-	}
+	})
 }
