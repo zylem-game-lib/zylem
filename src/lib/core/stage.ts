@@ -68,7 +68,6 @@ export class ZylemStage extends Mixin(BaseEntity) {
 	}
 
 	public async createFromBlueprint(): Promise<ZylemStage> {
-
 		return Promise.resolve(this);
 	}
 
@@ -157,8 +156,8 @@ export class ZylemStage extends Mixin(BaseEntity) {
 				entity[key] = child._custom[key];
 			}
 		}
-		child.setup({ entity });
 		this._childrenMap.set(entity.uuid, entity);
+		child.setup({ entity });
 	}
 
 	setForRemoval(entity: GameEntity<any>) {
@@ -186,7 +185,8 @@ export class ZylemStage extends Mixin(BaseEntity) {
 	}
 
 	getEntityByName(name: string) {
-		const entity = this._childrenMap.get(name);
+		const arr = Object.entries(Object.fromEntries(this._childrenMap)).map((entry) => entry[1]);
+		const entity = arr.find((child) => child.name === name);
 		if (!entity) {
 			console.warn(`Entity ${name} not found`);
 		}
