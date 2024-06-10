@@ -3,7 +3,8 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 import { Howl } from 'howler';
 
 import { ZylemGame } from './lib/core/game';
-import { GameBlueprint, StageBlueprint } from './lib/interfaces/game';
+import { GameBlueprint } from './lib/interfaces/game';
+import { StageBlueprint } from './lib/interfaces/stage';
 import { PerspectiveType } from './lib/interfaces/perspective';
 import { ZylemDebug } from './lib/core/debug';
 import { Vect3 } from './lib/interfaces/utility';

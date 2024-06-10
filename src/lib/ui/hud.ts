@@ -1,5 +1,5 @@
 import { Vector2 } from 'three';
-import { Application, TextStyle, Text, Graphics, FillStyle } from 'pixi.js';
+import { Application, TextStyle, Text, Graphics, FillStyle, DisplayObject } from 'pixi.js';
 import { ZylemBlue } from '../interfaces/utility';
 import { observe } from '@simplyianm/legend-state';
 import { state$ } from '../state/game-state';
@@ -60,7 +60,7 @@ export class ZylemHUD {
 		const height = canvas.height;
 
 		this.updateFrame(width, height);
-		app.stage.addChild(this._frame);
+		app.stage.addChild(this._frame as DisplayObject);
 	}
 
 	updateFrame(width: number, height: number) {
@@ -94,13 +94,13 @@ export class ZylemHUD {
 
 		richText.anchor.set(0.5, 0.5);
 
-		const addedText = this._app.stage.addChild(richText);
+		const addedText = this._app.stage.addChild(richText as DisplayObject);
 		if (options?.binding && options.update) {
 			const key = options.binding;
 			const updateFn = options.update;
 			observe(() => {
 				const value = state$.globals[key].get();
-				updateFn(addedText, value);
+				updateFn(addedText as Text, value);
 			});
 		}
 		this._hudText.set(usePosition, richText);
