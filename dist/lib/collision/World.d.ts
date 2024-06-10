@@ -1,15 +1,22 @@
 import { Vector3 } from 'three';
-import { Entity, GameEntity } from '../interfaces/entity';
 import RAPIER from '@dimforge/rapier3d-compat';
+import { Entity } from '../interfaces/entity';
+import { GameEntity } from '../core/game-entity';
+import { EntityParameters } from '../core/entity';
 export declare class ZylemWorld implements Entity<ZylemWorld> {
-    _type: string;
+    type: string;
     world: RAPIER.World;
-    collisionDictionary: Map<number, Entity<any>>;
+    collisionMap: Map<number, Entity<any>>;
+    collisionBehaviorMap: Map<number, Entity<any>>;
+    _removalMap: Map<number, Entity<any>>;
     static loadPhysics(gravity: Vector3): Promise<RAPIER.World>;
     constructor(world: RAPIER.World);
-    addEntity(entity: GameEntity<any>): void;
+    addEntity(entity: any): void;
+    setForRemoval(entity: any): void;
+    destroyEntity(entity: GameEntity<any>): void;
     setup(): void;
-    update(delta: number): void;
-    updateColliders(): void;
+    update(params: EntityParameters<any>): void;
+    updatePostCollisionBehaviors(delta: number): void;
+    updateColliders(delta: number): void;
     destroy(): void;
 }

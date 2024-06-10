@@ -1,13 +1,12 @@
 import { Scene, Vector2, WebGLRenderer, Object3D, Vector3 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
-import { ZylemCamera } from './Camera';
 import { Entity, GameEntity } from '../interfaces/entity';
-import { ZylemHUD } from '../ui/HUD';
 import { SetupCallback } from '~/lib/interfaces/game';
+import { EntityParameters } from '../core/entity';
+import { ZylemCamera } from '../core/camera';
 export declare class ZylemScene implements Entity<ZylemScene> {
-    _type: string;
+    type: string;
     _setup?: SetupCallback;
-    _hud: ZylemHUD | null;
     scene: Scene;
     screenResolution: Vector2;
     renderer: WebGLRenderer;
@@ -17,7 +16,7 @@ export declare class ZylemScene implements Entity<ZylemScene> {
     constructor(id: string);
     setup(): void;
     destroy(): void;
-    update(delta: number): void;
+    update({ delta }: Partial<EntityParameters<ZylemScene>>): void;
     setupCamera(scene: Scene): void;
     setupLighting(scene: Scene): void;
     setupRenderer(): void;

@@ -1,12 +1,29 @@
-import { ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
+import { Collider, ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 import { Color, Group, Vector3 } from "three";
-import { UpdateOptions } from "./Update";
 import { SpriteAnimation, SpriteImage } from "~/lib/entities";
+import { EntityParameters } from "../core/entity";
+export type UpdateFunction<T> = (params: EntityParameters<T>) => void;
+export type SetupFunction<T> = (params: EntityParameters<T>) => void;
+export type DestroyFunction<T> = (params: EntityParameters<T>) => void;
+export interface BaseEntityOptions<T> {
+    setup?: SetupFunction<T>;
+    update?: UpdateFunction<T>;
+    destroy?: DestroyFunction<T>;
+    custom?: {
+        [key: string]: any;
+    };
+}
+export type CollisionOption<T> = (entity: any, other: any, globals?: any) => void;
+export type GameEntityOptions<Options, T> = Partial<Options> & BaseEntityOptions<T> & {
+    collision?: CollisionOption<T>;
+    name?: string;
+    tag?: Set<string>;
+};
 export interface Entity<T = any> {
     setup: (entity: T) => void;
     destroy: () => void;
-    update: (delta: number, options: UpdateOptions<Entity<T>>) => void;
-    _type: string;
+    update: UpdateFunction<T>;
+    type: string;
     _collision?: (entity: any, other: any, globals?: any) => void;
     _destroy?: (globals?: any) => void;
     name?: string;
@@ -14,18 +31,21 @@ export interface Entity<T = any> {
 }
 export interface EntityBlueprint<T> extends Entity<T> {
     name: string;
-    type: EntityType;
     props?: {
         [key: string]: any;
     };
     shape?: Vector3;
-    collision?: (entity: Entity<T>, other: Entity<T>) => void;
+    collision?: (entity: Entity<T>, other: Entity<T>, globals?: any) => void;
+    createFromBlueprint: () => Promise<T>;
 }
 export interface GameEntity<T> extends Entity<T> {
     group: Group;
     body?: RigidBody;
     bodyDescription: RigidBodyDesc;
     constraintBodies?: RigidBody[];
+    collider: Collider;
+    controlledRotation?: boolean;
+    characterController?: any;
     sensor?: boolean;
     debug?: boolean;
     debugColor?: Color;
@@ -47,13 +67,6 @@ export interface EntityOptions {
     color?: THREE.Color;
     static?: boolean;
 }
-export declare enum EntityType {
-    Box = "Box",
-    Sphere = "Sphere",
-    Sprite = "Sprite",
-    Zone = "Zone"
-}
-export declare function update(this: GameEntity<Entity>, delta: number, { inputs }: any): void;
 export type OptionalVector = {
     x?: number;
     y?: number;

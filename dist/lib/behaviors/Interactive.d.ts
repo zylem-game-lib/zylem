@@ -1,12 +1,8 @@
-import { Constructor } from "./Composable";
-import { OptionalVector } from "~/lib/interfaces/entity";
-export declare function Interactive<CBase extends Constructor>(Base: CBase): {
-    new (...args: any[]): {
-        [x: string]: any;
-        setup(): void;
-        destroy(): void;
-        update(delta: number, { inputs, globals }: any): void;
-        spawn(T: any, options: any): void;
-        spawnRelative(T: any, options: any, offset: OptionalVector): void;
-    };
-} & CBase;
+import { GameEntity } from "../core";
+import { EntityErrors } from "../core/errors";
+declare const Interactive_base: import("ts-mixer/dist/types/types").Class<any[], GameEntity<unknown> & EntityErrors, (new (options: import("../interfaces/entity").GameEntityOptions<{
+    collision?: import("../interfaces/entity").CollisionOption<unknown> | undefined;
+}, unknown>) => GameEntity<unknown>) & typeof EntityErrors>;
+export declare class Interactive extends Interactive_base {
+}
+export {};
