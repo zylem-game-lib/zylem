@@ -1,56 +1,64 @@
-import { Color } from "three";
+import { Color, Vector2 } from "three";
 import { Zylem } from "../../src/main";
 import { Invader } from "./invader";
 import { Player } from "./player";
 
+const { Stage, Game } = Zylem;
 const { Flat2D } = Zylem;
 
-const game = Zylem.create({
-	id: 'space-invaders',
+const spaceInvaders = Game({
+	id: 'playground',
 	globals: {
 		score: 0,
 		lives: 3,
-		invaders: 0,
+		invaderCount: 0,
 	},
-	stages: [{
+	stages: [Stage({
 		perspective: Flat2D,
-		backgroundColor: Color.NAMES.black,
+		backgroundColor: new Color(Color.NAMES.black),
 		conditions: [
-			(globals, game) => {
-				if (globals.lives === 0) {
-					game.reset();
+			{
+				bindings: ['score', 'lives'],
+				callback: (globals, game) => {
+					const { lives } = globals;
+					if (lives.get() <= 0) {
+						game.reset();
+					}
 				}
 			}
 		],
-		setup: ({ scene, HUD }) => {
-			HUD.createText({
-				text: '0',
+		setup: ({ HUD }) => {
+			HUD.addText('0', {
 				binding: 'score',
-				position: { x: 0, y: 10, z: 0 }
+				update: (element, value) => {
+					element.text = `Score: ${value}`;
+				},
+				position: new Vector2(50, 5)
 			});
-			HUD.createText({
-				text: '0',
+			HUD.addText('3', {
 				binding: 'lives',
-				position: { x: -15, y: -10, z: 0 }
+				update: (element, value) => {
+					element.text = `Lives: ${value}`;
+				},
+				position: new Vector2(25, 5)
 			});
 		},
-		children: ({ gameState }) => {
+		children: ({ globals }) => {
+			const { invaderCount } = globals;
 			const invaders: any[] = [];
 			for (let i = -8; i <= 8; i += 2) {
 				for (let j = 8; j >= 4; j -= 2) {
 					const invader = Invader(i, j);
 					invaders.push(invader);
-					if (gameState) {
-						gameState.globals.invaders++;
-					}
 				}
 			}
+			invaderCount.set(invaders.length);
 			return [
 				Player(),
 				...invaders
 			]
 		},
-	}],
+	})],
 });
 
-game.start();
+spaceInvaders.start();

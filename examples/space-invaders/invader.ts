@@ -1,45 +1,49 @@
-import { Zylem } from '../../src/main';
 import { Vector3 } from 'three';
-const { Sprite } = Zylem;
+import { Sprite } from "../../src/lib/entities";
 
 const invaderSize = new Vector3(1, 1, 0.3);
 const bulletSize = new Vector3(1, 1, 0.1);
 
 function InvaderBullet({ x = 0, y = -8, health = 2 }) {
-	return {
+	return Sprite({
 		name: `bullet`,
-		type: Sprite,
 		size: bulletSize,
-		images: ['space-invaders/invader-shot.png'],
-		props: {},
-		setup: (entity) => {
+		images: [{
+			name: 'normal',
+			file: 'space-invaders/invader-shot.png'
+		}],
+		custom: {},
+		setup: ({ entity }) => {
 			entity.setPosition(x, y, 0);
 		},
-		update: (_delta, { entity: bullet, inputs }) => {
+		update: ({ entity: bullet }) => {
 			const { y } = bullet.getPosition();
 			bullet.moveXY(Math.sin(y) * 8, -15);
 			if (y < -10) {
-				bullet.destroy();
+				(bullet as any).destroy();
 			}
 		},
-		collision: (bullet, other, { gameState }) => {
+		collision: (bullet, other) => {
 			if (other.name.includes('player')) {
 				bullet.destroy();
 				other.health--;
 			}
-		},
-		destroy: () => { }
-	}
+		}
+	})
 }
 
 export function Invader(x = 0, y = 0, health = 2) {
-	return {
-		debug: true,
+	return Sprite({
 		name: `invader_${x}_${y}`,
-		type: Sprite,
 		size: invaderSize,
-		images: ['space-invaders/invader-1.png', 'space-invaders/invader-2.png'],
-		props: {
+		images: [{
+			name: 'move1',
+			file: 'space-invaders/invader-1.png'
+		}, {
+			name: 'move2',
+			file: 'space-invaders/invader-2.png'
+		}],
+		custom: {
 			animationRate: 1,
 			animationCurrent: 0,
 			dropRate: 1.5,
@@ -50,13 +54,13 @@ export function Invader(x = 0, y = 0, health = 2) {
 			fireChance: 12,
 			fireCurrent: 0,
 		},
-		setup: (entity) => {
+		setup: ({ entity }) => {
 			entity.setPosition(x, y, 0);
 		},
-		update: (_delta, { entity: invader, inputs }) => {
+		update: ({ delta, entity: invader }: any) => {
 			const { x, y } = invader.getPosition();
 			if (invader.animationCurrent < invader.animationRate) {
-				invader.animationCurrent += _delta;
+				invader.animationCurrent += delta;
 			} else {
 				invader.sprites[invader.spriteIndex].visible = false;
 				invader.spriteIndex = invader.spriteIndex === 0 ? 1 : 0;
@@ -64,7 +68,7 @@ export function Invader(x = 0, y = 0, health = 2) {
 				invader.sprites[invader.spriteIndex].visible = true;
 			}
 			if (invader.dropCurrent < invader.dropRate) {
-				invader.dropCurrent += _delta;
+				invader.dropCurrent += delta;
 			} else {
 				invader.dropCurrent = 0;
 				invader.direction = invader.direction === 1 ? -1 : 1;
@@ -73,7 +77,7 @@ export function Invader(x = 0, y = 0, health = 2) {
 			}
 			invader.moveX(invader.speed * invader.direction);
 			if (invader.fireCurrent < invader.fireRate) {
-				invader.fireCurrent += _delta;
+				invader.fireCurrent += delta;
 			} else {
 				invader.fireCurrent = 0;
 				const chance = Math.floor(Math.random() * invader.fireChance);
@@ -88,6 +92,5 @@ export function Invader(x = 0, y = 0, health = 2) {
 				other.health--;
 			}
 		},
-		destroy: () => { }
-	}
+	})
 }
