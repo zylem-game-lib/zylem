@@ -2,7 +2,7 @@ import { Color, Vector2 } from "three";
 import { game, stage, Zylem } from "../../src/main";
 import { Invader } from "./invader";
 import { Player } from "./player";
-const { Flat2D } = Zylem.PerspectiveType;
+const { Flat2D } = Zylem;
 
 const spaceInvaders = game({
 	id: 'playground',
