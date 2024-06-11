@@ -1,5 +1,5 @@
 import { THREE } from "../../src/main";
-import { Sprite } from "../../src/lib/entities";
+import { sprite } from "../../src/lib/entities";
 import { settings } from './settings';
 
 const { Vector3 } = THREE;
@@ -12,7 +12,7 @@ enum JumpState {
 };
 
 export function Player() {
-	return Sprite({
+	return sprite({
 		name: `player`,
 		images: [{
 			name: 'idle',

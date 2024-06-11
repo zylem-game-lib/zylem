@@ -1,5 +1,5 @@
 import { Vector2 } from 'three';
-import { Application, TextStyle, Text, Graphics, FillStyle, DisplayObject } from 'pixi.js';
+import { Application, TextStyle, Text, Graphics, DisplayObject } from 'pixi.js';
 import { ZylemBlue } from '../interfaces/utility';
 import { observe } from '@simplyianm/legend-state';
 import { state$ } from '../state/game-state';

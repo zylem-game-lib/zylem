@@ -1,13 +1,14 @@
-import { Zylem } from '../../src/main';
+import { Zylem, game, stage } from '../../src/main';
 import { Color, Vector2 } from 'three';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
 import { Brick } from './brick';
 
-const { Flat2D, Game, Stage } = Zylem;
+const { PerspectiveType } = Zylem;
+
 let brickCount = 0;
-const stage = Stage({
-	perspective: Flat2D,
+const stage1 = stage({
+	perspective: PerspectiveType.Flat2D,
 	backgroundColor: new Color('#000'),
 	conditions: [
 		{
@@ -57,7 +58,7 @@ const stage = Stage({
 	}
 });
 
-const breakout = Game({
+const breakout = game({
 	id: 'playground',
 	globals: {
 		score: 0,
@@ -65,7 +66,7 @@ const breakout = Game({
 		lives: 3,
 		bricks: 0
 	},
-	stages: [stage]
+	stages: [stage1]
 });
 
 breakout.start();

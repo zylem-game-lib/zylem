@@ -1,8 +1,8 @@
 import { Color, Vector3 } from 'three';
-import { Box } from "../../src/lib/entities";
+import { box } from "../../src/lib/entities";
 
 export function Brick(posX, posY) {
-	return Box({
+	return box({
 		name: `brick`,
 		color: new Color('#F30'),
 		custom: {

@@ -55,6 +55,6 @@ export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, Sp
 	}
 }
 
-export function Sphere(options: SphereOptions): ZylemSphere {
+export function sphere(options: SphereOptions): ZylemSphere {
 	return new ZylemSphere(options) as ZylemSphere;
 }

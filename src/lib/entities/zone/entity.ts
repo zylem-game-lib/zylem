@@ -121,6 +121,6 @@ export class ZylemZone extends Mixin(GameEntity, ZoneCollision, Moveable) {
 
 }
 
-export function Zone(options: ZoneOptions): ZylemZone {
+export function zone(options: ZoneOptions): ZylemZone {
 	return new ZylemZone(options) as ZylemZone;
 }

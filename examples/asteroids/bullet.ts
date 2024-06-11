@@ -1,8 +1,8 @@
 import { Color, Vector2 } from "three";
-import { Sphere } from "../../src/lib/entities";
+import { sphere } from "../../src/lib/entities";
 
 export function Bullet({ position = new Vector2(0, 0), velX = 0, velY = 0 }) {
-	return Sphere({
+	return sphere({
 		name: `bullet`,
 		radius: 0.1,
 		color: new Color(Color.NAMES.gold),

@@ -1,13 +1,13 @@
 import { THREE } from '../../src/main';
 import { boardHeight, boardWidth } from './board';
 import { Bullet } from './bullet';
-import { Sprite } from "../../src/lib/entities";
+import { sprite } from "../../src/lib/entities";
 import { actionOnPress } from '../../src/lib/behaviors/actions';
 
 const { Vector3 } = THREE;
 
 export function Ship(x = 0, y = 0) {
-	return Sprite({
+	return sprite({
 		name: `ship`,
 		size: new Vector3(2, 2, 1),
 		collisionSize: new Vector3(1, 1, 1),

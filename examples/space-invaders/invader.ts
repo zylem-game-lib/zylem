@@ -1,11 +1,11 @@
 import { Vector3 } from 'three';
-import { Sprite } from "../../src/lib/entities";
+import { sprite } from "../../src/lib/entities";
 
 const invaderSize = new Vector3(1, 1, 0.3);
 const bulletSize = new Vector3(1, 1, 0.1);
 
 function InvaderBullet({ x = 0, y = -8, health = 2 }) {
-	return Sprite({
+	return sprite({
 		name: `bullet`,
 		size: bulletSize,
 		images: [{
@@ -33,7 +33,7 @@ function InvaderBullet({ x = 0, y = -8, health = 2 }) {
 }
 
 export function Invader(x = 0, y = 0, health = 2) {
-	return Sprite({
+	return sprite({
 		name: `invader_${x}_${y}`,
 		size: invaderSize,
 		images: [{

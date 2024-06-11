@@ -1,10 +1,10 @@
 import { THREE } from "../../src/main";
-import { Box } from "../../src/lib/entities";
+import { box } from "../../src/lib/entities";
 
 const { Vector3, Color } = THREE;
 
 export function Ground({ position = new Vector3(0, 0, 0), rotation = new Vector3(0, 0, 0) }) {
-	return Box({
+	return box({
 		name: `ground`,
 		static: true,
 		size: new Vector3(50, 2, 5),

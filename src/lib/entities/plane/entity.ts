@@ -56,6 +56,6 @@ export class ZylemPlane extends Mixin(GameEntity, ZylemMaterial, PlaneMesh, Plan
 	}
 }
 
-export function Plane(options: PlaneOptions): ZylemPlane {
+export function plane(options: PlaneOptions): ZylemPlane {
 	return new ZylemPlane(options) as ZylemPlane;
 }

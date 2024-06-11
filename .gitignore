@@ -13,6 +13,7 @@ src/**/*.js
 
 node_modules
 wip
+_docs
 
 dist-ssr
 *.local

@@ -1,8 +1,7 @@
-import { Zylem } from "../../src/main";
-const { Game } = Zylem;
+import { game } from "../../src/main";
 import { LevelOne } from "./level-1";
 
-const platformer = Game({
+const platformer = game({
 	id: 'playground',
 	globals: {
 		score: 0,

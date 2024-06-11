@@ -1,11 +1,10 @@
-import { THREE } from '../../../src/main';
+import { THREE, zone } from '../../../src/main';
 import { settings } from '../settings';
 const { Vector3, Color } = THREE;
-import { Zone } from "../../../src/lib/entities";
 const { groundLevel } = settings;
 
 export function Goal() {
-	return Zone({
+	return zone({
 		name: 'goal',
 		custom: {
 			hasEntered: false,

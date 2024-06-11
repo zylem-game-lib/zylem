@@ -123,6 +123,6 @@ export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Mov
 	}
 }
 
-export function Actor(options: ActorOptions): ZylemActor {
+export function actor(options: ActorOptions): ZylemActor {
 	return new ZylemActor(options) as ZylemActor;
 }

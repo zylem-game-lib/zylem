@@ -8,9 +8,9 @@ import { StageBlueprint } from './lib/interfaces/stage';
 import { PerspectiveType } from './lib/interfaces/perspective';
 import { ZylemDebug } from './lib/core/debug';
 import { Vect3 } from './lib/interfaces/utility';
-import { Entity } from './lib/core/entity';
-import { Stage } from './lib/core/stage';
+import { stage } from './lib/core/stage';
 import * as actions from './lib/behaviors/actions';
+import * as entities from './lib/entities/index';
 
 const debug = new ZylemDebug();
 // debug.appendToDOM();
@@ -23,7 +23,7 @@ async function buildGame(options: GameBlueprint) {
 	return game;
 }
 
-function Game(options: GameBlueprint) {
+function game(options: GameBlueprint) {
 	return {
 		start: async () => {
 			const game = await buildGame(options);
@@ -57,14 +57,13 @@ const Util = {
 }
 
 const Zylem = {
-	Game,
-	...PerspectiveType,
-	Entity,
-	Stage,
+	PerspectiveType,
 	Util
 };
 
+const { box, sphere, sprite, plane, zone, actor } = entities;
+
 namespace Zylem { };
 
-export { Zylem, Howl, THREE, RAPIER };
+export { game, stage, box, sphere, sprite, plane, zone, actor, Zylem, Howl, THREE, RAPIER };
 export type { GameBlueprint as ZylemGame, StageBlueprint as ZylemStage, Vect3 };

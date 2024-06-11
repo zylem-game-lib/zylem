@@ -1,11 +1,11 @@
 import { Vector3 } from 'three';
 import { Bullet } from './bullet';
-import { Sprite } from "../../src/lib/entities";
+import { sprite } from "../../src/lib/entities";
 
 const playerSize = new Vector3(1, 1, 0.1);
 
 export function Player(x = 0, y = -8, health = 2) {
-	return Sprite({
+	return sprite({
 		name: `player`,
 		size: playerSize,
 		images: [{

@@ -57,6 +57,6 @@ class ZylemBox extends Mixin(GameEntity, ZylemMaterial, BoxMesh, BoxCollision, M
 	}
 }
 
-export function Box(options: BoxOptions): ZylemBox {
+export function box(options: BoxOptions): ZylemBox {
 	return new ZylemBox(options) as ZylemBox;
 }

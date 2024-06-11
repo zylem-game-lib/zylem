@@ -1,19 +1,17 @@
 import { Color, Vector2 } from "three";
-import { Zylem } from "../../src/main";
+import { game, stage, Zylem } from "../../src/main";
 import { Invader } from "./invader";
 import { Player } from "./player";
+const { Flat2D } = Zylem.PerspectiveType;
 
-const { Stage, Game } = Zylem;
-const { Flat2D } = Zylem;
-
-const spaceInvaders = Game({
+const spaceInvaders = game({
 	id: 'playground',
 	globals: {
 		score: 0,
 		lives: 3,
 		invaderCount: 0,
 	},
-	stages: [Stage({
+	stages: [stage({
 		perspective: Flat2D,
 		backgroundColor: new Color(Color.NAMES.black),
 		conditions: [

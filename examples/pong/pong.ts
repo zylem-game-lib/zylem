@@ -1,17 +1,16 @@
-import { Zylem } from '../../src/main';
+import { Zylem, stage, game } from '../../src/main';
 import { Color, Vector2 } from 'three';
 import { BoardSide } from './board';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
 
-const { Flat2D, Game, Stage } = Zylem;
-
+const { PerspectiveType } = Zylem;
 const paddle1 = Paddle(0, BoardSide.LEFT);
 const paddle2 = Paddle(1, BoardSide.RIGHT);
 const ball = Ball();
 
-const stage = Stage({
-	perspective: Flat2D,
+const stage1 = stage({
+	perspective: PerspectiveType.Flat2D,
 	backgroundColor: new Color(0, 0, 0),
 	conditions: [
 		{
@@ -62,14 +61,14 @@ const stage = Stage({
 	}
 });
 
-const game = Game({
+const pong = game({
 	id: 'playground',
 	globals: {
 		p1Score: 0,
 		p2Score: 0,
 		winner: 0
 	},
-	stages: [stage],
+	stages: [stage1],
 });
 
-game.start();
+pong.start();

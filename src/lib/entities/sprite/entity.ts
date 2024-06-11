@@ -208,6 +208,6 @@ export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollisio
 	}
 }
 
-export function Sprite(options: SpriteOptions): ZylemSprite {
+export function sprite(options: SpriteOptions): ZylemSprite {
 	return new ZylemSprite(options) as ZylemSprite;
 }

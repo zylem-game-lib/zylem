@@ -1,7 +1,7 @@
 import { THREE } from '../../src/main';
 import { boardHeight, boardWidth } from './board';
 
-import { Sprite } from "../../src/lib/entities";
+import { sprite } from "../../src/lib/entities";
 const { Vector3 } = THREE;
 
 // TODO: write mappings in engine
@@ -28,7 +28,7 @@ const resolveRockSize = (health: number, variant: number) => {
 
 export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 	const rockVariant = Math.floor(Math.random() * 2);
-	return Sprite({
+	return sprite({
 		name: `rock`,
 		size: new Vector3(startingHealth * 0.5, startingHealth * 0.5, startingHealth),
 		images: [

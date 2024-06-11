@@ -1,6 +1,6 @@
 import { Howl } from '../../src/main';
 
-import { Sphere } from "../../src/lib/entities";
+import { sphere } from "../../src/lib/entities";
 import { board } from './board';
 import { Color } from 'three';
 
@@ -17,7 +17,7 @@ export function Ball(startY = 0) {
 	let dy = 0;
 	let speed = 10;
 
-	return Sphere({
+	return sphere({
 		radius: 0.25,
 		color: new Color(1, 1, 1),
 		setup({ entity }) {

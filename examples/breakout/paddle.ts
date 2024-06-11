@@ -1,12 +1,12 @@
 import { Color, Vector3 } from 'three';
 import { board } from './board';
-import { Box } from "../../src/lib/entities";
+import { box } from "../../src/lib/entities";
 
 const paddleSpeed = 20.0;
 const paddleSize = new Vector3(4, 0.5, 1);
 
 export function Paddle() {
-	return Box({
+	return box({
 		name: 'paddle',
 		size: paddleSize,
 		color: new Color(1, 1, 1),

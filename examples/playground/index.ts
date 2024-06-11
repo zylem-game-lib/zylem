@@ -1,22 +1,17 @@
 import { Color, Vector2, Vector3 } from "three";
-import { PerspectiveType } from "../../src/lib/interfaces/perspective";
-import { Zylem } from "../../src/main";
-import { Actor, Box, Plane, Sphere, Sprite, Zone } from "../../src/lib/entities";
-import { Stage } from "../../src/lib/core/stage";
-import { actionOnRelease, actionWithCooldown } from "../../src/lib/behaviors/actions";
+import { game, stage, actor, box, plane, sphere, sprite, zone, Zylem } from "../../src/main";
+const { actionOnRelease, actionWithCooldown, actionOnPress } = Zylem.Util;
+const { PerspectiveType } = Zylem;
 
-const { Game, Util } = Zylem;
-const { actionOnPress } = Util;
-
-const box = Box({
+const box1 = box({
 	texture: 'playground/wood-box.jpg',
-	setup({ entity, globals }) {
+	setup({ entity }) {
 		entity.setPosition(9, 3, 30);
 		entity.setRotation(14, 16, 4);
 	},
 });
 
-const zone = Zone({
+const zone1 = zone({
 	size: new Vector3(5, 20, 30),
 	setup({ entity }) {
 		entity.setPosition(10, 3, 20);
@@ -29,23 +24,23 @@ const zone = Zone({
 	}
 });
 
-const ground = Plane({
+const ground = plane({
 	tile: new Vector2(200, 200),
 	repeat: new Vector2(4, 6),
 	static: true,
 	texture: 'playground/grass.jpg',
 });
 
-const sphere = Sphere({
+const sphere1 = sphere({
 	radius: 2,
 	texture: 'playground/rain-man.png',
-	setup({ entity, globals }) {
+	setup({ entity }) {
 		entity.setPosition(-6, 3, 30);
 		entity.setRotation(0, -0.25, 0);
 	},
 });
 
-const sprite = Sprite({
+const mario = sprite({
 	images: [{
 		name: 'idle',
 		file: 'platformer/idle.png'
@@ -93,14 +88,14 @@ const sprite = Sprite({
 let lastMovement = new Vector3();
 let moving = false;
 const actorFactory = (positionX, positionZ = 0) => {
-	return Actor({
+	return actor({
 		animations: ['playground/idle.fbx', 'playground/run.fbx'],
 		static: false,
-		setup({ entity, globals }) {
+		setup({ entity }) {
 			entity.setPosition(positionX, 4, positionZ);
 			entity.animate(0);
 		},
-		update({ delta, entity, inputs, globals, camera }) {
+		update({ entity, inputs, camera }) {
 			let { horizontal, vertical } = inputs[0];
 			const { camera: threeCamera } = camera;
 			if (camera?.target?.uuid !== entity.uuid) {
@@ -140,20 +135,20 @@ const actorFactory = (positionX, positionZ = 0) => {
 	})
 }
 
-const actor = actorFactory(0, 0);
+const actor1 = actorFactory(0, 0);
 const actor2 = actorFactory(15, 10);
 const actor3 = actorFactory(-15, 10);
 
 let cameraIndex = 0;
-let targets = [actor, actor2, actor3];
+let targets = [actor1, actor2, actor3];
 
-const stage = Stage({
+const stage1 = stage({
 	perspective: PerspectiveType.ThirdPerson,
 	backgroundColor: new Color('#88BBFF'),
 	gravity: new Vector3(0, -9, 0),
 	setup: ({ camera }) => {
 		camera.moveCamera(new Vector3(0, 8, 10));
-		camera.target = actor;
+		camera.target = actor1;
 	},
 	update: ({ camera, inputs }) => {
 		const { buttonB, buttonA } = inputs[0];
@@ -173,24 +168,24 @@ const stage = Stage({
 		});
 
 		actionOnRelease(buttonA, () => {
-			actor.moveY(100);
+			actor1.moveY(100);
 		});
 	},
 	children: () => {
 		return [
-			actor,
+			actor1,
 			actor2,
 			actor3,
-			box,
-			sphere,
-			sprite,
+			box1,
+			sphere1,
+			mario,
 			ground,
-			zone,
+			zone1,
 		]
 	},
 })
 
-const game = Game({
+const playground = game({
 	id: 'playground',
 	globals: {
 		score: 0,
@@ -198,7 +193,7 @@ const game = Game({
 		time: 0,
 		actualTime: 0,
 	},
-	stages: [stage]
+	stages: [stage1]
 });
 
-game.start();
+playground.start();

@@ -6,10 +6,10 @@ const sound = new Howl({
 	rate: 3.0,
 });
 const { Vector3 } = THREE;
-import { Sprite } from "../../../src/lib/entities";
+import { sprite } from "../../../src/lib/entities";
 
 export function Coin({ position = new Vector3(0, 0, 0) }) {
-	return Sprite({
+	return sprite({
 		name: `coin`,
 		collisionSize: new Vector3(0.5, 0.5, 1),
 		images: [{
