@@ -4,11 +4,11 @@ import { Paddle } from './paddle';
 import { Ball } from './ball';
 import { Brick } from './brick';
 
-const { PerspectiveType } = Zylem;
+const { Flat2D } = Zylem;
 
 let brickCount = 0;
 const stage1 = stage({
-	perspective: PerspectiveType.Flat2D,
+	perspective: Flat2D,
 	backgroundColor: new Color('#000'),
 	conditions: [
 		{

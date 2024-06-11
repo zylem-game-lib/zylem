@@ -3,10 +3,10 @@ import { Ship } from './ship';
 import { Rock } from './rock';
 import { Vector2 } from 'three';
 const { Color } = THREE;
-const { PerspectiveType } = Zylem;
+const { Flat2D } = Zylem;
 
 const stage1 = stage({
-	perspective: PerspectiveType.Flat2D,
+	perspective: Flat2D,
 	backgroundImage: 'asteroids/space-bg.png',
 	backgroundColor: new Color('#000'),
 	conditions: [

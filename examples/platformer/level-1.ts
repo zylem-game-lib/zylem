@@ -6,12 +6,12 @@ import { Ground } from "./ground";
 import { Player } from "./player";
 import { settings } from "./settings";
 const { Color, Vector3 } = THREE;
-const { PerspectiveType } = Zylem;
+const { ThirdPerson } = Zylem;
 const { groundLevel } = settings;
 
 export function LevelOne() {
 	return stage({
-		perspective: PerspectiveType.ThirdPerson,
+		perspective: ThirdPerson,
 		gravity: new Vector3(0, -10, 0),
 		backgroundColor: new Color(0xA1ADFF),
 		conditions: [

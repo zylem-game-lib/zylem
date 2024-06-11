@@ -57,7 +57,7 @@ const Util = {
 }
 
 const Zylem = {
-	PerspectiveType,
+	...PerspectiveType,
 	Util
 };
 

@@ -1,7 +1,7 @@
 import { Color, Vector2, Vector3 } from "three";
 import { game, stage, actor, box, plane, sphere, sprite, zone, Zylem } from "../../src/main";
 const { actionOnRelease, actionWithCooldown, actionOnPress } = Zylem.Util;
-const { PerspectiveType } = Zylem;
+const { ThirdPerson } = Zylem;
 
 const box1 = box({
 	texture: 'playground/wood-box.jpg',
@@ -143,7 +143,7 @@ let cameraIndex = 0;
 let targets = [actor1, actor2, actor3];
 
 const stage1 = stage({
-	perspective: PerspectiveType.ThirdPerson,
+	perspective: ThirdPerson,
 	backgroundColor: new Color('#88BBFF'),
 	gravity: new Vector3(0, -9, 0),
 	setup: ({ camera }) => {

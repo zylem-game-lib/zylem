@@ -4,13 +4,13 @@ import { BoardSide } from './board';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
 
-const { PerspectiveType } = Zylem;
+const { Flat2D } = Zylem;
 const paddle1 = Paddle(0, BoardSide.LEFT);
 const paddle2 = Paddle(1, BoardSide.RIGHT);
 const ball = Ball();
 
 const stage1 = stage({
-	perspective: PerspectiveType.Flat2D,
+	perspective: Flat2D,
 	backgroundColor: new Color(0, 0, 0),
 	conditions: [
 		{
