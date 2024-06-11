@@ -47,5 +47,5 @@ export declare class ZylemZone extends ZylemZone_base {
     update(params: EntityParameters<ZylemZone>): void;
     destroy(params: EntityParameters<ZylemZone>): void;
 }
-export declare function Zone(options: ZoneOptions): ZylemZone;
+export declare function zone(options: ZoneOptions): ZylemZone;
 export {};

@@ -23,5 +23,5 @@ declare class ZylemBox extends ZylemBox_base {
     update(params: EntityParameters<ZylemBox>): void;
     destroy(params: EntityParameters<ZylemBox>): void;
 }
-export declare function Box(options: BoxOptions): ZylemBox;
+export declare function box(options: BoxOptions): ZylemBox;
 export {};

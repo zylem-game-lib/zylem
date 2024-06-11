@@ -22,5 +22,5 @@ export declare class ZylemSphere extends ZylemSphere_base {
     update(params: EntityParameters<ZylemSphere>): void;
     destroy(params: EntityParameters<ZylemSphere>): void;
 }
-export declare function Sphere(options: SphereOptions): ZylemSphere;
+export declare function sphere(options: SphereOptions): ZylemSphere;
 export {};

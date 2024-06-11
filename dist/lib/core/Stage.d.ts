@@ -46,5 +46,5 @@ export declare class ZylemStage extends ZylemStage_base {
     logMissingEntities(): void;
     resize(width: number, height: number): void;
 }
-export declare function Stage(options: StageOptions, ...acts: Function[]): ZylemStage;
+export declare function stage(options: StageOptions, ...acts: Function[]): ZylemStage;
 export {};

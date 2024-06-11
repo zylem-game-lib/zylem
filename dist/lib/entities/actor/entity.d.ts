@@ -37,5 +37,5 @@ export declare class ZylemActor extends ZylemActor_base {
     load(files: string[]): Promise<any>;
     animate(animationIndex: number): void;
 }
-export declare function Actor(options: ActorOptions): ZylemActor;
+export declare function actor(options: ActorOptions): ZylemActor;
 export {};

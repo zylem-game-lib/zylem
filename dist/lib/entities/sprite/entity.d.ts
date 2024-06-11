@@ -55,5 +55,5 @@ export declare class ZylemSprite extends ZylemSprite_base {
     setAnimation(name: string, delta: number): void;
     createDebugMesh(geometry: BufferGeometry): void;
 }
-export declare function Sprite(options: SpriteOptions): ZylemSprite;
+export declare function sprite(options: SpriteOptions): ZylemSprite;
 export {};

@@ -22,5 +22,5 @@ export declare class ZylemPlane extends ZylemPlane_base {
     update(params: EntityParameters<ZylemPlane>): void;
     destroy(params: EntityParameters<ZylemPlane>): void;
 }
-export declare function Plane(options: PlaneOptions): ZylemPlane;
+export declare function plane(options: PlaneOptions): ZylemPlane;
 export {};
