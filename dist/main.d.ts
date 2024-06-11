@@ -24,7 +24,6 @@ interface Zylem {
     PerspectiveType: typeof PerspectiveType;
 }
 declare const Zylem: {
-    PerspectiveType: typeof PerspectiveType;
     Util: {
         actionOnPress: (isPressed: boolean, callback: Function) => void;
         actionOnRelease: (isPressed: boolean, callback: Function) => void;
@@ -34,6 +33,11 @@ declare const Zylem: {
         }, callback: Function, update: Function) => void;
         actionWithThrottle: (timer: number, callback: Function) => void;
     };
+    FirstPerson: PerspectiveType.FirstPerson;
+    ThirdPerson: PerspectiveType.ThirdPerson;
+    Isometric: PerspectiveType.Isometric;
+    Flat2D: PerspectiveType.Flat2D;
+    Fixed2D: PerspectiveType.Fixed2D;
 };
 declare const box: typeof entities.box, sphere: typeof entities.sphere, sprite: typeof entities.sprite, plane: typeof entities.plane, zone: typeof entities.zone, actor: typeof entities.actor;
 declare namespace Zylem { }

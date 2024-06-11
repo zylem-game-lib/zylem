@@ -55376,7 +55376,7 @@ function Pv(i) {
 const Jv = {
   ...Fb
 }, Zv = {
-  PerspectiveType: qg,
+  ...qg,
   Util: Jv
 }, { box: Wv, sphere: jv, sprite: Vv, plane: Xv, zone: zv, actor: $v } = Rv, AO = Qk.Howl;
 export {
