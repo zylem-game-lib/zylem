@@ -1,12 +1,12 @@
 import { Color } from 'three';
 import { observable } from '@simplyianm/legend-state';
-import { PerspectiveType } from '../interfaces/perspective';
+import { Perspectives } from '../interfaces/perspective';
 import { StageBlueprint } from '../interfaces/stage';
 
 const stageState$ = observable({
 	backgroundColor: Color.NAMES.cornflowerblue,
 	backgroundImage: '',
-	perspective: PerspectiveType
+	perspective: Perspectives
 } as unknown as Pick<StageBlueprint, 'backgroundColor' | 'backgroundImage' | 'perspective'>);
 
 const stageState = stageState$.get();

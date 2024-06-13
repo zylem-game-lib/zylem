@@ -1,9 +1,9 @@
-import { game, stage, Zylem, THREE } from '../../src/main';
+import { game, stage, THREE, Perspectives } from '../../src/main';
 import { Ship } from './ship';
 import { Rock } from './rock';
 import { Vector2 } from 'three';
 const { Color } = THREE;
-const { Flat2D } = Zylem;
+const { Flat2D } = Perspectives;
 
 const stage1 = stage({
 	perspective: Flat2D,

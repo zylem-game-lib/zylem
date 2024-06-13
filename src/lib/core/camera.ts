@@ -1,7 +1,7 @@
 import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { stageState } from '../state/index';
-import { PerspectiveType } from '../interfaces/perspective';
+import { PerspectiveType, Perspectives } from '../interfaces/perspective';
 import { GameEntity } from './game-entity';
 
 const zModifier = 45;
@@ -30,12 +30,12 @@ export class ZylemCamera {
 		this.renderer = renderer;
 	}
 
-	[PerspectiveType.ThirdPerson](aspectRatio: number): Camera {
+	[Perspectives.ThirdPerson](aspectRatio: number): Camera {
 		console.warn('Third person camera not fully implemented');
 		return new PerspectiveCamera(zModifier, aspectRatio, 0.1, 1000);
 	}
 
-	[PerspectiveType.Fixed2D](aspectRatio: number, position: Vector3): Camera {
+	[Perspectives.Fixed2D](aspectRatio: number, position: Vector3): Camera {
 		const frustumSize = position.z;
 		const distance = position.distanceTo(new Vector3(0, 0, 0));
 		// const orthographicCamera = new OrthographicCamera(
@@ -59,17 +59,17 @@ export class ZylemCamera {
 		return orthographicCamera;
 	}
 
-	[PerspectiveType.FirstPerson](): Camera {
+	[Perspectives.FirstPerson](): Camera {
 		console.warn('First person camera not fully implemented');
 		return new PerspectiveCamera(45, 1, 0.1, 1000);;
 	}
 
-	[PerspectiveType.Flat2D](aspectRatio: number, position: Vector3): Camera {
+	[Perspectives.Flat2D](aspectRatio: number, position: Vector3): Camera {
 		console.warn('Flat2D camera not fully implemented');
-		return this[PerspectiveType.Fixed2D](aspectRatio, position);
+		return this[Perspectives.Fixed2D](aspectRatio, position);
 	}
 
-	[PerspectiveType.Isometric](aspectRatio: number, position: Vector3): Camera {
+	[Perspectives.Isometric](aspectRatio: number, position: Vector3): Camera {
 		console.warn('Isometric camera not fully implemented');
 		const frustumSize = 20;
 		const isometricCamera = new OrthographicCamera(
@@ -113,7 +113,7 @@ export class ZylemCamera {
 	}
 
 	moveCamera(position: Vector3) {
-		const adjustedZ = (this._perspective !== PerspectiveType.Flat2D) ? position.z + zModifier : position.z;
+		const adjustedZ = (this._perspective !== Perspectives.Flat2D) ? position.z + zModifier : position.z;
 		this.cameraRig.position.set(position.x, position.y, adjustedZ);
 	}
 

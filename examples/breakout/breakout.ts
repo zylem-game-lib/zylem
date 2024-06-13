@@ -1,10 +1,10 @@
-import { Zylem, game, stage } from '../../src/main';
+import { Perspectives, game, stage } from '../../src/main';
 import { Color, Vector2 } from 'three';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
 import { Brick } from './brick';
 
-const { Flat2D } = Zylem;
+const { Flat2D } = Perspectives;
 
 let brickCount = 0;
 const stage1 = stage({

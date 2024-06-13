@@ -1,7 +1,7 @@
 import { Color, Vector2, Vector3 } from "three";
-import { game, stage, actor, box, plane, sphere, sprite, zone, Zylem } from "../../src/main";
+import { game, stage, actor, box, plane, sphere, sprite, zone, Perspectives, Zylem } from "../../src/main";
 const { actionOnRelease, actionWithCooldown, actionOnPress } = Zylem.Util;
-const { ThirdPerson } = Zylem;
+const { ThirdPerson } = Perspectives;
 
 const box1 = box({
 	texture: 'playground/wood-box.jpg',

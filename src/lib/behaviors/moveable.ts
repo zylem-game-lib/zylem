@@ -4,7 +4,7 @@ import { Mixin } from "ts-mixer";
 import { OptionalVector } from "~/lib/interfaces/entity";
 import { GameEntity } from "../core/game-entity";
 import { EntityErrors } from "../core/errors";
-import { PerspectiveType } from "../interfaces/perspective";
+import { Perspectives } from "../interfaces/perspective";
 
 export class Moveable extends Mixin(GameEntity, EntityErrors) {
 
@@ -41,7 +41,7 @@ export class Moveable extends Mixin(GameEntity, EntityErrors) {
 		let finalMovement = movementVector;
 		if (this.stageRef) {
 			const { perspective } = this.stageRef;
-			if (perspective === PerspectiveType.Fixed2D || perspective === PerspectiveType.Flat2D) {
+			if (perspective === Perspectives.Fixed2D || perspective === Perspectives.Flat2D) {
 				finalMovement.set(movementVector.x, movementVector.y, 0);
 			}
 		}

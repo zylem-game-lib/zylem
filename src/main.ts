@@ -5,7 +5,7 @@ import { Howl } from 'howler';
 import { ZylemGame } from './lib/core/game';
 import { GameBlueprint } from './lib/interfaces/game';
 import { StageBlueprint } from './lib/interfaces/stage';
-import { PerspectiveType } from './lib/interfaces/perspective';
+import { PerspectiveType, Perspectives } from './lib/interfaces/perspective';
 import { ZylemDebug } from './lib/core/debug';
 import { Vect3 } from './lib/interfaces/utility';
 import { stage } from './lib/core/stage';
@@ -47,17 +47,11 @@ interface Game {
 	end: () => {};
 }
 
-interface Zylem {
-	Game: (options: GameBlueprint) => Game;
-	PerspectiveType: typeof PerspectiveType;
-}
-
 const Util = {
 	...actions
 }
 
 const Zylem = {
-	...PerspectiveType,
 	Util
 };
 
@@ -65,5 +59,5 @@ const { box, sphere, sprite, plane, zone, actor } = entities;
 
 namespace Zylem { };
 
-export { game, stage, box, sphere, sprite, plane, zone, actor, Zylem, Howl, THREE, RAPIER };
-export type { GameBlueprint as ZylemGame, StageBlueprint as ZylemStage, Vect3 };
+export { game, stage, box, sphere, sprite, plane, zone, actor, Perspectives, Zylem, Howl, THREE, RAPIER };
+export type { GameBlueprint as ZylemGame, StageBlueprint as ZylemStage, Vect3, PerspectiveType };

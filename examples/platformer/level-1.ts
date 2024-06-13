@@ -1,12 +1,12 @@
 import { Vector2 } from "three";
-import { Zylem, THREE, stage } from "../../src/main";
+import { Zylem, THREE, stage, Perspectives } from "../../src/main";
 import { Coin } from "./game-objects/coin";
 import { Goal } from "./game-objects/goal";
 import { Ground } from "./ground";
 import { Player } from "./player";
 import { settings } from "./settings";
 const { Color, Vector3 } = THREE;
-const { ThirdPerson } = Zylem;
+const { ThirdPerson } = Perspectives;
 const { groundLevel } = settings;
 
 export function LevelOne() {

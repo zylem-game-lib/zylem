@@ -13,7 +13,7 @@ import { ZylemHUD } from "../ui/hud";
 import { EntityParameters, GameEntity } from "./";
 import { World } from "@dimforge/rapier3d-compat";
 import { Mixin } from "ts-mixer";
-import { PerspectiveType } from "../interfaces/perspective";
+import { PerspectiveType, Perspectives } from "../interfaces/perspective";
 import { ZylemBlueColor } from "../interfaces/utility";
 import { BaseEntity } from "./base-entity";
 
@@ -54,7 +54,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		this.world = null;
 		this.scene = null;
 		this.HUD = new ZylemHUD();
-		this.perspective = options.perspective ?? PerspectiveType.ThirdPerson;
+		this.perspective = options.perspective ?? Perspectives.ThirdPerson;
 		this.backgroundColor = options.backgroundColor ?? ZylemBlueColor;
 		this.backgroundImage = options.backgroundImage ?? '';
 		this.gravity = options.gravity ?? new Vector3(0, 0, 0);

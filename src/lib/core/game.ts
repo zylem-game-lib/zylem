@@ -1,7 +1,7 @@
 import GamePad from '../input/game-pad';
 import { Clock } from 'three';
 import { GameBlueprint, GameRatio } from '../interfaces/game';
-import { PerspectiveType } from "../interfaces/perspective";
+import { PerspectiveType, Perspectives } from "../interfaces/perspective";
 import { setGlobalState } from '../state/index';
 import { EntityParameters } from './entity';
 import { ZylemStage } from './stage';
@@ -15,7 +15,7 @@ type Timeout = /*unresolved*/ any;
 export class ZylemGame implements GameBlueprint {
 	id: string;
 	ratio: GameRatio;
-	perspective: PerspectiveType = PerspectiveType.ThirdPerson;
+	perspective: PerspectiveType = Perspectives.ThirdPerson;
 	globals: any;
 	stages: ZylemStage[] = [];
 	blueprintOptions: GameBlueprint;

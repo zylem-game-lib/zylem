@@ -1,8 +1,8 @@
 import { Color, Vector2 } from "three";
-import { game, stage, Zylem } from "../../src/main";
+import { game, stage, Perspectives } from "../../src/main";
 import { Invader } from "./invader";
 import { Player } from "./player";
-const { Flat2D } = Zylem;
+const { Flat2D } = Perspectives;
 
 const spaceInvaders = game({
 	id: 'playground',
