@@ -28,6 +28,10 @@ export declare class ZylemGame implements GameBlueprint {
      * update physics
      * render scene
      */
+    lastTimeStamp: number;
+    frameThrottle: number;
+    static FRAME_LIMIT: number;
+    static FRAME_DURATION: number;
     loop(timeStamp: number): void;
     runLoop(): void;
     start(): void;
