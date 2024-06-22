@@ -57,7 +57,18 @@ export class ZylemGame implements GameBlueprint {
 	 * update physics
 	 * render scene
 	 */
+	lastTimeStamp: number = 0;
+	frameThrottle: number = 0;
+
+	static FRAME_LIMIT = 64;
+	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
+
 	loop(timeStamp: number) {
+		if (!this.lastTimeStamp) {
+			this.lastTimeStamp = timeStamp;
+		}
+
+		const elapsed = timeStamp - this.lastTimeStamp;
 		const inputs = this.gamePad.getInputs();
 		const ticks = this.clock.getDelta();
 		const stage = this.getCurrentStage();
@@ -69,10 +80,17 @@ export class ZylemGame implements GameBlueprint {
 			globals: state$.globals,
 		} as unknown as EntityParameters<ZylemStage>;
 
-		stage.update(options);
-		this.totalTime += ticks;
-		state$.time.set(this.totalTime);
-		this.timeoutId = setTimeout(() => requestAnimationFrame(this.loop.bind(this)), 0);
+		this.frameThrottle += elapsed;
+
+		if (this.frameThrottle >= ZylemGame.FRAME_DURATION) {
+			stage.update(options);
+			this.totalTime += ticks;
+			state$.time.set(this.totalTime);
+			this.frameThrottle = 0;
+			this.lastTimeStamp = timeStamp;
+		}
+
+		requestAnimationFrame(this.loop.bind(this));
 	}
 
 	runLoop() {
