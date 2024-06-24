@@ -57,41 +57,34 @@ export class ZylemGame implements GameBlueprint {
 	 * update physics
 	 * render scene
 	 */
-	lastTimeStamp: number = 0;
-	frameThrottle: number = 0;
+	previousTimeStamp: number = 0;
 
 	static FRAME_LIMIT = 64;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 
-	loop(timeStamp: number) {
-		if (!this.lastTimeStamp) {
-			this.lastTimeStamp = timeStamp;
-		}
+	loop = (timeStamp: number) => {
+        const delta = this.clock.getDelta();
+        const elapsed = timeStamp - this.previousTimeStamp;
 
-		const elapsed = timeStamp - this.lastTimeStamp;
-		const inputs = this.gamePad.getInputs();
-		const ticks = this.clock.getDelta();
-		const stage = this.getCurrentStage();
-		const options = {
-			inputs,
-			entity: stage,
-			delta: ticks,
-			camera: stage.scene?.zylemCamera,
-			globals: state$.globals,
-		} as unknown as EntityParameters<ZylemStage>;
+        if (elapsed >= ZylemGame.FRAME_DURATION) {
+            const inputs = this.gamePad.getInputs();
+            const stage = this.getCurrentStage();
+            const options = {
+                inputs,
+                entity: stage,
+                delta,
+                camera: stage.scene?.zylemCamera,
+                globals: state$.globals,
+            } as EntityParameters<ZylemStage>;
 
-		this.frameThrottle += elapsed;
+            stage.update(options);
+            this.totalTime += delta;
+            state$.time.set(this.totalTime);
+            this.previousTimeStamp = timeStamp;
+        }
 
-		if (this.frameThrottle >= ZylemGame.FRAME_DURATION) {
-			stage.update(options);
-			this.totalTime += ticks;
-			state$.time.set(this.totalTime);
-			this.frameThrottle = 0;
-			this.lastTimeStamp = timeStamp;
-		}
-
-		requestAnimationFrame(this.loop.bind(this));
-	}
+        requestAnimationFrame(this.loop);
+    }
 
 	runLoop() {
 		const stage = this.getCurrentStage();
