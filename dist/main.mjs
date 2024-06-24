@@ -27844,24 +27844,26 @@ const uC = Mk({
      * update physics
      * render scene
      */
-    V(this, "lastTimeStamp", 0);
-    V(this, "frameThrottle", 0);
+    V(this, "previousTimeStamp", 0);
+    V(this, "loop", (A) => {
+      var C;
+      const I = this.clock.getDelta();
+      if (A - this.previousTimeStamp >= qa.FRAME_DURATION) {
+        const B = this.gamePad.getInputs(), t = this.getCurrentStage(), Q = {
+          inputs: B,
+          entity: t,
+          delta: I,
+          camera: (C = t.scene) == null ? void 0 : C.zylemCamera,
+          globals: uC.globals
+        };
+        t.update(Q), this.totalTime += I, uC.time.set(this.totalTime), this.previousTimeStamp = A;
+      }
+      requestAnimationFrame(this.loop);
+    });
     zy(A.globals), this._initialGlobals = { ...A.globals }, this.id = A.id, this.ratio = A.ratio ?? "16:9", this._targetRatio = Number(this.ratio.split(":")[0]) / Number(this.ratio.split(":")[1]), this.gamePad = new sq(), this.clock = new tn(), this.blueprintOptions = { ...A }, this.stages = [I], this._stageMap[I.uuid] = I, this.currentStageId = I.uuid;
   }
   async loadStage(A) {
     await A.buildStage(A.uuid), this._stageMap[A.uuid] = A;
-  }
-  loop(A) {
-    var Q;
-    this.lastTimeStamp || (this.lastTimeStamp = A);
-    const I = A - this.lastTimeStamp, g = this.gamePad.getInputs(), C = this.clock.getDelta(), B = this.getCurrentStage(), t = {
-      inputs: g,
-      entity: B,
-      delta: C,
-      camera: (Q = B.scene) == null ? void 0 : Q.zylemCamera,
-      globals: uC.globals
-    };
-    this.frameThrottle += I, this.frameThrottle >= qa.FRAME_DURATION && (B.update(t), this.totalTime += C, uC.time.set(this.totalTime), this.frameThrottle = 0, this.lastTimeStamp = A), requestAnimationFrame(this.loop.bind(this));
   }
   runLoop() {
     const A = this.getCurrentStage();
