@@ -63,10 +63,10 @@ export class ZylemGame implements GameBlueprint {
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 
 	loop = (timeStamp: number) => {
-        const delta = this.clock.getDelta();
         const elapsed = timeStamp - this.previousTimeStamp;
-
+		console.log(elapsed);
         if (elapsed >= ZylemGame.FRAME_DURATION) {
+			const delta = this.clock.getDelta();
             const inputs = this.gamePad.getInputs();
             const stage = this.getCurrentStage();
             const options = {

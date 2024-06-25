@@ -27846,17 +27846,17 @@ const uC = Mk({
      */
     V(this, "previousTimeStamp", 0);
     V(this, "loop", (A) => {
-      var C;
-      const I = this.clock.getDelta();
-      if (A - this.previousTimeStamp >= qa.FRAME_DURATION) {
-        const B = this.gamePad.getInputs(), t = this.getCurrentStage(), Q = {
+      var g;
+      const I = A - this.previousTimeStamp;
+      if (console.log(I), I >= qa.FRAME_DURATION) {
+        const C = this.clock.getDelta(), B = this.gamePad.getInputs(), t = this.getCurrentStage(), Q = {
           inputs: B,
           entity: t,
-          delta: I,
-          camera: (C = t.scene) == null ? void 0 : C.zylemCamera,
+          delta: C,
+          camera: (g = t.scene) == null ? void 0 : g.zylemCamera,
           globals: uC.globals
         };
-        t.update(Q), this.totalTime += I, uC.time.set(this.totalTime), this.previousTimeStamp = A;
+        t.update(Q), this.totalTime += C, uC.time.set(this.totalTime), this.previousTimeStamp = A;
       }
       requestAnimationFrame(this.loop);
     });
