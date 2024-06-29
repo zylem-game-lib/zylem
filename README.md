@@ -2,6 +2,65 @@
 
 A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.
 
+## Installation
+
+```bash
+pnpm install
+```
+
+```bash
+npm run dev
+```
+
+## Examples
+
+[Check out the examples repo here](https://github.com/tcool86/zylem-examples/tree/master)
+
+## Basic Usage
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zylem - Basic usage</title>
+ </head>
+ <body>
+  <main id="basic-game"></main>
+ </body>
+</html>
+```
+
+```typescript
+import { game, stage, sphere } from '@tcool86/zylem';
+
+const example = game({
+ id: 'basic-game',
+ globals: {
+  score: 0
+ },
+ stages: [
+  stage({
+   children: [
+    sphere({
+     update: ({ entity: ball, inputs }) => {
+      const { moveRight, moveLeft } = inputs[0];
+      if (moveRight) {
+       ball.moveX(5);
+      } else if (moveLeft) {
+       ball.moveX(-5);
+      }
+     }
+    })
+   ]
+  })
+ ],
+});
+
+example.start();
+```
+
 ## Repository Governance
 
 ### Conventional commits
@@ -14,60 +73,3 @@ A powerful and easy-to-use framework for creating simple 3D digital interactive 
 - `perf`: A code change that improves performance
 - `test`: Adding missing or correcting existing tests
 - `build`: Changes that affect the build system or external dependencies (example scopes: vite, npm, typescript, etc)
-
-## Directory structure
-
-### Tentative structuring
-
-```
-├── src
-│  ├── lib
-│  │  ├── behaviors
-│  │  │  ├── Composable.ts
-│  │  │  ├── Interactive.ts
-│  │  │  └── Moveable.ts
-│  │  ├── collision
-│  │  │  ├── Collision.ts
-│  │  │  └── ZylemWorld.ts
-│  │  ├── core
-│  │  │  ├── ZylemDebug.ts
-│  │  │  ├── ZylemGame.ts
-│  │  │  └── ZylemStage.ts
-│  │  ├── device
-│  │  │  ├── desktop.ts
-│  │  │  ├── mobile.ts
-│  │  │  └── tablet.ts
-│  │  ├── entities
-│  │  │  ├── Box.ts
-│  │  │  ├── Sphere.ts
-│  │  │  ├── Sprite.ts
-│  │  │  ├── Zone.ts
-│  │  │  └── index.ts
-│  │  ├── input
-│  │  │  └── ZylemGamePad.ts
-│  │  ├── interfaces
-│  │  │  ├── Entity.ts
-│  │  │  ├── Game.ts
-│  │  │  ├── GamePad.ts
-│  │  │  ├── Perspective.ts
-│  │  │  ├── Update.ts
-│  │  │  └── Utility.ts
-│  │  ├── rendering
-│  │  │  ├── RenderPass.ts
-│  │  │  ├── ZylemCamera.ts
-│  │  │  ├── ZylemScene.ts
-│  │  │  └── shaders
-│  │  │      ├── fragment
-│  │  │      │  ├── pixelated.fx
-│  │  │      │  └── standard.fx
-│  │  │      └── vertex
-│  │  │          └── standard.fx
-│  │  ├── state
-│  │  │  ├── GameState.ts
-│  │  │  ├── StageState.ts
-│  │  │  └── index.ts
-│  │  └── ui
-│  │      └── ZylemHUD.ts
-│  ├── main.ts
-│  └── tests
-```
