@@ -15,6 +15,7 @@ node_modules
 wip
 _docs
 dist
+stats.html
 
 dist-ssr
 *.local
