@@ -18,16 +18,20 @@ npm run dev
 
 ## Basic Usage
 
+[Basic usage repo here](https://github.com/tcool86/zylem-basic)
+
 ```html
 <!DOCTYPE html>
 <html lang="en">
  <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zylem - Basic usage</title>
+  <title>Zylem - Basic Usage</title>
+  <link rel="stylesheet" href="./index.css" />
  </head>
  <body>
   <main id="basic-game"></main>
+  <script src="./src/index.ts" type="module"></script>
  </body>
 </html>
 ```
@@ -42,14 +46,20 @@ const example = game({
  },
  stages: [
   stage({
-   children: [
+   children: () => [
     sphere({
      update: ({ entity: ball, inputs }) => {
-      const { moveRight, moveLeft } = inputs[0];
+      const { moveRight, moveLeft, moveUp, moveDown } = inputs[0];
       if (moveRight) {
        ball.moveX(5);
       } else if (moveLeft) {
        ball.moveX(-5);
+      } else if (moveUp) {
+       ball.moveY(5);
+      } else if (moveDown) {
+       ball.moveY(-5);
+      } else {
+       ball.moveXY(0, 0);
       }
      }
     })
