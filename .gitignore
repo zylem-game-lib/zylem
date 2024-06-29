@@ -14,6 +14,7 @@ src/**/*.js
 node_modules
 wip
 _docs
+dist
 
 dist-ssr
 *.local
