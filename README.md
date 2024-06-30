@@ -2,6 +2,8 @@
 
 A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.
 
+>Note: This project is still in alpha. There are unfinished features and some APIs that may change.
+
 ## Installation
 
 ```bash
