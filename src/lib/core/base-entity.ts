@@ -5,6 +5,7 @@ import {
 	BaseEntityOptions,
 } from '../interfaces/entity';
 import { Entity, EntityParameters } from './entity';
+import { nanoid } from 'nanoid';
 
 export class BaseEntity<T> implements Entity {
 	public uuid: string;
@@ -18,7 +19,7 @@ export class BaseEntity<T> implements Entity {
 	static entityCount = 1;
 
 	constructor(options: BaseEntityOptions<T>) {
-		this.uuid = `${++BaseEntity.entityCount}`; // TODO: use package for assigning uuid
+		this.uuid = `${++BaseEntity.entityCount}-${nanoid()}`;
 		this._setup = options.setup || (() => { });
 		this._update = options.update || (() => { });
 		this._destroy = options.destroy || (() => { });
