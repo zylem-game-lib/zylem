@@ -39,10 +39,10 @@ const stage1 = stage({
 	children: () => {
 		return [
 			Ship(),
-			Rock({ x: -14, y: -4, startingHealth: 4 }),
+			Rock({ x: -0, y: -4, startingHealth: 4 }),
 			Rock({ x: 10, y: 10, startingHealth: 4 }),
-			Rock({ x: -16, y: 7, startingHealth: 4 }),
-			Rock({ x: -2, y: -12, startingHealth: 4 }),
+			Rock({ x: -3, y: 7, startingHealth: 4 }),
+			Rock({ x: -2, y: -10, startingHealth: 4 }),
 		]
 	},
 });

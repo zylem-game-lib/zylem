@@ -24,6 +24,7 @@ export function Bullet({ position = new Vector2(0, 0), velX = 0, velY = 0 }) {
 			(bullet as any).timer += delta;
 			if ((bullet as any).timer > (bullet as any).totalTime) {
 				(bullet as any).destroy();
+				(bullet as any).timer = 0;
 			}
 		},
 		collision: (bullet: any, other: any, globals: any) => {
@@ -33,8 +34,12 @@ export function Bullet({ position = new Vector2(0, 0), velX = 0, velY = 0 }) {
 					other.hit = true;
 					score.set(score.get() + Math.abs(4 - other.health) * 25);
 				}
+				(bullet as any).timer = 0;
 				bullet.destroy();
 			}
+		},
+		destroy: (entity) => {
+			console.log(entity);
 		}
 	})
 }

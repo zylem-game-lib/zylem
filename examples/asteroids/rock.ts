@@ -106,6 +106,9 @@ export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 				lives.set(newLives);
 				asteroid.hit = true;
 			}
+		},
+		destroy: (entity) => {
+			console.log(entity);
 		}
 	})
 }
