@@ -9,9 +9,9 @@ import { state$ } from '../state';
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
 	world: RAPIER.World;
-	collisionMap: Map<number, Entity<any>> = new Map();
-	collisionBehaviorMap: Map<number, Entity<any>> = new Map();
-	_removalMap: Map<number, Entity<any>> = new Map();
+	collisionMap: Map<string, Entity<any>> = new Map();
+	collisionBehaviorMap: Map<string, Entity<any>> = new Map();
+	_removalMap: Map<string, Entity<any>> = new Map();
 
 	static async loadPhysics(gravity: Vector3) {
 		await RAPIER.init();
@@ -26,6 +26,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	addEntity(entity: any) {
 		const rigidBody = this.world.createRigidBody(entity.bodyDescription);
 		entity.body = rigidBody;
+		entity.body.userData = { uuid: entity.uuid };
 		let useSensor = false;
 		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
 			entity.body.lockTranslations(true, true);
@@ -48,19 +49,19 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			entity.characterController.enableSnapToGround(0.01);
 			entity.collider = collider;
 		}
-		this.collisionMap.set(entity.body.handle, entity);
+		this.collisionMap.set(entity.uuid, entity);
 	}
 
 	setForRemoval(entity: any) {
 		if (entity.body) {
-			this._removalMap.set(entity.body.handle, entity);
+			this._removalMap.set(entity.uuid, entity);
 		}
 	}
 
 	destroyEntity(entity: GameEntity<any>) {
 		if (entity.body) {
-			this.collisionMap.delete(entity.body.handle);
-			this._removalMap.delete(entity.body.handle);
+			this.collisionMap.delete(entity.uuid);
+			this._removalMap.delete(entity.uuid);
 			if (entity.collider) {
 				this.world.removeCollider(entity.collider, true);
 			}
@@ -103,12 +104,15 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			if (!gameEntity.body) {
 				continue;
 			}
-			if (this._removalMap.get(gameEntity.body.handle)) {
+			if (this._removalMap.get(gameEntity.uuid)) {
+				console.log(this._removalMap);
 				this.destroyEntity(gameEntity);
 				continue;
 			}
 			this.world.contactsWith(gameEntity.body.collider(0), (otherCollider) => {
-				const entity = dictionaryRef.get(otherCollider.handle);
+				// @ts-ignore
+				const uuid = otherCollider._parent.userData.uuid;
+				const entity = dictionaryRef.get(uuid);
 				if (!entity) {
 					return;
 				}
@@ -117,7 +121,9 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				}
 			});
 			this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
-				const entity = dictionaryRef.get(otherCollider.handle);
+				// @ts-ignore
+				const uuid = otherCollider._parent.userData.uuid;
+				const entity = dictionaryRef.get(uuid);
 				if (!entity) {
 					return;
 				}
@@ -128,7 +134,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				if (entity._internalCollisionBehavior) {
 					// @ts-ignore
 					entity._internalCollisionBehavior({ entity, other: gameEntity, delta });
-					this.collisionBehaviorMap.set(otherCollider.handle, entity);
+					this.collisionBehaviorMap.set(uuid, entity);
 				}
 			});
 		}
