@@ -1,3 +1,4 @@
+export * from './node';
 export * from './actor/entity';
 export * from './box/entity';
 export * from './plane/entity';
