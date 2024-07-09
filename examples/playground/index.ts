@@ -1,5 +1,6 @@
 import { Color, Vector2, Vector3 } from "three";
-import { game, stage, actor, box, plane, sphere, sprite, zone, Perspectives, Zylem } from "../../src/main";
+import { game, stage, actor, box, plane, sphere, zone, Perspectives, Zylem } from "../../src/main";
+import { node } from "../../src/lib/entities";
 const { actionOnRelease, actionWithCooldown, actionOnPress } = Zylem.Util;
 const { ThirdPerson } = Perspectives;
 
@@ -10,6 +11,24 @@ const box1 = box({
 		entity.setRotation(14, 16, 4);
 	},
 });
+
+
+const nodeTest = node(
+	box({
+		texture: 'playground/wood-box.jpg',
+		setup({ entity }) {
+			entity.setPosition(0, 3, 30);
+			entity.setRotation(0, 16, 4);
+		},
+	}),
+	box({
+		texture: 'playground/grass-normal.png',
+		setup({ entity }) {
+			entity.setPosition(4, 3, 30);
+			entity.setRotation(4, 16, 4);
+		},
+	})
+);
 
 const zone1 = zone({
 	size: new Vector3(5, 20, 30),
@@ -40,52 +59,11 @@ const sphere1 = sphere({
 	},
 });
 
-const mario = sprite({
-	images: [{
-		name: 'idle',
-		file: 'platformer/idle.png'
-	}, {
-		name: 'idle-left',
-		file: 'platformer/idle-left.png'
-	}, {
-		name: 'run-1',
-		file: 'platformer/run-1.png'
-	}, {
-		name: 'run-2',
-		file: 'platformer/run-2.png'
-	}
-	],
-	animations: [{
-		name: 'run',
-		frames: ['run-1', 'idle', 'run-2'],
-		speed: 0.1,
-		loop: true,
-	}],
-	size: new Vector3(1, 1, 1),
-	collisionSize: new Vector3(0.5, 1, 1),
-	setup({ entity, globals }) {
-		entity.setPosition(-2, 2, 30);
-	},
-	update({ delta, entity, inputs, globals }) {
-		entity.setAnimation('run', delta);
-		const { moveLeft, moveRight } = inputs[0];
-		if (moveRight) {
-			entity.moveX(5);
-			entity.setAnimation('run', delta * 2);
-		} else if (moveLeft) {
-			entity.moveX(-5);
-			entity.setAnimation('run', delta * 2);
-		} else {
-			entity.moveX(0);
-		}
-	},
-});
-
-
 let lastMovement = new Vector3();
 let moving = false;
 const actorFactory = (positionX, positionZ = 0) => {
 	return actor({
+		name: 'player',
 		animations: ['playground/idle.fbx', 'playground/run.fbx'],
 		static: false,
 		setup({ entity }) {
@@ -132,12 +110,22 @@ const actorFactory = (positionX, positionZ = 0) => {
 	})
 }
 
-const actor1 = actorFactory(0, 0);
-const actor2 = actorFactory(15, 10);
-const actor3 = actorFactory(-15, 10);
+const actor1 = actorFactory(0, -10);
+const actor2 = actorFactory(17, 10);
+const actor3 = actorFactory(-17, 10);
 
 let cameraIndex = 0;
 let targets = [actor1, actor2, actor3];
+
+const testSpike = actor({
+	models: ['playground/spike.gltf'],
+	static: true,
+	collision: (spike, other, globals) => {
+		if (other.name === 'player') {
+			console.log('player hit!');
+		}
+	}
+});
 
 const stage1 = stage({
 	perspective: ThirdPerson,
@@ -145,17 +133,17 @@ const stage1 = stage({
 	gravity: new Vector3(0, -9, 0),
 	setup: ({ camera }) => {
 		camera.moveCamera(new Vector3(0, 8, 10));
-		camera.target = actor1;
+		camera.target = actor1 as any;
 	},
 	update: ({ camera, inputs }) => {
 		const { buttonB, buttonA } = inputs[0];
 
 		actionOnPress(buttonB, () => {
 			cameraIndex++;
-			if (cameraIndex > 2) {
+			if (cameraIndex > targets.length - 1) {
 				cameraIndex = 0;
 			}
-			camera.target = targets[cameraIndex];
+			camera.target = targets[cameraIndex] as any;
 			console.log('start cooldown')
 			actionWithCooldown({ timer: 5000, immediate: false }, () => {
 				console.log('5 sec cooldown')
@@ -174,8 +162,9 @@ const stage1 = stage({
 			actor2,
 			actor3,
 			box1,
+			testSpike,
+			...nodeTest,
 			sphere1,
-			mario,
 			ground,
 			zone1,
 		]
