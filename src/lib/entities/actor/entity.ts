@@ -1,23 +1,35 @@
 import { AnimationAction, AnimationClip, AnimationMixer, Object3D } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
+import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Mixin } from 'ts-mixer';
 
 import { EntityParameters, GameEntity } from "../../core";
 import { GameEntityOptions } from "../../interfaces/entity";
 import { Moveable } from '../../behaviors/moveable';
 import { ActorMesh, ActorCollision } from './index';
+import { EntityErrors } from '~/lib/core/errors';
+
+enum FileExtensionTypes {
+	FBX = 'fbx',
+	GLTF = 'gltf'
+}
+type SupportedLoaders = FBXLoader | GLTFLoader;
+const compatibleExtensions: Array<FileExtensionTypes> = [FileExtensionTypes.FBX, FileExtensionTypes.GLTF];
 
 type ZylemActorOptions = {
 	static?: boolean;
 	animations?: string[];
+	models?: string[];
 }
 
 type ActorOptions = GameEntityOptions<ZylemActorOptions, ZylemActor>;
 
-export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Moveable) {
+export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Moveable, EntityErrors) {
 	protected type = 'Actor';
 	_static: boolean = false;
 	_fbxLoader: FBXLoader = new FBXLoader();
+	_gltfLoader: GLTFLoader = new GLTFLoader();
+	_loaderMap: Map<FileExtensionTypes, SupportedLoaders> = new Map();
 	_object: Object3D | null = null;
 	_mixer: AnimationMixer | null = null;
 	_actions: AnimationAction[] = [];
@@ -25,15 +37,20 @@ export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Mov
 	_animationFileNames: string[] = [];
 	_currentAction: AnimationAction | null = null;
 	_animationIndex: number = 0;
+	_modelFileNames: string[] = [];
 
 	constructor(options: ZylemActorOptions) {
 		super(options as GameEntityOptions<{}, unknown>);
 		this._static = options.static ?? false;
 		this._animationFileNames = options.animations || [];
+		this._modelFileNames = options.models || [];
+		this._loaderMap.set(FileExtensionTypes.FBX, this._fbxLoader);
+		this._loaderMap.set(FileExtensionTypes.GLTF, this._gltfLoader);
 	}
 
 	async createFromBlueprint(): Promise<this> {
 		await this.load(this._animationFileNames);
+		await this.load(this._modelFileNames);
 		// TODO: consider refactor to not have to pass materials
 		this.createMesh({ group: this.group, object: this._object, materials: [] });
 		this.controlledRotation = true;
@@ -63,28 +80,53 @@ export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Mov
 		this._destroy({ ...params, entity: this });
 	}
 
-	loadFile(file: string): Promise<AnimationClip> {
+	loadFile(file: string): Promise<AnimationClip | any> {
+		const extension = new URL(file, 'file://').pathname.split('.').pop();
+		const isCompatible = compatibleExtensions.includes(extension as FileExtensionTypes);
+		const dynamicFileLoader = this._loaderMap.get(extension as FileExtensionTypes);
+		if (!isCompatible || !dynamicFileLoader) {
+			this.errorIncompatibleFileType(extension);
+			return Promise.reject(null);
+		}
 		return new Promise((resolve, reject) => {
-			return this._fbxLoader.load(
-				file,
-				(object: Object3D) => {
-					if (!this._object) {
-						this._object = object;
+			if (dynamicFileLoader instanceof FBXLoader) {
+				return dynamicFileLoader.load(
+					file,
+					(object: Object3D) => {
+						if (!this._object) {
+							this._object = object;
+						}
+						if (!this._mixer) {
+							this._mixer = new AnimationMixer(object);
+						}
+						const animation = object.animations[this._animationIndex];
+						resolve(animation);
+					},
+					(xhr: { loaded: number; total: number; }) => {
+						console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
+					},
+					(error: any) => {
+						console.error(error);
+						reject(error);
 					}
-					if (!this._mixer) {
-						this._mixer = new AnimationMixer(object);
+				)
+			}
+			if (dynamicFileLoader instanceof GLTFLoader) {
+				return dynamicFileLoader.load(
+					file,
+					(gltf: GLTF) => {
+						this._object = gltf.scene;
+						resolve(gltf);
+					},
+					(xhr: { loaded: number; total: number; }) => {
+						console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
+					},
+					(error: any) => {
+						console.error(error);
+						reject(error);
 					}
-					const animation = object.animations[this._animationIndex];
-					resolve(animation);
-				},
-				(xhr: { loaded: number; total: number; }) => {
-					console.log((xhr.loaded / xhr.total) * 100 + '% loaded');
-				},
-				(error: any) => {
-					console.error(error);
-					reject(error);
-				}
-			)
+				)
+			}
 		});
 	}
 
@@ -94,19 +136,27 @@ export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Mov
 	 * @param files
 	 */
 	async load(files: string[]): Promise<any> {
+		if (files.length === 0) {
+			return;
+		}
 		const promises = new Array();
 		for (let file of files) {
 			promises.push(this.loadFile(file));
 		}
-		const animations = await Promise.all(promises);
-		this._animations = animations;
-		for (let animation of this._animations) {
-			if (this._mixer) {
-				const action: AnimationAction = this._mixer?.clipAction(animation);
-				this._actions.push(action);
+		const loadedFiles = await Promise.all(promises);
+		// TODO: create better abstraction
+		if (loadedFiles[0] instanceof AnimationClip) {
+			this._animations = loadedFiles;
+			for (let animation of this._animations) {
+				if (this._mixer) {
+					const action: AnimationAction = this._mixer?.clipAction(animation);
+					this._actions.push(action);
+				}
 			}
+			this._currentAction = this._actions[this._animationIndex];
+		} else {
+			this.group.add(loadedFiles[0].scene);
 		}
-		this._currentAction = this._actions[this._animationIndex];
 		return this;
 	}
 

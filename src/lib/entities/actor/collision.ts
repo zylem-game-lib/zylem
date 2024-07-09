@@ -21,6 +21,9 @@ export class ActorCollision extends BaseCollision {
 		const skinnedMesh = object.children[0] as SkinnedMesh;
 		const geometry = skinnedMesh.geometry as BufferGeometry;
 
+		if (!geometry) {
+			return;
+		}
 		geometry.computeBoundingBox();
 		if (geometry.boundingBox) {
 			const maxY = geometry.boundingBox.max.y;
