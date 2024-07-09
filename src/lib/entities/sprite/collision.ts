@@ -14,7 +14,7 @@ export class SpriteCollision extends BaseCollision {
 			.lockRotations()
 			.setGravityScale(gravityScale)
 			.setCanSleep(false)
-			.setCcdEnabled(false);
+			.setCcdEnabled(true);
 	}
 
 	createCollider(isSensor: boolean = false) {

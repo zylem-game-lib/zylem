@@ -149,15 +149,15 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			this.scene.scene.add(entity.group);
 		}
 		entity.stageRef = this;
-		this.world.addEntity(entity);
 		if (child._custom) {
 			for (let key in child._custom) {
 				if (entity[key]) { continue; }
 				entity[key] = child._custom[key];
 			}
 		}
-		this._childrenMap.set(entity.uuid, entity);
+		this.world.addEntity(entity);
 		child.setup({ entity });
+		this._childrenMap.set(entity.uuid, entity);
 	}
 
 	setForRemoval(entity: GameEntity<any>) {

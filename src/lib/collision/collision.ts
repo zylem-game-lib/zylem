@@ -14,6 +14,6 @@ export class BaseCollision {
 			.setTranslation(0, 0, 0)
 			.setGravityScale(1.0)
 			.setCanSleep(false)
-			.setCcdEnabled(false);
+			.setCcdEnabled(true);
 	}
 }

@@ -55,13 +55,13 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	destroyEntity(entity: GameEntity<any>) {
+		if (entity.collider) {
+			this.world.removeCollider(entity.collider, true);
+		}
 		if (entity.body) {
+			this.world.removeRigidBody(entity.body);
 			this.collisionMap.delete(entity.uuid);
 			this._removalMap.delete(entity.uuid);
-			if (entity.collider) {
-				this.world.removeCollider(entity.collider, true);
-			}
-			this.world.removeRigidBody(entity.body);
 		}
 	}
 
