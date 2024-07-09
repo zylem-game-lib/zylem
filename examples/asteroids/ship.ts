@@ -21,8 +21,6 @@ export function Ship(x = 0, y = 0) {
 		custom: {
 			rotationSpeed: 0.05,
 			thrust: 0.1,
-			bulletCurrent: 0,
-			// bulletRate: 0.2,
 		},
 		setup: ({ entity }) => {
 			entity.setPosition(x, y, 0);

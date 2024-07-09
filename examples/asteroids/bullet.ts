@@ -1,10 +1,14 @@
-import { Color, Vector2 } from "three";
-import { sphere } from "../../src/lib/entities";
+import { Color, Vector2, Vector3 } from "three";
+import { sprite } from "../../src/lib/entities";
 
 export function Bullet({ position = new Vector2(0, 0), velX = 0, velY = 0 }) {
-	return sphere({
+	return sprite({
 		name: `bullet`,
-		radius: 0.1,
+		size: new Vector3(0.5,0.5,1),
+		images: [{
+			name: 'normal',
+			file: 'asteroids/bullet.png'
+		}],
 		color: new Color(Color.NAMES.gold),
 		custom: {
 			velX: 0,
@@ -38,8 +42,5 @@ export function Bullet({ position = new Vector2(0, 0), velX = 0, velY = 0 }) {
 				bullet.destroy();
 			}
 		},
-		destroy: (entity) => {
-			console.log(entity);
-		}
 	})
 }

@@ -79,9 +79,6 @@ const mario = sprite({
 			entity.moveX(0);
 		}
 	},
-	destroy({ entity, globals }) {
-		console.log(entity);
-	},
 });
 
 

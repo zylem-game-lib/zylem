@@ -84,7 +84,6 @@ export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 				asteroid.destroy();
 			}
 			asteroid.hitCooldown += delta;
-			asteroid.wrapAroundXY(boardWidth, boardHeight);
 			if (hit && hitCooldown >= 1) {
 				asteroid.health--;
 				asteroid.hit = false;
@@ -95,6 +94,7 @@ export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 				}
 				asteroid.hitCooldown = 0;
 			}
+			asteroid.wrapAroundXY(boardWidth, boardHeight);
 		},
 		collision: (asteroid: any, other: any, globals) => {
 			const { lives } = globals;
@@ -107,8 +107,5 @@ export function Rock({ x = 0, y = 0, startingHealth = 4 }) {
 				asteroid.hit = true;
 			}
 		},
-		destroy: (entity) => {
-			console.log(entity);
-		}
 	})
 }
