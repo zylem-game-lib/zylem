@@ -1,5 +1,5 @@
-import GamePad from '../input/game-pad';
 import { Clock } from 'three';
+import GamePad from '../input/game-pad';
 import { GameBlueprint, GameRatio } from '../interfaces/game';
 import { PerspectiveType } from "../interfaces/perspective";
 import { ZylemStage } from './stage';
