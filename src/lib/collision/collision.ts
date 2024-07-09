@@ -1,14 +1,5 @@
 import { RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { Color, Vector3 } from "three";
-
-export interface BoxCollisionInterface {
-	createCollision: (params: CreateCollisionParameters) => void;
-}
-
-export type CreateCollisionParameters = {
-	isDynamicBody?: boolean;
-	size?: Vector3 | undefined;
-}
+import { Color } from "three";
 
 export class BaseCollision {
 	_static: boolean = false;

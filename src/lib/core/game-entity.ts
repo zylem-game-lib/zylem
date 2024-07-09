@@ -40,13 +40,17 @@ export class GameEntity<T> extends BaseEntity<T> {
 		throw new Error('Method not implemented.');
 	}
 
-	public setup(_params: Partial<EntityParameters<any>>) { }
+	public setup(_params: Partial<EntityParameters<any>>) {
+		super.setup(_params);
+	}
 
 	public update(_params: EntityParameters<any>): void {
+		super.update(_params);
 		this.movement();
 	}
 
 	public destroy(_params: EntityParameters<any>): void {
+		super.destroy(_params);
 		if (this.body) {
 			this.body.setEnabled(false);
 		}

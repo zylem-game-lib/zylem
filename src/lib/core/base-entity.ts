@@ -26,18 +26,11 @@ export class BaseEntity<T> implements Entity {
 		this._custom = options.custom || {};
 	}
 
-	protected createUuid(type: string) {
-		this.type = type;
-		this.uuid = `${this.type}-${this.uuid}`;
-	}
-
 	public createFromBlueprint(): Promise<any> {
 		throw new Error('Method not implemented.');
 	}
 
-	public setup(_params: Partial<EntityParameters<any>>) {
-		this.createUuid(_params.entity.type);
-	}
+	public setup(_params: Partial<EntityParameters<any>>) { }
 
 	public update(_params: EntityParameters<any>): void { }
 
