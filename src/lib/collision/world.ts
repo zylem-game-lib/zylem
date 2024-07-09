@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
+import RAPIER, { World } from '@dimforge/rapier3d-compat';
 
 import { Entity } from '../interfaces/entity';
 import { GameEntity } from '../core/game-entity';
@@ -8,7 +8,7 @@ import { state$ } from '../state';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
-	world: RAPIER.World;
+	world: World;
 	collisionMap: Map<string, Entity<any>> = new Map();
 	collisionBehaviorMap: Map<string, Entity<any>> = new Map();
 	_removalMap: Map<string, Entity<any>> = new Map();
@@ -19,7 +19,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		return physicsWorld;
 	}
 
-	constructor(world: RAPIER.World) {
+	constructor(world: World) {
 		this.world = world;
 	}
 
@@ -33,10 +33,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			entity.body.lockRotations(true, true);
 		} else {
 			useSensor = entity.sensor ?? false;
-		}
-		// TODO: useSensor should be set within entity class
-		if (entity.type === 'Zone') {
-			useSensor = true;
 		}
 		const colliderDesc = entity.createCollider(useSensor);
 		const collider = this.world.createCollider(colliderDesc, entity.body);
@@ -105,7 +101,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				continue;
 			}
 			if (this._removalMap.get(gameEntity.uuid)) {
-				console.log(this._removalMap);
 				this.destroyEntity(gameEntity);
 				continue;
 			}
