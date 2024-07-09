@@ -4,7 +4,6 @@ import { observable } from '@simplyianm/legend-state';
 const state$ = observable({
 	id: '',
 	globals: {},
-	debug: {},
 	time: 0,
 	elements: {
 		hud: null,

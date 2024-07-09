@@ -18,6 +18,7 @@ import { stageState } from '../state';
 import { EntityParameters } from '../core/entity';
 import { ThirdPersonCamera } from '../entities/camera/third-person';
 import { ZylemCamera } from '../core/camera';
+import { debugState } from '../state/debug-state';
 
 export class ZylemScene implements Entity<ZylemScene> {
 	type = 'Scene';
@@ -52,8 +53,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 		}
 		this.containerElement = element;
 		element.appendChild(this.renderer.domElement);
-		// TODO: this needs to be exposed at the stage options level
-		// this.debugScene();
+		if (debugState.on) {
+			this.debugScene();
+		}
 	}
 
 	setup() {

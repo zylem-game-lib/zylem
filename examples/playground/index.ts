@@ -173,6 +173,8 @@ const stage1 = stage({
 
 const playground = game({
 	id: 'playground',
+	debug: false,
+	debugConfiguration: {},
 	globals: {
 		score: 0,
 		lives: 3,

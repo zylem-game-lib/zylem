@@ -11,15 +11,16 @@ import { Vect3 } from './lib/interfaces/utility';
 import { stage } from './lib/core/stage';
 import * as actions from './lib/behaviors/actions';
 import * as entities from './lib/entities/index';
-
-const debug = new ZylemDebug();
-// debug.appendToDOM();
-// options.debug = debug;
+import { debugState } from './lib/state/debug-state';
 
 async function buildGame(options: GameBlueprint) {
 	const bluePrintCopy = { ...options };
 	await options.stages[0].buildStage(options.id);
 	const game = new ZylemGame(bluePrintCopy, options.stages[0]);
+	if (debugState.on) {
+		const debug = new ZylemDebug();
+		debug.appendToDOM();
+	}
 	return game;
 }
 

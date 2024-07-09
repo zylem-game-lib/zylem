@@ -16,6 +16,7 @@ import { Mixin } from "ts-mixer";
 import { PerspectiveType, Perspectives } from "../interfaces/perspective";
 import { ZylemBlueColor } from "../interfaces/utility";
 import { BaseEntity } from "./base-entity";
+import { debugState } from "../state/debug-state";
 
 type ZylemStageOptions = {
 	perspective: PerspectiveType;
@@ -96,12 +97,14 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			this.logMissingEntities();
 			return;
 		}
-		this._debugLines = new LineSegments(
-			new BufferGeometry(),
-			new LineBasicMaterial({ vertexColors: true })
-		);
-		this.scene.scene.add(this._debugLines);
-		this._debugLines.visible = true;
+		if (debugState.on) {
+			this._debugLines = new LineSegments(
+				new BufferGeometry(),
+				new LineBasicMaterial({ vertexColors: true })
+			);
+			this.scene.scene.add(this._debugLines);
+			this._debugLines.visible = true;
+		}
 		this._setup({ ...params, HUD: this.HUD });
 	}
 
@@ -129,7 +132,9 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			this._update({ ...params, entity: this });
 		}
 		this.scene.update({ delta });
-		this.debugStage(this.world.world);
+		if (debugState.on) {
+			this.debugStage(this.world.world);
+		}
 	}
 
 	public destroy(params: EntityParameters<ZylemStage>): void {

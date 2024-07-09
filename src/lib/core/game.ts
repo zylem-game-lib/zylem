@@ -1,12 +1,14 @@
-import GamePad from '../input/game-pad';
 import { Clock } from 'three';
+import { observe } from '@simplyianm/legend-state';
+
+import GamePad from '../input/game-pad';
 import { GameBlueprint, GameRatio } from '../interfaces/game';
 import { PerspectiveType, Perspectives } from "../interfaces/perspective";
 import { setGlobalState } from '../state/index';
 import { EntityParameters } from './entity';
 import { ZylemStage } from './stage';
 import { state$ } from '../state/game-state';
-import { observe } from '@simplyianm/legend-state';
+import { setDebugFlag } from '../state/debug-state';
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
@@ -34,6 +36,7 @@ export class ZylemGame implements GameBlueprint {
 
 	constructor(options: GameBlueprint, loadedStage: ZylemStage) {
 		setGlobalState(options.globals);
+		setDebugFlag(options.debug ?? false);
 		this._initialGlobals = { ...options.globals };
 		this.id = options.id;
 		this.ratio = options.ratio ?? '16:9';

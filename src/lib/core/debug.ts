@@ -1,16 +1,24 @@
+//TODO: Debug configuration
+export type DebugConfiguration = {
+	showCollisionBounds?: boolean;
+	showModelBounds?: boolean;
+	showSpriteBounds?: boolean;
+	//TODO: show movement vector? other world related possibilities
+}
+
 export class ZylemDebug extends HTMLElement {
 	constructor() {
 		super();
 		this.style.position = "fixed";
 		this.style.top = "0";
 		this.style.left = "0";
-		this.style.background = "rgba(255, 255, 255, 0.7)";
+		this.style.background = "rgba(255, 255, 255, 0.6)";
 		this.style.padding = "10px";
 		this.style.fontFamily = "monospace";
 		this.style.fontSize = "12px";
 		window.addEventListener("resize", () => {
-			this.style.width = window.innerWidth + "px";
-			this.style.height = window.innerHeight + "px";
+			this.style.width = Math.round(window.innerWidth / 3) + "px";
+			this.style.height = Math.round(window.innerHeight / 3) + "px";
 		});
 	}
 	connectedCallback() {
@@ -18,8 +26,8 @@ export class ZylemDebug extends HTMLElement {
 		debugText.textContent = "This is a debug overlay!";
 		this.appendChild(debugText);
 
-		this.style.width = window.innerWidth + "px";
-		this.style.height = window.innerHeight + "px";
+		this.style.width = Math.round(window.innerWidth / 3) + "px";
+		this.style.height = Math.round(window.innerHeight / 3) + "px";
 	}
 
 	addInfo(info: string) {

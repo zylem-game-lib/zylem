@@ -1,5 +1,5 @@
 import ZylemGame from '~/lib/core/game';
-import { ZylemDebug } from '~/lib/core/debug';
+import { DebugConfiguration } from '~/lib/core/debug';
 import { ZylemScene } from '~/lib/rendering/scene';
 import { ZylemHUD } from '~/lib/ui/hud';
 import { ZylemCamera } from '~/lib/core/camera';
@@ -15,7 +15,8 @@ export interface GameBlueprint {
 	globals: Record<string, any>;
 	stages: ZylemStage[];
 	update?: UpdateFunction<this>;
-	debug?: ZylemDebug;
+	debug?: boolean;
+	debugConfiguration?: DebugConfiguration;
 	time?: number;
 }
 
