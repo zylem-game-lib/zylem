@@ -1,0 +1,7 @@
+{
+  "src/main.ts": {
+    "file": "main.js",
+    "isEntry": true,
+    "src": "src/main.ts"
+  }
+}
