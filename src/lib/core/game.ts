@@ -75,6 +75,7 @@ export class ZylemGame implements GameBlueprint {
                 inputs,
                 entity: stage,
                 delta,
+				HUD: stage.HUD,
                 camera: stage.scene?.zylemCamera,
                 globals: state$.globals,
             } as EntityParameters<ZylemStage>;

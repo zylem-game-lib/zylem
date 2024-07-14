@@ -161,7 +161,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			}
 		}
 		this.world.addEntity(entity);
-		child.setup({ entity });
+		child.setup({ entity, HUD: this.HUD });
 		this._childrenMap.set(entity.uuid, entity);
 	}
 

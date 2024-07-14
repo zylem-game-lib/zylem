@@ -1,10 +1,23 @@
 import { Vector2 } from 'three';
-import { Application, TextStyle, Text, Graphics, DisplayObject } from 'pixi.js';
-import { ZylemBlue } from '../interfaces/utility';
-import { observe } from '@simplyianm/legend-state';
-import { state$ } from '../state/game-state';
+import { Application, Text, Graphics, FillGradient } from 'pixi.js';
+import { Mixin } from 'ts-mixer';
 
-export interface HUDTextOptions {
+import { ZylemBlue } from '../interfaces/utility';
+import { HUDLabel } from './hud-label';
+import { HUDBar } from './hud-bar';
+
+export interface HUDOptions<T> {
+	binding?: string | null;
+	bindings?: string[] | null;
+	update: null | ((element: T, value: any) => void);
+	position?: Vector2;
+}
+
+export interface HUDControl {
+	_app: Application;
+}
+
+export interface HUDBarOptions extends HUDOptions<Text> {
 	binding?: string | null;
 	bindings?: string[] | null;
 	update: null | ((element: Text, value: any) => void);
@@ -12,31 +25,18 @@ export interface HUDTextOptions {
 	style?: any;
 }
 
-export class ZylemHUD {
-	_app: Application | null = null;
-	_hudText: Map<Vector2, Text>;
+export class ZylemHUD extends Mixin(HUDLabel, HUDBar) {
+	_app: Application;
 	_frame: Graphics;
 
-	static defaultStyleParams = {
-		fontFamily: 'Tahoma',
-		fontSize: 36,
-		fontWeight: 'bold',
-		fill: ['#000', ZylemBlue],
-		stroke: '#fff',
-		strokeThickness: 4,
-		wordWrap: true,
-		wordWrapWidth: 440,
-		lineJoin: 'round',
-	};
-
 	constructor() {
-		this._hudText = new Map();
+		const app = new Application();
+		super(app);
+		this._app = app;
 		this._frame = new Graphics();
 	}
 
-	createUI() {
-		const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement;
-		canvas.classList.add('zylem-game-ui');
+	async createUI() {
 		const uiStyle = document.createElement('style');
 		uiStyle.textContent = `
 			.zylem-game-ui {
@@ -48,62 +48,18 @@ export class ZylemHUD {
 			}
 		`;
 		document.head.appendChild(uiStyle);
-		const app = new Application({
-			backgroundAlpha: 0,
-			resizeTo: window,
-			view: canvas
-		});
-		this._app = app;
-		document.body.appendChild(canvas);
+		const app = this._app;
+		await app.init({ backgroundAlpha: 0,resizeTo: window });
+		document.body.appendChild(app.canvas);
+		app.canvas.classList.add('zylem-game-ui');
 
-		const width = canvas.width;
-		const height = canvas.height;
-
-		this.updateFrame(width, height);
-		app.stage.addChild(this._frame as DisplayObject);
-	}
-
-	updateFrame(width: number, height: number) {
+		const width = app.canvas.width;
+		const height = app.canvas.height;
+		const rect = new Graphics();
 		this._frame.clear();
-		this._frame.lineStyle({ width: 6, color: ZylemBlue });
-		this._frame.drawRect(0, 0, width, height);
-	}
-
-	addText(text: string, options?: HUDTextOptions, x: number = 0, y: number = 0): void {
-		if (!this._app) {
-			console.warn('Missing HUD to add text to');
-			return;
-		}
-
-		const useOptions: HUDTextOptions = options
-			? { ...options, style: options.style ?? ZylemHUD.defaultStyleParams }
-			: { bindings: null, update: null, style: ZylemHUD.defaultStyleParams };
-
-		const textStyle = new TextStyle(useOptions.style);
-		const richText = new Text(text, textStyle);
-
-		const screenWidth = this._app.stage.width;
-		const screenHeight = this._app.stage.height;
-
-		const usePosition = new Vector2(
-			useOptions?.position?.x ?? x,
-			useOptions?.position?.y ?? y
-		);
-
-		this.updateTextPosition(usePosition, richText, screenWidth, screenHeight);
-
-		richText.anchor.set(0.5, 0.5);
-
-		const addedText = this._app.stage.addChild(richText as DisplayObject);
-		if (options?.binding && options.update) {
-			const key = options.binding;
-			const updateFn = options.update;
-			observe(() => {
-				const value = state$.globals[key].get();
-				updateFn(addedText as Text, value);
-			});
-		}
-		this._hudText.set(usePosition, richText);
+		this._frame.setStrokeStyle({ width: 6, color: ZylemBlue });
+		rect.rect(0, 0, width, height);
+		app.stage.addChild(this._frame);
 	}
 
 	updateTextPosition(position: Vector2, text: Text, width: number, height: number) {
@@ -112,17 +68,5 @@ export class ZylemHUD {
 
 		text.x = width / (100 / percentX);
 		text.y = height / (100 / percentY);
-	}
-
-	resize(width: number, height: number) {
-		if (this._app) {
-			this._app.view.width = width;
-			this._app.view.height = height;
-			this.updateFrame(width, height);
-			this._hudText.forEach((value, key) => {
-				this.updateTextPosition(key, value, width, height);
-			});
-			this._app.resize();
-		}
 	}
 }

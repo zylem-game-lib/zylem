@@ -61,14 +61,15 @@ const sphere1 = sphere({
 
 let lastMovement = new Vector3();
 let moving = false;
-const actorFactory = (positionX, positionZ = 0) => {
+const actorFactory = (positionX, positionZ = 0, index = 0) => {
 	return actor({
-		name: 'player',
+		name: `player-${index}`,
 		animations: ['playground/idle.fbx', 'playground/run.fbx'],
 		static: false,
-		setup({ entity }) {
+		setup({ entity, HUD }) {
 			entity.setPosition(positionX, 4, positionZ);
 			entity.animate(0);
+			HUD.addBar();
 		},
 		update({ entity, inputs, camera }) {
 			let { horizontal, vertical } = inputs[0];
@@ -121,7 +122,7 @@ const testSpike = actor({
 	models: ['playground/spike.gltf'],
 	static: true,
 	collision: (spike, other, globals) => {
-		if (other.name === 'player') {
+		if (other.name.includes('player')) {
 			console.log('player hit!');
 		}
 	}
@@ -131,9 +132,16 @@ const stage1 = stage({
 	perspective: ThirdPerson,
 	backgroundColor: new Color('#88BBFF'),
 	gravity: new Vector3(0, -9, 0),
-	setup: ({ camera }) => {
+	setup: ({ camera, HUD }) => {
 		camera.moveCamera(new Vector3(0, 8, 10));
 		camera.target = actor1 as any;
+		HUD.addText('0', {
+			binding: 'score',
+			update: (element, value) => {
+				element.text = `Score: ${value}`;
+			},
+			position: new Vector2(420, 30)
+		});
 	},
 	update: ({ camera, inputs }) => {
 		const { buttonB, buttonA } = inputs[0];
@@ -169,7 +177,7 @@ const stage1 = stage({
 			zone1,
 		]
 	},
-})
+});
 
 const playground = game({
 	id: 'playground',
