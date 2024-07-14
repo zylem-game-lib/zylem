@@ -1,5 +1,5 @@
 import { Vector2 } from 'three';
-import { Application, Text, Graphics, FillGradient } from 'pixi.js';
+import { Application, Text, Graphics } from 'pixi.js';
 import { Mixin } from 'ts-mixer';
 
 import { ZylemBlue } from '../interfaces/utility';

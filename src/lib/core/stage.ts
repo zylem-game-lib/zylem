@@ -208,7 +208,6 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			camera.aspect = width / height;
 			camera.updateProjectionMatrix();
 			this.scene.updateRenderer(width, height);
-			this.HUD.resize(width, height);
 		}
 	}
 }

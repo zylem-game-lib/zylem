@@ -1,6 +1,141 @@
 {
+  "_CanvasPool-0870ff78.js": {
+    "file": "CanvasPool-0870ff78.js",
+    "imports": [
+      "_main-aa62f8ec.js"
+    ]
+  },
+  "_CanvasPool-ed959980.mjs": {
+    "file": "CanvasPool-ed959980.mjs",
+    "imports": [
+      "_main-535ccc59.mjs"
+    ]
+  },
+  "_SharedSystems-2912f260.mjs": {
+    "file": "SharedSystems-2912f260.mjs",
+    "imports": [
+      "_main-535ccc59.mjs",
+      "_colorToUniform-ff17c41b.mjs"
+    ]
+  },
+  "_SharedSystems-60b106dd.js": {
+    "file": "SharedSystems-60b106dd.js",
+    "imports": [
+      "_main-aa62f8ec.js",
+      "_colorToUniform-4aa8a72e.js"
+    ]
+  },
+  "_colorToUniform-4aa8a72e.js": {
+    "file": "colorToUniform-4aa8a72e.js",
+    "imports": [
+      "_main-aa62f8ec.js"
+    ]
+  },
+  "_colorToUniform-ff17c41b.mjs": {
+    "file": "colorToUniform-ff17c41b.mjs",
+    "imports": [
+      "_main-535ccc59.mjs"
+    ]
+  },
+  "_getBatchSamplersUniformGroup-4a8228a7.mjs": {
+    "file": "getBatchSamplersUniformGroup-4a8228a7.mjs",
+    "imports": [
+      "_colorToUniform-ff17c41b.mjs"
+    ]
+  },
+  "_getBatchSamplersUniformGroup-bfe81843.js": {
+    "file": "getBatchSamplersUniformGroup-bfe81843.js",
+    "imports": [
+      "_colorToUniform-4aa8a72e.js"
+    ]
+  },
+  "_init-2a7b2879.mjs": {
+    "file": "init-2a7b2879.mjs",
+    "imports": [
+      "_main-535ccc59.mjs",
+      "_colorToUniform-ff17c41b.mjs",
+      "_CanvasPool-ed959980.mjs",
+      "_getBatchSamplersUniformGroup-4a8228a7.mjs"
+    ]
+  },
+  "_init-78ad0366.js": {
+    "file": "init-78ad0366.js",
+    "imports": [
+      "_main-aa62f8ec.js",
+      "_colorToUniform-4aa8a72e.js",
+      "_CanvasPool-0870ff78.js",
+      "_getBatchSamplersUniformGroup-bfe81843.js"
+    ]
+  },
+  "_main-535ccc59.mjs": {
+    "dynamicImports": [
+      "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/environment-browser/browserAll.mjs",
+      "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/environment-webworker/webworkerAll.mjs",
+      "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/rendering/renderers/gpu/WebGPURenderer.mjs",
+      "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/rendering/renderers/gl/WebGLRenderer.mjs"
+    ],
+    "file": "main-535ccc59.mjs"
+  },
+  "_main-aa62f8ec.js": {
+    "dynamicImports": [
+      "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/environment-browser/browserAll.mjs",
+      "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/environment-webworker/webworkerAll.mjs",
+      "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/rendering/renderers/gpu/WebGPURenderer.mjs",
+      "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/rendering/renderers/gl/WebGLRenderer.mjs"
+    ],
+    "file": "main-aa62f8ec.js"
+  },
+  "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/environment-browser/browserAll.mjs": {
+    "file": "browserAll-126a6e16.js",
+    "imports": [
+      "_main-aa62f8ec.js",
+      "_init-78ad0366.js",
+      "_colorToUniform-4aa8a72e.js",
+      "_CanvasPool-0870ff78.js",
+      "_getBatchSamplersUniformGroup-bfe81843.js"
+    ],
+    "isDynamicEntry": true,
+    "src": "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/environment-browser/browserAll.mjs"
+  },
+  "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/environment-webworker/webworkerAll.mjs": {
+    "file": "webworkerAll-fedc1029.js",
+    "imports": [
+      "_init-78ad0366.js",
+      "_main-aa62f8ec.js",
+      "_colorToUniform-4aa8a72e.js",
+      "_CanvasPool-0870ff78.js",
+      "_getBatchSamplersUniformGroup-bfe81843.js"
+    ],
+    "isDynamicEntry": true,
+    "src": "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/environment-webworker/webworkerAll.mjs"
+  },
+  "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/rendering/renderers/gl/WebGLRenderer.mjs": {
+    "file": "WebGLRenderer-8adaaa6a.js",
+    "imports": [
+      "_main-aa62f8ec.js",
+      "_colorToUniform-4aa8a72e.js",
+      "_getBatchSamplersUniformGroup-bfe81843.js",
+      "_SharedSystems-60b106dd.js"
+    ],
+    "isDynamicEntry": true,
+    "src": "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/rendering/renderers/gl/WebGLRenderer.mjs"
+  },
+  "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/rendering/renderers/gpu/WebGPURenderer.mjs": {
+    "file": "WebGPURenderer-00825091.js",
+    "imports": [
+      "_main-aa62f8ec.js",
+      "_colorToUniform-4aa8a72e.js",
+      "_SharedSystems-60b106dd.js",
+      "_CanvasPool-0870ff78.js"
+    ],
+    "isDynamicEntry": true,
+    "src": "node_modules/.pnpm/pixi.js@8.2.2/node_modules/pixi.js/lib/rendering/renderers/gpu/WebGPURenderer.mjs"
+  },
   "src/main.ts": {
     "file": "main.js",
+    "imports": [
+      "_main-aa62f8ec.js"
+    ],
     "isEntry": true,
     "src": "src/main.ts"
   }
