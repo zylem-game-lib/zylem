@@ -8,7 +8,7 @@ export interface HUDLabelOptions {
 type HUDOptionParams = Partial<HUDLabelOptions & HUDOptions<HUDLabel>>;
 export declare class HUDLabel implements HUDControl {
     _app: Application;
-    _labeOptions: HUDLabelOptions;
+    _labelOptions: HUDLabelOptions;
     _text: Text;
     constructor(app: Application);
     setupDefaults(): void;

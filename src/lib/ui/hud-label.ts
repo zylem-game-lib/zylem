@@ -31,7 +31,7 @@ type HUDOptionParams = Partial<HUDLabelOptions & HUDOptions<HUDLabel>>;
 
 export class HUDLabel implements HUDControl {
 	_app: Application;
-	_labeOptions: HUDLabelOptions = HUD_LABEL_DEFAULTS;
+	_labelOptions: HUDLabelOptions = HUD_LABEL_DEFAULTS;
 	_text: Text;
 
 	constructor(app: Application) {
@@ -47,7 +47,7 @@ export class HUDLabel implements HUDControl {
 			const ratio = index / colors.length;
 			fill.addColorStop(ratio, num);
 		})
-		this._labeOptions.style.fill = fill;
+		this._labelOptions.style.fill = fill;
 	}
 
 	addLabel(options: HUDOptionParams) {

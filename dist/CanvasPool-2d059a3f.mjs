@@ -1,4 +1,4 @@
-import { D as c, y as n } from "./main-86ac24d0.mjs";
+import { D as c, y as n } from "./main-1afee6c7.mjs";
 class l {
   constructor(a) {
     this._canvasPool = /* @__PURE__ */ Object.create(null), this.canvasOptions = a || {}, this.enableFullScreen = !1;

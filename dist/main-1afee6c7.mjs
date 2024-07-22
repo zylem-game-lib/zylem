@@ -28886,7 +28886,7 @@ const bn = (B) => {
   },
   test: () => !0,
   load: async () => {
-    await import("./browserAll-eb425c59.mjs");
+    await import("./browserAll-454cedcc.mjs");
   }
 }, eJ = {
   extension: {
@@ -28896,7 +28896,7 @@ const bn = (B) => {
   },
   test: () => typeof self < "u" && self.WorkerGlobalScope !== void 0,
   load: async () => {
-    await import("./webworkerAll-242c3602.mjs");
+    await import("./webworkerAll-5d6e20cc.mjs");
   }
 };
 class ug {
@@ -34646,13 +34646,13 @@ async function JF(B) {
   for (let i = 0; i < A.length; i++) {
     const Q = A[i];
     if (Q === "webgpu" && await KF()) {
-      const { WebGPURenderer: E } = await import("./WebGPURenderer-3414e0c3.mjs");
+      const { WebGPURenderer: E } = await import("./WebGPURenderer-f68c828a.mjs");
       I = E, g = { ...B, ...B.webgpu };
       break;
     } else if (Q === "webgl" && NF(
       B.failIfMajorPerformanceCaveat ?? iy.defaultOptions.failIfMajorPerformanceCaveat
     )) {
-      const { WebGLRenderer: E } = await import("./WebGLRenderer-8ff7a4cf.mjs");
+      const { WebGLRenderer: E } = await import("./WebGLRenderer-d3acf6b8.mjs");
       I = E, g = { ...B, ...B.webgl };
       break;
     } else if (Q === "canvas")
@@ -39423,7 +39423,7 @@ const $Q = new hA("#3A3EA0"), bh = "#3A3EA0", Kl = {
 class VR {
   constructor(A) {
     O(this, "_app");
-    O(this, "_labeOptions", Kl);
+    O(this, "_labelOptions", Kl);
     O(this, "_text");
     this._app = A, this.setupDefaults(), this._text = new Nl();
   }
@@ -39432,7 +39432,7 @@ class VR {
     I.forEach((g, C) => {
       const i = C / I.length;
       A.addColorStop(i, g);
-    }), this._labeOptions.style.fill = A;
+    }), this._labelOptions.style.fill = A;
   }
   addLabel(A) {
     this.addText("", A);
