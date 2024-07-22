@@ -51,18 +51,8 @@ const example = game({
    children: () => [
     sphere({
      update: ({ entity: ball, inputs }) => {
-      const { moveRight, moveLeft, moveUp, moveDown } = inputs[0];
-      if (moveRight) {
-       ball.moveX(5);
-      } else if (moveLeft) {
-       ball.moveX(-5);
-      } else if (moveUp) {
-       ball.moveY(5);
-      } else if (moveDown) {
-       ball.moveY(-5);
-      } else {
-       ball.moveXY(0, 0);
-      }
+      const { horizontal, vertical } = inputs[0];
+      ball.moveXY(horizontal * 5, -vertical * 5);
      }
     })
    ]
