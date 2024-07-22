@@ -5,6 +5,14 @@
 > something similar to kaboomjs
 
 ```typescript
+
+hud.add(UIBar(), UILabel())
+stage.add(actor(), box())
+stage.update = ({ children, stage }) => {
+}
+HUD.addLabel({})
+HUD.addBar({})
+
 interface MethodsConfig {
     setup: () => any;
     update: (params: any) => void;

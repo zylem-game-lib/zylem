@@ -5,24 +5,41 @@ import { Mixin } from 'ts-mixer';
 import { ZylemBlue } from '../interfaces/utility';
 import { HUDLabel } from './hud-label';
 import { HUDBar } from './hud-bar';
+import { observe } from '@simplyianm/legend-state';
+import { state$ } from '../state';
 
-export interface HUDOptions<T> {
+export class HUDOptions<T> {
 	binding?: string | null;
 	bindings?: string[] | null;
-	update: null | ((element: T, value: any) => void);
+	update: null | ((element: T, value: any | any[]) => void);
 	position?: Vector2;
+
+	constructor() {
+		this.update = () => {};
+	}
+}
+
+export function createBindings(element: any, options: Partial<HUDOptions<any>>) {
+	const { binding, bindings, update } = options;
+
+	if ((binding || bindings) && update) {
+		observe(() => {
+			if (bindings) {
+				const value: any = [];
+				bindings.forEach((key: string) => {
+					value.push(state$.globals[key].get());
+				});
+				update(element, value);
+			} else if (binding) {
+				const value = state$.globals[binding].get();
+				update(element, value);
+			}
+		});
+	}
 }
 
 export interface HUDControl {
 	_app: Application;
-}
-
-export interface HUDBarOptions extends HUDOptions<Text> {
-	binding?: string | null;
-	bindings?: string[] | null;
-	update: null | ((element: Text, value: any) => void);
-	position?: Vector2;
-	style?: any;
 }
 
 export class ZylemHUD extends Mixin(HUDLabel, HUDBar) {

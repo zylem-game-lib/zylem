@@ -1,6 +1,7 @@
 import { Color, Vector2, Vector3 } from "three";
 import { game, stage, actor, box, plane, sphere, zone, Perspectives, Zylem } from "../../src/main";
 import { node } from "../../src/lib/entities";
+
 const { actionOnRelease, actionWithCooldown, actionOnPress } = Zylem.Util;
 const { ThirdPerson } = Perspectives;
 
@@ -69,7 +70,6 @@ const actorFactory = (positionX, positionZ = 0, index = 0) => {
 		setup({ entity, HUD }) {
 			entity.setPosition(positionX, 4, positionZ);
 			entity.animate(0);
-			HUD.addBar();
 		},
 		update({ entity, inputs, camera }) {
 			let { horizontal, vertical } = inputs[0];
@@ -122,11 +122,29 @@ const testSpike = actor({
 	models: ['playground/spike.gltf'],
 	static: true,
 	collision: (spike, other, globals) => {
+		const { health } = globals;
 		if (other.name.includes('player')) {
-			console.log('player hit!');
+			const newHealth = Math.max(health.get() - 10, 0);
+			health.set(newHealth);
 		}
 	}
 });
+
+const testHealth = actor({
+	models: ['playground/health-box.gltf'],
+	static: true,
+	setup: ({ entity }) => {
+		entity.setPosition(10,2,2);
+	},
+	collision: (healthBox, other, globals) => {
+		const { health, maxHealth } = globals;
+		if (other.name.includes('player')) {
+			const newHealth = Math.min(health.get() + 20, maxHealth.get());
+			health.set(newHealth);
+		}
+	}
+});
+
 
 const stage1 = stage({
 	perspective: ThirdPerson,
@@ -138,9 +156,26 @@ const stage1 = stage({
 		HUD.addText('0', {
 			binding: 'score',
 			update: (element, value) => {
-				element.text = `Score: ${value}`;
+				element.updateText(`Score: ${value}`);
 			},
 			position: new Vector2(420, 30)
+		});
+		HUD.addBar({
+			bindings: ['health', 'maxHealth'],
+			update: (element, value) => {
+				element.updateBar(value);
+			}
+		});
+		HUD.addLabel({
+			style: {
+				fontSize: 16,
+				fill: 0xFFFFFF,
+			},
+			position: new Vector2(24, 22),
+			binding: 'health',
+			update: (element, value) => {
+				element.updateText(`Health: ${value}`);
+			}
 		});
 	},
 	update: ({ camera, inputs }) => {
@@ -169,8 +204,9 @@ const stage1 = stage({
 			actor1,
 			actor2,
 			actor3,
-			box1,
 			testSpike,
+			testHealth,
+			box1,
 			...nodeTest,
 			sphere1,
 			ground,
@@ -185,6 +221,8 @@ const playground = game({
 	debugConfiguration: {},
 	globals: {
 		score: 0,
+		health: 1000,
+		maxHealth: 1000,
 		lives: 3,
 		time: 0,
 		actualTime: 0,

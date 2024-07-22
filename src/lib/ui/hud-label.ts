@@ -1,34 +1,43 @@
 import { Vector2 } from 'three';
-import { Application, Color, FillGradient, Text, TextStyle } from 'pixi.js';
-import { observe } from '@simplyianm/legend-state';
+import { Application, Color, FillGradient, StrokeStyle, Text, TextStyle, TextStyleOptions } from 'pixi.js';
 
-import { HUDControl, HUDOptions } from './hud';
+import { HUDControl, HUDOptions, createBindings } from './hud';
 import { ZylemBlue } from '../interfaces/utility';
-import { state$ } from '../state';
 
-export interface HUDTextOptions extends HUDOptions<Text> {
-	style?: any;
+export interface HUDLabelOptions {
+	style: TextStyleOptions;
+	position: Vector2;
 }
 
-export class HUDLabel implements HUDControl {
-	_hudText: Map<Vector2, Text> = new Map();
-	_app: Application;
 
-	static defaultStyleParams = {
+const HUD_LABEL_DEFAULTS: HUDLabelOptions = {
+	style: {
 		fontFamily: 'Tahoma',
 		fontSize: 36,
 		fontWeight: 'bold',
 		fill: new FillGradient(0,0,0,0),
-		stroke: { color: '#ffffff', width: 2, join: 'round' },
-		strokeThickness: 4,
+		stroke: {
+			color: '#ffffff',
+			width: 4,
+			join: 'round'
+		},
 		wordWrap: true,
-		wordWrapWidth: 440,
-		lineJoin: 'round',
-	};
+		wordWrapWidth: 440
+	},
+	position: new Vector2(20, 20),
+}
+
+type HUDOptionParams = Partial<HUDLabelOptions & HUDOptions<HUDLabel>>;
+
+export class HUDLabel implements HUDControl {
+	_app: Application;
+	_labeOptions: HUDLabelOptions = HUD_LABEL_DEFAULTS;
+	_text: Text;
 
 	constructor(app: Application) {
 		this._app = app;
 		this.setupDefaults();
+		this._text = new Text();
 	}
 
 	setupDefaults() {
@@ -38,15 +47,18 @@ export class HUDLabel implements HUDControl {
 			const ratio = index / colors.length;
 			fill.addColorStop(ratio, num);
 		})
-		HUDLabel.defaultStyleParams.fill = fill;
+		this._labeOptions.style.fill = fill;
 	}
 
-	addText(text: string, options?: HUDTextOptions, x: number = 0, y: number = 0): void {
-		const useOptions: HUDTextOptions = options
-			? { ...options, style: options.style ?? HUDLabel.defaultStyleParams }
-			: { bindings: null, update: null, style: HUDLabel.defaultStyleParams };
+	addLabel(options: HUDOptionParams) {
+		this.addText('', options);
+	}
 
-		const textStyle = new TextStyle(useOptions.style);
+	addText(text: string, options?: HUDOptionParams, x: number = 0, y: number = 0): void {
+		const useOptions: HUDLabelOptions = Object.assign({}, HUD_LABEL_DEFAULTS, options);
+		const useStyleOptions = Object.assign({}, useOptions.style, options?.style);
+
+		const textStyle = new TextStyle(useStyleOptions as TextStyleOptions);
 		const richText = new Text({ text, style: textStyle });
 
 		const usePosition = new Vector2(
@@ -54,19 +66,16 @@ export class HUDLabel implements HUDControl {
 			useOptions?.position?.y ?? y
 		);
 
-		richText.anchor.set(0.5, 0.5);
+		richText.anchor.set(0, 0);
 		richText.position.set(usePosition.x, usePosition.y);
 
-		const addedText = this._app.stage.addChild(richText);
-		if (options?.binding && options.update) {
-			const key = options.binding;
-			const updateFn = options.update;
-			observe(() => {
-				const value = state$.globals[key].get();
-				updateFn(addedText as Text, value);
-			});
-		}
-		this._hudText.set(usePosition, richText);
+		this._text = this._app.stage.addChild(richText);
+		createBindings(this, useOptions);
+	}
+
+	updateText(text: string, style: any = null) {
+		// TODO: add style changes
+		this._text.text = text;
 	}
 
 }
