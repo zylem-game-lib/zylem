@@ -1,5 +1,5 @@
 // Sphere is a combination of a 3D mesh and a physics body
-import { Color } from 'three';
+import { Color, Vector3 } from 'three';
 import { Mixin, settings } from 'ts-mixer';
 
 import { EntityParameters, GameEntity } from '../../core';
@@ -27,13 +27,19 @@ export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, Sp
 		super(options as GameEntityOptions<{}, unknown>);
 		this._static = options.static ?? false;
 		this._texture = options.texture ?? null;
+		this._shader = options.shader ?? '';
 		this._radius = options.radius ?? 1;
 		this._collisionRadius = this._radius;
 		this._color = options.color ?? ZylemBlueColor;
 	}
 
 	async createFromBlueprint(): Promise<this> {
-		this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat });
+		await this.createMaterials({
+			texture: this._texture,
+			color: this._color,
+			repeat: this._repeat,
+			shader: this._shader
+		});
 		this.createMesh({ group: this.group, radius: this._radius, materials: this.materials });
 		this.createCollision({ isDynamicBody: !this._static });
 		return Promise.resolve(this);
@@ -46,6 +52,11 @@ export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, Sp
 
 	public update(params: EntityParameters<ZylemSphere>): void {
 		super.update(params);
+		for (const material of this.materials) {
+			if (material.isShaderMaterial && material.uniforms) {
+				material.uniforms.iTime.value += params.delta;
+			}
+		}
 		this._update({ ...params, entity: this });
 	}
 

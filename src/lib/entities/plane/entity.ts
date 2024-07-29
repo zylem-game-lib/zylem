@@ -30,11 +30,16 @@ export class ZylemPlane extends Mixin(GameEntity, ZylemMaterial, PlaneMesh, Plan
 		this._tile = options.tile ?? new Vector2(1, 1);
 		this._repeat = options.repeat ?? new Vector2(1, 1);
 		this._color = options.color ?? ZylemBlueColor;
+		this._shader = options.shader ?? '';
 	}
 
 	async createFromBlueprint(): Promise<this> {
-		this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat });
-		console.log('creating plane mesh');
+		await this.createMaterials({
+			texture: this._texture,
+			color: this._color,
+			repeat: this._repeat,
+			shader: this._shader
+		});
 		this.createMesh({ group: this.group, tile: this._tile!, materials: this.materials });
 		this.createCollision({ isDynamicBody: !this._static });
 		return Promise.resolve(this);
@@ -47,6 +52,11 @@ export class ZylemPlane extends Mixin(GameEntity, ZylemMaterial, PlaneMesh, Plan
 
 	public update(params: EntityParameters<ZylemPlane>): void {
 		super.update(params);
+		for (const material of this.materials) {
+			if (material.isShaderMaterial && material.uniforms) {
+				material.uniforms.iTime.value += params.delta;
+			}
+		}
 		this._update({ ...params, entity: this });
 	}
 

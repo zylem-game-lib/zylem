@@ -1,7 +1,19 @@
-import { Color, Material, MeshPhongMaterial, MeshStandardMaterial, RepeatWrapping, ShaderMaterial, TextureLoader, Vector2 } from "three";
-import fragmentShader from '../rendering/shaders/fragment/pixelated.fx?raw';
-import vertexShader from '../rendering/shaders/vertex/standard.fx?raw';
+import {
+	Color,
+	Material,
+	MeshPhongMaterial,
+	MeshStandardMaterial,
+	RepeatWrapping,
+	Shader,
+	ShaderMaterial,
+	TextureLoader,
+	Vector2,
+	Vector3
+} from "three";
+
 import { ZylemBlueColor } from "../interfaces/utility";
+import fragmentShader from '../rendering/shaders/fragment/fire.glsl';
+import vertexShader from '../rendering/shaders/vertex/object-shader.glsl';
 
 const shaderDictionary = {
 	test: {
@@ -16,27 +28,34 @@ export interface CreateMaterialsOptions {
 	texture: TexturePath;
 	color: Color;
 	repeat: Vector2;
+	shader: string;
 }
+
+export type ZylemMaterialType = (Material & Partial<Shader>) & { isShaderMaterial?: boolean };
 
 export class ZylemMaterial {
 	_color: Color = ZylemBlueColor;
 	_texture: TexturePath = null;
 	_repeat: Vector2 = new Vector2(1, 1);
-	materials: Material[] = [];
+	_shader: string = '';
+	materials: ZylemMaterialType[] = [];
 
-	createMaterials({ texture, color, repeat }: CreateMaterialsOptions) {
+	async createMaterials({ texture, color, repeat, shader }: CreateMaterialsOptions) {
 		if (!this.materials) {
 			this.materials = [];
 		}
 		this.applyMaterial(color);
 		if (texture) {
-			this.applyTexture(texture, repeat);
+			await this.applyTexture(texture, repeat);
+		}
+		if (shader) {
+			this.applyShader(shader);
 		}
 	}
 
-	applyTexture(texturePath: TexturePath, repeat: Vector2 = new Vector2(1, 1)) {
+	async applyTexture(texturePath: TexturePath, repeat: Vector2 = new Vector2(1, 1)) {
 		const loader = new TextureLoader();
-		const texture = loader.load(texturePath as string);
+		const texture = await loader.loadAsync(texturePath as string);
 		texture.repeat = repeat;
 		texture.wrapS = RepeatWrapping;
 		texture.wrapT = RepeatWrapping;
@@ -44,6 +63,7 @@ export class ZylemMaterial {
 			map: texture,
 		});
 		this.materials.push(material);
+		return texture;
 	}
 
 	applyMaterial(color: Color) {
@@ -57,11 +77,19 @@ export class ZylemMaterial {
 		this.materials.push(material);
 	}
 
-	applyShader(shaderName: 'test', customShader: string) {
-		const { vertexShader, fragmentShader } = shaderDictionary[shaderName];
+	applyShader(customShader: string = 'test') {
+		const { vertexShader, fragmentShader } = shaderDictionary.test;
+
 		const shader = new ShaderMaterial({
+			uniforms: {
+				iResolution: { value: new Vector3(1, 1, 1) },
+				iTime: { value: 0 },
+				tDiffuse: { value: null },
+				tDepth: { value: null },
+				tNormal: { value: null }
+			},
 			vertexShader,
-			fragmentShader
+			fragmentShader,
 		});
 		this.materials.push(shader);
 	}

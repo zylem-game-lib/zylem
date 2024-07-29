@@ -20,6 +20,7 @@ export type GameEntityOptions<Options, T> = Partial<Options> & BaseEntityOptions
 	collision?: CollisionOption<T>;
 	name?: string;
 	tag?: Set<string>;
+	shader?: string;
 };
 
 export interface Entity<T = any> {

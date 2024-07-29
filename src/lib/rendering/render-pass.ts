@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import fragmentShader from './shaders/fragment/standard.fx?raw';
-import vertexShader from './shaders/vertex/standard.fx?raw';
+import fragmentShader from './shaders/fragment/standard.glsl';
+import vertexShader from './shaders/vertex/standard.glsl';
 import { WebGLRenderer, WebGLRenderTarget } from "three";
 import { Pass, FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 
@@ -44,6 +44,7 @@ export default class RenderPass extends Pass {
 		uniforms.tDiffuse.value = this.rgbRenderTarget.texture;
 		uniforms.tDepth.value = this.rgbRenderTarget.depthTexture;
 		uniforms.tNormal.value = this.normalRenderTarget.texture;
+		uniforms.iTime.value += 0.01;
 
 		if (this.renderToScreen) {
 			renderer.setRenderTarget(null);
@@ -56,6 +57,7 @@ export default class RenderPass extends Pass {
 	material() {
 		return new THREE.ShaderMaterial({
 			uniforms: {
+				iTime: { value: 0 },
 				tDiffuse: { value: null },
 				tDepth: { value: null },
 				tNormal: { value: null },

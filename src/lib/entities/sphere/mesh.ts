@@ -11,6 +11,6 @@ export class SphereMesh extends BaseMesh {
 		this.mesh.position.set(0, 0, 0);
 		this.mesh.castShadow = true;
 		this.mesh.receiveShadow = true;
-		group.add(this.mesh);
+		group.attach(this.mesh);
 	}
 }
