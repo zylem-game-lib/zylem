@@ -2,7 +2,11 @@
 	"compilerOptions": {
 		"target": "ESNext",
 		"lib": ["DOM", "DOM.Iterable", "ESNext"],
-		"types": ["vite/client", "node"],
+		"types": [
+			"vite/client",
+			"node",
+			"vite-plugin-glsl/ext",
+		],
 		"allowJs": false,
 		"skipLibCheck": true,
 		"esModuleInterop": false,
