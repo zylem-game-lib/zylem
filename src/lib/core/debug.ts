@@ -16,6 +16,7 @@ export class ZylemDebug extends HTMLElement {
 		this.style.padding = "10px";
 		this.style.fontFamily = "monospace";
 		this.style.fontSize = "12px";
+		this.style.zIndex = '1';
 		window.addEventListener("resize", () => {
 			this.style.width = Math.round(window.innerWidth / 3) + "px";
 			this.style.height = Math.round(window.innerHeight / 3) + "px";
