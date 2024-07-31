@@ -1,13 +1,14 @@
-import { AnimationAction, AnimationClip, AnimationMixer, Object3D } from 'three';
+import { AnimationAction, AnimationClip, AnimationMixer, Mesh, Object3D } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { Mixin } from 'ts-mixer';
+import { Mixin, settings } from 'ts-mixer';
 
 import { EntityParameters, GameEntity } from "../../core";
 import { GameEntityOptions } from "../../interfaces/entity";
 import { Moveable } from '../../behaviors/moveable';
 import { ActorMesh, ActorCollision } from './index';
 import { EntityErrors } from '~/lib/core/errors';
+import { ZylemMaterial } from '~/lib/core/material';
 
 enum FileExtensionTypes {
 	FBX = 'fbx',
@@ -24,8 +25,12 @@ type ZylemActorOptions = {
 
 type ActorOptions = GameEntityOptions<ZylemActorOptions, ZylemActor>;
 
-export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Moveable, EntityErrors) {
+settings.initFunction = 'init';
+
+export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, ActorCollision, Moveable, EntityErrors) {
+
 	protected type = 'Actor';
+
 	_static: boolean = false;
 	_fbxLoader: FBXLoader = new FBXLoader();
 	_gltfLoader: GLTFLoader = new GLTFLoader();
@@ -52,26 +57,24 @@ export class ZylemActor extends Mixin(GameEntity, ActorMesh, ActorCollision, Mov
 		await this.load(this._animationFileNames);
 		await this.load(this._modelFileNames);
 		// TODO: consider refactor to not have to pass materials
-		this.createMesh({ group: this.group, object: this._object, materials: [] });
-		this.controlledRotation = true;
+		this.createMesh({ group: this.group, object: this._object, materials: this.materials });
+		this.controlledRotation = true;;
 		this.createCollision({ isDynamicBody: !this._static, object: this._object });
-		this._currentAction?.play();
 		return Promise.resolve(this);
 	}
 
 	public setup(params: EntityParameters<ZylemActor>): void {
 		super.setup(params);
+		this._currentAction?.play();
 		this._setup({ ...params, entity: this });
 	}
 
 	public update(params: EntityParameters<ZylemActor>): void {
 		const { delta } = params;
 		super.update(params);
-		// TODO: mixer update called 
-		if (!this._mixer) {
-			return;
+		if (this._mixer) {
+			this._mixer.update(delta);
 		}
-		this._mixer!.update(delta);
 		this._update({ ...params, entity: this });
 	}
 
