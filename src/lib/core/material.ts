@@ -12,15 +12,7 @@ import {
 } from "three";
 
 import { ZylemBlueColor } from "../interfaces/utility";
-import fragmentShader from '../rendering/shaders/fragment/fire.glsl';
-import vertexShader from '../rendering/shaders/vertex/object-shader.glsl';
-
-const shaderDictionary = {
-	test: {
-		vertexShader,
-		fragmentShader
-	}
-}
+import shaderMap, { ZylemShaderObject, ZylemShaderType } from "./preset-shader";
 
 export type TexturePath = string | null;
 
@@ -28,7 +20,7 @@ export interface CreateMaterialsOptions {
 	texture: TexturePath;
 	color: Color;
 	repeat: Vector2;
-	shader: string;
+	shader: ZylemShaderType;
 }
 
 export type ZylemMaterialType = (Material & Partial<Shader>) & { isShaderMaterial?: boolean };
@@ -37,7 +29,7 @@ export class ZylemMaterial {
 	_color: Color = ZylemBlueColor;
 	_texture: TexturePath = null;
 	_repeat: Vector2 = new Vector2(1, 1);
-	_shader: string = '';
+	_shader: ZylemShaderType = 'standard';
 	materials: ZylemMaterialType[] = [];
 
 	async createMaterials({ texture, color, repeat, shader }: CreateMaterialsOptions) {
@@ -77,8 +69,8 @@ export class ZylemMaterial {
 		this.materials.push(material);
 	}
 
-	applyShader(customShader: string = 'test') {
-		const { vertexShader, fragmentShader } = shaderDictionary.test;
+	applyShader(customShader: ZylemShaderType) {
+		const { fragment, vertex } = shaderMap.get(customShader) ?? shaderMap.get('standard') as ZylemShaderObject;
 
 		const shader = new ShaderMaterial({
 			uniforms: {
@@ -88,8 +80,8 @@ export class ZylemMaterial {
 				tDepth: { value: null },
 				tNormal: { value: null }
 			},
-			vertexShader,
-			fragmentShader,
+			vertexShader: vertex,
+			fragmentShader: fragment,
 		});
 		this.materials.push(shader);
 	}

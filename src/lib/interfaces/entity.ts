@@ -2,6 +2,7 @@ import { Collider, ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapi
 import { Color, Group, Vector3 } from "three";
 import { SpriteAnimation, SpriteImage } from "~/lib/entities";
 import { EntityParameters } from "../core/entity";
+import { ZylemShaderType } from "../core/preset-shader";
 
 export type UpdateFunction<T> = (params: EntityParameters<T>) => void;
 export type SetupFunction<T> = (params: EntityParameters<T>) => void;
@@ -20,7 +21,7 @@ export type GameEntityOptions<Options, T> = Partial<Options> & BaseEntityOptions
 	collision?: CollisionOption<T>;
 	name?: string;
 	tag?: Set<string>;
-	shader?: string;
+	shader?: ZylemShaderType;
 };
 
 export interface Entity<T = any> {

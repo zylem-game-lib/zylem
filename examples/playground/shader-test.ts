@@ -95,7 +95,7 @@ const shaderTest = game({
 						tile: new Vector2(200, 200),
 						repeat: new Vector2(4, 6),
 						static: true,
-						shader: 'test',
+						shader: 'star',
 						texture: 'playground/wood-box.jpg',
 					}),
 					// TODO: figure out why TS doesn't think ZylemActor inherits GameEntity
@@ -103,15 +103,14 @@ const shaderTest = game({
 					sphere({
 						radius: 3,
 						color: new Color(Color.NAMES.yellow),
-						texture: 'playground/grass-normal.png',
-						shader: 'test',
+						shader: 'fire',
 						setup: ({ entity }) => {
 							entity.setPosition(5, 6, 0)
 						}
 					}),
 					sphere({
 						radius: 2,
-						shader: 'test',
+						texture: 'playground/grass-normal.png',
 						setup: ({ entity }) => {
 							entity.setPosition(-5, 6, 0)
 						}

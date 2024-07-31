@@ -114,9 +114,14 @@ const actorFactory = (positionX, positionZ = 0, index = 0) => {
 const actor1 = actorFactory(0, -10);
 const actor2 = actorFactory(17, 10);
 const actor3 = actorFactory(-17, 10);
+const actor4 = actorFactory(-10, 10);
+const actor5 = actorFactory(-20, 10);
+const actor6 = actorFactory(-10, 0);
 
 let cameraIndex = 0;
-let targets = [actor1, actor2, actor3];
+let targets = [actor1, actor2, actor3, actor4,
+	actor5,
+	actor6,];
 
 const testSpike = actor({
 	models: ['playground/spike.gltf'],
@@ -174,7 +179,11 @@ const stage1 = stage({
 			position: new Vector2(24, 22),
 			binding: 'health',
 			update: (element, value) => {
-				element.updateText(`Health: ${value}`);
+				if (value < 500 ) {
+					element.updateText(`Health is geting low! ${value}`);
+				} else {
+					element.updateText(`Health: ${value}`);
+				}
 			}
 		});
 	},
@@ -204,6 +213,9 @@ const stage1 = stage({
 			actor1,
 			actor2,
 			actor3,
+			actor4,
+			actor5,
+			actor6,
 			testSpike,
 			testHealth,
 			box1,

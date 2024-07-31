@@ -30,7 +30,7 @@ export class ZylemPlane extends Mixin(GameEntity, ZylemMaterial, PlaneMesh, Plan
 		this._tile = options.tile ?? new Vector2(1, 1);
 		this._repeat = options.repeat ?? new Vector2(1, 1);
 		this._color = options.color ?? ZylemBlueColor;
-		this._shader = options.shader ?? '';
+		this._shader = options.shader ?? 'standard';
 	}
 
 	async createFromBlueprint(): Promise<this> {
