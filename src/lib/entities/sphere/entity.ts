@@ -27,7 +27,7 @@ export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, Sp
 		super(options as GameEntityOptions<{}, unknown>);
 		this._static = options.static ?? false;
 		this._texture = options.texture ?? null;
-		this._shader = options.shader ?? '';
+		this._shader = options.shader ?? 'standard';
 		this._radius = options.radius ?? 1;
 		this._collisionRadius = this._radius;
 		this._color = options.color ?? ZylemBlueColor;

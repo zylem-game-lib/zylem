@@ -6,6 +6,7 @@ import { GameEntityOptions } from "../../interfaces/entity";
 import { Moveable } from '../../behaviors/moveable';
 import { ActorMesh, ActorCollision } from './index';
 import { EntityErrors } from '~/lib/core/errors';
+import { ZylemMaterial } from '~/lib/core/material';
 declare enum FileExtensionTypes {
     FBX = "fbx",
     GLTF = "gltf"
@@ -17,9 +18,9 @@ type ZylemActorOptions = {
     models?: string[];
 };
 type ActorOptions = GameEntityOptions<ZylemActorOptions, ZylemActor>;
-declare const ZylemActor_base: import("ts-mixer/dist/types/types").Class<any[], GameEntity<unknown> & ActorMesh & ActorCollision & Moveable & EntityErrors, (new (options: GameEntityOptions<{
+declare const ZylemActor_base: import("ts-mixer/dist/types/types").Class<any[], GameEntity<unknown> & ZylemMaterial & ActorMesh & ActorCollision & Moveable & EntityErrors, (new (options: GameEntityOptions<{
     collision?: import("../../interfaces/entity").CollisionOption<unknown> | undefined;
-}, unknown>) => GameEntity<unknown>) & typeof ActorMesh & typeof ActorCollision & typeof Moveable & typeof EntityErrors>;
+}, unknown>) => GameEntity<unknown>) & typeof ZylemMaterial & typeof ActorMesh & typeof ActorCollision & typeof Moveable & typeof EntityErrors>;
 export declare class ZylemActor extends ZylemActor_base {
     protected type: string;
     _static: boolean;

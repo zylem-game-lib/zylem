@@ -40,7 +40,7 @@ export class ZylemMaterial {
 		if (texture) {
 			await this.applyTexture(texture, repeat);
 		}
-		if (shader) {
+		if (shader && shader !== 'standard') {
 			this.applyShader(shader);
 		}
 	}
