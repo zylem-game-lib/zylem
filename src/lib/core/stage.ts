@@ -214,6 +214,6 @@ export class ZylemStage extends Mixin(BaseEntity) {
 	}
 }
 
-export function stage(options: StageOptions): ZylemStage {
+export function stage(options: StageOptions = {}): ZylemStage {
 	return new ZylemStage(options) as ZylemStage;
 }

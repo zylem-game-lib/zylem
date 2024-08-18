@@ -1,3 +1,10 @@
+// TODO: rewrite these functions to work well within game loop
+
+export function wait(delay: number, callback: Function) {
+	// TODO: needs ticks from loop
+	setTimeout(callback, delay);
+}
+
 export const actionOnPress = (() => {
 	let buttonPressed = false;
 
@@ -60,23 +67,4 @@ export const actionWithThrottle = (() => {
 			callback();
 		}
 	};
-})();
-
-export const wait = (() => {
-	let startTime = 0;
-	let called = false;
-
-	return (time: number, callback: Function) => {
-		if (called) return;
-		if (!startTime) {
-			startTime = Date.now();
-		}
-		const currentTime = Date.now();
-		const delta = currentTime;
-
-		if (delta >= (startTime + time)) {
-			called = true;
-			callback();
-		}
-	}
 })();

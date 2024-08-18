@@ -227,7 +227,7 @@ const stage1 = stage({
 	},
 });
 
-const playground = game({
+const config = {
 	id: 'playground',
 	debug: false,
 	debugConfiguration: {},
@@ -239,7 +239,11 @@ const playground = game({
 		time: 0,
 		actualTime: 0,
 	},
-	stages: [stage1]
-});
+};
+
+const playground = game(
+	config,
+	stage1
+);
 
 playground.start();

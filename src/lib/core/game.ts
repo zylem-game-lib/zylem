@@ -10,8 +10,9 @@ import { ZylemStage } from './stage';
 import { state$ } from '../state/game-state';
 import { setDebugFlag } from '../state/debug-state';
 import { Entity, System } from './ecs';
-import { UpdateFunction } from '../interfaces/entity';
+import { SetupFunction, UpdateFunction } from '../interfaces/entity';
 import { DebugConfiguration } from './debug';
+import { Game } from './game-wrapper';
 
 export interface GameOptions {
 	id: string;
@@ -38,6 +39,9 @@ export class ZylemGame {
 	currentStageId: string = '';
 	clock: Clock;
 	gamePad: GamePad;
+	customSetup: SetupFunction<any> | null = null;
+	customUpdate: UpdateFunction<any> | null = null;
+	wrapperRef: Game;
 
 	_targetRatio: number;
 	_initialGlobals: any;
@@ -48,7 +52,8 @@ export class ZylemGame {
 
 	static logcount = 0;
 
-	constructor(options: GameOptions) {
+	constructor(options: GameOptions, wrapperRef: Game) {
+		this.wrapperRef = wrapperRef;
 		setGlobalState(options.globals);
 		setDebugFlag(options.debug ?? false);
 		this._initialGlobals = { ...options.globals };
@@ -85,6 +90,7 @@ export class ZylemGame {
             const inputs = this.gamePad.getInputs();
             const stage = this.getCurrentStage();
             const options = {
+				game: this.wrapperRef,
                 inputs,
                 entity: stage,
                 delta,
@@ -92,7 +98,9 @@ export class ZylemGame {
                 camera: stage.scene?.zylemCamera,
                 globals: state$.globals,
             } as EntityParameters<ZylemStage>;
-
+			if (this.customUpdate) {
+				this.customUpdate(options);
+			}
             stage.update(options);
             this.totalTime += delta;
             state$.time.set(this.totalTime);
@@ -104,14 +112,16 @@ export class ZylemGame {
 
 	runLoop() {
 		const stage = this.getCurrentStage();
-		stage.setup({
+		const params = {
+			game: this.wrapperRef,
 			entity: stage,
 			inputs: this.gamePad.getInputs(),
 			camera: stage.scene!.zylemCamera,
 			delta: 0,
 			HUD: stage.HUD,
 			globals: state$.globals,
-		});
+		};
+		stage.setup(params);
 		stage.conditions.forEach(({ bindings, callback }) => {
 			bindings.forEach((key) => {
 				observe(() => {
@@ -120,6 +130,9 @@ export class ZylemGame {
 				});
 			})
 		});
+		if (this.customSetup) {
+			this.customSetup(params);
+		}
 		requestAnimationFrame(this.loop.bind(this));
 	}
 

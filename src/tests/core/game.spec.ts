@@ -1,9 +1,19 @@
-import { describe, it } from 'vitest';
-import { game } from '../../main';
+import { describe, expect, it, vi } from 'vitest';
+import { game, stage } from '../../main';
 
 describe('create a basic game', () => {
   it('default configuration', () => {
-    const test = game();
-	console.log(test);
+    const result = game();
+	expect(result).toMatchSnapshot();
+  });
+  it('should create a game with multiple stages', async () => {
+	const result = game(
+		stage(),
+		stage(),
+		stage()
+	);
+	expect(result.options.length).toEqual(3);
   });
 });
+
+// TODO: test the porcelain commands of the Game wrapper
