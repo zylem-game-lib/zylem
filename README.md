@@ -32,7 +32,6 @@ npm run dev
   <link rel="stylesheet" href="./index.css" />
  </head>
  <body>
-  <main id="basic-game"></main>
   <script src="./src/index.ts" type="module"></script>
  </body>
 </html>
@@ -41,24 +40,15 @@ npm run dev
 ```typescript
 import { game, stage, sphere } from '@tcool86/zylem';
 
-const example = game({
- id: 'basic-game',
- globals: {
-  score: 0
- },
- stages: [
-  stage({
-   children: () => [
-    sphere({
-     update: ({ entity: ball, inputs }) => {
-      const { horizontal, vertical } = inputs[0];
-      ball.moveXY(horizontal * 5, -vertical * 5);
-     }
-    })
-   ]
-  })
- ],
-});
+const example = game(
+ stage(),
+ sphere({
+  update: ({ entity: ball, inputs }) => {
+   const { horizontal, vertical } = inputs[0];
+   ball.moveXY(horizontal * 5, -vertical * 5);
+  }
+ })
+);
 
 example.start();
 ```
@@ -72,7 +62,7 @@ example.start();
 - `docs`: Documentation only changes
 - `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
 - `refactor`: A code change that neither fixes a bug nor adds a feature
-- `cleanup`: Removal of dead code or code changes involving renaming
+- `cleanup`: Removal of dead code, unused functionality, or code changes involving renaming
 - `perf`: A code change that improves performance
 - `test`: Adding missing or correcting existing tests
 - `build`: Changes that affect the build system or external dependencies (example scopes: vite, npm, typescript, etc)
