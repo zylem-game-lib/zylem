@@ -2,25 +2,39 @@ import { Clock } from 'three';
 import { observe } from '@simplyianm/legend-state';
 
 import GamePad from '../input/game-pad';
-import { GameBlueprint, GameRatio } from '../interfaces/game';
+import { GameRatio } from '../interfaces/game';
 import { PerspectiveType, Perspectives } from "../interfaces/perspective";
 import { setGlobalState } from '../state/index';
 import { EntityParameters } from './entity';
 import { ZylemStage } from './stage';
 import { state$ } from '../state/game-state';
 import { setDebugFlag } from '../state/debug-state';
+import { Entity, System } from './ecs';
+import { UpdateFunction } from '../interfaces/entity';
+import { DebugConfiguration } from './debug';
+
+export interface GameOptions {
+	id: string;
+	ratio?: GameRatio,
+	globals: Record<string, any>;
+	stages: ZylemStage[];
+	update?: UpdateFunction<this>;
+	debug?: boolean;
+	debugConfiguration?: DebugConfiguration;
+	time?: number;
+}
 
 // We should have an abstraction for entering, exiting, and updating.
 // Zylem Game should only require stages, global state, and game loop.
 type Timeout = /*unresolved*/ any;
 
-export class ZylemGame implements GameBlueprint {
+export class ZylemGame {
 	id: string;
 	ratio: GameRatio;
 	perspective: PerspectiveType = Perspectives.ThirdPerson;
 	globals: any;
 	stages: ZylemStage[] = [];
-	blueprintOptions: GameBlueprint;
+	blueprintOptions: GameOptions;
 	currentStageId: string = '';
 	clock: Clock;
 	gamePad: GamePad;
@@ -34,7 +48,7 @@ export class ZylemGame implements GameBlueprint {
 
 	static logcount = 0;
 
-	constructor(options: GameBlueprint, loadedStage: ZylemStage) {
+	constructor(options: GameOptions, loadedStage: ZylemStage) {
 		setGlobalState(options.globals);
 		setDebugFlag(options.debug ?? false);
 		this._initialGlobals = { ...options.globals };

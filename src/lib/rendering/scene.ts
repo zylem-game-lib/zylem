@@ -44,15 +44,19 @@ export class ZylemScene implements Entity<ZylemScene> {
 		this.setupCamera(scene);
 
 		this.scene = scene;
-		const element = document.getElementById(id);
+		let element = document.getElementById(id);
 		if (!element) {
-			throw new Error(`Could not find element with id: ${id}`);
+			console.warn(`Could not find element with id: ${id}`);
+			const main = document.createElement('main');
+			main.setAttribute('id', id);
+			document.body.appendChild(main);
+			element = main;
 		}
-		if (element.firstChild) {
+		if (element?.firstChild) {
 			element.removeChild(element.firstChild);
 		}
 		this.containerElement = element;
-		element.appendChild(this.renderer.domElement);
+		element?.appendChild(this.renderer.domElement);
 		if (debugState.on) {
 			this.debugScene();
 		}
