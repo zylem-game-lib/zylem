@@ -37,7 +37,7 @@
 	"scripts": {
 		"build": "tsc && vite build && typedoc",
 		"build:watch": "tsc && vite build --watch && typedoc",
-		"test": "npx vitest",
+		"test": "npx vitest --reporter=verbose",
 		"coverage": "vitest run --coverage",
 		"start": "vite",
 		"dev": "vite --host && typedoc",
