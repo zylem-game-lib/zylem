@@ -48,7 +48,7 @@ export class ZylemGame {
 
 	static logcount = 0;
 
-	constructor(options: GameOptions, loadedStage: ZylemStage) {
+	constructor(options: GameOptions) {
 		setGlobalState(options.globals);
 		setDebugFlag(options.debug ?? false);
 		this._initialGlobals = { ...options.globals };
@@ -58,14 +58,13 @@ export class ZylemGame {
 		this.gamePad = new GamePad();
 		this.clock = new Clock();
 		this.blueprintOptions = { ...options };
-		this.stages = [loadedStage];
-		this._stageMap[loadedStage.uuid] = loadedStage;
-		this.currentStageId = loadedStage.uuid;
+		this.stages = options.stages;
 	}
 
 	async loadStage(stage: ZylemStage) {
-		await stage.buildStage(stage.uuid);
+		await stage.buildStage(this.id);
 		this._stageMap[stage.uuid] = stage;
+		this.currentStageId = stage.uuid;
 	}
 
 	/**
@@ -156,3 +155,69 @@ export class ZylemGame {
 }
 
 export default ZylemGame;
+
+
+export class GameSystem implements System {
+	stages = new Map();
+	currentStageId = '';
+	previousTimeStamp: number = 0;
+	totalTime = 0;
+
+	clock: Clock;
+	gamePad: GamePad;
+
+	static FRAME_LIMIT = 64;
+	static FRAME_DURATION = 1000 / GameSystem.FRAME_LIMIT;
+
+	entities: Map<number, Entity> = new Map();
+
+	constructor() {
+		this.gamePad = new GamePad();
+		this.clock = new Clock();
+	}
+
+	setup(entities: Map<number, Entity>): void {
+		this.entities = new Map([...entities].filter(([_key, value]) => this.filter(value)))
+	}
+
+	filter(entity: Entity): boolean {
+		// Does the game system have a filter?
+		return entity && true;
+	}
+
+	update(entities: Map<number, Entity>): void {
+		
+	}
+
+	loop(timestamp: number) {
+		const elapsed = timestamp - this.previousTimeStamp;
+        if (elapsed >= ZylemGame.FRAME_DURATION) {
+			const delta = this.clock.getDelta();
+            const inputs = this.gamePad.getInputs();
+            const stage = this.currentStage();
+            const options = {
+                inputs,
+                entity: stage,
+                delta,
+				HUD: stage.HUD,
+                camera: stage.scene?.zylemCamera,
+                globals: state$.globals,
+            } as EntityParameters<ZylemStage>;
+
+            stage.update(options);
+            this.totalTime += delta;
+            state$.time.set(this.totalTime);
+            this.previousTimeStamp = timestamp;
+        }
+
+        requestAnimationFrame(this.loop);
+	}
+
+	getStage(id: string) {
+		return this.stages.get(id);
+	}
+
+	currentStage() {
+		return this.getStage(this.currentStageId);
+	}
+}

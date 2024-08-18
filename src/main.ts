@@ -23,5 +23,20 @@ const { box, sphere, sprite, plane, zone, actor } = entities;
 
 namespace Zylem { };
 
-export { game, stage, box, sphere, sprite, plane, zone, actor, Perspectives, Zylem, Howl, THREE, RAPIER };
+export {
+	game,
+	stage,
+	box,
+	sphere,
+	sprite,
+	plane,
+	zone,
+	actor,
+	actions,
+	Perspectives,
+	Zylem,
+	Howl,
+	THREE,
+	RAPIER
+};
 export type { GameOptions as ZylemGame, StageBlueprint as ZylemStage, Vect3, PerspectiveType };

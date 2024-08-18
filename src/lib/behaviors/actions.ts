@@ -61,3 +61,22 @@ export const actionWithThrottle = (() => {
 		}
 	};
 })();
+
+export const wait = (() => {
+	let startTime = 0;
+	let called = false;
+
+	return (time: number, callback: Function) => {
+		if (called) return;
+		if (!startTime) {
+			startTime = Date.now();
+		}
+		const currentTime = Date.now();
+		const delta = currentTime;
+
+		if (delta >= (startTime + time)) {
+			called = true;
+			callback();
+		}
+	}
+})();
