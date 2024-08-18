@@ -17,6 +17,7 @@ type ZylemStageOptions = {
     children: ({ globals }: any) => GameEntity<any>[];
 };
 type StageOptions = GameEntityOptions<ZylemStageOptions, ZylemStage>;
+export declare const STAGE_TYPE = "Stage";
 declare const ZylemStage_base: import("ts-mixer/dist/types/types").Class<any[], BaseEntity<unknown>, new (options: import("../interfaces/entity").BaseEntityOptions<unknown>) => BaseEntity<unknown>>;
 export declare class ZylemStage extends ZylemStage_base {
     protected type: string;
@@ -46,5 +47,5 @@ export declare class ZylemStage extends ZylemStage_base {
     logMissingEntities(): void;
     resize(width: number, height: number): void;
 }
-export declare function stage(options: StageOptions, ...acts: Function[]): ZylemStage;
+export declare function stage(options?: StageOptions): ZylemStage;
 export {};

@@ -1,5 +1,5 @@
 import { ControllerInput, GamePadConnections } from "../interfaces/game-pad";
-import { JoystickManager } from 'nipplejs';
+type JoystickManager = unknown;
 export default class GamePad {
     hasSupport: boolean;
     mobileGamepad?: JoystickManager | null;
@@ -12,3 +12,4 @@ export default class GamePad {
     getInputs(): ControllerInput[];
     getDebugInfo(): string;
 }
+export {};

@@ -1,1 +1,0 @@
-"use strict";const i=require("./colorToUniform-92f00749.js"),e={};function c(r){let o=e[r];if(o)return o;const n=new Int32Array(r);for(let t=0;t<r;t++)n[t]=t;return o=e[r]=new i.UniformGroup({uTextures:{value:n,type:"i32",size:r}},{isStatic:!0}),o}exports.getBatchSamplersUniformGroup=c;

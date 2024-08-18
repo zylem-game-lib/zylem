@@ -1,4 +1,4 @@
-import { GameBlueprint } from '../interfaces/game';
+import { GameOptions } from '../core/';
 import { observable } from '@simplyianm/legend-state';
 
 const state$ = observable({
@@ -9,7 +9,7 @@ const state$ = observable({
 		hud: null,
 		game: null
 	}
-} as unknown as GameBlueprint);
+} as unknown as GameOptions);
 
 const setGlobalState = (value: any) => {
 	state$.globals.set(value);
