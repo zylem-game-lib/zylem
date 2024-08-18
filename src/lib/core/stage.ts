@@ -29,8 +29,10 @@ type ZylemStageOptions = {
 
 type StageOptions = GameEntityOptions<ZylemStageOptions, ZylemStage>;
 
+export const STAGE_TYPE = 'Stage';
+
 export class ZylemStage extends Mixin(BaseEntity) {
-	protected type = 'Stage';
+	protected type = STAGE_TYPE;
 
 	perspective: PerspectiveType;
 	backgroundColor: Color;
@@ -212,6 +214,6 @@ export class ZylemStage extends Mixin(BaseEntity) {
 	}
 }
 
-export function stage(options: StageOptions, ...acts: Function[]): ZylemStage {
+export function stage(options: StageOptions): ZylemStage {
 	return new ZylemStage(options) as ZylemStage;
 }
