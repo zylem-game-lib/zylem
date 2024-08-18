@@ -1,10 +1,12 @@
 import { ControllerInput, GamePadConnections } from "../interfaces/game-pad";
-import { isMobile } from "../device/mobile";
-import nipplejs, { JoystickManager } from 'nipplejs';
+// import { isMobile } from "../device/mobile";
+// import nipplejs, { JoystickManager } from 'nipplejs';
+
+type JoystickManager = unknown;
 
 export default class GamePad {
 	hasSupport = true;
-	mobileGamepad?: JoystickManager | null;
+	mobileGamepad?: JoystickManager | null = null;
 	lastConnection = -1;
 	connections: GamePadConnections = new Map();
 	keyboardInput = new Map<string, boolean>();
@@ -19,9 +21,9 @@ export default class GamePad {
 		window.addEventListener("keydown", ({ key }) => this.keyboardInput.set(key, true));
 		window.addEventListener("keyup", ({ key }) => this.keyboardInput.set(key, false));
 		// TODO: restrick virtual joystick to screen area
-		if (isMobile()) {
-			this.mobileGamepad = nipplejs.create({ mode: 'dynamic' });
-		}
+		// if (isMobile()) {
+		// 	this.mobileGamepad = nipplejs.create({ mode: 'dynamic' });
+		// }
 	}
 
 	scanGamePads() {
@@ -35,11 +37,11 @@ export default class GamePad {
 	}
 
 	getInputAtIndex(index: number): ControllerInput {
-		if (isMobile()) {
-			// TODO: separate out, use a strategy pattern
-			// Should users be able to use keyboard + controller + screen?
-			console.log(this.mobileGamepad?.get(0));
-		}
+		// if (isMobile()) {
+		// 	// TODO: separate out, use a strategy pattern
+		// 	// Should users be able to use keyboard + controller + screen?
+		// 	console.log(this.mobileGamepad?.get(0));
+		// }
 		const gamepad = navigator.getGamepads()[index];
 		const connected = this.connections.get(index) || false;
 		const up = this.keyboardInput.get("ArrowUp") || false;
