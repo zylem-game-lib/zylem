@@ -1,0 +1,64 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`create base collision > should create collision component 1`] = `
+BaseCollision {
+  "bodyDescription": cA {
+    "angularDamping": 0,
+    "angularInertiaLocalFrame": oA {
+      "w": 1,
+      "x": 0,
+      "y": 0,
+      "z": 0,
+    },
+    "angvel": iA {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+    },
+    "canSleep": false,
+    "ccdEnabled": true,
+    "centerOfMass": iA {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+    },
+    "dominanceGroup": 0,
+    "enabled": true,
+    "gravityScale": 1,
+    "linearDamping": 0,
+    "linvel": iA {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+    },
+    "mass": 0,
+    "massOnly": false,
+    "principalAngularInertia": iA {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+    },
+    "rotation": oA {
+      "w": 1,
+      "x": 0,
+      "y": 0,
+      "z": 0,
+    },
+    "rotationsEnabledX": true,
+    "rotationsEnabledY": true,
+    "rotationsEnabledZ": true,
+    "sleeping": false,
+    "status": 0,
+    "translation": {
+      "x": 0,
+      "y": 0,
+      "z": 0,
+    },
+    "translationsEnabledX": true,
+    "translationsEnabledY": true,
+    "translationsEnabledZ": true,
+  },
+  "isSensor": false,
+  "static": false,
+}
+`;

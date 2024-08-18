@@ -1,6 +1,6 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
 import { BufferGeometry, Object3D, SkinnedMesh } from "three";
-import { BaseCollision } from "~/lib/collision/collision";
+import { BaseCollision } from "~/lib/collision/_oldCollision";
 
 export class ActorCollision extends BaseCollision {
 	height: number = 1;

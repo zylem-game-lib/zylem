@@ -1,6 +1,6 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
 import { Vector3 } from "three";
-import { BaseCollision } from "~/lib/collision/collision";
+import { BaseCollision } from "~/lib/collision/_oldCollision";
 
 export class SpriteCollision extends BaseCollision {
 	collisionSize: Vector3 = new Vector3(1, 1, 1);
