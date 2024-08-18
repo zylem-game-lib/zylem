@@ -18,15 +18,26 @@ async function loadGame(wrapperRef: Game) {
 	return game;
 }
 
+// TODO: don't use this hack
+const supportedEntities = [
+	'ZylemActor',
+	'ZylemBox',
+	'ZylemCamera',
+	'ZylemPlane',
+	'ZylemSphere',
+	'ZylemSprite',
+	'ZylemZone',
+];
+
 function convertNodes(_options: GameOptionsWrapper): GameOptions {
 	let converted = { ...defaultGameOptions };
 	const configurations: GameOptions[] = [];
 	const stages: ZylemStage[] = [];
-	const entities: GameEntity<any>[] = [];
+	const entities: any[] = [];
 	Object.values(_options).forEach((node) => {
 		if (node instanceof ZylemStage) {
 			stages.push(node);
-		} else if (node instanceof GameEntity) {
+		} else if (supportedEntities.includes(node.constructor.name)) {
 			entities.push(node);
 		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
 			const configuration = Object.assign(defaultGameOptions, { ...node });
