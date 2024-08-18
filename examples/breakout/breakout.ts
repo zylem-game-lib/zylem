@@ -25,17 +25,18 @@ const stage1 = stage({
 		}
 	],
 	setup: ({ HUD, globals }) => {
-		HUD.addText('0', {
+		// TODO: fix binding issue
+		HUD.addLabel({
 			binding: 'score',
 			update: (element, value) => {
-				element.text = `Score: ${value}`;
+				element.updateText(`Score: ${value}`);
 			},
-			position: new Vector2(50, 5)
+			position: new Vector2(250, 5)
 		});
-		HUD.addText('0', {
+		HUD.addLabel({
 			binding: 'lives',
 			update: (element, value) => {
-				element.text = `Lives: ${value}`;
+				element.updateText(`Lives: ${value}`);
 			},
 			position: new Vector2(25, 5)
 		});
@@ -58,7 +59,7 @@ const stage1 = stage({
 	}
 });
 
-const breakout = game({
+const config = {
 	id: 'playground',
 	globals: {
 		score: 0,
@@ -66,7 +67,11 @@ const breakout = game({
 		lives: 3,
 		bricks: 0
 	},
-	stages: [stage1]
-});
+};
+
+const breakout = game(
+	config,
+	stage1
+);
 
 breakout.start();

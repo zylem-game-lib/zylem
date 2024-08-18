@@ -5,10 +5,11 @@ import { ZylemDebug } from './debug';
 import { GameOptions, ZylemGame } from "./game";
 import { ZylemStage, stage } from './stage';
 import { GameEntity } from './game-entity';
+import { SetupFunction, UpdateFunction } from '../interfaces/entity';
 
-async function loadGame(_options: GameOptionsWrapper) {
-	const options = convertNodes(_options);
-	const game = new ZylemGame(options);
+async function loadGame(wrapperRef: Game) {
+	const options = convertNodes(wrapperRef.options);
+	const game = new ZylemGame(options, wrapperRef);
 	await game.loadStage(options.stages[0]);
 	if (debugState.on) {
 		const debug = new ZylemDebug();
@@ -56,25 +57,48 @@ const defaultGameOptions = {
 	]
 }
 
-class Game {
+export class Game {
 	gameRef: ZylemGame | null = null;
 	options: GameOptionsWrapper;
+
+	updateOverride: UpdateFunction<any> = () => {};
+	setupOverride: SetupFunction<any> = () => {};
 
 	constructor(options: GameOptionsWrapper) {
 		this.options = options;
 	}
 
 	async start() {
-		const game = await loadGame(this.options);
+		const game = await loadGame(this);
 		this.gameRef = game;
+		this.setOverrides();
 		game.start();
 	}
+
+	setOverrides() {
+		if (!this.gameRef) {
+			console.error('lost reference to game');
+			return;
+		}
+		this.gameRef.customSetup = this.setupOverride;
+		this.gameRef.customUpdate = this.updateOverride;
+	}
+
+	async setup(setupFn: SetupFunction<any>) {
+		this.setupOverride = setupFn;
+	}
+
+	async update(updateFn: UpdateFunction<any>) {
+		this.updateOverride = updateFn;
+	}
+
 	async pause() {}
-	async end() {}
+
 	async reset() {
 		// TODO: implement actual reset
 		window.location.reload();
 	}
+
 	async nextStage() {
 		if (!this.gameRef) {
 			console.error('lost reference to game');
@@ -89,8 +113,12 @@ class Game {
 		}
 		await this.gameRef.loadStage(nextStage);
 	}
+
 	async previousStage() {}
+
 	async goToStage() {}
+
+	async end() {}
 }
 
 type GameOptionsWrapper = Array<Partial<GameOptions> | ZylemStage | GameEntity<any>>;
