@@ -20,7 +20,7 @@ declare const Zylem: {
         actionOnRelease: (isPressed: boolean, callback: Function) => void;
         actionWithCooldown: ({ timer, immediate }: {
             timer: number;
-            immediate?: boolean | undefined;
+            immediate?: boolean;
         }, callback: Function, update: Function) => void;
         actionWithThrottle: (timer: number, callback: Function) => void;
     };
