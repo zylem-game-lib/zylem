@@ -28376,7 +28376,7 @@ const Jn = (i) => {
   },
   test: () => !0,
   load: async () => {
-    await import("./browserAll-7b12b395.mjs");
+    await import("./browserAll-0662a571.mjs");
   }
 }, YK = {
   extension: {
@@ -28386,7 +28386,7 @@ const Jn = (i) => {
   },
   test: () => typeof self < "u" && self.WorkerGlobalScope !== void 0,
   load: async () => {
-    await import("./webworkerAll-1a45f8aa.mjs");
+    await import("./webworkerAll-ea045917.mjs");
   }
 };
 class dg {
@@ -34136,13 +34136,13 @@ async function iF(i) {
   for (let B = 0; B < A.length; B++) {
     const Q = A[B];
     if (Q === "webgpu" && await BF()) {
-      const { WebGPURenderer: E } = await import("./WebGPURenderer-acee6373.mjs");
+      const { WebGPURenderer: E } = await import("./WebGPURenderer-03617680.mjs");
       I = E, g = { ...i, ...i.webgpu };
       break;
     } else if (Q === "webgl" && CF(
       i.failIfMajorPerformanceCaveat ?? bS.defaultOptions.failIfMajorPerformanceCaveat
     )) {
-      const { WebGLRenderer: E } = await import("./WebGLRenderer-e1c4d694.mjs");
+      const { WebGLRenderer: E } = await import("./WebGLRenderer-4e955c67.mjs");
       I = E, g = { ...i, ...i.webgl };
       break;
     } else if (Q === "canvas")
@@ -39126,13 +39126,13 @@ async function NR(i) {
   return await I.loadStage(A.stages[0]), ro.on && new AS().appendToDOM(), I;
 }
 const KR = [
-  "ZylemActor",
-  "ZylemBox",
-  "ZylemCamera",
-  "ZylemPlane",
-  "ZylemSphere",
-  "ZylemSprite",
-  "ZylemZone"
+  "Actor",
+  "Box",
+  "Camera",
+  "Plane",
+  "Sphere",
+  "Sprite",
+  "Zone"
 ];
 function JR(i) {
   let A = { ...Dl };
@@ -39140,7 +39140,7 @@ function JR(i) {
   return Object.values(i).forEach((B) => {
     if (B instanceof Ey)
       g.push(B);
-    else if (KR.includes(B.constructor.name))
+    else if (KR.includes(B.type))
       C.push(B);
     else if (B.constructor.name === "Object" && typeof B == "object") {
       const Q = Object.assign(Dl, { ...B });
