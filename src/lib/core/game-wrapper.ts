@@ -14,6 +14,7 @@ async function loadGame(wrapperRef: Game) {
 	if (debugState.on) {
 		const debug = new ZylemDebug();
 		debug.appendToDOM();
+		game.statsRef = debug.statsRef;
 	}
 	return game;
 }

@@ -1,3 +1,7 @@
+import * as dat from 'dat.gui';
+import Stats from 'stats.js';
+import { ZylemBlue, ZylemBlueTransparent, ZylemGoldText } from '../interfaces/utility';
+
 //TODO: Debug configuration
 export type DebugConfiguration = {
 	showCollisionBounds?: boolean;
@@ -7,28 +11,60 @@ export type DebugConfiguration = {
 }
 
 export class ZylemDebug extends HTMLElement {
+	statsRef: Stats;
+	debugStyle: Partial<CSSStyleDeclaration> = {
+		display: 'grid',
+		position: 'fixed',
+		top: '0',
+		left: '0',
+		width: '39vw',
+		height: '39vh',
+		background: ZylemBlueTransparent,
+		padding: '10px',
+		color: ZylemGoldText,
+		fontFamily: 'monospace',
+		fontSize: '12px',
+		border: `2px solid ${ZylemBlue}`,
+		borderBottomRightRadius: '10px',
+		borderTop: '0px',
+		borderLeft: '0px',
+		zIndex: '1000',
+	};
+
 	constructor() {
 		super();
-		this.style.position = "fixed";
-		this.style.top = "0";
-		this.style.left = "0";
-		this.style.background = "rgba(255, 255, 255, 0.6)";
-		this.style.padding = "10px";
-		this.style.fontFamily = "monospace";
-		this.style.fontSize = "12px";
-		this.style.zIndex = '1';
-		window.addEventListener("resize", () => {
-			this.style.width = Math.round(window.innerWidth / 3) + "px";
-			this.style.height = Math.round(window.innerHeight / 3) + "px";
-		});
+		this.addDataGUI();
+		this.statsRef = this.addStats();
+		this.setStyles();
 	}
+
+	setStyles() {
+		for (const prop in this.debugStyle) {
+			const value = this.debugStyle[prop] ?? '';
+			this.style[prop] = value;
+		}
+	}
+
+	addStats() {
+		const stats = new Stats();
+		stats.showPanel(0);
+		this.appendChild(stats.dom);
+		stats.dom.style.position = 'relative';
+		return stats;
+	}
+
+	addDataGUI() {
+		const gui = new dat.GUI({
+			name: 'Debug menu',
+			closeOnTop: true,
+		});
+		this.appendChild(gui.domElement);
+	}
+
 	connectedCallback() {
 		const debugText = document.createElement("div");
-		debugText.textContent = "This is a debug overlay!";
+		debugText.textContent = "Debug overlay connected!";
 		this.appendChild(debugText);
-
-		this.style.width = Math.round(window.innerWidth / 3) + "px";
-		this.style.height = Math.round(window.innerHeight / 3) + "px";
 	}
 
 	addInfo(info: string) {

@@ -42,6 +42,7 @@ export class ZylemGame {
 	customSetup: SetupFunction<any> | null = null;
 	customUpdate: UpdateFunction<any> | null = null;
 	wrapperRef: Game;
+	statsRef: Stats | null = null;
 
 	_targetRatio: number;
 	_initialGlobals: any;
@@ -84,6 +85,7 @@ export class ZylemGame {
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 
 	loop = (timeStamp: number) => {
+		this.statsRef && this.statsRef.begin();
         const elapsed = timeStamp - this.previousTimeStamp;
         if (elapsed >= ZylemGame.FRAME_DURATION) {
 			const delta = this.clock.getDelta();
@@ -106,7 +108,7 @@ export class ZylemGame {
             state$.time.set(this.totalTime);
             this.previousTimeStamp = timeStamp;
         }
-
+		this.statsRef && this.statsRef.end();
         requestAnimationFrame(this.loop);
     }
 
