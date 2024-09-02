@@ -1,6 +1,6 @@
 import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
-import { EntityBlueprint, GameEntityOptions } from "../interfaces/entity";
+import { GameEntityOptions } from "../interfaces/entity";
 import { Conditions } from "../interfaces/game";
 import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from "three";
 import {
@@ -10,7 +10,7 @@ import {
 	state$
 } from "../state";
 import { ZylemHUD } from "../ui/hud";
-import { EntityParameters, GameEntity } from "./";
+import { EntityParameters, GameEntity, IGameEntity } from "./";
 import { World } from "@dimforge/rapier3d-compat";
 import { Mixin } from "ts-mixer";
 import { PerspectiveType, Perspectives } from "../interfaces/perspective";
@@ -24,7 +24,7 @@ type ZylemStageOptions = {
 	backgroundImage: String;
 	gravity: Vector3;
 	conditions: Conditions<any>[];
-	children: ({ globals }: any) => GameEntity<any>[];
+	children: ({ globals }: any) => IGameEntity[];
 }
 
 type StageOptions = GameEntityOptions<ZylemStageOptions, ZylemStage>;
@@ -32,7 +32,7 @@ type StageOptions = GameEntityOptions<ZylemStageOptions, ZylemStage>;
 export const STAGE_TYPE = 'Stage';
 
 export class ZylemStage extends Mixin(BaseEntity) {
-	protected type = STAGE_TYPE;
+	public type = STAGE_TYPE;
 
 	perspective: PerspectiveType;
 	backgroundColor: Color;
@@ -44,11 +44,9 @@ export class ZylemStage extends Mixin(BaseEntity) {
 	HUD: ZylemHUD;
 	conditions: Conditions<any>[] = [];
 
-	children: Array<GameEntity<any>> = [];
-	_childrenMap: Map<string, GameEntity<any>> = new Map();
-	_removalMap: Map<string, GameEntity<any>> = new Map();
-
-	blueprints: Array<EntityBlueprint<any>> = [];
+	children: Array<IGameEntity> = [];
+	_childrenMap: Map<string, IGameEntity> = new Map();
+	_removalMap: Map<string, IGameEntity> = new Map();
 
 	_debugLines: LineSegments | null = null;
 
@@ -146,12 +144,12 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		this._destroy({ ...params, entity: this });
 	}
 
-	async spawnEntity(child: GameEntity<any>) {
+	async spawnEntity(child: IGameEntity) {
 		if (!this.scene || !this.world) {
 			return;
 		}
 
-		const entity = await child.createFromBlueprint();
+		const entity = await child.create();
 		if (entity.group) {
 			this.scene.scene.add(entity.group);
 		}
@@ -163,11 +161,11 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			}
 		}
 		this.world.addEntity(entity);
-		child.setup({ entity, HUD: this.HUD });
+		child.setup({ entity, HUD: this.HUD, camera: this.scene.zylemCamera });
 		this._childrenMap.set(entity.uuid, entity);
 	}
 
-	setForRemoval(entity: GameEntity<any>) {
+	setForRemoval(entity: IGameEntity) {
 		if (this.world) {
 			this.world.setForRemoval(entity);
 		}

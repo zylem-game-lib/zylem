@@ -9,19 +9,19 @@ export interface EntityParameters<T> {
 	delta: number;
 	inputs: any; // TODO: inputs type
 	entity: T;
-	globals: Globals;
+	globals: Globals; // TODO: this needs better type information
 	camera: ZylemCamera;
 	HUD: ZylemHUD;
 }
 
-export abstract class Entity {
+export abstract class Entity<T> {
 	abstract uuid: string;
 
-	public abstract createFromBlueprint(): Promise<this>;
+	public abstract create(): Promise<T>;
 
-	public abstract setup(params: EntityParameters<this>): void;
+	public abstract setup(params: EntityParameters<T>): void;
 
-	public abstract update(params: EntityParameters<this>): void;
+	public abstract update(params: EntityParameters<T>): void;
 
-	public abstract destroy(params: EntityParameters<this>): void;
+	public abstract destroy(params: EntityParameters<T>): void;
 }

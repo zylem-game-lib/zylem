@@ -4,7 +4,7 @@ import { debugState } from '../state/debug-state';
 import { ZylemDebug } from './debug';
 import { GameOptions, ZylemGame } from "./game";
 import { ZylemStage, stage } from './stage';
-import { GameEntity } from './game-entity';
+import { IGameEntity } from './game-entity';
 import { SetupFunction, UpdateFunction } from '../interfaces/entity';
 
 async function loadGame(wrapperRef: Game) {
@@ -30,19 +30,31 @@ const supportedEntities = [
 	'Zone',
 ];
 
+const defaultGameOptions = {
+	id: 'zylem',
+	globals: {},
+	stages: [
+		stage({
+			perspective: Perspectives.ThirdPerson,
+			backgroundColor: ZylemBlueColor,
+			children: (_) => []
+		})
+	]
+}
+
 function convertNodes(_options: GameOptionsWrapper): GameOptions {
 	let converted = { ...defaultGameOptions };
 	const configurations: GameOptions[] = [];
 	const stages: ZylemStage[] = [];
-	const entities: any[] = [];
+	const entities: IGameEntity[] = [];
 	Object.values(_options).forEach((node) => {
 		if (node instanceof ZylemStage) {
 			stages.push(node);
-		} else if (supportedEntities.includes((node as any).type)) {
-			entities.push(node);
+		} else if (supportedEntities.includes((node as IGameEntity).type)) {
+			entities.push(node as IGameEntity);
 		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
 			const configuration = Object.assign(defaultGameOptions, { ...node });
-			configurations.push(configuration);
+			configurations.push(configuration as GameOptions);
 		}
 	});
 	configurations.forEach((configuration) => {
@@ -57,27 +69,24 @@ function convertNodes(_options: GameOptionsWrapper): GameOptions {
 	return converted;
 }
 
-const defaultGameOptions = {
-	id: 'zylem',
-	globals: {},
-	stages: [
-		stage({
-			perspective: Perspectives.ThirdPerson,
-			backgroundColor: ZylemBlueColor,
-			children: ({ globals }: any) => []
-		})
-	]
-}
-
 export class Game {
 	gameRef: ZylemGame | null = null;
 	options: GameOptionsWrapper;
+	debugRef: ZylemDebug | null = null;
 
 	updateOverride: UpdateFunction<any> = () => {};
 	setupOverride: SetupFunction<any> = () => {};
 
 	constructor(options: GameOptionsWrapper) {
 		this.options = options;
+	}
+
+	log(message: string) {
+		if (!this.debugRef) {
+			console.log(message);
+			return;
+		}
+		this.debugRef.addInfo(message);
 	}
 
 	async start() {
@@ -133,7 +142,7 @@ export class Game {
 	async end() {}
 }
 
-type GameOptionsWrapper = Array<Partial<GameOptions> | ZylemStage | GameEntity<any>>;
+type GameOptionsWrapper = Array<Partial<GameOptions> | ZylemStage | Partial<IGameEntity>>;
 
 export function game(...options: GameOptionsWrapper): Game {
 	return new Game(options);

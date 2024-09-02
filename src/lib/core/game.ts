@@ -1,22 +1,22 @@
 import { Clock } from 'three';
 import { observe } from '@simplyianm/legend-state';
+import { createWorld } from 'bitecs';
+
+import { state$ } from '../state/game-state';
+import { setGlobalState } from '../state/index';
+
+import { setDebugFlag } from '../state/debug-state';
+import { DebugConfiguration } from './debug';
 
 import GamePad from '../input/game-pad';
-import { GameRatio } from '../interfaces/game';
-import { PerspectiveType, Perspectives } from "../interfaces/perspective";
-import { setGlobalState } from '../state/index';
-import { EntityParameters } from './entity';
+
 import { ZylemStage } from './stage';
-import { state$ } from '../state/game-state';
-import { setDebugFlag } from '../state/debug-state';
-import { Entity, System } from './ecs';
+import { Entity, EntityParameters } from './entity';
 import { SetupFunction, UpdateFunction } from '../interfaces/entity';
-import { DebugConfiguration } from './debug';
 import { Game } from './game-wrapper';
 
 export interface GameOptions {
 	id: string;
-	ratio?: GameRatio,
 	globals: Record<string, any>;
 	stages: ZylemStage[];
 	update?: UpdateFunction<this>;
@@ -31,100 +31,72 @@ type Timeout = /*unresolved*/ any;
 
 export class ZylemGame {
 	id: string;
-	ratio: GameRatio;
-	perspective: PerspectiveType = Perspectives.ThirdPerson;
-	globals: any;
-	stages: ZylemStage[] = [];
-	blueprintOptions: GameOptions;
-	currentStageId: string = '';
-	clock: Clock;
-	gamePad: GamePad;
+	initialGlobals = {};
+
 	customSetup: SetupFunction<any> | null = null;
 	customUpdate: UpdateFunction<any> | null = null;
+
+	stages: ZylemStage[] = [];
+	stageMap: Map<string, ZylemStage> = new Map();
+	currentStageId = '';
+
+	previousTimeStamp: number = 0;
+	totalTime = 0;
+
+	clock: Clock;
+	gamePad: GamePad;
+
 	wrapperRef: Game;
 	statsRef: Stats | null = null;
 
-	_targetRatio: number;
-	_initialGlobals: any;
-	_stageMap: Record<string, ZylemStage> = {};
-
-	totalTime: number = 0;
-	timeoutId: Timeout | number = 0;
-
-	static logcount = 0;
-
-	constructor(options: GameOptions, wrapperRef: Game) {
-		this.wrapperRef = wrapperRef;
-		setGlobalState(options.globals);
-		setDebugFlag(options.debug ?? false);
-		this._initialGlobals = { ...options.globals };
-		this.id = options.id;
-		this.ratio = options.ratio ?? '16:9';
-		this._targetRatio = Number(this.ratio.split(':')[0]) / Number(this.ratio.split(':')[1]);
-		this.gamePad = new GamePad();
-		this.clock = new Clock();
-		this.blueprintOptions = { ...options };
-		this.stages = options.stages;
-	}
-
-	async loadStage(stage: ZylemStage) {
-		await stage.buildStage(this.id);
-		this._stageMap[stage.uuid] = stage;
-		this.currentStageId = stage.uuid;
-	}
-
-	/**
-	 * Main game loop
-	 * process user input
-	 * update physics
-	 * render scene
-	 */
-	previousTimeStamp: number = 0;
+	ecs = createWorld();
 
 	static FRAME_LIMIT = 64;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 
-	loop = (timeStamp: number) => {
-		this.statsRef && this.statsRef.begin();
-        const elapsed = timeStamp - this.previousTimeStamp;
-        if (elapsed >= ZylemGame.FRAME_DURATION) {
-			const delta = this.clock.getDelta();
-            const inputs = this.gamePad.getInputs();
-            const stage = this.getCurrentStage();
-            const options = {
-				game: this.wrapperRef,
-                inputs,
-                entity: stage,
-                delta,
-				HUD: stage.HUD,
-                camera: stage.scene?.zylemCamera,
-                globals: state$.globals,
-            } as EntityParameters<ZylemStage>;
-			if (this.customUpdate) {
-				this.customUpdate(options);
-			}
-            stage.update(options);
-            this.totalTime += delta;
-            state$.time.set(this.totalTime);
-            this.previousTimeStamp = timeStamp;
-        }
-		this.statsRef && this.statsRef.end();
-        requestAnimationFrame(this.loop);
-    }
+	// entities: Map<Uint16Array, Entity> = new Map();
 
-	runLoop() {
-		const stage = this.getCurrentStage();
-		const params = {
-			game: this.wrapperRef,
-			entity: stage,
-			inputs: this.gamePad.getInputs(),
-			camera: stage.scene!.zylemCamera,
-			delta: 0,
-			HUD: stage.HUD,
+	constructor(options: GameOptions, wrapperRef: Game) {
+		this.wrapperRef = wrapperRef;
+		this.gamePad = new GamePad();
+		this.clock = new Clock();
+		this.id = options.id;
+		this.stages = options.stages;
+		this.setGlobals(options);
+	}
+
+	async loadStage(stage: ZylemStage) {
+		await stage.buildStage(this.id);
+		this.stageMap.set(stage.uuid, stage);
+		this.currentStageId = stage.uuid;
+	}
+
+	setGlobals(options: GameOptions) {
+		setGlobalState(options.globals);
+		setDebugFlag(options.debug);
+		this.initialGlobals = { ...options.globals };
+	}
+
+	params(): EntityParameters<ZylemStage> {
+		const stage = this.currentStage();
+		const delta = this.clock.getDelta() ?? 0;
+		const inputs = this.gamePad.getInputs();
+		return {
+			delta,
+			inputs,
 			globals: state$.globals,
+			game: this.wrapperRef,
+			entity: stage as ZylemStage,
+			camera: stage!.scene!.zylemCamera,
+			HUD: stage!.HUD,
 		};
-		stage.setup(params);
-		stage.conditions.forEach(({ bindings, callback }) => {
+	}
+
+	start() {
+		const stage = this.currentStage();
+		const params = this.params();
+		stage!.setup(params);
+		stage!.conditions.forEach(({ bindings, callback }) => {
 			bindings.forEach((key) => {
 				observe(() => {
 					state$.globals[key].get();
@@ -135,104 +107,32 @@ export class ZylemGame {
 		if (this.customSetup) {
 			this.customSetup(params);
 		}
-		requestAnimationFrame(this.loop.bind(this));
-	}
-
-	start() {
-		this.runLoop();
-	}
-
-	async reset(resetGlobals = true) {
-		// TODO: implement actual reset
-		clearTimeout(this.timeoutId);
-		if (resetGlobals) {
-			setGlobalState({ ...this._initialGlobals });
-		}
-	}
-
-	getStage(id: string) {
-		return this._stageMap[id];
-	}
-
-	createStage(id: string) {
-		if (!this.id) {
-			console.error('No id provided for canvas');
-			return;
-		}
-		// this.stages[id] = new ZylemStage(this.id);
-		// this.currentStage = id;
-	}
-
-	getCurrentStage() {
-		return this._stageMap[this.currentStageId];
-	}
-
-}
-
-export default ZylemGame;
-
-
-export class GameSystem implements System {
-	stages = new Map();
-	currentStageId = '';
-	previousTimeStamp: number = 0;
-	totalTime = 0;
-
-	clock: Clock;
-	gamePad: GamePad;
-
-	static FRAME_LIMIT = 64;
-	static FRAME_DURATION = 1000 / GameSystem.FRAME_LIMIT;
-
-	entities: Map<number, Entity> = new Map();
-
-	constructor() {
-		this.gamePad = new GamePad();
-		this.clock = new Clock();
-	}
-
-	setup(entities: Map<number, Entity>): void {
-		this.entities = new Map([...entities].filter(([_key, value]) => this.filter(value)))
-	}
-
-	filter(entity: Entity): boolean {
-		// Does the game system have a filter?
-		return entity && true;
-	}
-
-	update(entities: Map<number, Entity>): void {
-		
+		this.loop(0);
 	}
 
 	loop(timestamp: number) {
+		this.statsRef && this.statsRef.begin();
 		const elapsed = timestamp - this.previousTimeStamp;
-        if (elapsed >= ZylemGame.FRAME_DURATION) {
-			const delta = this.clock.getDelta();
-            const inputs = this.gamePad.getInputs();
-            const stage = this.currentStage();
-            const options = {
-                inputs,
-                entity: stage,
-                delta,
-				HUD: stage.HUD,
-                camera: stage.scene?.zylemCamera,
-                globals: state$.globals,
-            } as EntityParameters<ZylemStage>;
+		if (elapsed >= ZylemGame.FRAME_DURATION) {
+			const stage = this.currentStage();
+			const params = this.params();
+			stage!.update(params);
+			this.totalTime += params.delta;
+			state$.time.set(this.totalTime);
+			this.previousTimeStamp = timestamp;
+		}
 
-            stage.update(options);
-            this.totalTime += delta;
-            state$.time.set(this.totalTime);
-            this.previousTimeStamp = timestamp;
-        }
-
-        requestAnimationFrame(this.loop);
+		this.statsRef && this.statsRef.end();
+        requestAnimationFrame(this.loop.bind(this));
 	}
 
 	getStage(id: string) {
-		return this.stages.get(id);
+		return this.stageMap.get(id);
 	}
 
 	currentStage() {
 		return this.getStage(this.currentStageId);
 	}
 }
+
+export default ZylemGame;

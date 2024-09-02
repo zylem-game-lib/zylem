@@ -1,7 +1,7 @@
 import { AnimationAction, AnimationClip, AnimationMixer, Mesh, Object3D } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { Mixin, settings } from 'ts-mixer';
+import { Mixin } from 'ts-mixer';
 
 import { EntityParameters, GameEntity } from "../../core";
 import { GameEntityOptions } from "../../interfaces/entity";
@@ -25,13 +25,10 @@ type ZylemActorOptions = {
 
 type ActorOptions = GameEntityOptions<ZylemActorOptions, ZylemActor>;
 
-settings.initFunction = 'init';
-
 export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, ActorCollision, Moveable, EntityErrors) {
 
-	protected type = 'Actor';
+	public type = 'Actor';
 
-	_static: boolean = false;
 	_fbxLoader: FBXLoader = new FBXLoader();
 	_gltfLoader: GLTFLoader = new GLTFLoader();
 	_loaderMap: Map<FileExtensionTypes, SupportedLoaders> = new Map();
@@ -53,7 +50,7 @@ export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, Acto
 		this._loaderMap.set(FileExtensionTypes.GLTF, this._gltfLoader);
 	}
 
-	async createFromBlueprint(): Promise<this> {
+	async create(): Promise<this> {
 		await this.load(this._animationFileNames);
 		await this.load(this._modelFileNames);
 		// TODO: consider refactor to not have to pass materials
@@ -63,13 +60,13 @@ export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, Acto
 		return Promise.resolve(this);
 	}
 
-	public setup(params: EntityParameters<ZylemActor>): void {
+	public setup(params: EntityParameters<this>): void {
 		super.setup(params);
 		this._currentAction?.play();
 		this._setup({ ...params, entity: this });
 	}
 
-	public update(params: EntityParameters<ZylemActor>): void {
+	public update(params: EntityParameters<this>): void {
 		const { delta } = params;
 		super.update(params);
 		if (this._mixer) {
@@ -78,7 +75,7 @@ export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, Acto
 		this._update({ ...params, entity: this });
 	}
 
-	public destroy(params: EntityParameters<ZylemActor>): void {
+	public destroy(params: EntityParameters<this>): void {
 		super.destroy(params);
 		this._destroy({ ...params, entity: this });
 	}
@@ -88,7 +85,7 @@ export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, Acto
 		const isCompatible = compatibleExtensions.includes(extension as FileExtensionTypes);
 		const dynamicFileLoader = this._loaderMap.get(extension as FileExtensionTypes);
 		if (!isCompatible || !dynamicFileLoader) {
-			this.errorIncompatibleFileType(extension);
+			// this.errorIncompatibleFileType(extension);
 			return Promise.reject(null);
 		}
 		return new Promise((resolve, reject) => {

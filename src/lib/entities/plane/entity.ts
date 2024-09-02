@@ -21,7 +21,7 @@ settings.initFunction = 'init';
 
 export class ZylemPlane extends Mixin(GameEntity, ZylemMaterial, PlaneMesh, PlaneCollision) {
 
-	protected type = 'Plane';
+	public type = 'Plane';
 
 	constructor(options: PlaneOptions) {
 		super(options as GameEntityOptions<{}, unknown>);
@@ -33,7 +33,7 @@ export class ZylemPlane extends Mixin(GameEntity, ZylemMaterial, PlaneMesh, Plan
 		this._shader = options.shader ?? 'standard';
 	}
 
-	async createFromBlueprint(): Promise<this> {
+	async create(): Promise<this> {
 		await this.createMaterials({
 			texture: this._texture,
 			color: this._color,

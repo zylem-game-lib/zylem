@@ -9,7 +9,7 @@ import {
 	MeshPhongMaterial,
 	Mesh,
 } from "three";
-import { Mixin, settings } from "ts-mixer";
+import { Mixin } from "ts-mixer";
 
 import { ZylemMaterial } from "../../core/material";
 import { EntityParameters, GameEntity } from "../../core";
@@ -38,10 +38,10 @@ type ZylemSpriteOptions = {
 
 type SpriteOptions = GameEntityOptions<ZylemSpriteOptions, ZylemSprite>;
 
-settings.initFunction = 'init';
-
 export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollision, Moveable, EntitySpawner) {
-	protected type = 'Sprite';
+
+	public type = 'Sprite';
+
 	_sensor: boolean = false;
 	_size: Vector3;
 	_debugMesh: Mesh | null;

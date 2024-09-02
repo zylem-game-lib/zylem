@@ -1,5 +1,5 @@
 import { Vector3, Color } from "three";
-import { Mixin, settings } from 'ts-mixer';
+import { Mixin } from 'ts-mixer';
 
 import { EntityParameters, GameEntity } from "../../core";
 import { GameEntityOptions } from "../../interfaces/entity";
@@ -15,13 +15,19 @@ type ZylemBoxOptions = {
 	color?: Color;
 }
 
-type BoxOptions = GameEntityOptions<ZylemBoxOptions, ZylemBox>;
+const boxDefaults: BoxOptions = {
+	size: new Vector3(1, 1, 1),
+	static: false,
+	texture: null,
+	color: ZylemBlueColor,
+	shader: 'standard',
+};
 
-settings.initFunction = 'init';
+type BoxOptions = GameEntityOptions<ZylemBoxOptions, ZylemBox>;
 
 class ZylemBox extends Mixin(GameEntity, ZylemMaterial, BoxMesh, BoxCollision, Moveable) {
 
-	protected type = 'Box';
+	public type = 'Box';
 
 	constructor(options: BoxOptions) {
 		if (!options) {
@@ -35,29 +41,29 @@ class ZylemBox extends Mixin(GameEntity, ZylemMaterial, BoxMesh, BoxCollision, M
 		this._shader = options.shader ?? 'standard';
 	}
 
-	async createFromBlueprint(): Promise<ZylemBox> {
+	async create(): Promise<this> {
 		await this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat, shader: this._shader });
 		this.createMesh({ group: this.group, size: this._size, materials: this.materials });
 		this.createCollision({ isDynamicBody: !this._static });
 		return Promise.resolve(this);
 	}
 
-	public setup(params: EntityParameters<ZylemBox>): void {
+	public setup(params: EntityParameters<this>): void {
 		super.setup(params);
 		this._setup({ ...params, entity: this });
 	}
 
-	public update(params: EntityParameters<ZylemBox>): void {
+	public update(params: EntityParameters<this>): void {
 		super.update(params);
 		this._update({ ...params, entity: this });
 	}
 
-	public destroy(params: EntityParameters<ZylemBox>): void {
+	public destroy(params: EntityParameters<this>): void {
 		super.destroy(params);
 		this._destroy({ ...params, entity: this });
 	}
 }
 
-export function box(options: BoxOptions): ZylemBox {
+export function box(options: BoxOptions = boxDefaults): ZylemBox {
 	return new ZylemBox(options) as ZylemBox;
 }

@@ -7,7 +7,7 @@ import {
 import { Entity, EntityParameters } from './entity';
 import { nanoid } from 'nanoid';
 
-export class BaseEntity<T> implements Entity {
+export class BaseEntity<T> implements Entity<T> {
 	public uuid: string;
 	public _custom: { [key: string]: any };
 
@@ -26,14 +26,14 @@ export class BaseEntity<T> implements Entity {
 		this._custom = options.custom || {};
 	}
 
-	public createFromBlueprint(): Promise<any> {
-		throw new Error('Method not implemented.');
+	public create(): Promise<T> {
+		throw new Error('Create method needs to be implemented for Entities.');
 	}
 
-	public setup(_params: Partial<EntityParameters<any>>) { }
+	public setup(_: EntityParameters<T>): void { }
 
-	public update(_params: EntityParameters<any>): void { }
+	public update(_: EntityParameters<T>): void { }
 
-	public destroy(_params: EntityParameters<any>): void { }
+	public destroy(_: EntityParameters<T>): void { }
 
 }

@@ -35,16 +35,6 @@ export interface Entity<T = any> {
 	tag?: Set<string>;
 }
 
-export interface EntityBlueprint<T> extends Entity<T> {
-	name: string;
-	// type: EntityType;
-	props?: { [key: string]: any };
-	shape?: Vector3;
-	collision?: (entity: Entity<T>, other: Entity<T>, globals?: any) => void;
-
-	createFromBlueprint: () => Promise<T>;
-}
-
 export interface GameEntity<T> extends Entity<T> {
 	group: Group;
 	body?: RigidBody;

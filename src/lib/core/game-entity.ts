@@ -1,14 +1,27 @@
-import { Color, Group, Mesh, Quaternion } from 'three';
+import { Color, Group, Mesh, Object3D, Quaternion } from 'three';
+import { Collider, KinematicCharacterController, RigidBody } from '@dimforge/rapier3d-compat';
+
 import {
 	CollisionOption,
 	GameEntityOptions,
 } from '../interfaces/entity';
 import { EntityParameters } from './entity';
-import { Collider, KinematicCharacterController, RigidBody } from '@dimforge/rapier3d-compat';
-import { EntityBehavior } from '../behaviors/behavior';
 import { BaseEntity } from './base-entity';
 import { state$ } from '../state';
 import { ZylemStage } from './stage';
+
+export interface IGameEntity {
+	uuid: string;
+	name: string;
+	type: string;
+	create: Function;
+	group: Object3D;
+	stageRef: ZylemStage | null;
+	_custom: any;
+	setup: Function;
+	update: Function;
+	destroy: Function;
+}
 
 export class GameEntity<T> extends BaseEntity<T> {
 	public stageRef: ZylemStage | null = null;
@@ -27,35 +40,35 @@ export class GameEntity<T> extends BaseEntity<T> {
 	constructor(options: GameEntityOptions<{ collision?: CollisionOption<T> }, T>) {
 		super(options);
 		this._collision = options.collision || null;
+		this.setName(options.name);
+	}
+
+	private setName(name?: string) {
 		GameEntity.counter++;
-		this.name = options.name || `entity-${GameEntity.counter}`;
+		const defaultName = `entity-${GameEntity.counter}`;
+		this.name = name ?? defaultName ;
 	}
 
-	protected createUuid(type: string) {
-		this.type = type;
-		this.uuid = `${this.type}-${this.uuid}`;
-	}
-
-	public createFromBlueprint(): Promise<any> {
+	public create(): Promise<T> {
 		throw new Error('Method not implemented.');
 	}
 
-	public setup(_params: Partial<EntityParameters<any>>) {
-		super.setup(_params);
+	public setup(params: EntityParameters<T>) {
+		super.setup(params);
 	}
 
-	public update(_params: EntityParameters<any>): void {
-		super.update(_params);
+	public update(params: EntityParameters<T>): void {
+		super.update(params);
 		this.movement();
 	}
 
-	public destroy(_params: EntityParameters<any>): void {
-		super.destroy(_params);
+	public destroy(params: EntityParameters<T>): void {
+		super.destroy(params);
 		if (this.body) {
 			this.body.setEnabled(false);
 		}
 		if (this.stageRef) {
-			this.stageRef.setForRemoval(this);
+			this.stageRef.setForRemoval(this as IGameEntity);
 		}
 	}
 
@@ -87,10 +100,4 @@ export class GameEntity<T> extends BaseEntity<T> {
 			this.group.setRotationFromQuaternion(new Quaternion(rx, ry, rz, rw));
 		}
 	}
-
-	// TODO: implement entity behaviors
-	public use(behavior: EntityBehavior) {
-		behavior.update();
-	}
-
 }

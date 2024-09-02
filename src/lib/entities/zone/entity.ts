@@ -2,7 +2,7 @@ import { Vector3 } from "three";
 import { Mixin } from "ts-mixer";
 
 import { GameEntityOptions } from "../../interfaces/entity";
-import { GameEntity, EntityParameters } from "../../core";
+import { GameEntity, EntityParameters, IGameEntity } from "../../core";
 import { Moveable } from "../../behaviors/moveable";
 import { ZoneCollision } from "./index";
 
@@ -35,11 +35,11 @@ export type ZylemZoneOptions = {
 type ZoneOptions = GameEntityOptions<ZylemZoneOptions, ZylemZone>;
 
 export class ZylemZone extends Mixin(GameEntity, ZoneCollision, Moveable) {
-	protected type = 'Zone';
+	public type = 'Zone';
 
 	_enteredZone: Map<string, number> = new Map();
 	_exitedZone: Map<string, number> = new Map();
-	_zoneEntities: Map<string, GameEntity<any>> = new Map();
+	_zoneEntities: Map<string, IGameEntity> = new Map();
 
 	_onEnter: (params: OnEnterParams) => void;
 	_onHeld: (params: OnHeldParams) => void;
@@ -54,7 +54,7 @@ export class ZylemZone extends Mixin(GameEntity, ZoneCollision, Moveable) {
 		this._size = options.size ?? new Vector3(1, 1, 1);
 	}
 
-	async createFromBlueprint(): Promise<this> {
+	async create(): Promise<this> {
 		this.createCollision({ isDynamicBody: !this._static });
 		return Promise.resolve(this);
 	}
@@ -76,7 +76,7 @@ export class ZylemZone extends Mixin(GameEntity, ZoneCollision, Moveable) {
 		}
 	}
 
-	entered(other: GameEntity<any>) {
+	entered(other: IGameEntity) {
 		this._enteredZone.set(other.uuid, 1);
 		if (this._onEnter) {
 			this._onEnter({ entity: this, other, gameGlobals: {} });
@@ -97,7 +97,7 @@ export class ZylemZone extends Mixin(GameEntity, ZoneCollision, Moveable) {
 		this._exitedZone.set(key, 1 + delta);
 	}
 
-	held(delta: number, other: GameEntity<any>) {
+	held(delta: number, other: IGameEntity) {
 		const heldTime = this._enteredZone.get(other.uuid) ?? 0;
 		this._enteredZone.set(other.uuid, heldTime + delta);
 		this._exitedZone.set(other.uuid, 1);

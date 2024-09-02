@@ -1,6 +1,6 @@
 // Sphere is a combination of a 3D mesh and a physics body
-import { Color, Vector3 } from 'three';
-import { Mixin, settings } from 'ts-mixer';
+import { Color } from 'three';
+import { Mixin } from 'ts-mixer';
 
 import { EntityParameters, GameEntity } from '../../core';
 import { TexturePath, ZylemMaterial } from '../../core/material';
@@ -18,10 +18,8 @@ type ZylemSphereOptions = {
 
 type SphereOptions = GameEntityOptions<ZylemSphereOptions, ZylemSphere>;
 
-settings.initFunction = 'init';
-
 export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, SphereCollision, Moveable) {
-	protected type = 'Sphere';
+	public type = 'Sphere';
 
 	constructor(options: SphereOptions) {
 		super(options as GameEntityOptions<{}, unknown>);
@@ -33,7 +31,7 @@ export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, Sp
 		this._color = options.color ?? ZylemBlueColor;
 	}
 
-	async createFromBlueprint(): Promise<this> {
+	async create(): Promise<this> {
 		await this.createMaterials({
 			texture: this._texture,
 			color: this._color,
