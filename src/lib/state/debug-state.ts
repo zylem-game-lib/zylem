@@ -7,7 +7,7 @@ const debugState$ = observable({
 
 const debugState = debugState$.get();
 
-const setDebugFlag = (flag: boolean) => {
+const setDebugFlag = (flag: boolean = false) => {
 	debugState$.on.set(flag);
 }
 
