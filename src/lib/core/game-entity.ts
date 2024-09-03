@@ -9,15 +9,18 @@ import { EntityParameters } from './entity';
 import { BaseEntity } from './base-entity';
 import { state$ } from '../state';
 import { ZylemStage } from './stage';
+import { Behavior } from '../behaviors/behavior';
 
 export interface IGameEntity {
 	uuid: string;
+	eid: number;
 	name: string;
 	type: string;
 	create: Function;
 	group: Object3D;
 	stageRef: ZylemStage | null;
 	_custom: any;
+	_behaviors: Behavior[];
 	setup: Function;
 	update: Function;
 	destroy: Function;
@@ -32,10 +35,12 @@ export class GameEntity<T> extends BaseEntity<T> {
 	public collider: null | Collider = null;
 	public name: string = '';
 
-	protected type: string = 'GameEntity';
+	public type: string = 'GameEntity';
 
 	_collision: CollisionOption<T> | null = null;
 	static counter = 0;
+
+	_behaviors: Behavior[] = [];
 
 	constructor(options: GameEntityOptions<{ collision?: CollisionOption<T> }, T>) {
 		super(options);

@@ -1,6 +1,6 @@
+import { IComponent } from "bitecs";
 
-export class EntityBehavior {
-	update() {
-
-	}
+export interface Behavior {
+	component: IComponent;
+	values: any;
 }

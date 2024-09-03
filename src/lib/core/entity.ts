@@ -17,6 +17,8 @@ export interface EntityParameters<T> {
 export abstract class Entity<T> {
 	abstract uuid: string;
 
+	abstract eid: number;
+
 	public abstract create(): Promise<T>;
 
 	public abstract setup(params: EntityParameters<T>): void;

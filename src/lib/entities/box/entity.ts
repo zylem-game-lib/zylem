@@ -7,6 +7,8 @@ import { TexturePath, ZylemMaterial } from '../../core/material';
 import { Moveable } from "../../behaviors/moveable";
 import { SizeVector, ZylemBlueColor } from "../../interfaces/utility";
 import { BoxMesh, BoxCollision } from "./index";
+import { IComponent } from "bitecs";
+import { Behavior } from "~/lib/behaviors/behavior";
 
 type ZylemBoxOptions = {
 	size?: SizeVector;
@@ -42,7 +44,12 @@ class ZylemBox extends Mixin(GameEntity, ZylemMaterial, BoxMesh, BoxCollision, M
 	}
 
 	async create(): Promise<this> {
-		await this.createMaterials({ texture: this._texture, color: this._color, repeat: this._repeat, shader: this._shader });
+		await this.createMaterials({
+			texture: this._texture,
+			color: this._color,
+			repeat: this._repeat,
+			shader: this._shader
+		});
 		this.createMesh({ group: this.group, size: this._size, materials: this.materials });
 		this.createCollision({ isDynamicBody: !this._static });
 		return Promise.resolve(this);
@@ -64,6 +71,8 @@ class ZylemBox extends Mixin(GameEntity, ZylemMaterial, BoxMesh, BoxCollision, M
 	}
 }
 
-export function box(options: BoxOptions = boxDefaults): ZylemBox {
-	return new ZylemBox(options) as ZylemBox;
+export function box(options: BoxOptions = boxDefaults, ...behaviors: Behavior[]): ZylemBox {
+	const zylemBox = new ZylemBox(options) as ZylemBox;
+	zylemBox._behaviors = behaviors ?? [];
+	return zylemBox;
 }

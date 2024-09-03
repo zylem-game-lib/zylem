@@ -9,6 +9,7 @@ import { nanoid } from 'nanoid';
 
 export class BaseEntity<T> implements Entity<T> {
 	public uuid: string;
+	public eid: number;
 	public _custom: { [key: string]: any };
 
 	protected type: string = 'BaseEntity';
@@ -20,6 +21,7 @@ export class BaseEntity<T> implements Entity<T> {
 
 	constructor(options: BaseEntityOptions<T>) {
 		this.uuid = `${++BaseEntity.entityCount}-${nanoid()}`;
+		this.eid = -1;
 		this._setup = options.setup || (() => { });
 		this._update = options.update || (() => { });
 		this._destroy = options.destroy || (() => { });

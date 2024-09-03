@@ -1,8 +1,12 @@
+import { addComponent, addEntity, createWorld as createECS } from "bitecs";
+import { Mixin } from "ts-mixer";
+import { World } from "@dimforge/rapier3d-compat";
+import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from "three";
+
 import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
 import { GameEntityOptions } from "../interfaces/entity";
 import { Conditions } from "../interfaces/game";
-import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from "three";
 import {
 	setStagePerspective,
 	setStageBackgroundColor,
@@ -10,13 +14,12 @@ import {
 	state$
 } from "../state";
 import { ZylemHUD } from "../ui/hud";
-import { EntityParameters, GameEntity, IGameEntity } from "./";
-import { World } from "@dimforge/rapier3d-compat";
-import { Mixin } from "ts-mixer";
+import { EntityParameters, IGameEntity } from "./";
 import { PerspectiveType, Perspectives } from "../interfaces/perspective";
 import { ZylemBlueColor } from "../interfaces/utility";
 import { BaseEntity } from "./base-entity";
 import { debugState } from "../state/debug-state";
+import createTestSystem from "../behaviors/test-system";
 
 type ZylemStageOptions = {
 	perspective: PerspectiveType;
@@ -50,6 +53,9 @@ export class ZylemStage extends Mixin(BaseEntity) {
 
 	_debugLines: LineSegments | null = null;
 
+	ecs = createECS();
+	testSystem: any = null;
+
 	constructor(options: StageOptions) {
 		super(options as GameEntityOptions<{}, unknown>);
 		this.world = null;
@@ -68,10 +74,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		};
 	}
 
-	public async createFromBlueprint(): Promise<ZylemStage> {
-		return Promise.resolve(this);
-	}
-
+	// TODO: consider renaming this to "create" for consistency with other abstractions 
 	async buildStage(id: string) {
 		// TODO: consider moving globals out
 		setStagePerspective(this.perspective);
@@ -89,6 +92,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		for (let child of this.children) {
 			this.spawnEntity(child);
 		}
+		this.testSystem = createTestSystem();
 	}
 
 	public async setup(params: EntityParameters<ZylemStage>) {
@@ -116,6 +120,9 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			return;
 		}
 		this.world.update(params);
+		// ECS TEST
+		this.testSystem(this.ecs);
+		//
 		this._childrenMap.forEach((child, uuid) => {
 			const needsRemoval = this._removalMap.get(uuid);
 			if (needsRemoval) {
@@ -148,8 +155,9 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		if (!this.scene || !this.world) {
 			return;
 		}
-
 		const entity = await child.create();
+		const eid = addEntity(this.ecs);
+		entity.eid = eid;
 		if (entity.group) {
 			this.scene.scene.add(entity.group);
 		}
@@ -158,6 +166,17 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			for (let key in child._custom) {
 				if (entity[key]) { continue; }
 				entity[key] = child._custom[key];
+			}
+		}
+		if (child._behaviors) {
+			for (let behavior of child._behaviors) {
+				console.log(child._behaviors);
+				addComponent(this.ecs, behavior.component, entity.eid);
+				const keys = Object.keys(behavior.values);
+				for (const key of keys) {
+					// @ts-ignore
+					behavior.component[key][entity.eid] = behavior.values[key];
+				}
 			}
 		}
 		this.world.addEntity(entity);

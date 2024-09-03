@@ -1,6 +1,5 @@
 import { Clock } from 'three';
 import { observe } from '@simplyianm/legend-state';
-import { createWorld } from 'bitecs';
 
 import { state$ } from '../state/game-state';
 import { setGlobalState } from '../state/index';
@@ -11,7 +10,7 @@ import { DebugConfiguration } from './debug';
 import GamePad from '../input/game-pad';
 
 import { ZylemStage } from './stage';
-import { Entity, EntityParameters } from './entity';
+import { EntityParameters } from './entity';
 import { SetupFunction, UpdateFunction } from '../interfaces/entity';
 import { Game } from './game-wrapper';
 
@@ -48,8 +47,6 @@ export class ZylemGame {
 
 	wrapperRef: Game;
 	statsRef: Stats | null = null;
-
-	ecs = createWorld();
 
 	static FRAME_LIMIT = 64;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
