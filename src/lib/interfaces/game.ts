@@ -1,4 +1,4 @@
-import ZylemGame, { GameSystem } from '~/lib/core/game';
+import ZylemGame from '~/lib/core/game';
 import { ZylemScene } from '~/lib/rendering/scene';
 import { ZylemHUD } from '~/lib/ui/hud';
 import { ZylemCamera } from '~/lib/core/camera';
@@ -16,7 +16,7 @@ type Concrete<Type> = {
 // the object literal that was just created above
 export type Conditions<T> = {
 	bindings: string[];
-	callback: (globals: Concrete<T>, game: ZylemGame | GameSystem) => void;
+	callback: (globals: Concrete<T>, game: ZylemGame) => void;
 };
 
 export interface SetupCallbackOptions {

@@ -4,6 +4,8 @@
 export const GameCanvas = (targetRatio: number) => {
 	const _targetRatio = targetRatio;
 	let _canvasWrapper: Element | null = null;
+	// this.ratio = options.ratio ?? '16:9';
+		// this._targetRatio = Number(this.ratio.split(':')[0]) / Number(this.ratio.split(':')[1]);
 	return {
 		targetRatio: _targetRatio,
 		canvasWrapper: _canvasWrapper

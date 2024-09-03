@@ -1,5 +1,5 @@
 import { Color, Vector2 } from "three";
-import { Mixin, settings } from "ts-mixer";
+import { Mixin } from "ts-mixer";
 
 import { EntityParameters, GameEntity } from "../../core";
 import { TexturePath, ZylemMaterial } from '../../core/material';
@@ -16,8 +16,6 @@ type ZylemPlaneOptions = {
 }
 
 type PlaneOptions = GameEntityOptions<ZylemPlaneOptions, ZylemPlane>;
-
-settings.initFunction = 'init';
 
 export class ZylemPlane extends Mixin(GameEntity, ZylemMaterial, PlaneMesh, PlaneCollision) {
 

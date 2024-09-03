@@ -18,7 +18,16 @@ type ZylemSphereOptions = {
 
 type SphereOptions = GameEntityOptions<ZylemSphereOptions, ZylemSphere>;
 
+const sphereDefaults: SphereOptions = {
+	radius: 1,
+	static: false,
+	texture: null,
+	color: ZylemBlueColor,
+	shader: 'standard',
+};
+
 export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, SphereCollision, Moveable) {
+
 	public type = 'Sphere';
 
 	constructor(options: SphereOptions) {
@@ -64,6 +73,6 @@ export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, Sp
 	}
 }
 
-export function sphere(options: SphereOptions): ZylemSphere {
+export function sphere(options: SphereOptions = sphereDefaults): ZylemSphere {
 	return new ZylemSphere(options) as ZylemSphere;
 }

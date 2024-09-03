@@ -21,7 +21,9 @@ import { ZylemCamera } from '../core/camera';
 import { debugState } from '../state/debug-state';
 
 export class ZylemScene implements Entity<ZylemScene> {
-	type = 'Scene';
+
+	public type = 'Scene';
+
 	_setup?: SetupCallback;
 	scene!: Scene;
 	screenResolution!: Vector2;
@@ -38,7 +40,6 @@ export class ZylemScene implements Entity<ZylemScene> {
 			const texture = loader.load(stageState.backgroundImage);
 			scene.background = texture;
 		}
-
 		this.setupRenderer();
 		this.setupLighting(scene);
 		this.setupCamera(scene);
@@ -73,6 +74,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 	update({ delta }: Partial<EntityParameters<ZylemScene>>) {
 		this.zylemCamera.update();
 		this.composer.render(delta);
+		this.zylemCamera.__update();
 	}
 
 	setupCamera(scene: Scene) {

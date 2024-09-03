@@ -92,32 +92,27 @@ export class ZylemCamera {
 		return isometricCamera;
 	}
 
-	update() {
-		// if (this.follow) {
-		// 	this.moveFollowCamera();
+	update() {}
+
+	__update() {
+		// if (this.orbitControls === null) {
+		// 	this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
 		// }
-		if (this.orbitControls === null) {
-			this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
-		}
-		this.orbitControls.update();
-		// this.camera.rotateZ(0.01);
-		// this.camera.rotateY(0.001);
+		// this.orbitControls.update();
 	}
 
-	moveFollowCamera() {
-		// const entity = this.follow;
-		// const { x, y, z } = entity?.body.translation() || { x: 0, y: 0, z: 0 };
-		// const entityPosition = new Vector3(x, y, z);
-		// this.cameraRig.position.set(x, y, z);
-		// this.camera.lookAt(entityPosition);
-	}
-
-	moveCamera(position: Vector3) {
+	private moveCamera(position: Vector3) {
 		const adjustedZ = (this._perspective !== Perspectives.Flat2D) ? position.z + zModifier : position.z;
 		this.cameraRig.position.set(position.x, position.y, adjustedZ);
 	}
 
-	// followEntity(entity: Entity) {
-	// 	this.follow = entity;
-	// }
+	move(position: Vector3) {
+		this.moveCamera(position);
+	}
+
+	rotate(pitch: number, yaw: number, roll: number) {
+		this.cameraRig.rotateX(pitch);
+		this.cameraRig.rotateY(yaw);
+		this.cameraRig.rotateZ(roll);
+	}
 }
