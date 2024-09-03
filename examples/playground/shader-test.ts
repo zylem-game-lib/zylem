@@ -55,6 +55,7 @@ const player = actor({
 })
 
 const config = {
+	debug: true,
 	globals: {
 		health: 100,
 		maxHealth: 100
@@ -84,7 +85,7 @@ const shaderTest = game(
 					element.updateText(`Health: ${value}`);
 				}
 			});
-			camera.moveCamera(new Vector3(0, 8, 10));
+			camera.move(new Vector3(0, 8, 10));
 			camera.target = player as any;
 		},
 		update: ({ camera }) => {

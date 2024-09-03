@@ -1,6 +1,7 @@
 import { Color, Vector2, Vector3 } from "three";
 import { game, stage, actor, box, plane, sphere, zone, Perspectives, Zylem } from "../../src/main";
 import { node } from "../../src/lib/entities";
+import { IGameEntity } from "../../src/lib/core";
 
 const { actionOnRelease, actionWithCooldown, actionOnPress } = Zylem.Util;
 const { ThirdPerson } = Perspectives;
@@ -67,7 +68,7 @@ const actorFactory = (positionX, positionZ = 0, index = 0) => {
 		name: `player-${index}`,
 		animations: ['playground/idle.fbx', 'playground/run.fbx'],
 		static: false,
-		setup({ entity, HUD }) {
+		setup({ entity }) {
 			entity.setPosition(positionX, 4, positionZ);
 			entity.animate(0);
 		},
@@ -105,9 +106,6 @@ const actorFactory = (positionX, positionZ = 0, index = 0) => {
 			}
 			entity.rotateInDirection(lastMovement);
 		},
-		collision: function (entity: any, other: any, globals?: any): void {
-			throw new Error("Function not implemented.");
-		}
 	})
 }
 
@@ -156,7 +154,7 @@ const stage1 = stage({
 	backgroundColor: new Color('#88BBFF'),
 	gravity: new Vector3(0, -9, 0),
 	setup: ({ camera, HUD }) => {
-		camera.moveCamera(new Vector3(0, 8, 10));
+		camera.move(new Vector3(0, 8, 10));
 		camera.target = actor1 as any;
 		HUD.addText('0', {
 			binding: 'score',
@@ -229,7 +227,7 @@ const stage1 = stage({
 
 const config = {
 	id: 'playground',
-	debug: false,
+	debug: true,
 	debugConfiguration: {},
 	globals: {
 		score: 0,
