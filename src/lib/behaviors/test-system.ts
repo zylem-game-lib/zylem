@@ -11,7 +11,6 @@ export default function createTestSystem() {
 
 	return defineSystem((world) => {
 		const entities = testQuery(world)
-		debugger;
 		for (let i = 0; i < entities.length; ++i)
 		{
 			const id = entities[i]

@@ -170,7 +170,6 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		}
 		if (child._behaviors) {
 			for (let behavior of child._behaviors) {
-				console.log(child._behaviors);
 				addComponent(this.ecs, behavior.component, entity.eid);
 				const keys = Object.keys(behavior.values);
 				for (const key of keys) {

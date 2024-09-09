@@ -3,12 +3,13 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Mixin } from 'ts-mixer';
 
-import { EntityParameters, GameEntity } from "../../core";
+import { EntityParameters, GameEntity, IGameEntity } from "../../core";
 import { GameEntityOptions } from "../../interfaces/entity";
 import { Moveable } from '../../behaviors/moveable';
 import { ActorMesh, ActorCollision } from './index';
 import { EntityErrors } from '~/lib/core/errors';
 import { ZylemMaterial } from '~/lib/core/material';
+import { Behavior } from '~/lib/behaviors/behavior';
 
 enum FileExtensionTypes {
 	FBX = 'fbx',
@@ -25,7 +26,7 @@ type ZylemActorOptions = {
 
 type ActorOptions = GameEntityOptions<ZylemActorOptions, ZylemActor>;
 
-export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, ActorCollision, Moveable, EntityErrors) {
+export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, ActorCollision, Moveable, EntityErrors) implements IGameEntity {
 
 	public type = 'Actor';
 
@@ -173,6 +174,8 @@ export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, Acto
 	}
 }
 
-export function actor(options: ActorOptions): ZylemActor {
-	return new ZylemActor(options) as ZylemActor;
+export function actor(options: ActorOptions, ...behaviors: Behavior[]): ZylemActor {
+	const zylemActor = new ZylemActor(options) as ZylemActor;
+	zylemActor._behaviors = behaviors ?? [];
+	return zylemActor;
 }

@@ -31,15 +31,19 @@ const ecsTest = game(
 			camera.rotate(-0.2, 0, 0);
 		},
 		update: ({ entity }) => {
-			ecsTest.log(bounce.height[entity.eid].toString());
+			// ecsTest.log('box: '+bounce.height[entity.eid].toString());
 		}
-	}, ...behaviors()),
+	}),
+	// }, ...behaviors()),
 	actor({
 		models: ['playground/health-box.gltf'],
 		setup: ({ entity }) => {
 			entity.setPosition(5, 0, 0);
+		},
+		update: ({ entity }) => {
+			// ecsTest.log('actor: '+bounce.height[entity.eid].toString());
 		}
-	})
+	}, ...behaviors())
 );
 
 ecsTest.start();

@@ -7,7 +7,8 @@ const example = game(
 			const { horizontal, vertical } = inputs[0];
 			ball.moveXY(horizontal * 5, -vertical * 5);
 		}
-	})
+	}),
+	sphere()
 );
 
 example.start();

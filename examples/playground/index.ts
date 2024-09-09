@@ -14,7 +14,6 @@ const box1 = box({
 	},
 });
 
-
 const nodeTest = node(
 	box({
 		texture: 'playground/wood-box.jpg',
@@ -206,7 +205,7 @@ const stage1 = stage({
 			actor1.moveY(100);
 		});
 	},
-	children: () => {
+	children: ({ globals }) => {
 		return [
 			actor1,
 			actor2,
@@ -221,7 +220,8 @@ const stage1 = stage({
 			sphere1,
 			ground,
 			zone1,
-		]
+			// TODO: fix this type issue
+		] as IGameEntity[]
 	},
 });
 

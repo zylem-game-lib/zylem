@@ -1,13 +1,12 @@
 import { Vector3, Color } from "three";
 import { Mixin } from 'ts-mixer';
 
-import { EntityParameters, GameEntity } from "../../core";
+import { EntityParameters, GameEntity, IGameEntity } from "../../core";
 import { GameEntityOptions } from "../../interfaces/entity";
 import { TexturePath, ZylemMaterial } from '../../core/material';
 import { Moveable } from "../../behaviors/moveable";
 import { SizeVector, ZylemBlueColor } from "../../interfaces/utility";
 import { BoxMesh, BoxCollision } from "./index";
-import { IComponent } from "bitecs";
 import { Behavior } from "~/lib/behaviors/behavior";
 
 type ZylemBoxOptions = {
@@ -27,7 +26,7 @@ const boxDefaults: BoxOptions = {
 
 type BoxOptions = GameEntityOptions<ZylemBoxOptions, ZylemBox>;
 
-class ZylemBox extends Mixin(GameEntity, ZylemMaterial, BoxMesh, BoxCollision, Moveable) {
+class ZylemBox extends Mixin(GameEntity, ZylemMaterial, BoxMesh, BoxCollision, Moveable) implements IGameEntity {
 
 	public type = 'Box';
 
