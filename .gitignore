@@ -12,6 +12,7 @@ src/**/*.js
 .env
 
 node_modules
+coverage
 wip
 _docs
 stats.html
