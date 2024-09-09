@@ -1,10 +1,8 @@
-import { EntityBehavior } from "./behavior";
 
-export class ZylemCharacterController extends EntityBehavior {
+export class ZylemCharacterController {
 	inputs: any; // TODO: this needs an interface!!!
 
 	constructor(inputs: any) {
-		super();
 		this.inputs = inputs;
 	}
 

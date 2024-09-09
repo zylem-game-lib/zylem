@@ -1,6 +1,6 @@
-import { Entity } from "../core";
+import { IGameEntity } from "../core";
 
-export function* entityGenerator(entities: Entity[]): Generator<any, void, unknown> {
+export function* entityGenerator(entities: IGameEntity[]): Generator<any, void, unknown> {
     for (const entity of entities) {
         yield entity;
     }

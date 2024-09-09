@@ -15,12 +15,12 @@ declare const ZylemSphere_base: import("ts-mixer/dist/types/types").Class<any[],
     collision?: import("../../interfaces/entity").CollisionOption<unknown> | undefined;
 }, unknown>) => GameEntity<unknown>) & typeof ZylemMaterial & typeof SphereMesh & typeof SphereCollision & typeof Moveable>;
 export declare class ZylemSphere extends ZylemSphere_base {
-    protected type: string;
+    type: string;
     constructor(options: SphereOptions);
-    createFromBlueprint(): Promise<this>;
+    create(): Promise<this>;
     setup(params: EntityParameters<ZylemSphere>): void;
     update(params: EntityParameters<ZylemSphere>): void;
     destroy(params: EntityParameters<ZylemSphere>): void;
 }
-export declare function sphere(options: SphereOptions): ZylemSphere;
+export declare function sphere(options?: SphereOptions): ZylemSphere;
 export {};

@@ -11,10 +11,11 @@ export interface EntityParameters<T> {
     camera: ZylemCamera;
     HUD: ZylemHUD;
 }
-export declare abstract class Entity {
+export declare abstract class Entity<T> {
     abstract uuid: string;
-    abstract createFromBlueprint(): Promise<this>;
-    abstract setup(params: EntityParameters<this>): void;
-    abstract update(params: EntityParameters<this>): void;
-    abstract destroy(params: EntityParameters<this>): void;
+    abstract eid: number;
+    abstract create(): Promise<T>;
+    abstract setup(params: EntityParameters<T>): void;
+    abstract update(params: EntityParameters<T>): void;
+    abstract destroy(params: EntityParameters<T>): void;
 }

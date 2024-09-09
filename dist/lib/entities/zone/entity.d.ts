@@ -1,6 +1,6 @@
 import { Vector3 } from "three";
 import { GameEntityOptions } from "../../interfaces/entity";
-import { GameEntity, EntityParameters } from "../../core";
+import { GameEntity, EntityParameters, IGameEntity } from "../../core";
 import { Moveable } from "../../behaviors/moveable";
 import { ZoneCollision } from "./index";
 export type InternalCollisionParams = {
@@ -29,20 +29,20 @@ declare const ZylemZone_base: import("ts-mixer/dist/types/types").Class<any[], G
     collision?: import("../../interfaces/entity").CollisionOption<unknown> | undefined;
 }, unknown>) => GameEntity<unknown>) & typeof ZoneCollision & typeof Moveable>;
 export declare class ZylemZone extends ZylemZone_base {
-    protected type: string;
+    type: string;
     _enteredZone: Map<string, number>;
     _exitedZone: Map<string, number>;
-    _zoneEntities: Map<string, GameEntity<any>>;
+    _zoneEntities: Map<string, IGameEntity>;
     _onEnter: (params: OnEnterParams) => void;
     _onHeld: (params: OnHeldParams) => void;
     _onExit: (params: OnExitParams) => void;
     constructor(options: ZoneOptions);
-    createFromBlueprint(): Promise<this>;
+    create(): Promise<this>;
     _internalPostCollisionBehavior({ entity, delta }: InternalCollisionParams): boolean;
     _internalCollisionBehavior({ entity, other, delta }: InternalCollisionParams): void;
-    entered(other: GameEntity<any>): void;
+    entered(other: IGameEntity): void;
     exited(delta: number, key: string): void;
-    held(delta: number, other: GameEntity<any>): void;
+    held(delta: number, other: IGameEntity): void;
     setup(params: EntityParameters<ZylemZone>): void;
     update(params: EntityParameters<ZylemZone>): void;
     destroy(params: EntityParameters<ZylemZone>): void;

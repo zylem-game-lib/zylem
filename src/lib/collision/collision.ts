@@ -1,8 +1,7 @@
 import { RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { Color } from "three";
-import { Component, Entity, System } from "../core/ecs";
+import { defineComponent, Types } from "bitecs";
 
-export class BaseCollision implements CollisionComponent {
+export class BaseCollision {
 	static: boolean = false;
 	isSensor: boolean = false;
 	bodyDescription: RigidBodyDesc;
@@ -17,13 +16,13 @@ export class BaseCollision implements CollisionComponent {
 	}
 }
 
-export interface CollisionComponent extends Component {
-	static: boolean;
-	isSensor: boolean;
-	bodyDescription: RigidBodyDesc;
-};
+export const CollisionComponent = defineComponent({
+	static: Types.i8,
+	isSensor: Types.i8,
+	bodyDescription: Types.i8 //RigidBodyDesc;
+});
 
-export interface CollisionDebugComponent extends Component {
-	active: boolean;
-	color: Color;
-}
+export const CollisionDebugComponent = defineComponent({
+	active: Types.i8,
+	color: Types.f32
+});

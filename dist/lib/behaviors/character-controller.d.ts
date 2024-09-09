@@ -1,5 +1,4 @@
-import { EntityBehavior } from "./behavior";
-export declare class ZylemCharacterController extends EntityBehavior {
+export declare class ZylemCharacterController {
     inputs: any;
     constructor(inputs: any);
 }

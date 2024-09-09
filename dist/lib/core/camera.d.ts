@@ -16,6 +16,8 @@ export declare class ZylemCamera {
     [Perspectives.Flat2D](aspectRatio: number, position: Vector3): Camera;
     [Perspectives.Isometric](aspectRatio: number, position: Vector3): Camera;
     update(): void;
-    moveFollowCamera(): void;
-    moveCamera(position: Vector3): void;
+    __update(): void;
+    private moveCamera;
+    move(position: Vector3): void;
+    rotate(pitch: number, yaw: number, roll: number): void;
 }

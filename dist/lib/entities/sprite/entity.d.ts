@@ -28,7 +28,7 @@ declare const ZylemSprite_base: import("ts-mixer/dist/types/types").Class<any[],
     collision?: import("../../interfaces/entity").CollisionOption<unknown> | undefined;
 }, unknown>) => GameEntity<unknown>) & typeof ZylemMaterial & typeof SpriteCollision & typeof Moveable & typeof EntitySpawner>;
 export declare class ZylemSprite extends ZylemSprite_base {
-    protected type: string;
+    type: string;
     _sensor: boolean;
     _size: Vector3;
     _debugMesh: Mesh | null;

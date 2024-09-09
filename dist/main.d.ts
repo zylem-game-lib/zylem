@@ -20,6 +20,11 @@ declare const Zylem: {
     };
 };
 declare const box: typeof entities.box, sphere: typeof entities.sphere, sprite: typeof entities.sprite, plane: typeof entities.plane, zone: typeof entities.zone, actor: typeof entities.actor;
+declare const bounce: import("bitecs").ComponentType<{
+    height: "i8";
+}>, move: import("bitecs").ComponentType<{
+    movement: "i8";
+}>;
 declare namespace Zylem { }
-export { game, stage, box, sphere, sprite, plane, zone, actor, actions, Perspectives, Zylem, Howl, THREE, RAPIER };
+export { game, stage, box, sphere, sprite, plane, zone, actor, actions, bounce, move, Perspectives, Zylem, Howl, THREE, RAPIER };
 export type { GameOptions as ZylemGame, StageBlueprint as ZylemStage, Vect3, PerspectiveType };

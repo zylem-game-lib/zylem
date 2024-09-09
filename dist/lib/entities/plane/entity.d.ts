@@ -15,9 +15,9 @@ declare const ZylemPlane_base: import("ts-mixer/dist/types/types").Class<any[], 
     collision?: import("../../interfaces/entity").CollisionOption<unknown> | undefined;
 }, unknown>) => GameEntity<unknown>) & typeof ZylemMaterial & typeof PlaneMesh & typeof PlaneCollision>;
 export declare class ZylemPlane extends ZylemPlane_base {
-    protected type: string;
+    type: string;
     constructor(options: PlaneOptions);
-    createFromBlueprint(): Promise<this>;
+    create(): Promise<this>;
     setup(params: EntityParameters<ZylemPlane>): void;
     update(params: EntityParameters<ZylemPlane>): void;
     destroy(params: EntityParameters<ZylemPlane>): void;
