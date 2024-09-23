@@ -4,7 +4,7 @@ import { debugState } from '../state/debug-state';
 import { ZylemDebug } from './debug';
 import { GameOptions, ZylemGame } from "./game";
 import { ZylemStage, stage } from './stage';
-import { IGameEntity } from './game-entity';
+import { IGameEntity } from './stage-entity';
 import { SetupFunction, UpdateFunction } from '../interfaces/entity';
 
 async function loadGame(wrapperRef: Game) {

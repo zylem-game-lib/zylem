@@ -1,29 +1,37 @@
-import { ZylemHUD } from "../ui/hud";
-import { ZylemCamera } from "./camera";
-import { Game } from "./game-wrapper";
+import {
+	LifecycleFunction
+} from '../interfaces/entity';
+import { nanoid } from 'nanoid';
 
-export type Globals = any;
-
-export interface EntityParameters<T> {
-	game: Game;
-	delta: number;
-	inputs: any; // TODO: inputs type
-	entity: T;
-	globals: Globals; // TODO: this needs better type information
-	camera: ZylemCamera;
-	HUD: ZylemHUD;
+export abstract class AbstractEntity {
+	abstract uuid: string;
+	abstract eid: number;
 }
 
-export abstract class Entity<T> {
-	abstract uuid: string;
+export interface EntityOptions<T = any> {
+	setup?: LifecycleFunction<T>;
+	update?: LifecycleFunction<T>;
+	destroy?: LifecycleFunction<T>;
+	custom?: { [key: string]: any };
+}
 
-	abstract eid: number;
+export class Entity<T = any> implements AbstractEntity {
+	public uuid: string;
+	public eid: number = -1;
+	public _custom: { [key: string]: any };
+	public _behaviors: any[] = [];
+	
+	protected type: string = 'Entity';
 
-	public abstract create(): Promise<T>;
+	static entityCount = 1;
 
-	public abstract setup(params: EntityParameters<T>): void;
+	constructor(options: EntityOptions) {
+		this.uuid = '';
+		this._custom = options.custom || {};
+	}
 
-	public abstract update(params: EntityParameters<T>): void;
-
-	public abstract destroy(params: EntityParameters<T>): void;
+	public entityDefaults(options: EntityOptions<T>): void {
+		this.uuid = `${++Entity.entityCount}-${nanoid()}`;
+		this._custom = options.custom || {};
+	}
 }

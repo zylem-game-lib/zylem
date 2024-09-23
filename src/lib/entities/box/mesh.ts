@@ -1,7 +1,11 @@
-import { BoxGeometry, Group, Mesh, Vector3 } from "three";
-import { BaseMesh, CreateMeshParameters } from "~/lib/core/mesh";
+import { BoxGeometry, BufferGeometry, Group, Material, Mesh, Vector3 } from "three";
+import { CreateMeshParameters } from "~/lib/core/mesh";
+import { SizeVector } from "~/lib/interfaces/utility";
 
-export class BoxMesh extends BaseMesh {
+export class BoxMesh {
+	_size: SizeVector = new Vector3(1, 1, 1);
+	mesh: Mesh<BufferGeometry, Material | Material[]> | null = null;
+
 	createMesh({ group = new Group(), size, materials }: CreateMeshParameters) {
 		const meshSize = size ?? new Vector3(1, 1, 1);
 		const geometry = new BoxGeometry(meshSize.x, meshSize.y, meshSize.z);

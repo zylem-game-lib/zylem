@@ -1,7 +1,7 @@
 import { Color, Vector2, Vector3 } from 'three';
 import { game, stage } from '../../src/main';
 import { actor, plane, sphere } from '../../src/lib/entities';
-import { GameEntity } from '../../src/lib/core';
+import { StageEntity  } from '../../src/lib/core';
 
 const player = actor({
 	name: `player`,

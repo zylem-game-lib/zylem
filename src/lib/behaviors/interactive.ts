@@ -1,5 +1,5 @@
 import { Mixin } from "ts-mixer";
-import { GameEntity } from "../core";
+import { StageEntity  } from "../core";
 import { EntityErrors } from "../core/errors";
 
 export class Interactive extends Mixin(GameEntity, EntityErrors) {
