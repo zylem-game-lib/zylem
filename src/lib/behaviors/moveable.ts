@@ -1,50 +1,70 @@
 import { RigidBody, Vector } from "@dimforge/rapier3d-compat";
 import { Euler, Vector3 } from "three";
-import { Mixin } from "ts-mixer";
 import { OptionalVector } from "~/lib/interfaces/entity";
-import { GameEntity } from "../core/game-entity";
 import { EntityErrors } from "../core/errors";
+// TODO: may have to come from global state
 import { Perspectives } from "../interfaces/perspective";
+import { applyMixins } from "../core/composable";
 
-export class Moveable extends Mixin(GameEntity, EntityErrors) {
+export class Moveable {
+	public body: RigidBody | null = null;
 
+	/**
+	 * Move the entity along the X axis
+	 */
 	moveX(delta: number) {
-		const movementVector = new Vector3(delta, 0, 0);
-		this.moveEntity(movementVector);
+		const vec = new Vector3(delta, 0, 0);
+		this.move(vec);
 	}
 
+	/**
+	 * Move the entity along the Y axis
+	 */
 	moveY(delta: number) {
-		const movementVector = new Vector3(0, delta, 0);
-		this.moveEntity(movementVector);
+		const vec = new Vector3(0, delta, 0);
+		this.move(vec);
 	}
 
+	/**
+	 * Move the entity along the Z axis
+	 */
 	moveZ(delta: number) {
-		const movementVector = new Vector3(0, 0, delta);
-		this.moveEntity(movementVector);
+		const vec = new Vector3(0, 0, delta);
+		this.move(vec);
 	}
 
+	/**
+	 * Move the entity along the X and Y axis
+	 */
 	moveXY(deltaX: number, deltaY: number) {
-		const movementVector = new Vector3(deltaX, deltaY, 0);
-		this.moveEntity(movementVector);
+		const vec = new Vector3(deltaX, deltaY, 0);
+		this.move(vec);
 	}
 
+	/**
+	 * Move the entity along the X and Z axis
+	 */
 	moveXZ(deltaX: number, deltaZ: number) {
-		const movementVector = new Vector3(deltaX, 0, deltaZ);
-		this.moveEntity(movementVector);
+		const vec = new Vector3(deltaX, 0, deltaZ);
+		this.move(vec);
 	}
 
-	moveEntity(movementVector: Vector3) {
+	/**
+	 * Move entity based on a vector
+	 */
+	move(vector: Vector3) {
 		if (!this.body) {
 			this.errorEntityBody();
 			return;
 		}
-		let finalMovement = movementVector;
-		if (this.stageRef) {
-			const { perspective } = this.stageRef;
-			if (perspective === Perspectives.Fixed2D || perspective === Perspectives.Flat2D) {
-				finalMovement.set(movementVector.x, movementVector.y, 0);
-			}
-		}
+		let finalMovement = vector;
+		// TODO: may have to come from global state
+		// if (this.stageRef) {
+		// 	const { perspective } = this.stageRef;
+		// 	if (perspective === Perspectives.Fixed2D || perspective === Perspectives.Flat2D) {
+		// 		finalMovement.set(vector.x, vector.y, 0);
+		// 	}
+		// }
 		this.body.setLinvel(finalMovement, true);
 	}
 
@@ -135,6 +155,21 @@ export class Moveable extends Mixin(GameEntity, EntityErrors) {
 		this.body!.setTranslation({ x, y, z }, true);
 	}
 
+	setPositionX(x: number) {
+		const { y, z } = this.body?.translation() || { y: 0, z: 0};
+		this.body!.setTranslation({ x, y, z }, true);
+	}
+
+	setPositionY(y: number) {
+		const { x, z } = this.body?.translation() || { x: 0, z: 0};
+		this.body!.setTranslation({ x, y, z }, true);
+	}
+
+	setPositionZ(z: number) {
+		const { x, y } = this.body?.translation() || { x: 0, y: 0};
+		this.body!.setTranslation({ x, y, z }, true);
+	}
+
 	getPosition(): Vector {
 		return this.body!.translation();
 	}
@@ -161,3 +196,8 @@ export class Moveable extends Mixin(GameEntity, EntityErrors) {
 		}
 	}
 };
+
+export interface Moveable extends EntityErrors {
+	group: any;
+}
+applyMixins(Moveable, [EntityErrors]);

@@ -2,9 +2,9 @@ import { Color, Vector3 } from "three";
 import { PerspectiveType } from "./perspective";
 import { Conditions, SetupCallback } from "./game";
 import { GameOptions } from "../core/";
-import { UpdateFunction } from "./entity";
+import { LifecycleFunction } from "./entity";
 
-export interface StageBlueprint {
+export interface StageBlueprint<T = any> {
 	id?: string;
 	gravity?: Vector3;
 	perspective: PerspectiveType;
@@ -12,6 +12,7 @@ export interface StageBlueprint {
 	backgroundColor: Color | number;
 	setup: SetupCallback;
 	children: (globals?: any) => any[];
+	_childrenMap?: Map<number, any>;
 	conditions: Array<Conditions<GameOptions["globals"]>>;
-	update?: UpdateFunction<any> | null;
+	update?: LifecycleFunction<T> | null;
 }

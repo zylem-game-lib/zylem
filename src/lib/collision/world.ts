@@ -2,7 +2,7 @@ import { Vector3 } from 'three';
 import RAPIER, { World } from '@dimforge/rapier3d-compat';
 
 import { Entity } from '../interfaces/entity';
-import { GameEntity } from '../core/game-entity';
+import { StageEntity  } from '../core/stage-entity';
 import { EntityParameters } from '../core/entity';
 import { state$ } from '../state';
 

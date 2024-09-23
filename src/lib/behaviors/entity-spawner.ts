@@ -1,11 +1,11 @@
 import { Mixin } from "ts-mixer";
-import { GameEntity } from "../core";
+import { StageEntity  } from "../core";
 import { EntityErrors } from "../core/errors";
 import { OptionalVector } from "../interfaces/entity";
 import { Moveable } from "./moveable";
 import { Vector3 } from "three";
 
-export class EntitySpawner extends Mixin(GameEntity, EntityErrors, Moveable) {
+export class EntitySpawner extends Mixin(StageEntity, EntityErrors, Moveable) {
 	spawn(T: any, options: any) {
 		const stage = this.stageRef;
 		stage?.spawnEntity(T(options));

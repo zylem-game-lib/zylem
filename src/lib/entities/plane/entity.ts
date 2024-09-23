@@ -1,9 +1,9 @@
 import { Color, Vector2 } from "three";
 import { Mixin } from "ts-mixer";
 
-import { EntityParameters, GameEntity } from "../../core";
+import { EntityParameters, StageEntity } from "../../core";
 import { TexturePath, ZylemMaterial } from '../../core/material';
-import { GameEntityOptions } from "../../interfaces/entity";
+import { StageEntityOptions } from "../../interfaces/entity";
 import { ZylemBlueColor } from "../../interfaces/utility";
 import { PlaneMesh, PlaneCollision } from "./index";
 
@@ -15,14 +15,14 @@ type ZylemPlaneOptions = {
 	color?: Color;
 }
 
-type PlaneOptions = GameEntityOptions<ZylemPlaneOptions, ZylemPlane>;
+type PlaneOptions = StageEntityOptions<ZylemPlaneOptions, ZylemPlane>;
 
-export class ZylemPlane extends Mixin(GameEntity, ZylemMaterial, PlaneMesh, PlaneCollision) {
+export class ZylemPlane extends Mixin(StageEntity, ZylemMaterial, PlaneMesh, PlaneCollision) {
 
 	public type = 'Plane';
 
 	constructor(options: PlaneOptions) {
-		super(options as GameEntityOptions<{}, unknown>);
+		super(options as StageEntityOptions<{}, unknown>);
 		this._static = options.static ?? true;
 		this._texture = options.texture ?? null;
 		this._tile = options.tile ?? new Vector2(1, 1);

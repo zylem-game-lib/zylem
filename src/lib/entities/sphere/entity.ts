@@ -2,9 +2,9 @@
 import { Color } from 'three';
 import { Mixin } from 'ts-mixer';
 
-import { EntityParameters, GameEntity } from '../../core';
+import { EntityParameters, StageEntity } from '../../core';
 import { TexturePath, ZylemMaterial } from '../../core/material';
-import { GameEntityOptions } from '../../interfaces/entity';
+import { StageEntityOptions } from '../../interfaces/entity';
 import { ZylemBlueColor } from '../../interfaces/utility';
 import { SphereMesh, SphereCollision } from './index';
 import { Moveable } from '../../behaviors/moveable';
@@ -16,7 +16,7 @@ type ZylemSphereOptions = {
 	color?: Color;
 }
 
-type SphereOptions = GameEntityOptions<ZylemSphereOptions, ZylemSphere>;
+type SphereOptions = StageEntityOptions<ZylemSphereOptions, ZylemSphere>;
 
 const sphereDefaults: SphereOptions = {
 	radius: 1,
@@ -26,12 +26,12 @@ const sphereDefaults: SphereOptions = {
 	shader: 'standard',
 };
 
-export class ZylemSphere extends Mixin(GameEntity, ZylemMaterial, SphereMesh, SphereCollision, Moveable) {
+export class ZylemSphere extends Mixin(StageEntity, ZylemMaterial, SphereMesh, SphereCollision, Moveable) {
 
 	public type = 'Sphere';
 
 	constructor(options: SphereOptions) {
-		super(options as GameEntityOptions<{}, unknown>);
+		super(options as StageEntityOptions<{}, unknown>);
 		this._static = options.static ?? false;
 		this._texture = options.texture ?? null;
 		this._shader = options.shader ?? 'standard';

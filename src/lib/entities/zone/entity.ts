@@ -1,8 +1,8 @@
 import { Vector3 } from "three";
 import { Mixin } from "ts-mixer";
 
-import { GameEntityOptions } from "../../interfaces/entity";
-import { GameEntity, EntityParameters, IGameEntity } from "../../core";
+import { StageEntityOptions } from "../../interfaces/entity";
+import { StageEntity, EntityParameters, IGameEntity } from "../../core";
 import { Moveable } from "../../behaviors/moveable";
 import { ZoneCollision } from "./index";
 
@@ -32,9 +32,9 @@ export type ZylemZoneOptions = {
 	onExit: (params: OnExitParams) => void;
 }
 
-type ZoneOptions = GameEntityOptions<ZylemZoneOptions, ZylemZone>;
+type ZoneOptions = StageEntityOptions<ZylemZoneOptions, ZylemZone>;
 
-export class ZylemZone extends Mixin(GameEntity, ZoneCollision, Moveable) {
+export class ZylemZone extends Mixin(StageEntity, ZoneCollision, Moveable) {
 	public type = 'Zone';
 
 	_enteredZone: Map<string, number> = new Map();
@@ -46,7 +46,7 @@ export class ZylemZone extends Mixin(GameEntity, ZoneCollision, Moveable) {
 	_onExit: (params: OnExitParams) => void;
 
 	constructor(options: ZoneOptions) {
-		super(options as GameEntityOptions<{}, unknown>);
+		super(options as StageEntityOptions<{}, unknown>);
 		this._onHeld = options.onHeld || (() => { });
 		this._onEnter = options.onEnter || (() => { });
 		this._onExit = options.onExit || (() => { });

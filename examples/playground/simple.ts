@@ -1,14 +1,24 @@
-import { game, stage, sphere } from '../../src/main';
+import { game, stage, box } from '../../src/main';
+
+const test = box();
+
 
 const example = game(
+	{ debug: true },
 	stage(),
-	sphere({
-		update: ({ entity: ball, inputs }) => {
+	box({
+		update: ({ entity: cube, inputs }) => {
 			const { horizontal, vertical } = inputs[0];
-			ball.moveXY(horizontal * 5, -vertical * 5);
+			cube.moveXY(horizontal * 5, -vertical * 5);
 		}
 	}),
-	sphere()
+	box({
+		update: ({ entity: cube, inputs }) => {
+			const { horizontal, vertical } = inputs[0];
+			cube.moveXY(-horizontal * 5, vertical * 5);
+		}
+	}),
+	test
 );
 
 example.start();
