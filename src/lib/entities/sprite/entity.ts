@@ -12,11 +12,11 @@ import {
 import { Mixin } from "ts-mixer";
 
 import { ZylemMaterial } from "../../core/material";
-import { EntityParameters, GameEntity } from "../../core";
+import { EntityParameters, StageEntity } from "../../core";
 import { EntitySpawner } from "../../behaviors/entity-spawner";
 import { Moveable } from "../../behaviors/moveable";
 import { ZylemBlueColor } from "../../interfaces/utility";
-import { GameEntityOptions } from "../../interfaces/entity";
+import { StageEntityOptions } from "../../interfaces/entity";
 import { SpriteCollision } from './index';
 
 export type SpriteImage = { name: string, file: string };
@@ -36,9 +36,9 @@ type ZylemSpriteOptions = {
 	collisionSize?: Vector3;
 }
 
-type SpriteOptions = GameEntityOptions<ZylemSpriteOptions, ZylemSprite>;
+type SpriteOptions = StageEntityOptions<ZylemSpriteOptions, ZylemSprite>;
 
-export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollision, Moveable, EntitySpawner) {
+export class ZylemSprite extends Mixin(StageEntity, ZylemMaterial, SpriteCollision, Moveable, EntitySpawner) {
 
 	public type = 'Sprite';
 
@@ -59,7 +59,7 @@ export class ZylemSprite extends Mixin(GameEntity, ZylemMaterial, SpriteCollisio
 	_currentAnimationTime: number = 0;
 
 	constructor(options: SpriteOptions) {
-		super(options as GameEntityOptions<{}, unknown>);
+		super(options as StageEntityOptions<{}, unknown>);
 		this._static = options.static ?? false;
 		this._color = options.color ?? ZylemBlueColor;
 		this._size = options.size ?? new Vector3(1, 1, 1);

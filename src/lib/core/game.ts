@@ -10,15 +10,15 @@ import { DebugConfiguration } from './debug';
 import GamePad from '../input/game-pad';
 
 import { ZylemStage } from './stage';
-import { EntityParameters } from './entity';
-import { SetupFunction, UpdateFunction } from '../interfaces/entity';
+import { LifecycleFunction } from '../interfaces/entity';
 import { Game } from './game-wrapper';
+import { LifecycleParameters } from './entity-life-cycle';
 
 export interface GameOptions {
 	id: string;
 	globals: Record<string, any>;
 	stages: ZylemStage[];
-	update?: UpdateFunction<this>;
+	update?: LifecycleFunction<ZylemGame>;
 	debug?: boolean;
 	debugConfiguration?: DebugConfiguration;
 	time?: number;
@@ -32,8 +32,8 @@ export class ZylemGame {
 	id: string;
 	initialGlobals = {};
 
-	customSetup: SetupFunction<any> | null = null;
-	customUpdate: UpdateFunction<any> | null = null;
+	customSetup: LifecycleFunction<ZylemStage> | null = null;
+	customUpdate: LifecycleFunction<ZylemStage> | null = null;
 
 	stages: ZylemStage[] = [];
 	stageMap: Map<string, ZylemStage> = new Map();
@@ -51,8 +51,6 @@ export class ZylemGame {
 	static FRAME_LIMIT = 64;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 
-	// entities: Map<Uint16Array, Entity> = new Map();
-
 	constructor(options: GameOptions, wrapperRef: Game) {
 		this.wrapperRef = wrapperRef;
 		this.gamePad = new GamePad();
@@ -63,7 +61,7 @@ export class ZylemGame {
 	}
 
 	async loadStage(stage: ZylemStage) {
-		await stage.buildStage(this.id);
+		await stage.load(this.id);
 		this.stageMap.set(stage.uuid, stage);
 		this.currentStageId = stage.uuid;
 	}
@@ -74,7 +72,7 @@ export class ZylemGame {
 		this.initialGlobals = { ...options.globals };
 	}
 
-	params(): EntityParameters<ZylemStage> {
+	params(): LifecycleParameters<ZylemStage> {
 		const stage = this.currentStage();
 		const delta = this.clock.getDelta() ?? 0;
 		const inputs = this.gamePad.getInputs();

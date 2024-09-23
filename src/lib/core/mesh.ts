@@ -1,4 +1,4 @@
-import { BoxGeometry, Group, Material, Mesh, Object3D, Vector2, Vector3 } from "three";
+import { Group, Material, Mesh, Object3D, Vector2 } from "three";
 import { SizeVector } from "../interfaces/utility";
 
 export interface BoxMeshInterface {

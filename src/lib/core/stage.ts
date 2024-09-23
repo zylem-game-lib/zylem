@@ -5,7 +5,7 @@ import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments
 
 import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
-import { GameEntityOptions } from "../interfaces/entity";
+import { StageEntityOptions } from "../interfaces/entity";
 import { Conditions } from "../interfaces/game";
 import {
 	setStagePerspective,
@@ -14,12 +14,14 @@ import {
 	state$
 } from "../state";
 import { ZylemHUD } from "../ui/hud";
-import { EntityParameters, IGameEntity } from "./";
+import { Entity, IGameEntity, StageEntity } from "./";
 import { PerspectiveType, Perspectives } from "../interfaces/perspective";
 import { ZylemBlueColor } from "../interfaces/utility";
-import { BaseEntity } from "./base-entity";
 import { debugState } from "../state/debug-state";
 import createTestSystem from "../behaviors/test-system";
+import { applyMixins } from "./composable";
+import { Lifecycle, LifecycleParameters } from "./entity-life-cycle";
+import createTransformSystem from "../behaviors/transformable";
 
 type ZylemStageOptions = {
 	perspective: PerspectiveType;
@@ -30,11 +32,11 @@ type ZylemStageOptions = {
 	children: ({ globals }: any) => IGameEntity[];
 }
 
-type StageOptions = GameEntityOptions<ZylemStageOptions, ZylemStage>;
+type StageOptions = StageEntityOptions<ZylemStageOptions, ZylemStage>;
 
 export const STAGE_TYPE = 'Stage';
 
-export class ZylemStage extends Mixin(BaseEntity) {
+export class ZylemStage {
 	public type = STAGE_TYPE;
 
 	perspective: PerspectiveType;
@@ -48,16 +50,16 @@ export class ZylemStage extends Mixin(BaseEntity) {
 	conditions: Conditions<any>[] = [];
 
 	children: Array<IGameEntity> = [];
-	_childrenMap: Map<string, IGameEntity> = new Map();
-	_removalMap: Map<string, IGameEntity> = new Map();
+	_childrenMap: Map<number, IGameEntity> = new Map();
+	_removalMap: Map<number, IGameEntity> = new Map();
 
 	_debugLines: LineSegments | null = null;
 
 	ecs = createECS();
 	testSystem: any = null;
+	transformSystem: any = null;
 
 	constructor(options: StageOptions) {
-		super(options as GameEntityOptions<{}, unknown>);
 		this.world = null;
 		this.scene = null;
 		this.HUD = new ZylemHUD();
@@ -74,8 +76,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		};
 	}
 
-	// TODO: consider renaming this to "create" for consistency with other abstractions 
-	async buildStage(id: string) {
+	async load(id: string) {
 		// TODO: consider moving globals out
 		setStagePerspective(this.perspective);
 		setStageBackgroundColor(this.backgroundColor);
@@ -93,10 +94,10 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			this.spawnEntity(child);
 		}
 		this.testSystem = createTestSystem();
+		this.transformSystem = createTransformSystem(this);
 	}
 
-	public async setup(params: EntityParameters<ZylemStage>) {
-		super.setup(params);
+	public setup(params: LifecycleParameters<ZylemStage>): void {
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
 			return;
@@ -109,11 +110,12 @@ export class ZylemStage extends Mixin(BaseEntity) {
 			this.scene.scene.add(this._debugLines);
 			this._debugLines.visible = true;
 		}
-		this._setup({ ...params, HUD: this.HUD });
+		if (this._setup) {
+			this._setup({ ...params, HUD: this.HUD });
+		}
 	}
 
-	public update(params: EntityParameters<ZylemStage>): void {
-		super.update(params);
+	public update(params: LifecycleParameters<ZylemStage>): void {
 		const { delta } = params;
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
@@ -122,6 +124,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		this.world.update(params);
 		// ECS TEST
 		this.testSystem(this.ecs);
+		this.transformSystem(this.ecs);
 		//
 		this._childrenMap.forEach((child, uuid) => {
 			const needsRemoval = this._removalMap.get(uuid);
@@ -144,8 +147,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		}
 	}
 
-	public destroy(params: EntityParameters<ZylemStage>): void {
-		super.destroy(params);
+	public destroy(params: LifecycleParameters<ZylemStage>): void {
 		this.world?.destroy();
 		this.scene?.destroy();
 		this._destroy({ ...params, entity: this });
@@ -180,7 +182,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		}
 		this.world.addEntity(entity);
 		child.setup({ entity, HUD: this.HUD, camera: this.scene.zylemCamera });
-		this._childrenMap.set(entity.uuid, entity);
+		this._childrenMap.set(entity.eid, entity);
 	}
 
 	setForRemoval(entity: IGameEntity) {
@@ -189,7 +191,7 @@ export class ZylemStage extends Mixin(BaseEntity) {
 		}
 		entity.group.clear();
 		entity.group.removeFromParent();
-		this._removalMap.set(entity.uuid, entity);
+		this._removalMap.set(entity.eid, entity);
 	}
 
 	debugStage(world: World) {
@@ -230,6 +232,10 @@ export class ZylemStage extends Mixin(BaseEntity) {
 	}
 }
 
+export interface ZylemStage extends Entity, StageEntity, Lifecycle<ZylemStage> {}
+applyMixins(ZylemStage, [Entity, StageEntity]);
+
 export function stage(options: StageOptions = {}): ZylemStage {
-	return new ZylemStage(options) as ZylemStage;
+	const zylemStage = new ZylemStage(options) as ZylemStage;
+	return zylemStage;
 }

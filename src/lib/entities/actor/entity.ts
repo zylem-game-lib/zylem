@@ -3,7 +3,7 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Mixin } from 'ts-mixer';
 
-import { EntityParameters, GameEntity, IGameEntity } from "../../core";
+import { EntityParameters, StageEntity, IGameEntity } from "../../core";
 import { GameEntityOptions } from "../../interfaces/entity";
 import { Moveable } from '../../behaviors/moveable';
 import { ActorMesh, ActorCollision } from './index';
@@ -26,7 +26,7 @@ type ZylemActorOptions = {
 
 type ActorOptions = GameEntityOptions<ZylemActorOptions, ZylemActor>;
 
-export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, ActorCollision, Moveable, EntityErrors) implements IGameEntity {
+export class ZylemActor extends Mixin(StageEntity, ZylemMaterial, ActorMesh, ActorCollision, Moveable, EntityErrors) implements IGameEntity {
 
 	public type = 'Actor';
 
@@ -50,6 +50,13 @@ export class ZylemActor extends Mixin(GameEntity, ZylemMaterial, ActorMesh, Acto
 		this._loaderMap.set(FileExtensionTypes.FBX, this._fbxLoader);
 		this._loaderMap.set(FileExtensionTypes.GLTF, this._gltfLoader);
 	}
+	uuid: string;
+	eid: number;
+	_custom: any;
+	_behaviors: Behavior[];
+	_setup: Function;
+	_update: Function;
+	_destroy: Function;
 
 	async create(): Promise<this> {
 		await this.load(this._animationFileNames);

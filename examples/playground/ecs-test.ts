@@ -4,7 +4,7 @@ import { game, stage, box, actor, move, bounce } from '../../src/main';
 function behaviors(): any[] {
 	return [
 		{ component: bounce, values: { height: 4 } },
-		{ component: move, values: { movement: 2 } }
+		{ component: move, values: { movement: 1 } }
 	];
 }
 
@@ -41,6 +41,7 @@ const ecsTest = game(
 			entity.setPosition(5, 0, 0);
 		},
 		update: ({ entity }) => {
+			// entity.setPositionY(bounce.height[entity.eid]);
 			// ecsTest.log('actor: '+bounce.height[entity.eid].toString());
 		}
 	}, ...behaviors())
