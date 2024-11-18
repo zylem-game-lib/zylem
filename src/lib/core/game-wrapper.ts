@@ -2,10 +2,11 @@ import { Perspectives } from '../interfaces/perspective';
 import { ZylemBlueColor } from '../interfaces/utility';
 import { debugState } from '../state/debug-state';
 import { ZylemDebug } from './debug';
-import { GameOptions, ZylemGame } from "./game";
+import { IGameOptions, ZylemGame } from "./game";
+import { SetupFunction } from './setup';
 import { ZylemStage, stage } from './stage';
 import { IGameEntity } from './stage-entity';
-import { SetupFunction, UpdateFunction } from '../interfaces/entity';
+import { UpdateFunction } from './update';
 
 async function loadGame(wrapperRef: Game) {
 	const options = convertNodes(wrapperRef.options);
@@ -43,9 +44,9 @@ const defaultGameOptions = {
 	]
 }
 
-function convertNodes(_options: GameOptionsWrapper): GameOptions {
+function convertNodes(_options: GameOptions): { id: string, globals: {}, stages: ZylemStage[] } {
 	let converted = { ...defaultGameOptions };
-	const configurations: GameOptions[] = [];
+	const configurations: IGameOptions[] = [];
 	const stages: ZylemStage[] = [];
 	const entities: IGameEntity[] = [];
 	Object.values(_options).forEach((node) => {
@@ -55,7 +56,7 @@ function convertNodes(_options: GameOptionsWrapper): GameOptions {
 			entities.push(node as IGameEntity);
 		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
 			const configuration = Object.assign(defaultGameOptions, { ...node });
-			configurations.push(configuration as GameOptions);
+			configurations.push(configuration as IGameOptions);
 		}
 	});
 	configurations.forEach((configuration) => {
@@ -72,13 +73,13 @@ function convertNodes(_options: GameOptionsWrapper): GameOptions {
 
 export class Game {
 	gameRef: ZylemGame | null = null;
-	options: GameOptionsWrapper;
+	options: GameOptions;
 	debugRef: ZylemDebug | null = null;
 
-	updateOverride: UpdateFunction<any> = () => {};
-	setupOverride: SetupFunction<any> = () => {};
+	updateOverride: UpdateFunction<any> = () => { };
+	setupOverride: SetupFunction<any> = () => { };
 
-	constructor(options: GameOptionsWrapper) {
+	constructor(options: GameOptions) {
 		this.options = options;
 	}
 
@@ -106,15 +107,15 @@ export class Game {
 		this.gameRef.customUpdate = this.updateOverride;
 	}
 
-	async setup(setupFn: SetupFunction<any>) {
+	async setup(setupFn: SetupFunction<Game>) {
 		this.setupOverride = setupFn;
 	}
 
-	async update(updateFn: UpdateFunction<any>) {
+	async update(updateFn: UpdateFunction<Game>) {
 		this.updateOverride = updateFn;
 	}
 
-	async pause() {}
+	async pause() { }
 
 	async reset() {
 		// TODO: implement actual reset
@@ -136,15 +137,23 @@ export class Game {
 		await this.gameRef.loadStage(nextStage);
 	}
 
-	async previousStage() {}
+	async previousStage() { }
 
-	async goToStage() {}
+	async goToStage() { }
 
-	async end() {}
+	async end() { }
 }
 
-type GameOptionsWrapper = Array<Partial<GameOptions> | ZylemStage | Partial<IGameEntity>>;
+type GameOptions = Array<Partial<IGameOptions> | ZylemStage | Partial<IGameEntity> | Node>;
 
-export function game(...options: GameOptionsWrapper): Game {
+/**
+ * create a new game
+ * @param options GameOptions
+ * @param options.id Game name string
+ * @param options.globals Game globals object
+ * @param options.stages Array of stage objects
+ * @returns Game
+ */
+export function game(...options: GameOptions): Game {
 	return new Game(options);
 }

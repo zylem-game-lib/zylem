@@ -7,33 +7,30 @@ import { setGlobalState } from '../state/index';
 import { setDebugFlag } from '../state/debug-state';
 import { DebugConfiguration } from './debug';
 
-import GamePad from '../input/game-pad';
+import Gamepad from '../input/gamepad';
 
 import { ZylemStage } from './stage';
-import { LifecycleFunction } from '../interfaces/entity';
 import { Game } from './game-wrapper';
 import { LifecycleParameters } from './entity-life-cycle';
+import { UpdateFunction } from './update';
+import { SetupFunction } from './setup';
 
-export interface GameOptions {
+export interface IGameOptions {
 	id: string;
 	globals: Record<string, any>;
 	stages: ZylemStage[];
-	update?: LifecycleFunction<ZylemGame>;
+	update?: UpdateFunction<ZylemGame>;
 	debug?: boolean;
 	debugConfiguration?: DebugConfiguration;
 	time?: number;
 }
 
-// We should have an abstraction for entering, exiting, and updating.
-// Zylem Game should only require stages, global state, and game loop.
-type Timeout = /*unresolved*/ any;
-
 export class ZylemGame {
 	id: string;
 	initialGlobals = {};
 
-	customSetup: LifecycleFunction<ZylemStage> | null = null;
-	customUpdate: LifecycleFunction<ZylemStage> | null = null;
+	customSetup: SetupFunction<ZylemStage> | null = null;
+	customUpdate: UpdateFunction<ZylemStage> | null = null;
 
 	stages: ZylemStage[] = [];
 	stageMap: Map<string, ZylemStage> = new Map();
@@ -43,7 +40,7 @@ export class ZylemGame {
 	totalTime = 0;
 
 	clock: Clock;
-	gamePad: GamePad;
+	gamepad: Gamepad;
 
 	wrapperRef: Game;
 	statsRef: Stats | null = null;
@@ -51,9 +48,9 @@ export class ZylemGame {
 	static FRAME_LIMIT = 64;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 
-	constructor(options: GameOptions, wrapperRef: Game) {
+	constructor(options: IGameOptions, wrapperRef: Game) {
 		this.wrapperRef = wrapperRef;
-		this.gamePad = new GamePad();
+		this.gamepad = new Gamepad();
 		this.clock = new Clock();
 		this.id = options.id;
 		this.stages = options.stages;
@@ -66,7 +63,7 @@ export class ZylemGame {
 		this.currentStageId = stage.uuid;
 	}
 
-	setGlobals(options: GameOptions) {
+	setGlobals(options: IGameOptions) {
 		setGlobalState(options.globals);
 		setDebugFlag(options.debug);
 		this.initialGlobals = { ...options.globals };
@@ -75,7 +72,7 @@ export class ZylemGame {
 	params(): LifecycleParameters<ZylemStage> {
 		const stage = this.currentStage();
 		const delta = this.clock.getDelta() ?? 0;
-		const inputs = this.gamePad.getInputs();
+		const inputs = this.gamepad.getInputs();
 		return {
 			delta,
 			inputs,
@@ -118,7 +115,7 @@ export class ZylemGame {
 		}
 
 		this.statsRef && this.statsRef.end();
-        requestAnimationFrame(this.loop.bind(this));
+		requestAnimationFrame(this.loop.bind(this));
 	}
 
 	getStage(id: string) {

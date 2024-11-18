@@ -1,13 +1,40 @@
-// Sphere is a combination of a 3D mesh and a physics body
+import { ActiveCollisionTypes, ColliderDesc } from "@dimforge/rapier3d-compat";
+import { BaseCollision } from "~/lib/collision/_oldCollision";
+import { Group, Mesh, SphereGeometry } from "three";
+import { BaseMesh, CreateMeshParameters } from "~/lib/core/mesh";
 import { Color } from 'three';
 import { Mixin } from 'ts-mixer';
 
-import { EntityParameters, StageEntity } from '../../core';
-import { TexturePath, ZylemMaterial } from '../../core/material';
-import { StageEntityOptions } from '../../interfaces/entity';
-import { ZylemBlueColor } from '../../interfaces/utility';
-import { SphereMesh, SphereCollision } from './index';
-import { Moveable } from '../../behaviors/moveable';
+import { EntityParameters, StageEntity } from '../core';
+import { TexturePath, ZylemMaterial } from '../core/material';
+import { StageEntityOptions } from '../interfaces/entity';
+import { ZylemBlueColor } from '../interfaces/utility';
+import { Moveable } from '../behaviors/moveable';
+
+export class SphereCollision extends BaseCollision {
+	_collisionRadius: number = 1;
+
+	createCollider(isSensor: boolean = false) {
+		const radius = this._collisionRadius || 1;
+		let colliderDesc = ColliderDesc.ball(radius);
+		colliderDesc.setSensor(isSensor);
+		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
+		return colliderDesc;
+	}
+}
+export class SphereMesh extends BaseMesh {
+	_radius: number = 1;
+
+	createMesh({ group = new Group(), radius = 1, materials }: CreateMeshParameters) {
+		this._radius = radius;
+		const geometry = new SphereGeometry(radius);
+		this.mesh = new Mesh(geometry, materials.at(-1));
+		this.mesh.position.set(0, 0, 0);
+		this.mesh.castShadow = true;
+		this.mesh.receiveShadow = true;
+		group.attach(this.mesh);
+	}
+}
 
 type ZylemSphereOptions = {
 	radius?: number;

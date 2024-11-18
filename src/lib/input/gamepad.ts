@@ -1,14 +1,11 @@
-import { ControllerInput, GamePadConnections } from "../interfaces/game-pad";
-// import { isMobile } from "../device/mobile";
-// import nipplejs, { JoystickManager } from 'nipplejs';
 
 type JoystickManager = unknown;
 
-export default class GamePad {
+export default class Gamepad {
 	hasSupport = true;
 	mobileGamepad?: JoystickManager | null = null;
 	lastConnection = -1;
-	connections: GamePadConnections = new Map();
+	connections: Map<number, boolean> = new Map();
 	keyboardInput = new Map<string, boolean>();
 
 	constructor() {
@@ -36,7 +33,7 @@ export default class GamePad {
 		this.lastConnection = navigator.getGamepads().length;
 	}
 
-	getInputAtIndex(index: number): ControllerInput {
+	getInputAtIndex(index: number): any {
 		// if (isMobile()) {
 		// 	// TODO: separate out, use a strategy pattern
 		// 	// Should users be able to use keyboard + controller + screen?
@@ -113,7 +110,8 @@ export default class GamePad {
 		};
 	}
 
-	getInputs(): ControllerInput[] {
+	// TODO: use input interface
+	getInputs(): any[] {
 		return [this.getInputAtIndex(0), this.getInputAtIndex(1)];
 	}
 

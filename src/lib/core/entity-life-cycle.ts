@@ -1,16 +1,23 @@
+import { LifecycleFunction } from "../interfaces/entity";
 import { ZylemHUD } from "../ui/hud";
 import { ZylemCamera } from "./camera";
 import { EntityOptions } from "./entity";
 import { Game } from "./game-wrapper";
 
-export interface LifecycleParameters<EntityType = any, GlobalsType = any> {
+export interface LifecycleParameters<T = any> {
 	game: Game; // TODO: this could be an interface
 	delta: number; // TODO: this could be an interface
 	inputs: any; // TODO: inputs type
-	entity: EntityType;
-	globals: GlobalsType;
+	entity: T;
+	globals: any;
 	camera: ZylemCamera; // TODO: this could be an interface
 	HUD: ZylemHUD; // TODO: this could be an interface
+}
+
+export interface LifecycleOptions<T> {
+	setup: LifecycleFunction<T>;
+	update: LifecycleFunction<T>;
+	destroy: LifecycleFunction<T>;
 }
 
 export class Lifecycle<T> {
@@ -24,10 +31,10 @@ export class Lifecycle<T> {
 		this._destroy = () => {};
 	}
 
-	lifecycleDefaults(options: EntityOptions<T>) {
-		this._setup = options.setup || ((params) => { });
-		this._update = options.update || ((params) => { });
-		this._destroy = options.destroy || ((params) => { });
+	lifecycleDefaults(options: LifecycleOptions<T>) {
+		this._setup = options.setup || (() => {});
+		this._update = options.update || (() => {});
+		this._destroy = options.destroy || (() => {});
 	}
 
 	setup(params: LifecycleParameters<T>){

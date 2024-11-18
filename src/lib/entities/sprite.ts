@@ -1,5 +1,7 @@
+import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
+import { Vector3 } from "three";
+import { BaseCollision } from "~/lib/collision/_oldCollision";
 import {
-	Vector3,
 	TextureLoader,
 	SpriteMaterial,
 	Sprite as ThreeSprite,
@@ -11,13 +13,40 @@ import {
 } from "three";
 import { Mixin } from "ts-mixer";
 
-import { ZylemMaterial } from "../../core/material";
-import { EntityParameters, StageEntity } from "../../core";
-import { EntitySpawner } from "../../behaviors/entity-spawner";
-import { Moveable } from "../../behaviors/moveable";
-import { ZylemBlueColor } from "../../interfaces/utility";
-import { StageEntityOptions } from "../../interfaces/entity";
-import { SpriteCollision } from './index';
+import { ZylemMaterial } from "../core/material";
+import { EntityParameters, StageEntity } from "../core";
+import { EntitySpawner } from "../behaviors/entity-spawner";
+import { Moveable } from "../behaviors/moveable";
+import { ZylemBlueColor } from "../interfaces/utility";
+import { StageEntityOptions } from "../interfaces/entity";
+
+export class SpriteCollision extends BaseCollision {
+	collisionSize: Vector3 = new Vector3(1, 1, 1);
+	size: Vector3 = new Vector3(1, 1, 1);
+
+	createCollision({ isDynamicBody = true, isSensor = false }) {
+		const gravityScale = (isSensor) ? 0.0 : 1.0;
+		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
+		this.bodyDescription = new RigidBodyDesc(type)
+			.setTranslation(0, 0, 0)
+			.lockRotations()
+			.setGravityScale(gravityScale)
+			.setCanSleep(false)
+			.setCcdEnabled(true);
+	}
+
+	createCollider(isSensor: boolean = false) {
+		const { x, y, z } = this.collisionSize ?? this.size;
+		const size = new Vector3(x, y, z);
+		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
+		const colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
+		colliderDesc.setSensor(isSensor);
+		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
+		return colliderDesc;
+	}
+}
+
+
 
 export type SpriteImage = { name: string, file: string };
 export type SpriteAnimation<T extends SpriteImage[] | undefined> = {
