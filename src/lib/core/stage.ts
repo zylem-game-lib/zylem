@@ -1,11 +1,9 @@
 import { addComponent, addEntity, createWorld as createECS } from "bitecs";
-import { Mixin } from "ts-mixer";
 import { World } from "@dimforge/rapier3d-compat";
 import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from "three";
 
 import { ZylemWorld } from "../collision/world";
 import { ZylemScene } from "../rendering/scene";
-import { StageEntityOptions } from "../interfaces/entity";
 import { Conditions } from "../interfaces/game";
 import {
 	setStagePerspective,
@@ -23,7 +21,7 @@ import { applyMixins } from "./composable";
 import { Lifecycle, LifecycleParameters } from "./entity-life-cycle";
 import createTransformSystem from "../behaviors/transformable";
 
-type ZylemStageOptions = {
+interface ZylemStageOptions {
 	perspective: PerspectiveType;
 	backgroundColor: Color;
 	backgroundImage: String;
@@ -32,7 +30,7 @@ type ZylemStageOptions = {
 	children: ({ globals }: any) => IGameEntity[];
 }
 
-type StageOptions = StageEntityOptions<ZylemStageOptions, ZylemStage>;
+export type StageOptions = Partial<ZylemStageOptions>;
 
 export const STAGE_TYPE = 'Stage';
 
@@ -232,7 +230,7 @@ export class ZylemStage {
 	}
 }
 
-export interface ZylemStage extends Entity, StageEntity, Lifecycle<ZylemStage> {}
+export interface ZylemStage extends Entity, StageEntity, Lifecycle<ZylemStage> { }
 applyMixins(ZylemStage, [Entity, StageEntity]);
 
 export function stage(options: StageOptions = {}): ZylemStage {

@@ -3,7 +3,6 @@ import { Collider, KinematicCharacterController, RigidBody } from '@dimforge/rap
 
 import {
 	CollisionOption,
-	StageEntityOptions,
 } from '../interfaces/entity';
 import { state$ } from '../state';
 import { ZylemStage } from './stage';
@@ -29,12 +28,13 @@ export interface IGameEntity {
 	_destroy: Function;
 }
 
-export interface StageEntity extends Moveable {}
+export interface StageEntity extends Moveable { }
+export interface StageEntity extends IGameEntity { }
 
 export class StageEntity {
 	public stageRef: ZylemStage | null = null;
 	public group = new Group();
-	
+
 	public collider: null | Collider = null;
 	public controlledRotation = false;
 	public characterController: null | KinematicCharacterController = null;
@@ -52,7 +52,7 @@ export class StageEntity {
 	private setName(name?: string) {
 		StageEntity.counter++;
 		const defaultName = `entity-${StageEntity.counter}`;
-		this.name = name ?? defaultName ;
+		this.name = name ?? defaultName;
 	}
 
 	public kill(params: any): void {

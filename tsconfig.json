@@ -1,32 +1,30 @@
 {
-	"compilerOptions": {
-		"target": "ESNext",
-		"lib": ["DOM", "DOM.Iterable", "ESNext"],
-		"types": [
-			"vite/client",
-			"node",
-			"vite-plugin-glsl/ext",
-		],
-		"allowJs": false,
-		"skipLibCheck": true,
-		"esModuleInterop": false,
-		"allowSyntheticDefaultImports": true,
-		"strict": true,
-		"forceConsistentCasingInFileNames": true,
-		"module": "ESNext",
-		"moduleResolution": "Node",
-		"resolveJsonModule": true,
-		"isolatedModules": true,
-		"noEmit": true,
-		"jsx": "preserve",
-		"baseUrl": "./",
-		"paths": {
-			"~/*": ["src/*"],
-			"@/*": ["src/*"],
-			"@interfaces/*": ["src/lib/interfaces/*"],
-			"@state/*": ["src/state/*"]
-		}
-	},
-	"include": ["./src"],
-	"exclude": ["node_modules"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "types": ["vite/client", "node", "vite-plugin-glsl/ext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "baseUrl": "./",
+    "paths": {
+      "~/*": ["src/*"],
+      "@/*": ["src/*"],
+      "@lib": ["src/lib/*"],
+      "@interfaces/*": ["src/lib/interfaces/*"],
+      "@state/*": ["src/state/*"]
+    }
+  },
+  "include": ["./src"],
+  "exclude": ["node_modules"]
 }

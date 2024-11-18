@@ -1,15 +1,70 @@
-import { AnimationAction, AnimationClip, AnimationMixer, Mesh, Object3D } from 'three';
+import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
+import { BufferGeometry, Object3D, SkinnedMesh } from "three";
+import { BaseCollision } from "~/lib/collision/_oldCollision";
+import { Group } from "three";
+import { BaseMesh, CreateMeshParameters } from "~/lib/core/mesh";
+import { AnimationAction, AnimationClip, AnimationMixer } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Mixin } from 'ts-mixer';
 
-import { EntityParameters, StageEntity, IGameEntity } from "../../core";
-import { GameEntityOptions } from "../../interfaces/entity";
-import { Moveable } from '../../behaviors/moveable';
-import { ActorMesh, ActorCollision } from './index';
+import { EntityParameters, StageEntity, IGameEntity } from "../core";
+import { GameEntityOptions } from "../interfaces/entity";
+import { Moveable } from '../behaviors/moveable';
 import { EntityErrors } from '~/lib/core/errors';
 import { ZylemMaterial } from '~/lib/core/material';
 import { Behavior } from '~/lib/behaviors/behavior';
+
+export class ActorCollision extends BaseCollision {
+	height: number = 1;
+	radius: number = 1;
+
+	createCollision({ isDynamicBody = true, object }: { isDynamicBody: boolean, object: Object3D | null }) {
+		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
+		this.bodyDescription = new RigidBodyDesc(type)
+			.setTranslation(0, 0, 0)
+			// .setRotation({ w: 1.0, x: 0.0, y: 0.0, z: 0.0 })
+			.setGravityScale(1.0)
+			.setCanSleep(false)
+			.setCcdEnabled(false);
+		if (!object) {
+			console.warn('missing object');
+			return;
+		}
+		const skinnedMesh = object.children[0] as SkinnedMesh;
+		const geometry = skinnedMesh.geometry as BufferGeometry;
+
+		if (!geometry) {
+			return;
+		}
+		geometry.computeBoundingBox();
+		if (geometry.boundingBox) {
+			const maxY = geometry.boundingBox.max.y;
+			const minY = geometry.boundingBox.min.y;
+			this.height = maxY - minY;
+		}
+	}
+
+	createCollider(isSensor: boolean = false) {
+		// TODO: consider using offsets
+		let colliderDesc = ColliderDesc.capsule(this.height / 2, 1);
+		colliderDesc.setSensor(isSensor);
+		colliderDesc.setTranslation(0, this.height / 2, 0);
+		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
+		return colliderDesc;
+	}
+}
+
+export class ActorMesh extends BaseMesh {
+	createMesh({ group = new Group(), object, materials }: CreateMeshParameters) {
+		if (!object) {
+			console.log('actor is missing object');
+			return;
+		}
+		object.position.set(0, 0, 0);
+		group.attach(object);
+	}
+}
 
 enum FileExtensionTypes {
 	FBX = 'fbx',
