@@ -87,29 +87,6 @@ class ZylemBox {
 	}
 }
 
-interface ZylemBox extends Entity<ZylemBox>, StageEntity, Lifecycle<ZylemBox>, BoxCollision, ZylemMaterial, BoxMesh { }
-applyMixins(ZylemBox, [Entity, StageEntity, Lifecycle, BoxCollision, ZylemMaterial, BoxMesh]);
-
-export function box(options: Partial<BoxOptions> = boxDefaults, ...behaviors: Behavior[]): ZylemBox {
-	const zylemBox = new ZylemBox(options) as ZylemBox;
-	zylemBox.entityDefaults(options as EntityOptions<ZylemBox>);
-	zylemBox.lifecycleDefaults(options as LifecycleOptions<ZylemBox>);
-	zylemBox.stageEntityDefaults();
-	zylemBox._static = options.static ?? boxDefaults.static!;
-	zylemBox._texture = options.texture ?? boxDefaults.texture!;
-	zylemBox._size = options.size ?? boxDefaults.size!;
-	zylemBox.collisionSize = options.size ?? boxDefaults.size!;
-	zylemBox._color = options.color ?? boxDefaults.color!;
-	zylemBox._shader = options.shader ?? boxDefaults.shader!;
-	// zylemBox._behaviors = [
-	// 	{ component: position, values: { x: 0, y: 0, z: 0 } },
-	// 	{ component: scale , values: { x: 0, y: 0, z: 0 } },
-	// 	{ component: rotation , values: { x: 0, y: 0, z: 0, w: 0 } },
-	// 	...behaviors
-	// ];
-	return zylemBox;
-}
-
 export class BoxMesh {
 	_size: SizeVector = new Vector3(1, 1, 1);
 	mesh: Mesh<BufferGeometry, Material | Material[]> | null = null;
@@ -123,4 +100,27 @@ export class BoxMesh {
 		this.mesh.receiveShadow = true;
 		group.add(this.mesh);
 	}
+}
+
+interface ZylemBox extends Entity<ZylemBox>, BoxCollision, ZylemMaterial, BoxMesh { }
+applyMixins(ZylemBox, [Entity, StageEntity, Lifecycle, BoxCollision, ZylemMaterial, BoxMesh]);
+
+export function box(options: Partial<BoxOptions> = boxDefaults, ...behaviors: Behavior[]): ZylemBox {
+	const zylemBox = new ZylemBox(options) as ZylemBox;
+	zylemBox.entityDefaults(options as EntityOptions<ZylemBox>);
+	// zylemBox.lifecycleDefaults(options as LifecycleOptions<ZylemBox>);
+	// zylemBox.stageEntityDefaults();
+	zylemBox._static = options.static ?? boxDefaults.static!;
+	zylemBox._texture = options.texture ?? boxDefaults.texture!;
+	zylemBox._size = options.size ?? boxDefaults.size!;
+	zylemBox.collisionSize = options.size ?? boxDefaults.size!;
+	zylemBox._color = options.color ?? boxDefaults.color!;
+	zylemBox._shader = options.shader ?? boxDefaults.shader!;
+	// zylemBox._behaviors = [
+	// 	{ component: position, values: { x: 0, y: 0, z: 0 } },
+	// 	{ component: scale , values: { x: 0, y: 0, z: 0 } },
+	// 	{ component: rotation , values: { x: 0, y: 0, z: 0, w: 0 } },
+	// 	...behaviors
+	// ];
+	return zylemBox;
 }

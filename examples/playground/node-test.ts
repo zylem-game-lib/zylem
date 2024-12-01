@@ -1,11 +1,13 @@
-import { game, node, ZylemNode } from '../../src/main';
+import { game, node, ZylemNode, box } from '../../src/main';
 
 const test = node();
 const test2 = node(node(), node());
 const test3 = node({ test: 'test' }, node({ test1: 'test' }), node({ test2: 'test' }));
+const myBox = box();
 
 const testGame = game(
-	test, test2, test3,
+	{ id: 'zylem' },
+	test, test2, test3, myBox
 );
 
 test3.update = ({ delta, entity }) => {
