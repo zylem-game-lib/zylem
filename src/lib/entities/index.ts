@@ -1,4 +1,4 @@
-export * from './node';
+export * from './vessel';
 export * from './actor';
 export * from './box';
 export * from './plane';

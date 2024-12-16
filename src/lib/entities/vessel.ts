@@ -2,8 +2,6 @@ import { DestroyFunction } from "../core/destroy";
 import { SetupFunction } from "../core/setup";
 import { UpdateFunction } from "../core/update";
 
-// Consider changing name to "thing" instead of "node"
-
 export interface ChildNode<U = object> {
 	options?: U;
 	children?: ChildNode<U>[];
@@ -26,8 +24,8 @@ export interface NodeFunction<T extends Node<U>, U extends ChildNode<object> = o
 	(...children: ChildNode<U>[]): Node<U>;
 }
 
-export function node<T extends Node>(...args: Array<T | Partial<T['options']>>): T {
-	const node: T = {
+export function vessel<T extends Node>(...args: Array<T | Partial<T['options']>>): T {
+	const vessel: T = {
 		children: [],
 		update: () => { },
 		setup: () => { },
@@ -36,19 +34,19 @@ export function node<T extends Node>(...args: Array<T | Partial<T['options']>>):
 
 	for (const arg of args) {
 		if ('children' in arg) {
-			node.children = node.children || [];
-			node.children.push(arg as T);
+			vessel.children = vessel.children || [];
+			vessel.children.push(arg as T);
 		} else {
-			node.options = { ...node.options, ...(arg as Partial<T['options']>) };
+			vessel.options = { ...vessel.options, ...(arg as Partial<T['options']>) };
 		}
 	}
 
-	return node;
+	return vessel;
 }
 
-export class ZylemNode {
-	nodes: ZylemNode[] = [];
-	setup: SetupFunction<ZylemNode> = () => { };
-	update: UpdateFunction<ZylemNode> = () => { };
-	destroy: DestroyFunction<ZylemNode> = () => { };
+export class ZylemVessel {
+	nodes: ZylemVessel[] = [];
+	setup: SetupFunction<ZylemVessel> = () => { };
+	update: UpdateFunction<ZylemVessel> = () => { };
+	destroy: DestroyFunction<ZylemVessel> = () => { };
 }

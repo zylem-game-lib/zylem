@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { node } from '@/lib/entities';
+import { vessel } from '@/lib/entities';
 
-describe('Base node functionality', () => {
-	it('Initialize a base node', () => {
-		const test = node();
+describe('Base vessel functionality', () => {
+	it('Initialize a base vessel', () => {
+		const test = vessel();
 		expect(test.setup).toBeDefined();
 		expect(test.update).toBeDefined();
 		expect(test.destroy).toBeDefined();
