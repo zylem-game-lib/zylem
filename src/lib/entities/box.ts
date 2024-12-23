@@ -124,3 +124,48 @@ export function box(options: Partial<BoxOptions> = boxDefaults, ...behaviors: Be
 	// ];
 	return zylemBox;
 }
+
+// type BoxBehavior = (box: ZylemBox) => Promise<void> | void;
+
+// class ZylemBoxBuilder {
+//     private box: ZylemBox;
+//     private behaviors: BoxBehavior[] = [];
+
+//     constructor(initialOptions: BoxOptions = {}) {
+//         this.box = new ZylemBox(initialOptions);
+//     }
+
+//     use(behavior: BoxBehavior): this {
+//         this.behaviors.push(behavior);
+//         return this;
+//     }
+
+//     async build(): Promise<ZylemBox> {
+//         for (const behavior of this.behaviors) {
+//             await behavior(this.box);
+//         }
+//         return this.box;
+//     }
+// }
+
+// // Define reusable behaviors
+// const meshBehavior: BoxBehavior = async (box) => {
+//     const size = box.options.size ?? 1;//new Vector3(1, 1, 1);
+//     const group = new Group();
+//     box.createMesh({
+//         group,
+//         size,
+//         materials: box.materials
+//     });
+// };
+
+// const collisionBehavior: BoxBehavior = (box) => {
+//     // box.createCollision({ isDynamicBody: !box._static });
+// };
+
+// const colorBehavior: BoxBehavior = (box) => {
+//     box._color = new Color().setColorName('blue');
+// };
+
+// // Build the ZylemBox with behaviors
+// const boxBuilder = new ZylemBoxBuilder({ size: 2, color: 'green' });
