@@ -1,12 +1,12 @@
-import { ColliderDesc } from "@dimforge/rapier3d-compat";
-import { Object3D } from "three";
-import { BaseCollision } from "~/lib/collision/_oldCollision";
+import { ColliderDesc } from '@dimforge/rapier3d-compat';
+import { Object3D } from 'three';
+import { BaseCollision } from '~/lib/collision/_oldCollision';
 export declare class ActorCollision extends BaseCollision {
-    height: number;
-    radius: number;
-    createCollision({ isDynamicBody, object }: {
+	height: number;
+	radius: number;
+	createCollision({ isDynamicBody, object }: {
         isDynamicBody: boolean;
         object: Object3D | null;
     }): void;
-    createCollider(isSensor?: boolean): ColliderDesc;
+	createCollider(isSensor?: boolean): ColliderDesc;
 }

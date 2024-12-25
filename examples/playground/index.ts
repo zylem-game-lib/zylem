@@ -1,7 +1,7 @@
-import { Color, Vector2, Vector3 } from "three";
-import { game, stage, actor, box, plane, sphere, zone, Perspectives, Zylem } from "../../src/main";
-import { node } from "../../src/lib/entities";
-import { IGameEntity } from "../../src/lib/core";
+import { Color, Vector2, Vector3 } from 'three';
+import { game, stage, actor, box, plane, sphere, zone, Perspectives, Zylem } from '../../src/main';
+import { node } from '../../src/lib/entities';
+import { IGameEntity } from '../../src/lib/core';
 
 const { actionOnRelease, actionWithCooldown, actionOnPress } = Zylem.Util;
 const { ThirdPerson } = Perspectives;
@@ -105,8 +105,8 @@ const actorFactory = (positionX, positionZ = 0, index = 0) => {
 			}
 			entity.rotateInDirection(lastMovement);
 		},
-	})
-}
+	});
+};
 
 const actor1 = actorFactory(0, -10);
 const actor2 = actorFactory(17, 10);
@@ -193,9 +193,9 @@ const stage1 = stage({
 				cameraIndex = 0;
 			}
 			camera.target = targets[cameraIndex] as any;
-			console.log('start cooldown')
+			console.log('start cooldown');
 			actionWithCooldown({ timer: 5000, immediate: false }, () => {
-				console.log('5 sec cooldown')
+				console.log('5 sec cooldown');
 			}, () => {
 
 			});
@@ -221,7 +221,7 @@ const stage1 = stage({
 			ground,
 			zone1,
 			// TODO: fix this type issue
-		] as IGameEntity[]
+		] as IGameEntity[];
 	},
 });
 

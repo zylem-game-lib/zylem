@@ -8,4 +8,4 @@ describe('Base vessel functionality', () => {
 		expect(test.update).toBeDefined();
 		expect(test.destroy).toBeDefined();
 	});
-})
+});

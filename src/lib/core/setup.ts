@@ -1,6 +1,6 @@
-import { ZylemHUD } from "../ui/hud";
-import { ZylemCamera } from "./camera";
-import { Game } from "./game-wrapper";
+import { ZylemHUD } from '../ui/hud';
+import { ZylemCamera } from './camera';
+import { Game } from './game-wrapper';
 
 export interface SetupContext<T> {
 	entity: T;

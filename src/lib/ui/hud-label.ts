@@ -25,7 +25,7 @@ const HUD_LABEL_DEFAULTS: HUDLabelOptions = {
 		wordWrapWidth: 440
 	},
 	position: new Vector2(20, 20),
-}
+};
 
 type HUDOptionParams = Partial<HUDLabelOptions & HUDOptions<HUDLabel>>;
 
@@ -46,7 +46,7 @@ export class HUDLabel implements HUDControl {
 		colors.forEach((num, index) => {
 			const ratio = index / colors.length;
 			fill.addColorStop(ratio, num);
-		})
+		});
 		this._labelOptions.style.fill = fill;
 	}
 

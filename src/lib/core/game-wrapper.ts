@@ -2,7 +2,7 @@ import { Perspectives } from '../interfaces/perspective';
 import { ZylemBlueColor } from '../interfaces/utility';
 import { debugState } from '../state/debug-state';
 import { ZylemDebug } from './debug';
-import { IGameOptions, ZylemGame } from "./game";
+import { IGameOptions, ZylemGame } from './game';
 import { SetupFunction } from './setup';
 import { ZylemStage, stage } from './stage';
 import { IGameEntity } from './stage-entity';
@@ -42,7 +42,7 @@ const defaultGameOptions = {
 			children: (_) => []
 		})
 	]
-}
+};
 
 function convertNodes(_options: GameOptions): { id: string, globals: {}, stages: ZylemStage[] } {
 	let converted = { ...defaultGameOptions };

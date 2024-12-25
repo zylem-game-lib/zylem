@@ -1,5 +1,5 @@
 import { Howl } from '../../src/main';
-import { sphere } from "../../src/lib/entities";
+import { sphere } from '../../src/lib/entities';
 import { board } from './board';
 
 const sound = new Howl({
@@ -18,7 +18,7 @@ export function Ball(startY = 0) {
 		dy = -1;
 		dx = 0;
 		speed = 10;
-	}
+	};
 
 	return sphere({
 		name: 'ball',

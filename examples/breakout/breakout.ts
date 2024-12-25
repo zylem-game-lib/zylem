@@ -55,7 +55,7 @@ const stage1 = stage({
 			Paddle(),
 			Ball(),
 			...bricks
-		]
+		];
 	}
 });
 

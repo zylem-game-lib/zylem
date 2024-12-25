@@ -1,18 +1,18 @@
 import {
 	defineSystem,
 	defineQuery,
-} from 'bitecs'
+} from 'bitecs';
 
 import { move } from './components/move';
 import { bounce } from './components/bounce';
 
 export default function createTestSystem() {
-	const testQuery = defineQuery([move, bounce])
+	const testQuery = defineQuery([move, bounce]);
 
 	return defineSystem((world) => {
-		const entities = testQuery(world)
+		const entities = testQuery(world);
 		for (let i = 0; i < entities.length; ++i) {
-			const id = entities[i]
+			const id = entities[i];
 
 			if (bounce.height[id] >= -4 && move.movement[id] === 1) {
 				bounce.height[id] -= 1;
@@ -26,6 +26,6 @@ export default function createTestSystem() {
 			}
 		}
 
-		return world
-	})
+		return world;
+	});
 }

@@ -13,14 +13,14 @@ const stageState = stageState$.get();
 
 const setStageBackgroundColor = (value: any) => {
 	stageState$.backgroundColor.set(value);
-}
+};
 
 const setStageBackgroundImage = (value: any) => {
 	stageState$.backgroundImage.set(value);
-}
+};
 
 const setStagePerspective = (value: any) => {
 	stageState$.perspective.set(value);
-}
+};
 
 export { stageState, setStageBackgroundColor, setStageBackgroundImage, setStagePerspective };

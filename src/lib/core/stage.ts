@@ -1,25 +1,25 @@
-import { addComponent, addEntity, createWorld as createECS } from "bitecs";
-import { World } from "@dimforge/rapier3d-compat";
-import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from "three";
+import { addComponent, addEntity, createWorld as createECS } from 'bitecs';
+import { World } from '@dimforge/rapier3d-compat';
+import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from 'three';
 
-import { ZylemWorld } from "../collision/world";
-import { ZylemScene } from "../rendering/scene";
-import { Conditions } from "../interfaces/game";
+import { ZylemWorld } from '../collision/world';
+import { ZylemScene } from '../rendering/scene';
+import { Conditions } from '../interfaces/game';
 import {
 	setStagePerspective,
 	setStageBackgroundColor,
 	setStageBackgroundImage,
 	state$
-} from "../state";
-import { ZylemHUD } from "../ui/hud";
-import { Entity, IGameEntity, StageEntity } from "./";
-import { PerspectiveType, Perspectives } from "../interfaces/perspective";
-import { ZylemBlueColor } from "../interfaces/utility";
-import { debugState } from "../state/debug-state";
-import createTestSystem from "../behaviors/test-system";
-import { applyMixins } from "./composable";
-import { Lifecycle, LifecycleParameters } from "./entity-life-cycle";
-import createTransformSystem from "../behaviors/transformable";
+} from '../state';
+import { ZylemHUD } from '../ui/hud';
+import { Entity, IGameEntity, StageEntity } from './';
+import { PerspectiveType, Perspectives } from '../interfaces/perspective';
+import { ZylemBlueColor } from '../interfaces/utility';
+import { debugState } from '../state/debug-state';
+import createTestSystem from '../behaviors/test-system';
+import { applyMixins } from './composable';
+import { Lifecycle, LifecycleParameters } from './entity-life-cycle';
+import createTransformSystem from '../behaviors/transformable';
 
 interface ZylemStageOptions {
 	perspective: PerspectiveType;
@@ -198,11 +198,11 @@ export class ZylemStage {
 		}
 		const { vertices, colors } = world.debugRender();
 		this._debugLines.geometry.setAttribute(
-			"position",
+			'position',
 			new BufferAttribute(vertices, 3),
 		);
 		this._debugLines.geometry.setAttribute(
-			"color",
+			'color',
 			new BufferAttribute(colors, 4),
 		);
 	}
@@ -217,7 +217,7 @@ export class ZylemStage {
 	}
 
 	logMissingEntities() {
-		console.warn("Zylem world or scene is null");
+		console.warn('Zylem world or scene is null');
 	}
 
 	resize(width: number, height: number) {

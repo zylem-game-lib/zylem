@@ -94,7 +94,7 @@ export class ZylemGame {
 					state$.globals[key].get();
 					callback(state$.globals, this);
 				});
-			})
+			});
 		});
 		if (this.customSetup) {
 			this.customSetup(params);

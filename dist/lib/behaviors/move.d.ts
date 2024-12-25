@@ -1,3 +1,3 @@
-export declare const move: import("bitecs").ComponentType<{
-    movement: "i8";
+export declare const move: import('bitecs').ComponentType<{
+    movement: 'i8';
 }>;

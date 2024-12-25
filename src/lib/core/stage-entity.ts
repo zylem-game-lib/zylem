@@ -77,7 +77,7 @@ export class StageEntity {
 			if (child instanceof (Mesh)) {
 				child.material.color.set(color);
 			}
-		})
+		});
 	}
 }
 

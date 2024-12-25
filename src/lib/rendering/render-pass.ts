@@ -1,20 +1,20 @@
-import * as THREE from "three";
+import * as THREE from 'three';
 import fragmentShader from './shaders/fragment/standard.glsl';
 import vertexShader from './shaders/vertex/standard.glsl';
-import { WebGLRenderer, WebGLRenderTarget } from "three";
-import { Pass, FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
+import { WebGLRenderer, WebGLRenderTarget } from 'three';
+import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass';
 
 export default class RenderPass extends Pass {
-	fsQuad: FullScreenQuad
-	resolution: THREE.Vector2
-	scene: THREE.Scene
-	camera: THREE.Camera
-	rgbRenderTarget: WebGLRenderTarget
-	normalRenderTarget: WebGLRenderTarget
-	normalMaterial: THREE.Material
+	fsQuad: FullScreenQuad;
+	resolution: THREE.Vector2;
+	scene: THREE.Scene;
+	camera: THREE.Camera;
+	rgbRenderTarget: WebGLRenderTarget;
+	normalRenderTarget: WebGLRenderTarget;
+	normalMaterial: THREE.Material;
 
 	constructor(resolution: THREE.Vector2, scene: THREE.Scene, camera: THREE.Camera) {
-		super()
+		super();
 		this.resolution = resolution;
 		this.fsQuad = new FullScreenQuad(this.material());
 		this.scene = scene;
@@ -72,6 +72,6 @@ export default class RenderPass extends Pass {
 			},
 			vertexShader: vertexShader,
 			fragmentShader: fragmentShader
-		})
+		});
 	}
 }

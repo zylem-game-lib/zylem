@@ -1,17 +1,17 @@
-import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { BoxGeometry, BufferGeometry, Group, Material, Mesh, Object3D } from "three";
-import { Color, Vector3 } from "three";
-import { SizeVector } from "~/lib/interfaces/utility";
-import { Entity, EntityOptions, StageEntity } from "../core";
+import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
+import { BoxGeometry, BufferGeometry, Group, Material, Mesh, Object3D } from 'three';
+import { Color, Vector3 } from 'three';
+import { SizeVector } from '~/lib/interfaces/utility';
+import { Entity, EntityOptions, StageEntity } from '../core';
 import { TexturePath, ZylemMaterial } from '../core/material';
-import { ZylemBlueColor } from "../interfaces/utility";
-import { Behavior } from "~/lib/behaviors/behavior";
-import { Lifecycle, LifecycleOptions } from "~/lib/core/entity-life-cycle";
-import { applyMixins } from "~/lib/core/composable";
+import { ZylemBlueColor } from '../interfaces/utility';
+import { Behavior } from '~/lib/behaviors/behavior';
+import { Lifecycle, LifecycleOptions } from '~/lib/core/entity-life-cycle';
+import { applyMixins } from '~/lib/core/composable';
 // import { position, rotation, scale } from "~/lib/behaviors/transform";
-import { ZylemShaderType } from "~/lib/core/preset-shader";
-import { CreateMeshParameters } from "~/lib/core/mesh";
-import { BaseEntity } from "../core/base-entity";
+import { ZylemShaderType } from '~/lib/core/preset-shader';
+import { CreateMeshParameters } from '~/lib/core/mesh';
+import { BaseEntity } from '../core/base-entity';
 
 
 export class BoxCollision {
@@ -91,7 +91,7 @@ class ZylemBox extends BaseEntity{
 	}
 
 	operation() {
-		return "ZylemBox";
+		return 'ZylemBox';
 	}
 }
 
@@ -136,42 +136,42 @@ applyMixins(ZylemBox, [Entity, StageEntity, Lifecycle, BoxCollision, ZylemMateri
 type BoxOptions = BaseEntity | ZylemBoxOptions;
 
 export function box(...args: Array<BoxOptions>): ZylemBox {
-    const instance = new ZylemBox();
+	const instance = new ZylemBox();
     
-    for (const arg of args) {
-        if (arg instanceof BaseEntity) {
-            instance.add(arg);
-        } else {
-            instance.setOptions(arg);
-        }
-    }
+	for (const arg of args) {
+		if (arg instanceof BaseEntity) {
+			instance.add(arg);
+		} else {
+			instance.setOptions(arg);
+		}
+	}
 
-    return instance;
+	return instance;
 }
 
 
-// type BoxBehavior = (box: ZylemBox) => Promise<void> | void;
+type BoxBehavior = (box: ZylemBox) => Promise<void> | void;
 
-// class ZylemBoxBuilder {
-//     private box: ZylemBox;
-//     private behaviors: BoxBehavior[] = [];
+class ZylemBoxBuilder {
+	private box: ZylemBox;
+	private behaviors: BoxBehavior[] = [];
 
-//     constructor(initialOptions: BoxOptions = {}) {
-//         this.box = new ZylemBox(initialOptions);
-//     }
+	constructor(initialOptions: BoxOptions = {}) {
+		this.box = new ZylemBox(initialOptions);
+	}
 
-//     use(behavior: BoxBehavior): this {
-//         this.behaviors.push(behavior);
-//         return this;
-//     }
+	use(behavior: BoxBehavior): this {
+		this.behaviors.push(behavior);
+		return this;
+	}
 
-//     async build(): Promise<ZylemBox> {
-//         for (const behavior of this.behaviors) {
-//             await behavior(this.box);
-//         }
-//         return this.box;
-//     }
-// }
+	async build(): Promise<ZylemBox> {
+		for (const behavior of this.behaviors) {
+			await behavior(this.box);
+		}
+		return this.box;
+	}
+}
 
 // // Define reusable behaviors
 // const meshBehavior: BoxBehavior = async (box) => {

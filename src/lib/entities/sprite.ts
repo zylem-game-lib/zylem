@@ -1,6 +1,6 @@
-import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { Vector3 } from "three";
-import { BaseCollision } from "~/lib/collision/_oldCollision";
+import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
+import { Vector3 } from 'three';
+import { BaseCollision } from '~/lib/collision/_oldCollision';
 import {
 	TextureLoader,
 	SpriteMaterial,
@@ -10,15 +10,15 @@ import {
 	BufferGeometry,
 	MeshPhongMaterial,
 	Mesh,
-} from "three";
-import { Mixin } from "ts-mixer";
+} from 'three';
+import { Mixin } from 'ts-mixer';
 
-import { ZylemMaterial } from "../core/material";
-import { EntityParameters, StageEntity } from "../core";
-import { EntitySpawner } from "../behaviors/entity-spawner";
-import { Moveable } from "../behaviors/moveable";
-import { ZylemBlueColor } from "../interfaces/utility";
-import { StageEntityOptions } from "../interfaces/entity";
+import { ZylemMaterial } from '../core/material';
+import { EntityParameters, StageEntity } from '../core';
+import { EntitySpawner } from '../behaviors/entity-spawner';
+import { Moveable } from '../behaviors/moveable';
+import { ZylemBlueColor } from '../interfaces/utility';
+import { StageEntityOptions } from '../interfaces/entity';
 
 export class SpriteCollision extends BaseCollision {
 	collisionSize: Vector3 = new Vector3(1, 1, 1);
@@ -162,7 +162,7 @@ export class ZylemSprite extends Mixin(StageEntity, ZylemMaterial, SpriteCollisi
 
 	createAnimations() {
 		this._animations?.forEach((animation, index) => {
-			const { name = "anim-1", loop = false, frames, speed = 1 } = animation;
+			const { name = 'anim-1', loop = false, frames, speed = 1 } = animation;
 			const internalAnimation = {
 				frames: frames.flatMap((frame: string, index: number) => {
 					return {
@@ -171,10 +171,10 @@ export class ZylemSprite extends Mixin(StageEntity, ZylemMaterial, SpriteCollisi
 						// TODO: needs to be array based
 						time: speed as number * (index + 1),
 						duration: speed
-					}
+					};
 				}),
 				loop,
-			}
+			};
 			this._mappedAnimations.set(name, internalAnimation);
 		});
 	}
@@ -205,7 +205,7 @@ export class ZylemSprite extends Mixin(StageEntity, ZylemMaterial, SpriteCollisi
 	setAnimation(name: string, delta: number) {
 		const animation = this._mappedAnimations.get(name);
 		const { loop, frames } = animation;
-		const frame = frames[this._currentAnimationIndex]
+		const frame = frames[this._currentAnimationIndex];
 		if (name === this._currentAnimation) {
 			this._currentAnimationFrame = frame.key;
 			this._currentAnimationTime += delta;
@@ -223,7 +223,7 @@ export class ZylemSprite extends Mixin(StageEntity, ZylemMaterial, SpriteCollisi
 				this._currentAnimationIndex = 0;
 				this._currentAnimationTime = 0;
 			} else {
-				this._currentAnimationTime = frames[this._currentAnimationIndex].time
+				this._currentAnimationTime = frames[this._currentAnimationIndex].time;
 			}
 		}
 	}

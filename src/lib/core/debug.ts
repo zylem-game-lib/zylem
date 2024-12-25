@@ -11,14 +11,14 @@ export type DebugConfiguration = {
 }
 
 function formatTime() {
-    const now = new Date();
+	const now = new Date();
 
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+	const hours = String(now.getHours()).padStart(2, '0');
+	const minutes = String(now.getMinutes()).padStart(2, '0');
+	const seconds = String(now.getSeconds()).padStart(2, '0');
+	const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
 
-    return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+	return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
 
 export class ZylemDebug extends HTMLElement {
@@ -53,7 +53,7 @@ export class ZylemDebug extends HTMLElement {
 		borderBottomRightRadius: '10px',
 		borderTop: '0px',
 		borderLeft: '0px',
-	}
+	};
 
 	constructor() {
 		super();
@@ -83,15 +83,15 @@ export class ZylemDebug extends HTMLElement {
 			name: 'Debug menu',
 			closeOnTop: true,
 		});
-		const showOverlay = gui.add({ "Show Overlay": this.showOverlay }, 'Show Overlay');
+		const showOverlay = gui.add({ 'Show Overlay': this.showOverlay }, 'Show Overlay');
 		showOverlay.onChange((value) => {
 			this.style.display = value ? 'grid' : 'none';
 		});
-		const showStats = gui.add({ "Show Stats": this.showStats }, 'Show Stats');
+		const showStats = gui.add({ 'Show Stats': this.showStats }, 'Show Stats');
 		showStats.onChange((value) => {
 			this.statsRef.dom.style.display = value ? 'block' : 'none';
 		});
-		const showConsole = gui.add({ "Show Console": this.showConsole }, 'Show Console');
+		const showConsole = gui.add({ 'Show Console': this.showConsole }, 'Show Console');
 		showConsole.onChange((value) => {
 			if (!this.consoleTextElement) return;
 			this.consoleTextElement.style.display = value ? 'block' : 'none';
@@ -100,23 +100,23 @@ export class ZylemDebug extends HTMLElement {
 	}
 
 	connectedCallback() {
-		const debugText = document.createElement("div");
+		const debugText = document.createElement('div');
 		debugText.classList.add('zylem-console');
-		debugText.textContent = "Debug overlay connected!";
+		debugText.textContent = 'Debug overlay connected!';
 		this.consoleTextElement = debugText;
 		this.setStyles(this.consoleTextElement, this.consoleTextElementStyle);
 		this.appendChild(debugText);
 	}
 
 	addInfo(info: string) {
-		const infoText = document.createElement("p");
+		const infoText = document.createElement('p');
 		infoText.textContent = `[${formatTime()}]: ${info}`;
 		const element = this.consoleTextElement!;
 		element.appendChild(infoText);
 		if (element.children.length > 20 && element.firstChild) {
 			element.removeChild(element.firstChild);
 		}
-		infoText.scrollIntoView({ behavior: "instant", block: "end", inline: "nearest" });
+		infoText.scrollIntoView({ behavior: 'instant', block: 'end', inline: 'nearest' });
 	}
 
 	appendToDOM() {
@@ -124,4 +124,4 @@ export class ZylemDebug extends HTMLElement {
 	}
 }
 
-customElements.define("zylem-debug", ZylemDebug);
+customElements.define('zylem-debug', ZylemDebug);

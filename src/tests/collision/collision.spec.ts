@@ -3,10 +3,10 @@ import { BaseCollision } from '../../lib/collision/collision';
 // import { Entity } from '~/lib/core/ecs';
 
 describe('create base collision', () => {
-  it('should create collision component', () => {
-    const result = new BaseCollision({});
-	expect(result).toMatchSnapshot();
-  });
+	it('should create collision component', () => {
+		const result = new BaseCollision({});
+		expect(result).toMatchSnapshot();
+	});
 //   it('should create collision system', () => {
 // 	const components = [new BaseCollision({})];
 // 	const entity = {

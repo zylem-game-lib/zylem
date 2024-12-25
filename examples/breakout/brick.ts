@@ -1,9 +1,9 @@
 import { Color, Vector3 } from 'three';
-import { box } from "../../src/lib/entities";
+import { box } from '../../src/lib/entities';
 
 export function Brick(posX, posY) {
 	return box({
-		name: `brick`,
+		name: 'brick',
 		color: new Color('#F30'),
 		custom: {
 			health: 2
@@ -30,5 +30,5 @@ export function Brick(posX, posY) {
 			const newScore = score.get() + 100;
 			score.set(newScore);
 		}
-	})
+	});
 }
