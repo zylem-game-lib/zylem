@@ -21,7 +21,7 @@ export const fireShader: ZylemShaderObject = {
 export const standardShader: ZylemShaderObject = {
 	fragment: fragmentShader,
 	vertex: vertexShader
-}
+};
 
 export type ZylemShaderType = 'standard' | 'fire' | 'star';
 

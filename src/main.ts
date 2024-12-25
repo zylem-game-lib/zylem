@@ -13,7 +13,7 @@ import * as behaviors from './lib/behaviors';
 
 const Util = {
 	...actions
-}
+};
 
 const Zylem = {
 	Util

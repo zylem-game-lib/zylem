@@ -1,8 +1,8 @@
-import { Vector2 } from "three";
-import { Application, FillGradient, Graphics, StrokeInput } from "pixi.js";
+import { Vector2 } from 'three';
+import { Application, FillGradient, Graphics, StrokeInput } from 'pixi.js';
 
-import { ZylemBlue } from "../interfaces/utility";
-import { HUDControl, HUDOptions, createBindings } from "./hud";
+import { ZylemBlue } from '../interfaces/utility';
+import { HUDControl, HUDOptions, createBindings } from './hud';
 
 export interface HUDBarOptions {
 	color?: number;
@@ -38,7 +38,7 @@ const HUD_BAR_DEFAULTS: HUDBarOptions = {
 	transitionColors: [0xffdddd, 0xffffff],
 	transitionGradient: new FillGradient(20, 20, 20, 70),
 	isVertical: false,
-}
+};
 
 type HUDOptionParams = Partial<HUDBarOptions & HUDOptions<HUDBar>>;
 

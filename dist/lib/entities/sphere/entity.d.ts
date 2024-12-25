@@ -11,16 +11,16 @@ type ZylemSphereOptions = {
     color?: Color;
 };
 type SphereOptions = GameEntityOptions<ZylemSphereOptions, ZylemSphere>;
-declare const ZylemSphere_base: import("ts-mixer/dist/types/types").Class<any[], GameEntity<unknown> & ZylemMaterial & SphereMesh & SphereCollision & Moveable, (new (options: GameEntityOptions<{
-    collision?: import("../../interfaces/entity").CollisionOption<unknown> | undefined;
+declare const ZylemSphere_base: import('ts-mixer/dist/types/types').Class<any[], GameEntity<unknown> & ZylemMaterial & SphereMesh & SphereCollision & Moveable, (new (options: GameEntityOptions<{
+    collision?: import('../../interfaces/entity').CollisionOption<unknown> | undefined;
 }, unknown>) => GameEntity<unknown>) & typeof ZylemMaterial & typeof SphereMesh & typeof SphereCollision & typeof Moveable>;
 export declare class ZylemSphere extends ZylemSphere_base {
-    type: string;
-    constructor(options: SphereOptions);
-    create(): Promise<this>;
-    setup(params: EntityParameters<ZylemSphere>): void;
-    update(params: EntityParameters<ZylemSphere>): void;
-    destroy(params: EntityParameters<ZylemSphere>): void;
+	type: string;
+	constructor(options: SphereOptions);
+	create(): Promise<this>;
+	setup(params: EntityParameters<ZylemSphere>): void;
+	update(params: EntityParameters<ZylemSphere>): void;
+	destroy(params: EntityParameters<ZylemSphere>): void;
 }
 export declare function sphere(options?: SphereOptions): ZylemSphere;
 export {};

@@ -1,4 +1,4 @@
-import { IComponent } from "bitecs";
+import { IComponent } from 'bitecs';
 
 export interface Behavior {
 	component: IComponent;

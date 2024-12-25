@@ -1,4 +1,4 @@
-import { Inputs } from "../input/input";
+import { Inputs } from '../input/input';
 
 export type UpdateContext<T> = {
 	entity: T;

@@ -1,7 +1,7 @@
-import { ActiveCollisionTypes, ColliderDesc } from "@dimforge/rapier3d-compat";
-import { BaseCollision } from "~/lib/collision/_oldCollision";
-import { Group, Mesh, SphereGeometry } from "three";
-import { BaseMesh, CreateMeshParameters } from "~/lib/core/mesh";
+import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
+import { BaseCollision } from '~/lib/collision/_oldCollision';
+import { Group, Mesh, SphereGeometry } from 'three';
+import { BaseMesh, CreateMeshParameters } from '~/lib/core/mesh';
 import { Color } from 'three';
 import { Mixin } from 'ts-mixer';
 

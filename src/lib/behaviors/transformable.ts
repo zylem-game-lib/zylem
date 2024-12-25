@@ -1,7 +1,7 @@
 import {
 	defineSystem,
 	defineQuery,
-} from 'bitecs'
+} from 'bitecs';
 
 import { position, scale, rotation } from './components/transform';
 import { Quaternion } from 'three';
@@ -41,6 +41,6 @@ export default function createTransformSystem(stage: StageSystem) {
 			}
 		}
 
-		return world
-	})
+		return world;
+	});
 }

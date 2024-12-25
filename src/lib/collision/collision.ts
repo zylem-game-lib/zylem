@@ -1,5 +1,5 @@
-import { RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { defineComponent, Types } from "bitecs";
+import { RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
+import { defineComponent, Types } from 'bitecs';
 
 export class BaseCollision {
 	static: boolean = false;

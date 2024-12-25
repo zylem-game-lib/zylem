@@ -1,14 +1,14 @@
 export type BaseEntityOptions<T = any> = BaseEntity | Partial<T>;
 
 export abstract class BaseEntity<Options = any, T = any> {
-    protected parent: BaseEntity | null = null;
-    protected children: BaseEntity[] = [];
-    protected options: Options;
+	protected parent: BaseEntity | null = null;
+	protected children: BaseEntity[] = [];
+	protected options: Options;
 
 	constructor(args: BaseEntityOptions[] = []) {
 		const options = args
 			.filter(arg => !(arg instanceof BaseEntity))
-            .reduce((acc, opt) => ({ ...acc, ...opt }), {});
+			.reduce((acc, opt) => ({ ...acc, ...opt }), {});
 		this.options = options as Options;
 	}
 
@@ -34,8 +34,8 @@ export abstract class BaseEntity<Options = any, T = any> {
 	}
 
 	public isComposite(): boolean {
-        return this.children.length > 0;
-    }
+		return this.children.length > 0;
+	}
 
 	public abstract create(): T;
 
@@ -52,10 +52,10 @@ export abstract class BaseEntity<Options = any, T = any> {
 	}
 
 	public getOptions(): Options {
-        return this.options;
-    }
+		return this.options;
+	}
 
-    public setOptions(options: Partial<Options>): void {
-        this.options = { ...this.options, ...options };
-    }
+	public setOptions(options: Partial<Options>): void {
+		this.options = { ...this.options, ...options };
+	}
 }

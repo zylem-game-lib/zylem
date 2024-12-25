@@ -1,10 +1,10 @@
-import { RigidBody, Vector } from "@dimforge/rapier3d-compat";
-import { Euler, Vector3 } from "three";
-import { OptionalVector } from "~/lib/interfaces/entity";
-import { EntityErrors } from "../core/errors";
+import { RigidBody, Vector } from '@dimforge/rapier3d-compat';
+import { Euler, Vector3 } from 'three';
+import { OptionalVector } from '~/lib/interfaces/entity';
+import { EntityErrors } from '../core/errors';
 // TODO: may have to come from global state
-import { Perspectives } from "../interfaces/perspective";
-import { applyMixins } from "../core/composable";
+import { Perspectives } from '../interfaces/perspective';
+import { applyMixins } from '../core/composable';
 
 export class Moveable {
 	public body: RigidBody | null = null;

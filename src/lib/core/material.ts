@@ -9,10 +9,10 @@ import {
 	TextureLoader,
 	Vector2,
 	Vector3
-} from "three";
+} from 'three';
 
-import { ZylemBlueColor } from "../interfaces/utility";
-import shaderMap, { ZylemShaderObject, ZylemShaderType } from "./preset-shader";
+import { ZylemBlueColor } from '../interfaces/utility';
+import shaderMap, { ZylemShaderObject, ZylemShaderType } from './preset-shader';
 
 export type TexturePath = string | null;
 

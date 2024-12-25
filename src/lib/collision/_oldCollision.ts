@@ -1,5 +1,5 @@
-import { RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { Color } from "three";
+import { RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
+import { Color } from 'three';
 
 export class BaseCollision {
 	_static: boolean = false;

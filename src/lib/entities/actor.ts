@@ -1,15 +1,15 @@
-import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { BufferGeometry, Object3D, SkinnedMesh } from "three";
-import { BaseCollision } from "~/lib/collision/_oldCollision";
-import { Group } from "three";
-import { BaseMesh, CreateMeshParameters } from "~/lib/core/mesh";
+import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
+import { BufferGeometry, Object3D, SkinnedMesh } from 'three';
+import { BaseCollision } from '~/lib/collision/_oldCollision';
+import { Group } from 'three';
+import { BaseMesh, CreateMeshParameters } from '~/lib/core/mesh';
 import { AnimationAction, AnimationClip, AnimationMixer } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { Mixin } from 'ts-mixer';
 
-import { EntityParameters, StageEntity, IGameEntity } from "../core";
-import { GameEntityOptions } from "../interfaces/entity";
+import { EntityParameters, StageEntity, IGameEntity } from '../core';
+import { GameEntityOptions } from '../interfaces/entity';
 import { Moveable } from '../behaviors/moveable';
 import { EntityErrors } from '~/lib/core/errors';
 import { ZylemMaterial } from '~/lib/core/material';
@@ -172,7 +172,7 @@ export class ZylemActor extends Mixin(StageEntity, ZylemMaterial, ActorMesh, Act
 						console.error(error);
 						reject(error);
 					}
-				)
+				);
 			}
 			if (dynamicFileLoader instanceof GLTFLoader) {
 				return dynamicFileLoader.load(
@@ -188,7 +188,7 @@ export class ZylemActor extends Mixin(StageEntity, ZylemMaterial, ActorMesh, Act
 						console.error(error);
 						reject(error);
 					}
-				)
+				);
 			}
 		});
 	}

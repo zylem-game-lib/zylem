@@ -1,4 +1,4 @@
-import { BaseEntity, BaseEntityOptions } from "../core/base-entity";
+import { BaseEntity, BaseEntityOptions } from '../core/base-entity';
 
 interface Vessel {
 	children: BaseEntity[];
@@ -10,20 +10,20 @@ export class ZylemVessel extends BaseEntity<{}> {
 		return {
 			children: this.children,
 			options: this.options
-		}
+		};
 	}
 }
 
 export function vessel(...args: Array<BaseEntity | Partial<{}>>): Vessel {
-    const instance = new ZylemVessel();
+	const instance = new ZylemVessel();
     
-    for (const arg of args) {
-        if (arg instanceof BaseEntity) {
-            instance.add(arg);
-        } else {
-            instance.setOptions(arg as Partial<{}>);
-        }
-    }
+	for (const arg of args) {
+		if (arg instanceof BaseEntity) {
+			instance.add(arg);
+		} else {
+			instance.setOptions(arg as Partial<{}>);
+		}
+	}
 
-    return instance.create();
+	return instance.create();
 }

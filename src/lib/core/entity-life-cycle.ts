@@ -1,8 +1,8 @@
-import { LifecycleFunction } from "../interfaces/entity";
-import { ZylemHUD } from "../ui/hud";
-import { ZylemCamera } from "./camera";
-import { EntityOptions } from "./entity";
-import { Game } from "./game-wrapper";
+import { LifecycleFunction } from '../interfaces/entity';
+import { ZylemHUD } from '../ui/hud';
+import { ZylemCamera } from './camera';
+import { EntityOptions } from './entity';
+import { Game } from './game-wrapper';
 
 export interface LifecycleParameters<T = any> {
 	game: Game; // TODO: this could be an interface

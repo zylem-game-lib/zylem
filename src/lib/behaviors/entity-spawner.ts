@@ -1,9 +1,9 @@
-import { Mixin } from "ts-mixer";
-import { StageEntity  } from "../core";
-import { EntityErrors } from "../core/errors";
-import { OptionalVector } from "../interfaces/entity";
-import { Moveable } from "./moveable";
-import { Vector3 } from "three";
+import { Mixin } from 'ts-mixer';
+import { StageEntity  } from '../core';
+import { EntityErrors } from '../core/errors';
+import { OptionalVector } from '../interfaces/entity';
+import { Moveable } from './moveable';
+import { Vector3 } from 'three';
 
 export class EntitySpawner extends Mixin(StageEntity, EntityErrors, Moveable) {
 	spawn(T: any, options: any) {

@@ -1,5 +1,5 @@
-import { Group, Material, Mesh, Object3D, Vector2 } from "three";
-import { SizeVector } from "../interfaces/utility";
+import { Group, Material, Mesh, Object3D, Vector2 } from 'three';
+import { SizeVector } from '../interfaces/utility';
 export interface BoxMeshInterface {
     createMesh: (params: CreateMeshParameters) => void;
 }
@@ -12,5 +12,5 @@ export type CreateMeshParameters = {
     materials: Material[];
 };
 export declare class BaseMesh {
-    mesh: Mesh | null;
+	mesh: Mesh | null;
 }

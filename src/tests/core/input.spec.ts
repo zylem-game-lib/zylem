@@ -1,4 +1,4 @@
-import { describe } from "vitest";
+import { describe } from 'vitest';
 
 // TODO: Implement tests
 describe.skip('test player 1 input', () => {

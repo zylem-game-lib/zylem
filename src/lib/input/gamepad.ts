@@ -13,10 +13,10 @@ export default class Gamepad {
 			if (!this.hasSupport) clearInterval(interval);
 			if (this.connections.size > this.lastConnection) this.scanGamePads();
 		}, 200);
-		window.addEventListener("gamepadconnected", ({ gamepad }) => this.connections.set(gamepad.index, gamepad.connected));
-		window.addEventListener("gamepaddisconnected", ({ gamepad }) => this.connections.delete(gamepad.index));
-		window.addEventListener("keydown", ({ key }) => this.keyboardInput.set(key, true));
-		window.addEventListener("keyup", ({ key }) => this.keyboardInput.set(key, false));
+		window.addEventListener('gamepadconnected', ({ gamepad }) => this.connections.set(gamepad.index, gamepad.connected));
+		window.addEventListener('gamepaddisconnected', ({ gamepad }) => this.connections.delete(gamepad.index));
+		window.addEventListener('keydown', ({ key }) => this.keyboardInput.set(key, true));
+		window.addEventListener('keyup', ({ key }) => this.keyboardInput.set(key, false));
 		// TODO: restrick virtual joystick to screen area
 		// if (isMobile()) {
 		// 	this.mobileGamepad = nipplejs.create({ mode: 'dynamic' });
@@ -26,7 +26,7 @@ export default class Gamepad {
 	scanGamePads() {
 		const browserGamePadSupport = Boolean(navigator.getGamepads) ?? false;
 		if (!browserGamePadSupport) {
-			console.warn("This browser doesn't support gamepads");
+			console.warn('This browser doesn\'t support gamepads');
 			this.hasSupport = false;
 			return;
 		}
@@ -41,18 +41,18 @@ export default class Gamepad {
 		// }
 		const gamepad = navigator.getGamepads()[index];
 		const connected = this.connections.get(index) || false;
-		const up = this.keyboardInput.get("ArrowUp") || false;
-		const down = this.keyboardInput.get("ArrowDown") || false;
-		const left = this.keyboardInput.get("ArrowLeft") || false;
-		const right = this.keyboardInput.get("ArrowRight") || false;
-		const w = this.keyboardInput.get("w") || false;
-		const a = this.keyboardInput.get("a") || false;
-		const s = this.keyboardInput.get("s") || false;
-		const d = this.keyboardInput.get("d") || false;
-		const z = this.keyboardInput.get("z") || false;
-		const x = this.keyboardInput.get("x") || false;
-		const enter = this.keyboardInput.get("Enter") || false;
-		const space = this.keyboardInput.get(" ") || false;
+		const up = this.keyboardInput.get('ArrowUp') || false;
+		const down = this.keyboardInput.get('ArrowDown') || false;
+		const left = this.keyboardInput.get('ArrowLeft') || false;
+		const right = this.keyboardInput.get('ArrowRight') || false;
+		const w = this.keyboardInput.get('w') || false;
+		const a = this.keyboardInput.get('a') || false;
+		const s = this.keyboardInput.get('s') || false;
+		const d = this.keyboardInput.get('d') || false;
+		const z = this.keyboardInput.get('z') || false;
+		const x = this.keyboardInput.get('x') || false;
+		const enter = this.keyboardInput.get('Enter') || false;
+		const space = this.keyboardInput.get(' ') || false;
 		let horizontal = right ? 1 : left ? -1 : 0;
 		let vertical = up ? -1 : down ? 1 : 0;
 		let buttonA = z ? 1 : 0;
@@ -117,7 +117,7 @@ export default class Gamepad {
 
 	getDebugInfo(): string {
 		const gamepads = navigator.getGamepads();
-		let info = "";
+		let info = '';
 		for (let i = 0; i < gamepads.length; i++) {
 			const gamepad = gamepads[i];
 			if (!gamepad) continue;

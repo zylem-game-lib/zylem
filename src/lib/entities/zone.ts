@@ -1,12 +1,12 @@
-import { ActiveCollisionTypes, ColliderDesc } from "@dimforge/rapier3d-compat";
-import { Vector3 } from "three";
-import { BaseCollision } from "~/lib/collision/_oldCollision";
-import { SizeVector } from "~/lib/interfaces/utility";
-import { Mixin } from "ts-mixer";
+import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
+import { Vector3 } from 'three';
+import { BaseCollision } from '~/lib/collision/_oldCollision';
+import { SizeVector } from '~/lib/interfaces/utility';
+import { Mixin } from 'ts-mixer';
 
-import { StageEntityOptions } from "../interfaces/entity";
-import { StageEntity, EntityParameters, IGameEntity } from "../core";
-import { Moveable } from "../behaviors/moveable";
+import { StageEntityOptions } from '../interfaces/entity';
+import { StageEntity, EntityParameters, IGameEntity } from '../core';
+import { Moveable } from '../behaviors/moveable';
 
 export class ZoneCollision extends BaseCollision {
 	_size: SizeVector = new Vector3(1, 1, 1);
@@ -77,7 +77,7 @@ export class ZylemZone extends Mixin(StageEntity, ZoneCollision, Moveable) {
 	_internalPostCollisionBehavior({ entity, delta }: InternalCollisionParams) {
 		entity._enteredZone.forEach((val, key) => {
 			entity.exited(delta, key as any);
-		})
+		});
 		return entity._enteredZone.size > 0;
 	}
 

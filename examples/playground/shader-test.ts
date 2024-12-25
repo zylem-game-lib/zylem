@@ -4,7 +4,7 @@ import { actor, plane, sphere } from '../../src/lib/entities';
 import { StageEntity  } from '../../src/lib/core';
 
 const player = actor({
-	name: `player`,
+	name: 'player',
 	animations: ['playground/idle.fbx', 'playground/run.fbx'],
 	static: false,
 	custom: {
@@ -50,9 +50,9 @@ const player = actor({
 		entity.rotateInDirection(entity.lastMovement);
 	},
 	collision: function (entity: any, other: any, globals?: any): void {
-		throw new Error("Function not implemented.");
+		throw new Error('Function not implemented.');
 	}
-})
+});
 
 const config = {
 	debug: true,
@@ -107,18 +107,18 @@ const shaderTest = game(
 					color: new Color(Color.NAMES.yellow),
 					shader: 'fire',
 					setup: ({ entity }) => {
-						entity.setPosition(5, 6, 0)
+						entity.setPosition(5, 6, 0);
 					}
 				}),
 				sphere({
 					radius: 2,
 					texture: 'playground/grass-normal.png',
 					setup: ({ entity }) => {
-						entity.setPosition(-5, 6, 0)
+						entity.setPosition(-5, 6, 0);
 					}
 				})
 				
-			]
+			];
 		}
 	})
 );
