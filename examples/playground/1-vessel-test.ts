@@ -1,6 +1,4 @@
-import { game, vessel, ZylemVessel, box } from '../../src/main';
-
-console.log(ZylemVessel);
+import { game, vessel, box } from '../../src/main';
 
 const test = vessel();
 const test2 = vessel(vessel(), vessel());
@@ -12,9 +10,9 @@ const testGame = game(
 	test, test2, test3, myBox
 );
 
-test3.update = ({ delta, entity }) => {
-	console.log(delta, entity);
-}
+// test3.update = ({ delta, entity }) => {
+// 	console.log(delta, entity);
+// }
 testGame.start();
 testGame.update(({ delta }) => {
 	console.log(delta);

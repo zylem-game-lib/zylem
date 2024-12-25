@@ -3,7 +3,6 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 import { Howl } from 'howler';
 
 import { game, IGameOptions, stage, StageOptions } from './lib/core';
-import { ZylemVessel } from './lib/entities/index';
 
 import { PerspectiveType, Perspectives } from './lib/interfaces/perspective';
 import { Vect3 } from './lib/interfaces/utility';
@@ -35,7 +34,6 @@ export {
 	zone,
 	actor,
 	vessel,
-	ZylemVessel,
 	actions,
 	bounce,
 	move,
