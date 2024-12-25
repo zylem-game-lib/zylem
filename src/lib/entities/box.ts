@@ -1,5 +1,5 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from "@dimforge/rapier3d-compat";
-import { BoxGeometry, BufferGeometry, Group, Material, Mesh } from "three";
+import { BoxGeometry, BufferGeometry, Group, Material, Mesh, Object3D } from "three";
 import { Color, Vector3 } from "three";
 import { SizeVector } from "~/lib/interfaces/utility";
 import { Entity, EntityOptions, StageEntity } from "../core";
@@ -11,6 +11,8 @@ import { applyMixins } from "~/lib/core/composable";
 // import { position, rotation, scale } from "~/lib/behaviors/transform";
 import { ZylemShaderType } from "~/lib/core/preset-shader";
 import { CreateMeshParameters } from "~/lib/core/mesh";
+import { BaseEntity } from "../core/base-entity";
+
 
 export class BoxCollision {
 	_static: boolean = false;
@@ -47,23 +49,25 @@ type ZylemBoxOptions = {
 	color?: Color;
 }
 
-interface BoxOptions extends ZylemBoxOptions, LifecycleOptions<ZylemBox> {
-	shader: ZylemShaderType;
-};
+// interface BoxOptions extends ZylemBoxOptions, LifecycleOptions<ZylemBox> {
+// 	shader: ZylemShaderType;
+// };
 
 const boxDefaults: Partial<BoxOptions> = {
 	size: new Vector3(1, 1, 1),
 	static: false,
 	texture: null,
 	color: ZylemBlueColor,
-	shader: 'standard',
+	// shader: 'standard',
 };
 
-class ZylemBox {
+class ZylemBox extends BaseEntity{
 	public type = 'Box';
 	options: Partial<BoxOptions> = boxDefaults;
+	group = {} as Group;
 
-	constructor(options: Partial<BoxOptions>) {
+	constructor(options?: Partial<BoxOptions>) {
+		super();
 		if (!options) {
 			return;
 		}
@@ -85,6 +89,10 @@ class ZylemBox {
 		this.createCollision({ isDynamicBody: !this._static });
 		return Promise.resolve(this);
 	}
+
+	operation() {
+		return "ZylemBox";
+	}
 }
 
 export class BoxMesh {
@@ -105,25 +113,42 @@ export class BoxMesh {
 interface ZylemBox extends Entity<ZylemBox>, BoxCollision, ZylemMaterial, BoxMesh { }
 applyMixins(ZylemBox, [Entity, StageEntity, Lifecycle, BoxCollision, ZylemMaterial, BoxMesh]);
 
-export function box(options: Partial<BoxOptions> = boxDefaults, ...behaviors: Behavior[]): ZylemBox {
-	const zylemBox = new ZylemBox(options) as ZylemBox;
-	zylemBox.entityDefaults(options as EntityOptions<ZylemBox>);
-	// zylemBox.lifecycleDefaults(options as LifecycleOptions<ZylemBox>);
-	// zylemBox.stageEntityDefaults();
-	zylemBox._static = options.static ?? boxDefaults.static!;
-	zylemBox._texture = options.texture ?? boxDefaults.texture!;
-	zylemBox._size = options.size ?? boxDefaults.size!;
-	zylemBox.collisionSize = options.size ?? boxDefaults.size!;
-	zylemBox._color = options.color ?? boxDefaults.color!;
-	zylemBox._shader = options.shader ?? boxDefaults.shader!;
-	// zylemBox._behaviors = [
-	// 	{ component: position, values: { x: 0, y: 0, z: 0 } },
-	// 	{ component: scale , values: { x: 0, y: 0, z: 0 } },
-	// 	{ component: rotation , values: { x: 0, y: 0, z: 0, w: 0 } },
-	// 	...behaviors
-	// ];
-	return zylemBox;
+// export function box(options: Partial<BoxOptions> = boxDefaults, ...behaviors: Behavior[]): ZylemBox {
+// 	const zylemBox = new ZylemBox(options) as ZylemBox;
+// 	zylemBox.entityDefaults(options as EntityOptions<ZylemBox>);
+// 	// zylemBox.lifecycleDefaults(options as LifecycleOptions<ZylemBox>);
+// 	// zylemBox.stageEntityDefaults();
+// 	zylemBox._static = options.static ?? boxDefaults.static!;
+// 	zylemBox._texture = options.texture ?? boxDefaults.texture!;
+// 	zylemBox._size = options.size ?? boxDefaults.size!;
+// 	zylemBox.collisionSize = options.size ?? boxDefaults.size!;
+// 	zylemBox._color = options.color ?? boxDefaults.color!;
+// 	zylemBox._shader = options.shader ?? boxDefaults.shader!;
+// 	// zylemBox._behaviors = [
+// 	// 	{ component: position, values: { x: 0, y: 0, z: 0 } },
+// 	// 	{ component: scale , values: { x: 0, y: 0, z: 0 } },
+// 	// 	{ component: rotation , values: { x: 0, y: 0, z: 0, w: 0 } },
+// 	// 	...behaviors
+// 	// ];
+// 	return zylemBox;
+// }
+
+type BoxOptions = BaseEntity | ZylemBoxOptions;
+
+export function box(...args: Array<BoxOptions>): ZylemBox {
+    const instance = new ZylemBox();
+    
+    for (const arg of args) {
+        if (arg instanceof BaseEntity) {
+            instance.add(arg);
+        } else {
+            instance.setOptions(arg);
+        }
+    }
+
+    return instance;
 }
+
 
 // type BoxBehavior = (box: ZylemBox) => Promise<void> | void;
 
