@@ -14,15 +14,14 @@ import { CreateMeshParameters } from '~/lib/core/mesh';
 import { BaseEntity } from '../core/base-entity';
 
 
-export class BoxCollision {
-	_static: boolean = false;
-	_isSensor: boolean = false;
+export class BoxCollisionBuilder {
+	static: boolean = false;
+	isSensor: boolean = false;
+
 	bodyDescription: RigidBodyDesc | null = null;
-	debugCollision: boolean = false;
-	debugColor: Color = new Color().setColorName('green');
 	collisionSize: SizeVector = new Vector3(1, 1, 1);
 
-	createCollider(isSensor: boolean = false) {
+	collider(isSensor: boolean = false): ColliderDesc {
 		const size = this.collisionSize || new Vector3(1, 1, 1);
 		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
 		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
@@ -31,16 +30,18 @@ export class BoxCollision {
 		return colliderDesc;
 	}
 
-	createCollision({ isDynamicBody = true }) {
+	collision({ isDynamicBody = true }): RigidBodyDesc  {
 		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
-		this.bodyDescription = new RigidBodyDesc(type)
+		const bodyDesc = new RigidBodyDesc(type)
 			.setTranslation(0, 0, 0)
 			.setGravityScale(1.0)
 			.setCanSleep(false)
 			.setCcdEnabled(true);
+		return bodyDesc;
 	}
 }
 
+// debugColor: Color = new Color().setColorName('green');
 
 type ZylemBoxOptions = {
 	size?: SizeVector;
@@ -53,7 +54,7 @@ type ZylemBoxOptions = {
 // 	shader: ZylemShaderType;
 // };
 
-const boxDefaults: Partial<BoxOptions> = {
+const boxDefaults: Partial<ZylemBoxOptions> = {
 	size: new Vector3(1, 1, 1),
 	static: false,
 	texture: null,
@@ -61,57 +62,43 @@ const boxDefaults: Partial<BoxOptions> = {
 	// shader: 'standard',
 };
 
-class ZylemBox extends BaseEntity{
-	public type = 'Box';
-	options: Partial<BoxOptions> = boxDefaults;
-	group = {} as Group;
+export const BOX_TYPE = Symbol('Box');
 
-	constructor(options?: Partial<BoxOptions>) {
-		super();
-		if (!options) {
-			return;
-		}
-		this.options = options;
-	}
+class ZylemBox extends BaseEntity<ZylemBoxOptions> {
+	public type = BOX_TYPE;
+    public group = new Group();
+    public mesh: Mesh | undefined;
+    public materials: Material[] | undefined;
+    public rigidBody: RigidBodyDesc | undefined;
+    public collider: ColliderDesc | undefined;
 
-	async create(): Promise<this> {
-		await this.createMaterials({
-			texture: this._texture,
-			color: this._color,
-			repeat: this._repeat,
-			shader: this._shader
-		});
-		this.createMesh({
-			group: this.group,
-			size: this._size,
-			materials: this.materials
-		});
-		this.createCollision({ isDynamicBody: !this._static });
-		return Promise.resolve(this);
-	}
+    constructor(options?: ZylemBoxOptions) {
+        super();
+        this.options = { ...boxDefaults, ...options };
+    }
 
-	operation() {
-		return 'ZylemBox';
+	public create() {
+		throw new Error('Method not implemented.');
 	}
 }
 
-export class BoxMesh {
-	_size: SizeVector = new Vector3(1, 1, 1);
-	mesh: Mesh<BufferGeometry, Material | Material[]> | null = null;
+export class BoxMeshBuilder {
+	size: SizeVector = new Vector3(1, 1, 1);
 
-	createMesh({ group = new Group(), size, materials }: CreateMeshParameters) {
+	mesh({ size, materials }: CreateMeshParameters): Mesh<BoxGeometry, Material> {
 		const meshSize = size ?? new Vector3(1, 1, 1);
 		const geometry = new BoxGeometry(meshSize.x, meshSize.y, meshSize.z);
-		this.mesh = new Mesh(geometry, materials.at(-1));
-		this.mesh.position.set(0, 0, 0);
-		this.mesh.castShadow = true;
-		this.mesh.receiveShadow = true;
-		group.add(this.mesh);
+		const mesh = new Mesh(geometry, materials.at(-1));
+		mesh.position.set(0, 0, 0);
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		//group.add(mesh);
+		return mesh;
 	}
 }
 
-interface ZylemBox extends Entity<ZylemBox>, BoxCollision, ZylemMaterial, BoxMesh { }
-applyMixins(ZylemBox, [Entity, StageEntity, Lifecycle, BoxCollision, ZylemMaterial, BoxMesh]);
+// interface ZylemBox extends Entity<ZylemBox>, BoxCollision, ZylemMaterial, BoxMesh { }
+// applyMixins(ZylemBox, [Entity, StageEntity, Lifecycle, BoxCollision, ZylemMaterial, BoxMesh]);
 
 // export function box(options: Partial<BoxOptions> = boxDefaults, ...behaviors: Behavior[]): ZylemBox {
 // 	const zylemBox = new ZylemBox(options) as ZylemBox;
@@ -155,8 +142,14 @@ type BoxBehavior = (box: ZylemBox) => Promise<void> | void;
 class ZylemBoxBuilder {
 	private box: ZylemBox;
 	private behaviors: BoxBehavior[] = [];
+	private meshBuilder: BoxMeshBuilder = null;
+	private collisionBuilder: BoxCollisionBuilder = null;
 
-	constructor(initialOptions: BoxOptions = {}) {
+	constructor(
+		initialOptions: BoxOptions = {},
+		meshBuilder: BoxMeshBuilder,
+		collisionBuilder: BoxCollisionBuilder
+	) {
 		this.box = new ZylemBox(initialOptions);
 	}
 
@@ -194,3 +187,97 @@ class ZylemBoxBuilder {
 
 // // Build the ZylemBox with behaviors
 // const boxBuilder = new ZylemBoxBuilder({ size: 2, color: 'green' });
+
+// ... existing imports ...
+
+// export class BoxBuilder {
+//     private meshBuilder: BoxMeshBuilder;
+//     private collisionBuilder: BoxCollisionBuilder;
+//     private materialBuilder: ZylemMaterialBuilder;  // You'll need to create this
+//     private options: Partial<BoxOptions>;
+
+//     constructor(options?: Partial<BoxOptions>) {
+//         this.options = { ...boxDefaults, ...options };
+//         this.meshBuilder = new BoxMeshBuilder();
+//         this.collisionBuilder = new BoxCollisionBuilder();
+//         this.materialBuilder = new ZylemMaterialBuilder();
+//     }
+
+//     withSize(size: SizeVector): this {
+//         this.meshBuilder.size = size;
+//         this.collisionBuilder.collisionSize = size;
+//         return this;
+//     }
+
+//     withStatic(isStatic: boolean): this {
+//         this.collisionBuilder.static = isStatic;
+//         return this;
+//     }
+
+//     withTexture(texture: TexturePath): this {
+//         this.materialBuilder.setTexture(texture);
+//         return this;
+//     }
+
+//     withColor(color: Color): this {
+//         this.materialBuilder.setColor(color);
+//         return this;
+//     }
+
+//     async build(): Promise<ZylemBox> {
+//         const box = new ZylemBox(this.options);
+        
+//         // Build materials
+//         box.materials = await this.materialBuilder.build();
+        
+//         // Build mesh
+//         box.mesh = this.meshBuilder.build({
+//             size: this.meshBuilder.size,
+//             materials: box.materials
+//         });
+        
+//         // Build collision
+//         box.rigidBody = this.collisionBuilder.collision({ 
+//             isDynamicBody: !this.collisionBuilder.static 
+//         });
+//         box.collider = this.collisionBuilder.collider(
+//             this.collisionBuilder.isSensor
+//         );
+
+//         return box;
+//     }
+// }
+
+// // Modify the box factory function to use the builder
+// export function box(...args: Array<BoxOptions>): Promise<ZylemBox> {
+//     const builder = new BoxBuilder();
+    
+//     for (const arg of args) {
+//         if (arg instanceof BaseEntity) {
+//             // Handle entity composition differently
+//             continue;
+//         }
+//         // Apply options to builder
+//         if (arg.size) builder.withSize(arg.size);
+//         if (arg.static !== undefined) builder.withStatic(arg.static);
+//         if (arg.texture) builder.withTexture(arg.texture);
+//         if (arg.color) builder.withColor(arg.color);
+//     }
+
+//     return builder.build();
+// }
+
+// // Simplify ZylemBox to be more of a data container
+// class ZylemBox extends BaseEntity<ZylemBoxOptions> {
+//     public type = BOX_TYPE;
+//     public group = new Group();
+//     public mesh: Mesh;
+//     public materials: Material[];
+//     public rigidBody: RigidBodyDesc;
+//     public collider: ColliderDesc;
+
+//     constructor(options?: Partial<BoxOptions>) {
+//         super();
+//         this.options = { ...boxDefaults, ...options };
+//     }
+// }
