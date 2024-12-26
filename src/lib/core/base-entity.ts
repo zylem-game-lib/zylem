@@ -3,7 +3,7 @@ export type BaseEntityOptions<T = any> = BaseEntity | Partial<T>;
 export abstract class BaseEntity<Options = any, T = any> {
 	protected parent: BaseEntity | null = null;
 	protected children: BaseEntity[] = [];
-	protected options: Options;
+	public options: Options;
 
 	constructor(args: BaseEntityOptions[] = []) {
 		const options = args

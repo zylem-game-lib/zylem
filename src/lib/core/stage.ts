@@ -155,6 +155,7 @@ export class ZylemStage {
 		if (!this.scene || !this.world) {
 			return;
 		}
+		debugger;
 		const entity = await child.create();
 		const eid = addEntity(this.ecs);
 		entity.eid = eid;
