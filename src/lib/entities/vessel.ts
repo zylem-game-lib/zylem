@@ -1,22 +1,29 @@
-import { BaseEntity, BaseEntityOptions } from '../core/base-entity';
+import { BaseEntity, BaseEntityOptions } from '../core/entity/base-entity';
+import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/entity';
 
 interface Vessel {
 	children: BaseEntity[];
 	options: BaseEntityOptions;
+	update: UpdateFunction<Vessel>;
+	setup: SetupFunction<Vessel>;
+	destroy: DestroyFunction<Vessel>
 }
 
 export class ZylemVessel extends BaseEntity<{}> {
 	create(): Vessel {
 		return {
 			children: this.children,
-			options: this.options
+			options: this.options,
+			update: this.update,
+			setup: this.setup,
+			destroy: this.destroy
 		};
 	}
 }
 
 export function vessel(...args: Array<BaseEntity | Partial<{}>>): Vessel {
 	const instance = new ZylemVessel();
-    
+
 	for (const arg of args) {
 		if (arg instanceof BaseEntity) {
 			instance.add(arg);

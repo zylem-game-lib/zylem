@@ -15,7 +15,7 @@ import RenderPass from './render-pass';
 import { Entity, GameEntity } from '../interfaces/entity';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
-import { EntityParameters } from '../core/entity';
+import { EntityParameters } from '../core/entity/entity';
 import { ThirdPersonCamera } from '../camera/third-person';
 import { ZylemCamera } from '../core/camera';
 import { debugState } from '../state/debug-state';

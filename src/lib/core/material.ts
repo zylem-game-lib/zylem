@@ -86,3 +86,47 @@ export class ZylemMaterial {
 		this.materials.push(shader);
 	}
 }
+
+export class MaterialBuilder {
+	materials: Material[] = [];
+
+	async setTexture(texturePath: TexturePath, repeat: Vector2 = new Vector2(1, 1)) {
+		const loader = new TextureLoader();
+		const texture = await loader.loadAsync(texturePath as string);
+		texture.repeat = repeat;
+		texture.wrapS = RepeatWrapping;
+		texture.wrapT = RepeatWrapping;
+		const material = new MeshPhongMaterial({
+			map: texture,
+		});
+		this.materials.push(material);
+	}
+
+	setColor(color: Color) {
+		const material = new MeshStandardMaterial({
+			color: color,
+			emissiveIntensity: 0.5,
+			lightMapIntensity: 0.5,
+			fog: true,
+		});
+
+		this.materials.push(material);
+	}
+
+	setShader(customShader: ZylemShaderType) {
+		const { fragment, vertex } = shaderMap.get(customShader) ?? shaderMap.get('standard') as ZylemShaderObject;
+
+		const shader = new ShaderMaterial({
+			uniforms: {
+				iResolution: { value: new Vector3(1, 1, 1) },
+				iTime: { value: 0 },
+				tDiffuse: { value: null },
+				tDepth: { value: null },
+				tNormal: { value: null }
+			},
+			vertexShader: vertex,
+			fragmentShader: fragment,
+		});
+		this.materials.push(shader);
+	}
+}

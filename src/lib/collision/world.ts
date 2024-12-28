@@ -2,9 +2,10 @@ import { Vector3 } from 'three';
 import RAPIER, { World } from '@dimforge/rapier3d-compat';
 
 import { Entity } from '../interfaces/entity';
-import { StageEntity  } from '../core/stage-entity';
-import { EntityParameters } from '../core/entity';
+import { StageEntity } from '../core/entity/stage-entity';
+import { EntityParameters } from '../core/entity/entity';
 import { state$ } from '../state';
+import { BaseEntity } from '../core/entity/base-entity';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
@@ -24,7 +25,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	addEntity(entity: any) {
-		const rigidBody = this.world.createRigidBody(entity.bodyDescription);
+		const rigidBody = this.world.createRigidBody(entity.rigidBody);
 		entity.body = rigidBody;
 		entity.body.userData = { uuid: entity.uuid };
 		let useSensor = false;
@@ -34,8 +35,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		} else {
 			useSensor = entity.sensor ?? false;
 		}
-		const colliderDesc = entity.createCollider(useSensor);
-		const collider = this.world.createCollider(colliderDesc, entity.body);
+		const collider = this.world.createCollider(entity.collider, entity.body);
 		if (entity.controlledRotation) {
 			entity.body.lockRotations(true, true);
 			entity.characterController = this.world.createCharacterController(0.01);
@@ -75,6 +75,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		this.updateColliders(delta);
 		this.updatePostCollisionBehaviors(delta);
 		this.world.step();
+		// console.log(params);
 	}
 
 	updatePostCollisionBehaviors(delta: number) {

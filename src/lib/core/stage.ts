@@ -18,8 +18,9 @@ import { ZylemBlueColor } from '../interfaces/utility';
 import { debugState } from '../state/debug-state';
 import createTestSystem from '../behaviors/test-system';
 import { applyMixins } from './composable';
-import { Lifecycle, LifecycleParameters } from './entity-life-cycle';
+import { SetupContext, UpdateContext, DestroyContext } from './entity/entity-life-cycle';
 import createTransformSystem from '../behaviors/transformable';
+import { BaseEntity } from './entity/base-entity';
 
 interface ZylemStageOptions {
 	perspective: PerspectiveType;
@@ -27,7 +28,7 @@ interface ZylemStageOptions {
 	backgroundImage: String;
 	gravity: Vector3;
 	conditions: Conditions<any>[];
-	children: ({ globals }: any) => IGameEntity[];
+	children: ({ globals }: any) => BaseEntity[];
 }
 
 export type StageOptions = Partial<ZylemStageOptions>;
@@ -47,9 +48,9 @@ export class ZylemStage {
 	HUD: ZylemHUD;
 	conditions: Conditions<any>[] = [];
 
-	children: Array<IGameEntity> = [];
-	_childrenMap: Map<number, IGameEntity> = new Map();
-	_removalMap: Map<number, IGameEntity> = new Map();
+	children: Array<BaseEntity> = [];
+	_childrenMap: Map<string, BaseEntity> = new Map();
+	_removalMap: Map<string, BaseEntity> = new Map();
 
 	_debugLines: LineSegments | null = null;
 
@@ -88,6 +89,7 @@ export class ZylemStage {
 		this.HUD.createUI();
 
 		this.scene.setup();
+
 		for (let child of this.children) {
 			this.spawnEntity(child);
 		}
@@ -95,7 +97,7 @@ export class ZylemStage {
 		this.transformSystem = createTransformSystem(this);
 	}
 
-	public setup(params: LifecycleParameters<ZylemStage>): void {
+	public setup(params: SetupContext<ZylemStage>): void {
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
 			return;
@@ -113,7 +115,7 @@ export class ZylemStage {
 		}
 	}
 
-	public update(params: LifecycleParameters<ZylemStage>): void {
+	public update(params: UpdateContext<ZylemStage>): void {
 		const { delta } = params;
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
@@ -131,10 +133,11 @@ export class ZylemStage {
 				this._removalMap.delete(uuid);
 				return;
 			}
-			child.update({
-				...params,
-				entity: child,
-			});
+			child.update();
+			// child.update({
+			// 	...params,
+			// 	entity: child,
+			// });
 		});
 		if (this._update) {
 			this._update({ ...params, entity: this });
@@ -145,32 +148,31 @@ export class ZylemStage {
 		}
 	}
 
-	public destroy(params: LifecycleParameters<ZylemStage>): void {
+	public destroy(params: DestroyContext<ZylemStage>): void {
 		this.world?.destroy();
 		this.scene?.destroy();
 		this._destroy({ ...params, entity: this });
 	}
 
-	async spawnEntity(child: IGameEntity) {
+	async spawnEntity(child: BaseEntity) {
 		if (!this.scene || !this.world) {
 			return;
 		}
-		debugger;
-		const entity = await child.create();
+		const entity = await child.create<ZylemStage>(this);
 		const eid = addEntity(this.ecs);
 		entity.eid = eid;
 		if (entity.group) {
 			this.scene.scene.add(entity.group);
 		}
 		entity.stageRef = this;
-		if (child._custom) {
-			for (let key in child._custom) {
-				if (entity[key]) { continue; }
-				entity[key] = child._custom[key];
-			}
-		}
-		if (child._behaviors) {
-			for (let behavior of child._behaviors) {
+		// if (child._custom) {
+		// 	for (let key in child._custom) {
+		// 		if (entity[key]) { continue; }
+		// 		entity[key] = child._custom[key];
+		// 	}
+		// }
+		if (child.behaviors) {
+			for (let behavior of child.behaviors) {
 				addComponent(this.ecs, behavior.component, entity.eid);
 				const keys = Object.keys(behavior.values);
 				for (const key of keys) {
@@ -180,17 +182,19 @@ export class ZylemStage {
 			}
 		}
 		this.world.addEntity(entity);
-		child.setup({ entity, HUD: this.HUD, camera: this.scene.zylemCamera });
-		this._childrenMap.set(entity.eid, entity);
+		child.setup();
+		// child.setup({ entity, HUD: this.HUD, camera: this.scene.zylemCamera });
+		// TODO: string disk usage concerns?
+		this._childrenMap.set(`${entity.eid}-key`, entity);
 	}
 
-	setForRemoval(entity: IGameEntity) {
+	setForRemoval(entity: BaseEntity & { eid, group }) {
 		if (this.world) {
 			this.world.setForRemoval(entity);
 		}
 		entity.group.clear();
 		entity.group.removeFromParent();
-		this._removalMap.set(entity.eid, entity);
+		this._removalMap.set(`${entity.eid}-key`, entity);
 	}
 
 	debugStage(world: World) {

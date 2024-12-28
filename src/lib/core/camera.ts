@@ -2,7 +2,7 @@ import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCame
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { stageState } from '../state/index';
 import { PerspectiveType, Perspectives } from '../interfaces/perspective';
-import { StageEntity  } from './stage-entity';
+import { StageEntity } from './entity/stage-entity';
 
 const zModifier = 45;
 
@@ -92,7 +92,7 @@ export class ZylemCamera {
 		return isometricCamera;
 	}
 
-	update() {}
+	update() { }
 
 	__update() {
 		// if (this.orbitControls === null) {

@@ -11,7 +11,7 @@ import Gamepad from '../input/gamepad';
 
 import { ZylemStage } from './stage';
 import { Game } from './game-wrapper';
-import { LifecycleParameters } from './entity-life-cycle';
+import { LifecycleParameters } from './entity/entity-life-cycle';
 import { UpdateFunction } from './update';
 import { SetupFunction } from './setup';
 

@@ -1,7 +1,5 @@
+import { UpdateFunction, SetupFunction, DestroyFunction } from './entity-life-cycle';
 import { nanoid } from 'nanoid';
-import { UpdateFunction } from './update';
-import { SetupFunction } from './setup';
-import { DestroyFunction } from './destroy';
 
 export abstract class AbstractEntity {
 	abstract uuid: string;
