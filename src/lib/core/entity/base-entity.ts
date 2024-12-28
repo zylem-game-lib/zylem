@@ -1,8 +1,11 @@
+import { Behavior } from "~/lib/behaviors/behavior";
+
 export type BaseEntityOptions<T = any> = BaseEntity | Partial<T>;
 
 export abstract class BaseEntity<Options = any, T = any> {
 	protected parent: BaseEntity | null = null;
 	protected children: BaseEntity[] = [];
+	public behaviors: Behavior[] = [];
 	public options: Options;
 
 	constructor(args: BaseEntityOptions[] = []) {
@@ -37,7 +40,7 @@ export abstract class BaseEntity<Options = any, T = any> {
 		return this.children.length > 0;
 	}
 
-	public abstract create(): T;
+	public abstract create<S>(scene: S): T;
 
 	public setup(): void {
 		this.children.forEach(child => child.setup());

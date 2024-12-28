@@ -3,12 +3,12 @@ import { Collider, KinematicCharacterController, RigidBody } from '@dimforge/rap
 
 import {
 	CollisionOption,
-} from '../interfaces/entity';
-import { state$ } from '../state';
-import { ZylemStage } from './stage';
-import { Behavior } from '../behaviors/behavior';
-import { Moveable } from '../behaviors/moveable';
-import { applyMixins } from './composable';
+} from '../../interfaces/entity';
+import { state$ } from '../../state';
+import { ZylemStage } from '../stage';
+import { Behavior } from '../../behaviors/behavior';
+import { Moveable } from '../../behaviors/moveable';
+import { applyMixins } from '../composable';
 
 export interface IGameEntity {
 	uuid: string;

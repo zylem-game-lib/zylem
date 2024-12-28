@@ -1,12 +1,11 @@
 import { Perspectives } from '../interfaces/perspective';
 import { ZylemBlueColor } from '../interfaces/utility';
 import { debugState } from '../state/debug-state';
+import { BaseEntity } from './entity/base-entity';
 import { ZylemDebug } from './debug';
 import { IGameOptions, ZylemGame } from './game';
-import { SetupFunction } from './setup';
 import { ZylemStage, stage } from './stage';
-import { IGameEntity } from './stage-entity';
-import { UpdateFunction } from './update';
+import { SetupFunction, UpdateFunction } from './entity/entity-life-cycle';
 
 async function loadGame(wrapperRef: Game) {
 	const options = convertNodes(wrapperRef.options);
@@ -20,17 +19,6 @@ async function loadGame(wrapperRef: Game) {
 	}
 	return game;
 }
-
-// TODO: don't use this hack
-const supportedEntities = [
-	'Actor',
-	'Box',
-	'Camera',
-	'Plane',
-	'Sphere',
-	'Sprite',
-	'Zone',
-];
 
 const defaultGameOptions = {
 	id: 'zylem',
@@ -48,12 +36,12 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 	let converted = { ...defaultGameOptions };
 	const configurations: IGameOptions[] = [];
 	const stages: ZylemStage[] = [];
-	const entities: IGameEntity[] = [];
+	const entities: BaseEntity[] = [];
 	Object.values(_options).forEach((node) => {
 		if (node instanceof ZylemStage) {
 			stages.push(node);
-		} else if (supportedEntities.includes((node as IGameEntity).type)) {
-			entities.push(node as IGameEntity);
+		} else if (node instanceof BaseEntity) {
+			entities.push(node);
 		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
 			const configuration = Object.assign(defaultGameOptions, { ...node });
 			configurations.push(configuration as IGameOptions);
@@ -144,7 +132,7 @@ export class Game {
 	async end() { }
 }
 
-type GameOptions = Array<Partial<IGameOptions> | ZylemStage | Partial<IGameEntity> | Node>;
+type GameOptions = Array<Partial<IGameOptions> | ZylemStage | Partial<BaseEntity> | Node>;
 
 /**
  * create a new game
