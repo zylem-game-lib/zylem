@@ -133,10 +133,7 @@ export class ZylemStage {
 				this._removalMap.delete(uuid);
 				return;
 			}
-			(child as GameEntity<any>)._update({
-				...params
-			});
-			child.update({
+			child.nodeUpdate({
 				...params,
 				entity: child,
 			});
@@ -160,7 +157,7 @@ export class ZylemStage {
 		if (!this.scene || !this.world) {
 			return;
 		}
-		const entity = await child.create();
+		const entity = child.create();
 		const eid = addEntity(this.ecs);
 		entity.eid = eid;
 		if (entity.group) {
@@ -186,8 +183,11 @@ export class ZylemStage {
 			}
 		}
 		this.world.addEntity(entity);
-		child.setup();
-		// child.setup({ entity, HUD: this.HUD, camera: this.scene.zylemCamera });
+		child.nodeSetup({
+			entity: child,
+			globals: {},
+			camera: this.scene.zylemCamera,
+		});
 		// TODO: string disk usage concerns?
 		this._childrenMap.set(`${entity.eid}-key`, entity);
 	}

@@ -6,9 +6,9 @@ import { Inputs } from '../input/input';
 export interface SetupContext<T> {
 	entity: T;
 	globals: any;
-	HUD: ZylemHUD;
+	HUD?: ZylemHUD;
 	camera: ZylemCamera;
-	game: Game;
+	game?: Game;
 }
 
 export interface SetupFunction<T> {
