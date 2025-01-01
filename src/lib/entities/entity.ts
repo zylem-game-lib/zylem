@@ -7,6 +7,7 @@ import { MaterialOptions } from "../graphics/material";
 import { PhysicsOptions } from "../collision/physics";
 import { CollisionOptions } from "../collision/collision";
 import { BaseNode } from "../core/base-node";
+import { DestroyContext, SetupContext, UpdateContext } from "../core/base-node-life-cycle";
 
 export abstract class AbstractEntity {
 	abstract uuid: string;
@@ -40,17 +41,16 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> {
 			{ component: scale, values: { x: 0, y: 0, z: 0 } },
 			{ component: rotation, values: { x: 0, y: 0, z: 0, w: 0 } },
 		];
-		this._setup();
 		return this;
 	}
 
-	public _setup() {
-		this.baseSetup();
-	}
+	protected _setup(params: SetupContext<this>): void { }
 
-	public _update(params: any) {
+	protected _update(params: UpdateContext<this>): void {
 		this.updateMaterials(params);
 	}
+
+	protected _destroy(params: DestroyContext<this>): void { }
 
 	protected updateMaterials(params: any) {
 		if (!this.materials?.length) {

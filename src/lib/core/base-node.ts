@@ -1,4 +1,6 @@
 import { Behavior } from "~/lib/behaviors/behavior";
+import { DestroyContext, SetupContext, UpdateContext } from "./base-node-life-cycle";
+import { DEBUG_FLAG } from "./flags";
 
 export type BaseNodeOptions<T = any> = BaseNode | Partial<T>;
 
@@ -42,20 +44,32 @@ export abstract class BaseNode<Options = any, T = any> {
 
 	public abstract create(): T;
 
-	protected baseSetup() {
+	protected abstract _setup(params: SetupContext<this>): void;
 
+	protected abstract _update(params: UpdateContext<this>): void;
+
+	protected abstract _destroy(params: DestroyContext<this>): void;
+
+	public nodeSetup(params: SetupContext<this>) {
+		if (DEBUG_FLAG) { /**  */ }
+		if (typeof this._setup === 'function') {
+			this._setup(params);
+		}
+		this.children.forEach(child => child.nodeSetup(params));
 	}
 
-	public setup(): void {
-		this.children.forEach(child => child.setup());
+	public nodeUpdate(params: UpdateContext<this>): void {
+		if (typeof this._update === 'function') {
+			this._update(params);
+		}
+		this.children.forEach(child => child.nodeUpdate(params));
 	}
 
-	public update({ entity }: { entity: any }): void {
-		this.children.forEach(child => child.update({ entity }));
-	}
-
-	public destroy(): void {
-		this.children.forEach(child => child.destroy());
+	public nodeDestroy(params: DestroyContext<this>): void {
+		if (typeof this._destroy === 'function') {
+			this._destroy(params);
+		}
+		this.children.forEach(child => child.nodeDestroy(params));
 	}
 
 	public getOptions(): Options {
