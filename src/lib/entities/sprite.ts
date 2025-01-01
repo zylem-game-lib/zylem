@@ -1,6 +1,6 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
-import { BaseCollision } from '~/lib/collision/_oldCollision';
+// import { BaseCollision } from '~/lib/collision/_oldCollision';
 import {
 	TextureLoader,
 	SpriteMaterial,
@@ -13,14 +13,14 @@ import {
 } from 'three';
 import { Mixin } from 'ts-mixer';
 
-import { ZylemMaterial } from '../core/material';
+import { ZylemMaterial } from '../graphics/material';
 import { EntityParameters, StageEntity } from '../core';
 import { EntitySpawner } from '../behaviors/entity-spawner';
 import { Moveable } from '../behaviors/moveable';
-import { ZylemBlueColor } from '../interfaces/utility';
+import { ZylemBlueColor } from '../core/utility';
 import { StageEntityOptions } from '../interfaces/entity';
 
-export class SpriteCollision extends BaseCollision {
+export class SpriteCollision { //extends BaseCollision {
 	collisionSize: Vector3 = new Vector3(1, 1, 1);
 	size: Vector3 = new Vector3(1, 1, 1);
 

@@ -1,5 +1,5 @@
 import { ZylemShaderType } from '../core/preset-shader';
-import { LifecycleOptions, LifecycleParameters } from '../core/entity/entity-life-cycle';
+import { LifecycleOptions, LifecycleParameters } from '../core/base-node-life-cycle';
 import { EntityOptions } from '../core';
 
 export type LifecycleFunction<T> = (params?: LifecycleParameters<T>) => void;

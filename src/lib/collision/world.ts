@@ -2,10 +2,9 @@ import { Vector3 } from 'three';
 import RAPIER, { World } from '@dimforge/rapier3d-compat';
 
 import { Entity } from '../interfaces/entity';
-import { StageEntity } from '../core/entity/stage-entity';
-import { EntityParameters } from '../core/entity/entity';
+import { StageEntity } from '../entities/stage-entity';
 import { state$ } from '../state';
-import { BaseEntity } from '../core/entity/base-entity';
+import { UpdateContext } from '../core/base-node-life-cycle';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
@@ -54,7 +53,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		}
 	}
 
-	destroyEntity(entity: GameEntity<any>) {
+	destroyEntity(entity: StageEntity) {
 		if (entity.collider) {
 			this.world.removeCollider(entity.collider, true);
 		}
@@ -67,7 +66,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 
 	setup() { }
 
-	update(params: EntityParameters<any>) {
+	update(params: UpdateContext<any>) {
 		const { delta } = params;
 		if (!this.world) {
 			return;
@@ -75,7 +74,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		this.updateColliders(delta);
 		this.updatePostCollisionBehaviors(delta);
 		this.world.step();
-		// console.log(params);
 	}
 
 	updatePostCollisionBehaviors(delta: number) {

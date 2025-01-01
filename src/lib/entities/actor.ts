@@ -1,8 +1,8 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
 import { BufferGeometry, Object3D, SkinnedMesh } from 'three';
-import { BaseCollision } from '~/lib/collision/_oldCollision';
+// import { BaseCollision } from '~/lib/collision/_oldCollision';
 import { Group } from 'three';
-import { BaseMesh, CreateMeshParameters } from '~/lib/core/mesh';
+import { BaseMesh, CreateMeshParameters } from '~/lib/graphics/mesh';
 import { AnimationAction, AnimationClip, AnimationMixer } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
@@ -12,10 +12,10 @@ import { EntityParameters, StageEntity, IGameEntity } from '../core';
 import { GameEntityOptions } from '../interfaces/entity';
 import { Moveable } from '../behaviors/moveable';
 import { EntityErrors } from '~/lib/core/errors';
-import { ZylemMaterial } from '~/lib/core/material';
+import { ZylemMaterial } from '../graphics/material';
 import { Behavior } from '~/lib/behaviors/behavior';
 
-export class ActorCollision extends BaseCollision {
+export class ActorCollision { //extends BaseCollision {
 	height: number = 1;
 	radius: number = 1;
 

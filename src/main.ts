@@ -5,7 +5,7 @@ import { Howl } from 'howler';
 import { game, IGameOptions, stage, StageOptions } from './lib/core';
 
 import { PerspectiveType, Perspectives } from './lib/interfaces/perspective';
-import { Vect3 } from './lib/interfaces/utility';
+import { Vect3 } from './lib/core/utility';
 
 import * as actions from './lib/behaviors/actions';
 import * as entities from './lib/entities/index';
@@ -19,7 +19,7 @@ const Zylem = {
 	Util
 };
 
-const { box, sphere, sprite, plane, zone, actor, vessel } = entities;
+const { box, sphere, sprite, plane, zone, actor, vessel, ZylemBox } = entities;
 const { bounce, move } = behaviors;
 
 namespace Zylem { };
@@ -39,6 +39,7 @@ export {
 	move,
 	Perspectives,
 	Zylem,
+	ZylemBox,
 	Howl,
 	THREE,
 	RAPIER

@@ -1,0 +1,1 @@
+// Use service worker when loading assets

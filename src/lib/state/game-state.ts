@@ -1,4 +1,4 @@
-import { GameOptions } from '../core/';
+import { IGameOptions } from '../core/';
 import { observable } from '@simplyianm/legend-state';
 
 const state$ = observable({
@@ -9,7 +9,7 @@ const state$ = observable({
 		hud: null,
 		game: null
 	}
-} as unknown as GameOptions);
+} as unknown as IGameOptions);
 
 const setGlobalState = (value: any) => {
 	state$.globals.set(value);

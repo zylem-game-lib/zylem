@@ -15,9 +15,9 @@ import RenderPass from './render-pass';
 import { Entity, GameEntity } from '../interfaces/entity';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
-import { EntityParameters } from '../core/entity/entity';
+import { EntityParameters } from '../entities/entity';
 import { ThirdPersonCamera } from '../camera/third-person';
-import { ZylemCamera } from '../core/camera';
+import { ZylemCamera } from '../camera/camera';
 import { debugState } from '../state/debug-state';
 
 export class ZylemScene implements Entity<ZylemScene> {
@@ -72,13 +72,12 @@ export class ZylemScene implements Entity<ZylemScene> {
 	destroy() { }
 
 	update({ delta }: Partial<EntityParameters<ZylemScene>>) {
-		this.zylemCamera.update();
+		// this.zylemCamera.update();
 		this.composer.render(delta);
-		this.zylemCamera.__update();
 	}
 
 	setupCamera(scene: Scene) {
-		this.zylemCamera = new ThirdPersonCamera(this.screenResolution, this.renderer);
+		this.zylemCamera = new ThirdPersonCamera(this.screenResolution, this.renderer, scene);
 		let renderResolution = this.screenResolution.clone().divideScalar(2);
 		renderResolution.x |= 0;
 		renderResolution.y |= 0;
@@ -87,10 +86,10 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	setupLighting(scene: Scene) {
-		const ambientLight = new AmbientLight(0xffffff, 0.5);
+		const ambientLight = new AmbientLight(0xffffff, 2);
 		scene.add(ambientLight);
 
-		const directionalLight = new DirectionalLight(0xffffff, 1);
+		const directionalLight = new DirectionalLight(0xffffff, 2);
 		directionalLight.name = 'Light';
 		directionalLight.position.set(0, 100, 0);
 		directionalLight.castShadow = true;

@@ -1,15 +1,15 @@
-import { BaseEntity, BaseEntityOptions } from '../core/entity/base-entity';
-import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/entity';
+import { BaseNode, BaseNodeOptions } from '../core/base-node';
+import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 
 interface Vessel {
-	children: BaseEntity[];
-	options: BaseEntityOptions;
+	children: BaseNode[];
+	options: BaseNodeOptions;
 	update: UpdateFunction<Vessel>;
 	setup: SetupFunction<Vessel>;
 	destroy: DestroyFunction<Vessel>
 }
 
-export class ZylemVessel extends BaseEntity<{}> {
+export class ZylemVessel extends BaseNode<{}> {
 	create(): Vessel {
 		return {
 			children: this.children,
@@ -21,11 +21,11 @@ export class ZylemVessel extends BaseEntity<{}> {
 	}
 }
 
-export function vessel(...args: Array<BaseEntity | Partial<{}>>): Vessel {
+export function vessel(...args: Array<BaseNode | Partial<{}>>): Vessel {
 	const instance = new ZylemVessel();
 
 	for (const arg of args) {
-		if (arg instanceof BaseEntity) {
+		if (arg instanceof BaseNode) {
 			instance.add(arg);
 		} else {
 			instance.setOptions(arg as Partial<{}>);

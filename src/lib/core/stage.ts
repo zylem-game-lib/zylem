@@ -3,7 +3,7 @@ import { World } from '@dimforge/rapier3d-compat';
 import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
-import { ZylemScene } from '../rendering/scene';
+import { ZylemScene } from '../graphics/scene';
 import { Conditions } from '../interfaces/game';
 import {
 	setStagePerspective,
@@ -12,15 +12,15 @@ import {
 	state$
 } from '../state';
 import { ZylemHUD } from '../ui/hud';
-import { Entity, IGameEntity, StageEntity } from './';
+import { GameEntity, StageEntity } from './';
 import { PerspectiveType, Perspectives } from '../interfaces/perspective';
-import { ZylemBlueColor } from '../interfaces/utility';
+import { ZylemBlueColor } from './utility';
 import { debugState } from '../state/debug-state';
 import createTestSystem from '../behaviors/test-system';
 import { applyMixins } from './composable';
-import { SetupContext, UpdateContext, DestroyContext } from './entity/entity-life-cycle';
+import { SetupContext, UpdateContext, DestroyContext } from './base-node-life-cycle';
 import createTransformSystem from '../behaviors/transformable';
-import { BaseEntity } from './entity/base-entity';
+import { BaseNode } from './base-node';
 
 interface ZylemStageOptions {
 	perspective: PerspectiveType;
@@ -28,7 +28,7 @@ interface ZylemStageOptions {
 	backgroundImage: String;
 	gravity: Vector3;
 	conditions: Conditions<any>[];
-	children: ({ globals }: any) => BaseEntity[];
+	children: ({ globals }: any) => BaseNode[];
 }
 
 export type StageOptions = Partial<ZylemStageOptions>;
@@ -48,9 +48,9 @@ export class ZylemStage {
 	HUD: ZylemHUD;
 	conditions: Conditions<any>[] = [];
 
-	children: Array<BaseEntity> = [];
-	_childrenMap: Map<string, BaseEntity> = new Map();
-	_removalMap: Map<string, BaseEntity> = new Map();
+	children: Array<BaseNode> = [];
+	_childrenMap: Map<string, BaseNode> = new Map();
+	_removalMap: Map<string, BaseNode> = new Map();
 
 	_debugLines: LineSegments | null = null;
 
@@ -86,7 +86,7 @@ export class ZylemStage {
 		const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
 
-		this.HUD.createUI();
+		// this.HUD.createUI();
 
 		this.scene.setup();
 
@@ -133,11 +133,13 @@ export class ZylemStage {
 				this._removalMap.delete(uuid);
 				return;
 			}
-			child.update();
-			// child.update({
-			// 	...params,
-			// 	entity: child,
-			// });
+			(child as GameEntity<any>)._update({
+				...params
+			});
+			child.update({
+				...params,
+				entity: child,
+			});
 		});
 		if (this._update) {
 			this._update({ ...params, entity: this });
@@ -154,15 +156,17 @@ export class ZylemStage {
 		this._destroy({ ...params, entity: this });
 	}
 
-	async spawnEntity(child: BaseEntity) {
+	async spawnEntity(child: BaseNode) {
 		if (!this.scene || !this.world) {
 			return;
 		}
-		const entity = await child.create<ZylemStage>(this);
+		const entity = await child.create();
 		const eid = addEntity(this.ecs);
 		entity.eid = eid;
 		if (entity.group) {
 			this.scene.scene.add(entity.group);
+		} else if (entity.mesh) {
+			this.scene.scene.add(entity.mesh);
 		}
 		entity.stageRef = this;
 		// if (child._custom) {
@@ -188,7 +192,7 @@ export class ZylemStage {
 		this._childrenMap.set(`${entity.eid}-key`, entity);
 	}
 
-	setForRemoval(entity: BaseEntity & { eid, group }) {
+	setForRemoval(entity: BaseNode & { eid, group }) {
 		if (this.world) {
 			this.world.setForRemoval(entity);
 		}
@@ -235,8 +239,8 @@ export class ZylemStage {
 	}
 }
 
-export interface ZylemStage extends Entity, StageEntity, Lifecycle<ZylemStage> { }
-applyMixins(ZylemStage, [Entity, StageEntity]);
+export interface ZylemStage extends StageEntity, Lifecycle<ZylemStage> { }
+applyMixins(ZylemStage, [StageEntity]);
 
 export function stage(options: StageOptions = {}): ZylemStage {
 	const zylemStage = new ZylemStage(options) as ZylemStage;

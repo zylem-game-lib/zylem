@@ -1,11 +1,11 @@
 import { Perspectives } from '../interfaces/perspective';
-import { ZylemBlueColor } from '../interfaces/utility';
+import { ZylemBlueColor } from './utility';
 import { debugState } from '../state/debug-state';
-import { BaseEntity } from './entity/base-entity';
+import { BaseNode } from './base-node';
 import { ZylemDebug } from './debug';
 import { IGameOptions, ZylemGame } from './game';
 import { ZylemStage, stage } from './stage';
-import { SetupFunction, UpdateFunction } from './entity/entity-life-cycle';
+import { SetupFunction, UpdateFunction } from './base-node-life-cycle';
 
 async function loadGame(wrapperRef: Game) {
 	const options = convertNodes(wrapperRef.options);
@@ -36,11 +36,11 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 	let converted = { ...defaultGameOptions };
 	const configurations: IGameOptions[] = [];
 	const stages: ZylemStage[] = [];
-	const entities: BaseEntity[] = [];
+	const entities: BaseNode[] = [];
 	Object.values(_options).forEach((node) => {
 		if (node instanceof ZylemStage) {
 			stages.push(node);
-		} else if (node instanceof BaseEntity) {
+		} else if (node instanceof BaseNode) {
 			entities.push(node);
 		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
 			const configuration = Object.assign(defaultGameOptions, { ...node });
@@ -132,7 +132,7 @@ export class Game {
 	async end() { }
 }
 
-type GameOptions = Array<Partial<IGameOptions> | ZylemStage | Partial<BaseEntity> | Node>;
+type GameOptions = Array<Partial<IGameOptions> | ZylemStage | Partial<BaseNode>>;
 
 /**
  * create a new game

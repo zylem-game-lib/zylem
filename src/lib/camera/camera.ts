@@ -1,10 +1,10 @@
-import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, WebGLRenderer } from 'three';
+import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, WebGLRenderer, Scene } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { stageState } from '../state/index';
 import { PerspectiveType, Perspectives } from '../interfaces/perspective';
-import { StageEntity } from './entity/stage-entity';
+import { StageEntity } from '../entities/stage-entity';
 
-const zModifier = 45;
+const zModifier = 100;
 
 export class ZylemCamera {
 	cameraRig: Object3D;
@@ -13,13 +13,15 @@ export class ZylemCamera {
 	_perspective: PerspectiveType;
 	orbitControls: OrbitControls | null = null;
 	target: GameEntity<any> | null = null;
+	sceneRef: Scene | null = null;
 
-	constructor(screenResolution: Vector2, renderer: WebGLRenderer) {
+	constructor(screenResolution: Vector2, renderer: WebGLRenderer, scene: Scene) {
 		let aspectRatio = screenResolution.x / screenResolution.y;
 
 		const z = 15;
 		const position = new Vector3(0, 0, z);
 		const gamePerspective = stageState.perspective as PerspectiveType;
+		this.sceneRef = scene;
 		this._perspective = gamePerspective;
 		this.camera = this[gamePerspective](aspectRatio, position);
 		this.cameraRig = new Object3D();
@@ -28,6 +30,24 @@ export class ZylemCamera {
 		this.camera.lookAt(new Vector3(0, 0, 0));
 
 		this.renderer = renderer;
+		if (this.orbitControls === null) {
+			this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
+			this.orbitControls.enableDamping = true;
+			this.orbitControls.dampingFactor = 0.05;
+
+			this.orbitControls.screenSpacePanning = false;
+
+			this.orbitControls.minDistance = 1;
+			this.orbitControls.maxDistance = 500;
+
+			this.orbitControls.maxPolarAngle = Math.PI / 2;
+		}
+		this.renderer.setAnimationLoop(() => {
+			// console.log(this.orbitControls);
+			this.orbitControls?.update();
+			// console.log(this.sceneRef, this.camera);
+			// this.renderer.render(this.sceneRef, this.camera);
+		});
 	}
 
 	[Perspectives.ThirdPerson](aspectRatio: number): Camera {
@@ -95,19 +115,16 @@ export class ZylemCamera {
 	update() { }
 
 	__update() {
-		// if (this.orbitControls === null) {
-		// 	this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
-		// }
-		// this.orbitControls.update();
+		// this.orbitControls?.update();
 	}
 
 	private moveCamera(position: Vector3) {
-		const adjustedZ = (this._perspective !== Perspectives.Flat2D) ? position.z + zModifier : position.z;
-		this.cameraRig.position.set(position.x, position.y, adjustedZ);
+		// const adjustedZ = (this._perspective !== Perspectives.Flat2D) ? position.z + zModifier : position.z;
+		// this.cameraRig.position.set(position.x, position.y, adjustedZ);
 	}
 
 	move(position: Vector3) {
-		this.moveCamera(position);
+		// this.moveCamera(position);
 	}
 
 	rotate(pitch: number, yaw: number, roll: number) {
