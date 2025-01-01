@@ -1,7 +1,7 @@
-import { ZylemHUD } from '../../ui/hud';
-import { ZylemCamera } from '../camera';
-import { Game } from '../game-wrapper';
-import { Inputs } from '../../input/input';
+import { ZylemHUD } from '../ui/hud';
+import { ZylemCamera } from '../camera/camera';
+import { Game } from './game-wrapper';
+import { Inputs } from '../input/input';
 
 export interface SetupContext<T> {
 	entity: T;

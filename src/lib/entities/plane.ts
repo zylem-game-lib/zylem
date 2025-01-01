@@ -1,15 +1,15 @@
 import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
-import { BaseCollision } from '~/lib/collision/_oldCollision';
+// import { BaseCollision } from '~/lib/collision/_oldCollision';
 import { Group, Mesh, PlaneGeometry, Vector2, Vector3, Color } from 'three';
-import { BaseMesh, CreateMeshParameters } from '~/lib/core/mesh';
+import { BaseMesh, CreateMeshParameters } from '~/lib/graphics/mesh';
 import { Mixin } from 'ts-mixer';
 
 import { EntityParameters, StageEntity } from '../core';
-import { TexturePath, ZylemMaterial } from '../core/material';
+import { TexturePath, ZylemMaterial } from '../graphics/material';
 import { StageEntityOptions } from '../interfaces/entity';
-import { ZylemBlueColor } from '../interfaces/utility';
+import { ZylemBlueColor } from '../core/utility';
 
-export class PlaneCollision extends BaseCollision {
+export class PlaneCollision { //extends BaseCollision {
 	createCollider(isSensor: boolean = false) {
 		//@ts-ignore
 		let colliderDesc = ColliderDesc.heightfield(

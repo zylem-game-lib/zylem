@@ -26,3 +26,8 @@ export const CollisionDebugComponent = defineComponent({
 	active: Types.i8,
 	color: Types.f32
 });
+
+export interface CollisionOptions {
+	static: boolean;
+	sensor: boolean;
+}

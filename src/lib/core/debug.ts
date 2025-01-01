@@ -1,6 +1,6 @@
 import * as dat from 'dat.gui';
 import Stats from 'stats.js';
-import { ZylemBlueTransparent, ZylemGoldText } from '../interfaces/utility';
+import { ZylemBlueTransparent, ZylemGoldText } from './utility';
 
 //TODO: Debug configuration
 export type DebugConfiguration = {
@@ -22,7 +22,7 @@ function formatTime() {
 }
 
 export class ZylemDebug extends HTMLElement {
-	showStats: boolean = false;
+	showStats: boolean = true;
 	showConsole: boolean = true;
 	showOverlay: boolean = true;
 

@@ -1,7 +1,7 @@
 import ZylemGame from '~/lib/core/game';
-import { ZylemScene } from '~/lib/rendering/scene';
+import { ZylemScene } from '~/lib/graphics/scene';
 import { ZylemHUD } from '~/lib/ui/hud';
-import { ZylemCamera } from '~/lib/core/camera';
+import { ZylemCamera } from '~/lib/camera/camera';
 import { ZylemWorld } from '~/lib/collision/world';
 
 export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';

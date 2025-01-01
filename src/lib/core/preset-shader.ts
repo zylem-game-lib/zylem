@@ -1,10 +1,10 @@
 /* Fragment Shaders **/
-import starsTest from '../rendering/shaders/fragment/stars.glsl';
-import fireFragment from '../rendering/shaders/fragment/fire.glsl';
-import fragmentShader from '../rendering/shaders/fragment/standard.glsl';
+import starsTest from '../graphics/shaders/fragment/stars.glsl';
+import fireFragment from '../graphics/shaders/fragment/fire.glsl';
+import fragmentShader from '../graphics/shaders/fragment/standard.glsl';
 
 /* Vertex Shaders **/
-import vertexShader from '../rendering/shaders/vertex/object-shader.glsl';
+import vertexShader from '../graphics/shaders/vertex/object-shader.glsl';
 
 export type ZylemShaderObject = { fragment: string, vertex: string };
 

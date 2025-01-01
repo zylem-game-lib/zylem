@@ -1,6 +1,6 @@
 import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
-import { BaseCollision } from '~/lib/collision/_oldCollision';
+// import { BaseCollision } from '~/lib/collision/_oldCollision';
 import { SizeVector } from '~/lib/interfaces/utility';
 import { Mixin } from 'ts-mixer';
 
@@ -8,7 +8,7 @@ import { StageEntityOptions } from '../interfaces/entity';
 import { StageEntity, EntityParameters, IGameEntity } from '../core';
 import { Moveable } from '../behaviors/moveable';
 
-export class ZoneCollision extends BaseCollision {
+export class ZoneCollision { //extends BaseCollision {
 	_size: SizeVector = new Vector3(1, 1, 1);
 
 	createCollider(_isSensor: boolean = true) {
