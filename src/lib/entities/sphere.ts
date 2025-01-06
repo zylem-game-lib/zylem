@@ -1,84 +1,9 @@
-import { ColliderDesc, RigidBodyDesc } from '@dimforge/rapier3d-compat';
-import { SphereGeometry, Group, Material, Mesh, Color } from 'three';
+import { ColliderDesc } from '@dimforge/rapier3d-compat';
+import { SphereGeometry } from 'three';
 import { Vector3 } from 'three';
-import { position, rotation, scale } from "~/lib/behaviors/components/transform";
-import { MaterialBuilder } from '../graphics/material';
 import { ZylemBlueColor } from '../core/utility';
-import { CreateMeshParameters, MeshBuilder } from '~/lib/graphics/mesh';
 import { BaseNode } from '../core/base-node';
-import { CollisionBuilder } from '../collision/collision-builder';
-import { MaterialOptions } from '../graphics/material';
-import { EntityOptions, GameEntity } from './entity';
-import { Vec3 } from '../core/vector';
-
-export class SphereCollisionBuilder extends CollisionBuilder {
-	collisionRadius: number = 1;
-
-	collider(): ColliderDesc {
-		let colliderDesc = ColliderDesc.ball(this.collisionRadius);
-		return colliderDesc;
-	}
-}
-
-export class SphereMeshBuilder extends MeshBuilder {
-	radius: number = 1;
-}
-
-export class SphereBuilder {
-	private meshBuilder: SphereMeshBuilder;
-	private collisionBuilder: SphereCollisionBuilder;
-	private materialBuilder: MaterialBuilder;
-	private options: Partial<ZylemSphereOptions>;
-
-	constructor(options: Partial<ZylemSphereOptions>) {
-		this.options = { ...sphereDefaults, ...options };
-		this.meshBuilder = new SphereMeshBuilder();
-		this.collisionBuilder = new SphereCollisionBuilder();
-		this.materialBuilder = new MaterialBuilder();
-
-		if (options.radius) this.withRadius(options.radius);
-		if (options.position) this.withPosition(options.position);
-
-		this.collisionBuilder
-			.withCollision(options?.collision ?? {})
-			.withPhysics(options?.physics ?? {});
-	}
-
-	withRadius(radius: number): this {
-		this.meshBuilder.radius = radius;
-		this.collisionBuilder.collisionRadius = radius;
-		return this;
-	}
-
-	withPosition(setupPosition: Vec3): this {
-		this.options.position = setupPosition;
-		return this;
-	}
-
-	async withMaterial(options: Partial<MaterialOptions>): Promise<this> {
-		await this.materialBuilder.build(options, SPHERE_TYPE);
-		return this;
-	}
-
-	async build(): Promise<ZylemSphere> {
-		const sphere = new ZylemSphere(this.options);
-
-		sphere.materials = this.materialBuilder.materials;
-
-		const geometry = new SphereGeometry(this.meshBuilder.radius);
-		sphere.mesh = this.meshBuilder.build(this.options, geometry, sphere.materials);
-
-		const [rigidBody, collider] = this.collisionBuilder.build(
-			this.collisionBuilder.collider.bind(this.collisionBuilder)
-		);
-		sphere.rigidBody = rigidBody;
-		sphere.collider = collider;
-
-		const { x, y, z } = this.options.position || { x: 0, y: 0, z: 0 };
-		sphere.rigidBody.setTranslation(x, y, z);
-		return sphere;
-	}
-}
+import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
 
 type ZylemSphereOptions = EntityOptions & {
 	radius?: number;
@@ -96,10 +21,31 @@ const sphereDefaults: ZylemSphereOptions = {
 	},
 };
 
+export class SphereCollisionBuilder extends EntityCollisionBuilder {
+	collider(options: ZylemSphereOptions): ColliderDesc {
+		const radius = options.radius ?? 1;
+		let colliderDesc = ColliderDesc.ball(radius);
+		return colliderDesc;
+	}
+}
+
+export class SphereMeshBuilder extends EntityMeshBuilder {
+	buildGeometry(options: ZylemSphereOptions): SphereGeometry {
+		const radius = options.radius ?? 1;
+		return new SphereGeometry(radius);
+	}
+}
+
+export class SphereBuilder extends EntityBuilder<ZylemSphere, ZylemSphereOptions> {
+	protected createEntity(options: Partial<ZylemSphereOptions>): ZylemSphere {
+		return new ZylemSphere(options);
+	}
+}
+
 export const SPHERE_TYPE = Symbol('Sphere');
 
 export class ZylemSphere extends GameEntity<ZylemSphereOptions> {
-	public type = SPHERE_TYPE;
+	static type = SPHERE_TYPE;
 
 	constructor(options?: ZylemSphereOptions) {
 		super();
@@ -116,8 +62,12 @@ export async function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere
 		if (arg instanceof BaseNode) {
 			continue;
 		}
-		builder = new SphereBuilder(arg);
-		if (arg.material) await builder.withMaterial(arg.material);
+		builder = new SphereBuilder(
+			arg,
+			new SphereMeshBuilder(),
+			new SphereCollisionBuilder()
+		);
+		if (arg.material) await builder.withMaterial(arg.material, ZylemSphere.type);
 	}
 
 	if (!builder) {
