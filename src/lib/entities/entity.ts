@@ -1,13 +1,15 @@
-import { Mesh, Material, ShaderMaterial } from "three";
+import { Mesh, Material, ShaderMaterial, BufferGeometry } from "three";
 import { ColliderDesc, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 
 import { position, rotation, scale } from "~/lib/behaviors/components/transform";
 import { Vec3 } from "../core/vector";
-import { MaterialOptions } from "../graphics/material";
+import { MaterialBuilder, MaterialOptions } from "../graphics/material";
 import { PhysicsOptions } from "../collision/physics";
 import { CollisionOptions } from "../collision/collision";
 import { BaseNode } from "../core/base-node";
 import { DestroyContext, SetupContext, UpdateContext } from "../core/base-node-life-cycle";
+import { CollisionBuilder } from "../collision/collision-builder";
+import { MeshBuilder } from "../graphics/mesh";
 
 export abstract class AbstractEntity {
 	abstract uuid: string;
@@ -64,4 +66,56 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> {
 			}
 		}
 	}
+}
+
+export abstract class EntityCollisionBuilder extends CollisionBuilder {
+	abstract collider(options: EntityOptions): ColliderDesc;
+}
+
+export abstract class EntityMeshBuilder extends MeshBuilder {
+	abstract buildGeometry(options: EntityOptions): BufferGeometry;
+}
+
+export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityOptions> {
+	protected meshBuilder: EntityMeshBuilder;
+	protected collisionBuilder: EntityCollisionBuilder;
+	protected materialBuilder: MaterialBuilder;
+	protected options: Partial<U>;
+
+	constructor(options: Partial<U>, meshBuilder: EntityMeshBuilder, collisionBuilder: EntityCollisionBuilder) {
+		this.options = options;
+		this.meshBuilder = meshBuilder;
+		this.collisionBuilder = collisionBuilder;
+		this.materialBuilder = new MaterialBuilder();
+	}
+
+	withPosition(setupPosition: Vec3): this {
+		this.options.position = setupPosition;
+		return this;
+	}
+
+	async withMaterial(options: Partial<MaterialOptions>, entityType: symbol): Promise<this> {
+		await this.materialBuilder.build(options, entityType);
+		return this;
+	}
+
+	async build(): Promise<T> {
+		const entity = this.createEntity(this.options);
+
+		entity.materials = this.materialBuilder.materials;
+		const geometry = this.meshBuilder.buildGeometry(this.options);
+		entity.mesh = this.meshBuilder.build(this.options, geometry, entity.materials);
+
+		this.collisionBuilder.withCollision(this.options?.collision || {});
+		this.collisionBuilder.withPhysics(this.options?.physics || {});
+		const [rigidBody, collider] = this.collisionBuilder.build(this.options);
+		entity.rigidBody = rigidBody;
+		entity.collider = collider;
+
+		const { x, y, z } = this.options.position || { x: 0, y: 0, z: 0 };
+		entity.rigidBody.setTranslation(x, y, z);
+		return entity;
+	}
+
+	protected abstract createEntity(options: Partial<U>): T;
 }

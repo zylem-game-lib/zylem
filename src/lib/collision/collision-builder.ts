@@ -2,6 +2,7 @@ import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType, Vecto
 import { PhysicsOptions } from "./physics";
 import { Vec3 } from "../core/vector";
 import { CollisionOptions } from "./collision";
+import { EntityOptions } from "../core";
 
 export type ColliderFunction = () => ColliderDesc;
 export type RigidBodyFunction = ({ isDynamicBody }: { isDynamicBody: boolean }) => RigidBodyDesc;
@@ -11,13 +12,11 @@ export class CollisionBuilder {
 	sensor: boolean = false;
 	gravity: Vec3 = new Vector3(0, 0, 0);
 
-	build(colliderFn?: ColliderFunction, rigidBodyFn?: RigidBodyFunction): [RigidBodyDesc, ColliderDesc] {
-		const useRigidBodyFn = rigidBodyFn ?? this.rigidBody;
-		const rigidBody = useRigidBodyFn({
+	build(options: EntityOptions): [RigidBodyDesc, ColliderDesc] {
+		const rigidBody = this.rigidBody({
 			isDynamicBody: !this.static
 		});
-		const useColliderFn = colliderFn ?? this.collider;
-		const collider = useColliderFn();
+		const collider = this.collider(options);
 		const { KINEMATIC_FIXED, DEFAULT } = ActiveCollisionTypes;
 		collider.activeCollisionTypes = (this.sensor) ? KINEMATIC_FIXED : DEFAULT;
 		return [rigidBody, collider];
@@ -34,8 +33,8 @@ export class CollisionBuilder {
 		return this;
 	}
 
-	collider(): ColliderDesc {
-		const size = new Vector3(1, 1, 1);
+	collider(options: EntityOptions): ColliderDesc {
+		const size = options.size ?? new Vector3(1, 1, 1);
 		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
 		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
 		return colliderDesc;

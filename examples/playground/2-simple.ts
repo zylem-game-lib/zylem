@@ -6,7 +6,10 @@ const grassPath = 'playground/grass.jpg';
 const grassNormalPath = 'playground/grass-normal.png';
 const woodPath = 'playground/wood-box.jpg';
 
-const testBox = await box({ position: new Vector3(2, 3, 5), material: { path: rainPath } });
+const testBox = await box(
+	{ position: new Vector3(2, 3, 5), material: { path: rainPath } },
+	await box({ position: new Vector3(1, 1, 1), material: { path: rainPath } })
+);
 const testBox1 = await box({ position: new Vector3(0, 5, 5), material: { path: rainPath } });
 const testBox2 = await box({ position: new Vector3(4, 5, 5), material: { path: rainPath } });
 
@@ -36,8 +39,8 @@ const testground = await box({
 		static: true,
 	},
 	size: new Vector3(200, 0.5, 200),
-	position: new Vector3(0, -5, 0),
-	material: { path: woodPath, repeat: new Vector2(100, 100) },
+	position: new Vector3(0, -1, 0),
+	material: { path: grassNormalPath, repeat: new Vector2(100, 100) },
 });
 
 const testSphere = await sphere({
@@ -49,13 +52,13 @@ const testSphere = await sphere({
 
 const example = game(
 	{ debug: true },
-	stage({
-		gravity: new Vector3(0, -9, 0)
-	}),
+	stage(
+		{ gravity: new Vector3(0, -9, 0) },
+	),
+	...testBoxes,
 	testBox,
 	testBox1,
 	testBox2,
-	...testBoxes,
 	testSphere,
 	testground
 );
