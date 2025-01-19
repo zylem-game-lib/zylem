@@ -55,6 +55,8 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 	});
 	if (stages.length) {
 		converted.stages = stages;
+	} else {
+		converted.stages[0].children.unshift(...entities);
 	}
 	return converted;
 }

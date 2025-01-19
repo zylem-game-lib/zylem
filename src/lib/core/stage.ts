@@ -165,13 +165,6 @@ export class ZylemStage {
 		} else if (entity.mesh) {
 			this.scene.scene.add(entity.mesh);
 		}
-		entity.stageRef = this;
-		// if (child._custom) {
-		// 	for (let key in child._custom) {
-		// 		if (entity[key]) { continue; }
-		// 		entity[key] = child._custom[key];
-		// 	}
-		// }
 		if (child.behaviors) {
 			for (let behavior of child.behaviors) {
 				addComponent(this.ecs, behavior.component, entity.eid);
@@ -182,12 +175,18 @@ export class ZylemStage {
 				}
 			}
 		}
-		this.world.addEntity(entity);
+		if (entity.collider) {
+			this.world.addEntity(entity);
+		}
 		child.nodeSetup({
 			entity: child,
 			globals: {},
 			camera: this.scene.zylemCamera,
 		});
+		this.addEntityToStage(entity);
+	}
+
+	addEntityToStage(entity: BaseNode) {
 		// TODO: string disk usage concerns?
 		this._childrenMap.set(`${entity.eid}-key`, entity);
 	}

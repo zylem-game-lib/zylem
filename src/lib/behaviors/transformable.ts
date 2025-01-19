@@ -23,7 +23,7 @@ export default function createTransformSystem(stage: StageSystem) {
 		for (let i = 0; i < entities.length; ++i) {
 			const id = entities[i];
 			const stageEntity = stageEntities.get(`${id}-key`);
-			if (stageEntity === undefined) {
+			if (stageEntity === undefined || !stageEntity?.body) {
 				continue;
 			}
 			const { x, y, z } = stageEntity.body.translation();

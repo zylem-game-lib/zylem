@@ -56,6 +56,8 @@ type BoxOptions = BaseNode | ZylemBoxOptions;
 
 export async function box(...args: Array<BoxOptions>): Promise<ZylemBox> {
 	let builder;
+	const configuration = args.find(node => !(node instanceof BaseNode));
+	if (!configuration) args.push({ ...boxDefaults });
 
 	for (const arg of args) {
 		if (arg instanceof BaseNode) {
