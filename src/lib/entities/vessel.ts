@@ -1,27 +1,52 @@
-import { BaseNode, BaseNodeOptions } from '../core/base-node';
-import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
+import { BaseNode } from '../core/base-node';
+import {
+	SetupContext,
+	UpdateContext,
+	DestroyContext,
+	SetupFunction,
+	UpdateFunction,
+	DestroyFunction,
+} from '../core/base-node-life-cycle';
+import { EntityOptions } from './entity';
 
-interface Vessel {
-	children: BaseNode[];
-	options: BaseNodeOptions;
-	update: UpdateFunction<Vessel>;
-	setup: SetupFunction<Vessel>;
-	destroy: DestroyFunction<Vessel>
-}
+export const VESSEL_TYPE = Symbol('vessel');
 
 export class ZylemVessel extends BaseNode<{}> {
-	create(): Vessel {
-		return {
-			children: this.children,
-			options: this.options,
-			update: this.update,
-			setup: this.setup,
-			destroy: this.destroy
-		};
+	static type = VESSEL_TYPE;
+
+	public update: UpdateFunction<this> | null = null;
+	public setup: SetupFunction<this> | null = null;
+	public destroy: DestroyFunction<this> | null = null;
+
+	constructor(options?: EntityOptions) {
+		super();
+		this.options = { ...options };
 	}
+
+	public create(): this {
+		return this;
+	}
+
+	protected _setup(params: SetupContext<this>): void {
+		if (typeof this.setup === 'function') {
+			this.setup(params);
+		}
+	};
+
+	protected _update(params: UpdateContext<this>): void {
+		if (typeof this.update === 'function') {
+			this.update(params);
+		}
+	}
+
+	protected _destroy(params: DestroyContext<this>): void {
+		if (typeof this.destroy === 'function') {
+			this.destroy(params);
+		}
+	};
 }
 
-export function vessel(...args: Array<BaseNode | Partial<{}>>): Vessel {
+export function vessel(...args: Array<BaseNode | Partial<{}>>): ZylemVessel {
 	const instance = new ZylemVessel();
 
 	for (const arg of args) {
@@ -32,5 +57,5 @@ export function vessel(...args: Array<BaseNode | Partial<{}>>): Vessel {
 		}
 	}
 
-	return instance.create();
+	return new ZylemVessel();
 }

@@ -9,6 +9,7 @@ export abstract class BaseNode<Options = any, T = any> {
 	protected children: BaseNode[] = [];
 	public behaviors: Behavior[] = [];
 	public options: Options;
+	public eid: number = 0;
 
 	constructor(args: BaseNodeOptions[] = []) {
 		const options = args
