@@ -19,7 +19,7 @@ for (let i = 0; i < 20; i++) {
 	for (let j = 0; j < 10; j++) {
 		const nextBox = await box({
 			position: new Vector3(i - 10, j + 2, 5),
-			material: { path: grassPath },
+			material: { shader: 'star' },
 			custom: {
 				superProp: 1
 			}
@@ -39,7 +39,7 @@ const testground = await box({
 		static: true,
 	},
 	size: new Vector3(200, 0.5, 200),
-	position: new Vector3(0, -1, 0),
+	position: new Vector3(-10, -1, 0),
 	material: { path: grassNormalPath, repeat: new Vector2(100, 100) },
 });
 
