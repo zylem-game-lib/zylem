@@ -6,13 +6,19 @@
  */
 
 export type InputPlayerNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-export type InputPlayer = `Player${InputPlayerNumber}`;
+export type InputPlayer = `p${InputPlayerNumber}`;
 
-export interface InputGamepad<PlayerNumber extends InputPlayerNumber> {
-	playerNumber: PlayerNumber;
+export interface ButtonState {
+	pressed: boolean;   // True only on the first frame when pressed
+	released: boolean;  // True only on the first frame when released
+	held: number;      // Time in seconds the button has been held
+}
+
+export interface InputGamepad {
+	playerNumber: InputPlayerNumber;
 	buttons: {
-		A: boolean;
-		B: boolean;
+		A: ButtonState;  // Full button state tracking
+		B: boolean;      // Simple pressed state
 		X: boolean;
 		Y: boolean;
 		Start: boolean;
@@ -36,13 +42,12 @@ export interface InputGamepad<PlayerNumber extends InputPlayerNumber> {
 	};
 }
 
-export interface Inputs {
-	Player1: InputGamepad<1>;
-	Player2: InputGamepad<2>;
-	Player3: InputGamepad<3>;
-	Player4: InputGamepad<4>;
-	Player5: InputGamepad<5>;
-	Player6: InputGamepad<6>;
-	Player7: InputGamepad<7>;
-	Player8: InputGamepad<8>;
+export type Inputs = Record<InputPlayer, InputGamepad>;
+
+export type ButtonName = keyof InputGamepad['buttons'];
+export type InputHandlerCallback = () => void;
+
+export interface InputHandler {
+	onPress(button: ButtonName, callback: InputHandlerCallback): void;
+	update(currentInputs: Inputs): void;
 }
