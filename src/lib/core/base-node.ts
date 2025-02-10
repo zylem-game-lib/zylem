@@ -10,6 +10,7 @@ export abstract class BaseNode<Options = any, T = any> {
 	public behaviors: Behavior[] = [];
 	public options: Options;
 	public eid: number = 0;
+	public name: string = '';
 
 	constructor(args: BaseNodeOptions[] = []) {
 		const options = args
@@ -37,6 +38,10 @@ export abstract class BaseNode<Options = any, T = any> {
 			this.children.splice(index, 1);
 			baseNode.setParent(null);
 		}
+	}
+
+	public getChildren(): BaseNode[] {
+		return this.children;
 	}
 
 	public isComposite(): boolean {
