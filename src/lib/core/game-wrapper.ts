@@ -66,8 +66,8 @@ export class Game {
 	options: GameOptions;
 	debugRef: ZylemDebug | null = null;
 
-	updateOverride: UpdateFunction<any> = () => { };
-	setupOverride: SetupFunction<any> = () => { };
+	update: UpdateFunction<Game> = () => { };
+	setup: SetupFunction<Game> = () => { };
 
 	constructor(options: GameOptions) {
 		this.options = options;
@@ -93,16 +93,8 @@ export class Game {
 			console.error('lost reference to game');
 			return;
 		}
-		this.gameRef.customSetup = this.setupOverride;
-		this.gameRef.customUpdate = this.updateOverride;
-	}
-
-	async setup(setupFn: SetupFunction<Game>) {
-		this.setupOverride = setupFn;
-	}
-
-	async update(updateFn: UpdateFunction<Game>) {
-		this.updateOverride = updateFn;
+		this.gameRef.customSetup = this.setup;
+		this.gameRef.customUpdate = this.update;
 	}
 
 	async pause() { }
@@ -127,7 +119,20 @@ export class Game {
 		await this.gameRef.loadStage(nextStage);
 	}
 
-	async previousStage() { }
+	async previousStage() {
+		if (!this.gameRef) {
+			console.error('lost reference to game');
+			return;
+		}
+		const currentStageId = this.gameRef.currentStageId;
+		const currentIndex = this.gameRef.stages.findIndex((s) => s.uuid === currentStageId);
+		const previousStage = this.gameRef.stages[currentIndex - 1];
+		if (!previousStage) {
+			console.error('previous stage called on first stage');
+			return;
+		}
+		await this.gameRef.loadStage(previousStage);
+	}
 
 	async goToStage() { }
 

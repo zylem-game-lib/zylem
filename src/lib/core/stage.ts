@@ -1,35 +1,36 @@
 import { addComponent, addEntity, createWorld as createECS } from 'bitecs';
 import { World } from '@dimforge/rapier3d-compat';
-import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from 'three';
+import { BufferAttribute, BufferGeometry, Color, Group, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/scene';
+
 import { Conditions } from '../interfaces/game';
-import {
-	setStagePerspective,
-	setStageBackgroundColor,
-	setStageBackgroundImage,
-	state$
-} from '../state';
+import { state$ } from '../state';
+import { setStageBackgroundColor, setStageBackgroundImage, setStagePerspective, setStageState } from '../state/stage-state';
+
 import { ZylemHUD } from '../ui/hud';
-import { GameEntity, StageEntity } from './';
+import { StageEntity } from './';
 import { PerspectiveType, Perspectives } from '../interfaces/perspective';
 import { ZylemBlueColor } from './utility';
 import { debugState } from '../state/debug-state';
 import createTestSystem from '../behaviors/test-system';
 import { applyMixins } from './composable';
 import { SetupContext, UpdateContext, DestroyContext } from './base-node-life-cycle';
-import createTransformSystem from '../behaviors/transformable';
+import createTransformSystem, { StageSystem } from '../behaviors/transformable';
 import { BaseNode } from './base-node';
 
-interface ZylemStageOptions {
+export interface ZylemStageOptions {
 	perspective: PerspectiveType;
+	inputs: Record<string, string[]>;
 	backgroundColor: Color;
-	backgroundImage: String;
+	backgroundImage: string | null;
 	gravity: Vector3;
 	conditions: Conditions<any>[];
 	children: ({ globals }: any) => BaseNode[];
 }
+
+export type StageState = Pick<ZylemStageOptions, 'perspective' | 'backgroundColor' | 'backgroundImage' | 'inputs'>;
 
 export type StageOptions = Partial<ZylemStageOptions>;
 
@@ -38,9 +39,15 @@ export const STAGE_TYPE = 'Stage';
 export class ZylemStage {
 	public type = STAGE_TYPE;
 
-	perspective: PerspectiveType;
-	backgroundColor: Color;
-	backgroundImage: String;
+	state: StageState = {
+		perspective: Perspectives.ThirdPerson,
+		backgroundColor: ZylemBlueColor,
+		backgroundImage: null,
+		inputs: {
+			p1: ['gamepad-1', 'keyboard'],
+			p2: ['gamepad-2', 'keyboard'],
+		},
+	};
 	gravity: Vector3;
 
 	world: ZylemWorld | null;
@@ -58,13 +65,19 @@ export class ZylemStage {
 	testSystem: any = null;
 	transformSystem: any = null;
 
+	uuid: string;
+
 	constructor(options: StageOptions) {
 		this.world = null;
 		this.scene = null;
 		this.HUD = new ZylemHUD();
-		this.perspective = options.perspective ?? Perspectives.ThirdPerson;
-		this.backgroundColor = options.backgroundColor ?? ZylemBlueColor;
-		this.backgroundImage = options.backgroundImage ?? '';
+		this.uuid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+		this.saveState({
+			perspective: options.perspective ?? this.state.perspective,
+			backgroundColor: options.backgroundColor ?? this.state.backgroundColor,
+			backgroundImage: options.backgroundImage ?? this.state.backgroundImage,
+			inputs: options.inputs ?? this.state.inputs,
+		});
 		this.gravity = options.gravity ?? new Vector3(0, 0, 0);
 		this.children = options.children ? options.children({ globals: state$.globals }) : [];
 		this.conditions = options.conditions ?? [];
@@ -75,18 +88,24 @@ export class ZylemStage {
 		};
 	}
 
+	private saveState(state: StageState) {
+		this.state = state;
+	}
+
+	private setState() {
+		const { backgroundColor, backgroundImage, perspective } = this.state;
+		setStageBackgroundColor(backgroundColor);
+		setStageBackgroundImage(backgroundImage);
+		setStagePerspective(perspective);
+	}
+
 	async load(id: string) {
-		// TODO: consider moving globals out
-		setStagePerspective(this.perspective);
-		setStageBackgroundColor(this.backgroundColor);
-		setStageBackgroundImage(this.backgroundImage);
+		this.setState();
 
 		this.scene = new ZylemScene(id);
 
 		const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
-
-		// this.HUD.createUI();
 
 		this.scene.setup();
 
@@ -94,7 +113,7 @@ export class ZylemStage {
 			this.spawnEntity(child);
 		}
 		this.testSystem = createTestSystem();
-		this.transformSystem = createTransformSystem(this);
+		this.transformSystem = createTransformSystem(this as unknown as StageSystem);
 	}
 
 	public setup(params: SetupContext<ZylemStage>): void {
@@ -187,11 +206,10 @@ export class ZylemStage {
 	}
 
 	addEntityToStage(entity: BaseNode) {
-		// TODO: string disk usage concerns?
 		this._childrenMap.set(`${entity.eid}-key`, entity);
 	}
 
-	setForRemoval(entity: BaseNode & { eid, group }) {
+	setForRemoval(entity: BaseNode & { group: Group }) {
 		if (this.world) {
 			this.world.setForRemoval(entity);
 		}
@@ -238,7 +256,7 @@ export class ZylemStage {
 	}
 }
 
-export interface ZylemStage extends StageEntity, Lifecycle<ZylemStage> { }
+export interface ZylemStage extends StageEntity { }
 applyMixins(ZylemStage, [StageEntity]);
 
 export function stage(options: StageOptions = {}): ZylemStage {

@@ -1,5 +1,5 @@
 import { InputProvider } from './input-provider';
-import { ButtonState, InputGamepad } from './input';
+import { AnalogState, ButtonState, InputGamepad } from './input';
 
 export class GamepadProvider implements InputProvider {
 	private gamepadIndex: number;
@@ -51,6 +51,11 @@ export class GamepadProvider implements InputProvider {
 		return buttonState;
 	}
 
+	private handleAnalogState(index: number, gamepad: Gamepad, delta: number): AnalogState {
+		const value = gamepad.axes[index];
+		return { value, held: delta };
+	}
+
 	getInput(delta: number): Partial<InputGamepad> {
 		const gamepad = navigator.getGamepads()[this.gamepadIndex];
 		if (!gamepad) return {};
@@ -58,27 +63,27 @@ export class GamepadProvider implements InputProvider {
 		return {
 			buttons: {
 				A: this.handleButtonState(0, gamepad, delta),
-				B: gamepad.buttons[1].pressed,
-				X: gamepad.buttons[2].pressed,
-				Y: gamepad.buttons[3].pressed,
-				Start: gamepad.buttons[9].pressed,
-				Select: gamepad.buttons[8].pressed,
-				L: gamepad.buttons[4].pressed,
-				R: gamepad.buttons[5].pressed,
+				B: this.handleButtonState(1, gamepad, delta),
+				X: this.handleButtonState(2, gamepad, delta),
+				Y: this.handleButtonState(3, gamepad, delta),
+				Start: this.handleButtonState(9, gamepad, delta),
+				Select: this.handleButtonState(8, gamepad, delta),
+				L: this.handleButtonState(4, gamepad, delta),
+				R: this.handleButtonState(5, gamepad, delta),
 			},
 			directions: {
-				Up: gamepad.axes[1] < -0.1,
-				Down: gamepad.axes[1] > 0.1,
-				Left: gamepad.axes[0] < -0.1,
-				Right: gamepad.axes[0] > 0.1,
+				Up: this.handleButtonState(12, gamepad, delta),
+				Down: this.handleButtonState(13, gamepad, delta),
+				Left: this.handleButtonState(14, gamepad, delta),
+				Right: this.handleButtonState(15, gamepad, delta),
 			},
 			axes: {
-				Horizontal: Math.abs(gamepad.axes[0]) > 0.1 ? gamepad.axes[0] : 0,
-				Vertical: Math.abs(gamepad.axes[1]) > 0.1 ? gamepad.axes[1] : 0,
+				Horizontal: this.handleAnalogState(0, gamepad, delta),
+				Vertical: this.handleAnalogState(1, gamepad, delta),
 			},
 			shoulders: {
-				LTrigger: gamepad.buttons[6].value,
-				RTrigger: gamepad.buttons[7].value,
+				LTrigger: this.handleButtonState(6, gamepad, delta),
+				RTrigger: this.handleButtonState(7, gamepad, delta),
 			}
 		};
 	}

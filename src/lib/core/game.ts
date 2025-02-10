@@ -7,13 +7,10 @@ import { setGlobalState } from '../state/index';
 import { setDebugFlag } from '../state/debug-state';
 import { DebugConfiguration } from './debug';
 
-import Gamepad from '../input/gamepad';
-
 import { ZylemStage } from './stage';
 import { Game } from './game-wrapper';
-import { LifecycleParameters } from './base-node-life-cycle';
-import { UpdateFunction } from './update';
-import { SetupFunction } from './setup';
+import { UpdateContext, SetupContext, UpdateFunction, SetupFunction } from './base-node-life-cycle';
+import { InputManager } from '../input/input-manager';
 
 export interface IGameOptions {
 	id: string;
@@ -29,8 +26,8 @@ export class ZylemGame {
 	id: string;
 	initialGlobals = {};
 
-	customSetup: SetupFunction<ZylemStage> | null = null;
-	customUpdate: UpdateFunction<ZylemStage> | null = null;
+	customSetup: ((params: SetupContext<ZylemStage>) => void) | null = null;
+	customUpdate: ((params: UpdateContext<ZylemStage>) => void) | null = null;
 
 	stages: ZylemStage[] = [];
 	stageMap: Map<string, ZylemStage> = new Map();
@@ -40,7 +37,7 @@ export class ZylemGame {
 	totalTime = 0;
 
 	clock: Clock;
-	gamepad: Gamepad;
+	inputManager: InputManager;
 
 	wrapperRef: Game;
 	statsRef: Stats | null = null;
@@ -50,7 +47,7 @@ export class ZylemGame {
 
 	constructor(options: IGameOptions, wrapperRef: Game) {
 		this.wrapperRef = wrapperRef;
-		this.gamepad = new Gamepad();
+		this.inputManager = new InputManager();
 		this.clock = new Clock();
 		this.id = options.id;
 		this.stages = options.stages;
@@ -69,10 +66,10 @@ export class ZylemGame {
 		this.initialGlobals = { ...options.globals };
 	}
 
-	params(): LifecycleParameters<ZylemStage> {
+	params(): UpdateContext<ZylemStage> {
 		const stage = this.currentStage();
 		const delta = this.clock.getDelta() ?? 0;
-		const inputs = this.gamepad.getInputs();
+		const inputs = this.inputManager.getInputs(delta);
 		return {
 			delta,
 			inputs,
@@ -108,6 +105,9 @@ export class ZylemGame {
 		if (elapsed >= ZylemGame.FRAME_DURATION) {
 			const stage = this.currentStage();
 			const params = this.params();
+			if (this.customUpdate) {
+				this.customUpdate(params);
+			}
 			stage!.update(params);
 			this.totalTime += params.delta;
 			state$.time.set(this.totalTime);

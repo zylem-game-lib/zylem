@@ -6,8 +6,9 @@ import { Inputs } from '../input/input';
 export interface SetupContext<T> {
 	entity: T;
 	globals: any;
+	inputs?: Inputs;
 	HUD?: ZylemHUD;
-	camera: ZylemCamera;
+	camera?: ZylemCamera;
 	game?: Game;
 }
 
@@ -19,6 +20,10 @@ export type UpdateContext<T> = {
 	entity: T;
 	delta: number;
 	inputs: Inputs;
+	globals: any;
+	camera: ZylemCamera;
+	game?: Game;
+	HUD?: ZylemHUD;
 };
 
 export interface UpdateFunction<T> {

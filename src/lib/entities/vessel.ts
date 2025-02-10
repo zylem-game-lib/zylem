@@ -57,5 +57,5 @@ export function vessel(...args: Array<BaseNode | Partial<{}>>): ZylemVessel {
 		}
 	}
 
-	return new ZylemVessel();
+	return instance;
 }

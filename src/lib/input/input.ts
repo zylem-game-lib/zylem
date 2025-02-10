@@ -9,36 +9,41 @@ export type InputPlayerNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type InputPlayer = `p${InputPlayerNumber}`;
 
 export interface ButtonState {
-	pressed: boolean;   // True only on the first frame when pressed
-	released: boolean;  // True only on the first frame when released
-	held: number;      // Time in seconds the button has been held
+	pressed: boolean;
+	released: boolean;
+	held: number;
+}
+
+export interface AnalogState {
+	value: number;
+	held: number;
 }
 
 export interface InputGamepad {
 	playerNumber: InputPlayerNumber;
 	buttons: {
-		A: ButtonState;  // Full button state tracking
-		B: boolean;      // Simple pressed state
-		X: boolean;
-		Y: boolean;
-		Start: boolean;
-		Select: boolean;
-		L: boolean;
-		R: boolean;
+		A: ButtonState;
+		B: ButtonState;
+		X: ButtonState;
+		Y: ButtonState;
+		Start: ButtonState;
+		Select: ButtonState;
+		L: ButtonState;
+		R: ButtonState;
 	};
 	directions: {
-		Up: boolean;
-		Down: boolean;
-		Left: boolean;
-		Right: boolean;
+		Up: ButtonState;
+		Down: ButtonState;
+		Left: ButtonState;
+		Right: ButtonState;
 	};
 	shoulders: {
-		LTrigger: number;
-		RTrigger: number;
+		LTrigger: ButtonState;
+		RTrigger: ButtonState;
 	};
 	axes: {
-		Horizontal: number;
-		Vertical: number;
+		Horizontal: AnalogState;
+		Vertical: AnalogState;
 	};
 }
 

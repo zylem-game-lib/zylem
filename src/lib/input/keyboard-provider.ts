@@ -1,5 +1,5 @@
 import { InputProvider } from './input-provider';
-import { ButtonState, InputGamepad } from './input';
+import { AnalogState, ButtonState, InputGamepad } from './input';
 
 export class KeyboardProvider implements InputProvider {
 	private keyStates = new Map<string, boolean>();
@@ -44,31 +44,36 @@ export class KeyboardProvider implements InputProvider {
 		return buttonState;
 	}
 
+	private handleAnalogState(negativeKey: string, positiveKey: string, delta: number): AnalogState {
+		const value = this.getAxisValue(negativeKey, positiveKey);
+		return { value, held: delta };
+	}
+
 	getInput(delta: number): Partial<InputGamepad> {
 		return {
 			buttons: {
 				A: this.handleButtonState('z', delta),
-				B: this.isKeyPressed('x'),
-				X: this.isKeyPressed('a'),
-				Y: this.isKeyPressed('s'),
-				Start: this.isKeyPressed(' '),
-				Select: this.isKeyPressed('Enter'),
-				L: this.isKeyPressed('q'),
-				R: this.isKeyPressed('e'),
+				B: this.handleButtonState('x', delta),
+				X: this.handleButtonState('a', delta),
+				Y: this.handleButtonState('s', delta),
+				Start: this.handleButtonState(' ', delta),
+				Select: this.handleButtonState('Enter', delta),
+				L: this.handleButtonState('q', delta),
+				R: this.handleButtonState('e', delta),
 			},
 			directions: {
-				Up: this.isKeyPressed('ArrowUp') || this.isKeyPressed('w'),
-				Down: this.isKeyPressed('ArrowDown') || this.isKeyPressed('s'),
-				Left: this.isKeyPressed('ArrowLeft') || this.isKeyPressed('a'),
-				Right: this.isKeyPressed('ArrowRight') || this.isKeyPressed('d'),
+				Up: this.handleButtonState('ArrowUp', delta),
+				Down: this.handleButtonState('ArrowDown', delta),
+				Left: this.handleButtonState('ArrowLeft', delta),
+				Right: this.handleButtonState('ArrowRight', delta),
 			},
 			axes: {
-				Horizontal: this.getAxisValue('ArrowLeft', 'ArrowRight'),
-				Vertical: this.getAxisValue('ArrowUp', 'ArrowDown'),
+				Horizontal: this.handleAnalogState('ArrowLeft', 'ArrowRight', delta),
+				Vertical: this.handleAnalogState('ArrowUp', 'ArrowDown', delta),
 			},
 			shoulders: {
-				LTrigger: this.isKeyPressed('q') ? 1 : 0,
-				RTrigger: this.isKeyPressed('e') ? 1 : 0,
+				LTrigger: this.handleButtonState('Q', delta),
+				RTrigger: this.handleButtonState('E', delta),
 			}
 		};
 	}
