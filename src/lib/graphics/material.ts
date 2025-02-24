@@ -4,7 +4,6 @@ import {
 	MeshPhongMaterial,
 	MeshStandardMaterial,
 	RepeatWrapping,
-	Shader,
 	ShaderMaterial,
 	TextureLoader,
 	Vector2,

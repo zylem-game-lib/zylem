@@ -1,4 +1,4 @@
-import { Mesh, Material, ShaderMaterial, BufferGeometry } from "three";
+import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, PlaneHelper } from "three";
 import { ColliderDesc, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 
 import { position, rotation, scale } from "~/lib/behaviors/components/transform";
@@ -24,6 +24,11 @@ export type EntityOptions = {
 	physics?: Partial<PhysicsOptions>;
 	material?: Partial<MaterialOptions>;
 	custom?: { [key: string]: any };
+	_builders?: {
+		meshBuilder?: EntityMeshBuilder;
+		collisionBuilder?: EntityCollisionBuilder;
+		materialBuilder?: MaterialBuilder;
+	};
 }
 
 export class GameEntity<O extends EntityOptions> extends BaseNode<O> {
@@ -87,6 +92,11 @@ export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityO
 		this.meshBuilder = meshBuilder;
 		this.collisionBuilder = collisionBuilder;
 		this.materialBuilder = new MaterialBuilder();
+		this.options._builders = {
+			meshBuilder,
+			collisionBuilder,
+			materialBuilder: this.materialBuilder
+		};
 	}
 
 	withPosition(setupPosition: Vec3): this {
@@ -105,12 +115,16 @@ export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityO
 		entity.materials = this.materialBuilder.materials;
 		const geometry = this.meshBuilder.buildGeometry(this.options);
 		entity.mesh = this.meshBuilder.build(this.options, geometry, entity.materials);
+		entity.mesh = this.meshBuilder.postBuild(entity.mesh);
 
 		this.collisionBuilder.withCollision(this.options?.collision || {});
 		this.collisionBuilder.withPhysics(this.options?.physics || {});
 		const [rigidBody, collider] = this.collisionBuilder.build(this.options);
 		entity.rigidBody = rigidBody;
 		entity.collider = collider;
+
+		const axesHelper = new AxesHelper(2);
+		entity.mesh?.add(axesHelper);
 
 		const { x, y, z } = this.options.position || { x: 0, y: 0, z: 0 };
 		entity.rigidBody.setTranslation(x, y, z);

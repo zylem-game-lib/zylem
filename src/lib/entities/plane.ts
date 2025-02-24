@@ -1,74 +1,92 @@
-import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
-import { Group, Mesh, PlaneGeometry, Vector2, Vector3, Color } from 'three';
-import { BaseMesh, CreateMeshParameters } from '~/lib/graphics/mesh';
-import { Mixin } from 'ts-mixer';
-
-import { StageEntity } from '../core';
-import { TexturePath, ZylemMaterial } from '../graphics/material';
-import { StageEntityOptions } from '../interfaces/entity';
+import { ColliderDesc } from '@dimforge/rapier3d-compat';
+import { Mesh, PlaneGeometry, Vector2, Vector3 } from 'three';
+import { TexturePath } from '../graphics/material';
 import { ZylemBlueColor } from '../core/utility';
+import { BaseNode } from '../core/base-node';
+import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { XZPlaneGeometry } from '../graphics/geometries/XZPlaneGeometry';
 
-export class PlaneCollision { //extends BaseCollision {
-	createCollider(isSensor: boolean = false) {
-		//@ts-ignore
+type ZylemPlaneOptions = EntityOptions & {
+	tile?: Vector2;
+	repeat?: Vector2;
+	texture?: TexturePath;
+	subdivisions?: number;
+};
+
+const DEFAULT_SUBDIVISIONS = 4;
+
+const planeDefaults: ZylemPlaneOptions = {
+	tile: new Vector2(10, 10),
+	repeat: new Vector2(1, 1),
+	position: new Vector3(0, 0, 0),
+	collision: {
+		static: true,
+	},
+	material: {
+		color: ZylemBlueColor,
+		shader: 'standard'
+	},
+	subdivisions: DEFAULT_SUBDIVISIONS
+};
+
+export class PlaneCollisionBuilder extends EntityCollisionBuilder {
+	private subdivisions: number = DEFAULT_SUBDIVISIONS;
+	private size: Vector3 = new Vector3(1, 1, 1);
+
+	collider(options: ZylemPlaneOptions): ColliderDesc {
+		const tile = options.tile ?? new Vector2(1, 1);
+		const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
+		const size = new Vector3(tile.x, 1, tile.y);
+
+		const heightData = (options._builders?.meshBuilder as PlaneMeshBuilder)?.heightData;
+		const scale = new Vector3(size.x, 1, size.z);
 		let colliderDesc = ColliderDesc.heightfield(
-			//@ts-ignore
-			this.subdivisions, this.subdivisions, new Float32Array(this.heights), this.size
+			subdivisions,
+			subdivisions,
+			heightData,
+			scale
 		);
-		colliderDesc.setSensor(isSensor);
-		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
+
 		return colliderDesc;
 	}
 }
 
-export class PlaneMesh extends BaseMesh {
-	_tile: Vector2 = new Vector2(1, 1);
-	size: Vector3 = new Vector3(1, 1, 1);
-	heights: number[] = [];
-	subdivisions = 20;
+export class PlaneMeshBuilder extends EntityMeshBuilder {
+	heightData: Float32Array = new Float32Array();
+	columnsRows = new Map();
 
-	createMesh({ group = new Group(), tile = new Vector2(1, 1), materials }: CreateMeshParameters) {
-		const scale = 1; // TODO: pass scale as parameter
-		this.subdivisions = 20;
-		const subdivisions = this.subdivisions;
-		this.size = new Vector3(tile.x * scale, 1, tile.y * scale);
+	buildGeometry(options: ZylemPlaneOptions): XZPlaneGeometry {
+		const tile = options.tile ?? new Vector2(1, 1);
+		const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
+		const size = new Vector3(tile.x, 1, tile.y);
 
-		this._tile = tile;
-
-		const geometry = new PlaneGeometry(this.size.x, this.size.z, subdivisions, subdivisions);
-		const heights = [];
-
-		//@ts-ignore
-		const vertices = geometry.attributes.position.array;
-		const dx = this.size.x / subdivisions;
-		const dy = this.size.z / subdivisions;
-		// store height data in map column-row map
+		const geometry = new XZPlaneGeometry(size.x, size.z, subdivisions, subdivisions);
+		const vertexGeometry = new PlaneGeometry(size.x, size.z, subdivisions, subdivisions);
+		const dx = size.x / subdivisions;
+		const dy = size.z / subdivisions;
+		const originalVertices = geometry.attributes.position.array;
+		const vertices = vertexGeometry.attributes.position.array;
 		const columsRows = new Map();
 		for (let i = 0; i < vertices.length; i += 3) {
-			// translate into colum / row indices
-			let row = Math.floor(Math.abs((vertices as any)[i] + (this.size.x / 2)) / dx);
-			let column = Math.floor(Math.abs((vertices as any)[i + 1] - (this.size.z / 2)) / dy);
-			// generate height for this column & row
-			// const randomHeight = 0.1;
+			let row = Math.floor(Math.abs((vertices as any)[i] + (size.x / 2)) / dx);
+			let column = Math.floor(Math.abs((vertices as any)[i + 1] - (size.z / 2)) / dy);
 			const randomHeight = Math.random() * 0.4;
 			(vertices as any)[i + 2] = randomHeight;
-			// store height
+			originalVertices[i + 1] = randomHeight;
 			if (!columsRows.get(column)) {
 				columsRows.set(column, new Map());
 			}
 			columsRows.get(column).set(row, randomHeight);
 		}
-		this.mesh = new Mesh(geometry, materials.at(-1));
-		this.mesh.position.set(0, 0, 0);
-		this.mesh.rotateX(-Math.PI / 2);
-		this.mesh.castShadow = true;
-		this.mesh.receiveShadow = true;
-		this.mesh.geometry.computeVertexNormals();
+		this.columnsRows = columsRows;
+		return geometry;
+	}
 
-		// store height data into column-major-order matrix array
-		for (let i = 0; i <= subdivisions; ++i) {
-			for (let j = 0; j <= subdivisions; ++j) {
-				const row = columsRows.get(j);
+	postBuild(mesh: Mesh): Mesh {
+		const heights = [];
+		for (let i = 0; i <= DEFAULT_SUBDIVISIONS; ++i) {
+			for (let j = 0; j <= DEFAULT_SUBDIVISIONS; ++j) {
+				const row = this.columnsRows.get(j);
 				if (!row) {
 					continue;
 				}
@@ -76,68 +94,56 @@ export class PlaneMesh extends BaseMesh {
 				heights.push(data);
 			}
 		}
-		this.heights = heights;
-		group.add(this.mesh);
+		this.heightData = new Float32Array(heights as unknown as number[]);
+		return mesh;
 	}
 }
 
-type ZylemPlaneOptions = {
-	tile?: Vector2;
-	repeat?: Vector2;
-	static?: boolean;
-	texture?: TexturePath;
-	color?: Color;
+export class PlaneBuilder extends EntityBuilder<ZylemPlane, ZylemPlaneOptions> {
+	protected createEntity(options: Partial<ZylemPlaneOptions>): ZylemPlane {
+		return new ZylemPlane(options);
+	}
 }
 
-type PlaneOptions = StageEntityOptions<ZylemPlaneOptions, ZylemPlane>;
+export const PLANE_TYPE = Symbol('Plane');
 
-export class ZylemPlane extends Mixin(StageEntity, ZylemMaterial, PlaneMesh, PlaneCollision) {
+export class ZylemPlane extends GameEntity<ZylemPlaneOptions> {
+	static type = PLANE_TYPE;
 
-	public type = 'Plane';
-
-	constructor(options: PlaneOptions) {
-		super(options as StageEntityOptions<{}, unknown>);
-		this._static = options.static ?? true;
-		this._texture = options.texture ?? null;
-		this._tile = options.tile ?? new Vector2(1, 1);
-		this._repeat = options.repeat ?? new Vector2(1, 1);
-		this._color = options.color ?? ZylemBlueColor;
-		this._shader = options.shader ?? 'standard';
+	constructor(options?: ZylemPlaneOptions) {
+		super();
+		this.options = { ...planeDefaults, ...options };
 	}
+}
 
-	async create(): Promise<this> {
-		await this.createMaterials({
-			texture: this._texture,
-			color: this._color,
-			repeat: this._repeat,
-			shader: this._shader
-		});
-		this.createMesh({ group: this.group, tile: this._tile!, materials: this.materials });
-		this.createCollision({ isDynamicBody: !this._static });
-		return Promise.resolve(this);
+type PlaneOptions = BaseNode | Partial<ZylemPlaneOptions>;
+
+export async function plane(...args: Array<PlaneOptions>): Promise<ZylemPlane> {
+	let builder, configuration;
+	const configurationIndex = args.findIndex(node => !(node instanceof BaseNode));
+	if (configurationIndex !== -1) {
+		const subArgs = args.splice(configurationIndex, 1);
+		configuration = subArgs.find(node => !(node instanceof BaseNode));
 	}
+	const mergedConfiguration = configuration ? { ...planeDefaults, ...configuration } : planeDefaults;
+	args.push(mergedConfiguration);
 
-	public setup(params: EntityParameters<ZylemPlane>): void {
-		super.setup(params);
-		this._setup({ ...params, entity: this });
-	}
-
-	public update(params: EntityParameters<ZylemPlane>): void {
-		super.update(params);
-		for (const material of this.materials) {
-			if (material.isShaderMaterial && material.uniforms) {
-				material.uniforms.iTime.value += params.delta;
-			}
+	for (const arg of args) {
+		if (arg instanceof BaseNode) {
+			continue;
 		}
-		this._update({ ...params, entity: this });
+		builder = new PlaneBuilder(
+			arg,
+			new PlaneMeshBuilder(),
+			new PlaneCollisionBuilder()
+		);
+
+		if (arg.material) await builder.withMaterial(arg.material, ZylemPlane.type);
 	}
 
-	public destroy(params: EntityParameters<ZylemPlane>): void {
-		super.destroy(params);
-		this._destroy({ ...params, entity: this });
+	if (!builder) {
+		throw new Error("missing options for ZylemPlane, builder is not initialized.");
 	}
+	return await builder.build();
 }
 
-export function plane(options: PlaneOptions): ZylemPlane {
-	return new ZylemPlane(options) as ZylemPlane;
-}

@@ -69,6 +69,8 @@ export class Game {
 	update: UpdateFunction<Game> = () => { };
 	setup: SetupFunction<Game> = () => { };
 
+	refErrorMessage = 'lost reference to game';
+
 	constructor(options: GameOptions) {
 		this.options = options;
 	}
@@ -90,7 +92,7 @@ export class Game {
 
 	setOverrides() {
 		if (!this.gameRef) {
-			console.error('lost reference to game');
+			console.error(this.refErrorMessage);
 			return;
 		}
 		this.gameRef.customSetup = this.setup;
@@ -100,13 +102,16 @@ export class Game {
 	async pause() { }
 
 	async reset() {
-		// TODO: implement actual reset
-		window.location.reload();
+		if (!this.gameRef) {
+			console.error(this.refErrorMessage);
+			return;
+		}
+		await this.gameRef.loadStage(this.gameRef.stages[0]);
 	}
 
 	async nextStage() {
 		if (!this.gameRef) {
-			console.error('lost reference to game');
+			console.error(this.refErrorMessage);
 			return;
 		}
 		const currentStageId = this.gameRef.currentStageId;
@@ -121,7 +126,7 @@ export class Game {
 
 	async previousStage() {
 		if (!this.gameRef) {
-			console.error('lost reference to game');
+			console.error(this.refErrorMessage);
 			return;
 		}
 		const currentStageId = this.gameRef.currentStageId;

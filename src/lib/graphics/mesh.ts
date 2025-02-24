@@ -42,4 +42,8 @@ export class MeshBuilder {
 		mesh.receiveShadow = true;
 		return mesh;
 	}
+
+	postBuild(mesh: Mesh): Mesh {
+		return mesh;
+	}
 }
