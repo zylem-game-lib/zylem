@@ -5,11 +5,13 @@ import { game, stage } from '../../src/main';
 const aquaStage = { backgroundColor: new Color(Color.NAMES.aquamarine) };
 const bisqueStage = { backgroundColor: new Color(Color.NAMES.bisque) };
 const crimsonStage = { backgroundColor: new Color(Color.NAMES.crimson) };
+const darkStage = { backgroundColor: new Color(Color.NAMES.darkblue) };
 
 const myGame = game(
 	stage(aquaStage),
 	stage(bisqueStage),
 	stage(crimsonStage),
+	stage(darkStage),
 );
 
 myGame.update = ({ inputs, game }) => {
@@ -21,6 +23,11 @@ myGame.update = ({ inputs, game }) => {
 	if (p1.buttons.B.pressed) {
 		game && game.previousStage();
 	}
+	if (p1.buttons.Start.pressed) {
+		game && game.reset();
+	}
 }
+
+// TODO: stage transitions
 
 myGame.start();
