@@ -5,6 +5,7 @@ import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
 import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
 import { XZPlaneGeometry } from '../graphics/geometries/XZPlaneGeometry';
+import { createEntity } from './create';
 
 type ZylemPlaneOptions = EntityOptions & {
 	tile?: Vector2;
@@ -119,31 +120,12 @@ export class ZylemPlane extends GameEntity<ZylemPlaneOptions> {
 type PlaneOptions = BaseNode | Partial<ZylemPlaneOptions>;
 
 export async function plane(...args: Array<PlaneOptions>): Promise<ZylemPlane> {
-	let builder, configuration;
-	const configurationIndex = args.findIndex(node => !(node instanceof BaseNode));
-	if (configurationIndex !== -1) {
-		const subArgs = args.splice(configurationIndex, 1);
-		configuration = subArgs.find(node => !(node instanceof BaseNode));
-	}
-	const mergedConfiguration = configuration ? { ...planeDefaults, ...configuration } : planeDefaults;
-	args.push(mergedConfiguration);
-
-	for (const arg of args) {
-		if (arg instanceof BaseNode) {
-			continue;
-		}
-		builder = new PlaneBuilder(
-			arg,
-			new PlaneMeshBuilder(),
-			new PlaneCollisionBuilder()
-		);
-
-		if (arg.material) await builder.withMaterial(arg.material, ZylemPlane.type);
-	}
-
-	if (!builder) {
-		throw new Error("missing options for ZylemPlane, builder is not initialized.");
-	}
-	return await builder.build();
+	return createEntity<ZylemPlane, ZylemPlaneOptions>(
+		args,
+		planeDefaults,
+		PlaneBuilder,
+		PlaneMeshBuilder,
+		PlaneCollisionBuilder,
+		ZylemPlane.type
+	);
 }
-
