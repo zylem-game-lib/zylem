@@ -4,6 +4,7 @@ import { Vector3 } from 'three';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
 import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { createEntity } from './create';
 
 type ZylemBoxOptions = EntityOptions;
 
@@ -55,24 +56,12 @@ export class ZylemBox extends GameEntity<ZylemBoxOptions> {
 type BoxOptions = BaseNode | ZylemBoxOptions;
 
 export async function box(...args: Array<BoxOptions>): Promise<ZylemBox> {
-	let builder;
-	const configuration = args.find(node => !(node instanceof BaseNode));
-	if (!configuration) args.push({ ...boxDefaults });
-
-	for (const arg of args) {
-		if (arg instanceof BaseNode) {
-			continue;
-		}
-		builder = new BoxBuilder(
-			arg,
-			new BoxMeshBuilder(),
-			new BoxCollisionBuilder()
-		);
-		if (arg.material) await builder.withMaterial(arg.material, ZylemBox.type);
-	}
-
-	if (!builder) {
-		throw new Error("missing options for ZylemBox, builder is not initialized.");
-	}
-	return await builder.build();
+	return createEntity<ZylemBox, ZylemBoxOptions>(
+		args,
+		boxDefaults,
+		BoxBuilder,
+		BoxMeshBuilder,
+		BoxCollisionBuilder,
+		ZylemBox.type
+	);
 }

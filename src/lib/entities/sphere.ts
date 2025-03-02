@@ -4,6 +4,7 @@ import { Vector3 } from 'three';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
 import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { createEntity } from './create';
 
 type ZylemSphereOptions = EntityOptions & {
 	radius?: number;
@@ -56,22 +57,12 @@ export class ZylemSphere extends GameEntity<ZylemSphereOptions> {
 type SphereOptions = BaseNode | Partial<ZylemSphereOptions>;
 
 export async function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere> {
-	let builder;
-
-	for (const arg of args) {
-		if (arg instanceof BaseNode) {
-			continue;
-		}
-		builder = new SphereBuilder(
-			arg,
-			new SphereMeshBuilder(),
-			new SphereCollisionBuilder()
-		);
-		if (arg.material) await builder.withMaterial(arg.material, ZylemSphere.type);
-	}
-
-	if (!builder) {
-		throw new Error("missing options for ZylemSphere, builder is not initialized.");
-	}
-	return await builder.build();
+	return createEntity<ZylemSphere, ZylemSphereOptions>(
+		args,
+		sphereDefaults,
+		SphereBuilder,
+		SphereMeshBuilder,
+		SphereCollisionBuilder,
+		ZylemSphere.type
+	);
 }
