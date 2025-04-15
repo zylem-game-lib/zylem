@@ -2,8 +2,6 @@ import { EntityOptions } from "./entity";
 import { BaseNode } from "../core/base-node";
 import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntity } from "./entity";
 
-
-// Generic function to create entities
 export async function createEntity<T extends GameEntity<any>, CreateOptions extends EntityOptions>(
 	args: Array<any>,
 	defaultConfig: CreateOptions,

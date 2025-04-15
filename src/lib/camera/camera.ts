@@ -24,8 +24,8 @@ export class ZylemCamera {
 		this._perspective = gamePerspective;
 		this.camera = this[gamePerspective](aspectRatio, position);
 		this.cameraRig = new Object3D();
-		// this.cameraRig.position.set(0, 0, z);
-		// this.cameraRig.add(this.camera);
+		this.cameraRig.position.set(0, 0, z);
+		this.cameraRig.add(this.camera);
 		this.camera.lookAt(new Vector3(0, 0, 0));
 
 		this.renderer = renderer;
