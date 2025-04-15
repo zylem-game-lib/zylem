@@ -20,17 +20,24 @@ import { SetupContext, UpdateContext, DestroyContext } from './base-node-life-cy
 import createTransformSystem, { StageSystem } from '../behaviors/transformable';
 import { BaseNode } from './base-node';
 
-export interface ZylemStageOptions {
+export interface CameraOptions {
 	perspective: PerspectiveType;
+	position: Vector3;
+	target: Vector3;
+	zoom: number;
+}
+
+export interface ZylemStageOptions {
 	inputs: Record<string, string[]>;
 	backgroundColor: Color;
 	backgroundImage: string | null;
 	gravity: Vector3;
 	conditions: Conditions<any>[];
 	children: ({ globals }: any) => BaseNode[];
+	camera: CameraOptions;
 }
 
-export type StageState = Pick<ZylemStageOptions, 'perspective' | 'backgroundColor' | 'backgroundImage' | 'inputs'>;
+export type StageState = Pick<ZylemStageOptions, 'backgroundColor' | 'backgroundImage' | 'inputs'>;
 
 export type StageOptions = Partial<ZylemStageOptions>;
 
@@ -40,7 +47,6 @@ export class ZylemStage {
 	public type = STAGE_TYPE;
 
 	state: StageState = {
-		perspective: Perspectives.ThirdPerson,
 		backgroundColor: ZylemBlueColor,
 		backgroundImage: null,
 		inputs: {
@@ -73,7 +79,6 @@ export class ZylemStage {
 		this.HUD = new ZylemHUD();
 		this.uuid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 		this.saveState({
-			perspective: options.perspective ?? this.state.perspective,
 			backgroundColor: options.backgroundColor ?? this.state.backgroundColor,
 			backgroundImage: options.backgroundImage ?? this.state.backgroundImage,
 			inputs: options.inputs ?? this.state.inputs,
@@ -93,10 +98,9 @@ export class ZylemStage {
 	}
 
 	private setState() {
-		const { backgroundColor, backgroundImage, perspective } = this.state;
+		const { backgroundColor, backgroundImage } = this.state;
 		setStageBackgroundColor(backgroundColor);
 		setStageBackgroundImage(backgroundImage);
-		setStagePerspective(perspective);
 	}
 
 	async load(id: string) {
