@@ -2,14 +2,17 @@ import { EntityOptions } from "./entity";
 import { BaseNode } from "../core/base-node";
 import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntity } from "./entity";
 
-export async function createEntity<T extends GameEntity<any>, CreateOptions extends EntityOptions>(
-	args: Array<any>,
-	defaultConfig: CreateOptions,
-	BuilderClass: new (options: any, meshBuilder: any, collisionBuilder: any) => EntityBuilder<T, CreateOptions>,
-	MeshBuilderClass: new () => EntityMeshBuilder,
-	CollisionBuilderClass: new () => EntityCollisionBuilder,
-	entityType: symbol
-): Promise<T> {
+export interface CreateEntityOptions<T extends GameEntity<any>, CreateOptions extends EntityOptions> {
+	args: Array<any>;
+	defaultConfig: EntityOptions;
+	BuilderClass: new (options: any, meshBuilder: any, collisionBuilder: any) => EntityBuilder<T, CreateOptions>;
+	entityType: symbol;
+	MeshBuilderClass?: new () => EntityMeshBuilder;
+	CollisionBuilderClass?: new () => EntityCollisionBuilder;
+};
+
+export async function createEntity<T extends GameEntity<any>, CreateOptions extends EntityOptions>(params: CreateEntityOptions<T, CreateOptions>): Promise<T> {
+	const { args, defaultConfig, BuilderClass, entityType, MeshBuilderClass, CollisionBuilderClass } = params;
 	let builder: EntityBuilder<T, CreateOptions> | undefined;
 	let configuration;
 
@@ -28,8 +31,8 @@ export async function createEntity<T extends GameEntity<any>, CreateOptions exte
 		}
 		builder = new BuilderClass(
 			arg,
-			new MeshBuilderClass(),
-			new CollisionBuilderClass()
+			MeshBuilderClass ? new MeshBuilderClass() : undefined,
+			CollisionBuilderClass ? new CollisionBuilderClass() : undefined,
 		);
 
 		if (arg.material) {

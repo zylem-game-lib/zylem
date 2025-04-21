@@ -111,11 +111,12 @@ export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityO
 
 	async build(): Promise<T> {
 		const entity = this.createEntity(this.options);
-
 		entity.materials = this.materialBuilder.materials;
-		const geometry = this.meshBuilder.buildGeometry(this.options);
-		entity.mesh = this.meshBuilder.build(this.options, geometry, entity.materials);
-		entity.mesh = this.meshBuilder.postBuild(entity.mesh);
+		if (this.meshBuilder) {
+			const geometry = this.meshBuilder.buildGeometry(this.options);
+			entity.mesh = this.meshBuilder.build(this.options, geometry, entity.materials);
+			entity.mesh = this.meshBuilder.postBuild(entity.mesh);
+		}
 
 		this.collisionBuilder.withCollision(this.options?.collision || {});
 		this.collisionBuilder.withPhysics(this.options?.physics || {});
