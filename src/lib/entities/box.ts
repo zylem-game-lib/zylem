@@ -56,12 +56,12 @@ export class ZylemBox extends GameEntity<ZylemBoxOptions> {
 type BoxOptions = BaseNode | ZylemBoxOptions;
 
 export async function box(...args: Array<BoxOptions>): Promise<ZylemBox> {
-	return createEntity<ZylemBox, ZylemBoxOptions>(
+	return createEntity<ZylemBox, ZylemBoxOptions>({
 		args,
-		boxDefaults,
-		BoxBuilder,
-		BoxMeshBuilder,
-		BoxCollisionBuilder,
-		ZylemBox.type
-	);
+		defaultConfig: boxDefaults,
+		BuilderClass: BoxBuilder,
+		MeshBuilderClass: BoxMeshBuilder,
+		CollisionBuilderClass: BoxCollisionBuilder,
+		entityType: ZylemBox.type
+	});
 }

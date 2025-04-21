@@ -12,10 +12,10 @@ import {
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
 import RenderPass from './render-pass';
-import { Entity, GameEntity } from '../interfaces/entity';
+import { Entity } from '../interfaces/entity';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
-import { EntityParameters } from '../entities/entity';
+import { GameEntity } from '../entities/entity';
 import { ThirdPersonCamera } from '../camera/third-person';
 import { ZylemCamera } from '../camera/camera';
 import { debugState } from '../state/debug-state';
@@ -71,7 +71,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	destroy() { }
 
-	update({ delta }: Partial<EntityParameters<ZylemScene>>) {
+	update({ delta }: Partial<any>) {
 		// this.zylemCamera.update();
 		this.composer.render(delta);
 	}

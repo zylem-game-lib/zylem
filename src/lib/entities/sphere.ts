@@ -57,12 +57,12 @@ export class ZylemSphere extends GameEntity<ZylemSphereOptions> {
 type SphereOptions = BaseNode | Partial<ZylemSphereOptions>;
 
 export async function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere> {
-	return createEntity<ZylemSphere, ZylemSphereOptions>(
+	return createEntity<ZylemSphere, ZylemSphereOptions>({
 		args,
-		sphereDefaults,
-		SphereBuilder,
-		SphereMeshBuilder,
-		SphereCollisionBuilder,
-		ZylemSphere.type
-	);
+		defaultConfig: sphereDefaults,
+		BuilderClass: SphereBuilder,
+		MeshBuilderClass: SphereMeshBuilder,
+		CollisionBuilderClass: SphereCollisionBuilder,
+		entityType: ZylemSphere.type
+	});
 }

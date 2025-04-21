@@ -1,154 +1,97 @@
-import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
+import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
-// import { BaseCollision } from '~/lib/collision/_oldCollision';
 import {
 	TextureLoader,
 	SpriteMaterial,
 	Sprite as ThreeSprite,
-	Texture,
-	Color,
-	BufferGeometry,
-	MeshPhongMaterial,
-	Mesh,
 } from 'three';
-import { Mixin } from 'ts-mixer';
-
-import { ZylemMaterial } from '../graphics/material';
-import { EntityParameters, StageEntity } from '../core';
-import { EntitySpawner } from '../behaviors/entity-spawner';
-import { Moveable } from '../behaviors/moveable';
 import { ZylemBlueColor } from '../core/utility';
-import { StageEntityOptions } from '../interfaces/entity';
+import { BaseNode } from '../core/base-node';
+import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { createEntity } from './create';
 
-export class SpriteCollision { //extends BaseCollision {
-	collisionSize: Vector3 = new Vector3(1, 1, 1);
-	size: Vector3 = new Vector3(1, 1, 1);
-
-	createCollision({ isDynamicBody = true, isSensor = false }) {
-		const gravityScale = (isSensor) ? 0.0 : 1.0;
-		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
-		this.bodyDescription = new RigidBodyDesc(type)
-			.setTranslation(0, 0, 0)
-			.lockRotations()
-			.setGravityScale(gravityScale)
-			.setCanSleep(false)
-			.setCcdEnabled(true);
-	}
-
-	createCollider(isSensor: boolean = false) {
-		const { x, y, z } = this.collisionSize ?? this.size;
-		const size = new Vector3(x, y, z);
-		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
-		const colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
-		colliderDesc.setSensor(isSensor);
-		colliderDesc.activeCollisionTypes = (isSensor) ? ActiveCollisionTypes.KINEMATIC_FIXED : ActiveCollisionTypes.DEFAULT;
-		return colliderDesc;
-	}
-}
-
-
-
-export type SpriteImage = { name: string, file: string };
-export type SpriteAnimation<T extends SpriteImage[] | undefined> = {
+export type SpriteImage = { name: string; file: string };
+export type SpriteAnimation = {
 	name: string;
-	frames: T extends SpriteImage[] ? Array<T[number]['name']> : never[];
+	frames: string[];
 	speed: number | number[];
 	loop: boolean;
 };
 
-type ZylemSpriteOptions = {
-	static?: boolean;
-	color?: Color;
-	images?: SpriteImage[] | undefined;
-	animations?: SpriteAnimation<any>[] | undefined;
+type ZylemSpriteOptions = EntityOptions & {
+	images?: SpriteImage[];
+	animations?: SpriteAnimation[];
 	size?: Vector3;
 	collisionSize?: Vector3;
+};
+
+const spriteDefaults: ZylemSpriteOptions = {
+	size: new Vector3(1, 1, 1),
+	position: new Vector3(0, 0, 0),
+	collision: {
+		static: false,
+	},
+	material: {
+		color: ZylemBlueColor,
+		shader: 'standard'
+	},
+	images: [],
+	animations: [],
+};
+
+export class SpriteCollisionBuilder extends EntityCollisionBuilder {
+	collider(options: ZylemSpriteOptions): ColliderDesc {
+		const size = options.collisionSize || options.size || new Vector3(1, 1, 1);
+		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
+		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
+		return colliderDesc;
+	}
 }
 
-type SpriteOptions = StageEntityOptions<ZylemSpriteOptions, ZylemSprite>;
+export class SpriteMeshBuilder extends EntityMeshBuilder {
+	buildGeometry(options: ZylemSpriteOptions): any {
+		return null;
+	}
+	postBuild(mesh: any): any {
+		return mesh;
+	}
+}
 
-export class ZylemSprite extends Mixin(StageEntity, ZylemMaterial, SpriteCollision, Moveable, EntitySpawner) {
-
-	public type = 'Sprite';
-
-	_sensor: boolean = false;
-	_size: Vector3;
-	_debugMesh: Mesh | null;
-
-	_images?: SpriteImage[] | undefined;
-	spriteIndex: number = 0;
-	sprites: ThreeSprite[] = [];
-	_spriteMap: Map<string, number> = new Map();
-
-	_animations?: SpriteAnimation<typeof this._images>[] | undefined;
-	_mappedAnimations: Map<string, any> = new Map(); // TODO: create proper types for internal animations
-	_currentAnimation: any = null;
-	_currentAnimationFrame: string = '';
-	_currentAnimationIndex: number = 0;
-	_currentAnimationTime: number = 0;
-
-	constructor(options: SpriteOptions) {
-		super(options as StageEntityOptions<{}, unknown>);
-		this._static = options.static ?? false;
-		this._color = options.color ?? ZylemBlueColor;
-		this._size = options.size ?? new Vector3(1, 1, 1);
-		this._images = options.images ?? [];
-		this._animations = options.animations ?? [];
-		this._debugMesh = null;
-		this.collisionSize = options.collisionSize ?? this.collisionSize;
-		this.controlledRotation = true;
+export class SpriteBuilder extends EntityBuilder<ZylemSprite, ZylemSpriteOptions> {
+	constructor(options: Partial<ZylemSpriteOptions>, meshBuilder: EntityMeshBuilder, collisionBuilder: EntityCollisionBuilder) {
+		super(options, meshBuilder, collisionBuilder);
 	}
 
-	async createFromBlueprint(): Promise<this> {
-		this.createSprites(this._size);
-		this.createAnimations();
-		this.createCollision({ isDynamicBody: !this._static, isSensor: this._sensor });
-		return Promise.resolve(this);
+	protected createEntity(options: Partial<ZylemSpriteOptions>): ZylemSprite {
+		return new ZylemSprite(options);
+	}
+}
+
+export const SPRITE_TYPE = Symbol('Sprite');
+
+export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
+	static type = SPRITE_TYPE;
+
+	private sprites: ThreeSprite[] = [];
+	private spriteMap: Map<string, number> = new Map();
+	private currentSpriteIndex: number = 0;
+	private animations: Map<string, any> = new Map();
+	private currentAnimation: any = null;
+	private currentAnimationFrame: string = '';
+	private currentAnimationIndex: number = 0;
+	private currentAnimationTime: number = 0;
+
+	constructor(options?: ZylemSpriteOptions) {
+		super();
+		this.options = { ...spriteDefaults, ...options };
+		this.createSpritesFromImages(options?.images || []);
+		this.createAnimations(options?.animations || []);
 	}
 
-	public setup(params: EntityParameters<ZylemSprite>): void {
-		super.setup(params);
-		this._setup({ ...params, entity: this });
-	}
-
-	public update(params: EntityParameters<ZylemSprite>): void {
-		super.update(params);
-		if (this._rotation2DAngle !== 0) {
-			this.group.rotation.z = this._rotation2DAngle;
-		}
-		this._update({ ...params, entity: this });
-	}
-
-	public destroy(params: EntityParameters<ZylemSprite>): void {
-		super.destroy(params);
-		this._destroy({ ...params, entity: this });
-	}
-
-	createSprites(size: Vector3 | undefined = new Vector3(1, 1, 1)) {
-		this.sprites = [];
-		this.createSpritesFromImages();
-		this.size = size;
-		this.sprites.forEach((sprite, index) => {
-			if (this.spriteIndex === index) {
-				sprite.visible = true;
-			} else {
-				sprite.visible = false;
-			}
-			sprite.scale.set(size.x, size.y, size.z);
-			this.group.add(sprite);
-		});
-		this.group.position.set(0, 0, 0);
-	}
-
-	createSpritesFromImages() {
+	private createSpritesFromImages(images: SpriteImage[]) {
 		const textureLoader = new TextureLoader();
-		this._images?.forEach((image: SpriteImage, index: number) => {
-			const file = typeof image === 'string' ? image : image.file;
-			const name = typeof image === 'string' ? `${index}` : image.name;
-
-			image = typeof image === 'string' ? { name: `${index}`, file: image } : image;
-
-			const spriteMap: Texture = textureLoader.load(file);
+		images.forEach((image, index) => {
+			const spriteMap = textureLoader.load(image.file);
 			const material = new SpriteMaterial({
 				map: spriteMap,
 				transparent: true,
@@ -156,87 +99,74 @@ export class ZylemSprite extends Mixin(StageEntity, ZylemMaterial, SpriteCollisi
 			const sprite = new ThreeSprite(material);
 			sprite.position.normalize();
 			this.sprites.push(sprite);
-			this._spriteMap.set(name, index);
+			this.spriteMap.set(image.name, index);
 		});
 	}
 
-	createAnimations() {
-		this._animations?.forEach((animation, index) => {
-			const { name = 'anim-1', loop = false, frames, speed = 1 } = animation;
+	private createAnimations(animations: SpriteAnimation[]) {
+		animations.forEach(animation => {
+			const { name, frames, loop = false, speed = 1 } = animation;
 			const internalAnimation = {
-				frames: frames.flatMap((frame: string, index: number) => {
-					return {
-						key: frame,
-						index,
-						// TODO: needs to be array based
-						time: speed as number * (index + 1),
-						duration: speed
-					};
-				}),
+				frames: frames.map((frame, index) => ({
+					key: frame,
+					index,
+					time: (typeof speed === 'number' ? speed : speed[index]) * (index + 1),
+					duration: typeof speed === 'number' ? speed : speed[index]
+				})),
 				loop,
 			};
-			this._mappedAnimations.set(name, internalAnimation);
+			this.animations.set(name, internalAnimation);
 		});
 	}
 
 	setSprite(key: string) {
-		const spriteIndex = this._spriteMap.get(key);
+		const spriteIndex = this.spriteMap.get(key);
 		const useIndex = spriteIndex ?? 0;
-
-		this.spriteIndex = useIndex;
-
-		// TODO: consider using generator
+		this.currentSpriteIndex = useIndex;
 		this.sprites.forEach((sprite, i) => {
-			if (this.spriteIndex === i) {
-				sprite.visible = true;
-				sprite.material.rotation = this._rotation2DAngle;
-			} else {
-				sprite.visible = false;
-			}
-		});
-	}
-
-	setColor(color: Color) {
-		this.sprites.forEach((sprite, i) => {
-			sprite.material.color = new Color(color);
+			sprite.visible = this.currentSpriteIndex === i;
 		});
 	}
 
 	setAnimation(name: string, delta: number) {
-		const animation = this._mappedAnimations.get(name);
+		const animation = this.animations.get(name);
+		if (!animation) return;
+
 		const { loop, frames } = animation;
-		const frame = frames[this._currentAnimationIndex];
-		if (name === this._currentAnimation) {
-			this._currentAnimationFrame = frame.key;
-			this._currentAnimationTime += delta;
-			this.setSprite(this._currentAnimationFrame);
+		const frame = frames[this.currentAnimationIndex];
+
+		if (name === this.currentAnimation) {
+			this.currentAnimationFrame = frame.key;
+			this.currentAnimationTime += delta;
+			this.setSprite(this.currentAnimationFrame);
 		} else {
-			this._currentAnimation = name;
+			this.currentAnimation = name;
 		}
 
-		if (this._currentAnimationTime > frame.time) {
-			this._currentAnimationIndex++;
+		if (this.currentAnimationTime > frame.time) {
+			this.currentAnimationIndex++;
 		}
 
-		if (this._currentAnimationIndex >= frames.length) {
+		if (this.currentAnimationIndex >= frames.length) {
 			if (loop) {
-				this._currentAnimationIndex = 0;
-				this._currentAnimationTime = 0;
+				this.currentAnimationIndex = 0;
+				this.currentAnimationTime = 0;
 			} else {
-				this._currentAnimationTime = frames[this._currentAnimationIndex].time;
+				this.currentAnimationTime = frames[this.currentAnimationIndex].time;
 			}
 		}
 	}
 
-	createDebugMesh(geometry: BufferGeometry) {
-		const color = this.debugColor;
-		const debugMaterial = new MeshPhongMaterial({ color });
-		debugMaterial.wireframe = true;
-		debugMaterial.needsUpdate = true;
-		this._debugMesh = new Mesh(geometry, debugMaterial);
-	}
 }
 
-export function sprite(options: SpriteOptions): ZylemSprite {
-	return new ZylemSprite(options) as ZylemSprite;
+type SpriteOptions = BaseNode | ZylemSpriteOptions;
+
+export async function sprite(...args: Array<SpriteOptions>): Promise<ZylemSprite> {
+	return createEntity<ZylemSprite, ZylemSpriteOptions>({
+		args,
+		defaultConfig: spriteDefaults,
+		BuilderClass: SpriteBuilder,
+		CollisionBuilderClass: SpriteCollisionBuilder,
+		entityType: ZylemSprite.type
+	});
 }

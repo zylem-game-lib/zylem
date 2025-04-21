@@ -120,12 +120,12 @@ export class ZylemPlane extends GameEntity<ZylemPlaneOptions> {
 type PlaneOptions = BaseNode | Partial<ZylemPlaneOptions>;
 
 export async function plane(...args: Array<PlaneOptions>): Promise<ZylemPlane> {
-	return createEntity<ZylemPlane, ZylemPlaneOptions>(
+	return createEntity<ZylemPlane, ZylemPlaneOptions>({
 		args,
-		planeDefaults,
-		PlaneBuilder,
-		PlaneMeshBuilder,
-		PlaneCollisionBuilder,
-		ZylemPlane.type
-	);
+		defaultConfig: planeDefaults,
+		BuilderClass: PlaneBuilder,
+		MeshBuilderClass: PlaneMeshBuilder,
+		CollisionBuilderClass: PlaneCollisionBuilder,
+		entityType: ZylemPlane.type
+	});
 }

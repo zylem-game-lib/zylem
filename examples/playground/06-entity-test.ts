@@ -1,4 +1,4 @@
-import { game, stage, box, plane, sphere } from '../../src/main';
+import { game, stage, box, plane, sphere, sprite, actor } from '../../src/main';
 import { Vector3, Vector2 } from 'three';
 
 const grassPath = 'playground/grass.jpg';
@@ -9,7 +9,7 @@ const stage1 = stage({ gravity: new Vector3(0, -9.82, 0) });
 
 const myBox = await box({
 	size: new Vector3(4, 2, 1),
-	position: { x: 3, y: 1, z: 0 },
+	position: { x: -3, y: 1, z: 4},
 	collision: { static: false },
 	material: { path: woodPath, repeat: new Vector2(2, 2) },
 });
@@ -23,10 +23,19 @@ const myPlane = await plane({
 
 const mySphere = await sphere({
 	size: new Vector3(4, 4, 4),
-	position: { x: 0, y: 3, z: 0 },
+	position: { x: 0, y: 2, z: 0 },
 	collision: { static: false },
 	material: { path: marsSurfacePath },
 });
+
+const mySprite = await sprite({
+	position: { x: 5, y: 5, z: 0 },
+	images: [
+		{ name: 'rain-man', file: 'playground/rain-man.png' },
+	],
+});
+
+// const myActor = await actor();
 
 
 const testGame = game(
@@ -35,6 +44,7 @@ const testGame = game(
 	myBox,
 	myPlane,
 	mySphere,
+	mySprite,
 );
 
 testGame.start();
