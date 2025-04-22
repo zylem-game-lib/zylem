@@ -1,4 +1,4 @@
-import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, PlaneHelper } from "three";
+import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, PlaneHelper, Group } from "three";
 import { ColliderDesc, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 
 import { position, rotation, scale } from "~/lib/behaviors/components/transform";
@@ -32,7 +32,7 @@ export type EntityOptions = {
 }
 
 export class GameEntity<O extends EntityOptions> extends BaseNode<O> {
-	public group = null;
+	public group: Group | undefined;
 	public instanceId: number = 0;
 	public mesh: Mesh | undefined;
 	public materials: Material[] | undefined;

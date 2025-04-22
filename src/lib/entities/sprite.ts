@@ -1,5 +1,5 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
-import { Vector3 } from 'three';
+import { Group, Vector3 } from 'three';
 import {
 	TextureLoader,
 	SpriteMaterial,
@@ -101,6 +101,8 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 			this.sprites.push(sprite);
 			this.spriteMap.set(image.name, index);
 		});
+		this.group = new Group();
+		this.group.add(...this.sprites);
 	}
 
 	private createAnimations(animations: SpriteAnimation[]) {
