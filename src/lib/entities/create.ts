@@ -1,19 +1,30 @@
 import { EntityOptions } from "./entity";
 import { BaseNode } from "../core/base-node";
 import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntity } from "./entity";
+import { EntityLoader, isLoadable } from "./loader";
 
 export interface CreateEntityOptions<T extends GameEntity<any>, CreateOptions extends EntityOptions> {
 	args: Array<any>;
 	defaultConfig: EntityOptions;
-	BuilderClass: new (options: any, meshBuilder: any, collisionBuilder: any) => EntityBuilder<T, CreateOptions>;
+	EntityClass: new (options: any) => T;
+	BuilderClass: new (options: any, entity: T, meshBuilder: any, collisionBuilder: any) => EntityBuilder<T, CreateOptions>;
+	MeshBuilderClass?: new (data: any) => EntityMeshBuilder;
+	CollisionBuilderClass?: new (data: any) => EntityCollisionBuilder;
 	entityType: symbol;
-	MeshBuilderClass?: new () => EntityMeshBuilder;
-	CollisionBuilderClass?: new () => EntityCollisionBuilder;
 };
 
 export async function createEntity<T extends GameEntity<any>, CreateOptions extends EntityOptions>(params: CreateEntityOptions<T, CreateOptions>): Promise<T> {
-	const { args, defaultConfig, BuilderClass, entityType, MeshBuilderClass, CollisionBuilderClass } = params;
-	let builder: EntityBuilder<T, CreateOptions> | undefined;
+	const {
+		args,
+		defaultConfig,
+		EntityClass,
+		BuilderClass,
+		entityType,
+		MeshBuilderClass,
+		CollisionBuilderClass
+	} = params;
+
+	let builder: EntityBuilder<T, CreateOptions> | null = null;
 	let configuration;
 
 	const configurationIndex = args.findIndex(node => !(node instanceof BaseNode));
@@ -29,10 +40,22 @@ export async function createEntity<T extends GameEntity<any>, CreateOptions exte
 		if (arg instanceof BaseNode) {
 			continue;
 		}
+		let entityData = null;
+		const entity = new EntityClass(arg);
+		try {
+			if (isLoadable(entity)) {
+				const loader = new EntityLoader(entity);
+				await loader.load();
+				entityData = await loader.data();
+			}
+		} catch (error) {
+			console.error("Error creating entity with loader:", error);
+		}
 		builder = new BuilderClass(
 			arg,
-			MeshBuilderClass ? new MeshBuilderClass() : undefined,
-			CollisionBuilderClass ? new CollisionBuilderClass() : undefined,
+			entity,
+			MeshBuilderClass ? new MeshBuilderClass(entityData) : null,
+			CollisionBuilderClass ? new CollisionBuilderClass(entityData) : null,
 		);
 
 		if (arg.material) {

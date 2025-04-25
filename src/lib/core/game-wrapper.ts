@@ -1,4 +1,4 @@
-import { Perspectives } from '../interfaces/perspective';
+// import { Perspectives } from '../interfaces/perspective';
 import { ZylemBlueColor } from './utility';
 import { debugState } from '../state/debug-state';
 import { BaseNode } from './base-node';
@@ -25,7 +25,7 @@ const defaultGameOptions = {
 	globals: {},
 	stages: [
 		stage({
-			perspective: Perspectives.ThirdPerson,
+			// perspective: Perspectives.ThirdPerson,
 			backgroundColor: ZylemBlueColor,
 			children: (_) => []
 		})

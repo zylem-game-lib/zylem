@@ -123,6 +123,7 @@ export async function plane(...args: Array<PlaneOptions>): Promise<ZylemPlane> {
 	return createEntity<ZylemPlane, ZylemPlaneOptions>({
 		args,
 		defaultConfig: planeDefaults,
+		EntityClass: ZylemPlane,
 		BuilderClass: PlaneBuilder,
 		MeshBuilderClass: PlaneMeshBuilder,
 		CollisionBuilderClass: PlaneCollisionBuilder,

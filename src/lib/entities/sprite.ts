@@ -48,20 +48,7 @@ export class SpriteCollisionBuilder extends EntityCollisionBuilder {
 	}
 }
 
-export class SpriteMeshBuilder extends EntityMeshBuilder {
-	buildGeometry(options: ZylemSpriteOptions): any {
-		return null;
-	}
-	postBuild(mesh: any): any {
-		return mesh;
-	}
-}
-
 export class SpriteBuilder extends EntityBuilder<ZylemSprite, ZylemSpriteOptions> {
-	constructor(options: Partial<ZylemSpriteOptions>, meshBuilder: EntityMeshBuilder, collisionBuilder: EntityCollisionBuilder) {
-		super(options, meshBuilder, collisionBuilder);
-	}
-
 	protected createEntity(options: Partial<ZylemSpriteOptions>): ZylemSprite {
 		return new ZylemSprite(options);
 	}
@@ -167,6 +154,7 @@ export async function sprite(...args: Array<SpriteOptions>): Promise<ZylemSprite
 	return createEntity<ZylemSprite, ZylemSpriteOptions>({
 		args,
 		defaultConfig: spriteDefaults,
+		EntityClass: ZylemSprite,
 		BuilderClass: SpriteBuilder,
 		CollisionBuilderClass: SpriteCollisionBuilder,
 		entityType: ZylemSprite.type
