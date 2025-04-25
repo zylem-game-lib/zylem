@@ -1,9 +1,9 @@
 import {
 	defineSystem,
 	defineQuery,
+	defineComponent,
+	Types,
 } from 'bitecs';
-
-import { position, scale, rotation } from './components/transform';
 import { Quaternion } from 'three';
 import { StageEntity } from '../core';
 import RAPIER from '@dimforge/rapier3d-compat';
@@ -11,6 +11,25 @@ import RAPIER from '@dimforge/rapier3d-compat';
 export type StageSystem = {
 	_childrenMap: Map<string, StageEntity & { body: RAPIER.RigidBody }>;
 }
+
+export const position = defineComponent({
+	x: Types.f32,
+	y: Types.f32,
+	z: Types.f32
+});
+
+export const rotation = defineComponent({
+	x: Types.f32,
+	y: Types.f32,
+	z: Types.f32,
+	w: Types.f32
+});
+
+export const scale = defineComponent({
+	x: Types.f32,
+	y: Types.f32,
+	z: Types.f32
+});
 
 export default function createTransformSystem(stage: StageSystem) {
 	const transformQuery = defineQuery([position, rotation]);
