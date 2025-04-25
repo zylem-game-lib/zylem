@@ -60,6 +60,7 @@ export async function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere
 	return createEntity<ZylemSphere, ZylemSphereOptions>({
 		args,
 		defaultConfig: sphereDefaults,
+		EntityClass: ZylemSphere,
 		BuilderClass: SphereBuilder,
 		MeshBuilderClass: SphereMeshBuilder,
 		CollisionBuilderClass: SphereCollisionBuilder,

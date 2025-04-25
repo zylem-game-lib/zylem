@@ -59,6 +59,7 @@ export async function box(...args: Array<BoxOptions>): Promise<ZylemBox> {
 	return createEntity<ZylemBox, ZylemBoxOptions>({
 		args,
 		defaultConfig: boxDefaults,
+		EntityClass: ZylemBox,
 		BuilderClass: BoxBuilder,
 		MeshBuilderClass: BoxMeshBuilder,
 		CollisionBuilderClass: BoxCollisionBuilder,

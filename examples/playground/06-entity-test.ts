@@ -9,7 +9,7 @@ const stage1 = stage({ gravity: new Vector3(0, -9.82, 0) });
 
 const myBox = await box({
 	size: new Vector3(4, 2, 1),
-	position: { x: -3, y: 1, z: 4},
+	position: { x: -3, y: 1, z: 4 },
 	collision: { static: false },
 	material: { path: woodPath, repeat: new Vector2(2, 2) },
 });
@@ -35,7 +35,11 @@ const mySprite = await sprite({
 	],
 });
 
-// const myActor = await actor();
+const myActor = await actor({
+	position: { x: 5, y: 5, z: 0 },
+	models: ['playground/idle.fbx'],
+	animations: ['playground/idle.fbx'],
+});
 
 
 const testGame = game(
@@ -45,6 +49,17 @@ const testGame = game(
 	myPlane,
 	mySphere,
 	mySprite,
+	myActor
 );
 
 testGame.start();
+
+testGame.update = ({ inputs }) => {
+	const { p1 } = inputs;
+	if (p1.buttons.A.held > 0) {
+		// @ts-ignore
+		myActor.body.setLinvel(new Vector3(1, 0, 0), true);
+		// @ts-ignore
+		myBox.body.setLinvel(new Vector3(-1, 0, 0), true);
+	}
+};

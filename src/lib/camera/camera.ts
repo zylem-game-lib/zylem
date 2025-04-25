@@ -2,6 +2,7 @@ import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCame
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { stageState } from '../state/index';
 import { PerspectiveType, Perspectives } from '../interfaces/perspective';
+import { GameEntity } from '../core';
 
 const zModifier = 100;
 
@@ -17,12 +18,12 @@ export class ZylemCamera {
 	constructor(screenResolution: Vector2, renderer: WebGLRenderer, scene: Scene) {
 		let aspectRatio = screenResolution.x / screenResolution.y;
 
-		const z = 15;
+		const z = 10;
 		const position = new Vector3(0, 0, z);
-		const gamePerspective = stageState.perspective as PerspectiveType;
+		// const gamePerspective = stageState.perspective as PerspectiveType;
 		this.sceneRef = scene;
-		this._perspective = gamePerspective;
-		this.camera = this[gamePerspective](aspectRatio, position);
+		this._perspective = Perspectives.ThirdPerson;
+		this.camera = this[this._perspective](aspectRatio);
 		this.cameraRig = new Object3D();
 		this.cameraRig.position.set(0, 3, z);
 		this.cameraRig.add(this.camera);

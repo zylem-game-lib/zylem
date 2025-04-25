@@ -3,5 +3,4 @@ export {
 	stageState,
 	setStageBackgroundColor,
 	setStageBackgroundImage,
-	setStagePerspective
 } from './stage-state';

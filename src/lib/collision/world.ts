@@ -5,6 +5,7 @@ import { Entity } from '../interfaces/entity';
 import { StageEntity } from '../entities/stage-entity';
 import { state$ } from '../state';
 import { UpdateContext } from '../core/base-node-life-cycle';
+import { ZylemActor } from '../entities/actor';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
@@ -35,7 +36,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			useSensor = entity.sensor ?? false;
 		}
 		const collider = this.world.createCollider(entity.collider, entity.body);
-		if (entity.controlledRotation) {
+		if (entity.controlledRotation || entity instanceof ZylemActor) {
 			entity.body.lockRotations(true, true);
 			entity.characterController = this.world.createCharacterController(0.01);
 			entity.characterController.setUp({ x: 0.0, y: 1.0, z: 0.0 });

@@ -18,7 +18,5 @@ export {
 
 export type {
 	AbstractEntity,
-	EntityConfig,
 	EntityOptions,
-	Entity
 } from './entity';
