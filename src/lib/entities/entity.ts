@@ -1,4 +1,5 @@
 import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, Group } from "three";
+import { v4 as uuidv4 } from 'uuid';
 import { ColliderDesc, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 
 import { position, rotation, scale } from "~/lib/behaviors/transformable.system";
@@ -39,13 +40,18 @@ export type EntityOptions = {
 
 export class GameEntity<O extends EntityOptions> extends BaseNode<O> {
 	public group: Group | undefined;
-	public instanceId: number = 0;
+	public uuid: string = '';
 	public mesh: Mesh | undefined;
 	public materials: Material[] | undefined;
 	public rigidBody: RigidBodyDesc | undefined;
 	public collider: ColliderDesc | undefined;
 	public custom: Record<string, any> = {};
 	protected lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
+
+	constructor() {
+		super();
+		this.uuid = uuidv4();
+	}
 
 	public create(): this {
 		const { position: setupPosition } = this.options;

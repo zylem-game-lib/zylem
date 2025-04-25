@@ -1,18 +1,43 @@
 import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
-// import { BaseCollision } from '~/lib/collision/_oldCollision';
-import { SizeVector } from '~/lib/interfaces/utility';
-import { Mixin } from 'ts-mixer';
+import { BaseNode } from '../core/base-node';
+import { EntityBuilder, EntityCollisionBuilder, EntityOptions, GameEntity } from './entity';
+import { createEntity } from './create';
+import { CollisionHandlerDelegate } from '../collision/delegate';
 
-import { StageEntityOptions } from '../interfaces/entity';
-import { StageEntity, EntityParameters, IGameEntity } from '../core';
-import { Moveable } from '../behaviors/moveable';
+export type OnHeldParams = {
+	delta: number;
+	self: ZylemZone;
+	visitor: GameEntity<any>;
+	heldTime: number;
+	globals: any;
+}
 
-export class ZoneCollision { //extends BaseCollision {
-	_size: SizeVector = new Vector3(1, 1, 1);
+export type OnEnterParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
+export type OnExitParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
 
-	createCollider(_isSensor: boolean = true) {
-		const size = this._size || new Vector3(1, 1, 1);
+type ZylemZoneOptions = EntityOptions & {
+	size?: Vector3;
+	static?: boolean;
+	onEnter?: (params: OnEnterParams) => void;
+	onHeld?: (params: OnHeldParams) => void;
+	onExit?: (params: OnExitParams) => void;
+};
+
+const zoneDefaults: ZylemZoneOptions = {
+	size: new Vector3(1, 1, 1),
+	position: new Vector3(0, 0, 0),
+	collision: {
+		static: true,
+	},
+	material: {
+		shader: 'standard'
+	},
+};
+
+export class ZoneCollisionBuilder extends EntityCollisionBuilder {
+	collider(options: ZylemZoneOptions): ColliderDesc {
+		const size = options.size || new Vector3(1, 1, 1);
 		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
 		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
 		colliderDesc.setSensor(true);
@@ -21,80 +46,47 @@ export class ZoneCollision { //extends BaseCollision {
 	}
 }
 
-export type InternalCollisionParams = {
-	delta: number;
-	entity: ZylemZone;
-	other: any;
+export class ZoneBuilder extends EntityBuilder<ZylemZone, ZylemZoneOptions> {
+	protected createEntity(options: Partial<ZylemZoneOptions>): ZylemZone {
+		return new ZylemZone(options);
+	}
 }
 
-export type OnHeldParams = {
-	delta: number;
-	entity: ZylemZone;
-	other: any;
-	heldTime: number;
-	// TODO: pass in actual game globals
-	gameGlobals: any;
-}
+export const ZONE_TYPE = Symbol('Zone');
 
-export type OnEnterParams = Pick<OnHeldParams, 'entity' | 'other' | 'gameGlobals'>;
-export type OnExitParams = Pick<OnHeldParams, 'entity' | 'other' | 'gameGlobals'>;
+export class ZylemZone extends GameEntity<ZylemZoneOptions> implements CollisionHandlerDelegate {
+	static type = ZONE_TYPE;
 
-export type ZylemZoneOptions = {
-	size?: Vector3;
-	static?: boolean;
-	onEnter: (params: OnEnterParams) => void;
-	onHeld: (params: OnHeldParams) => void;
-	onExit: (params: OnExitParams) => void;
-}
+	private _enteredZone: Map<string, number> = new Map();
+	private _exitedZone: Map<string, number> = new Map();
+	private _zoneEntities: Map<string, any> = new Map();
 
-type ZoneOptions = StageEntityOptions<ZylemZoneOptions, ZylemZone>;
-
-export class ZylemZone extends Mixin(StageEntity, ZoneCollision, Moveable) {
-	public type = 'Zone';
-
-	_enteredZone: Map<string, number> = new Map();
-	_exitedZone: Map<string, number> = new Map();
-	_zoneEntities: Map<string, IGameEntity> = new Map();
-
-	_onEnter: (params: OnEnterParams) => void;
-	_onHeld: (params: OnHeldParams) => void;
-	_onExit: (params: OnExitParams) => void;
-
-	constructor(options: ZoneOptions) {
-		super(options as StageEntityOptions<{}>);
-		this._onHeld = options.onHeld || (() => { });
-		this._onEnter = options.onEnter || (() => { });
-		this._onExit = options.onExit || (() => { });
-		this._static = options.static ?? true;
-		this._size = options.size ?? new Vector3(1, 1, 1);
+	constructor(options?: ZylemZoneOptions) {
+		super();
+		this.options = { ...zoneDefaults, ...options };
 	}
 
-	async create(): Promise<this> {
-		this.createCollision({ isDynamicBody: !this._static });
-		return Promise.resolve(this);
-	}
-
-	_internalPostCollisionBehavior({ entity, delta }: InternalCollisionParams) {
-		entity._enteredZone.forEach((val, key) => {
-			entity.exited(delta, key as any);
+	public handlePostCollision({ delta }: { delta: number }): boolean {
+		this._enteredZone.forEach((val, key) => {
+			this.exited(delta, key);
 		});
-		return entity._enteredZone.size > 0;
+		return this._enteredZone.size > 0;
 	}
 
-	_internalCollisionBehavior({ entity, other, delta }: InternalCollisionParams) {
-		const hasEntered = entity._enteredZone.get(other.uuid);
+	public handleIntersectionEvent({ other, delta }: { other: any, delta: number }) {
+		const hasEntered = this._enteredZone.get(other.uuid);
 		if (!hasEntered) {
-			entity.entered(other);
-			entity._zoneEntities.set(other.uuid, other);
+			this.entered(other);
+			this._zoneEntities.set(other.uuid, other);
 		} else {
-			entity.held(delta, other);
+			this.held(delta, other);
 		}
 	}
 
-	entered(other: IGameEntity) {
+	entered(other: any) {
 		this._enteredZone.set(other.uuid, 1);
-		if (this._onEnter) {
-			this._onEnter({ entity: this, other, gameGlobals: {} });
+		if (this.options.onEnter) {
+			this.options.onEnter({ self: this, visitor: other, globals: {} });
 		}
 	}
 
@@ -104,38 +96,33 @@ export class ZylemZone extends Mixin(StageEntity, ZoneCollision, Moveable) {
 			this._exitedZone.delete(key);
 			this._enteredZone.delete(key);
 			const other = this._zoneEntities.get(key);
-			if (this._onExit) {
-				this._onExit({ entity: this, other, gameGlobals: {} });
+			if (this.options.onExit) {
+				this.options.onExit({ self: this, visitor: other, globals: {} });
 			}
 			return;
 		}
 		this._exitedZone.set(key, 1 + delta);
 	}
 
-	held(delta: number, other: IGameEntity) {
+	held(delta: number, other: any) {
 		const heldTime = this._enteredZone.get(other.uuid) ?? 0;
 		this._enteredZone.set(other.uuid, heldTime + delta);
 		this._exitedZone.set(other.uuid, 1);
-		this._onHeld({ delta, entity: this, other, gameGlobals: {}, heldTime });
+		if (this.options.onHeld) {
+			this.options.onHeld({ delta, self: this, visitor: other, globals: {}, heldTime });
+		}
 	}
-
-	public setup(params: EntityParameters<ZylemZone>): void {
-		super.setup(params);
-		this._setup({ ...params, entity: this });
-	}
-
-	public update(params: EntityParameters<ZylemZone>): void {
-		super.update(params);
-		this._update({ ...params, entity: this });
-	}
-
-	public destroy(params: EntityParameters<ZylemZone>): void {
-		super.destroy(params);
-		this._destroy({ ...params, entity: this });
-	}
-
 }
 
-export function zone(options: ZoneOptions): ZylemZone {
-	return new ZylemZone(options) as ZylemZone;
+type ZoneOptions = BaseNode | ZylemZoneOptions;
+
+export async function zone(...args: Array<ZoneOptions>): Promise<ZylemZone> {
+	return createEntity<ZylemZone, ZylemZoneOptions>({
+		args,
+		defaultConfig: zoneDefaults,
+		EntityClass: ZylemZone,
+		BuilderClass: ZoneBuilder,
+		CollisionBuilderClass: ZoneCollisionBuilder,
+		entityType: ZylemZone.type
+	});
 }

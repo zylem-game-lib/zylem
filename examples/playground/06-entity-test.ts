@@ -1,4 +1,4 @@
-import { game, stage, box, plane, sphere, sprite, actor } from '../../src/main';
+import { game, stage, box, plane, sphere, sprite, actor, zone } from '../../src/main';
 import { Vector3, Vector2 } from 'three';
 
 const grassPath = 'playground/grass.jpg';
@@ -41,6 +41,16 @@ const myActor = await actor({
 	animations: ['playground/idle.fbx'],
 });
 
+const myZone = await zone({
+	position: { x: 14, y: 3, z: 3 },
+	size: new Vector3(5, 5, 10),
+	onEnter: ({ self, visitor, globals }) => {
+		console.log('entered', visitor, globals);
+	},
+	onExit: ({ self, visitor, globals }) => {
+		console.log('exited', visitor, globals);
+	},
+});
 
 const testGame = game(
 	{ id: 'zylem', debug: true },
@@ -49,17 +59,25 @@ const testGame = game(
 	myPlane,
 	mySphere,
 	mySprite,
-	myActor
+	myActor,
+	myZone,
 );
 
 testGame.start();
 
-testGame.update = ({ inputs }) => {
+testGame.update = ({ inputs, entity }) => {
 	const { p1 } = inputs;
 	if (p1.buttons.A.held > 0) {
+		// console.log(entity);
 		// @ts-ignore
-		myActor.body.setLinvel(new Vector3(1, 0, 0), true);
+		myActor.body.setLinvel(new Vector3(5, 0, 0), true);
 		// @ts-ignore
-		myBox.body.setLinvel(new Vector3(-1, 0, 0), true);
+		myBox.body.setLinvel(new Vector3(-5, 0, 0), true);
+	}
+	if (p1.buttons.B.held > 0) {
+		// @ts-ignore
+		myActor.body.setLinvel(new Vector3(-5, 0, 0), true);
+		// @ts-ignore
+		myBox.body.setLinvel(new Vector3(5, 0, 0), true);
 	}
 };

@@ -5,7 +5,7 @@ import { BaseNode } from './base-node';
 import { ZylemDebug } from './debug';
 import { IGameOptions, ZylemGame } from './game';
 import { ZylemStage, stage } from './stage';
-import { SetupFunction, UpdateFunction } from './base-node-life-cycle';
+import { DestroyFunction, SetupFunction, UpdateFunction } from './base-node-life-cycle';
 
 async function loadGame(wrapperRef: Game) {
 	const options = convertNodes(wrapperRef.options);
@@ -66,8 +66,9 @@ export class Game {
 	options: GameOptions;
 	debugRef: ZylemDebug | null = null;
 
-	update: UpdateFunction<Game> = () => { };
-	setup: SetupFunction<Game> = () => { };
+	update: UpdateFunction<ZylemStage> = () => { };
+	setup: SetupFunction<ZylemStage> = () => { };
+	destroy: DestroyFunction<ZylemStage> = () => { };
 
 	refErrorMessage = 'lost reference to game';
 
@@ -97,6 +98,7 @@ export class Game {
 		}
 		this.gameRef.customSetup = this.setup;
 		this.gameRef.customUpdate = this.update;
+		this.gameRef.customDestroy = this.destroy;
 	}
 
 	async pause() { }
