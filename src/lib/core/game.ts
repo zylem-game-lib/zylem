@@ -9,7 +9,7 @@ import { DebugConfiguration } from './debug';
 
 import { ZylemStage } from './stage';
 import { Game } from './game-wrapper';
-import { UpdateContext, SetupContext, UpdateFunction, SetupFunction } from './base-node-life-cycle';
+import { UpdateContext, SetupContext, UpdateFunction, SetupFunction, DestroyContext } from './base-node-life-cycle';
 import { InputManager } from '../input/input-manager';
 
 export interface IGameOptions {
@@ -28,6 +28,7 @@ export class ZylemGame {
 
 	customSetup: ((params: SetupContext<ZylemStage>) => void) | null = null;
 	customUpdate: ((params: UpdateContext<ZylemStage>) => void) | null = null;
+	customDestroy: ((params: DestroyContext<ZylemStage>) => void) | null = null;
 
 	stages: ZylemStage[] = [];
 	stageMap: Map<string, ZylemStage> = new Map();

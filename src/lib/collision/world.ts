@@ -6,6 +6,7 @@ import { StageEntity } from '../entities/stage-entity';
 import { state$ } from '../state';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { ZylemActor } from '../entities/actor';
+import { isCollisionHandlerDelegate } from './delegate';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
@@ -28,12 +29,9 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		const rigidBody = this.world.createRigidBody(entity.rigidBody);
 		entity.body = rigidBody;
 		entity.body.userData = { uuid: entity.uuid };
-		let useSensor = false;
 		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
 			entity.body.lockTranslations(true, true);
 			entity.body.lockRotations(true, true);
-		} else {
-			useSensor = entity.sensor ?? false;
 		}
 		const collider = this.world.createCollider(entity.collider, entity.body);
 		if (entity.controlledRotation || entity instanceof ZylemActor) {
@@ -81,12 +79,10 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		const dictionaryRef = this.collisionBehaviorMap;
 		for (let [id, collider] of dictionaryRef) {
 			const gameEntity = collider as any;
-			// @ts-ignore
-			if (!gameEntity._internalPostCollisionBehavior) {
+			if (!isCollisionHandlerDelegate(gameEntity)) {
 				return;
 			}
-			// @ts-ignore
-			const active = gameEntity._internalPostCollisionBehavior({ entity: gameEntity, delta });
+			const active = gameEntity.handlePostCollision({ entity: gameEntity, delta });
 			if (!active) {
 				this.collisionBehaviorMap.delete(id);
 			}
@@ -125,10 +121,8 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				if (entity._collision) {
 					entity._collision(entity, gameEntity, state$.globals);
 				}
-				// @ts-ignore
-				if (entity._internalCollisionBehavior) {
-					// @ts-ignore
-					entity._internalCollisionBehavior({ entity, other: gameEntity, delta });
+				if (isCollisionHandlerDelegate(entity)) {
+					entity.handleIntersectionEvent({ entity, other: gameEntity, delta });
 					this.collisionBehaviorMap.set(uuid, entity);
 				}
 			});
