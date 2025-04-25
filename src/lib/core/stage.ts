@@ -7,17 +7,17 @@ import { ZylemScene } from '../graphics/scene';
 
 import { Conditions } from '../interfaces/game';
 import { state$ } from '../state';
-import { setStageBackgroundColor, setStageBackgroundImage, setStagePerspective, setStageState } from '../state/stage-state';
+import { setStageBackgroundColor, setStageBackgroundImage } from '../state/stage-state';
 
 import { ZylemHUD } from '../ui/hud';
 import { StageEntity } from './';
 import { PerspectiveType, Perspectives } from '../interfaces/perspective';
 import { ZylemBlueColor } from './utility';
 import { debugState } from '../state/debug-state';
-import createTestSystem from '../behaviors/test-system';
+// import createTestSystem from '../behaviors/test-system';
 import { applyMixins } from './composable';
 import { SetupContext, UpdateContext, DestroyContext } from './base-node-life-cycle';
-import createTransformSystem, { StageSystem } from '../behaviors/transformable';
+import createTransformSystem, { StageSystem } from '../behaviors/transformable.system';
 import { BaseNode } from './base-node';
 
 export interface CameraOptions {
@@ -116,7 +116,7 @@ export class ZylemStage {
 		for (let child of this.children) {
 			this.spawnEntity(child);
 		}
-		this.testSystem = createTestSystem();
+		// this.testSystem = createTestSystem();
 		this.transformSystem = createTransformSystem(this as unknown as StageSystem);
 	}
 
@@ -146,7 +146,7 @@ export class ZylemStage {
 		}
 		this.world.update(params);
 		// ECS TEST
-		this.testSystem(this.ecs);
+		// this.testSystem(this.ecs);
 		this.transformSystem(this.ecs);
 		//
 		this._childrenMap.forEach((child, uuid) => {
