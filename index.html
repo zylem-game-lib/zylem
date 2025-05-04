@@ -13,11 +13,22 @@
     <!-- <script src="./examples/playground/03-stage-test.ts" type="module"></script> -->
     <!-- <script src="./examples/playground/04-vessel-test.ts" type="module"></script> -->
     <!-- <script src="./examples/playground/05-camera-test.ts" type="module"></script> -->
-    <script src="./examples/playground/06-entity-test.ts" type="module"></script>
+    <!-- <script src="./examples/playground/06-entity-test.ts" type="module"></script> -->
+    <script src="./examples/playground/07-behaviors.ts" type="module"></script>
     <!-- <script src="./examples/playground/kitchen-sink.ts" type="module"></script> -->
     <!-- <script src="./examples/playground/shader-test.ts" type="module"></script> -->
     <!-- <script src="./examples/playground/stress-test.ts" type="module"></script> -->
     <!-- <script src="./examples/playground/ecs-test.ts" type="module"></script> -->
     <!-- <script src="./examples/breakout/breakout.ts" type="module"></script> -->
+    <button id="zylem-debug-button"></button>
+    <script>
+      const debugButton = document.getElementById('zylem-debug-button');
+      debugButton.addEventListener('click', () => {
+        const debug = document.querySelector('zylem-debug');
+        if (debug) {
+          debugButton.classList.toggle('open');
+        }
+      });
+    </script>
   </body>
 </html>

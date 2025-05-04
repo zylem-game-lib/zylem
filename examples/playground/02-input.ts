@@ -18,9 +18,9 @@ myGame.setup = ({ game }) => {
 	console.log(game);
 };
 
-myGame.update = ({ inputs, game }) => {
+myGame.update = ({ inputs }) => {
 	const { p1 } = inputs;
-
+	// console.log(p1);
 	for (const button in p1.buttons) {
 		if (p1.buttons[button].pressed) {
 			console.log(button, 'just pressed');
