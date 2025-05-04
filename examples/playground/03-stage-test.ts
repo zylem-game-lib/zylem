@@ -8,6 +8,7 @@ const crimsonStage = { backgroundColor: new Color(Color.NAMES.crimson) };
 const darkStage = { backgroundColor: new Color(Color.NAMES.darkblue) };
 
 const myGame = game(
+	{ id: 'zylem', debug: true },
 	stage(aquaStage),
 	stage(bisqueStage),
 	stage(crimsonStage),

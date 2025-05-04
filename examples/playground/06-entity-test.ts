@@ -64,20 +64,3 @@ const testGame = game(
 );
 
 testGame.start();
-
-testGame.update = ({ inputs, entity }) => {
-	const { p1 } = inputs;
-	if (p1.buttons.A.held > 0) {
-		// console.log(entity);
-		// @ts-ignore
-		myActor.body.setLinvel(new Vector3(5, 0, 0), true);
-		// @ts-ignore
-		myBox.body.setLinvel(new Vector3(-5, 0, 0), true);
-	}
-	if (p1.buttons.B.held > 0) {
-		// @ts-ignore
-		myActor.body.setLinvel(new Vector3(-5, 0, 0), true);
-		// @ts-ignore
-		myBox.body.setLinvel(new Vector3(5, 0, 0), true);
-	}
-};

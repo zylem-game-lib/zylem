@@ -41,3 +41,26 @@ body {
   right: 0;
   z-index: 1000;
 }
+
+button {
+  all: unset;
+}
+
+#zylem-debug-button {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  background-image: url(./assets/zylem-logo.png);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  cursor: pointer;
+  width: 100px;
+  height: 100px;
+  z-index: 1000;
+  transition: transform 0.3s ease-in-out;
+}
+
+#zylem-debug-button.open {
+  transform: translateX(-500px);
+}
