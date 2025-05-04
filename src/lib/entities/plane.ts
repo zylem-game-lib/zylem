@@ -71,7 +71,7 @@ export class PlaneMeshBuilder extends EntityMeshBuilder {
 		for (let i = 0; i < vertices.length; i += 3) {
 			let row = Math.floor(Math.abs((vertices as any)[i] + (size.x / 2)) / dx);
 			let column = Math.floor(Math.abs((vertices as any)[i + 1] - (size.z / 2)) / dy);
-			const randomHeight = Math.random() * 0.4;
+			const randomHeight = Math.random() * 4;
 			(vertices as any)[i + 2] = randomHeight;
 			originalVertices[i + 1] = randomHeight;
 			if (!columsRows.get(column)) {

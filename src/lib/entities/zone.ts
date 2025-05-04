@@ -3,7 +3,7 @@ import { Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
 import { EntityBuilder, EntityCollisionBuilder, EntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
-import { CollisionHandlerDelegate } from '../collision/delegate';
+import { CollisionHandlerDelegate } from '../collision/collision-delegate';
 
 export type OnHeldParams = {
 	delta: number;

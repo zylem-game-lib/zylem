@@ -4,7 +4,7 @@ import { stageState } from '../state/index';
 import { PerspectiveType, Perspectives } from '../interfaces/perspective';
 import { GameEntity } from '../core';
 
-const zModifier = 100;
+const zModifier = 50;
 
 export class ZylemCamera {
 	cameraRig: Object3D;
@@ -119,12 +119,12 @@ export class ZylemCamera {
 	}
 
 	private moveCamera(position: Vector3) {
-		// const adjustedZ = (this._perspective !== Perspectives.Flat2D) ? position.z + zModifier : position.z;
-		// this.cameraRig.position.set(position.x, position.y, adjustedZ);
+		const adjustedZ = (this._perspective !== Perspectives.Flat2D) ? position.z + zModifier : position.z;
+		this.cameraRig.position.set(position.x, position.y, adjustedZ);
 	}
 
 	move(position: Vector3) {
-		// this.moveCamera(position);
+		this.moveCamera(position);
 	}
 
 	rotate(pitch: number, yaw: number, roll: number) {

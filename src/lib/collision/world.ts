@@ -6,7 +6,7 @@ import { StageEntity } from '../entities/stage-entity';
 import { state$ } from '../state';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { ZylemActor } from '../entities/actor';
-import { isCollisionHandlerDelegate } from './delegate';
+import { isCollisionHandlerDelegate } from './collision-delegate';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
@@ -28,7 +28,8 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	addEntity(entity: any) {
 		const rigidBody = this.world.createRigidBody(entity.rigidBody);
 		entity.body = rigidBody;
-		entity.body.userData = { uuid: entity.uuid };
+		// TODO: consider passing in more specific data
+		entity.body.userData = { uuid: entity.uuid, ref: entity };
 		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
 			entity.body.lockTranslations(true, true);
 			entity.body.lockRotations(true, true);
@@ -37,10 +38,12 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		if (entity.controlledRotation || entity instanceof ZylemActor) {
 			entity.body.lockRotations(true, true);
 			entity.characterController = this.world.createCharacterController(0.01);
-			entity.characterController.setUp({ x: 0.0, y: 1.0, z: 0.0 });
 			entity.characterController.setMaxSlopeClimbAngle(45 * Math.PI / 180);
-			entity.characterController.setMinSlopeSlideAngle(45 * Math.PI / 180);
+			entity.characterController.setMinSlopeSlideAngle(30 * Math.PI / 180);
 			entity.characterController.enableSnapToGround(0.01);
+			entity.characterController.setSlideEnabled(true);
+			entity.characterController.setApplyImpulsesToDynamicBodies(true);
+			entity.characterController.setCharacterMass(1);
 			entity.collider = collider;
 		}
 		this.collisionMap.set(entity.uuid, entity);

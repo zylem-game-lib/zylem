@@ -7,7 +7,7 @@ import {
 import { state$ } from '../state';
 import { ZylemStage } from '../core/stage';
 import { Behavior } from '../behaviors/behavior';
-import { Moveable } from '../behaviors/moveable';
+// import { Moveable } from '../behaviors/moveable';
 import { applyMixins } from '../core/composable';
 
 export interface IGameEntity {
@@ -28,7 +28,7 @@ export interface IGameEntity {
 	_destroy: Function;
 }
 
-export interface StageEntity extends Moveable { }
+// export interface StageEntity extends Moveable { }
 export interface StageEntity extends IGameEntity { }
 
 export class StageEntity {
@@ -83,4 +83,4 @@ export class StageEntity {
 	}
 }
 
-applyMixins(StageEntity, [Moveable]);
+applyMixins(StageEntity, []);
