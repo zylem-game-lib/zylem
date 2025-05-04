@@ -49,11 +49,6 @@ export default function createTransformSystem(stage: StageSystem) {
 			position.x[id] = x;
 			position.y[id] = y;
 			position.z[id] = z;
-			if (stageEntity.group) {
-				stageEntity.group.position.set(position.x[id], position.y[id], position.z[id]);
-			} else if (stageEntity.mesh) {
-				stageEntity.mesh.position.set(position.x[id], position.y[id], position.z[id]);
-			}
 			if (stageEntity.controlledRotation) {
 				continue;
 			}
@@ -62,10 +57,32 @@ export default function createTransformSystem(stage: StageSystem) {
 			rotation.y[id] = ry;
 			rotation.z[id] = rz;
 			rotation.w[id] = rw;
+		}
+
+		for (let i = 0; i < stageEntities.size; i++) {
+			const id = entities[i];
+			const stageEntity = stageEntities.get(`${id}-key`);
+			if (stageEntity === undefined || !stageEntity?.body) {
+				continue;
+			}
 			if (stageEntity.group) {
-				stageEntity.group.setRotationFromQuaternion(new Quaternion(rx, ry, rz, rw));
+				stageEntity.group.position.set(position.x[id], position.y[id], position.z[id]);
 			} else if (stageEntity.mesh) {
-				stageEntity.mesh.setRotationFromQuaternion(new Quaternion(rx, ry, rz, rw));
+				stageEntity.mesh.position.set(position.x[id], position.y[id], position.z[id]);
+			}
+			if (stageEntity.controlledRotation) {
+				continue;
+			}
+			const newRotation = new Quaternion(
+				rotation.x[id],
+				rotation.y[id],
+				rotation.z[id],
+				rotation.w[id]
+			);
+			if (stageEntity.group) {
+				stageEntity.group.setRotationFromQuaternion(newRotation);
+			} else if (stageEntity.mesh) {
+				stageEntity.mesh.setRotationFromQuaternion(newRotation);
 			}
 		}
 
