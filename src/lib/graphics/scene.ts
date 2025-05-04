@@ -72,7 +72,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 	destroy() { }
 
 	update({ delta }: Partial<any>) {
-		// this.zylemCamera.update();
+		this.zylemCamera.update();
 		this.composer.render(delta);
 	}
 

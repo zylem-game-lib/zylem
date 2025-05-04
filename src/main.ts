@@ -20,7 +20,7 @@ const Zylem = {
 };
 
 const { box, sphere, sprite, plane, zone, actor, vessel, ZylemBox } = entities;
-const { bounce, move } = behaviors;
+const { bounce } = behaviors;
 
 namespace Zylem { };
 
@@ -36,7 +36,6 @@ export {
 	vessel,
 	actions,
 	bounce,
-	move,
 	Perspectives,
 	Zylem,
 	ZylemBox,

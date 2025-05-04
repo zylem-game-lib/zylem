@@ -151,8 +151,12 @@ export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityO
 			const geometry = this.meshBuilder.buildGeometry(this.options);
 			entity.mesh = this.meshBuilder.build(this.options, geometry, entity.materials);
 			entity.mesh = this.meshBuilder.postBuild(entity.mesh);
+		}
+		const axesHelper = new AxesHelper(2);
 
-			const axesHelper = new AxesHelper(2);
+		if (entity.group) {
+			entity.group.add(axesHelper);
+		} else {
 			entity.mesh?.add(axesHelper);
 		}
 

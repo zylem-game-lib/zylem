@@ -7,11 +7,12 @@ import { createEntity } from './create';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { EntityAssetLoader, AssetLoaderResult } from '../core/entity-asset-loader';
 import { EntityLoaderDelegate } from './loader';
-
+import { Vec3 } from '../core/vector';
 type ZylemActorOptions = EntityOptions & {
 	static?: boolean;
 	animations?: string[];
 	models?: string[];
+	scale?: Vec3;
 };
 
 const actorDefaults: ZylemActorOptions = {
@@ -86,12 +87,15 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 	private _modelFileNames: string[] = [];
 	private _assetLoader: EntityAssetLoader = new EntityAssetLoader();
 
+	controlledRotation: boolean = false;
+
 	constructor(options?: ZylemActorOptions) {
 		super();
 		this.options = { ...actorDefaults, ...options };
 		this.lifeCycleDelegate = {
 			update: this.update.bind(this),
 		};
+		this.controlledRotation = true;
 	}
 
 	async load(): Promise<void> {
@@ -131,6 +135,11 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		if (this._object) {
 			this.group = new Group();
 			this.group.attach(this._object);
+			this.group.scale.set(
+				this.options.scale?.x || 1,
+				this.options.scale?.y || 1,
+				this.options.scale?.z || 1
+			);
 		}
 	}
 
@@ -152,6 +161,17 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 				}
 			}
 			this._currentAction?.play();
+		}
+	}
+
+	playAnimation(index: number) {
+		if (index === this._animationIndex) return;
+		this._currentAction?.stop();
+		const animation = this._animations?.[index];
+		if (animation) {
+			this._currentAction = this._mixer!.clipAction(animation);
+			this._currentAction?.play();
+			this._animationIndex = index;
 		}
 	}
 
