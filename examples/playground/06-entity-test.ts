@@ -1,5 +1,6 @@
 import { game, stage, box, plane, sphere, sprite, actor, zone } from '../../src/main';
 import { Vector3, Vector2 } from 'three';
+import { playgroundActor } from './utils';
 
 const grassPath = 'playground/grass.jpg';
 const woodPath = 'playground/wood-box.jpg';
@@ -35,11 +36,7 @@ const mySprite = await sprite({
 	],
 });
 
-const myActor = await actor({
-	position: { x: 5, y: 5, z: 0 },
-	models: ['playground/idle.fbx'],
-	animations: ['playground/idle.fbx'],
-});
+const myActor = await playgroundActor('mascot');
 
 const myZone = await zone({
 	position: { x: 14, y: 3, z: 3 },
