@@ -1,60 +1,18 @@
-import { ArrowHelper, Color, Vector2, Vector3 } from 'three';
-import { game, stage, box, plane, actor, zone, sphere } from '../../src/main';
-import { ZylemBox } from '../../src/lib/entities/box';
-import { ZylemSphere } from '../../src/lib/entities/sphere';
-import { RotatableEntity, rotateInDirection } from '../../src/lib/behaviors/rotatable';
+import { ArrowHelper, Color, Vector3 } from 'three';
+import { game, stage, zone } from '../../src/main';
+import { rotateInDirection } from '../../src/lib/behaviors/rotatable';
 import { move } from '../../src/lib/behaviors/moveable';
 import { Ray } from '@dimforge/rapier3d-compat';
-
-const groundPlane = await plane({
-	tile: new Vector2(100, 100),
-	collision: { static: true },
-	material: {
-		path: 'playground/ground-texture.png',
-		repeat: new Vector2(5, 5)
-	}
-})
+import { playgroundPlane, playgroundActor, playgroundPlatforms } from './utils';
 
 const stage1 = await stage({
 	gravity: new Vector3(0, -9.82, 0),
 	backgroundImage: 'playground/skybox.png',
 });
 
-// 'playground/idle.fbx'
-const player = await actor({
-	position: { x: 0, y: 10, z: 4 },
-	scale: { x: 0.02, y: 0.02, z: 0.02 },
-	models: ['playground/test-player/idle.fbx'],
-	animations: [
-		'playground/test-player/idle.fbx',
-		'playground/test-player/walking.fbx',
-		'playground/test-player/running.fbx',
-		'playground/test-player/jumping-up.fbx',
-		'playground/test-player/jumping-down.fbx',
-	],
-	material: {
-		color: new Color(Color.NAMES.lightgreen),
-	}
-});
-
-const spheres: ZylemSphere[] = [];
-
-for (let i = 0; i < 100; i++) {
-	const colorkeys = Object.keys(Color.NAMES);
-	const randomColor = colorkeys[Math.floor(Math.random() * colorkeys.length)];
-	let myMaterial = {};
-	if (Math.random() > 0.5) {
-		myMaterial = { shader: 'star' };
-	} else {
-		myMaterial = { shader: 'standard', color: new Color(randomColor) };
-	}
-	spheres.push(await sphere({
-		position: { x: Math.random() * 25 - 12.5, y: Math.random() * 20, z: Math.random() * 25 - 12.5 },
-		radius: 0.3,
-		material: myMaterial,
-	}));
-}
-
+const groundPlane = await playgroundPlane('dirt');
+const player = await playgroundActor('player');
+const platforms = await playgroundPlatforms();
 const startingZone = await zone({
 	position: { x: 0, y: 0, z: 0 },
 	size: new Vector3(10, 10, 10),
@@ -77,102 +35,6 @@ const endingZone = await zone({
 	},
 });
 
-const boxes: ZylemBox[] = [];
-
-// Create a starting platform
-const startPlatform = await box({
-	position: { x: 0, y: 1, z: 0 },
-	size: { x: 6, y: 0.5, z: 4 },
-	collision: { static: true },
-	material: {
-		path: 'playground/steel.png',
-	}
-});
-
-// Create a series of ascending platforms for the player to jump on
-// Some platforms are connected to create more interesting paths
-const platformConfigs = [
-	// First set - connected platforms forming a staircase
-	{ x: 8, y: 3, z: 0, width: 6, depth: 4 },
-	{ x: 12, y: 4, z: 1, width: 4, depth: 3 },
-	{ x: 16, y: 5, z: 2, width: 5, depth: 5 },
-
-	// Second set - larger isolated platform
-	{ x: 8, y: 7, z: 4, width: 8, depth: 6 },
-
-	// Third set - connected narrow bridge
-	{ x: 0, y: 9, z: 6, width: 10, depth: 2 },
-	{ x: -8, y: 9, z: 6, width: 8, depth: 2 },
-
-	// Fourth set - varying sizes
-	{ x: -16, y: 13, z: 2, width: 7, depth: 4 },
-	{ x: -8, y: 15, z: 0, width: 3, depth: 8 },
-
-	// Fifth set - connected L-shape
-	{ x: 0, y: 17, z: -2, width: 6, depth: 3 },
-	{ x: 4, y: 17, z: -4, width: 3, depth: 5 }
-];
-
-const jumpPlatforms: ZylemBox[] = [];
-for (const config of platformConfigs) {
-	jumpPlatforms.push(await box({
-		position: { x: config.x, y: config.y, z: config.z },
-		size: { x: config.width, y: 0.5, z: config.depth },
-		collision: { static: true },
-		material: {
-			path: 'playground/steel.png',
-		}
-	}));
-}
-
-// Create some loop platforms at the top with varying sizes
-const loopRadius = 12;
-const loopHeight = 21;
-const loopSegments = 8;
-const loopPlatforms: ZylemBox[] = [];
-
-for (let i = 0; i < loopSegments; i++) {
-	const angle = (i / loopSegments) * Math.PI * 2;
-	const x = Math.cos(angle) * loopRadius;
-	const z = Math.sin(angle) * loopRadius;
-
-	// Vary platform sizes based on position in the loop
-	const width = 3 + Math.sin(angle * 2) * 2; // Varies between 1-5
-	const depth = 2 + Math.cos(angle * 3) * 1.5; // Varies between 0.5-3.5
-
-	// Connect some adjacent platforms in the loop
-	if (i % 2 === 0 && i < loopSegments - 1) {
-		// Create a connecting platform between this and the next platform
-		const nextAngle = ((i + 1) / loopSegments) * Math.PI * 2;
-		const nextX = Math.cos(nextAngle) * loopRadius;
-		const nextZ = Math.sin(nextAngle) * loopRadius;
-
-		// Calculate midpoint for the connecting platform
-		const midX = (x + nextX) / 2;
-		const midZ = (z + nextZ) / 2;
-
-		loopPlatforms.push(await box({
-			position: { x: midX, y: loopHeight, z: midZ - 6 },
-			size: { x: 2, y: 0.5, z: 2 },
-			collision: { static: true },
-			material: {
-				path: 'playground/steel.png',
-			}
-		}));
-	}
-
-	loopPlatforms.push(await box({
-		position: { x: x, y: loopHeight, z: z - 6 },
-		size: { x: width, y: 0.5, z: depth },
-		collision: { static: true },
-		material: {
-			path: 'playground/steel.png',
-		}
-	}));
-}
-
-boxes.push(startPlatform, ...jumpPlatforms, ...loopPlatforms);
-
 const testGame = game(
 	{
 		debug: true,
@@ -185,13 +47,10 @@ const testGame = game(
 	endingZone,
 	groundPlane,
 	player,
-	...spheres,
-	...boxes
+	...platforms,
 );
 
 testGame.start();
-
-
 
 let lastMovement = new Vector3();
 let playerForce = new Vector3();
@@ -255,7 +114,11 @@ testGame.update = ({ inputs, delta }) => {
 	const right = new Vector3(-1, 0, 0);
 
 	// Calculate movement force
-	const moveForce = 12;
+	let moveForce = 12;
+
+	if (p1.shoulders.LTrigger.held > 0 && grounded) {
+		moveForce = 24;
+	}
 
 	const gravity = 9.82;
 
@@ -292,21 +155,24 @@ testGame.update = ({ inputs, delta }) => {
 	move(player, playerForce);
 
 	if (grounded) {
-		if (playerForce.x > 2 || playerForce.x < -2 || playerForce.z > 2 || playerForce.z < -2) {
-			player.playAnimation(1);
+		const forceMagnitude = Math.abs(playerForce.x) + Math.abs(playerForce.z);
+		if (forceMagnitude > 2 && forceMagnitude <= 24) {
+			player.playAnimation({ key: 'walking' });
+		} else if (forceMagnitude > 24) {
+			player.playAnimation({ key: 'running' });
 		} else {
-			player.playAnimation(0);
+			player.playAnimation({ key: 'idle' });
 		}
 	} else {
 		if (playerForce.y > 5) {
-			player.playAnimation(3);
-		} else if (playerForce.y < -10) {
-			player.playAnimation(4);
+			player.playAnimation({ key: 'jumping-up', pauseAtEnd: true });
+		} else if (jumping === false) {
+			player.playAnimation({ key: 'jumping-down', pauseAtEnd: true });
 		}
 	}
 
 	// Store last movement for rotation
-	if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2 || jumping) {
+	if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
 		lastMovement = playerForce.clone();
 	}
 
