@@ -29,7 +29,7 @@ export class MeshBuilder {
 		return mesh;
 	}
 
-	postBuild(mesh: Mesh): Mesh {
-		return mesh;
+	postBuild(): void {
+		return;
 	}
 }

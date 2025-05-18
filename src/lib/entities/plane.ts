@@ -31,9 +31,6 @@ const planeDefaults: ZylemPlaneOptions = {
 };
 
 export class PlaneCollisionBuilder extends EntityCollisionBuilder {
-	private subdivisions: number = DEFAULT_SUBDIVISIONS;
-	private size: Vector3 = new Vector3(1, 1, 1);
-
 	collider(options: ZylemPlaneOptions): ColliderDesc {
 		const tile = options.tile ?? new Vector2(1, 1);
 		const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
@@ -83,7 +80,7 @@ export class PlaneMeshBuilder extends EntityMeshBuilder {
 		return geometry;
 	}
 
-	postBuild(mesh: Mesh): Mesh {
+	postBuild(): void {
 		const heights = [];
 		for (let i = 0; i <= DEFAULT_SUBDIVISIONS; ++i) {
 			for (let j = 0; j <= DEFAULT_SUBDIVISIONS; ++j) {
@@ -96,7 +93,6 @@ export class PlaneMeshBuilder extends EntityMeshBuilder {
 			}
 		}
 		this.heightData = new Float32Array(heights as unknown as number[]);
-		return mesh;
 	}
 }
 

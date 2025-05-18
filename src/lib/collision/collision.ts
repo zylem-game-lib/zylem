@@ -1,5 +1,6 @@
 import { RigidBodyDesc, RigidBodyType } from '@dimforge/rapier3d-compat';
 import { defineComponent, Types } from 'bitecs';
+import { Vector3 } from 'three';
 
 export class BaseCollision {
 	static: boolean = false;
@@ -28,6 +29,8 @@ export const CollisionDebugComponent = defineComponent({
 });
 
 export interface CollisionOptions {
-	static: boolean;
-	sensor: boolean;
+	static?: boolean;
+	sensor?: boolean;
+	size?: Vector3;
+	position?: Vector3;
 }

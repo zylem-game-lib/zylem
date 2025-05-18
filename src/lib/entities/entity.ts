@@ -1,4 +1,4 @@
-import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, Group } from "three";
+import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, Group, PointLight } from "three";
 import { v4 as uuidv4 } from 'uuid';
 import { ColliderDesc, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 
@@ -102,7 +102,13 @@ export abstract class EntityCollisionBuilder extends CollisionBuilder {
 }
 
 export abstract class EntityMeshBuilder extends MeshBuilder {
-	abstract buildGeometry(options: EntityOptions): BufferGeometry;
+	buildGeometry(options: EntityOptions): BufferGeometry {
+		return new BufferGeometry();
+	}
+
+	postBuild(): void {
+		return;
+	}
 }
 
 export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityOptions> {
@@ -142,6 +148,22 @@ export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityO
 		return this;
 	}
 
+	applyMaterialToGroup(group: Group, materials: Material[]): void {
+		group.traverse((child) => {
+			console.log(child);
+			if (child instanceof Mesh) {
+				if (child.type === 'SkinnedMesh' && materials[0] && !child.material.map) {
+					const light = new PointLight(0xffffff, 10, 0, 2);
+					light.position.set(0, 0, 0);
+					child.add(light);
+					child.material = materials[0];
+				}
+			}
+			child.castShadow = true;
+			child.receiveShadow = true;
+		});
+	}
+
 	async build(): Promise<T> {
 		const entity = this.entity;
 		if (this.materialBuilder) {
@@ -150,8 +172,14 @@ export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityO
 		if (this.meshBuilder && entity.materials) {
 			const geometry = this.meshBuilder.buildGeometry(this.options);
 			entity.mesh = this.meshBuilder.build(this.options, geometry, entity.materials);
-			entity.mesh = this.meshBuilder.postBuild(entity.mesh);
+			this.meshBuilder.postBuild();
 		}
+
+		if (entity.group && entity.materials) {
+			console.log(entity.group, entity.materials);
+			this.applyMaterialToGroup(entity.group, entity.materials);
+		}
+
 		const axesHelper = new AxesHelper(2);
 
 		if (entity.group) {
