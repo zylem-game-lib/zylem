@@ -1,7 +1,7 @@
 import { EntityOptions } from "./entity";
 import { BaseNode } from "../core/base-node";
 import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntity } from "./entity";
-import { EntityLoader, isLoadable } from "./loader";
+import { EntityLoader, isLoadable } from "./delegates/loader";
 
 export interface CreateEntityOptions<T extends GameEntity<any>, CreateOptions extends EntityOptions> {
 	args: Array<any>;
