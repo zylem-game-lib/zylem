@@ -1,0 +1,15 @@
+.zylem-debug-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1.5px solid var(--debug-primary);
+}
+
+.zylem-debug-toolbar-btn {
+  background: none;
+}
+
+.zylem-debug-toolbar-btn {
+  background: none;
+  cursor: pointer;
+}

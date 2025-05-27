@@ -9,7 +9,6 @@ import { Vect3 } from './lib/core/utility';
 
 import * as actions from './lib/behaviors/actions';
 import * as entities from './lib/entities/index';
-import * as behaviors from './lib/behaviors';
 
 const Util = {
 	...actions
@@ -20,7 +19,6 @@ const Zylem = {
 };
 
 const { box, sphere, sprite, plane, zone, actor, vessel, ZylemBox } = entities;
-const { bounce } = behaviors;
 
 namespace Zylem { };
 
@@ -35,7 +33,6 @@ export {
 	actor,
 	vessel,
 	actions,
-	bounce,
 	Perspectives,
 	Zylem,
 	ZylemBox,

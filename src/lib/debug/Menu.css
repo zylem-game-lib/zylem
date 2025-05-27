@@ -1,0 +1,122 @@
+/* Main debug menu container */
+.zylem-debug-menu {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--debug-background);
+  border: 1.5px solid var(--debug-primary);
+  border-radius: 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.zylem-debug-accordion-container {
+  flex: 0 0 auto;
+}
+
+.zylem-debug-accordion {
+  color: var(--debug-primary);
+}
+
+.zylem-debug-console-container {
+  flex: 1;
+  min-height: 0;
+  margin: 8px;
+}
+
+.zylem-debug-console {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  background: var(--debug-console-background);
+  color: var(--debug-primary);
+  font-family: monospace;
+  font-size: 14px;
+  border: 1.5px solid var(--debug-primary);
+  border-radius: 8px;
+  padding: 10px;
+  box-sizing: border-box;
+  outline: none;
+}
+
+/* Accordion animations and styles */
+.accordion-item {
+  border-bottom: 1px solid var(--debug-primary);
+}
+
+.accordion-item:last-child {
+  border-bottom: none;
+}
+
+.accordion-trigger {
+  width: 100%;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--debug-primary);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.accordion-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.accordion-trigger[data-expanded] {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.accordion-content {
+  overflow: hidden;
+  transition: height 0.3s ease;
+}
+
+.panel-content {
+  padding: 12px;
+  color: var(--debug-primary);
+}
+
+/* Add a chevron icon that rotates on expansion */
+.accordion-trigger::after {
+  content: '▼';
+  right: 20px;
+  position: relative;
+  color: var(--debug-primary);
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.accordion-trigger[data-expanded]::after {
+  transform: rotate(180deg);
+}
+
+/* Tooltip styles */
+.zylem-debug-tooltip {
+  background: var(--debug-background);
+  color: var(--debug-primary);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--debug-primary);
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.zylem-debug-tooltip[data-enter] {
+  animation: tooltip-enter 0.2s ease-out;
+}
+
+@keyframes tooltip-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
