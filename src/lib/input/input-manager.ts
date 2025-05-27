@@ -82,38 +82,4 @@ export class InputManager {
 			}
 		};
 	}
-
-	// 	constructor() {
-	// 		let interval = setInterval(() => {
-	// 			if (!this.hasSupport) clearInterval(interval);
-	// 			if (this.connections.size > this.lastConnection) this.scanGamePads();
-	// 		}, 200);
-	// 		window.addEventListener('gamepadconnected', ({ gamepad }) => this.connections.set(gamepad.index, gamepad.connected));
-	// 		window.addEventListener('gamepaddisconnected', ({ gamepad }) => this.connections.delete(gamepad.index));
-	// 		window.addEventListener('keydown', ({ key }) => this.keyboardInput.set(key, true));
-	// 		window.addEventListener('keyup', ({ key }) => this.keyboardInput.set(key, false));
-	// 	}
-
-	// 	scanGamePads() {
-	// 		const browserGamePadSupport = Boolean(navigator.getGamepads) ?? false;
-	// 		if (!browserGamePadSupport) {
-	// 			console.warn('This browser doesn\'t support gamepads');
-	// 			this.hasSupport = false;
-	// 			return;
-	// 		}
-	// 		this.lastConnection = navigator.getGamepads().length;
-	// 	}
-	// 	getDebugInfo(): string {
-	// 		const gamepads = navigator.getGamepads();
-	// 		let info = '';
-	// 		for (let i = 0; i < gamepads.length; i++) {
-	// 			const gamepad = gamepads[i];
-	// 			if (!gamepad) continue;
-	// 			info += `\nGamepad ${i}: ${gamepad.id} connected: ${gamepad.connected}\n`;
-	// 			info += `\nAxes: ${gamepad.axes}\n`;
-	// 			info += `\nButtons: ${gamepad.buttons}\n`;
-	// 		}
-	// 		return info;
-	// 	}
-	// }
 } 

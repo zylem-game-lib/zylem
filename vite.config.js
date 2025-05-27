@@ -5,6 +5,8 @@ import typescript from '@rollup/plugin-typescript';
 import { typescriptPaths } from 'rollup-plugin-typescript-paths';
 import { visualizer } from 'rollup-plugin-visualizer';
 
+import solidPlugin from 'vite-plugin-solid';
+
 import viteProgressBar from 'vite-plugin-progress';
 import colors from 'picocolors';
 
@@ -21,6 +23,7 @@ export default defineConfig(async () => {
         width: 60,
       }),
       glsl(),
+      solidPlugin(),
     ],
     resolve: {
       alias: [

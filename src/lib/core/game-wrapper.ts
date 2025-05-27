@@ -1,8 +1,5 @@
-// import { Perspectives } from '../interfaces/perspective';
 import { ZylemBlueColor } from './utility';
-import { debugState } from '../state/debug-state';
 import { BaseNode } from './base-node';
-import { ZylemDebug } from './debug';
 import { IGameOptions, ZylemGame } from './game';
 import { ZylemStage, stage } from './stage';
 import { DestroyFunction, SetupFunction, UpdateFunction } from './base-node-life-cycle';
@@ -11,12 +8,6 @@ async function loadGame(wrapperRef: Game) {
 	const options = convertNodes(wrapperRef.options);
 	const game = new ZylemGame(options, wrapperRef);
 	await game.loadStage(options.stages[0]);
-	if (debugState.on) {
-		const debug = new ZylemDebug();
-		debug.appendToDOM();
-		game.statsRef = debug.statsRef;
-		wrapperRef.debugRef = debug;
-	}
 	return game;
 }
 
@@ -64,7 +55,6 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 export class Game {
 	gameRef: ZylemGame | null = null;
 	options: GameOptions;
-	debugRef: ZylemDebug | null = null;
 
 	update: UpdateFunction<ZylemStage> = () => { };
 	setup: SetupFunction<ZylemStage> = () => { };
@@ -74,14 +64,6 @@ export class Game {
 
 	constructor(options: GameOptions) {
 		this.options = options;
-	}
-
-	log(message: string) {
-		if (!this.debugRef) {
-			console.log(message);
-			return;
-		}
-		this.debugRef.addInfo(message);
 	}
 
 	async start() {

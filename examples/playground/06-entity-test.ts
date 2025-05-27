@@ -8,9 +8,14 @@ const marsSurfacePath = 'playground/mars-surface.jpg';
 
 const stage1 = stage({ gravity: new Vector3(0, -9.82, 0) });
 
+stage1.setup = ({ camera }) => {
+	camera?.camera.position.set(0, 10, 40);
+	camera?.camera.lookAt(0, 0, 0);
+};
+
 const myBox = await box({
 	size: new Vector3(4, 2, 1),
-	position: { x: -3, y: 1, z: 4 },
+	position: { x: -10, y: 4, z: 4 },
 	collision: { static: false },
 	material: { path: woodPath, repeat: new Vector2(2, 2) },
 });
@@ -24,7 +29,7 @@ const myPlane = await plane({
 
 const mySphere = await sphere({
 	size: new Vector3(4, 4, 4),
-	position: { x: 0, y: 2, z: 0 },
+	position: { x: -5, y: 4, z: 0 },
 	collision: { static: false },
 	material: { path: marsSurfacePath },
 });

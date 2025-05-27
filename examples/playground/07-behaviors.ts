@@ -17,10 +17,10 @@ const startingZone = await zone({
 	position: { x: 0, y: 0, z: 0 },
 	size: new Vector3(10, 10, 10),
 	onEnter: ({ self, visitor, globals }) => {
-		testGame.log(`${visitor.uuid} entered the starting zone 🚶‍♂️`);
+		// testGame.log(`${visitor.uuid} entered the starting zone 🚶‍♂️`);
 	},
 	onExit: ({ self, visitor, globals }) => {
-		testGame.log(`${visitor.uuid} exited the starting zone 🚶‍♂️`);
+		// testGame.log(`${visitor.uuid} exited the starting zone 🚶‍♂️`);
 	},
 });
 
@@ -28,10 +28,10 @@ const endingZone = await zone({
 	position: { x: 0, y: 20, z: 0 },
 	size: new Vector3(10, 10, 10),
 	onEnter: ({ self, visitor, globals }) => {
-		testGame.log(`${visitor.uuid} entered the ending zone ⛳️`);
+		// testGame.log(`${visitor.uuid} entered the ending zone ⛳️`);
 	},
 	onExit: ({ self, visitor, globals }) => {
-		testGame.log(`${visitor.uuid} exited the ending zone ⛳️`);
+		// testGame.log(`${visitor.uuid} exited the ending zone ⛳️`);
 	},
 });
 
@@ -155,10 +155,12 @@ testGame.update = ({ inputs, delta }) => {
 	move(player, playerForce);
 
 	if (grounded) {
-		const forceMagnitude = Math.abs(playerForce.x) + Math.abs(playerForce.z);
-		if (forceMagnitude > 2 && forceMagnitude <= 24) {
+		const forceMagnitudeX = Math.abs(playerForce.x);
+		const forceMagnitudeZ = Math.abs(playerForce.z);
+		const highestForceMagnitude = Math.max(forceMagnitudeX, forceMagnitudeZ);
+		if (highestForceMagnitude > 2 && highestForceMagnitude <= 12) {
 			player.playAnimation({ key: 'walking' });
-		} else if (forceMagnitude > 24) {
+		} else if (highestForceMagnitude > 12) {
 			player.playAnimation({ key: 'running' });
 		} else {
 			player.playAnimation({ key: 'idle' });

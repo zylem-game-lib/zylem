@@ -5,12 +5,18 @@ import { state$ } from '../state/game-state';
 import { setGlobalState } from '../state/index';
 
 import { setDebugFlag } from '../state/debug-state';
-import { DebugConfiguration } from './debug';
 
 import { ZylemStage } from './stage';
 import { Game } from './game-wrapper';
 import { UpdateContext, SetupContext, UpdateFunction, SetupFunction, DestroyContext } from './base-node-life-cycle';
 import { InputManager } from '../input/input-manager';
+
+export type DebugConfiguration = {
+	showCollisionBounds?: boolean;
+	showModelBounds?: boolean;
+	showSpriteBounds?: boolean;
+	//TODO: show movement vector? other world related possibilities
+}
 
 export interface IGameOptions {
 	id: string;
@@ -41,7 +47,7 @@ export class ZylemGame {
 	inputManager: InputManager;
 
 	wrapperRef: Game;
-	statsRef: Stats | null = null;
+	// statsRef: Stats | null = null;
 
 	static FRAME_LIMIT = 64;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
@@ -101,7 +107,7 @@ export class ZylemGame {
 	}
 
 	loop(timestamp: number) {
-		this.statsRef && this.statsRef.begin();
+		// this.statsRef && this.statsRef.begin();
 		const elapsed = timestamp - this.previousTimeStamp;
 		if (elapsed >= ZylemGame.FRAME_DURATION) {
 			const stage = this.currentStage();
@@ -115,7 +121,7 @@ export class ZylemGame {
 			this.previousTimeStamp = timestamp;
 		}
 
-		this.statsRef && this.statsRef.end();
+		// this.statsRef && this.statsRef.end();
 		requestAnimationFrame(this.loop.bind(this));
 	}
 
