@@ -1,4 +1,4 @@
-import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, Group, PointLight } from "three";
+import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, Group, PointLight, Color } from "three";
 import { v4 as uuidv4 } from 'uuid';
 import { ColliderDesc, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 
@@ -24,6 +24,7 @@ export interface LifeCycleDelegate<U> {
 }
 
 export type EntityOptions = {
+	color?: Color;
 	size?: Vec3;
 	position?: Vec3;
 	batched?: boolean;

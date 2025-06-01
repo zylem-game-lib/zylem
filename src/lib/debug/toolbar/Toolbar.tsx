@@ -1,7 +1,6 @@
 import { Button, Tooltip } from '@kobalte/core';
 import { X, MousePointer, Plus, Trash2 } from 'lucide-solid';
 import type { Component } from 'solid-js';
-import { DEBUG_COLORS, DEBUG_SIZES } from './constants';
 import './Toolbar.css';
 
 /**
@@ -17,11 +16,13 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
             onClick={props.onClose}
             class="zylem-debug-toolbar-btn"
           >
-            <X color={DEBUG_COLORS.primary} size={DEBUG_SIZES.icon} />
+            <X class="zylem-debug-icon" />
           </Button.Root>
         </Tooltip.Trigger>
         <Tooltip.Portal>
-          <Tooltip.Content class="zylem-debug-tooltip">Close</Tooltip.Content>
+          <Tooltip.Content class="zylem-debug-tooltip zylem-exo-2">
+            Close
+          </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>
 
@@ -32,14 +33,13 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
             onClick={() => {}}
             class="zylem-debug-toolbar-btn"
           >
-            <MousePointer
-              color={DEBUG_COLORS.primary}
-              size={DEBUG_SIZES.icon}
-            />
+            <MousePointer class="zylem-debug-icon" />
           </Button.Root>
         </Tooltip.Trigger>
         <Tooltip.Portal>
-          <Tooltip.Content class="zylem-debug-tooltip">Select</Tooltip.Content>
+          <Tooltip.Content class="zylem-debug-tooltip zylem-exo-2">
+            Select
+          </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>
 
@@ -50,11 +50,13 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
             onClick={() => {}}
             class="zylem-debug-toolbar-btn"
           >
-            <Plus color={DEBUG_COLORS.primary} size={DEBUG_SIZES.icon} />
+            <Plus class="zylem-debug-icon" />
           </Button.Root>
         </Tooltip.Trigger>
         <Tooltip.Portal>
-          <Tooltip.Content class="zylem-debug-tooltip">Add</Tooltip.Content>
+          <Tooltip.Content class="zylem-debug-tooltip zylem-exo-2">
+            Add
+          </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>
 
@@ -65,11 +67,13 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
             onClick={() => {}}
             class="zylem-debug-toolbar-btn"
           >
-            <Trash2 color={DEBUG_COLORS.primary} size={DEBUG_SIZES.icon} />
+            <Trash2 class="zylem-debug-icon" />
           </Button.Root>
         </Tooltip.Trigger>
         <Tooltip.Portal>
-          <Tooltip.Content class="zylem-debug-tooltip">Delete</Tooltip.Content>
+          <Tooltip.Content class="zylem-debug-tooltip zylem-exo-2">
+            Delete
+          </Tooltip.Content>
         </Tooltip.Portal>
       </Tooltip.Root>
     </div>

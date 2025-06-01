@@ -8,7 +8,6 @@ const { Flat2D } = Perspectives;
 
 let brickCount = 0;
 const stage1 = stage({
-	perspective: Flat2D,
 	backgroundColor: new Color('#000'),
 	conditions: [
 		{
@@ -16,32 +15,32 @@ const stage1 = stage({
 			callback: (globals, game) => {
 				const { score, bricks, lives } = globals;
 				if (score.get() > 0 && bricks.get() === 0) {
-					breakout.reset(game);
+					breakout.reset();
 				}
 				if (lives.get() === 0) {
-					breakout.reset(game);
+					breakout.reset();
 				}
 			}
 		}
 	],
-	setup: ({ HUD, globals }) => {
-		// TODO: fix binding issue
-		HUD.addLabel({
-			binding: 'score',
-			update: (element, value) => {
-				element.updateText(`Score: ${value}`);
-			},
-			position: new Vector2(250, 5)
-		});
-		HUD.addLabel({
-			binding: 'lives',
-			update: (element, value) => {
-				element.updateText(`Lives: ${value}`);
-			},
-			position: new Vector2(25, 5)
-		});
-		globals.bricks.set(brickCount);
-	},
+	// setup: ({ HUD, globals }) => {
+	// 	// TODO: fix binding issue
+	// 	HUD.addLabel({
+	// 		binding: 'score',
+	// 		update: (element, value) => {
+	// 			element.updateText(`Score: ${value}`);
+	// 		},
+	// 		position: new Vector2(250, 5)
+	// 	});
+	// 	HUD.addLabel({
+	// 		binding: 'lives',
+	// 		update: (element, value) => {
+	// 			element.updateText(`Lives: ${value}`);
+	// 		},
+	// 		position: new Vector2(25, 5)
+	// 	});
+	// 	globals.bricks.set(brickCount);
+	// },
 	children: ({ globals }) => {
 		const bricks: any[] = [];
 		for (let i = -8; i <= 8; i += 4) {

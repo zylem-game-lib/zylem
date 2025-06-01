@@ -1,0 +1,65 @@
+.zylem-debug-toolbar {
+  display: flex;
+  gap: 16px;
+  padding: 8px;
+}
+
+.zylem-debug-toolbar.separator {
+  border-bottom: 1.5px solid var(--debug-primary);
+}
+
+.zylem-debug-toolbar-btn {
+  background: none;
+  cursor: pointer;
+  font-family: var(--debug-font-family);
+  padding: 8px;
+  border-radius: 8px;
+  border: 1.5px solid var(--debug-primary);
+  color: var(--debug-primary);
+}
+
+.zylem-debug-toolbar-btn:hover {
+  background-color: var(--debug-primary);
+  color: var(--debug-background);
+}
+
+.zylem-debug-toolbar-btn:hover svg {
+  stroke: var(--debug-background);
+}
+
+.zylem-debug-toolbar-btn:active {
+  background-color: var(--debug-active-background);
+  color: var(--debug-background);
+}
+
+.zylem-debug-icon {
+  width: var(--debug-icon-size);
+  height: var(--debug-icon-size);
+  stroke: var(--debug-icon-color);
+}
+
+.zylem-debug-tooltip {
+  background: var(--debug-background);
+  color: var(--debug-primary);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1.5px solid var(--debug-primary);
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.zylem-debug-tooltip[data-enter] {
+  animation: tooltip-enter 0.2s ease-out;
+}
+
+@keyframes tooltip-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

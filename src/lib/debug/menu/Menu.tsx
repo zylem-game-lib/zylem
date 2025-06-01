@@ -1,7 +1,7 @@
 import type { Component } from 'solid-js';
-import { Toolbar } from './Toolbar';
+import { Toolbar } from '../toolbar/Toolbar';
 import { AccordionMenu } from './AccordionMenu';
-import { Console } from './Console';
+import { Console } from '../console/Console';
 import './Menu.css';
 
 /**

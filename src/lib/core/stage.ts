@@ -14,11 +14,12 @@ import { StageEntity } from './';
 import { PerspectiveType, Perspectives } from '../interfaces/perspective';
 import { ZylemBlueColor } from './utility';
 import { debugState } from '../state/debug-state';
-// import createTestSystem from '../behaviors/test-system';
+
 import { applyMixins } from './composable';
 import { SetupContext, UpdateContext, DestroyContext } from './base-node-life-cycle';
 import createTransformSystem, { StageSystem } from '../behaviors/transformable.system';
 import { BaseNode } from './base-node';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface CameraOptions {
 	perspective: PerspectiveType;
@@ -77,7 +78,7 @@ export class ZylemStage {
 		this.world = null;
 		this.scene = null;
 		this.HUD = new ZylemHUD();
-		this.uuid = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+		this.uuid = uuidv4();
 		this.saveState({
 			backgroundColor: options.backgroundColor ?? this.state.backgroundColor,
 			backgroundImage: options.backgroundImage ?? this.state.backgroundImage,

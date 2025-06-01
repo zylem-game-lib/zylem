@@ -11,4 +11,4 @@ const setDebugFlag = (flag: boolean = false) => {
 	debugState$.on.set(flag);
 };
 
-export { debugState, setDebugFlag };
+export { debugState$, debugState, setDebugFlag };

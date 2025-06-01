@@ -14,6 +14,7 @@ const boxDefaults: ZylemBoxOptions = {
 	collision: {
 		static: false,
 	},
+	color: ZylemBlueColor,
 	material: {
 		color: ZylemBlueColor,
 		shader: 'standard'

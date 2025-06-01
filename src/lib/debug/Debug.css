@@ -1,3 +1,13 @@
+:root {
+  --debug-primary: #9fcfff;
+  --debug-background: rgba(10, 20, 30, 0.54);
+  --debug-console-background: rgba(20, 40, 60, 0.2);
+  --debug-active-background: rgba(20, 255, 60, 0.2);
+  --debug-icon-color: #9fcfff;
+  --debug-icon-size: 28px;
+  --debug-font-family: 'Exo 2', sans-serif;
+}
+
 #zylem-debug-container {
   position: fixed;
   top: 0;
@@ -24,4 +34,11 @@ button {
   height: 100px;
   z-index: 1000;
   transition: transform 0.3s ease-in-out;
+}
+
+.zylem-exo-2 {
+  font-family: var(--debug-font-family);
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
 }
