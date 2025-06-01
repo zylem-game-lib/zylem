@@ -1,4 +1,3 @@
-import { Clock } from 'three';
 import { observe } from '@simplyianm/legend-state';
 
 import { state$ } from '../state/game-state';
@@ -10,6 +9,7 @@ import { ZylemStage } from './stage';
 import { Game } from './game-wrapper';
 import { UpdateContext, SetupContext, UpdateFunction, SetupFunction, DestroyContext } from './base-node-life-cycle';
 import { InputManager } from '../input/input-manager';
+import { Timer } from './three-addons/Timer';
 
 export type DebugConfiguration = {
 	showCollisionBounds?: boolean;
@@ -43,7 +43,7 @@ export class ZylemGame {
 	previousTimeStamp: number = 0;
 	totalTime = 0;
 
-	clock: Clock;
+	timer: Timer;
 	inputManager: InputManager;
 
 	wrapperRef: Game;
@@ -55,7 +55,8 @@ export class ZylemGame {
 	constructor(options: IGameOptions, wrapperRef: Game) {
 		this.wrapperRef = wrapperRef;
 		this.inputManager = new InputManager();
-		this.clock = new Clock();
+		this.timer = new Timer();
+		this.timer.connect(document);
 		this.id = options.id;
 		this.stages = options.stages;
 		this.setGlobals(options);
@@ -75,7 +76,7 @@ export class ZylemGame {
 
 	params(): UpdateContext<ZylemStage> {
 		const stage = this.currentStage();
-		const delta = this.clock.getDelta() ?? 0;
+		const delta = this.timer.getDelta();
 		const inputs = this.inputManager.getInputs(delta);
 		return {
 			delta,
@@ -110,6 +111,7 @@ export class ZylemGame {
 		// this.statsRef && this.statsRef.begin();
 		const elapsed = timestamp - this.previousTimeStamp;
 		if (elapsed >= ZylemGame.FRAME_DURATION) {
+			this.timer.update();
 			const stage = this.currentStage();
 			const params = this.params();
 			if (this.customUpdate) {

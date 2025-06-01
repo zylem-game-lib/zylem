@@ -1,5 +1,5 @@
 import { Behavior } from "~/lib/behaviors/behavior";
-import { DestroyContext, SetupContext, UpdateContext } from "./base-node-life-cycle";
+import { DestroyContext, DestroyFunction, SetupContext, SetupFunction, UpdateContext, UpdateFunction } from "./base-node-life-cycle";
 import { DEBUG_FLAG } from "./flags";
 
 export type BaseNodeOptions<T = any> = BaseNode | Partial<T>;
@@ -11,6 +11,11 @@ export abstract class BaseNode<Options = any, T = any> {
 	public options: Options;
 	public eid: number = 0;
 	public name: string = '';
+	// public markForDestruction: boolean = false;
+
+	update: UpdateFunction<this> = () => { };
+	setup: SetupFunction<this> = () => { };
+	destroy: DestroyFunction<this> = () => { };
 
 	constructor(args: BaseNodeOptions[] = []) {
 		const options = args
@@ -61,6 +66,9 @@ export abstract class BaseNode<Options = any, T = any> {
 		if (typeof this._setup === 'function') {
 			this._setup(params);
 		}
+		if (this.setup) {
+			this.setup(params);
+		}
 		this.children.forEach(child => child.nodeSetup(params));
 	}
 
@@ -68,14 +76,21 @@ export abstract class BaseNode<Options = any, T = any> {
 		if (typeof this._update === 'function') {
 			this._update(params);
 		}
+		if (this.update) {
+			this.update(params);
+		}
 		this.children.forEach(child => child.nodeUpdate(params));
 	}
 
 	public nodeDestroy(params: DestroyContext<this>): void {
+		this.children.forEach(child => child.nodeDestroy(params));
+		if (this.destroy) {
+			this.destroy(params);
+		}
 		if (typeof this._destroy === 'function') {
 			this._destroy(params);
 		}
-		this.children.forEach(child => child.nodeDestroy(params));
+		// this.markForDestruction = true;
 	}
 
 	public getOptions(): Options {

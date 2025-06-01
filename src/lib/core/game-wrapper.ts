@@ -128,7 +128,7 @@ export class Game {
 	async end() { }
 }
 
-type GameOptions = Array<Partial<IGameOptions> | ZylemStage | Partial<BaseNode>>;
+type GameOptions = Array<Partial<IGameOptions> | ZylemStage | BaseNode>;
 
 /**
  * create a new game
