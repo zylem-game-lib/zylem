@@ -112,7 +112,7 @@ export abstract class EntityMeshBuilder extends MeshBuilder {
 	}
 }
 
-export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityOptions> {
+export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends EntityOptions, P = any> {
 	protected meshBuilder: EntityMeshBuilder | null;
 	protected collisionBuilder: EntityCollisionBuilder | null;
 	protected materialBuilder: MaterialBuilder | null;
@@ -151,7 +151,7 @@ export abstract class EntityBuilder<T extends GameEntity<any>, U extends EntityO
 
 	applyMaterialToGroup(group: Group, materials: Material[]): void {
 		group.traverse((child) => {
-			console.log(child);
+			// console.log(child);
 			if (child instanceof Mesh) {
 				if (child.type === 'SkinnedMesh' && materials[0] && !child.material.map) {
 					const light = new PointLight(0xffffff, 10, 0, 2);

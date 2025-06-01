@@ -1,4 +1,4 @@
-import { addComponent, addEntity, createWorld as createECS } from 'bitecs';
+import { addComponent, addEntity, createWorld as createECS, removeEntity } from 'bitecs';
 import { World } from '@dimforge/rapier3d-compat';
 import { BufferAttribute, BufferGeometry, Color, Group, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from 'three';
 
@@ -7,10 +7,10 @@ import { ZylemScene } from '../graphics/scene';
 
 import { Conditions } from '../interfaces/game';
 import { state$ } from '../state';
-import { setStageBackgroundColor, setStageBackgroundImage } from '../state/stage-state';
+import { setEntitiesToStage, setStageBackgroundColor, setStageBackgroundImage } from '../state/stage-state';
 
 import { ZylemHUD } from '../ui/hud';
-import { StageEntity } from './';
+import { GameEntity, StageEntity } from './';
 import { PerspectiveType, Perspectives } from '../interfaces/perspective';
 import { ZylemBlueColor } from './utility';
 import { debugState } from '../state/debug-state';
@@ -38,7 +38,7 @@ export interface ZylemStageOptions {
 	camera: CameraOptions;
 }
 
-export type StageState = Pick<ZylemStageOptions, 'backgroundColor' | 'backgroundImage' | 'inputs'>;
+export type StageState = Pick<ZylemStageOptions, 'backgroundColor' | 'backgroundImage' | 'inputs'> & { entities: GameEntity<any>[] };
 
 export type StageOptions = Partial<ZylemStageOptions>;
 
@@ -54,6 +54,7 @@ export class ZylemStage {
 			p1: ['gamepad-1', 'keyboard'],
 			p2: ['gamepad-2', 'keyboard'],
 		},
+		entities: [],
 	};
 	gravity: Vector3;
 
@@ -83,6 +84,7 @@ export class ZylemStage {
 			backgroundColor: options.backgroundColor ?? this.state.backgroundColor,
 			backgroundImage: options.backgroundImage ?? this.state.backgroundImage,
 			inputs: options.inputs ?? this.state.inputs,
+			entities: this.state.entities,
 		});
 		this.gravity = options.gravity ?? new Vector3(0, 0, 0);
 		this.children = options.children ? options.children({ globals: state$.globals }) : [];
@@ -117,7 +119,7 @@ export class ZylemStage {
 		for (let child of this.children) {
 			this.spawnEntity(child);
 		}
-		// this.testSystem = createTestSystem();
+		setEntitiesToStage(this.children as unknown as GameEntity<any>[]);
 		this.transformSystem = createTransformSystem(this as unknown as StageSystem);
 	}
 
@@ -146,17 +148,14 @@ export class ZylemStage {
 			return;
 		}
 		this.world.update(params);
-		// ECS TEST
-		// this.testSystem(this.ecs);
 		this.transformSystem(this.ecs);
-		//
 		this._childrenMap.forEach((child, uuid) => {
-			const needsRemoval = this._removalMap.get(uuid);
-			if (needsRemoval) {
-				this._childrenMap.delete(uuid);
-				this._removalMap.delete(uuid);
-				return;
-			}
+			// if (child.markForDestruction && this.world) {
+			// removeEntity(this.ecs, child.eid);
+			// this.world.destroyEntity(child as any);
+			// this._childrenMap.delete(uuid);
+			// return;
+			// }
 			child.nodeUpdate({
 				...params,
 				entity: child,
@@ -212,15 +211,6 @@ export class ZylemStage {
 
 	addEntityToStage(entity: BaseNode) {
 		this._childrenMap.set(`${entity.eid}-key`, entity);
-	}
-
-	setForRemoval(entity: BaseNode & { group: Group }) {
-		if (this.world) {
-			this.world.setForRemoval(entity);
-		}
-		entity.group.clear();
-		entity.group.removeFromParent();
-		this._removalMap.set(`${entity.eid}-key`, entity);
 	}
 
 	debugStage(world: World) {

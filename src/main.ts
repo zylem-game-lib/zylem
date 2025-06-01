@@ -9,6 +9,7 @@ import { Vect3 } from './lib/core/utility';
 
 import * as actions from './lib/behaviors/actions';
 import * as entities from './lib/entities/index';
+import { destroy } from './lib/entities/destroy';
 
 const Util = {
 	...actions
@@ -33,6 +34,7 @@ export {
 	actor,
 	vessel,
 	actions,
+	destroy,
 	Perspectives,
 	Zylem,
 	ZylemBox,

@@ -3,7 +3,7 @@ import { BufferGeometry, Object3D, SkinnedMesh, Group, Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
 import { EntityBuilder, EntityCollisionBuilder, EntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
-import { UpdateContext } from '../core/base-node-life-cycle';
+import { UpdateContext, UpdateFunction } from '../core/base-node-life-cycle';
 import { EntityAssetLoader } from '../core/entity-asset-loader';
 import { EntityLoaderDelegate } from './delegates/loader';
 import { Vec3 } from '../core/vector';
@@ -98,7 +98,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		super();
 		this.options = { ...actorDefaults, ...options };
 		this.lifeCycleDelegate = {
-			update: this.update.bind(this),
+			update: this.actorUpdate.bind(this) as UpdateFunction<ZylemActorOptions>,
 		};
 		this.controlledRotation = true;
 	}
@@ -119,7 +119,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		};
 	}
 
-	async update(params: UpdateContext<ZylemActorOptions>): Promise<void> {
+	async actorUpdate(params: UpdateContext<ZylemActorOptions>): Promise<void> {
 		this._animationDelegate?.update(params.delta);
 	}
 
