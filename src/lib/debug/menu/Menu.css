@@ -8,5 +8,10 @@
   border: 1.5px solid var(--debug-primary);
   border-radius: 12px;
   box-sizing: border-box;
-  overflow: hidden;
+  /* overflow: hidden; */
+  overflow-y: scroll;
+}
+
+::-webkit-scrollbar {
+  display: none;
 }

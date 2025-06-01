@@ -1,4 +1,4 @@
-import { game, stage, box, plane, sphere, sprite, actor, zone } from '../../src/main';
+import { game, stage, box, plane, sphere, sprite, actor, zone, destroy } from '../../src/main';
 import { Vector3, Vector2 } from 'three';
 import { playgroundActor } from './utils';
 
@@ -19,6 +19,20 @@ const myBox = await box({
 	collision: { static: false },
 	material: { path: woodPath, repeat: new Vector2(2, 2) },
 });
+
+let counter = 0;
+
+myBox.update = ({ delta }) => {
+	counter += delta;
+	// console.log('counter', counter);
+	if (counter > 3) {
+		// destroy(myBox);
+	}
+};
+
+myBox.destroy = () => {
+	console.log('box has been destroyed');
+};
 
 const myPlane = await plane({
 	tile: new Vector2(200, 200),

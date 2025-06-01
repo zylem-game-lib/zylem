@@ -1,5 +1,5 @@
 import { ArrowHelper, Color, Vector3 } from 'three';
-import { game, stage, zone } from '../../src/main';
+import { destroy, game, stage, zone } from '../../src/main';
 import { rotateInDirection } from '../../src/lib/behaviors/rotatable';
 import { move } from '../../src/lib/behaviors/moveable';
 import { Ray } from '@dimforge/rapier3d-compat';
@@ -34,6 +34,18 @@ const endingZone = await zone({
 		// testGame.log(`${visitor.uuid} exited the ending zone ⛳️`);
 	},
 });
+
+let counter = 0;
+platforms[4].update = ({ delta }) => {
+	counter += delta;
+	if (counter > 3) {
+		// destroy(platforms[4]);
+	}
+};
+
+platforms[4].destroy = () => {
+	// console.log('platform has been destroyed');
+};
 
 const testGame = game(
 	{

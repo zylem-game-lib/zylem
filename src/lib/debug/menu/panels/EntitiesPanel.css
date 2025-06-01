@@ -1,0 +1,13 @@
+.entity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  font-family: var(--debug-font-family);
+}
+
+.entity-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
