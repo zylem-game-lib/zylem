@@ -2,6 +2,10 @@
   display: flex;
   gap: 16px;
   padding: 8px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: black;
 }
 
 .zylem-debug-toolbar.separator {

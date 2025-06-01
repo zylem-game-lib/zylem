@@ -42,3 +42,7 @@ button {
   font-weight: 400;
   font-style: normal;
 }
+
+.scrollable {
+  overflow-y: scroll;
+}
