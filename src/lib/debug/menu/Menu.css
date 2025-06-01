@@ -1,0 +1,12 @@
+/* Main debug menu container */
+.zylem-debug-menu {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--debug-background);
+  border: 1.5px solid var(--debug-primary);
+  border-radius: 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+}

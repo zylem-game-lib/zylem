@@ -4,3 +4,9 @@ export {
 	setStageBackgroundColor,
 	setStageBackgroundImage,
 } from './stage-state';
+export {
+	consoleState$,
+	printToConsole,
+	clearConsole,
+	getConsoleContent,
+} from './console-state';

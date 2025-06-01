@@ -1,29 +1,20 @@
-import { render } from 'solid-js/web';
-import { createSignal, onMount } from 'solid-js';
-import { Menu } from './Menu';
-import { DEBUG_COLORS, DEBUG_SIZES } from './constants';
+import { render, style } from 'solid-js/web';
+import { createEffect, createSignal } from 'solid-js';
+
+import { debugStore } from './debug-store';
+
+import { Menu } from './menu/Menu';
 import './Debug.css';
 
 /**
  * DebugMenu root component. Handles open/close state and layout.
  */
 function Debug() {
+  const [showDebugMenu, setShowDebugMenu] = createSignal(false);
   const [isOpen, setIsOpen] = createSignal(false);
 
-  onMount(() => {
-    // Set CSS variables for colors
-    document.documentElement.style.setProperty(
-      '--debug-primary',
-      DEBUG_COLORS.primary,
-    );
-    document.documentElement.style.setProperty(
-      '--debug-background',
-      DEBUG_COLORS.background,
-    );
-    document.documentElement.style.setProperty(
-      '--debug-console-background',
-      DEBUG_COLORS.consoleBackground,
-    );
+  createEffect(() => {
+    setShowDebugMenu(debugStore.debug);
   });
 
   const toggleMenu = () => {
@@ -40,16 +31,16 @@ function Debug() {
         'pointer-events': 'visible',
       }}
     >
-      <button
-        id="zylem-debug-button"
-        type="button"
-        onClick={toggleMenu}
-        style={{ 'z-index': 1001 }}
-      />
+      {showDebugMenu() && (
+        <div style={{ display: 'flex', 'z-index': 1001 }}>
+          <button id="zylem-debug-button" type="button" onClick={toggleMenu} />
+        </div>
+      )}
       {isOpen() && (
         <div
           style={{
-            width: `${DEBUG_SIZES.menuWidth}%`,
+            width: '33%',
+            'min-width': '460px',
             height: '100%',
             'z-index': 1002,
           }}
