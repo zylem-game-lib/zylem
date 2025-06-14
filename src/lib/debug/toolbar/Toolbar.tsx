@@ -1,5 +1,8 @@
 import { Button, Tooltip } from '@kobalte/core';
-import { X, MousePointer, Plus, Trash2 } from 'lucide-solid';
+import X from 'lucide-solid/icons/x';
+import MousePointer from 'lucide-solid/icons/mouse-pointer';
+import Plus from 'lucide-solid/icons/plus';
+import Trash2 from 'lucide-solid/icons/trash-2';
 import type { Component } from 'solid-js';
 import './Toolbar.css';
 
