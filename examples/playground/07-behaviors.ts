@@ -49,6 +49,7 @@ platforms[4].destroy = () => {
 
 const testGame = game(
 	{
+		id: 'behaviors-test',
 		debug: true,
 		behaviors: [
 			// moveable,

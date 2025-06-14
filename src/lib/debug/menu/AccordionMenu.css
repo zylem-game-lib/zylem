@@ -1,7 +1,3 @@
-.zylem-debug-accordion-container {
-  flex: 0 0 auto;
-}
-
 .zylem-debug-accordion {
   color: var(--debug-primary);
 }
@@ -11,7 +7,20 @@ h3 {
 }
 
 /* Accordion animations and styles */
+.accordion-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--debug-background);
+  transition: background-color 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.accordion-header[data-expanded] {
+  background-color: var(--debug-primary-active);
+}
+
 .accordion-item {
+  position: relative;
   border-bottom: 1px solid var(--debug-primary);
 }
 
@@ -36,14 +45,34 @@ h3 {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
+.accordion-item {
+  scrollbar-width: none;
+}
+
+.accordion-item[data-expanded] {
+  scrollbar-width: thin;
+}
+
 .accordion-trigger[data-expanded] {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
 .accordion-content {
-  overflow: hidden;
+  overflow-y: scroll;
+  max-height: 20vh;
   transition: height 0.3s ease;
 }
+
+/* .accordion-item[data-expanded]:after {
+  display: block;
+  content: '';
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 32px;
+  background: linear-gradient(transparent, var(--debug-primary-active));
+} */
 
 .panel-content {
   padding: 12px;

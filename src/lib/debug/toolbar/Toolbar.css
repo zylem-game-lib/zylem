@@ -1,11 +1,10 @@
 .zylem-debug-toolbar {
   display: flex;
-  gap: 16px;
-  padding: 8px;
   position: sticky;
   top: 0;
-  z-index: 1000;
-  background-color: black;
+  gap: 16px;
+  padding: 8px;
+  z-index: 1;
 }
 
 .zylem-debug-toolbar.separator {
@@ -32,14 +31,14 @@
 }
 
 .zylem-debug-toolbar-btn:active {
-  background-color: var(--debug-active-background);
+  background-color: var(--debug-background-active);
   color: var(--debug-background);
 }
 
 .zylem-debug-icon {
   width: var(--debug-icon-size);
   height: var(--debug-icon-size);
-  stroke: var(--debug-icon-color);
+  stroke: var(--debug-primary);
 }
 
 .zylem-debug-tooltip {

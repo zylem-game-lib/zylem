@@ -3,6 +3,7 @@ import { BaseNode } from './base-node';
 import { IGameOptions, ZylemGame } from './game';
 import { ZylemStage, stage } from './stage';
 import { DestroyFunction, SetupFunction, UpdateFunction } from './base-node-life-cycle';
+import { GameEntity } from '../entities/entity';
 
 async function loadGame(wrapperRef: Game) {
 	const options = convertNodes(wrapperRef.options);
@@ -27,10 +28,12 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 	let converted = { ...defaultGameOptions };
 	const configurations: IGameOptions[] = [];
 	const stages: ZylemStage[] = [];
-	const entities: BaseNode[] = [];
+	const entities: (BaseNode | GameEntity<any>)[] = [];
 	Object.values(_options).forEach((node) => {
 		if (node instanceof ZylemStage) {
 			stages.push(node);
+		} else if (node instanceof GameEntity) {
+			entities.push(node);
 		} else if (node instanceof BaseNode) {
 			entities.push(node);
 		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
@@ -42,12 +45,12 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 		converted = Object.assign(converted, { ...configuration });
 	});
 	stages.forEach((stage) => {
-		stage.children.unshift(...entities);
+		stage.children.unshift(...(entities as BaseNode[]));
 	});
 	if (stages.length) {
 		converted.stages = stages;
 	} else {
-		converted.stages[0].children.unshift(...entities);
+		converted.stages[0].children.unshift(...(entities as BaseNode[]));
 	}
 	return converted;
 }
@@ -128,14 +131,14 @@ export class Game {
 	async end() { }
 }
 
-type GameOptions = Array<Partial<IGameOptions> | ZylemStage | BaseNode>;
+type GameOptions = Array<IGameOptions | ZylemStage | GameEntity<any> | BaseNode>;
 
 /**
  * create a new game
- * @param options GameOptions
- * @param options.id Game name string
- * @param options.globals Game globals object
- * @param options.stages Array of stage objects
+ * @param options GameOptions - Array of IGameOptions, ZylemStage, GameEntity, or BaseNode objects
+ * @param options.id Game name string (when using IGameOptions)
+ * @param options.globals Game globals object (when using IGameOptions)
+ * @param options.stages Array of stage objects (when using IGameOptions)
  * @returns Game
  */
 export function game(...options: GameOptions): Game {

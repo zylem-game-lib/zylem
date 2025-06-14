@@ -3,7 +3,7 @@ import { BoxGeometry } from 'three';
 import { Vector3 } from 'three';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { DebugInfoBuilder, EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
 
 type ZylemBoxOptions = EntityOptions;
@@ -54,6 +54,21 @@ export class ZylemBox extends GameEntity<ZylemBoxOptions> {
 	}
 }
 
+export class BoxDebugInfoBuilder extends DebugInfoBuilder {
+	buildInfo(options: EntityOptions): Record<string, any> {
+		const { x, z, y } = options.position ?? { x: 0, y: 0, z: 0 };
+		const positionString = `${x}, ${y}, ${z}`;
+		const { x: sizeX, y: sizeY, z: sizeZ } = options.size ?? { x: 1, y: 1, z: 1 };
+		const sizeString = `${sizeX}, ${sizeY}, ${sizeZ}`;
+		return {
+			type: String(ZylemBox.type),
+			position: positionString,
+			size: sizeString,
+			message: 'box debug info'
+		};
+	}
+}
+
 type BoxOptions = BaseNode | ZylemBoxOptions;
 
 export async function box(...args: Array<BoxOptions>): Promise<ZylemBox> {
@@ -64,6 +79,7 @@ export async function box(...args: Array<BoxOptions>): Promise<ZylemBox> {
 		BuilderClass: BoxBuilder,
 		MeshBuilderClass: BoxMeshBuilder,
 		CollisionBuilderClass: BoxCollisionBuilder,
+		DebugInfoBuilderClass: BoxDebugInfoBuilder,
 		entityType: ZylemBox.type
 	});
 }
