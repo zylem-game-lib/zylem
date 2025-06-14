@@ -1,7 +1,5 @@
-import { render, style } from 'solid-js/web';
-import { createEffect, createSignal } from 'solid-js';
-
-import { debugStore } from './debug-store';
+import { render } from 'solid-js/web';
+import { createSignal } from 'solid-js';
 
 import { Menu } from './menu/Menu';
 import './Debug.css';
@@ -10,12 +8,7 @@ import './Debug.css';
  * DebugMenu root component. Handles open/close state and layout.
  */
 function Debug() {
-  const [showDebugMenu, setShowDebugMenu] = createSignal(false);
   const [isOpen, setIsOpen] = createSignal(false);
-
-  createEffect(() => {
-    setShowDebugMenu(debugStore.debug);
-  });
 
   const toggleMenu = () => {
     setIsOpen(!isOpen());
@@ -31,11 +24,9 @@ function Debug() {
         'pointer-events': 'visible',
       }}
     >
-      {showDebugMenu() && (
-        <div style={{ display: 'flex', 'z-index': 1001 }}>
-          <button id="zylem-debug-button" type="button" onClick={toggleMenu} />
-        </div>
-      )}
+      <div style={{ display: 'flex', 'z-index': 1001 }}>
+        <button id="zylem-debug-button" type="button" onClick={toggleMenu} />
+      </div>
       {isOpen() && (
         <div
           style={{

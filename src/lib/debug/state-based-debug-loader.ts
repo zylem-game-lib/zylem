@@ -1,0 +1,35 @@
+/**
+ * State-Based Debug Module Loader
+ * 
+ * This approach integrates with the existing debug state system
+ * and loads the debug module when debug state changes to true.
+ */
+
+import { debugState$ } from '../state/debug-state';
+
+let debugModuleLoaded = false;
+
+/**
+ * Loads the debug module when debug state becomes true
+ */
+async function loadDebugModule(): Promise<void> {
+	if (!debugModuleLoaded) {
+		try {
+			await import('./Debug');
+			debugModuleLoaded = true;
+			console.log('🐛 Zylem Debug module loaded via state change');
+		} catch (error) {
+			console.error('Failed to load debug module:', error);
+		}
+	}
+}
+
+debugState$.on.onChange(async (isDebugEnabled) => {
+	if (isDebugEnabled && !debugModuleLoaded) {
+		await loadDebugModule();
+	}
+});
+
+if (debugState$.on.get() && !debugModuleLoaded) {
+	loadDebugModule();
+} 
