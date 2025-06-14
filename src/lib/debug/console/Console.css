@@ -29,7 +29,7 @@
 }
 
 .zylem-debug-console-clear:active {
-  background: var(--debug-active-background);
+  background: var(--debug-background-active);
   color: var(--debug-background);
 }
 

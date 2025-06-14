@@ -3,11 +3,47 @@
   flex-direction: column;
   gap: 10px;
   overflow-y: auto;
+  overflow-x: hidden;
+  font-family: var(--debug-font-family);
+}
+
+ul {
+  all: unset;
+}
+
+.entity-item-wrapper {
+  all: unset;
+  cursor: pointer;
+}
+
+.entity-item-wrapper:hover .entity-item {
+  background-color: var(--debug-background-hover);
+  color: var(--debug-primary);
+}
+
+.entity-item-wrapper:active .entity-item {
+  background-color: var(--debug-background-active);
+  color: var(--debug-background);
+}
+
+.entity-item,
+.entity-info-item {
   font-family: var(--debug-font-family);
 }
 
 .entity-item {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 5px;
+  grid-template-columns: 1fr 1fr 1fr;
+  border: 1px solid;
+  padding: 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  transition: background-color 200ms cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
+.entity-info-item {
+  display: grid;
+  grid-template-columns: min-content max-content;
+  gap: 10px;
 }

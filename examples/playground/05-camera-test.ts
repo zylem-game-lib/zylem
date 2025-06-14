@@ -2,6 +2,7 @@ import { Color, Vector3 } from 'three';
 import { box, game, Perspectives, stage } from '../../src/main';
 
 const myGame = game(
+	{ debug: true, id: 'camera-test' },
 	stage({
 		backgroundColor: new Color(Color.NAMES.gainsboro),
 		camera: {

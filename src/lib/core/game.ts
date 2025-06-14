@@ -20,8 +20,8 @@ export type DebugConfiguration = {
 
 export interface IGameOptions {
 	id: string;
-	globals: Record<string, any>;
-	stages: ZylemStage[];
+	globals?: Record<string, any>;
+	stages?: ZylemStage[];
 	update?: UpdateFunction<ZylemGame>;
 	debug?: boolean;
 	debugConfiguration?: DebugConfiguration;
@@ -58,7 +58,7 @@ export class ZylemGame {
 		this.timer = new Timer();
 		this.timer.connect(document);
 		this.id = options.id;
-		this.stages = options.stages;
+		this.stages = options.stages || [];
 		this.setGlobals(options);
 	}
 

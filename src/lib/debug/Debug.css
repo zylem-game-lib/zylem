@@ -1,11 +1,21 @@
 :root {
   --debug-primary: #9fcfff;
+  --debug-primary-hover: #72b3f4;
+  --debug-primary-active: #003c77;
+
   --debug-background: rgba(10, 20, 30, 0.54);
+  --debug-background-hover: #2a6734b3;
+  --debug-background-active: rgba(20, 255, 60, 0.7);
+
   --debug-console-background: rgba(20, 40, 60, 0.2);
-  --debug-active-background: rgba(20, 255, 60, 0.2);
-  --debug-icon-color: #9fcfff;
+  --debug-console-text: #72b3f4;
+
   --debug-icon-size: 28px;
   --debug-font-family: 'Exo 2', sans-serif;
+}
+
+button {
+  all: unset;
 }
 
 #zylem-debug-container {
@@ -14,25 +24,25 @@
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 1000;
-}
-
-button {
-  all: unset;
+  z-index: 1;
 }
 
 #zylem-debug-button {
   position: fixed;
   top: 0;
   right: 0;
+
+  width: 100px;
+  height: 100px;
+
   background-image: url(./assets/zylem-logo.png);
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+
   cursor: pointer;
-  width: 100px;
-  height: 100px;
-  z-index: 1000;
+  z-index: 1;
+
   transition: transform 0.3s ease-in-out;
 }
 
@@ -43,6 +53,27 @@ button {
   font-style: normal;
 }
 
-.scrollable {
+.scrollable-y {
   overflow-y: scroll;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+.scroll-thin {
+  scrollbar-width: thin; /* For Firefox */
+  scrollbar-color: var(--debug-primary) transparent;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  background-color: var(--debug-primary-active);
+  border-radius: 3px;
 }

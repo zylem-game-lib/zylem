@@ -47,6 +47,7 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> {
 	public rigidBody: RigidBodyDesc | undefined;
 	public collider: ColliderDesc | undefined;
 	public custom: Record<string, any> = {};
+	public debugInfo: Record<string, any> = {};
 	protected lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
 
 	constructor() {
@@ -112,10 +113,23 @@ export abstract class EntityMeshBuilder extends MeshBuilder {
 	}
 }
 
+export abstract class DebugInfoBuilder {
+	abstract buildInfo(options: EntityOptions): Record<string, string>;
+}
+
+export class DefaultDebugInfoBuilder extends DebugInfoBuilder {
+	buildInfo(options: EntityOptions): Record<string, string> {
+		return {
+			message: 'missing debug info builder'
+		};
+	}
+}
+
 export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends EntityOptions, P = any> {
 	protected meshBuilder: EntityMeshBuilder | null;
 	protected collisionBuilder: EntityCollisionBuilder | null;
 	protected materialBuilder: MaterialBuilder | null;
+	protected debugInfoBuilder: DebugInfoBuilder | null = null;
 	protected options: Partial<U>;
 	protected entity: T;
 
@@ -124,16 +138,18 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends Entit
 		entity: T,
 		meshBuilder: EntityMeshBuilder | null,
 		collisionBuilder: EntityCollisionBuilder | null,
+		debugInfoBuilder: DebugInfoBuilder | null
 	) {
 		this.options = options;
 		this.entity = entity;
 		this.meshBuilder = meshBuilder;
 		this.collisionBuilder = collisionBuilder;
+		this.debugInfoBuilder = debugInfoBuilder;
 		this.materialBuilder = new MaterialBuilder();
 		this.options._builders = {
 			meshBuilder: this.meshBuilder,
 			collisionBuilder: this.collisionBuilder,
-			materialBuilder: this.materialBuilder
+			materialBuilder: this.materialBuilder,
 		};
 	}
 
@@ -151,7 +167,6 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends Entit
 
 	applyMaterialToGroup(group: Group, materials: Material[]): void {
 		group.traverse((child) => {
-			// console.log(child);
 			if (child instanceof Mesh) {
 				if (child.type === 'SkinnedMesh' && materials[0] && !child.material.map) {
 					const light = new PointLight(0xffffff, 10, 0, 2);
@@ -198,6 +213,10 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends Entit
 
 			const { x, y, z } = this.options.position || { x: 0, y: 0, z: 0 };
 			entity.rigidBody.setTranslation(x, y, z);
+		}
+
+		if (this.debugInfoBuilder) {
+			entity.debugInfo = this.debugInfoBuilder.buildInfo(this.options);
 		}
 
 		return entity;
