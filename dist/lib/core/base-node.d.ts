@@ -1,0 +1,30 @@
+import { Behavior } from "~/lib/behaviors/behavior";
+import { DestroyContext, DestroyFunction, SetupContext, SetupFunction, UpdateContext, UpdateFunction } from "./base-node-life-cycle";
+export type BaseNodeOptions<T = any> = BaseNode | Partial<T>;
+export declare abstract class BaseNode<Options = any, T = any> {
+    protected parent: BaseNode | null;
+    protected children: BaseNode[];
+    behaviors: Behavior[];
+    options: Options;
+    eid: number;
+    name: string;
+    update: UpdateFunction<this>;
+    setup: SetupFunction<this>;
+    destroy: DestroyFunction<this>;
+    constructor(args?: BaseNodeOptions[]);
+    setParent(parent: BaseNode | null): void;
+    getParent(): BaseNode | null;
+    add(baseNode: BaseNode): void;
+    remove(baseNode: BaseNode): void;
+    getChildren(): BaseNode[];
+    isComposite(): boolean;
+    abstract create(): T;
+    protected abstract _setup(params: SetupContext<this>): void;
+    protected abstract _update(params: UpdateContext<this>): void;
+    protected abstract _destroy(params: DestroyContext<this>): void;
+    nodeSetup(params: SetupContext<this>): void;
+    nodeUpdate(params: UpdateContext<this>): void;
+    nodeDestroy(params: DestroyContext<this>): void;
+    getOptions(): Options;
+    setOptions(options: Partial<Options>): void;
+}

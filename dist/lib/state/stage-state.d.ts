@@ -1,6 +1,9 @@
-import { StageBlueprint } from '../interfaces/stage';
-declare const stageState: Pick<StageBlueprint, 'backgroundColor' | 'backgroundImage' | 'perspective'>;
-declare const setStageBackgroundColor: (value: any) => void;
-declare const setStageBackgroundImage: (value: any) => void;
-declare const setStagePerspective: (value: any) => void;
-export { stageState, setStageBackgroundColor, setStageBackgroundImage, setStagePerspective };
+import { Color } from 'three';
+import { StageState } from '../core/stage/zylem-stage';
+import { GameEntity } from '../entities/entity';
+declare const stageState: StageState;
+declare const setStageState: (state: StageState) => void;
+declare const setStageBackgroundColor: (value: Color) => void;
+declare const setStageBackgroundImage: (value: string | null) => void;
+declare const setEntitiesToStage: (entities: GameEntity<any>[]) => void;
+export { stageState, setStageState, setStageBackgroundColor, setStageBackgroundImage, setEntitiesToStage };

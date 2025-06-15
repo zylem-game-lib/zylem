@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { Howl } from 'howler';
-import { game, GameOptions, stage } from './lib/core';
-import { StageBlueprint } from './lib/interfaces/stage';
-import { PerspectiveType, Perspectives } from './lib/interfaces/perspective';
-import { Vect3 } from './lib/interfaces/utility';
+import { game, ZylemGameConfig, stage, StageOptions, vessel } from './lib/core';
+import { PerspectiveType, Perspectives } from './lib/camera/perspective';
+import { camera } from './lib/camera/camera';
+import { Vect3 } from './lib/core/utility';
 import * as actions from './lib/behaviors/actions';
 import * as entities from './lib/entities/index';
+import { destroy } from './lib/entities/destroy';
 declare const Zylem: {
     Util: {
         wait(delay: number, callback: Function): void;
@@ -19,12 +20,7 @@ declare const Zylem: {
         actionWithThrottle: (timer: number, callback: Function) => void;
     };
 };
-declare const box: typeof entities.box, sphere: typeof entities.sphere, sprite: typeof entities.sprite, plane: typeof entities.plane, zone: typeof entities.zone, actor: typeof entities.actor;
-declare const bounce: import('bitecs').ComponentType<{
-    height: 'i8';
-}>, move: import('bitecs').ComponentType<{
-    movement: 'i8';
-}>;
+declare const box: typeof entities.box, sphere: typeof entities.sphere, sprite: typeof entities.sprite, plane: typeof entities.plane, zone: typeof entities.zone, actor: typeof entities.actor, ZylemBox: typeof entities.ZylemBox;
 declare namespace Zylem { }
-export { game, stage, box, sphere, sprite, plane, zone, actor, actions, bounce, move, Perspectives, Zylem, Howl, THREE, RAPIER };
-export type { GameOptions as ZylemGame, StageBlueprint as ZylemStage, Vect3, PerspectiveType };
+export { game, stage, camera, box, sphere, sprite, plane, zone, actor, vessel, actions, destroy, Perspectives, Zylem, ZylemBox, Howl, THREE, RAPIER };
+export type { ZylemGameConfig as ZylemGame, StageOptions as ZylemStage, Vect3, PerspectiveType };

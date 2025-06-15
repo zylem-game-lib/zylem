@@ -1,39 +1,65 @@
-import { Vector } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
-import { OptionalVector } from '~/lib/interfaces/entity';
-import { GameEntity } from '../core/game-entity';
-import { EntityErrors } from '../core/errors';
-declare const Moveable_base: import('ts-mixer/dist/types/types').Class<any[], GameEntity<unknown> & EntityErrors, (new (options: import('~/lib/interfaces/entity').GameEntityOptions<{
-    collision?: import('~/lib/interfaces/entity').CollisionOption<unknown> | undefined;
-}, unknown>) => GameEntity<unknown>) & typeof EntityErrors>;
-export declare class Moveable extends Moveable_base {
-	moveX(delta: number): void;
-	moveY(delta: number): void;
-	moveZ(delta: number): void;
-	moveXY(deltaX: number, deltaY: number): void;
-	moveXZ(deltaX: number, deltaZ: number): void;
-	moveEntity(movementVector: Vector3): void;
-	resetVelocity(): void;
-	moveForwardXY(delta: number): void;
-	velocity: Vector3;
-	_rotation2DAngle: number;
-	_normalizeAngleTo2Pi(angle: number): number;
-	rotateInDirection(moveVector: Vector3): void;
-	rotateYEuler(amount: number): void;
-	rotateEuler(rotation: Vector3): void;
-	rotate(delta: number): void;
-	rotateY(delta: number): void;
-	rotateZ(delta: number): void;
-	setRotationY(y: number): void;
-	setRotationX(x: number): void;
-	setRotationZ(z: number): void;
-	newRotation(x: number, y: number, z: number): void;
-	setRotation(x: number, y: number, z: number): void;
-	getRotation(): any;
-	setPosition(x: number, y: number, z: number): void;
-	getPosition(): Vector;
-	getVelocity(): Vector;
-	getDirection2D(): OptionalVector;
-	wrapAroundXY(boundsX: number, boundsY: number): void;
+import { RigidBody, Vector } from '@dimforge/rapier3d-compat';
+export interface MoveableEntity {
+    body: RigidBody | null;
 }
-export {};
+/**
+ * Move an entity along the X axis
+ */
+export declare function moveX(entity: MoveableEntity, delta: number): void;
+/**
+ * Move an entity along the Y axis
+ */
+export declare function moveY(entity: MoveableEntity, delta: number): void;
+/**
+ * Move an entity along the Z axis
+ */
+export declare function moveZ(entity: MoveableEntity, delta: number): void;
+/**
+ * Move an entity along the X and Y axis
+ */
+export declare function moveXY(entity: MoveableEntity, deltaX: number, deltaY: number): void;
+/**
+ * Move an entity along the X and Z axis
+ */
+export declare function moveXZ(entity: MoveableEntity, deltaX: number, deltaZ: number): void;
+/**
+ * Move entity based on a vector
+ */
+export declare function move(entity: MoveableEntity, vector: Vector3): void;
+/**
+ * Reset entity velocity
+ */
+export declare function resetVelocity(entity: MoveableEntity): void;
+/**
+ * Move entity forward in 2D space
+ */
+export declare function moveForwardXY(entity: MoveableEntity, delta: number, rotation2DAngle: number): void;
+/**
+ * Get entity position
+ */
+export declare function getPosition(entity: MoveableEntity): Vector | null;
+/**
+ * Get entity velocity
+ */
+export declare function getVelocity(entity: MoveableEntity): Vector | null;
+/**
+ * Set entity position
+ */
+export declare function setPosition(entity: MoveableEntity, x: number, y: number, z: number): void;
+/**
+ * Set entity X position
+ */
+export declare function setPositionX(entity: MoveableEntity, x: number): void;
+/**
+ * Set entity Y position
+ */
+export declare function setPositionY(entity: MoveableEntity, y: number): void;
+/**
+ * Set entity Z position
+ */
+export declare function setPositionZ(entity: MoveableEntity, z: number): void;
+/**
+ * Wrap entity around 2D bounds
+ */
+export declare function wrapAroundXY(entity: MoveableEntity, boundsX: number, boundsY: number): void;

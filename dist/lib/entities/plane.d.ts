@@ -1,0 +1,32 @@
+import { ColliderDesc } from '@dimforge/rapier3d-compat';
+import { Vector2 } from 'three';
+import { TexturePath } from '../graphics/material';
+import { BaseNode } from '../core/base-node';
+import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { XZPlaneGeometry } from '../graphics/geometries/XZPlaneGeometry';
+type ZylemPlaneOptions = EntityOptions & {
+    tile?: Vector2;
+    repeat?: Vector2;
+    texture?: TexturePath;
+    subdivisions?: number;
+};
+export declare class PlaneCollisionBuilder extends EntityCollisionBuilder {
+    collider(options: ZylemPlaneOptions): ColliderDesc;
+}
+export declare class PlaneMeshBuilder extends EntityMeshBuilder {
+    heightData: Float32Array;
+    columnsRows: Map<any, any>;
+    buildGeometry(options: ZylemPlaneOptions): XZPlaneGeometry;
+    postBuild(): void;
+}
+export declare class PlaneBuilder extends EntityBuilder<ZylemPlane, ZylemPlaneOptions> {
+    protected createEntity(options: Partial<ZylemPlaneOptions>): ZylemPlane;
+}
+export declare const PLANE_TYPE: unique symbol;
+export declare class ZylemPlane extends GameEntity<ZylemPlaneOptions> {
+    static type: symbol;
+    constructor(options?: ZylemPlaneOptions);
+}
+type PlaneOptions = BaseNode | Partial<ZylemPlaneOptions>;
+export declare function plane(...args: Array<PlaneOptions>): Promise<ZylemPlane>;
+export {};
