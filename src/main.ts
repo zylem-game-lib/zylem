@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import * as RAPIER from '@dimforge/rapier3d-compat';
 import { Howl } from 'howler';
 
-import { game, IGameOptions, stage, StageOptions } from './lib/core';
+import { game, ZylemGameConfig, stage, StageOptions, vessel } from './lib/core';
 
-import { PerspectiveType, Perspectives } from './lib/interfaces/perspective';
+import { PerspectiveType, Perspectives } from './lib/camera/perspective';
+import { camera } from './lib/camera/camera';
 import { Vect3 } from './lib/core/utility';
 
 import * as actions from './lib/behaviors/actions';
@@ -19,13 +20,14 @@ const Zylem = {
 	Util
 };
 
-const { box, sphere, sprite, plane, zone, actor, vessel, ZylemBox } = entities;
+const { box, sphere, sprite, plane, zone, actor, ZylemBox } = entities;
 
 namespace Zylem { };
 
 export {
 	game,
 	stage,
+	camera,
 	box,
 	sphere,
 	sprite,
@@ -42,4 +44,4 @@ export {
 	THREE,
 	RAPIER
 };
-export type { IGameOptions as ZylemGame, StageOptions as ZylemStage, Vect3, PerspectiveType };
+export type { ZylemGameConfig as ZylemGame, StageOptions as ZylemStage, Vect3, PerspectiveType };

@@ -39,7 +39,13 @@ export type EntityOptions = {
 	};
 }
 
-export class GameEntity<O extends EntityOptions> extends BaseNode<O> {
+export abstract class GameEntityLifeCycle {
+	abstract _setup(params: SetupContext<this>): void;
+	abstract _update(params: UpdateContext<this>): void;
+	abstract _destroy(params: DestroyContext<this>): void;
+}
+
+export class GameEntity<O extends EntityOptions> extends BaseNode<O> implements GameEntityLifeCycle {
 	public group: Group | undefined;
 	public uuid: string = '';
 	public mesh: Mesh | undefined;
@@ -48,7 +54,7 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> {
 	public collider: ColliderDesc | undefined;
 	public custom: Record<string, any> = {};
 	public debugInfo: Record<string, any> = {};
-	protected lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
+	public lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
 
 	constructor() {
 		super();
@@ -66,20 +72,20 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> {
 		return this;
 	}
 
-	protected _setup(params: SetupContext<this>): void {
+	public _setup(params: SetupContext<this>): void {
 		if (this.lifeCycleDelegate?.setup) {
 			this.lifeCycleDelegate.setup({ ...params, entity: this as unknown as O });
 		}
 	}
 
-	protected _update(params: UpdateContext<this>): void {
+	public _update(params: UpdateContext<this>): void {
 		this.updateMaterials(params);
 		if (this.lifeCycleDelegate?.update) {
 			this.lifeCycleDelegate.update({ ...params, entity: this as unknown as O });
 		}
 	}
 
-	protected _destroy(params: DestroyContext<this>): void {
+	public _destroy(params: DestroyContext<this>): void {
 		if (this.lifeCycleDelegate?.destroy) {
 			this.lifeCycleDelegate.destroy({ ...params, entity: this as unknown as O });
 		}

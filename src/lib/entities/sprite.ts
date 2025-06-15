@@ -7,7 +7,7 @@ import {
 } from 'three';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { EntityBuilder, EntityCollisionBuilder, EntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
 
 export type SpriteImage = { name: string; file: string };
@@ -59,14 +59,14 @@ export const SPRITE_TYPE = Symbol('Sprite');
 export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 	static type = SPRITE_TYPE;
 
-	private sprites: ThreeSprite[] = [];
-	private spriteMap: Map<string, number> = new Map();
-	private currentSpriteIndex: number = 0;
-	private animations: Map<string, any> = new Map();
-	private currentAnimation: any = null;
-	private currentAnimationFrame: string = '';
-	private currentAnimationIndex: number = 0;
-	private currentAnimationTime: number = 0;
+	protected sprites: ThreeSprite[] = [];
+	protected spriteMap: Map<string, number> = new Map();
+	protected currentSpriteIndex: number = 0;
+	protected animations: Map<string, any> = new Map();
+	protected currentAnimation: any = null;
+	protected currentAnimationFrame: string = '';
+	protected currentAnimationIndex: number = 0;
+	protected currentAnimationTime: number = 0;
 
 	constructor(options?: ZylemSpriteOptions) {
 		super();
@@ -75,7 +75,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		this.createAnimations(options?.animations || []);
 	}
 
-	private createSpritesFromImages(images: SpriteImage[]) {
+	protected createSpritesFromImages(images: SpriteImage[]) {
 		const textureLoader = new TextureLoader();
 		images.forEach((image, index) => {
 			const spriteMap = textureLoader.load(image.file);
@@ -92,7 +92,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		this.group.add(...this.sprites);
 	}
 
-	private createAnimations(animations: SpriteAnimation[]) {
+	protected createAnimations(animations: SpriteAnimation[]) {
 		animations.forEach(animation => {
 			const { name, frames, loop = false, speed = 1 } = animation;
 			const internalAnimation = {
@@ -148,7 +148,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 
 }
 
-type SpriteOptions = BaseNode | ZylemSpriteOptions;
+type SpriteOptions = BaseNode | Partial<ZylemSpriteOptions>;
 
 export async function sprite(...args: Array<SpriteOptions>): Promise<ZylemSprite> {
 	return createEntity<ZylemSprite, ZylemSpriteOptions>({

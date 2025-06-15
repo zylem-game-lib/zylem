@@ -1,23 +1,9 @@
-import { ZylemShaderType } from '../core/preset-shader';
-import { LifecycleOptions, LifecycleParameters } from '../core/base-node-life-cycle';
-import { EntityOptions } from '../core';
+import { Collider, KinematicCharacterController, RigidBody } from "@dimforge/rapier3d-compat";
+import { Group, Mesh } from "three";
 
-export type LifecycleFunction<T> = (params?: LifecycleParameters<T>) => void;
-/** deprecated */
-export type UpdateFunction = (params: LifecycleParameters) => void;
-/** deprecated */
-export type SetupFunction = (params: LifecycleParameters) => void;
-/** deprecated */
-export type DestroyFunction = (params: LifecycleParameters) => void;
+export type LifecycleFunction<T> = (params?: any) => void;
 
 export type CollisionOption = (entity: any, other: any, globals?: Global) => void;
-
-export type StageEntityOptions<Options> = Partial<Options> & EntityOptions & LifecycleOptions<Options> & {
-	collision?: CollisionOption;
-	name?: string;
-	tag?: Set<string>;
-	shader?: ZylemShaderType;
-};
 
 export interface Entity<T = any> {
 	setup: (entity: T) => void;
@@ -28,6 +14,18 @@ export interface Entity<T = any> {
 	_destroy?: (globals?: any) => void;
 	name?: string;
 	tag?: Set<string>;
+}
+
+export interface StageEntity extends Entity {
+	uuid: string;
+	body: RigidBody;
+	group: Group;
+	mesh: Mesh;
+	instanceId: number;
+	collider: Collider;
+	controlledRotation: boolean;
+	characterController: KinematicCharacterController;
+	name: string;
 }
 
 export type OptionalVector = { x?: number, y?: number, z?: number };

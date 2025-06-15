@@ -1,6 +1,6 @@
 import { AnimationClip, Object3D } from 'three';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
-import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export enum FileExtensionTypes {
 	FBX = 'fbx',

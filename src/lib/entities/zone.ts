@@ -114,7 +114,7 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions> implements Collision
 	}
 }
 
-type ZoneOptions = BaseNode | ZylemZoneOptions;
+type ZoneOptions = BaseNode | Partial<ZylemZoneOptions>;
 
 export async function zone(...args: Array<ZoneOptions>): Promise<ZylemZone> {
 	return createEntity<ZylemZone, ZylemZoneOptions>({

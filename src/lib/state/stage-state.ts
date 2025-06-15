@@ -1,6 +1,6 @@
-import { Color } from 'three';
+import { Color, Vector3 } from 'three';
 import { observable } from '@simplyianm/legend-state';
-import { StageState } from '../core/stage';
+import { StageState } from '../core/stage/zylem-stage';
 import { GameEntity } from '../entities/entity';
 
 const stageState$ = observable({
@@ -10,6 +10,7 @@ const stageState$ = observable({
 		p1: ['gamepad-1', 'keyboard-1'],
 		p2: ['gamepad-2', 'keyboard-2'],
 	},
+	gravity: new Vector3(0, 0, 0),
 	entities: [],
 } as StageState);
 

@@ -10,6 +10,7 @@
   box-sizing: border-box;
   overflow-y: scroll;
   overflow-x: hidden;
+  pointer-events: auto;
 }
 
 ::-webkit-scrollbar {
