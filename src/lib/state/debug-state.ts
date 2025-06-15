@@ -1,8 +1,19 @@
 import { observable } from '@simplyianm/legend-state';
 
+export type DebugConfiguration = {
+	showCollisionBounds?: boolean;
+	showModelBounds?: boolean;
+	showSpriteBounds?: boolean;
+	//TODO: show movement vector? other world related possibilities
+}
+
 const debugState$ = observable({
 	on: false,
-	configuration: {},
+	configuration: {
+		showCollisionBounds: false,
+		showModelBounds: false,
+		showSpriteBounds: false,
+	},
 });
 
 const debugState = debugState$.get();

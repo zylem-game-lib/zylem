@@ -1,46 +1,39 @@
 import { addComponent, addEntity, createWorld as createECS, removeEntity } from 'bitecs';
 import { World } from '@dimforge/rapier3d-compat';
-import { BufferAttribute, BufferGeometry, Color, Group, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3 } from 'three';
+import { BufferAttribute, BufferGeometry, Color, Group, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3, Vector2 } from 'three';
 
-import { ZylemWorld } from '../collision/world';
-import { ZylemScene } from '../graphics/scene';
+import { ZylemWorld } from '../../collision/world';
+import { ZylemScene } from '../../graphics/zylem-scene';
 
-import { Conditions } from '../interfaces/game';
-import { state$ } from '../state';
-import { setEntitiesToStage, setStageBackgroundColor, setStageBackgroundImage } from '../state/stage-state';
+import { Conditions } from '../../interfaces/game';
+import { state$ } from '../../state';
+import { setEntitiesToStage, setStageBackgroundColor, setStageBackgroundImage } from '../../state/stage-state';
 
-import { ZylemHUD } from '../ui/hud';
-import { GameEntity, StageEntity } from './';
-import { PerspectiveType, Perspectives } from '../interfaces/perspective';
-import { ZylemBlueColor } from './utility';
-import { debugState } from '../state/debug-state';
+import { GameEntity } from '..';
+import { ZylemBlueColor } from '../utility';
+import { debugState } from '../../state/debug-state';
 
-import { applyMixins } from './composable';
-import { SetupContext, UpdateContext, DestroyContext } from './base-node-life-cycle';
-import createTransformSystem, { StageSystem } from '../behaviors/transformable.system';
-import { BaseNode } from './base-node';
+import { SetupContext, UpdateContext, DestroyContext } from '../base-node-life-cycle';
+import createTransformSystem, { StageSystem } from '../../behaviors/transformable.system';
+import { BaseNode } from '../base-node';
 import { v4 as uuidv4 } from 'uuid';
+import { Stage } from './stage';
+import { ZylemCamera } from '~/lib/camera/zylem-camera';
+import { Perspectives } from '~/lib/camera/perspective';
+import { CameraWrapper } from '~/lib/camera/camera';
 
-export interface CameraOptions {
-	perspective: PerspectiveType;
-	position: Vector3;
-	target: Vector3;
-	zoom: number;
-}
-
-export interface ZylemStageOptions {
+export interface ZylemStageConfig {
 	inputs: Record<string, string[]>;
 	backgroundColor: Color;
 	backgroundImage: string | null;
 	gravity: Vector3;
-	conditions: Conditions<any>[];
-	children: ({ globals }: any) => BaseNode[];
-	camera: CameraOptions;
+	conditions?: Conditions<any>[];
+	children?: ({ globals }: any) => BaseNode[];
 }
 
-export type StageState = Pick<ZylemStageOptions, 'backgroundColor' | 'backgroundImage' | 'inputs'> & { entities: GameEntity<any>[] };
+export type StageOptions = Array<ZylemStageConfig | BaseNode | CameraWrapper>;
 
-export type StageOptions = Partial<ZylemStageOptions>;
+export type StageState = ZylemStageConfig & { entities: GameEntity<any>[] };
 
 export const STAGE_TYPE = 'Stage';
 
@@ -54,13 +47,13 @@ export class ZylemStage {
 			p1: ['gamepad-1', 'keyboard'],
 			p2: ['gamepad-2', 'keyboard'],
 		},
+		gravity: new Vector3(0, 0, 0),
 		entities: [],
 	};
 	gravity: Vector3;
 
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
-	HUD: ZylemHUD;
 	conditions: Conditions<any>[] = [];
 
 	children: Array<BaseNode> = [];
@@ -74,26 +67,93 @@ export class ZylemStage {
 	transformSystem: any = null;
 
 	uuid: string;
+	wrapperRef: Stage | null = null;
+	camera?: CameraWrapper;
+	cameraRef?: ZylemCamera | null = null;
 
-	constructor(options: StageOptions) {
+	_setup?: (params: SetupContext<ZylemStage>) => void;
+	_update?: (params: UpdateContext<ZylemStage>) => void;
+	_destroy?: (params: DestroyContext<ZylemStage>) => void;
+
+	constructor(options: StageOptions = []) {
 		this.world = null;
 		this.scene = null;
-		this.HUD = new ZylemHUD();
 		this.uuid = uuidv4();
+
+		// Parse the options array to extract different types of items
+		const { config, entities, camera } = this.parseOptions(options);
+
+		this.camera = camera;
+		this.children = entities;
+
 		this.saveState({
-			backgroundColor: options.backgroundColor ?? this.state.backgroundColor,
-			backgroundImage: options.backgroundImage ?? this.state.backgroundImage,
-			inputs: options.inputs ?? this.state.inputs,
+			backgroundColor: config.backgroundColor ?? this.state.backgroundColor,
+			backgroundImage: config.backgroundImage ?? this.state.backgroundImage,
+			inputs: config.inputs ?? this.state.inputs,
+			gravity: config.gravity ?? this.state.gravity,
+			conditions: config.conditions,
+			children: config.children,
 			entities: this.state.entities,
 		});
-		this.gravity = options.gravity ?? new Vector3(0, 0, 0);
-		this.children = options.children ? options.children({ globals: state$.globals }) : [];
-		this.conditions = options.conditions ?? [];
+
+		this.gravity = config.gravity ?? new Vector3(0, 0, 0);
+		this.conditions = config.conditions ?? [];
+
+		// If children function is provided in config, merge with entities
+		if (config.children) {
+			const configChildren = config.children({ globals: state$.globals });
+			this.children = [...this.children, ...configChildren];
+		}
 
 		const self = this;
 		window.onresize = function () {
 			self.resize(window.innerWidth, window.innerHeight);
 		};
+	}
+
+	/**
+	 * Parse the options array to extract config, entities, and camera
+	 */
+	private parseOptions(options: StageOptions): {
+		config: Partial<ZylemStageConfig>;
+		entities: BaseNode[];
+		camera?: CameraWrapper;
+	} {
+		let config: Partial<ZylemStageConfig> = {};
+		const entities: BaseNode[] = [];
+		let camera: CameraWrapper | undefined;
+		for (const item of options) {
+			if (this.isZylemStageConfig(item)) {
+				config = { ...config, ...item };
+			} else if (this.isBaseNode(item)) {
+				entities.push(item);
+			} else if (this.isCameraWrapper(item)) {
+				camera = item;
+			}
+		}
+
+		return { config, entities, camera };
+	}
+
+	/**
+	 * Type guard to check if an item is ZylemStageConfig
+	 */
+	private isZylemStageConfig(item: any): item is ZylemStageConfig {
+		return item && typeof item === 'object' && !(item instanceof BaseNode);
+	}
+
+	/**
+	 * Type guard to check if an item is BaseNode
+	 */
+	private isBaseNode(item: any): item is BaseNode {
+		return item && typeof item === 'object' && typeof item.create === 'function';
+	}
+
+	/**
+	 * Type guard to check if an item is CameraWrapper
+	 */
+	private isCameraWrapper(item: any): item is CameraWrapper {
+		return item && typeof item === 'object' && item.constructor.name === 'CameraWrapper';
 	}
 
 	private saveState(state: StageState) {
@@ -106,10 +166,12 @@ export class ZylemStage {
 		setStageBackgroundImage(backgroundImage);
 	}
 
-	async load(id: string) {
+	async load(id: string, camera?: ZylemCamera) {
 		this.setState();
 
-		this.scene = new ZylemScene(id);
+		const zylemCamera = camera || (this.camera ? this.camera.cameraRef : this.createDefaultCamera());
+		this.cameraRef = zylemCamera;
+		this.scene = new ZylemScene(id, zylemCamera);
 
 		const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
@@ -121,6 +183,13 @@ export class ZylemStage {
 		}
 		setEntitiesToStage(this.children as unknown as GameEntity<any>[]);
 		this.transformSystem = createTransformSystem(this as unknown as StageSystem);
+	}
+
+	private createDefaultCamera(): ZylemCamera {
+		const width = window.innerWidth;
+		const height = window.innerHeight;
+		const screenResolution = new Vector2(width, height);
+		return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
 	}
 
 	public setup(params: SetupContext<ZylemStage>): void {
@@ -137,7 +206,7 @@ export class ZylemStage {
 			this._debugLines.visible = true;
 		}
 		if (this._setup) {
-			this._setup({ ...params, HUD: this.HUD });
+			this._setup({ ...params, entity: this, stage: this });
 		}
 	}
 
@@ -150,12 +219,6 @@ export class ZylemStage {
 		this.world.update(params);
 		this.transformSystem(this.ecs);
 		this._childrenMap.forEach((child, uuid) => {
-			// if (child.markForDestruction && this.world) {
-			// removeEntity(this.ecs, child.eid);
-			// this.world.destroyEntity(child as any);
-			// this._childrenMap.delete(uuid);
-			// return;
-			// }
 			child.nodeUpdate({
 				...params,
 				entity: child,
@@ -173,7 +236,9 @@ export class ZylemStage {
 	public destroy(params: DestroyContext<ZylemStage>): void {
 		this.world?.destroy();
 		this.scene?.destroy();
-		this._destroy({ ...params, entity: this });
+		if (this._destroy) {
+			this._destroy({ ...params, entity: this });
+		}
 	}
 
 	async spawnEntity(child: BaseNode) {
@@ -243,18 +308,7 @@ export class ZylemStage {
 
 	resize(width: number, height: number) {
 		if (this.scene) {
-			const camera = this.scene.zylemCamera.camera as PerspectiveCamera;
-			camera.aspect = width / height;
-			camera.updateProjectionMatrix();
 			this.scene.updateRenderer(width, height);
 		}
 	}
-}
-
-export interface ZylemStage extends StageEntity { }
-applyMixins(ZylemStage, [StageEntity]);
-
-export function stage(options: StageOptions = {}): ZylemStage {
-	const zylemStage = new ZylemStage(options) as ZylemStage;
-	return zylemStage;
 }

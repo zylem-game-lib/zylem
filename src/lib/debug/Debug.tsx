@@ -21,7 +21,6 @@ function Debug() {
         display: 'flex',
         height: '100vh',
         width: '100vw',
-        'pointer-events': 'visible',
       }}
     >
       <div style={{ display: 'flex', 'z-index': 1001 }}>

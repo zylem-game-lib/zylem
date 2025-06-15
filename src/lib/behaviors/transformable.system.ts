@@ -5,7 +5,7 @@ import {
 	Types,
 } from 'bitecs';
 import { Quaternion } from 'three';
-import { StageEntity } from '../core';
+import { StageEntity } from '../interfaces/entity';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 export type StageSystem = {

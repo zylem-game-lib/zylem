@@ -1,8 +1,7 @@
 import { Vector3 } from 'three';
 import RAPIER, { World } from '@dimforge/rapier3d-compat';
 
-import { Entity } from '../interfaces/entity';
-import { StageEntity } from '../entities/stage-entity';
+import { Entity, StageEntity } from '../interfaces/entity';
 import { state$ } from '../state';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { ZylemActor } from '../entities/actor';

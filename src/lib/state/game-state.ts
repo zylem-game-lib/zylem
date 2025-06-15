@@ -1,4 +1,4 @@
-import { IGameOptions } from '../core/';
+import { ZylemGameConfig } from '../core/';
 import { observable } from '@simplyianm/legend-state';
 
 const state$ = observable({
@@ -9,7 +9,7 @@ const state$ = observable({
 		hud: null,
 		game: null
 	}
-} as unknown as IGameOptions);
+} as unknown as ZylemGameConfig);
 
 const setGlobalState = (value: any) => {
 	state$.globals.set(value);

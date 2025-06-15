@@ -1,14 +1,14 @@
-import { ZylemHUD } from '../ui/hud';
-import { ZylemCamera } from '../camera/camera';
-import { Game } from './game-wrapper';
+import { ZylemCamera } from '../camera/zylem-camera';
+import { Game } from './game/game';
 import { Inputs } from '../input/input';
+import { ZylemStage } from './stage/zylem-stage';
 
 export interface SetupContext<T> {
 	entity: T;
 	globals: any;
 	inputs?: Inputs;
-	HUD?: ZylemHUD;
 	camera?: ZylemCamera;
+	stage?: ZylemStage;
 	game?: Game;
 }
 
@@ -22,8 +22,8 @@ export type UpdateContext<T> = {
 	inputs: Inputs;
 	globals: any;
 	camera: ZylemCamera;
+	stage?: ZylemStage;
 	game?: Game;
-	HUD?: ZylemHUD;
 };
 
 export interface UpdateFunction<T> {

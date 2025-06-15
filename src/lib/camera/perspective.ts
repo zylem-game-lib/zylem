@@ -6,4 +6,4 @@ export const Perspectives = {
 	Fixed2D: 'fixed-2d',
 } as const;
 
-export type PerspectiveType = typeof Perspectives[keyof typeof Perspectives];
+export type PerspectiveType = (typeof Perspectives)[keyof typeof Perspectives];

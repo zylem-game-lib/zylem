@@ -1,36 +1,25 @@
-import { ZylemBlueColor } from './utility';
-import { BaseNode } from './base-node';
-import { IGameOptions, ZylemGame } from './game';
-import { ZylemStage, stage } from './stage';
-import { DestroyFunction, SetupFunction, UpdateFunction } from './base-node-life-cycle';
-import { GameEntity } from '../entities/entity';
-
-async function loadGame(wrapperRef: Game) {
-	const options = convertNodes(wrapperRef.options);
-	const game = new ZylemGame(options, wrapperRef);
-	await game.loadStage(options.stages[0]);
-	return game;
-}
+import { BaseNode } from '../base-node';
+import { ZylemGameConfig, ZylemGame } from './zylem-game';
+import { ZylemStage } from '../stage/zylem-stage';
+import { Stage, stage } from '../stage/stage';
+import { DestroyFunction, SetupFunction, UpdateFunction } from '../base-node-life-cycle';
+import { GameEntity, GameEntityLifeCycle } from '../../entities/entity';
 
 const defaultGameOptions = {
 	id: 'zylem',
 	globals: {},
 	stages: [
-		stage({
-			// perspective: Perspectives.ThirdPerson,
-			backgroundColor: ZylemBlueColor,
-			children: (_) => []
-		})
+		stage()
 	]
 };
 
-function convertNodes(_options: GameOptions): { id: string, globals: {}, stages: ZylemStage[] } {
+function convertNodes(_options: GameOptions): { id: string, globals: {}, stages: Stage[] } {
 	let converted = { ...defaultGameOptions };
-	const configurations: IGameOptions[] = [];
-	const stages: ZylemStage[] = [];
+	const configurations: ZylemGameConfig[] = [];
+	const stages: Stage[] = [];
 	const entities: (BaseNode | GameEntity<any>)[] = [];
 	Object.values(_options).forEach((node) => {
-		if (node instanceof ZylemStage) {
+		if (node instanceof Stage) {
 			stages.push(node);
 		} else if (node instanceof GameEntity) {
 			entities.push(node);
@@ -38,19 +27,19 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 			entities.push(node);
 		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
 			const configuration = Object.assign(defaultGameOptions, { ...node });
-			configurations.push(configuration as IGameOptions);
+			configurations.push(configuration as ZylemGameConfig);
 		}
 	});
 	configurations.forEach((configuration) => {
 		converted = Object.assign(converted, { ...configuration });
 	});
 	stages.forEach((stage) => {
-		stage.children.unshift(...(entities as BaseNode[]));
+		stage.addEntities(entities as BaseNode[]);
 	});
 	if (stages.length) {
 		converted.stages = stages;
 	} else {
-		converted.stages[0].children.unshift(...(entities as BaseNode[]));
+		converted.stages[0].addEntities(entities as BaseNode[]);
 	}
 	return converted;
 }
@@ -70,10 +59,17 @@ export class Game {
 	}
 
 	async start() {
-		const game = await loadGame(this);
+		const game = await this.load();
 		this.gameRef = game;
 		this.setOverrides();
 		game.start();
+	}
+
+	async load(): Promise<ZylemGame> {
+		const options = convertNodes(this.options);
+		const game = new ZylemGame(options, this);
+		await game.loadStage(options.stages[0]);
+		return game;
 	}
 
 	setOverrides() {
@@ -102,7 +98,7 @@ export class Game {
 			return;
 		}
 		const currentStageId = this.gameRef.currentStageId;
-		const currentIndex = this.gameRef.stages.findIndex((s) => s.uuid === currentStageId);
+		const currentIndex = this.gameRef.stages.findIndex((s) => s.stageRef!.uuid === currentStageId);
 		const nextStage = this.gameRef.stages[currentIndex + 1];
 		if (!nextStage) {
 			console.error('next stage called on last stage');
@@ -117,7 +113,7 @@ export class Game {
 			return;
 		}
 		const currentStageId = this.gameRef.currentStageId;
-		const currentIndex = this.gameRef.stages.findIndex((s) => s.uuid === currentStageId);
+		const currentIndex = this.gameRef.stages.findIndex((s) => s.stageRef!.uuid === currentStageId);
 		const previousStage = this.gameRef.stages[currentIndex - 1];
 		if (!previousStage) {
 			console.error('previous stage called on first stage');
@@ -131,11 +127,11 @@ export class Game {
 	async end() { }
 }
 
-type GameOptions = Array<IGameOptions | ZylemStage | GameEntity<any> | BaseNode>;
+type GameOptions = Array<ZylemGameConfig | Stage | GameEntityLifeCycle | BaseNode>;
 
 /**
  * create a new game
- * @param options GameOptions - Array of IGameOptions, ZylemStage, GameEntity, or BaseNode objects
+ * @param options GameOptions - Array of IGameOptions, Stage, GameEntity, or BaseNode objects
  * @param options.id Game name string (when using IGameOptions)
  * @param options.globals Game globals object (when using IGameOptions)
  * @param options.stages Array of stage objects (when using IGameOptions)

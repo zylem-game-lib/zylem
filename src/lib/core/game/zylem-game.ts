@@ -1,30 +1,24 @@
-import { observe } from '@simplyianm/legend-state';
+// import { observe } from '@simplyianm/legend-state';
 
-import { state$ } from '../state/game-state';
-import { setGlobalState } from '../state/index';
+import { state$ } from '../../state/game-state';
+import { setGlobalState } from '../../state/index';
 
-import { setDebugFlag } from '../state/debug-state';
+import { setDebugFlag } from '../../state/debug-state';
 
-import { ZylemStage } from './stage';
-import { Game } from './game-wrapper';
-import { UpdateContext, SetupContext, UpdateFunction, SetupFunction, DestroyContext } from './base-node-life-cycle';
-import { InputManager } from '../input/input-manager';
-import { Timer } from './three-addons/Timer';
+import { ZylemStage } from '../stage/zylem-stage';
+import { Game } from './game';
+import { UpdateContext, SetupContext, UpdateFunction, SetupFunction, DestroyContext } from '../base-node-life-cycle';
+import { InputManager } from '../../input/input-manager';
+import { Timer } from '../three-addons/Timer';
+import { ZylemCamera } from '~/lib/camera/zylem-camera';
+import { Stage } from '../stage/stage';
 
-export type DebugConfiguration = {
-	showCollisionBounds?: boolean;
-	showModelBounds?: boolean;
-	showSpriteBounds?: boolean;
-	//TODO: show movement vector? other world related possibilities
-}
-
-export interface IGameOptions {
+export interface ZylemGameConfig {
 	id: string;
 	globals?: Record<string, any>;
-	stages?: ZylemStage[];
+	stages?: Stage[];
 	update?: UpdateFunction<ZylemGame>;
 	debug?: boolean;
-	debugConfiguration?: DebugConfiguration;
 	time?: number;
 }
 
@@ -36,8 +30,8 @@ export class ZylemGame {
 	customUpdate: ((params: UpdateContext<ZylemStage>) => void) | null = null;
 	customDestroy: ((params: DestroyContext<ZylemStage>) => void) | null = null;
 
-	stages: ZylemStage[] = [];
-	stageMap: Map<string, ZylemStage> = new Map();
+	stages: Stage[] = [];
+	stageMap: Map<string, Stage> = new Map();
 	currentStageId = '';
 
 	previousTimeStamp: number = 0;
@@ -52,7 +46,7 @@ export class ZylemGame {
 	static FRAME_LIMIT = 64;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 
-	constructor(options: IGameOptions, wrapperRef: Game) {
+	constructor(options: ZylemGameConfig, wrapperRef: Game) {
 		this.wrapperRef = wrapperRef;
 		this.inputManager = new InputManager();
 		this.timer = new Timer();
@@ -62,13 +56,13 @@ export class ZylemGame {
 		this.setGlobals(options);
 	}
 
-	async loadStage(stage: ZylemStage) {
+	async loadStage(stage: Stage) {
 		await stage.load(this.id);
-		this.stageMap.set(stage.uuid, stage);
-		this.currentStageId = stage.uuid;
+		this.stageMap.set(stage.stageRef!.uuid, stage);
+		this.currentStageId = stage.stageRef!.uuid;
 	}
 
-	setGlobals(options: IGameOptions) {
+	setGlobals(options: ZylemGameConfig) {
 		setGlobalState(options.globals);
 		setDebugFlag(options.debug);
 		this.initialGlobals = { ...options.globals };
@@ -83,24 +77,23 @@ export class ZylemGame {
 			inputs,
 			globals: state$.globals,
 			game: this.wrapperRef,
-			entity: stage as ZylemStage,
-			camera: stage!.scene!.zylemCamera,
-			HUD: stage!.HUD,
+			entity: stage!.stageRef!,
+			camera: stage!.stageRef!.cameraRef!,
 		};
 	}
 
 	start() {
 		const stage = this.currentStage();
 		const params = this.params();
-		stage!.setup(params);
-		stage!.conditions.forEach(({ bindings, callback }) => {
-			bindings.forEach((key) => {
-				observe(() => {
-					state$.globals[key].get();
-					callback(state$.globals, this);
-				});
-			});
-		});
+		stage!.start(params);
+		// stage!.conditions.forEach(({ bindings, callback }) => {
+		// 	bindings.forEach((key) => {
+		// 		observe(() => {
+		// 			state$.globals[key].get();
+		// 			callback(state$.globals, this);
+		// 		});
+		// 	});
+		// });
 		if (this.customSetup) {
 			this.customSetup(params);
 		}
@@ -117,7 +110,7 @@ export class ZylemGame {
 			if (this.customUpdate) {
 				this.customUpdate(params);
 			}
-			stage!.update(params);
+			stage!.stageRef!.update(params);
 			this.totalTime += params.delta;
 			state$.time.set(this.totalTime);
 			this.previousTimeStamp = timestamp;

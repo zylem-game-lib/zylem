@@ -10,41 +10,55 @@ import {
 	TextureLoader,
 	GridHelper
 } from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer';
-import RenderPass from './render-pass';
 import { Entity } from '../interfaces/entity';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { stageState } from '../state';
 import { GameEntity } from '../entities/entity';
-import { ThirdPersonCamera } from '../camera/third-person';
-import { ZylemCamera } from '../camera/camera';
+import { ZylemCamera } from '../camera/zylem-camera';
 import { debugState } from '../state/debug-state';
 
 export class ZylemScene implements Entity<ZylemScene> {
-
 	public type = 'Scene';
 
 	_setup?: SetupCallback;
 	scene!: Scene;
-	screenResolution!: Vector2;
-	renderer!: WebGLRenderer;
-	composer!: EffectComposer;
 	zylemCamera!: ZylemCamera;
 	containerElement: HTMLElement | null = null;
 
-	constructor(id: string) {
+	constructor(id: string, camera: ZylemCamera) {
+		// Create Three.js scene
 		const scene = new Scene();
 		scene.background = new Color(stageState.backgroundColor);
+
+		// Setup background image if provided
 		if (stageState.backgroundImage) {
 			const loader = new TextureLoader();
 			const texture = loader.load(stageState.backgroundImage);
 			scene.background = texture;
 		}
-		this.setupRenderer();
-		this.setupLighting(scene);
-		this.setupCamera(scene);
 
 		this.scene = scene;
+		this.zylemCamera = camera;
+
+		// Setup DOM element
+		this.setupContainer(id);
+
+		// Setup lighting
+		this.setupLighting(scene);
+
+		// Setup camera with scene
+		this.setupCamera(scene, camera);
+
+		// Debug setup
+		if (debugState.on) {
+			this.debugScene();
+		}
+	}
+
+	/**
+	 * Setup the container element and append camera's renderer
+	 */
+	private setupContainer(id: string) {
 		let element = document.getElementById(id);
 		if (!element) {
 			console.warn(`Could not find element with id: ${id}`);
@@ -57,10 +71,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 			element.removeChild(element.firstChild);
 		}
 		this.containerElement = element;
-		element?.appendChild(this.renderer.domElement);
-		if (debugState.on) {
-			this.debugScene();
-		}
+		element?.appendChild(this.zylemCamera.getDomElement());
 	}
 
 	setup() {
@@ -69,22 +80,27 @@ export class ZylemScene implements Entity<ZylemScene> {
 		}
 	}
 
-	destroy() { }
+	destroy() {
+		// Scene cleanup if needed
+	}
 
 	update({ delta }: Partial<any>) {
-		this.zylemCamera.update();
-		this.composer.render(delta);
+		// Scene no longer handles rendering - camera does this
+		// Any scene-specific updates can go here
 	}
 
-	setupCamera(scene: Scene) {
-		this.zylemCamera = new ThirdPersonCamera(this.screenResolution, this.renderer, scene);
-		let renderResolution = this.screenResolution.clone().divideScalar(2);
-		renderResolution.x |= 0;
-		renderResolution.y |= 0;
-		scene.add(this.zylemCamera.cameraRig);
-		this.composer.addPass(new RenderPass(renderResolution, scene, this.zylemCamera.camera));
+	/**
+	 * Setup camera with the scene
+	 */
+	setupCamera(scene: Scene, camera: ZylemCamera) {
+		scene.add(camera.cameraRig);
+		// Camera handles its own setup now
+		camera.setup(scene);
 	}
 
+	/**
+	 * Setup scene lighting
+	 */
 	setupLighting(scene: Scene) {
 		const ambientLight = new AmbientLight(0xffffff, 2);
 		scene.add(ambientLight);
@@ -100,32 +116,33 @@ export class ZylemScene implements Entity<ZylemScene> {
 		scene.add(directionalLight);
 	}
 
-	setupRenderer() {
-		const width = this.containerElement?.clientWidth || window.innerWidth;
-		const height = this.containerElement?.clientHeight || window.innerHeight;
-		const screenResolution = new Vector2(width, height);
-		this.screenResolution = screenResolution;
-
-		this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
-		this.renderer.setSize(screenResolution.x, screenResolution.y);
-		this.composer = new EffectComposer(this.renderer);
-	}
-
+	/**
+	 * Update renderer size - delegates to camera
+	 */
 	updateRenderer(width: number, height: number) {
-		this.screenResolution = new Vector2(width, height);
-		this.renderer.setSize(this.screenResolution.x, this.screenResolution.y, true);
-		this.composer.setSize(this.screenResolution.x, this.screenResolution.y);
+		this.zylemCamera.resize(width, height);
 	}
 
+	/**
+	 * Add object to scene
+	 */
 	add(object: Object3D, position: Vector3 = new Vector3(0, 0, 0)) {
 		object.position.set(position.x, position.y, position.z);
 		this.scene.add(object);
 	}
 
+	/**
+	 * Add game entity to scene
+	 */
 	addEntity(entity: GameEntity<any>) {
-		this.scene.add(entity.group);
+		if (entity.group) {
+			this.scene.add(entity.group);
+		}
 	}
 
+	/**
+	 * Add debug helpers to scene
+	 */
 	debugScene() {
 		const size = 1000;
 		const divisions = 100;

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import fragmentShader from './shaders/fragment/standard.glsl';
 import vertexShader from './shaders/vertex/standard.glsl';
 import { WebGLRenderer, WebGLRenderTarget } from 'three';
-import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass';
+import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
 export default class RenderPass extends Pass {
 	fsQuad: FullScreenQuad;
