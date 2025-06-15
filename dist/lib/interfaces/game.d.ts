@@ -1,7 +1,6 @@
-import ZylemGame from '~/lib/core/game';
-import { ZylemScene } from '~/lib/rendering/scene';
-import { ZylemHUD } from '~/lib/ui/hud';
-import { ZylemCamera } from '~/lib/core/camera';
+import ZylemGame from '~/lib/core/game/zylem-game';
+import { ZylemScene } from '~/lib/graphics/zylem-scene';
+import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { ZylemWorld } from '~/lib/collision/world';
 export type GameRatio = '16:9' | '9:16' | '4:3' | '3:4' | '1:1';
 type Concrete<Type> = {
@@ -15,7 +14,6 @@ export interface SetupCallbackOptions {
     scene: ZylemScene;
     world?: ZylemWorld;
     camera?: ZylemCamera;
-    HUD?: ZylemHUD;
 }
 export type SetupCallback = (options: SetupCallbackOptions) => void;
 export {};

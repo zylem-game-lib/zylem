@@ -1,10 +1,8 @@
-import { Perspectives, game, stage } from '../../src/main';
+import { game, stage } from '../../src/main';
 import { Color, Vector2 } from 'three';
 import { Paddle } from './paddle';
 import { Ball } from './ball';
 import { Brick } from './brick';
-
-const { Flat2D } = Perspectives;
 
 let brickCount = 0;
 const stage1 = stage({
@@ -23,24 +21,6 @@ const stage1 = stage({
 			}
 		}
 	],
-	// setup: ({ HUD, globals }) => {
-	// 	// TODO: fix binding issue
-	// 	HUD.addLabel({
-	// 		binding: 'score',
-	// 		update: (element, value) => {
-	// 			element.updateText(`Score: ${value}`);
-	// 		},
-	// 		position: new Vector2(250, 5)
-	// 	});
-	// 	HUD.addLabel({
-	// 		binding: 'lives',
-	// 		update: (element, value) => {
-	// 			element.updateText(`Lives: ${value}`);
-	// 		},
-	// 		position: new Vector2(25, 5)
-	// 	});
-	// 	globals.bricks.set(brickCount);
-	// },
 	children: ({ globals }) => {
 		const bricks: any[] = [];
 		for (let i = -8; i <= 8; i += 4) {

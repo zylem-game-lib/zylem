@@ -1,6 +1,6 @@
 {
   "name": "@tcool86/zylem",
-  "version": "0.2.2",
+  "version": "0.3.1",
   "description": "A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.",
   "license": "MIT",
   "author": "Tim Cool",
@@ -70,9 +70,10 @@
     "stats.js": "^0.17.0",
     "supports-preserve-symlinks-flag": "^1.0.0",
     "three": "0.172.0",
+    "three-addons": "^1.2.0",
+    "three-full": "^28.0.2",
     "three-instanced-uniforms-mesh": "^0.52.0",
     "three-spritetext": "^1.8.1",
-    "ts-mixer": "^6.0.4",
     "tsimp": "^2.0.11",
     "uuid": "^11.1.0"
   },

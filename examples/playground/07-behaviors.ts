@@ -4,6 +4,7 @@ import { rotateInDirection } from '../../src/lib/behaviors/rotatable';
 import { move } from '../../src/lib/behaviors/moveable';
 import { Ray } from '@dimforge/rapier3d-compat';
 import { playgroundPlane, playgroundActor, playgroundPlatforms } from './utils';
+import { StageEntity } from '../../src/lib/interfaces/entity';
 
 const stage1 = await stage({
 	gravity: new Vector3(0, -9.82, 0),
@@ -78,9 +79,8 @@ let jumpStart = 5;
 const maxJumpHeight = 12;
 
 testGame.setup = ({ camera }) => {
-	// Initialize camera target if not set
 	if (player.group && camera && !camera.target) {
-		camera.target = player;
+		camera.target = player as unknown as StageEntity;
 	}
 }
 
@@ -98,7 +98,7 @@ testGame.update = ({ inputs, delta }) => {
 		);
 		arrow = new ArrowHelper(rayDirection, rayOrigin, rayLength, 0xff0000);
 		// @ts-ignore
-		stage1.scene.scene.add(arrow);
+		stage1.stageRef!.scene.scene.add(arrow);
 		// @ts-ignore
 	}
 	// @ts-ignore
@@ -106,7 +106,7 @@ testGame.update = ({ inputs, delta }) => {
 	const rayDirection = new Vector3(0, -1, 0); // Downward
 	rapierRay.origin = rayOrigin;
 	rapierRay.direction = rayDirection;
-	stage1.world!.world.castRay(rapierRay, rayLength, true, undefined, undefined, undefined, undefined, (collider) => {
+	stage1.stageRef!.world!.world.castRay(rapierRay, rayLength, true, undefined, undefined, undefined, undefined, (collider) => {
 		// @ts-ignore
 		const ref = collider._parent.userData.uuid;
 		if (ref === player.uuid) {
@@ -123,8 +123,8 @@ testGame.update = ({ inputs, delta }) => {
 	const vertical = p1.axes.Vertical.value;
 
 	// Create movement vectors
-	const forward = new Vector3(0, 0, -1);
-	const right = new Vector3(-1, 0, 0);
+	const forward = new Vector3(0, 0, 1);
+	const right = new Vector3(1, 0, 0);
 
 	// Calculate movement force
 	let moveForce = 12;

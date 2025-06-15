@@ -1,5 +1,6 @@
-export * from './entity';
-export * from './game-entity';
-export * from './game-wrapper';
-export * from './game';
-export * from './stage';
+export * from '../entities/entity';
+export * from './game/game';
+export * from './game/zylem-game';
+export * from './stage/stage';
+export * from './vessel';
+export type { StageOptions } from './stage/zylem-stage';
