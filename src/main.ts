@@ -21,6 +21,7 @@ export { plane } from './lib/entities/plane';
 export { zone } from './lib/entities/zone';
 export { actor } from './lib/entities/actor';
 export { ZylemBox } from './lib/entities/box';
+export { makeMoveable } from './lib/behaviors/moveable';
 
 // Behaviors and actions - tree-shakable
 export * as actions from './lib/behaviors/actions';
