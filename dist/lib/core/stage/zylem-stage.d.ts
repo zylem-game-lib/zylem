@@ -63,7 +63,7 @@ export declare class ZylemStage {
     private isCameraWrapper;
     private saveState;
     private setState;
-    load(id: string, camera?: ZylemCamera): Promise<void>;
+    load(id: string, camera?: ZylemCamera | null): Promise<void>;
     private createDefaultCamera;
     setup(params: SetupContext<ZylemStage>): void;
     update(params: UpdateContext<ZylemStage>): void;

@@ -46,27 +46,6 @@ export declare const loadStage: () => Promise<{
 }>;
 export declare const loadUI: () => Promise<typeof import("../ui/hud")>;
 export declare const loadDebugTools: () => Promise<typeof import("../debug/Debug")>;
-export declare const loadMinimalGame: () => Promise<{
-    foundation: {
-        baseNode: typeof import("./base-node");
-        lifeCycle: typeof import("./base-node-life-cycle");
-        utility: typeof import("./utility");
-        vector: typeof import("./vector");
-    };
-    graphics: {
-        material: typeof import("../graphics/material");
-        mesh: typeof import("../graphics/mesh");
-    };
-    camera: {
-        camera: typeof import("../camera/camera");
-        perspectives: typeof import("../camera/perspective");
-    };
-    entities: typeof import("../entities/box") | typeof import("../entities/sphere") | typeof import("../entities/sprite") | typeof import("../entities/plane") | typeof import("../entities/zone") | typeof import("../entities/actor");
-    gameCore: {
-        game: typeof import("./game/game");
-        vessel: typeof import("./vessel");
-    };
-}>;
 export declare const loadFullGame: () => Promise<{
     foundation: {
         baseNode: typeof import("./base-node");
@@ -101,5 +80,3 @@ export declare const loadFullGame: () => Promise<{
         scene: typeof import("../graphics/zylem-scene");
     };
 }>;
-export declare const exampleOptimalUsage: () => Promise<void>;
-export declare const exampleUsage: () => Promise<void>;

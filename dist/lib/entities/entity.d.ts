@@ -17,13 +17,13 @@ export interface LifeCycleDelegate<U> {
     update?: (params: UpdateContext<U>) => void;
     destroy?: (params: DestroyContext<U>) => void;
 }
-export interface CollisionContext<O extends EntityOptions> {
-    entity: GameEntity<O>;
+export interface CollisionContext<T, O extends EntityOptions> {
+    entity: T;
     other: GameEntity<O>;
     globals?: any;
 }
-export interface CollisionDelegate<O extends EntityOptions> {
-    collision?: (params: CollisionContext<O>) => void;
+export interface CollisionDelegate<T, O extends EntityOptions> {
+    collision?: (params: CollisionContext<T, O>) => void;
 }
 export type EntityOptions = {
     color?: Color;
@@ -59,13 +59,13 @@ export declare class GameEntity<O extends EntityOptions> extends BaseNode<O> imp
     custom: Record<string, any>;
     debugInfo: Record<string, any>;
     lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
-    collisionDelegate: CollisionDelegate<O> | undefined;
+    collisionDelegate: CollisionDelegate<this, O> | undefined;
     constructor();
     create(): this;
     onSetup(setup: (params: SetupContext<this>) => void): this;
     onUpdate(update: (params: UpdateContext<this>) => void): this;
     onDestroy(destroy: (params: DestroyContext<this>) => void): this;
-    onCollision(collision: (params: CollisionContext<O>) => void): this;
+    onCollision(collision: (params: CollisionContext<this, O>) => void): this;
     _setup(params: SetupContext<this>): void;
     _update(params: UpdateContext<this>): void;
     _destroy(params: DestroyContext<this>): void;

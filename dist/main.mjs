@@ -23236,7 +23236,7 @@ const Wi = class Wi {
   }
   async loadStage(A) {
     const I = A.options[0];
-    await A.load(this.id, I.camera), this.stageMap.set(A.stageRef.uuid, A), this.currentStageId = A.stageRef.uuid;
+    await A.load(this.id, I == null ? void 0 : I.camera), this.stageMap.set(A.stageRef.uuid, A), this.currentStageId = A.stageRef.uuid;
   }
   setGlobals(A) {
     fS(A.globals), md(A.debug), this.initialGlobals = { ...A.globals };
@@ -28279,7 +28279,6 @@ class Si extends bC {
     return this.destroy = I, this;
   }
   onCollision(I) {
-    debugger;
     return this.collisionDelegate = { collision: I }, this;
   }
   _setup(I) {
@@ -32235,11 +32234,9 @@ class Ec {
           continue;
         }
         this.world.contactsWith(B.body.collider(0), (Q) => {
-          debugger;
           const E = Q._parent.userData.uuid, o = I.get(E);
           o && B._collision && B._collision(o, AQ.globals);
         }), this.world.intersectionsWith(B.body.collider(0), (Q) => {
-          debugger;
           const E = Q._parent.userData.uuid, o = I.get(E);
           o && (B._collision && B._collision(o, AQ.globals), Qc(o) && (o.handleIntersectionEvent({ entity: o, other: B, delta: A }), this.collisionBehaviorMap.set(E, o)));
         });

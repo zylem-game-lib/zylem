@@ -10,7 +10,7 @@ export declare class Stage {
     setup: SetupFunction<ZylemStage>;
     destroy: DestroyFunction<ZylemStage>;
     constructor(options: StageOptions);
-    load(id: string, camera?: ZylemCamera | CameraWrapper): Promise<void>;
+    load(id: string, camera?: ZylemCamera | CameraWrapper | null): Promise<void>;
     addEntities(entities: BaseNode[]): Promise<void>;
     start(params: SetupContext<ZylemStage>): void;
 }
