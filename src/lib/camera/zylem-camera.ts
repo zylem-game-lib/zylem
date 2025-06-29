@@ -2,6 +2,7 @@ import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCame
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PerspectiveType, Perspectives } from './perspective';
 import { ThirdPersonCamera } from './third-person';
+import { Fixed2DCamera } from './fixed-2d';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import RenderPass from '../graphics/render-pass';
 import { StageEntity } from '../interfaces/entity';
@@ -158,7 +159,9 @@ export class ZylemCamera {
 			case Perspectives.ThirdPerson:
 				this.perspectiveController = new ThirdPersonCamera();
 				break;
-			// Add more perspective controllers as needed
+			case Perspectives.Fixed2D:
+				this.perspectiveController = new Fixed2DCamera();
+				break;
 			default:
 				this.perspectiveController = new ThirdPersonCamera();
 		}

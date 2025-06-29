@@ -11,3 +11,5 @@ export declare const ZylemGoldText = "#DAA420";
 export type SizeVector = Vect3 | null;
 export declare function sortedStringify(obj: Record<string, any>): string;
 export declare function shortHash(objString: string): string;
+export declare const Vec0: Vector3;
+export declare const Vec1: Vector3;

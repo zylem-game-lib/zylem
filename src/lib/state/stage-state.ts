@@ -10,6 +10,7 @@ const stageState$ = observable({
 		p1: ['gamepad-1', 'keyboard-1'],
 		p2: ['gamepad-2', 'keyboard-2'],
 	},
+	variables: {},
 	gravity: new Vector3(0, 0, 0),
 	entities: [],
 } as StageState);

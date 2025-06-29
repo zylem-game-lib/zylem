@@ -1,6 +1,6 @@
-import { addComponent, addEntity, createWorld as createECS, removeEntity } from 'bitecs';
+import { addComponent, addEntity, createWorld as createECS } from 'bitecs';
 import { World } from '@dimforge/rapier3d-compat';
-import { BufferAttribute, BufferGeometry, Color, Group, LineBasicMaterial, LineSegments, PerspectiveCamera, Vector3, Vector2 } from 'three';
+import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, Vector3, Vector2 } from 'three';
 
 import { ZylemWorld } from '../../collision/world';
 import { ZylemScene } from '../../graphics/zylem-scene';
@@ -27,6 +27,7 @@ export interface ZylemStageConfig {
 	backgroundColor: Color;
 	backgroundImage: string | null;
 	gravity: Vector3;
+	variables: Record<string, any>;
 	conditions?: Conditions<any>[];
 	children?: ({ globals }: any) => BaseNode[];
 }
@@ -48,6 +49,7 @@ export class ZylemStage {
 			p2: ['gamepad-2', 'keyboard'],
 		},
 		gravity: new Vector3(0, 0, 0),
+		variables: {},
 		entities: [],
 	};
 	gravity: Vector3;
@@ -91,6 +93,7 @@ export class ZylemStage {
 			backgroundImage: config.backgroundImage ?? this.state.backgroundImage,
 			inputs: config.inputs ?? this.state.inputs,
 			gravity: config.gravity ?? this.state.gravity,
+			variables: config.variables ?? this.state.variables,
 			conditions: config.conditions,
 			children: config.children,
 			entities: this.state.entities,
@@ -166,7 +169,7 @@ export class ZylemStage {
 		setStageBackgroundImage(backgroundImage);
 	}
 
-	async load(id: string, camera?: ZylemCamera) {
+	async load(id: string, camera?: ZylemCamera | null) {
 		this.setState();
 
 		const zylemCamera = camera || (this.camera ? this.camera.cameraRef : this.createDefaultCamera());
@@ -263,7 +266,7 @@ export class ZylemStage {
 				}
 			}
 		}
-		if (entity.collider) {
+		if (entity.colliderDesc) {
 			this.world.addEntity(entity);
 		}
 		child.nodeSetup({

@@ -14,6 +14,7 @@ export interface ZylemStageConfig {
     backgroundColor: Color;
     backgroundImage: string | null;
     gravity: Vector3;
+    variables: Record<string, any>;
     conditions?: Conditions<any>[];
     children?: ({ globals }: any) => BaseNode[];
 }

@@ -32,3 +32,6 @@ export function shortHash(objString: string) {
 	}
 	return hash.toString(36);
 }
+
+export const Vec0 = new Vector3(0, 0, 0);
+export const Vec1 = new Vector3(1, 1, 1);

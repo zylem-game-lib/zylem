@@ -14,7 +14,7 @@ const planeTypeToPath: Record<PlaygroundPlaneType, string> = {
 	steel: 'playground/steel.png'
 };
 
-export const playgroundPlane = async (type: PlaygroundPlaneType, size: Vector2 = new Vector2(200, 200)) => {
+export const playgroundPlane = async (type: PlaygroundPlaneType, size: Vector2 = new Vector2(100, 100)) => {
 	const repeatX = size.x / 40;
 	const repeatY = size.y / 40;
 

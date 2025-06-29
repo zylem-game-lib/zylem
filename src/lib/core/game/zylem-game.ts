@@ -5,13 +5,15 @@ import { setGlobalState } from '../../state/index';
 
 import { setDebugFlag } from '../../state/debug-state';
 
-import { ZylemStage } from '../stage/zylem-stage';
+import { ZylemStage, ZylemStageConfig } from '../stage/zylem-stage';
 import { Game } from './game';
 import { UpdateContext, SetupContext, UpdateFunction, SetupFunction, DestroyContext } from '../base-node-life-cycle';
 import { InputManager } from '../../input/input-manager';
 import { Timer } from '../three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
+import { Perspectives } from '~/main';
+import { Vector2, Vector3 } from 'three';
 
 export interface ZylemGameConfig {
 	id: string;
@@ -57,7 +59,8 @@ export class ZylemGame {
 	}
 
 	async loadStage(stage: Stage) {
-		await stage.load(this.id);
+		const config = stage.options[0] as any;
+		await stage.load(this.id, config?.camera as ZylemCamera | null);
 		this.stageMap.set(stage.stageRef!.uuid, stage);
 		this.currentStageId = stage.stageRef!.uuid;
 	}

@@ -16,10 +16,9 @@ export class Stage {
 		this.options = options;
 	}
 
-	async load(id: string, camera?: ZylemCamera | CameraWrapper) {
+	async load(id: string, camera?: ZylemCamera | CameraWrapper | null) {
 		this.stageRef = new ZylemStage(this.options);
 		this.stageRef.wrapperRef = this;
-
 		const zylemCamera = camera instanceof CameraWrapper ? camera.cameraRef : camera;
 
 		await this.stageRef.load(id, zylemCamera);

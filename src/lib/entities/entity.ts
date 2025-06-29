@@ -1,6 +1,6 @@
 import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, Group, PointLight, Color } from "three";
 import { v4 as uuidv4 } from 'uuid';
-import { ColliderDesc, RigidBodyDesc } from "@dimforge/rapier3d-compat";
+import { Collider, ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 
 import { position, rotation, scale } from "~/lib/behaviors/transformable.system";
 import { Vec3 } from "../core/vector";
@@ -21,6 +21,16 @@ export interface LifeCycleDelegate<U> {
 	setup?: (params: SetupContext<U>) => void;
 	update?: (params: UpdateContext<U>) => void;
 	destroy?: (params: DestroyContext<U>) => void;
+}
+
+export interface CollisionContext<T, O extends EntityOptions> {
+	entity: T;
+	other: GameEntity<O>;
+	globals?: any;
+}
+
+export interface CollisionDelegate<T, O extends EntityOptions> {
+	collision?: (params: CollisionContext<T, O>) => void;
 }
 
 export type EntityOptions = {
@@ -50,11 +60,14 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> implements 
 	public uuid: string = '';
 	public mesh: Mesh | undefined;
 	public materials: Material[] | undefined;
-	public rigidBody: RigidBodyDesc | undefined;
-	public collider: ColliderDesc | undefined;
+	public bodyDesc: RigidBodyDesc | null = null;
+	public body: RigidBody | null = null;
+	public colliderDesc: ColliderDesc | undefined;
+	public collider: Collider | undefined;
 	public custom: Record<string, any> = {};
 	public debugInfo: Record<string, any> = {};
 	public lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
+	public collisionDelegate: CollisionDelegate<this, O> | undefined;
 
 	constructor() {
 		super();
@@ -69,6 +82,26 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> implements 
 			{ component: scale, values: { x: 0, y: 0, z: 0 } },
 			{ component: rotation, values: { x: 0, y: 0, z: 0, w: 0 } },
 		];
+		return this;
+	}
+
+	public onSetup(setup: (params: SetupContext<this>) => void): this {
+		this.setup = setup;
+		return this;
+	}
+
+	public onUpdate(update: (params: UpdateContext<this>) => void): this {
+		this.update = update;
+		return this;
+	}
+
+	public onDestroy(destroy: (params: DestroyContext<this>) => void): this {
+		this.destroy = destroy;
+		return this;
+	}
+
+	public onCollision(collision: (params: CollisionContext<this, O>) => void): this {
+		this.collisionDelegate = { collision };
 		return this;
 	}
 
@@ -88,6 +121,12 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> implements 
 	public _destroy(params: DestroyContext<this>): void {
 		if (this.lifeCycleDelegate?.destroy) {
 			this.lifeCycleDelegate.destroy({ ...params, entity: this as unknown as O });
+		}
+	}
+
+	public _collision(other: GameEntity<O>, globals?: any): void {
+		if (this.collisionDelegate?.collision) {
+			this.collisionDelegate.collision({ entity: this, other, globals });
 		}
 	}
 
@@ -175,9 +214,9 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends Entit
 		group.traverse((child) => {
 			if (child instanceof Mesh) {
 				if (child.type === 'SkinnedMesh' && materials[0] && !child.material.map) {
-					const light = new PointLight(0xffffff, 10, 0, 2);
-					light.position.set(0, 0, 0);
-					child.add(light);
+					// const light = new PointLight(0xffffff, 10, 0, 2);
+					// light.position.set(0, 0, 0);
+					// child.add(light);
 					child.material = materials[0];
 				}
 			}
@@ -213,12 +252,12 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends Entit
 		if (this.collisionBuilder) {
 			this.collisionBuilder.withCollision(this.options?.collision || {});
 			this.collisionBuilder.withPhysics(this.options?.physics || {});
-			const [rigidBody, collider] = this.collisionBuilder.build(this.options);
-			entity.rigidBody = rigidBody;
-			entity.collider = collider;
+			const [bodyDesc, colliderDesc] = this.collisionBuilder.build(this.options);
+			entity.bodyDesc = bodyDesc;
+			entity.colliderDesc = colliderDesc;
 
 			const { x, y, z } = this.options.position || { x: 0, y: 0, z: 0 };
-			entity.rigidBody.setTranslation(x, y, z);
+			entity.bodyDesc.setTranslation(x, y, z);
 		}
 
 		if (this.debugInfoBuilder) {

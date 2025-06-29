@@ -37,13 +37,14 @@
   "scripts": {
     "build": "tsc && vite build && typedoc",
     "build:watch": "tsc && vite build --watch && typedoc",
+    "build:preview": "vite build --mode development",
     "lint": "eslint \"**/*.ts\"",
     "lint:fix": "eslint \"**/*.ts\" --fix",
     "test": "npx vitest --reporter=verbose",
     "coverage": "vitest run --coverage",
     "start": "vite",
     "dev": "vite --host && typedoc",
-    "serve": "vite preview",
+    "serve": "npm run build:preview && vite preview --outDir dist-preview",
     "docs": "yarn typedoc"
   },
   "dependencies": {
