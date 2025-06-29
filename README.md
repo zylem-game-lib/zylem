@@ -16,6 +16,7 @@ npm run dev
 
 ## Examples
 
+>Note: The examples are not up to date with the latest version of Zylem.
 [Check out the examples repo here](https://github.com/tcool86/zylem-examples/tree/master)
 
 ## Basic Usage
@@ -38,19 +39,15 @@ npm run dev
 ```
 
 ```typescript
-import { game, stage, sphere } from '@tcool86/zylem';
+import { game, sphere, makeMoveable } from '@tcool86/zylem';
 
-const example = game(
- stage(),
- sphere({
-  update: ({ entity: ball, inputs }) => {
-   const { horizontal, vertical } = inputs[0];
-   ball.moveXY(horizontal * 5, -vertical * 5);
-  }
- })
-);
+const ball = await sphere();
+makeMoveable(ball).onUpdate(({ entity, inputs }) => {
+  const { Horizontal, Vertical } = inputs.p1.axes;
+  entity.moveXY(Horizontal.value * 5, -Vertical.value * 5);
+});
 
-example.start();
+game(ball).start();
 ```
 
 ## Repository Governance
