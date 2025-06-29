@@ -6,13 +6,14 @@ import { state$ } from '../state';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { ZylemActor } from '../entities/actor';
 import { isCollisionHandlerDelegate } from './collision-delegate';
+import { Game, GameEntity } from '../core';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
 	world: World;
-	collisionMap: Map<string, Entity<any>> = new Map();
-	collisionBehaviorMap: Map<string, Entity<any>> = new Map();
-	_removalMap: Map<string, Entity<any>> = new Map();
+	collisionMap: Map<string, GameEntity<any>> = new Map();
+	collisionBehaviorMap: Map<string, GameEntity<any>> = new Map();
+	_removalMap: Map<string, GameEntity<any>> = new Map();
 
 	static async loadPhysics(gravity: Vector3) {
 		await RAPIER.init();
@@ -25,7 +26,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	addEntity(entity: any) {
-		const rigidBody = this.world.createRigidBody(entity.rigidBody);
+		const rigidBody = this.world.createRigidBody(entity.bodyDesc);
 		entity.body = rigidBody;
 		// TODO: consider passing in more specific data
 		entity.body.userData = { uuid: entity.uuid, ref: entity };
@@ -33,7 +34,8 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			entity.body.lockTranslations(true, true);
 			entity.body.lockRotations(true, true);
 		}
-		const collider = this.world.createCollider(entity.collider, entity.body);
+		const collider = this.world.createCollider(entity.colliderDesc, entity.body);
+		entity.collider = collider;
 		if (entity.controlledRotation || entity instanceof ZylemActor) {
 			entity.body.lockRotations(true, true);
 			entity.characterController = this.world.createCharacterController(0.01);
@@ -43,7 +45,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			entity.characterController.setSlideEnabled(true);
 			entity.characterController.setApplyImpulsesToDynamicBodies(true);
 			entity.characterController.setCharacterMass(1);
-			entity.collider = collider;
 		}
 		this.collisionMap.set(entity.uuid, entity);
 	}
@@ -54,7 +55,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		}
 	}
 
-	destroyEntity(entity: StageEntity) {
+	destroyEntity(entity: GameEntity<any>) {
 		if (entity.collider) {
 			this.world.removeCollider(entity.collider, true);
 		}
@@ -94,7 +95,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	updateColliders(delta: number) {
 		const dictionaryRef = this.collisionMap;
 		for (let [id, collider] of dictionaryRef) {
-			const gameEntity = collider as any;
+			const gameEntity = collider as GameEntity<any>;
 			if (!gameEntity.body) {
 				continue;
 			}
@@ -109,8 +110,8 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				if (!entity) {
 					return;
 				}
-				if (entity._collision) {
-					entity._collision(entity, gameEntity, state$.globals);
+				if (gameEntity._collision) {
+					gameEntity._collision(entity, state$.globals);
 				}
 			});
 			this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
@@ -120,8 +121,8 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				if (!entity) {
 					return;
 				}
-				if (entity._collision) {
-					entity._collision(entity, gameEntity, state$.globals);
+				if (gameEntity._collision) {
+					gameEntity._collision(entity, state$.globals);
 				}
 				if (isCollisionHandlerDelegate(entity)) {
 					entity.handleIntersectionEvent({ entity, other: gameEntity, delta });

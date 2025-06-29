@@ -3,7 +3,7 @@ import { SphereGeometry } from 'three';
 import { Vector3 } from 'three';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { DebugInfoBuilder, EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
 
 type ZylemSphereOptions = EntityOptions & {
@@ -54,6 +54,20 @@ export class ZylemSphere extends GameEntity<ZylemSphereOptions> {
 	}
 }
 
+export class SphereDebugInfoBuilder extends DebugInfoBuilder {
+	buildInfo(options: ZylemSphereOptions): Record<string, any> {
+		const { x, z, y } = options.position ?? { x: 0, y: 0, z: 0 };
+		const positionString = `${x}, ${y}, ${z}`;
+		const radius = options?.radius ?? 1;
+		return {
+			type: String(ZylemSphere.type),
+			position: positionString,
+			radius: radius,
+			message: 'sphere debug info'
+		};
+	}
+}
+
 type SphereOptions = BaseNode | Partial<ZylemSphereOptions>;
 
 export async function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere> {
@@ -64,6 +78,7 @@ export async function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere
 		BuilderClass: SphereBuilder,
 		MeshBuilderClass: SphereMeshBuilder,
 		CollisionBuilderClass: SphereCollisionBuilder,
+		DebugInfoBuilderClass: SphereDebugInfoBuilder,
 		entityType: ZylemSphere.type
 	});
 }

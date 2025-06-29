@@ -1,7 +1,7 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { SphereGeometry } from 'three';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { DebugInfoBuilder, EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
 type ZylemSphereOptions = EntityOptions & {
     radius?: number;
 };
@@ -18,6 +18,9 @@ export declare const SPHERE_TYPE: unique symbol;
 export declare class ZylemSphere extends GameEntity<ZylemSphereOptions> {
     static type: symbol;
     constructor(options?: ZylemSphereOptions);
+}
+export declare class SphereDebugInfoBuilder extends DebugInfoBuilder {
+    buildInfo(options: ZylemSphereOptions): Record<string, any>;
 }
 type SphereOptions = BaseNode | Partial<ZylemSphereOptions>;
 export declare function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere>;

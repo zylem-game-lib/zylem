@@ -13,13 +13,13 @@ export class CollisionBuilder {
 	gravity: Vec3 = new Vector3(0, 0, 0);
 
 	build(options: EntityOptions): [RigidBodyDesc, ColliderDesc] {
-		const rigidBody = this.rigidBody({
+		const bodyDesc = this.bodyDesc({
 			isDynamicBody: !this.static
 		});
 		const collider = this.collider(options);
 		const { KINEMATIC_FIXED, DEFAULT } = ActiveCollisionTypes;
 		collider.activeCollisionTypes = (this.sensor) ? KINEMATIC_FIXED : DEFAULT;
-		return [rigidBody, collider];
+		return [bodyDesc, collider];
 	}
 
 	withCollision(collisionOptions: Partial<CollisionOptions>): this {
@@ -40,7 +40,7 @@ export class CollisionBuilder {
 		return colliderDesc;
 	}
 
-	rigidBody({ isDynamicBody = true }): RigidBodyDesc {
+	bodyDesc({ isDynamicBody = true }): RigidBodyDesc {
 		const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
 		const bodyDesc = new RigidBodyDesc(type)
 			.setTranslation(0, 0, 0)

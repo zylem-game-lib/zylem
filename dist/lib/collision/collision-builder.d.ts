@@ -15,7 +15,7 @@ export declare class CollisionBuilder {
     withCollision(collisionOptions: Partial<CollisionOptions>): this;
     withPhysics(physicsOptions: Partial<PhysicsOptions>): this;
     collider(options: EntityOptions): ColliderDesc;
-    rigidBody({ isDynamicBody }: {
+    bodyDesc({ isDynamicBody }: {
         isDynamicBody?: boolean | undefined;
     }): RigidBodyDesc;
 }
