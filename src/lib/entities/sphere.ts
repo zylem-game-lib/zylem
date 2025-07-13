@@ -3,10 +3,10 @@ import { SphereGeometry } from 'three';
 import { Vector3 } from 'three';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
-import { DebugInfoBuilder, EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { DebugInfoBuilder, EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
 
-type ZylemSphereOptions = EntityOptions & {
+type ZylemSphereOptions = GameEntityOptions & {
 	radius?: number;
 };
 

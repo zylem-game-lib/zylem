@@ -7,7 +7,7 @@ import {
 } from 'three';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityOptions, GameEntity } from './entity';
+import { EntityBuilder, EntityCollisionBuilder, GameEntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
 
 export type SpriteImage = { name: string; file: string };
@@ -18,7 +18,7 @@ export type SpriteAnimation = {
 	loop: boolean;
 };
 
-type ZylemSpriteOptions = EntityOptions & {
+type ZylemSpriteOptions = GameEntityOptions & {
 	images?: SpriteImage[];
 	animations?: SpriteAnimation[];
 	size?: Vector3;

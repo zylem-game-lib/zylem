@@ -23,17 +23,17 @@ export interface LifeCycleDelegate<U> {
 	destroy?: ((params: DestroyContext<U>) => void) | ((params: DestroyContext<U>) => void)[];
 }
 
-export interface CollisionContext<T, O extends EntityOptions> {
+export interface CollisionContext<T, O extends GameEntityOptions> {
 	entity: T;
 	other: GameEntity<O>;
 	globals?: any;
 }
 
-export interface CollisionDelegate<T, O extends EntityOptions> {
+export interface CollisionDelegate<T, O extends GameEntityOptions> {
 	collision?: ((params: CollisionContext<T, O>) => void) | ((params: CollisionContext<T, O>) => void)[];
 }
 
-export type EntityOptions = {
+export type GameEntityOptions = {
 	color?: Color;
 	size?: Vec3;
 	position?: Vec3;
@@ -58,7 +58,7 @@ export abstract class GameEntityLifeCycle {
 	abstract _destroy(params: DestroyContext<this>): void;
 }
 
-export class GameEntity<O extends EntityOptions> extends BaseNode<O> implements GameEntityLifeCycle {
+export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implements GameEntityLifeCycle {
 	public group: Group | undefined;
 	public uuid: string = '';
 	public mesh: Mesh | undefined;
@@ -188,11 +188,11 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> implements 
 }
 
 export abstract class EntityCollisionBuilder extends CollisionBuilder {
-	abstract collider(options: EntityOptions): ColliderDesc;
+	abstract collider(options: GameEntityOptions): ColliderDesc;
 }
 
 export abstract class EntityMeshBuilder extends MeshBuilder {
-	buildGeometry(options: EntityOptions): BufferGeometry {
+	buildGeometry(options: GameEntityOptions): BufferGeometry {
 		return new BufferGeometry();
 	}
 
@@ -202,18 +202,18 @@ export abstract class EntityMeshBuilder extends MeshBuilder {
 }
 
 export abstract class DebugInfoBuilder {
-	abstract buildInfo(options: EntityOptions): Record<string, string>;
+	abstract buildInfo(options: GameEntityOptions): Record<string, string>;
 }
 
 export class DefaultDebugInfoBuilder extends DebugInfoBuilder {
-	buildInfo(options: EntityOptions): Record<string, string> {
+	buildInfo(options: GameEntityOptions): Record<string, string> {
 		return {
 			message: 'missing debug info builder'
 		};
 	}
 }
 
-export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends EntityOptions, P = any> {
+export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends GameEntityOptions, P = any> {
 	protected meshBuilder: EntityMeshBuilder | null;
 	protected collisionBuilder: EntityCollisionBuilder | null;
 	protected materialBuilder: MaterialBuilder | null;

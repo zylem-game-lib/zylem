@@ -1,7 +1,7 @@
 import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityOptions, GameEntity } from './entity';
+import { EntityBuilder, EntityCollisionBuilder, GameEntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
 import { CollisionHandlerDelegate } from '../collision/collision-delegate';
 
@@ -16,7 +16,7 @@ export type OnHeldParams = {
 export type OnEnterParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
 export type OnExitParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
 
-type ZylemZoneOptions = EntityOptions & {
+type ZylemZoneOptions = GameEntityOptions & {
 	size?: Vector3;
 	static?: boolean;
 	onEnter?: (params: OnEnterParams) => void;

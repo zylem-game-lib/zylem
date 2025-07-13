@@ -2,7 +2,7 @@ import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType, Vecto
 import { PhysicsOptions } from "./physics";
 import { Vec3 } from "../core/vector";
 import { CollisionOptions } from "./collision";
-import { EntityOptions } from "../core";
+import { GameEntityOptions } from "../core";
 
 // Global map for type to group ID (0-15 for simplicity)
 const typeToGroup = new Map<string, number>();
@@ -49,7 +49,7 @@ export class CollisionBuilder {
 	sensor: boolean = false;
 	gravity: Vec3 = new Vector3(0, 0, 0);
 
-	build(options: EntityOptions): [RigidBodyDesc, ColliderDesc] {
+	build(options: GameEntityOptions): [RigidBodyDesc, ColliderDesc] {
 		const bodyDesc = this.bodyDesc({
 			isDynamicBody: !this.static
 		});
@@ -79,7 +79,7 @@ export class CollisionBuilder {
 		return this;
 	}
 
-	collider(options: EntityOptions): ColliderDesc {
+	collider(options: GameEntityOptions): ColliderDesc {
 		const size = options.size ?? new Vector3(1, 1, 1);
 		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
 		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);

@@ -1,5 +1,5 @@
 import { BufferGeometry, Material, Mesh } from 'three';
-import { EntityOptions } from '../core';
+import { GameEntityOptions } from '../core';
 
 /**
  * TODO: allow for multiple materials requires geometry groups
@@ -13,7 +13,7 @@ import { EntityOptions } from '../core';
  * }
  */
 
-export type MeshBuilderOptions = Partial<Pick<EntityOptions, 'batched' | 'material'>>;
+export type MeshBuilderOptions = Partial<Pick<GameEntityOptions, 'batched' | 'material'>>;
 
 export class MeshBuilder {
 

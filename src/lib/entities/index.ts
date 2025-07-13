@@ -17,5 +17,5 @@ export {
 
 export type {
 	AbstractEntity,
-	EntityOptions,
+	GameEntityOptions,
 } from './entity';
