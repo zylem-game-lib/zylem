@@ -20,7 +20,11 @@ export class CameraWrapper {
 
 export function camera(options: CameraOptions): CameraWrapper {
 	const screenResolution = options.screenResolution || new Vector2(window.innerWidth, window.innerHeight);
-	const zylemCamera = new ZylemCamera(options.perspective || 'third-person', screenResolution);
+	let frustumSize = 10;
+	if (options.perspective === 'fixed-2d') {
+		frustumSize = options.zoom || 10;
+	}
+	const zylemCamera = new ZylemCamera(options.perspective || 'third-person', screenResolution, frustumSize);
 
 	// Set initial position and target
 	zylemCamera.move(options.position || new Vector3(0, 0, 0));

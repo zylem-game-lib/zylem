@@ -1,8 +1,13 @@
 import { Color, Vector3 } from 'three';
-import { game, box, sphere, stage, camera } from '../../src/main';
-import { MoveableEntity, makeMoveable } from '../../src/lib/behaviors/moveable';
+import { game, box, sphere, stage, camera, zone } from '../../src/main';
+import { makeMoveable } from '../../src/lib/behaviors/moveable';
 import { Vec0 } from '../../src/lib/core/utility';
-import { GameEntity } from '../../src/lib/core';
+import { pingPong } from '../../src/lib/actions/collision/ping-pong';
+import { ricochet2d } from '../../src/lib/actions/update/ricochet';
+import { ricochetSound, pingPongBeep } from '../../src/lib/sounds';
+import { boundary } from '../../src/lib/behaviors/boundary';
+
+const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
 
 const ball = await sphere({
 	position: Vec0,
@@ -12,30 +17,42 @@ const ball = await sphere({
 	},
 });
 
-function pingPong(entity: MoveableEntity, other: GameEntity<any>) {
-	const { x, y } = entity.body?.translation() || { x: 0, y: 0 };
-	const { x: otherX, y: otherY } = other.body?.translation() || { x: 0, y: 0 };
-	const yDiff = y - otherY;
-	const velocity = entity.getVelocity() || { x: 0, y: 0 };
-	const speed = Math.min(Math.abs(velocity.x) + 1, 15);
-	if (otherX > x) {
-		entity.setPosition(otherX - 0.2, y, 0);
-		entity.moveXY(-speed, yDiff);
-	} else {
-		entity.setPosition(otherX + 0.2, y, 0);
-		entity.moveXY(speed, yDiff);
-	}
-}
-
 const moveableBall = makeMoveable(ball);
 moveableBall.onSetup(({ entity }) => {
 	entity.setPosition(0, 0, 0);
-	entity.moveX(3);
+	entity.moveX(5);
 });
 
-moveableBall.onCollision(({ entity, other, globals }) => {
-	pingPong(entity, other);
+moveableBall.onUpdate(
+	ricochet2d({
+		boundaries: gameBounds,
+		onRicochet: (event) => {
+			ricochetSound();
+		}
+	})
+);
+
+const ball2 = await sphere({
+	position: Vec0,
+	radius: 0.1,
+	material: {
+		color: new Color(Color.NAMES.crimson),
+	},
 });
+const moveableBall2 = makeMoveable(ball2);
+moveableBall2.onSetup(({ entity }) => {
+	entity.setPosition(0, 0.5, 0);
+	entity.moveX(-5);
+});
+
+moveableBall2.onUpdate(
+	ricochet2d({
+		boundaries: gameBounds,
+		onRicochet: (event) => {
+			ricochetSound();
+		}
+	})
+);
 
 const paddleSize = { x: 0.20, y: 1.5, z: 1 };
 const paddleMaterial = { color: new Color(Color.NAMES.lightblue) };
@@ -50,7 +67,7 @@ makeMoveable(paddle1).onUpdate(({ entity, inputs }) => {
 	const { Vertical } = inputs.p1.axes;
 	const { value } = Vertical;
 	entity.moveY(-value * paddleSpeed);
-});
+}, boundary({ boundaries: gameBounds }));
 
 const paddle2 = await box({
 	position: { x: 10, y: 0, z: 0 },
@@ -58,15 +75,62 @@ const paddle2 = await box({
 	material: paddleMaterial,
 });
 makeMoveable(paddle2).onUpdate(({ entity, inputs }) => {
-	const { Horizontal } = inputs.p1.axes;
-	const { value } = Horizontal;
-	entity.moveY(value * paddleSpeed);
+	const { Vertical } = inputs.p2.axes;
+	const { value } = Vertical;
+	entity.moveY(-value * paddleSpeed);
+}, boundary({ boundaries: gameBounds }));
+
+
+const p1Goal = await zone({
+	position: { x: -12, y: 0, z: 0 },
+	size: new Vector3(2, 10, 1),
+});
+p1Goal.onEnter((params) => {
+	const { visitor, globals } = params;
+	if (visitor.uuid === ball.uuid) {
+		globals.p2Score++;
+		moveableBall.setPosition(0, 0, 0);
+		moveableBall.moveX(5);
+	}
+	if (visitor.uuid === ball2.uuid) {
+		globals.p2Score++;
+		moveableBall2.setPosition(0, 0, 0);
+		moveableBall2.moveX(5);
+	}
 });
 
+const p2Goal = await zone({
+	position: { x: 12, y: 0, z: 0 },
+	size: new Vector3(2, 10, 1),
+});
+p2Goal.onEnter((params) => {
+	const { visitor, globals } = params;
+	if (visitor.uuid === ball.uuid) {
+		globals.p1Score++;
+		moveableBall.setPosition(0, 0, 0);
+		moveableBall.moveX(-5);
+	}
+	if (visitor.uuid === ball2.uuid) {
+		globals.p1Score++;
+		moveableBall2.setPosition(0, 0, 0);
+		moveableBall2.moveX(-5);
+	}
+});
+
+moveableBall.onCollision(
+	pingPong({ minSpeed: 10 }),
+	pingPongBeep()
+);
+
+moveableBall2.onCollision(
+	pingPong({ minSpeed: 10 }),
+	pingPongBeep()
+);
 
 const camera1 = await camera({
-	position: new Vector3(0, 0, 10),
+	position: new Vector3(0, 0, 0),
 	perspective: 'fixed-2d',
+	zoom: 12,
 });
 
 const stage1 = await stage({
@@ -81,7 +145,7 @@ const stage1 = await stage({
 const game1 = game({
 	id: 'pong',
 	debug: true,
-}, stage1, ball, paddle1, paddle2);
+}, stage1, ball, ball2, paddle1, paddle2, p1Goal, p2Goal);
 
 
 game1.start();

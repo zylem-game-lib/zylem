@@ -2,7 +2,7 @@ import { Mesh, Material, ShaderMaterial, BufferGeometry, AxesHelper, Group, Poin
 import { v4 as uuidv4 } from 'uuid';
 import { Collider, ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
 
-import { position, rotation, scale } from "~/lib/behaviors/transformable.system";
+import { position, rotation, scale } from "~/lib/systems/transformable.system";
 import { Vec3 } from "../core/vector";
 import { MaterialBuilder, MaterialOptions } from "../graphics/material";
 import { PhysicsOptions } from "../collision/physics";
@@ -18,9 +18,9 @@ export abstract class AbstractEntity {
 }
 
 export interface LifeCycleDelegate<U> {
-	setup?: (params: SetupContext<U>) => void;
-	update?: (params: UpdateContext<U>) => void;
-	destroy?: (params: DestroyContext<U>) => void;
+	setup?: ((params: SetupContext<U>) => void) | ((params: SetupContext<U>) => void)[];
+	update?: ((params: UpdateContext<U>) => void) | ((params: UpdateContext<U>) => void)[];
+	destroy?: ((params: DestroyContext<U>) => void) | ((params: DestroyContext<U>) => void)[];
 }
 
 export interface CollisionContext<T, O extends EntityOptions> {
@@ -30,7 +30,7 @@ export interface CollisionContext<T, O extends EntityOptions> {
 }
 
 export interface CollisionDelegate<T, O extends EntityOptions> {
-	collision?: (params: CollisionContext<T, O>) => void;
+	collision?: ((params: CollisionContext<T, O>) => void) | ((params: CollisionContext<T, O>) => void)[];
 }
 
 export type EntityOptions = {
@@ -42,6 +42,9 @@ export type EntityOptions = {
 	physics?: Partial<PhysicsOptions>;
 	material?: Partial<MaterialOptions>;
 	custom?: { [key: string]: any };
+	collisionType?: string;
+	collisionGroup?: string;
+	collisionFilter?: string[];
 	_builders?: {
 		meshBuilder?: EntityMeshBuilder | null;
 		collisionBuilder?: EntityCollisionBuilder | null;
@@ -68,6 +71,7 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> implements 
 	public debugInfo: Record<string, any> = {};
 	public lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
 	public collisionDelegate: CollisionDelegate<this, O> | undefined;
+	public collisionType?: string;
 
 	constructor() {
 		super();
@@ -85,48 +89,87 @@ export class GameEntity<O extends EntityOptions> extends BaseNode<O> implements 
 		return this;
 	}
 
-	public onSetup(setup: (params: SetupContext<this>) => void): this {
-		this.setup = setup;
+	public onSetup(...callbacks: ((params: SetupContext<this>) => void)[]): this {
+		this.lifeCycleDelegate = {
+			...this.lifeCycleDelegate,
+			setup: callbacks.length > 0 ? callbacks as unknown as ((params: SetupContext<O>) => void)[] : undefined
+		};
 		return this;
 	}
 
-	public onUpdate(update: (params: UpdateContext<this>) => void): this {
-		this.update = update;
+	public onUpdate(...callbacks: ((params: UpdateContext<this>) => void)[]): this {
+		this.lifeCycleDelegate = {
+			...this.lifeCycleDelegate,
+			update: callbacks.length > 0 ? callbacks as unknown as ((params: UpdateContext<O>) => void)[] : undefined
+		};
 		return this;
 	}
 
-	public onDestroy(destroy: (params: DestroyContext<this>) => void): this {
-		this.destroy = destroy;
+	public onDestroy(...callbacks: ((params: DestroyContext<this>) => void)[]): this {
+		this.lifeCycleDelegate = {
+			...this.lifeCycleDelegate,
+			destroy: callbacks.length > 0 ? callbacks as unknown as ((params: DestroyContext<O>) => void)[] : undefined
+		};
 		return this;
 	}
 
-	public onCollision(collision: (params: CollisionContext<this, O>) => void): this {
-		this.collisionDelegate = { collision };
+	public onCollision(...callbacks: ((params: CollisionContext<this, O>) => void)[]): this {
+		this.collisionDelegate = {
+			collision: callbacks.length > 0 ? callbacks : undefined
+		};
 		return this;
 	}
 
 	public _setup(params: SetupContext<this>): void {
 		if (this.lifeCycleDelegate?.setup) {
-			this.lifeCycleDelegate.setup({ ...params, entity: this as unknown as O });
+			const callbacks = this.lifeCycleDelegate.setup;
+			if (typeof callbacks === 'function') {
+				callbacks({ ...params, entity: this as unknown as O });
+			} else if (Array.isArray(callbacks)) {
+				callbacks.forEach(callback => {
+					callback({ ...params, entity: this as unknown as O });
+				});
+			}
 		}
 	}
 
 	public _update(params: UpdateContext<this>): void {
 		this.updateMaterials(params);
 		if (this.lifeCycleDelegate?.update) {
-			this.lifeCycleDelegate.update({ ...params, entity: this as unknown as O });
+			const callbacks = this.lifeCycleDelegate.update;
+			if (typeof callbacks === 'function') {
+				callbacks({ ...params, entity: this as unknown as O });
+			} else if (Array.isArray(callbacks)) {
+				callbacks.forEach(callback => {
+					callback({ ...params, entity: this as unknown as O });
+				});
+			}
 		}
 	}
 
 	public _destroy(params: DestroyContext<this>): void {
 		if (this.lifeCycleDelegate?.destroy) {
-			this.lifeCycleDelegate.destroy({ ...params, entity: this as unknown as O });
+			const callbacks = this.lifeCycleDelegate.destroy;
+			if (typeof callbacks === 'function') {
+				callbacks({ ...params, entity: this as unknown as O });
+			} else if (Array.isArray(callbacks)) {
+				callbacks.forEach(callback => {
+					callback({ ...params, entity: this as unknown as O });
+				});
+			}
 		}
 	}
 
 	public _collision(other: GameEntity<O>, globals?: any): void {
 		if (this.collisionDelegate?.collision) {
-			this.collisionDelegate.collision({ entity: this, other, globals });
+			const callbacks = this.collisionDelegate.collision;
+			if (typeof callbacks === 'function') {
+				callbacks({ entity: this, other, globals });
+			} else if (Array.isArray(callbacks)) {
+				callbacks.forEach(callback => {
+					callback({ entity: this, other, globals });
+				});
+			}
 		}
 	}
 
@@ -262,6 +305,10 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends Entit
 
 		if (this.debugInfoBuilder) {
 			entity.debugInfo = this.debugInfoBuilder.buildInfo(this.options);
+		}
+
+		if (this.options.collisionType) {
+			entity.collisionType = this.options.collisionType;
 		}
 
 		return entity;

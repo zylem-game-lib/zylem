@@ -12,6 +12,13 @@ export class InputManager {
 	constructor() {
 		this.addInputProvider(1, new KeyboardProvider());
 		this.addInputProvider(1, new GamepadProvider(0));
+		this.addInputProvider(2, new GamepadProvider(1));
+		this.addInputProvider(3, new GamepadProvider(2));
+		this.addInputProvider(4, new GamepadProvider(3));
+		this.addInputProvider(5, new GamepadProvider(4));
+		this.addInputProvider(6, new GamepadProvider(5));
+		this.addInputProvider(7, new GamepadProvider(6));
+		this.addInputProvider(8, new GamepadProvider(7));
 	}
 
 	addInputProvider(playerNumber: InputPlayerNumber, provider: InputProvider) {

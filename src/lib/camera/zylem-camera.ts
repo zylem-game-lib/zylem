@@ -7,8 +7,6 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import RenderPass from '../graphics/render-pass';
 import { StageEntity } from '../interfaces/entity';
 
-const zModifier = 50;
-
 /**
  * Interface for perspective-specific camera controllers
  */
@@ -28,14 +26,15 @@ export class ZylemCamera {
 	orbitControls: OrbitControls | null = null;
 	target: StageEntity | null = null;
 	sceneRef: Scene | null = null;
+	frustumSize = 10;
 
 	// Perspective controller delegation
 	perspectiveController: PerspectiveController | null = null;
 
-	constructor(perspective: PerspectiveType, screenResolution: Vector2) {
+	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10) {
 		this._perspective = perspective;
 		this.screenResolution = screenResolution;
-
+		this.frustumSize = frustumSize;
 		// Initialize renderer
 		this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
 		this.renderer.setSize(screenResolution.x, screenResolution.y);
@@ -176,24 +175,22 @@ export class ZylemCamera {
 	}
 
 	private createIsometricCamera(aspectRatio: number): OrthographicCamera {
-		const frustumSize = 20;
 		return new OrthographicCamera(
-			frustumSize * aspectRatio / -2,
-			frustumSize * aspectRatio / 2,
-			frustumSize / 2,
-			frustumSize / -2,
+			this.frustumSize * aspectRatio / -2,
+			this.frustumSize * aspectRatio / 2,
+			this.frustumSize / 2,
+			this.frustumSize / -2,
 			1,
 			1000
 		);
 	}
 
 	private createFlat2DCamera(aspectRatio: number): OrthographicCamera {
-		const frustumSize = 10;
 		return new OrthographicCamera(
-			frustumSize * aspectRatio / -2,
-			frustumSize * aspectRatio / 2,
-			frustumSize / 2,
-			frustumSize / -2,
+			this.frustumSize * aspectRatio / -2,
+			this.frustumSize * aspectRatio / 2,
+			this.frustumSize / 2,
+			this.frustumSize / -2,
 			1,
 			1000
 		);
@@ -205,8 +202,10 @@ export class ZylemCamera {
 
 	// Movement methods
 	private moveCamera(position: Vector3) {
-		const adjustedZ = (this._perspective !== Perspectives.Flat2D) ? position.z + zModifier : position.z;
-		this.cameraRig.position.set(position.x, position.y, adjustedZ);
+		if (this._perspective === Perspectives.Flat2D || this._perspective === Perspectives.Fixed2D) {
+			this.frustumSize = position.z;
+		}
+		this.cameraRig.position.set(position.x, position.y, position.z);
 	}
 
 	move(position: Vector3) {

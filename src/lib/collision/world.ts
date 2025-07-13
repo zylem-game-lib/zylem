@@ -1,12 +1,12 @@
 import { Vector3 } from 'three';
 import RAPIER, { World } from '@dimforge/rapier3d-compat';
 
-import { Entity, StageEntity } from '../interfaces/entity';
+import { Entity } from '../interfaces/entity';
 import { state$ } from '../state';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { ZylemActor } from '../entities/actor';
 import { isCollisionHandlerDelegate } from './collision-delegate';
-import { Game, GameEntity } from '../core';
+import { GameEntity } from '../core';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';

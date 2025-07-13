@@ -83,6 +83,21 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions> implements Collision
 		}
 	}
 
+	onEnter(callback: (params: OnEnterParams) => void) {
+		this.options.onEnter = callback;
+		return this;
+	}
+
+	onHeld(callback: (params: OnHeldParams) => void) {
+		this.options.onHeld = callback;
+		return this;
+	}
+
+	onExit(callback: (params: OnExitParams) => void) {
+		this.options.onExit = callback;
+		return this;
+	}
+
 	entered(other: any) {
 		this._enteredZone.set(other.uuid, 1);
 		if (this.options.onEnter) {

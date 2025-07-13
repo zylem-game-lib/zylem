@@ -14,7 +14,7 @@ import { ZylemBlueColor } from '../utility';
 import { debugState } from '../../state/debug-state';
 
 import { SetupContext, UpdateContext, DestroyContext } from '../base-node-life-cycle';
-import createTransformSystem, { StageSystem } from '../../behaviors/transformable.system';
+import createTransformSystem, { StageSystem } from '../../systems/transformable.system';
 import { BaseNode } from '../base-node';
 import { v4 as uuidv4 } from 'uuid';
 import { Stage } from './stage';
