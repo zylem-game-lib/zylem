@@ -1,7 +1,7 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Object3D, Group } from 'three';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityOptions, GameEntity } from './entity';
+import { EntityBuilder, EntityCollisionBuilder, GameEntityOptions, GameEntity } from './entity';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { EntityLoaderDelegate } from './delegates/loader';
 import { Vec3 } from '../core/vector';
@@ -11,7 +11,7 @@ type AnimationObject = {
     key?: string;
     path: string;
 };
-type ZylemActorOptions = EntityOptions & {
+type ZylemActorOptions = GameEntityOptions & {
     static?: boolean;
     animations?: AnimationObject[];
     models?: string[];

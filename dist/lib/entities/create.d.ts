@@ -1,8 +1,8 @@
-import { DebugInfoBuilder, EntityOptions } from "./entity";
+import { DebugInfoBuilder, GameEntityOptions } from "./entity";
 import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntity } from "./entity";
-export interface CreateEntityOptions<T extends GameEntity<any>, CreateOptions extends EntityOptions> {
+export interface CreateGameEntityOptions<T extends GameEntity<any>, CreateOptions extends GameEntityOptions> {
     args: Array<any>;
-    defaultConfig: EntityOptions;
+    defaultConfig: GameEntityOptions;
     EntityClass: new (options: any) => T;
     BuilderClass: new (options: any, entity: T, meshBuilder: any, collisionBuilder: any, debugInfoBuilder: any) => EntityBuilder<T, CreateOptions>;
     MeshBuilderClass?: new (data: any) => EntityMeshBuilder;
@@ -10,4 +10,4 @@ export interface CreateEntityOptions<T extends GameEntity<any>, CreateOptions ex
     DebugInfoBuilderClass?: new (data: any) => DebugInfoBuilder;
     entityType: symbol;
 }
-export declare function createEntity<T extends GameEntity<any>, CreateOptions extends EntityOptions>(params: CreateEntityOptions<T, CreateOptions>): Promise<T>;
+export declare function createEntity<T extends GameEntity<any>, CreateOptions extends GameEntityOptions>(params: CreateGameEntityOptions<T, CreateOptions>): Promise<T>;

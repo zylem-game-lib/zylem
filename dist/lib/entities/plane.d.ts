@@ -2,9 +2,9 @@ import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector2 } from 'three';
 import { TexturePath } from '../graphics/material';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
+import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntityOptions, GameEntity } from './entity';
 import { XZPlaneGeometry } from '../graphics/geometries/XZPlaneGeometry';
-type ZylemPlaneOptions = EntityOptions & {
+type ZylemPlaneOptions = GameEntityOptions & {
     tile?: Vector2;
     repeat?: Vector2;
     texture?: TexturePath;

@@ -26,8 +26,9 @@ export declare class ZylemCamera {
     orbitControls: OrbitControls | null;
     target: StageEntity | null;
     sceneRef: Scene | null;
+    frustumSize: number;
     perspectiveController: PerspectiveController | null;
-    constructor(perspective: PerspectiveType, screenResolution: Vector2);
+    constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize?: number);
     /**
      * Setup the camera with a scene
      */

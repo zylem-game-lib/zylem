@@ -1,14 +1,14 @@
 import { World } from '@dimforge/rapier3d-compat';
 import { Color, LineSegments, Vector3 } from 'three';
-import { ZylemWorld } from '../../collision/world';
-import { ZylemScene } from '../../graphics/zylem-scene';
-import { Conditions } from '../../interfaces/game';
-import { GameEntity } from '..';
-import { SetupContext, UpdateContext, DestroyContext } from '../base-node-life-cycle';
-import { BaseNode } from '../base-node';
+import { ZylemWorld } from '../collision/world';
+import { ZylemScene } from '../graphics/zylem-scene';
+import { Conditions } from '../interfaces/game';
+import { GameEntityInterface } from '../types/entity-types';
+import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
+import { BaseNode } from '../core/base-node';
 import { Stage } from './stage';
-import { ZylemCamera } from '~/lib/camera/zylem-camera';
-import { CameraWrapper } from '~/lib/camera/camera';
+import { ZylemCamera } from '../camera/zylem-camera';
+import { CameraWrapper } from '../camera/camera';
 export interface ZylemStageConfig {
     inputs: Record<string, string[]>;
     backgroundColor: Color;
@@ -17,10 +17,11 @@ export interface ZylemStageConfig {
     variables: Record<string, any>;
     conditions?: Conditions<any>[];
     children?: ({ globals }: any) => BaseNode[];
+    stageRef?: Stage;
 }
-export type StageOptions = Array<ZylemStageConfig | BaseNode | CameraWrapper>;
+export type StageOptions = Array<Partial<ZylemStageConfig> | BaseNode | CameraWrapper>;
 export type StageState = ZylemStageConfig & {
-    entities: GameEntity<any>[];
+    entities: GameEntityInterface[];
 };
 export declare const STAGE_TYPE = "Stage";
 export declare class ZylemStage {

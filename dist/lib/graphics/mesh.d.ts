@@ -1,5 +1,5 @@
 import { BufferGeometry, Material, Mesh } from 'three';
-import { EntityOptions } from '../core';
+import { GameEntityOptions } from '../entities/entity';
 /**
  * TODO: allow for multiple materials requires geometry groups
  * TODO: allow for instanced uniforms
@@ -11,7 +11,7 @@ import { EntityOptions } from '../core';
  *   MeshBuilder.bachedMesh = new BatchedMesh(10, 5000, 10000, material);
  * }
  */
-export type MeshBuilderOptions = Partial<Pick<EntityOptions, 'batched' | 'material'>>;
+export type MeshBuilderOptions = Partial<Pick<GameEntityOptions, 'batched' | 'material'>>;
 export declare class MeshBuilder {
     build(meshOptions: MeshBuilderOptions, geometry: BufferGeometry, materials: Material[]): Mesh;
     postBuild(): void;

@@ -1,6 +1,6 @@
 {
   "src/main.ts": {
-    "file": "main.js",
+    "file": "main.cjs",
     "name": "main",
     "src": "src/main.ts",
     "isEntry": true

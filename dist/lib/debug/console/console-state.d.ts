@@ -1,9 +1,9 @@
 /**
  * Console state for managing debug console messages
  */
-export declare const consoleState$: import("@simplyianm/legend-state").ObservableObject<{
+export declare const consoleState: {
     messages: string[];
-}>;
+};
 /**
  * Append a message to the debug console
  * @param message The message to append to the console

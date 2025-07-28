@@ -2,7 +2,7 @@ import { Vector3 } from 'three';
 import RAPIER, { World } from '@dimforge/rapier3d-compat';
 import { Entity } from '../interfaces/entity';
 import { UpdateContext } from '../core/base-node-life-cycle';
-import { GameEntity } from '../core';
+import { GameEntity } from '../entities/entity';
 export declare class ZylemWorld implements Entity<ZylemWorld> {
     type: string;
     world: World;

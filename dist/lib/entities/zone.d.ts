@@ -1,23 +1,26 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityOptions, GameEntity } from './entity';
+import { EntityBuilder, EntityCollisionBuilder, GameEntityOptions, GameEntity } from './entity';
 import { CollisionHandlerDelegate } from '../collision/collision-delegate';
+import { Stage } from '../stage/stage';
 export type OnHeldParams = {
     delta: number;
     self: ZylemZone;
     visitor: GameEntity<any>;
     heldTime: number;
     globals: any;
+    stage: Stage;
 };
-export type OnEnterParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
-export type OnExitParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
-type ZylemZoneOptions = EntityOptions & {
+export type OnEnterParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals' | 'stage'>;
+export type OnExitParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals' | 'stage'>;
+type ZylemZoneOptions = GameEntityOptions & {
     size?: Vector3;
     static?: boolean;
     onEnter?: (params: OnEnterParams) => void;
     onHeld?: (params: OnHeldParams) => void;
     onExit?: (params: OnExitParams) => void;
+    stageRef?: Stage;
 };
 export declare class ZoneCollisionBuilder extends EntityCollisionBuilder {
     collider(options: ZylemZoneOptions): ColliderDesc;
@@ -31,6 +34,7 @@ export declare class ZylemZone extends GameEntity<ZylemZoneOptions> implements C
     private _enteredZone;
     private _exitedZone;
     private _zoneEntities;
+    stageRef: Stage;
     constructor(options?: ZylemZoneOptions);
     handlePostCollision({ delta }: {
         delta: number;
@@ -39,6 +43,9 @@ export declare class ZylemZone extends GameEntity<ZylemZoneOptions> implements C
         other: any;
         delta: number;
     }): void;
+    onEnter(callback: (params: OnEnterParams) => void): this;
+    onHeld(callback: (params: OnHeldParams) => void): this;
+    onExit(callback: (params: OnExitParams) => void): this;
     entered(other: any): void;
     exited(delta: number, key: string): void;
     held(delta: number, other: any): void;

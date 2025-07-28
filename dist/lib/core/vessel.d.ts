@@ -1,4 +1,4 @@
-import { BaseNode } from '../entities';
+import { BaseNode } from './base-node';
 import { SetupContext, UpdateContext, DestroyContext } from './base-node-life-cycle';
 export declare const VESSEL_TYPE: unique symbol;
 export declare class Vessel extends BaseNode<{}, Vessel> {

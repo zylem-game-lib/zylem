@@ -1,8 +1,8 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { SphereGeometry } from 'three';
 import { BaseNode } from '../core/base-node';
-import { DebugInfoBuilder, EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, EntityOptions, GameEntity } from './entity';
-type ZylemSphereOptions = EntityOptions & {
+import { DebugInfoBuilder, EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntityOptions, GameEntity } from './entity';
+type ZylemSphereOptions = GameEntityOptions & {
     radius?: number;
 };
 export declare class SphereCollisionBuilder extends EntityCollisionBuilder {

@@ -1,15 +1,19 @@
-import { Scene, Object3D, Vector3 } from 'three';
+import { Scene, Color, Object3D, Vector3 } from 'three';
 import { Entity } from '../interfaces/entity';
 import { SetupCallback } from '~/lib/interfaces/game';
 import { GameEntity } from '../entities/entity';
 import { ZylemCamera } from '../camera/zylem-camera';
+interface SceneState {
+    backgroundColor: Color;
+    backgroundImage: string | null;
+}
 export declare class ZylemScene implements Entity<ZylemScene> {
     type: string;
     _setup?: SetupCallback;
     scene: Scene;
     zylemCamera: ZylemCamera;
     containerElement: HTMLElement | null;
-    constructor(id: string, camera: ZylemCamera);
+    constructor(id: string, camera: ZylemCamera, state: SceneState);
     /**
      * Setup the container element and append camera's renderer
      */
@@ -42,3 +46,4 @@ export declare class ZylemScene implements Entity<ZylemScene> {
      */
     debugScene(): void;
 }
+export {};

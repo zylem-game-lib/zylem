@@ -1,20 +1,13 @@
 import { ZylemStage } from '../stage/zylem-stage';
 import { Game } from './game';
-import { UpdateContext, SetupContext, UpdateFunction, DestroyContext } from '../base-node-life-cycle';
-import { InputManager } from '../../input/input-manager';
-import { Timer } from '../three-addons/Timer';
+import { UpdateContext, SetupContext, DestroyContext } from '../core/base-node-life-cycle';
+import { InputManager } from '../input/input-manager';
+import { Timer } from '../core/three-addons/Timer';
 import { Stage } from '../stage/stage';
-export interface ZylemGameConfig {
-    id: string;
-    globals?: Record<string, any>;
-    stages?: Stage[];
-    update?: UpdateFunction<ZylemGame>;
-    debug?: boolean;
-    time?: number;
-}
+import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 export declare class ZylemGame {
     id: string;
-    initialGlobals: {};
+    initialGlobals: GlobalVariablesType;
     customSetup: ((params: SetupContext<ZylemStage>) => void) | null;
     customUpdate: ((params: UpdateContext<ZylemStage>) => void) | null;
     customDestroy: ((params: DestroyContext<ZylemStage>) => void) | null;
@@ -28,13 +21,15 @@ export declare class ZylemGame {
     wrapperRef: Game;
     static FRAME_LIMIT: number;
     static FRAME_DURATION: number;
-    constructor(options: ZylemGameConfig, wrapperRef: Game);
+    constructor(options: ZylemGameConfig<Stage, ZylemGame>, wrapperRef: Game);
     loadStage(stage: Stage): Promise<void>;
-    setGlobals(options: ZylemGameConfig): void;
+    setGlobals(options: ZylemGameConfig<Stage, ZylemGame>): void;
     params(): UpdateContext<ZylemStage>;
     start(): void;
     loop(timestamp: number): void;
     getStage(id: string): Stage | undefined;
     currentStage(): Stage | undefined;
+    getGlobal(key: string): BasicTypes | GlobalVariablesType;
+    setGlobal(key: string, value: BasicTypes): void;
 }
 export default ZylemGame;

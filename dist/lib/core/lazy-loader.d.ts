@@ -17,7 +17,7 @@ export declare const loadFoundation: () => Promise<{
     utility: typeof import("./utility");
     vector: typeof import("./vector");
 }>;
-export declare const loadState: () => Promise<typeof import("../state/index")>;
+export declare const loadState: () => Promise<typeof import("../game/game-state")>;
 export declare const loadInput: () => Promise<typeof import("../input/input-manager")>;
 export declare const loadGraphics: () => Promise<{
     material: typeof import("../graphics/material");
@@ -36,15 +36,14 @@ export declare const loadAllEntities: () => Promise<typeof import("../entities/e
 export declare const loadEntity: (entityType: "box" | "sphere" | "sprite" | "plane" | "zone" | "actor") => Promise<typeof import("../entities/box") | typeof import("../entities/sphere") | typeof import("../entities/sprite") | typeof import("../entities/plane") | typeof import("../entities/zone") | typeof import("../entities/actor")>;
 export declare const loadBehaviors: () => Promise<typeof import("../behaviors/actions")>;
 export declare const loadGameCore: () => Promise<{
-    game: typeof import("./game/game");
+    game: typeof import("../game/game");
     vessel: typeof import("./vessel");
 }>;
 export declare const loadStage: () => Promise<{
-    stage: typeof import("./stage/stage");
+    stage: typeof import("../stage/stage");
     world: typeof import("../collision/world");
     scene: typeof import("../graphics/zylem-scene");
 }>;
-export declare const loadUI: () => Promise<typeof import("../ui/hud")>;
 export declare const loadDebugTools: () => Promise<typeof import("../debug/Debug")>;
 export declare const loadFullGame: () => Promise<{
     foundation: {
@@ -53,7 +52,7 @@ export declare const loadFullGame: () => Promise<{
         utility: typeof import("./utility");
         vector: typeof import("./vector");
     };
-    state: typeof import("../state/index");
+    state: typeof import("../game/game-state");
     input: typeof import("../input/input-manager");
     graphics: {
         material: typeof import("../graphics/material");
@@ -71,11 +70,11 @@ export declare const loadFullGame: () => Promise<{
     entities: typeof import("../entities/entity");
     behaviors: typeof import("../behaviors/actions");
     gameCore: {
-        game: typeof import("./game/game");
+        game: typeof import("../game/game");
         vessel: typeof import("./vessel");
     };
     stage: {
-        stage: typeof import("./stage/stage");
+        stage: typeof import("../stage/stage");
         world: typeof import("../collision/world");
         scene: typeof import("../graphics/zylem-scene");
     };

@@ -1,7 +1,7 @@
-export { game } from './lib/core/game/game';
-export type { ZylemGameConfig } from './lib/core/game/zylem-game';
-export { stage } from './lib/core/stage/stage';
-export type { StageOptions } from './lib/core/stage/zylem-stage';
+export { game } from './lib/game/game';
+export type { ZylemGameConfig } from './lib/game/game-interfaces';
+export { stage } from './lib/stage/stage';
+export type { StageOptions } from './lib/stage/zylem-stage';
 export { vessel } from './lib/core/vessel';
 export { camera } from './lib/camera/camera';
 export type { PerspectiveType } from './lib/camera/perspective';

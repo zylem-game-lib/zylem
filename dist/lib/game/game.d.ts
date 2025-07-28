@@ -1,9 +1,10 @@
-import { BaseNode } from '../base-node';
-import { ZylemGameConfig, ZylemGame } from './zylem-game';
+import { BaseNode } from '../core/base-node';
+import { ZylemGame } from './zylem-game';
 import { ZylemStage } from '../stage/zylem-stage';
 import { Stage } from '../stage/stage';
-import { DestroyFunction, SetupFunction, UpdateFunction } from '../base-node-life-cycle';
-import { GameEntityLifeCycle } from '../../entities/entity';
+import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
+import { GameEntityLifeCycle } from '../entities/entity';
+import { GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 export declare class Game {
     gameRef: ZylemGame | null;
     options: GameOptions;
@@ -12,7 +13,7 @@ export declare class Game {
     destroy: DestroyFunction<ZylemStage>;
     refErrorMessage: string;
     constructor(options: GameOptions);
-    start(): Promise<void>;
+    start(): Promise<ZylemGame>;
     load(): Promise<ZylemGame>;
     setOverrides(): void;
     pause(): Promise<void>;
@@ -21,8 +22,10 @@ export declare class Game {
     previousStage(): Promise<void>;
     goToStage(): Promise<void>;
     end(): Promise<void>;
+    getGlobal(key: string): import("./game-interfaces").BasicTypes | GlobalVariablesType | undefined;
+    setGlobal(key: string, value: number): void;
 }
-type GameOptions = Array<ZylemGameConfig | Stage | GameEntityLifeCycle | BaseNode>;
+type GameOptions = Array<ZylemGameConfig<Stage, Game> | Stage | GameEntityLifeCycle | BaseNode>;
 /**
  * create a new game
  * @param options GameOptions - Array of IGameOptions, Stage, GameEntity, or BaseNode objects

@@ -1,9 +1,9 @@
 import { ZylemCamera } from '../camera/zylem-camera';
-import { Game } from './game/game';
+import { Game } from '../game/game';
 import { Inputs } from '../input/input';
-import { ZylemStage } from './stage/zylem-stage';
+import { ZylemStage } from '../stage/zylem-stage';
 export interface SetupContext<T> {
-    entity: T;
+    me: T;
     globals: any;
     inputs?: Inputs;
     camera?: ZylemCamera;
@@ -14,7 +14,7 @@ export interface SetupFunction<T> {
     (context: SetupContext<T>): void;
 }
 export type UpdateContext<T> = {
-    entity: T;
+    me: T;
     delta: number;
     inputs: Inputs;
     globals: any;
@@ -26,7 +26,7 @@ export interface UpdateFunction<T> {
     (context: UpdateContext<T>): void;
 }
 export interface DestroyContext<T> {
-    entity: T;
+    me: T;
     globals: any;
 }
 export interface DestroyFunction<T> {

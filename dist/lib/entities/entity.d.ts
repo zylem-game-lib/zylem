@@ -13,19 +13,19 @@ export declare abstract class AbstractEntity {
     abstract eid: number;
 }
 export interface LifeCycleDelegate<U> {
-    setup?: (params: SetupContext<U>) => void;
-    update?: (params: UpdateContext<U>) => void;
-    destroy?: (params: DestroyContext<U>) => void;
+    setup?: ((params: SetupContext<U>) => void) | ((params: SetupContext<U>) => void)[];
+    update?: ((params: UpdateContext<U>) => void) | ((params: UpdateContext<U>) => void)[];
+    destroy?: ((params: DestroyContext<U>) => void) | ((params: DestroyContext<U>) => void)[];
 }
-export interface CollisionContext<T, O extends EntityOptions> {
+export interface CollisionContext<T, O extends GameEntityOptions> {
     entity: T;
     other: GameEntity<O>;
     globals?: any;
 }
-export interface CollisionDelegate<T, O extends EntityOptions> {
-    collision?: (params: CollisionContext<T, O>) => void;
+export interface CollisionDelegate<T, O extends GameEntityOptions> {
+    collision?: ((params: CollisionContext<T, O>) => void) | ((params: CollisionContext<T, O>) => void)[];
 }
-export type EntityOptions = {
+export type GameEntityOptions = {
     color?: Color;
     size?: Vec3;
     position?: Vec3;
@@ -36,6 +36,9 @@ export type EntityOptions = {
     custom?: {
         [key: string]: any;
     };
+    collisionType?: string;
+    collisionGroup?: string;
+    collisionFilter?: string[];
     _builders?: {
         meshBuilder?: EntityMeshBuilder | null;
         collisionBuilder?: EntityCollisionBuilder | null;
@@ -47,7 +50,7 @@ export declare abstract class GameEntityLifeCycle {
     abstract _update(params: UpdateContext<this>): void;
     abstract _destroy(params: DestroyContext<this>): void;
 }
-export declare class GameEntity<O extends EntityOptions> extends BaseNode<O> implements GameEntityLifeCycle {
+export declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implements GameEntityLifeCycle {
     group: Group | undefined;
     uuid: string;
     mesh: Mesh | undefined;
@@ -60,12 +63,13 @@ export declare class GameEntity<O extends EntityOptions> extends BaseNode<O> imp
     debugInfo: Record<string, any>;
     lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
     collisionDelegate: CollisionDelegate<this, O> | undefined;
+    collisionType?: string;
     constructor();
     create(): this;
-    onSetup(setup: (params: SetupContext<this>) => void): this;
-    onUpdate(update: (params: UpdateContext<this>) => void): this;
-    onDestroy(destroy: (params: DestroyContext<this>) => void): this;
-    onCollision(collision: (params: CollisionContext<this, O>) => void): this;
+    onSetup(...callbacks: ((params: SetupContext<this>) => void)[]): this;
+    onUpdate(...callbacks: ((params: UpdateContext<this>) => void)[]): this;
+    onDestroy(...callbacks: ((params: DestroyContext<this>) => void)[]): this;
+    onCollision(...callbacks: ((params: CollisionContext<this, O>) => void)[]): this;
     _setup(params: SetupContext<this>): void;
     _update(params: UpdateContext<this>): void;
     _destroy(params: DestroyContext<this>): void;
@@ -73,19 +77,19 @@ export declare class GameEntity<O extends EntityOptions> extends BaseNode<O> imp
     protected updateMaterials(params: any): void;
 }
 export declare abstract class EntityCollisionBuilder extends CollisionBuilder {
-    abstract collider(options: EntityOptions): ColliderDesc;
+    abstract collider(options: GameEntityOptions): ColliderDesc;
 }
 export declare abstract class EntityMeshBuilder extends MeshBuilder {
-    buildGeometry(options: EntityOptions): BufferGeometry;
+    buildGeometry(options: GameEntityOptions): BufferGeometry;
     postBuild(): void;
 }
 export declare abstract class DebugInfoBuilder {
-    abstract buildInfo(options: EntityOptions): Record<string, string>;
+    abstract buildInfo(options: GameEntityOptions): Record<string, string>;
 }
 export declare class DefaultDebugInfoBuilder extends DebugInfoBuilder {
-    buildInfo(options: EntityOptions): Record<string, string>;
+    buildInfo(options: GameEntityOptions): Record<string, string>;
 }
-export declare abstract class EntityBuilder<T extends GameEntity<U> & P, U extends EntityOptions, P = any> {
+export declare abstract class EntityBuilder<T extends GameEntity<U> & P, U extends GameEntityOptions, P = any> {
     protected meshBuilder: EntityMeshBuilder | null;
     protected collisionBuilder: EntityCollisionBuilder | null;
     protected materialBuilder: MaterialBuilder | null;

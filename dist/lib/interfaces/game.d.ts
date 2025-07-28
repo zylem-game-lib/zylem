@@ -1,4 +1,4 @@
-import ZylemGame from '~/lib/core/game/zylem-game';
+import ZylemGame from '~/lib/game/zylem-game';
 import { ZylemScene } from '~/lib/graphics/zylem-scene';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { ZylemWorld } from '~/lib/collision/world';

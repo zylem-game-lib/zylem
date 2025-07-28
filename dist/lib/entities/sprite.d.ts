@@ -2,7 +2,7 @@ import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
 import { Sprite as ThreeSprite } from 'three';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityOptions, GameEntity } from './entity';
+import { EntityBuilder, EntityCollisionBuilder, GameEntityOptions, GameEntity } from './entity';
 export type SpriteImage = {
     name: string;
     file: string;
@@ -13,7 +13,7 @@ export type SpriteAnimation = {
     speed: number | number[];
     loop: boolean;
 };
-type ZylemSpriteOptions = EntityOptions & {
+type ZylemSpriteOptions = GameEntityOptions & {
     images?: SpriteImage[];
     animations?: SpriteAnimation[];
     size?: Vector3;
