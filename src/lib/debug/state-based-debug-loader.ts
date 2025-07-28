@@ -1,11 +1,12 @@
 /**
  * State-Based Debug Module Loader
- * 
+ *
  * This approach integrates with the existing debug state system
  * and loads the debug module when debug state changes to true.
  */
 
-import { debugState$ } from '../state/debug-state';
+import { subscribe } from 'valtio';
+import { debugState } from './debug-state';
 
 let debugModuleLoaded = false;
 
@@ -24,12 +25,12 @@ async function loadDebugModule(): Promise<void> {
 	}
 }
 
-debugState$.on.onChange(async (isDebugEnabled) => {
-	if (isDebugEnabled && !debugModuleLoaded) {
+subscribe(debugState, async () => {
+	if (debugState.on && !debugModuleLoaded) {
 		await loadDebugModule();
 	}
 });
 
-if (debugState$.on.get() && !debugModuleLoaded) {
+if (debugState.on && !debugModuleLoaded) {
 	loadDebugModule();
 } 

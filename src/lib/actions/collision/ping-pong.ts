@@ -1,4 +1,4 @@
-import { CollisionContext, GameEntity } from "../../core";
+import { CollisionContext, GameEntity } from "../../entities/entity";
 import { MoveableEntity } from "../../behaviors/moveable";
 
 export interface PingPongOptions {

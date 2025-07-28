@@ -4,7 +4,7 @@ import { Vector3 } from "three";
 import { Vector } from "@dimforge/rapier3d-compat";
 
 export interface RicochetEvent {
-	entity: MoveableEntity;
+	me: MoveableEntity;
 	boundary: 'top' | 'bottom' | 'left' | 'right' | 'front' | 'back';
 	position: Vector;
 	velocityBefore: Vector;
@@ -106,14 +106,14 @@ function _ricochet2d(
 	updateContext: UpdateContext<MoveableEntity>,
 	options: Partial<Ricochet2DOptions>
 ) {
-	const { entity } = updateContext;
+	const { me } = updateContext;
 	const { restitution, maxSpeed, minSpeed, boundaries, onRicochet } = {
 		...defaultRicochet2DOptions,
 		...options
 	};
 
-	const position = entity.getPosition();
-	const velocity = entity.getVelocity();
+	const position = me.getPosition();
+	const velocity = me.getVelocity();
 
 	if (!position || !velocity) return;
 
@@ -158,14 +158,14 @@ function _ricochet2d(
 	}
 
 	if (newX !== position.x || newY !== position.y) {
-		entity.setPosition(newX, newY, position.z);
-		entity.moveXY(newVelX, newVelY);
+		me.setPosition(newX, newY, position.z);
+		me.moveXY(newVelX, newVelY);
 
 		if (onRicochet && ricochetBoundary) {
-			const velocityAfter = entity.getVelocity();
+			const velocityAfter = me.getVelocity();
 			if (velocityAfter) {
 				onRicochet({
-					entity,
+					me,
 					boundary: ricochetBoundary,
 					position: { x: newX, y: newY, z: position.z },
 					velocityBefore: velocity,
@@ -181,14 +181,14 @@ function _ricochet3d(
 	updateContext: UpdateContext<MoveableEntity>,
 	options: Partial<Ricochet3DOptions>
 ) {
-	const { entity } = updateContext;
+	const { me } = updateContext;
 	const { restitution, maxSpeed, minSpeed, boundaries, onRicochet } = {
 		...defaultRicochet3DOptions,
 		...options
 	};
 
-	const position = entity.getPosition();
-	const velocity = entity.getVelocity();
+	const position = me.getPosition();
+	const velocity = me.getVelocity();
 
 	if (!position || !velocity) return;
 
@@ -247,14 +247,14 @@ function _ricochet3d(
 	}
 
 	if (newX !== position.x || newY !== position.y || newZ !== position.z) {
-		entity.setPosition(newX, newY, newZ);
-		entity.move(new Vector3(newVelX, newVelY, newVelZ));
+		me.setPosition(newX, newY, newZ);
+		me.move(new Vector3(newVelX, newVelY, newVelZ));
 
 		if (onRicochet && ricochetBoundary) {
-			const velocityAfter = entity.getVelocity();
+			const velocityAfter = me.getVelocity();
 			if (velocityAfter) {
 				onRicochet({
-					entity,
+					me,
 					boundary: ricochetBoundary,
 					position: { x: newX, y: newY, z: newZ },
 					velocityBefore: velocity,
@@ -273,7 +273,7 @@ export function basicRicochet2d(
 	updateContext: UpdateContext<MoveableEntity>,
 	options: Partial<Ricochet2DOptions>
 ) {
-	const { entity } = updateContext;
+	const { me: entity } = updateContext;
 	const { restitution, boundaries, onRicochet } = { ...defaultRicochet2DOptions, ...options };
 
 	const position = entity.getPosition();
@@ -307,7 +307,7 @@ export function basicRicochet2d(
 			const velocityAfter = entity.getVelocity();
 			if (velocityAfter) {
 				onRicochet({
-					entity,
+					me: entity,
 					boundary: ricochetBoundary,
 					position: { x: newX, y: newY, z: position.z },
 					velocityBefore: velocity,

@@ -1,4 +1,4 @@
-import { observable } from '@simplyianm/legend-state';
+import { proxy } from 'valtio';
 
 export type DebugConfiguration = {
 	showCollisionBounds?: boolean;
@@ -7,7 +7,7 @@ export type DebugConfiguration = {
 	//TODO: show movement vector? other world related possibilities
 }
 
-const debugState$ = observable({
+const debugState = proxy({
 	on: false,
 	configuration: {
 		showCollisionBounds: false,
@@ -16,10 +16,8 @@ const debugState$ = observable({
 	},
 });
 
-const debugState = debugState$.get();
-
 const setDebugFlag = (flag: boolean = false) => {
-	debugState$.on.set(flag);
+	debugState.on = flag;
 };
 
-export { debugState$, debugState, setDebugFlag };
+export { debugState, setDebugFlag };

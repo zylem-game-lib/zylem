@@ -11,6 +11,7 @@ import { BaseNode } from "../core/base-node";
 import { DestroyContext, SetupContext, UpdateContext } from "../core/base-node-life-cycle";
 import { CollisionBuilder } from "../collision/collision-builder";
 import { MeshBuilder } from "../graphics/mesh";
+import { debugState } from '../debug/debug-state';
 
 export abstract class AbstractEntity {
 	abstract uuid: string;
@@ -124,10 +125,10 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 		if (this.lifeCycleDelegate?.setup) {
 			const callbacks = this.lifeCycleDelegate.setup;
 			if (typeof callbacks === 'function') {
-				callbacks({ ...params, entity: this as unknown as O });
+				callbacks({ ...params, me: this as unknown as O });
 			} else if (Array.isArray(callbacks)) {
 				callbacks.forEach(callback => {
-					callback({ ...params, entity: this as unknown as O });
+					callback({ ...params, me: this as unknown as O });
 				});
 			}
 		}
@@ -138,10 +139,10 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 		if (this.lifeCycleDelegate?.update) {
 			const callbacks = this.lifeCycleDelegate.update;
 			if (typeof callbacks === 'function') {
-				callbacks({ ...params, entity: this as unknown as O });
+				callbacks({ ...params, me: this as unknown as O });
 			} else if (Array.isArray(callbacks)) {
 				callbacks.forEach(callback => {
-					callback({ ...params, entity: this as unknown as O });
+					callback({ ...params, me: this as unknown as O });
 				});
 			}
 		}
@@ -151,10 +152,10 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 		if (this.lifeCycleDelegate?.destroy) {
 			const callbacks = this.lifeCycleDelegate.destroy;
 			if (typeof callbacks === 'function') {
-				callbacks({ ...params, entity: this as unknown as O });
+				callbacks({ ...params, me: this as unknown as O });
 			} else if (Array.isArray(callbacks)) {
 				callbacks.forEach(callback => {
-					callback({ ...params, entity: this as unknown as O });
+					callback({ ...params, me: this as unknown as O });
 				});
 			}
 		}
@@ -284,12 +285,14 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends GameE
 			this.applyMaterialToGroup(entity.group, entity.materials);
 		}
 
-		const axesHelper = new AxesHelper(2);
+		if (debugState.on) {
+			const axesHelper = new AxesHelper(2);
 
-		if (entity.group) {
-			entity.group.add(axesHelper);
-		} else {
-			entity.mesh?.add(axesHelper);
+			if (entity.group) {
+				entity.group.add(axesHelper);
+			} else {
+				entity.mesh?.add(axesHelper);
+			}
 		}
 
 		if (this.collisionBuilder) {

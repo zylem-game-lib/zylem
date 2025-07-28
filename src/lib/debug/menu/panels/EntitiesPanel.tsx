@@ -1,38 +1,37 @@
-import type { Component } from 'solid-js';
-import { stageState } from '../../../state/stage-state';
-import { GameEntity } from '~/lib/core';
-import { printToConsole } from '../../../state/console-state';
+import { stageState } from '../../../stage/stage-state';
+import { Component, For } from 'solid-js';
+import { printToConsole } from '../../console/console-state';
 import './EntitiesPanel.css';
 
-const EntityInfo: Component<{ entity: GameEntity<any> }> = ({ entity }) => {
-  const handleClick = () => {
-    let entityInfo = 'Entity Properties:\n';
-
-    for (const [key, value] of Object.entries(entity)) {
-      entityInfo += `${key}: ${value}\n`;
-    }
-
-    printToConsole(entityInfo);
-  };
-
-  return (
-    <button class="entity-item-wrapper" onClick={handleClick}>
-      <ul class="entity-item">
-        {Object.entries(entity.debugInfo).map(([key, value]) => (
-          <li class="entity-info-item">
-            <p>{key}:</p>
-            <p>{value}</p>
-          </li>
-        ))}
-      </ul>
-    </button>
-  );
-};
-
 export const EntitiesPanel: Component = () => (
-  <div class="entity-list">
-    {stageState.entities.map((entity) => (
-      <EntityInfo entity={entity} />
-    ))}
+  <div class="panel-content">
+    <h3>Active Entities</h3>
+    <div class="entities-list">
+      <For each={stageState.entities}>
+        {(entity, index) => (
+          <div class="entity-item">
+            <h4>{entity.name || `Entity ${index()}`}</h4>
+            <div class="entity-details">
+              <For each={Object.entries(entity as any)}>
+                {([key, value]) => (
+                  <div class="entity-property">
+                    <strong>{key}:</strong>
+                    <p>{String(value)}</p>
+                  </div>
+                )}
+              </For>
+            </div>
+            <button
+              class="zylem-debug-toolbar-btn"
+              onClick={() => {
+                printToConsole(`Entity: ${JSON.stringify(entity, null, 2)}`);
+              }}
+            >
+              Log Entity
+            </button>
+          </div>
+        )}
+      </For>
+    </div>
   </div>
 );

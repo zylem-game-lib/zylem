@@ -1,5 +1,5 @@
 import { BufferGeometry, Material, Mesh } from 'three';
-import { GameEntityOptions } from '../core';
+import { GameEntityOptions } from '../entities/entity';
 
 /**
  * TODO: allow for multiple materials requires geometry groups

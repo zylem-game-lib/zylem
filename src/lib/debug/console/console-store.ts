@@ -1,10 +1,11 @@
 import { createStore } from 'solid-js/store';
-import { consoleState$, getConsoleContent } from '../../state/console-state';
+import { subscribe } from 'valtio';
+import { consoleState, getConsoleContent } from './console-state';
 
 export const [consoleStore, setConsoleStore] = createStore({
 	messages: [] as string[],
 });
 
-consoleState$.onChange(() => {
+subscribe(consoleState, () => {
 	setConsoleStore('messages', getConsoleContent().split('\n'));
 });

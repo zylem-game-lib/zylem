@@ -1,4 +1,4 @@
-import { BaseNode } from '../entities';
+import { BaseNode } from './base-node';
 import {
 	SetupContext,
 	UpdateContext,

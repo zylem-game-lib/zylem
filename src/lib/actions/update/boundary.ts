@@ -1,9 +1,9 @@
-import { UpdateContext } from "../core/base-node-life-cycle";
-import { MoveableEntity } from "./moveable";
+import { UpdateContext } from "../../core/base-node-life-cycle";
+import { MoveableEntity } from "../../behaviors/moveable";
 import { Vector } from "@dimforge/rapier3d-compat";
 
 export interface BoundaryEvent {
-	entity: MoveableEntity;
+	me: MoveableEntity;
 	boundary: 'top' | 'bottom' | 'left' | 'right';
 	position: Vector;
 	updateContext: UpdateContext<MoveableEntity>;
@@ -48,7 +48,7 @@ export function boundary(
 }
 
 function _boundary(updateContext: UpdateContext<MoveableEntity>, options: Partial<BoundaryOptions>) {
-	const { entity } = updateContext;
+	const { me: entity } = updateContext;
 	const { boundaries, onBoundary } = {
 		...defaultBoundaryOptions,
 		...options
@@ -82,7 +82,7 @@ function _boundary(updateContext: UpdateContext<MoveableEntity>, options: Partia
 	}
 	if (onBoundary && boundaryHit) {
 		onBoundary({
-			entity,
+			me: entity,
 			boundary: boundaryHit,
 			position: { x: position.x, y: position.y, z: position.z },
 			updateContext

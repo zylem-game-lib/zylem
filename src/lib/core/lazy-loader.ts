@@ -25,7 +25,7 @@ export const loadFoundation = async () => {
 
 // Level 2: Independent systems (can load in parallel)
 export const loadState = async () => {
-	const state = await import('../state/index');
+	const state = await import('../game/game-state');
 	return state;
 };
 
@@ -94,7 +94,7 @@ export const loadBehaviors = async () => {
 // Level 6: Core game systems (depends on most others)
 export const loadGameCore = async () => {
 	const [game, vessel] = await Promise.all([
-		import('./game/game'),
+		import('../game/game'),
 		import('./vessel')
 	]);
 	return { game, vessel };
@@ -103,17 +103,11 @@ export const loadGameCore = async () => {
 // Level 7: Stage system (depends on everything)
 export const loadStage = async () => {
 	const [stage, world, scene] = await Promise.all([
-		import('./stage/stage'),
+		import('../stage/stage'),
 		import('../collision/world'),
 		import('../graphics/zylem-scene')
 	]);
 	return { stage, world, scene };
-};
-
-// Optional systems (can be loaded on demand)
-export const loadUI = async () => {
-	const hud = await import('../ui/hud');
-	return hud;
 };
 
 export const loadDebugTools = async () => {

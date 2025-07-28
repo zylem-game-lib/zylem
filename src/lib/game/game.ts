@@ -1,13 +1,14 @@
-import { BaseNode } from '../base-node';
-import { ZylemGameConfig, ZylemGame } from './zylem-game';
+import { BaseNode } from '../core/base-node';
+import { ZylemGame } from './zylem-game';
 import { ZylemStage } from '../stage/zylem-stage';
 import { Stage, stage } from '../stage/stage';
-import { DestroyFunction, SetupFunction, UpdateFunction } from '../base-node-life-cycle';
-import { GameEntity, GameEntityLifeCycle } from '../../entities/entity';
+import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
+import { GameEntity, GameEntityLifeCycle } from '../entities/entity';
+import { GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 
 const defaultGameOptions = {
 	id: 'zylem',
-	globals: {},
+	globals: {} as GlobalVariablesType,
 	stages: [
 		stage()
 	]
@@ -15,7 +16,7 @@ const defaultGameOptions = {
 
 function convertNodes(_options: GameOptions): { id: string, globals: {}, stages: Stage[] } {
 	let converted = { ...defaultGameOptions };
-	const configurations: ZylemGameConfig[] = [];
+	const configurations: ZylemGameConfig<Stage, Game>[] = [];
 	const stages: Stage[] = [];
 	const entities: (BaseNode | GameEntity<any>)[] = [];
 	Object.values(_options).forEach((node) => {
@@ -27,7 +28,7 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 			entities.push(node);
 		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
 			const configuration = Object.assign(defaultGameOptions, { ...node });
-			configurations.push(configuration as ZylemGameConfig);
+			configurations.push(configuration as ZylemGameConfig<Stage, Game>);
 		}
 	});
 	configurations.forEach((configuration) => {
@@ -63,9 +64,11 @@ export class Game {
 		this.gameRef = game;
 		this.setOverrides();
 		game.start();
+		return game;
 	}
 
 	async load(): Promise<ZylemGame> {
+		console.log('loading game', this.options);
 		const options = convertNodes(this.options);
 		const game = new ZylemGame(options, this);
 		await game.loadStage(options.stages[0]);
@@ -125,9 +128,17 @@ export class Game {
 	async goToStage() { }
 
 	async end() { }
+
+	getGlobal(key: string) {
+		return this.gameRef?.getGlobal(key);
+	}
+
+	setGlobal(key: string, value: number) {
+		this.gameRef?.setGlobal(key, value);
+	}
 }
 
-type GameOptions = Array<ZylemGameConfig | Stage | GameEntityLifeCycle | BaseNode>;
+type GameOptions = Array<ZylemGameConfig<Stage, Game> | Stage | GameEntityLifeCycle | BaseNode>;
 
 /**
  * create a new game

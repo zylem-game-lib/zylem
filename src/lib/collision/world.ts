@@ -2,11 +2,11 @@ import { Vector3 } from 'three';
 import RAPIER, { World } from '@dimforge/rapier3d-compat';
 
 import { Entity } from '../interfaces/entity';
-import { state$ } from '../state';
+import { state } from '../game/game-state';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { ZylemActor } from '../entities/actor';
 import { isCollisionHandlerDelegate } from './collision-delegate';
-import { GameEntity } from '../core';
+import { GameEntity } from '../entities/entity';
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
@@ -111,7 +111,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 					return;
 				}
 				if (gameEntity._collision) {
-					gameEntity._collision(entity, state$.globals);
+					gameEntity._collision(entity, state.globals);
 				}
 			});
 			this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
@@ -122,7 +122,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 					return;
 				}
 				if (gameEntity._collision) {
-					gameEntity._collision(entity, state$.globals);
+					gameEntity._collision(entity, state.globals);
 				}
 				if (isCollisionHandlerDelegate(entity)) {
 					entity.handleIntersectionEvent({ entity, other: gameEntity, delta });

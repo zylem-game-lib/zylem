@@ -4,6 +4,8 @@ import { BaseNode } from '../core/base-node';
 import { EntityBuilder, EntityCollisionBuilder, GameEntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
 import { CollisionHandlerDelegate } from '../collision/collision-delegate';
+import { state } from '../game/game-state';
+import { Stage } from '../stage/stage';
 
 export type OnHeldParams = {
 	delta: number;
@@ -11,10 +13,11 @@ export type OnHeldParams = {
 	visitor: GameEntity<any>;
 	heldTime: number;
 	globals: any;
+	stage: Stage;
 }
 
-export type OnEnterParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
-export type OnExitParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
+export type OnEnterParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals' | 'stage'>;
+export type OnExitParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals' | 'stage'>;
 
 type ZylemZoneOptions = GameEntityOptions & {
 	size?: Vector3;
@@ -22,6 +25,7 @@ type ZylemZoneOptions = GameEntityOptions & {
 	onEnter?: (params: OnEnterParams) => void;
 	onHeld?: (params: OnHeldParams) => void;
 	onExit?: (params: OnExitParams) => void;
+	stageRef?: Stage;
 };
 
 const zoneDefaults: ZylemZoneOptions = {
@@ -60,10 +64,12 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions> implements Collision
 	private _enteredZone: Map<string, number> = new Map();
 	private _exitedZone: Map<string, number> = new Map();
 	private _zoneEntities: Map<string, any> = new Map();
+	stageRef: Stage;
 
 	constructor(options?: ZylemZoneOptions) {
 		super();
 		this.options = { ...zoneDefaults, ...options };
+		this.stageRef = this.options.stageRef!;
 	}
 
 	public handlePostCollision({ delta }: { delta: number }): boolean {
@@ -101,7 +107,12 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions> implements Collision
 	entered(other: any) {
 		this._enteredZone.set(other.uuid, 1);
 		if (this.options.onEnter) {
-			this.options.onEnter({ self: this, visitor: other, globals: {} });
+			this.options.onEnter({
+				self: this,
+				visitor: other,
+				globals: state.globals,
+				stage: this.stageRef!,
+			});
 		}
 	}
 
@@ -112,7 +123,12 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions> implements Collision
 			this._enteredZone.delete(key);
 			const other = this._zoneEntities.get(key);
 			if (this.options.onExit) {
-				this.options.onExit({ self: this, visitor: other, globals: {} });
+				this.options.onExit({
+					self: this,
+					visitor: other,
+					globals: state.globals,
+					stage: this.stageRef!,
+				});
 			}
 			return;
 		}
@@ -124,7 +140,14 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions> implements Collision
 		this._enteredZone.set(other.uuid, heldTime + delta);
 		this._exitedZone.set(other.uuid, 1);
 		if (this.options.onHeld) {
-			this.options.onHeld({ delta, self: this, visitor: other, globals: {}, heldTime });
+			this.options.onHeld({
+				delta,
+				self: this,
+				visitor: other,
+				globals: state.globals,
+				heldTime,
+				stage: this.stageRef!,
+			});
 		}
 	}
 }

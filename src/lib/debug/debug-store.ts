@@ -1,10 +1,11 @@
 import { createStore } from 'solid-js/store';
-import { debugState$ } from '../state/debug-state';
+import { subscribe } from 'valtio';
+import { debugState } from './debug-state';
 
 export const [debugStore, setDebugStore] = createStore({
 	debug: false,
 });
 
-debugState$.onChange(() => {
-	setDebugStore('debug', debugState$.on.get());
+subscribe(debugState, () => {
+	setDebugStore('debug', debugState.on);
 });

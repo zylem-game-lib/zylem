@@ -4,9 +4,6 @@ import { AccordionMenu } from './AccordionMenu';
 import { Console } from '../console/Console';
 import './Menu.css';
 
-/**
- * Main debug menu layout: Toolbar, AccordionMenu, and Console.
- */
 export const Menu: Component<{ onClose?: () => void }> = (props) => {
   return (
     <div class="zylem-debug-menu">

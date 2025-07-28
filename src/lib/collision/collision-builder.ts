@@ -2,7 +2,7 @@ import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType, Vecto
 import { PhysicsOptions } from "./physics";
 import { Vec3 } from "../core/vector";
 import { CollisionOptions } from "./collision";
-import { GameEntityOptions } from "../core";
+import { GameEntityOptions } from "../entities/entity";
 
 // Global map for type to group ID (0-15 for simplicity)
 const typeToGroup = new Map<string, number>();

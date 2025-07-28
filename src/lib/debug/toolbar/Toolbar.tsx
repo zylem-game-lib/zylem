@@ -6,9 +6,6 @@ import Trash2 from 'lucide-solid/icons/trash-2';
 import type { Component } from 'solid-js';
 import './Toolbar.css';
 
-/**
- * Toolbar for debug menu with interactive Lucide icon buttons.
- */
 export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
   return (
     <div class="zylem-debug-toolbar">

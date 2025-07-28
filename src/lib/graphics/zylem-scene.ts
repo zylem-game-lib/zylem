@@ -10,10 +10,14 @@ import {
 } from 'three';
 import { Entity } from '../interfaces/entity';
 import { SetupCallback } from '~/lib/interfaces/game';
-import { stageState } from '../state';
 import { GameEntity } from '../entities/entity';
 import { ZylemCamera } from '../camera/zylem-camera';
-import { debugState } from '../state/debug-state';
+import { debugState } from '../debug/debug-state';
+
+interface SceneState {
+	backgroundColor: Color;
+	backgroundImage: string | null;
+}
 
 export class ZylemScene implements Entity<ZylemScene> {
 	public type = 'Scene';
@@ -23,15 +27,15 @@ export class ZylemScene implements Entity<ZylemScene> {
 	zylemCamera!: ZylemCamera;
 	containerElement: HTMLElement | null = null;
 
-	constructor(id: string, camera: ZylemCamera) {
+	constructor(id: string, camera: ZylemCamera, state: SceneState) {
 		// Create Three.js scene
 		const scene = new Scene();
-		scene.background = new Color(stageState.backgroundColor);
+		scene.background = new Color(state.backgroundColor);
 
 		// Setup background image if provided
-		if (stageState.backgroundImage) {
+		if (state.backgroundImage) {
 			const loader = new TextureLoader();
-			const texture = loader.load(stageState.backgroundImage);
+			const texture = loader.load(state.backgroundImage);
 			scene.background = texture;
 		}
 
@@ -139,6 +143,8 @@ export class ZylemScene implements Entity<ZylemScene> {
 	addEntity(entity: GameEntity<any>) {
 		if (entity.group) {
 			this.scene.add(entity.group);
+		} else if (entity.mesh) {
+			this.scene.add(entity.mesh);
 		}
 	}
 

@@ -1,32 +1,20 @@
-// import { observe } from '@simplyianm/legend-state';
+import { state, setGlobalState, getGlobalState } from './game-state';
 
-import { state$ } from '../../state/game-state';
-import { setGlobalState } from '../../state/index';
+import { setDebugFlag } from '../debug/debug-state';
 
-import { setDebugFlag } from '../../state/debug-state';
-
-import { ZylemStage, ZylemStageConfig } from '../stage/zylem-stage';
+import { ZylemStage } from '../stage/zylem-stage';
 import { Game } from './game';
-import { UpdateContext, SetupContext, UpdateFunction, SetupFunction, DestroyContext } from '../base-node-life-cycle';
-import { InputManager } from '../../input/input-manager';
-import { Timer } from '../three-addons/Timer';
+import { UpdateContext, SetupContext, DestroyContext } from '../core/base-node-life-cycle';
+import { InputManager } from '../input/input-manager';
+import { Timer } from '../core/three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
-import { Perspectives } from '~/main';
-import { Vector2, Vector3 } from 'three';
+import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 
-export interface ZylemGameConfig {
-	id: string;
-	globals?: Record<string, any>;
-	stages?: Stage[];
-	update?: UpdateFunction<ZylemGame>;
-	debug?: boolean;
-	time?: number;
-}
 
 export class ZylemGame {
 	id: string;
-	initialGlobals = {};
+	initialGlobals = {} as GlobalVariablesType;
 
 	customSetup: ((params: SetupContext<ZylemStage>) => void) | null = null;
 	customUpdate: ((params: UpdateContext<ZylemStage>) => void) | null = null;
@@ -45,10 +33,10 @@ export class ZylemGame {
 	wrapperRef: Game;
 	// statsRef: Stats | null = null;
 
-	static FRAME_LIMIT = 64;
+	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 
-	constructor(options: ZylemGameConfig, wrapperRef: Game) {
+	constructor(options: ZylemGameConfig<Stage, ZylemGame>, wrapperRef: Game) {
 		this.wrapperRef = wrapperRef;
 		this.inputManager = new InputManager();
 		this.timer = new Timer();
@@ -65,10 +53,16 @@ export class ZylemGame {
 		this.currentStageId = stage.stageRef!.uuid;
 	}
 
-	setGlobals(options: ZylemGameConfig) {
-		setGlobalState(options.globals);
+	setGlobals(options: ZylemGameConfig<Stage, ZylemGame>) {
 		setDebugFlag(options.debug);
 		this.initialGlobals = { ...options.globals };
+		for (const variable in this.initialGlobals) {
+			const value = this.initialGlobals[variable];
+			if (value === undefined) {
+				console.error(`global ${variable} is undefined`);
+			}
+			this.setGlobal(variable, value);
+		}
 	}
 
 	params(): UpdateContext<ZylemStage> {
@@ -78,9 +72,9 @@ export class ZylemGame {
 		return {
 			delta,
 			inputs,
-			globals: state$.globals,
+			globals: state.globals,
 			game: this.wrapperRef,
-			entity: stage!.stageRef!,
+			me: stage!.stageRef!,
 			camera: stage!.stageRef!.cameraRef!,
 		};
 	}
@@ -89,14 +83,6 @@ export class ZylemGame {
 		const stage = this.currentStage();
 		const params = this.params();
 		stage!.start(params);
-		// stage!.conditions.forEach(({ bindings, callback }) => {
-		// 	bindings.forEach((key) => {
-		// 		observe(() => {
-		// 			state$.globals[key].get();
-		// 			callback(state$.globals, this);
-		// 		});
-		// 	});
-		// });
 		if (this.customSetup) {
 			this.customSetup(params);
 		}
@@ -115,7 +101,7 @@ export class ZylemGame {
 			}
 			stage!.stageRef!.update(params);
 			this.totalTime += params.delta;
-			state$.time.set(this.totalTime);
+			state.time = this.totalTime;
 			this.previousTimeStamp = timestamp;
 		}
 
@@ -129,6 +115,14 @@ export class ZylemGame {
 
 	currentStage() {
 		return this.getStage(this.currentStageId);
+	}
+
+	getGlobal(key: string) {
+		return getGlobalState(key);
+	}
+
+	setGlobal(key: string, value: BasicTypes) {
+		setGlobalState(key, value);
 	}
 }
 

@@ -23,7 +23,7 @@ printToConsole(`[Component] MyComponent initialized with props: ${JSON.stringify
 - `printToConsole(message: string)` - Append a timestamped message to the console
 - `clearConsole()` - Clear all messages from the console
 - `getConsoleContent()` - Get all console messages as a single string
-- `consoleState$` - Direct access to the console state (for advanced usage)
+- `consoleState` - Direct access to the console state (for advanced usage)
 
 ## Features
 
