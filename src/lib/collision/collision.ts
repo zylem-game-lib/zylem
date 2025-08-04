@@ -33,4 +33,6 @@ export interface CollisionOptions {
 	sensor?: boolean;
 	size?: Vector3;
 	position?: Vector3;
+	collisionType?: string;
+	collisionFilter?: string[];
 }

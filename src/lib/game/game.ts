@@ -1,8 +1,7 @@
 import { BaseNode } from '../core/base-node';
 import { ZylemGame } from './zylem-game';
-import { ZylemStage } from '../stage/zylem-stage';
 import { Stage, stage } from '../stage/stage';
-import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
+import { DestroyFunction, IGame, IStage, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 import { GameEntity, GameEntityLifeCycle } from '../entities/entity';
 import { GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 
@@ -45,13 +44,13 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 	return converted;
 }
 
-export class Game {
+export class Game implements IGame {
 	gameRef: ZylemGame | null = null;
 	options: GameOptions;
 
-	update: UpdateFunction<ZylemStage> = () => { };
-	setup: SetupFunction<ZylemStage> = () => { };
-	destroy: DestroyFunction<ZylemStage> = () => { };
+	update: UpdateFunction<ZylemGame> = () => { };
+	setup: SetupFunction<ZylemGame> = () => { };
+	destroy: DestroyFunction<ZylemGame> = () => { };
 
 	refErrorMessage = 'lost reference to game';
 
@@ -59,12 +58,12 @@ export class Game {
 		this.options = options;
 	}
 
-	async start() {
+	async start(): Promise<this> {
 		const game = await this.load();
 		this.gameRef = game;
 		this.setOverrides();
 		game.start();
-		return game;
+		return this;
 	}
 
 	async load(): Promise<ZylemGame> {

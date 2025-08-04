@@ -1,11 +1,11 @@
 import { Color } from 'three';
-import { GameEntityInterface } from '../types/entity-types';
+import { BaseEntityInterface } from '../types/entity-types';
 import { StageStateInterface } from '../types/stage-types';
 declare const stageState: StageStateInterface;
 declare const setStageState: (state: StageStateInterface) => void;
 declare const setStageBackgroundColor: (value: Color) => void;
 declare const setStageBackgroundImage: (value: string | null) => void;
-declare const setEntitiesToStage: (entities: GameEntityInterface[]) => void;
+declare const setEntitiesToStage: (entities: Partial<BaseEntityInterface>[]) => void;
 declare const setStageVariable: (key: string, value: any) => void;
 declare const getStageVariable: (key: string) => any;
 declare const stageStateToString: (state: StageStateInterface) => string;

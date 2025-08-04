@@ -2,7 +2,10 @@ import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector2 } from 'three';
 import { TexturePath } from '../graphics/material';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntityOptions, GameEntity } from './entity';
+import { GameEntityOptions, GameEntity } from './entity';
+import { EntityBuilder } from './builder';
+import { EntityCollisionBuilder } from './builder';
+import { EntityMeshBuilder } from './builder';
 import { XZPlaneGeometry } from '../graphics/geometries/XZPlaneGeometry';
 type ZylemPlaneOptions = GameEntityOptions & {
     tile?: Vector2;
@@ -16,7 +19,7 @@ export declare class PlaneCollisionBuilder extends EntityCollisionBuilder {
 export declare class PlaneMeshBuilder extends EntityMeshBuilder {
     heightData: Float32Array;
     columnsRows: Map<any, any>;
-    buildGeometry(options: ZylemPlaneOptions): XZPlaneGeometry;
+    build(options: ZylemPlaneOptions): XZPlaneGeometry;
     postBuild(): void;
 }
 export declare class PlaneBuilder extends EntityBuilder<ZylemPlane, ZylemPlaneOptions> {

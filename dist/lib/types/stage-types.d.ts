@@ -1,5 +1,5 @@
 import { Color, Vector3 } from 'three';
-import { GameEntityInterface } from './entity-types';
+import { BaseEntityInterface } from './entity-types';
 /**
  * Stage state interface - minimal to prevent circular dependencies
  */
@@ -12,7 +12,7 @@ export interface StageStateInterface {
     };
     variables: Record<string, any>;
     gravity: Vector3;
-    entities: GameEntityInterface[];
+    entities: Partial<BaseEntityInterface>[];
     stageRef?: any;
 }
 /**

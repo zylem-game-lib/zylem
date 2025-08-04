@@ -1,19 +1,18 @@
 import { BaseNode } from '../core/base-node';
 import { ZylemGame } from './zylem-game';
-import { ZylemStage } from '../stage/zylem-stage';
 import { Stage } from '../stage/stage';
-import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
+import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 import { GameEntityLifeCycle } from '../entities/entity';
 import { GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
-export declare class Game {
+export declare class Game implements IGame {
     gameRef: ZylemGame | null;
     options: GameOptions;
-    update: UpdateFunction<ZylemStage>;
-    setup: SetupFunction<ZylemStage>;
-    destroy: DestroyFunction<ZylemStage>;
+    update: UpdateFunction<ZylemGame>;
+    setup: SetupFunction<ZylemGame>;
+    destroy: DestroyFunction<ZylemGame>;
     refErrorMessage: string;
     constructor(options: GameOptions);
-    start(): Promise<ZylemGame>;
+    start(): Promise<this>;
     load(): Promise<ZylemGame>;
     setOverrides(): void;
     pause(): Promise<void>;

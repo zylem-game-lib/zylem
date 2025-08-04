@@ -27,7 +27,7 @@ const myStage = await stage(
 );
 
 const cameraTest = await game(
-	{ id: 'camera-test' },
+	{ id: 'camera-test', debug: true },
 	myStage,
 	...boxes,
 );

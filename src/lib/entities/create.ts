@@ -1,16 +1,17 @@
-import { DebugInfoBuilder, GameEntityOptions } from "./entity";
+import { GameEntityOptions, GameEntity } from "./entity";
 import { BaseNode } from "../core/base-node";
-import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntity } from "./entity";
+import { EntityBuilder } from "./builder";
+import { EntityCollisionBuilder } from "./builder";
+import { EntityMeshBuilder } from "./builder";
 import { EntityLoader, isLoadable } from "./delegates/loader";
 
 export interface CreateGameEntityOptions<T extends GameEntity<any>, CreateOptions extends GameEntityOptions> {
 	args: Array<any>;
 	defaultConfig: GameEntityOptions;
 	EntityClass: new (options: any) => T;
-	BuilderClass: new (options: any, entity: T, meshBuilder: any, collisionBuilder: any, debugInfoBuilder: any) => EntityBuilder<T, CreateOptions>;
+	BuilderClass: new (options: any, entity: T, meshBuilder: any, collisionBuilder: any) => EntityBuilder<T, CreateOptions>;
 	MeshBuilderClass?: new (data: any) => EntityMeshBuilder;
 	CollisionBuilderClass?: new (data: any) => EntityCollisionBuilder;
-	DebugInfoBuilderClass?: new (data: any) => DebugInfoBuilder;
 	entityType: symbol;
 };
 
@@ -23,7 +24,6 @@ export async function createEntity<T extends GameEntity<any>, CreateOptions exte
 		entityType,
 		MeshBuilderClass,
 		CollisionBuilderClass,
-		DebugInfoBuilderClass
 	} = params;
 
 	let builder: EntityBuilder<T, CreateOptions> | null = null;
@@ -58,7 +58,6 @@ export async function createEntity<T extends GameEntity<any>, CreateOptions exte
 			entity,
 			MeshBuilderClass ? new MeshBuilderClass(entityData) : null,
 			CollisionBuilderClass ? new CollisionBuilderClass(entityData) : null,
-			DebugInfoBuilderClass ? new DebugInfoBuilderClass(entityData) : null
 		);
 		if (arg.material) {
 			await builder.withMaterial(arg.material, entityType);

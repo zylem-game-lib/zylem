@@ -11,7 +11,7 @@ import { setEntitiesToStage, setStageBackgroundColor, setStageBackgroundImage } 
 
 import { GameEntityInterface } from '../types/entity-types';
 import { ZylemBlueColor } from '../core/utility';
-import { debugState } from '../debug/debug-state';
+import { debugState, getHoveredEntity } from '../debug/debug-state';
 
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
 import createTransformSystem, { StageSystem } from '../systems/transformable.system';
@@ -64,6 +64,7 @@ export class ZylemStage {
 	_removalMap: Map<string, BaseNode> = new Map();
 
 	_debugLines: LineSegments | null = null;
+	_debugMap: Map<string, BaseNode> = new Map();
 
 	ecs = createECS();
 	testSystem: any = null;
@@ -208,7 +209,7 @@ export class ZylemStage {
 			this._debugLines.visible = true;
 		}
 		if (this._setup) {
-			this._setup({ ...params, me: this, stage: this });
+			this._setup({ ...params, me: this });
 		}
 	}
 
@@ -274,6 +275,9 @@ export class ZylemStage {
 
 	addEntityToStage(entity: BaseNode) {
 		this._childrenMap.set(`${entity.eid}-key`, entity);
+		if (debugState.on) {
+			this._debugMap.set(entity.uuid, entity);
+		}
 	}
 
 	debugStage(world: World) {
@@ -289,6 +293,20 @@ export class ZylemStage {
 			'color',
 			new BufferAttribute(colors, 4),
 		);
+		const hoveredEntityUuid = getHoveredEntity();
+		this._debugMap.forEach((child) => {
+			// @ts-ignore
+			child.materials[0].wireframe = false;
+		});
+		if (hoveredEntityUuid) {
+			const hoveredEntity = this._debugMap.get(`${hoveredEntityUuid}`);
+			if (hoveredEntity) {
+				// @ts-ignore
+				hoveredEntity.materials[0].wireframe = true;
+				// @ts-ignore
+				hoveredEntity.materials[1] && (hoveredEntity.materials[1].wireframe = true);
+			}
+		}
 	}
 
 	getEntityByName(name: string) {

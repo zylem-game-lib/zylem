@@ -35,11 +35,21 @@ ul {
   display: grid;
   gap: 5px;
   grid-template-columns: 1fr 1fr 1fr;
-  border: 1px solid;
+  border: 0.5px;
+  border-style: outset;
+  border-color: var(--debug-background-hover);
   padding: 10px;
-  border-radius: 20px;
+  margin: 10px 0;
   font-weight: 600;
   transition: background-color 200ms cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
+.entity-item:hover {
+  background-color: var(--debug-background-active-hover);
+}
+
+h4 {
+  margin: 0;
 }
 
 .entity-info-item {

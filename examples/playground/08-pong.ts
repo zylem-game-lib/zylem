@@ -10,6 +10,7 @@ import { boundary } from '../../src/lib/actions/update/boundary';
 const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
 
 const ball = await sphere({
+	name: 'ball',
 	position: Vec0,
 	radius: 0.1,
 	material: {
@@ -27,7 +28,7 @@ moveableBall.onUpdate(
 	ricochet2d({
 		boundaries: gameBounds,
 		onRicochet: (event) => {
-			ricochetSound();
+			// ricochetSound();
 		}
 	})
 );
@@ -37,6 +38,7 @@ const paddleMaterial = { color: new Color(Color.NAMES.lightblue) };
 const paddleSpeed = 5;
 
 const paddle1 = await box({
+	name: 'paddle1',
 	position: { x: -10, y: 0, z: 0 },
 	size: paddleSize,
 	material: paddleMaterial,
@@ -48,6 +50,7 @@ makeMoveable(paddle1).onUpdate(({ me, inputs }) => {
 }, boundary({ boundaries: gameBounds }));
 
 const paddle2 = await box({
+	name: 'paddle2',
 	position: { x: 10, y: 0, z: 0 },
 	size: paddleSize,
 	material: paddleMaterial,
@@ -60,6 +63,7 @@ makeMoveable(paddle2).onUpdate(({ me, inputs }) => {
 
 
 const p1Goal = await zone({
+	name: 'p1Goal',
 	position: { x: 12, y: 0, z: 0 },
 	size: new Vector3(2, 10, 1),
 });
@@ -75,6 +79,7 @@ p1Goal.onEnter((params) => {
 });
 
 const p2Goal = await zone({
+	name: 'p2Goal',
 	position: { x: -12, y: 0, z: 0 },
 	size: new Vector3(2, 10, 1),
 });
@@ -91,7 +96,7 @@ p2Goal.onEnter((params) => {
 
 moveableBall.onCollision(
 	pingPong({ minSpeed: 10 }),
-	pingPongBeep()
+	// pingPongBeep()
 );
 
 const camera1 = await camera({

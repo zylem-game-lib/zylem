@@ -2,7 +2,6 @@ import { state, setGlobalState, getGlobalState } from './game-state';
 
 import { setDebugFlag } from '../debug/debug-state';
 
-import { ZylemStage } from '../stage/zylem-stage';
 import { Game } from './game';
 import { UpdateContext, SetupContext, DestroyContext } from '../core/base-node-life-cycle';
 import { InputManager } from '../input/input-manager';
@@ -16,9 +15,9 @@ export class ZylemGame {
 	id: string;
 	initialGlobals = {} as GlobalVariablesType;
 
-	customSetup: ((params: SetupContext<ZylemStage>) => void) | null = null;
-	customUpdate: ((params: UpdateContext<ZylemStage>) => void) | null = null;
-	customDestroy: ((params: DestroyContext<ZylemStage>) => void) | null = null;
+	customSetup: ((params: SetupContext<ZylemGame>) => void) | null = null;
+	customUpdate: ((params: UpdateContext<ZylemGame>) => void) | null = null;
+	customDestroy: ((params: DestroyContext<ZylemGame>) => void) | null = null;
 
 	stages: Stage[] = [];
 	stageMap: Map<string, Stage> = new Map();
@@ -65,7 +64,7 @@ export class ZylemGame {
 		}
 	}
 
-	params(): UpdateContext<ZylemStage> {
+	params(): UpdateContext<ZylemGame> {
 		const stage = this.currentStage();
 		const delta = this.timer.getDelta();
 		const inputs = this.inputManager.getInputs(delta);
@@ -73,8 +72,7 @@ export class ZylemGame {
 			delta,
 			inputs,
 			globals: state.globals,
-			game: this.wrapperRef,
-			me: stage!.stageRef!,
+			me: this,
 			camera: stage!.stageRef!.cameraRef!,
 		};
 	}
@@ -82,7 +80,7 @@ export class ZylemGame {
 	start() {
 		const stage = this.currentStage();
 		const params = this.params();
-		stage!.start(params);
+		stage!.start({ ...params, me: stage!.stageRef });
 		if (this.customSetup) {
 			this.customSetup(params);
 		}
@@ -99,7 +97,7 @@ export class ZylemGame {
 			if (this.customUpdate) {
 				this.customUpdate(params);
 			}
-			stage!.stageRef!.update(params);
+			stage!.stageRef!.update({ ...params, me: stage!.stageRef });
 			this.totalTime += params.delta;
 			state.time = this.totalTime;
 			this.previousTimeStamp = timestamp;

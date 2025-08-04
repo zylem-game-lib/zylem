@@ -1,14 +1,32 @@
-import { ZylemCamera } from '../camera/zylem-camera';
-import { Game } from '../game/game';
+import { Vector3 } from 'three';
 import { Inputs } from '../input/input';
-import { ZylemStage } from '../stage/zylem-stage';
+export interface IGame {
+    start: () => Promise<this>;
+    nextStage: () => Promise<void>;
+    previousStage: () => Promise<void>;
+    reset: () => Promise<void>;
+    pause: () => Promise<void>;
+    end: () => Promise<void>;
+    goToStage: () => void;
+    getGlobal: (key: string) => any;
+    setGlobal: (key: string, value: any) => void;
+}
+export interface IStage {
+    onUpdate: (callback: UpdateFunction<IStage>) => void;
+    onSetup: (callback: SetupFunction<IStage>) => void;
+    onDestroy: (callback: DestroyFunction<IStage>) => void;
+}
+export interface ICamera {
+    move: (position: Vector3) => void;
+    rotate: (pitch: number, yaw: number, roll: number) => void;
+}
 export interface SetupContext<T> {
     me: T;
     globals: any;
     inputs?: Inputs;
-    camera?: ZylemCamera;
-    stage?: ZylemStage;
-    game?: Game;
+    camera?: ICamera;
+    stage?: IStage;
+    game?: IGame;
 }
 export interface SetupFunction<T> {
     (context: SetupContext<T>): void;
@@ -18,9 +36,9 @@ export type UpdateContext<T> = {
     delta: number;
     inputs: Inputs;
     globals: any;
-    camera: ZylemCamera;
-    stage?: ZylemStage;
-    game?: Game;
+    camera: ICamera;
+    stage?: IStage;
+    game?: IGame;
 };
 export interface UpdateFunction<T> {
     (context: UpdateContext<T>): void;

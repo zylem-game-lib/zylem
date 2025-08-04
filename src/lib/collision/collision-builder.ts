@@ -2,15 +2,10 @@ import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType, Vecto
 import { PhysicsOptions } from "./physics";
 import { Vec3 } from "../core/vector";
 import { CollisionOptions } from "./collision";
-import { GameEntityOptions } from "../entities/entity";
 
-// Global map for type to group ID (0-15 for simplicity)
 const typeToGroup = new Map<string, number>();
 let nextGroupId = 0;
 
-/**
- * Get or create a collision group ID for a given collision type
- */
 export function getOrCreateCollisionGroupId(type: string): number {
 	let groupId = typeToGroup.get(type);
 	if (groupId === undefined) {
@@ -20,9 +15,6 @@ export function getOrCreateCollisionGroupId(type: string): number {
 	return groupId;
 }
 
-/**
- * Create a collision filter mask for the specified collision types
- */
 export function createCollisionFilter(allowedTypes: string[]): number {
 	let filter = 0;
 	allowedTypes.forEach(type => {
@@ -32,9 +24,6 @@ export function createCollisionFilter(allowedTypes: string[]): number {
 	return filter;
 }
 
-/**
- * Set collision groups on a collider using Rapier's built-in system
- */
 export function setCollisionGroups(collider: ColliderDesc, entityType: string, allowedTypes: string[]): void {
 	const groupId = getOrCreateCollisionGroupId(entityType);
 	const filter = createCollisionFilter(allowedTypes);
@@ -49,7 +38,7 @@ export class CollisionBuilder {
 	sensor: boolean = false;
 	gravity: Vec3 = new Vector3(0, 0, 0);
 
-	build(options: GameEntityOptions): [RigidBodyDesc, ColliderDesc] {
+	build(options: Partial<CollisionOptions>): [RigidBodyDesc, ColliderDesc] {
 		const bodyDesc = this.bodyDesc({
 			isDynamicBody: !this.static
 		});
@@ -79,7 +68,7 @@ export class CollisionBuilder {
 		return this;
 	}
 
-	collider(options: GameEntityOptions): ColliderDesc {
+	collider(options: CollisionOptions): ColliderDesc {
 		const size = options.size ?? new Vector3(1, 1, 1);
 		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
 		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);

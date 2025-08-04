@@ -1,4 +1,3 @@
-import { ZylemStage } from '../stage/zylem-stage';
 import { Game } from './game';
 import { UpdateContext, SetupContext, DestroyContext } from '../core/base-node-life-cycle';
 import { InputManager } from '../input/input-manager';
@@ -8,9 +7,9 @@ import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfa
 export declare class ZylemGame {
     id: string;
     initialGlobals: GlobalVariablesType;
-    customSetup: ((params: SetupContext<ZylemStage>) => void) | null;
-    customUpdate: ((params: UpdateContext<ZylemStage>) => void) | null;
-    customDestroy: ((params: DestroyContext<ZylemStage>) => void) | null;
+    customSetup: ((params: SetupContext<ZylemGame>) => void) | null;
+    customUpdate: ((params: UpdateContext<ZylemGame>) => void) | null;
+    customDestroy: ((params: DestroyContext<ZylemGame>) => void) | null;
     stages: Stage[];
     stageMap: Map<string, Stage>;
     currentStageId: string;
@@ -24,7 +23,7 @@ export declare class ZylemGame {
     constructor(options: ZylemGameConfig<Stage, ZylemGame>, wrapperRef: Game);
     loadStage(stage: Stage): Promise<void>;
     setGlobals(options: ZylemGameConfig<Stage, ZylemGame>): void;
-    params(): UpdateContext<ZylemStage>;
+    params(): UpdateContext<ZylemGame>;
     start(): void;
     loop(timestamp: number): void;
     getStage(id: string): Stage | undefined;

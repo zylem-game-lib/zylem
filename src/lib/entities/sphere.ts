@@ -3,7 +3,11 @@ import { SphereGeometry } from 'three';
 import { Vector3 } from 'three';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
-import { DebugInfoBuilder, EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntityOptions, GameEntity } from './entity';
+import { GameEntityOptions, GameEntity } from './entity';
+import { EntityBuilder } from './builder';
+import { EntityCollisionBuilder } from './builder';
+import { EntityMeshBuilder } from './builder';
+import { DebugDelegate } from './delegates/debug';
 import { createEntity } from './create';
 
 type ZylemSphereOptions = GameEntityOptions & {
@@ -31,7 +35,7 @@ export class SphereCollisionBuilder extends EntityCollisionBuilder {
 }
 
 export class SphereMeshBuilder extends EntityMeshBuilder {
-	buildGeometry(options: ZylemSphereOptions): SphereGeometry {
+	build(options: ZylemSphereOptions): SphereGeometry {
 		const radius = options.radius ?? 1;
 		return new SphereGeometry(radius);
 	}
@@ -52,18 +56,15 @@ export class ZylemSphere extends GameEntity<ZylemSphereOptions> {
 		super();
 		this.options = { ...sphereDefaults, ...options };
 	}
-}
 
-export class SphereDebugInfoBuilder extends DebugInfoBuilder {
-	buildInfo(options: ZylemSphereOptions): Record<string, any> {
-		const { x, z, y } = options.position ?? { x: 0, y: 0, z: 0 };
-		const positionString = `${x}, ${y}, ${z}`;
-		const radius = options?.radius ?? 1;
+	buildInfo(): Record<string, any> {
+		const delegate = new DebugDelegate(this as any);
+		const baseInfo = delegate.buildDebugInfo();
+		const radius = this.options.radius ?? 1;
 		return {
+			...baseInfo,
 			type: String(ZylemSphere.type),
-			position: positionString,
-			radius: radius,
-			message: 'sphere debug info'
+			radius: radius.toFixed(2),
 		};
 	}
 }
@@ -78,7 +79,6 @@ export async function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere
 		BuilderClass: SphereBuilder,
 		MeshBuilderClass: SphereMeshBuilder,
 		CollisionBuilderClass: SphereCollisionBuilder,
-		DebugInfoBuilderClass: SphereDebugInfoBuilder,
 		entityType: ZylemSphere.type
 	});
 }

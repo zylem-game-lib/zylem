@@ -1,6 +1,6 @@
 import { Color, Vector3 } from 'three';
 import { proxy } from 'valtio';
-import { GameEntityInterface } from '../types/entity-types';
+import { BaseEntityInterface } from '../types/entity-types';
 import { StageStateInterface } from '../types/stage-types';
 
 const stageState = proxy({
@@ -13,7 +13,6 @@ const stageState = proxy({
 	variables: {},
 	gravity: new Vector3(0, 0, 0),
 	entities: [],
-	stageRef: undefined,
 } as StageStateInterface);
 
 const setStageState = (state: StageStateInterface) => {
@@ -28,7 +27,7 @@ const setStageBackgroundImage = (value: string | null) => {
 	stageState.backgroundImage = value;
 };
 
-const setEntitiesToStage = (entities: GameEntityInterface[]) => {
+const setEntitiesToStage = (entities: Partial<BaseEntityInterface>[]) => {
 	stageState.entities = entities;
 };
 

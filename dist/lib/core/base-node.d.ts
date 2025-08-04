@@ -7,6 +7,7 @@ export declare abstract class BaseNode<Options = any, T = any> {
     behaviors: Behavior[];
     options: Options;
     eid: number;
+    uuid: string;
     name: string;
     update: UpdateFunction<this>;
     setup: SetupFunction<this>;

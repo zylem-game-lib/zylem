@@ -4,7 +4,10 @@ import { StageOptions, ZylemStage } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 import { subscribe } from 'valtio';
-import { getStageVariable, setStageState, setStageVariable, stageState } from './stage-state';
+import { setEntitiesToStage, setStageVariable, stageState } from './stage-state';
+import { BaseEntityInterface } from '../types';
+import { ZylemGame } from '../core';
+import { GameEntity } from '../entities/entity';
 
 export class Stage {
 	stageRef: ZylemStage;
@@ -33,6 +36,17 @@ export class Stage {
 
 	start(params: SetupContext<ZylemStage>) {
 		this.stageRef?.setup(params);
+		const stateEntities = this.stageRef.children.map((child) => {
+			if (child instanceof GameEntity) {
+				return { ...child.buildInfo() } as Partial<BaseEntityInterface>
+			}
+			return {
+				uuid: child.uuid,
+				name: child.name,
+				eid: child.eid,
+			};
+		});
+		setEntitiesToStage(stateEntities);
 	}
 
 	onUpdate(callback: UpdateFunction<ZylemStage>) {

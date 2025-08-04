@@ -1,7 +1,7 @@
 import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
 import { BufferGeometry, Object3D, SkinnedMesh, Group, Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, GameEntityOptions, GameEntity } from './entity';
+import { GameEntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
 import { UpdateContext, UpdateFunction } from '../core/base-node-life-cycle';
 import { EntityAssetLoader } from '../core/entity-asset-loader';
@@ -9,6 +9,9 @@ import { EntityLoaderDelegate } from './delegates/loader';
 import { Vec3 } from '../core/vector';
 import { AnimationDelegate, AnimationOptions } from './delegates/animation';
 import { MaterialOptions } from '../graphics/material';
+import { DebugInfoProvider } from './delegates/debug';
+import { EntityBuilder } from './builder';
+import { EntityCollisionBuilder } from './builder';
 
 type AnimationObject = {
 	key?: string;
@@ -84,7 +87,7 @@ export class ActorBuilder extends EntityBuilder<ZylemActor, ZylemActorOptions> {
 
 export const ACTOR_TYPE = Symbol('Actor');
 
-export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityLoaderDelegate {
+export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityLoaderDelegate, DebugInfoProvider {
 	static type = ACTOR_TYPE;
 
 	private _object: Object3D | null = null;
@@ -147,6 +150,46 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 
 	get object(): Object3D | null {
 		return this._object;
+	}
+
+	/**
+	 * Provide custom debug information for the actor
+	 * This will be merged with the default debug information
+	 */
+	getDebugInfo(): Record<string, any> {
+		const debugInfo: Record<string, any> = {
+			type: 'Actor',
+			models: this._modelFileNames.length > 0 ? this._modelFileNames : 'none',
+			modelLoaded: !!this._object,
+			scale: this.options.scale ?
+				`${this.options.scale.x}, ${this.options.scale.y}, ${this.options.scale.z}` :
+				'1, 1, 1',
+		};
+
+		// Add animation info if available
+		if (this._animationDelegate) {
+			debugInfo.currentAnimation = this._animationDelegate.currentAnimationKey || 'none';
+			debugInfo.animationsCount = this.options.animations?.length || 0;
+		}
+
+		// Add mesh info if model is loaded
+		if (this._object) {
+			let meshCount = 0;
+			let vertexCount = 0;
+			this._object.traverse((child) => {
+				if ((child as any).isMesh) {
+					meshCount++;
+					const geometry = (child as SkinnedMesh).geometry;
+					if (geometry && geometry.attributes.position) {
+						vertexCount += geometry.attributes.position.count;
+					}
+				}
+			});
+			debugInfo.meshCount = meshCount;
+			debugInfo.vertexCount = vertexCount;
+		}
+
+		return debugInfo;
 	}
 }
 

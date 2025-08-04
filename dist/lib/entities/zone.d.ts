@@ -1,26 +1,25 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, GameEntityOptions, GameEntity } from './entity';
+import { GameEntityOptions, GameEntity } from './entity';
+import { EntityBuilder } from './builder';
+import { EntityCollisionBuilder } from './builder';
 import { CollisionHandlerDelegate } from '../collision/collision-delegate';
-import { Stage } from '../stage/stage';
 export type OnHeldParams = {
     delta: number;
     self: ZylemZone;
     visitor: GameEntity<any>;
     heldTime: number;
     globals: any;
-    stage: Stage;
 };
-export type OnEnterParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals' | 'stage'>;
-export type OnExitParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals' | 'stage'>;
+export type OnEnterParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
+export type OnExitParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
 type ZylemZoneOptions = GameEntityOptions & {
     size?: Vector3;
     static?: boolean;
     onEnter?: (params: OnEnterParams) => void;
     onHeld?: (params: OnHeldParams) => void;
     onExit?: (params: OnExitParams) => void;
-    stageRef?: Stage;
 };
 export declare class ZoneCollisionBuilder extends EntityCollisionBuilder {
     collider(options: ZylemZoneOptions): ColliderDesc;
@@ -34,7 +33,6 @@ export declare class ZylemZone extends GameEntity<ZylemZoneOptions> implements C
     private _enteredZone;
     private _exitedZone;
     private _zoneEntities;
-    stageRef: Stage;
     constructor(options?: ZylemZoneOptions);
     handlePostCollision({ delta }: {
         delta: number;

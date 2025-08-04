@@ -6,6 +6,7 @@
   --debug-background: rgba(10, 20, 30, 0.54);
   --debug-background-hover: #2a6734b3;
   --debug-background-active: rgba(20, 255, 60, 0.7);
+  --debug-background-active-hover: rgba(20, 255, 60, 0.4);
 
   --debug-console-background: rgba(20, 40, 60, 0.2);
   --debug-console-text: #72b3f4;

@@ -17,7 +17,7 @@ export type MeshBuilderOptions = Partial<Pick<GameEntityOptions, 'batched' | 'ma
 
 export class MeshBuilder {
 
-	build(meshOptions: MeshBuilderOptions, geometry: BufferGeometry, materials: Material[]): Mesh {
+	_build(meshOptions: MeshBuilderOptions, geometry: BufferGeometry, materials: Material[]): Mesh {
 		const { batched, material } = meshOptions;
 		if (batched) {
 			console.warn('warning: mesh batching is not implemented');
@@ -29,7 +29,7 @@ export class MeshBuilder {
 		return mesh;
 	}
 
-	postBuild(): void {
+	_postBuild(): void {
 		return;
 	}
 }

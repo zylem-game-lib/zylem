@@ -4,8 +4,11 @@ export * from './plane';
 export * from './sphere';
 export * from './sprite';
 export * from './zone';
+export { createEntity } from './create';
+export * from './delegates/debug';
 
 export type {
 	AbstractEntity,
+	GameEntity,
 	GameEntityOptions,
 } from './entity';

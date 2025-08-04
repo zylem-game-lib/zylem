@@ -2,7 +2,9 @@ import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
 import { Sprite as ThreeSprite } from 'three';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, GameEntityOptions, GameEntity } from './entity';
+import { GameEntityOptions, GameEntity } from './entity';
+import { EntityBuilder } from './builder';
+import { EntityCollisionBuilder } from './builder';
 export type SpriteImage = {
     name: string;
     file: string;

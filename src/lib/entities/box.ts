@@ -3,7 +3,11 @@ import { BoxGeometry } from 'three';
 import { Vector3 } from 'three';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
-import { DebugInfoBuilder, EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntityOptions, GameEntity } from './entity';
+import { GameEntityOptions, GameEntity } from './entity';
+import { EntityBuilder } from './builder';
+import { EntityCollisionBuilder } from './builder';
+import { EntityMeshBuilder } from './builder';
+import { DebugDelegate } from './delegates/debug';
 import { createEntity } from './create';
 
 type ZylemBoxOptions = GameEntityOptions;
@@ -31,7 +35,7 @@ export class BoxCollisionBuilder extends EntityCollisionBuilder {
 }
 
 export class BoxMeshBuilder extends EntityMeshBuilder {
-	buildGeometry(options: GameEntityOptions): BoxGeometry {
+	build(options: GameEntityOptions): BoxGeometry {
 		const size = options.size ?? new Vector3(1, 1, 1);
 		return new BoxGeometry(size.x, size.y, size.z);
 	}
@@ -52,19 +56,16 @@ export class ZylemBox extends GameEntity<ZylemBoxOptions> {
 		super();
 		this.options = { ...boxDefaults, ...options };
 	}
-}
 
-export class BoxDebugInfoBuilder extends DebugInfoBuilder {
-	buildInfo(options: GameEntityOptions): Record<string, any> {
-		const { x, z, y } = options.position ?? { x: 0, y: 0, z: 0 };
-		const positionString = `${x}, ${y}, ${z}`;
-		const { x: sizeX, y: sizeY, z: sizeZ } = options.size ?? { x: 1, y: 1, z: 1 };
-		const sizeString = `${sizeX}, ${sizeY}, ${sizeZ}`;
+	buildInfo(): Record<string, any> {
+		const delegate = new DebugDelegate(this as any);
+		const baseInfo = delegate.buildDebugInfo();
+
+		const { x: sizeX, y: sizeY, z: sizeZ } = this.options.size ?? { x: 1, y: 1, z: 1 };
 		return {
+			...baseInfo,
 			type: String(ZylemBox.type),
-			position: positionString,
-			size: sizeString,
-			message: 'box debug info'
+			size: `${sizeX}, ${sizeY}, ${sizeZ}`,
 		};
 	}
 }
@@ -79,7 +80,6 @@ export async function box(...args: Array<BoxOptions>): Promise<ZylemBox> {
 		BuilderClass: BoxBuilder,
 		MeshBuilderClass: BoxMeshBuilder,
 		CollisionBuilderClass: BoxCollisionBuilder,
-		DebugInfoBuilderClass: BoxDebugInfoBuilder,
 		entityType: ZylemBox.type
 	});
 }

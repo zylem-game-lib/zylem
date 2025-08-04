@@ -35,6 +35,7 @@ export declare class ZylemStage {
     _childrenMap: Map<string, BaseNode>;
     _removalMap: Map<string, BaseNode>;
     _debugLines: LineSegments | null;
+    _debugMap: Map<string, BaseNode>;
     ecs: import("bitecs").IWorld;
     testSystem: any;
     transformSystem: any;

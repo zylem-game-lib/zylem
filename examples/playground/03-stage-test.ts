@@ -15,17 +15,18 @@ const myGame = game(
 	stage(darkStage),
 );
 
-myGame.update = ({ inputs, game }) => {
+// TODO: should use "me/self" instead of "myGame"
+myGame.update = ({ inputs }) => {
 	const { p1 } = inputs;
 
 	if (p1.buttons.A.pressed) {
-		game && game.nextStage();
+		myGame.nextStage();
 	}
 	if (p1.buttons.B.pressed) {
-		game && game.previousStage();
+		myGame.previousStage();
 	}
 	if (p1.buttons.Start.pressed) {
-		game && game.reset();
+		myGame.reset();
 	}
 }
 

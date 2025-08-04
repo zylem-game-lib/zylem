@@ -13,6 +13,6 @@ import { GameEntityOptions } from '../entities/entity';
  */
 export type MeshBuilderOptions = Partial<Pick<GameEntityOptions, 'batched' | 'material'>>;
 export declare class MeshBuilder {
-    build(meshOptions: MeshBuilderOptions, geometry: BufferGeometry, materials: Material[]): Mesh;
-    postBuild(): void;
+    _build(meshOptions: MeshBuilderOptions, geometry: BufferGeometry, materials: Material[]): Mesh;
+    _postBuild(): void;
 }

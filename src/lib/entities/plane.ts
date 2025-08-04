@@ -3,7 +3,10 @@ import { Mesh, PlaneGeometry, Vector2, Vector3 } from 'three';
 import { TexturePath } from '../graphics/material';
 import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
-import { EntityBuilder, EntityCollisionBuilder, EntityMeshBuilder, GameEntityOptions, GameEntity } from './entity';
+import { GameEntityOptions, GameEntity } from './entity';
+import { EntityBuilder } from './builder';
+import { EntityCollisionBuilder } from './builder';
+import { EntityMeshBuilder } from './builder';
 import { XZPlaneGeometry } from '../graphics/geometries/XZPlaneGeometry';
 import { createEntity } from './create';
 
@@ -36,7 +39,7 @@ export class PlaneCollisionBuilder extends EntityCollisionBuilder {
 		const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
 		const size = new Vector3(tile.x, 1, tile.y);
 
-		const heightData = (options._builders?.meshBuilder as PlaneMeshBuilder)?.heightData;
+		const heightData = (options._builders?.meshBuilder as unknown as PlaneMeshBuilder)?.heightData;
 		const scale = new Vector3(size.x, 1, size.z);
 		let colliderDesc = ColliderDesc.heightfield(
 			subdivisions,
@@ -53,7 +56,7 @@ export class PlaneMeshBuilder extends EntityMeshBuilder {
 	heightData: Float32Array = new Float32Array();
 	columnsRows = new Map();
 
-	buildGeometry(options: ZylemPlaneOptions): XZPlaneGeometry {
+	build(options: ZylemPlaneOptions): XZPlaneGeometry {
 		const tile = options.tile ?? new Vector2(1, 1);
 		const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
 		const size = new Vector3(tile.x, 1, tile.y);
