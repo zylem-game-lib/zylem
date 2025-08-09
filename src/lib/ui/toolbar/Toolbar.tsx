@@ -14,7 +14,7 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
           <Button.Root
             aria-label="Close"
             onClick={props.onClose}
-            class="zylem-debug-toolbar-btn"
+            class="zylem-debug-toolbar-btn zylem-debug-button"
           >
             <X class="zylem-debug-icon" />
           </Button.Root>
@@ -31,7 +31,7 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
           <Button.Root
             aria-label="Select"
             onClick={() => {}}
-            class="zylem-debug-toolbar-btn"
+            class="zylem-debug-toolbar-btn zylem-debug-button"
           >
             <MousePointer class="zylem-debug-icon" />
           </Button.Root>
@@ -48,7 +48,7 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
           <Button.Root
             aria-label="Add"
             onClick={() => {}}
-            class="zylem-debug-toolbar-btn"
+            class="zylem-debug-toolbar-btn zylem-debug-button"
           >
             <Plus class="zylem-debug-icon" />
           </Button.Root>
@@ -65,7 +65,7 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
           <Button.Root
             aria-label="Delete"
             onClick={() => {}}
-            class="zylem-debug-toolbar-btn"
+            class="zylem-debug-toolbar-btn zylem-debug-button"
           >
             <Trash2 class="zylem-debug-icon" />
           </Button.Root>

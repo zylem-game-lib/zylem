@@ -2,8 +2,8 @@
   display: flex;
   position: sticky;
   top: 0;
-  gap: 16px;
-  padding: 8px;
+  gap: var(--debug-space-small);
+  padding: var(--debug-space-small);
   z-index: 1;
 }
 
@@ -11,28 +11,13 @@
   border-bottom: 1.5px solid var(--debug-primary);
 }
 
+/* Toolbar-specific tweaks; base styles come from .zylem-debug-button */
 .zylem-debug-toolbar-btn {
-  background: none;
-  cursor: pointer;
-  font-family: var(--debug-font-family);
-  padding: 8px;
-  border-radius: 8px;
-  border: 1.5px solid var(--debug-primary);
-  color: var(--debug-primary);
-}
-
-.zylem-debug-toolbar-btn:hover {
-  background-color: var(--debug-primary);
-  color: var(--debug-background);
+  padding: var(--debug-space-small);
 }
 
 .zylem-debug-toolbar-btn:hover svg {
   stroke: var(--debug-background);
-}
-
-.zylem-debug-toolbar-btn:active {
-  background-color: var(--debug-background-active);
-  color: var(--debug-background);
 }
 
 .zylem-debug-icon {
@@ -44,10 +29,11 @@
 .zylem-debug-tooltip {
   background: var(--debug-background);
   color: var(--debug-primary);
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1.5px solid var(--debug-primary);
-  font-size: 14px;
+  padding: var(--debug-space-small) var(--debug-space-medium);
+  margin-top: var(--debug-space-small);
+  border-radius: var(--debug-border-radius);
+  border: var(--debug-border-width) solid var(--debug-primary);
+  font-size: var(--debug-font-size);
   pointer-events: none;
   z-index: 1000;
 }

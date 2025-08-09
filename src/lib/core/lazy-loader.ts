@@ -111,7 +111,7 @@ export const loadStage = async () => {
 };
 
 export const loadDebugTools = async () => {
-	const debug = await import('../debug/Debug');
+	const debug = await import('../ui/Debug');
 	return debug;
 };
 

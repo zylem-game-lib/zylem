@@ -1,12 +1,6 @@
 import { Accordion } from '@kobalte/core';
 import type { Component } from 'solid-js';
-import {
-  DebugOptionsPanel,
-  GameConfigPanel,
-  StageConfigPanel,
-  EntitiesPanel,
-  GlobalStatePanel,
-} from './panels';
+import { GameSection, StagesSection, EntitiesSection } from './sections/all';
 import './AccordionMenu.css';
 
 /**
@@ -14,36 +8,25 @@ import './AccordionMenu.css';
  */
 export const AccordionMenu: Component = () => (
   <Accordion.Root multiple class="zylem-debug-accordion">
-    <Accordion.Item value="debug-options" class="accordion-item">
-      <Accordion.Header class="accordion-header">
-        <Accordion.Trigger class="accordion-trigger zylem-exo-2">
-          Debug options
-        </Accordion.Trigger>
-      </Accordion.Header>
-      <Accordion.Content class="accordion-content scrollable-y scroll-thin">
-        <DebugOptionsPanel />
-      </Accordion.Content>
-    </Accordion.Item>
-
     <Accordion.Item value="game-config" class="accordion-item">
       <Accordion.Header class="accordion-header">
         <Accordion.Trigger class="accordion-trigger zylem-exo-2">
-          Game Configuration
+          Game
         </Accordion.Trigger>
       </Accordion.Header>
       <Accordion.Content class="accordion-content scrollable-y scroll-thin">
-        <GameConfigPanel />
+        <GameSection />
       </Accordion.Content>
     </Accordion.Item>
 
     <Accordion.Item value="stage-config" class="accordion-item">
       <Accordion.Header class="accordion-header">
         <Accordion.Trigger class="accordion-trigger zylem-exo-2">
-          Stage Configuration
+          Stages
         </Accordion.Trigger>
       </Accordion.Header>
       <Accordion.Content class="accordion-content scrollable-y scroll-thin">
-        <StageConfigPanel />
+        <StagesSection />
       </Accordion.Content>
     </Accordion.Item>
 
@@ -54,18 +37,7 @@ export const AccordionMenu: Component = () => (
         </Accordion.Trigger>
       </Accordion.Header>
       <Accordion.Content class="accordion-content scrollable-y scroll-thin">
-        <EntitiesPanel />
-      </Accordion.Content>
-    </Accordion.Item>
-
-    <Accordion.Item value="global-state" class="accordion-item">
-      <Accordion.Header class="accordion-header">
-        <Accordion.Trigger class="accordion-trigger zylem-exo-2">
-          Global State
-        </Accordion.Trigger>
-      </Accordion.Header>
-      <Accordion.Content class="accordion-content scrollable-y scroll-thin">
-        <GlobalStatePanel />
+        <EntitiesSection />
       </Accordion.Content>
     </Accordion.Item>
   </Accordion.Root>

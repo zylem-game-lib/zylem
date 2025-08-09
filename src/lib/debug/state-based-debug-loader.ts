@@ -16,7 +16,7 @@ let debugModuleLoaded = false;
 async function loadDebugModule(): Promise<void> {
 	if (!debugModuleLoaded) {
 		try {
-			await import('./Debug');
+			await import('@lib/ui/Debug');
 			debugModuleLoaded = true;
 			console.log('🐛 Zylem Debug module loaded via state change');
 		} catch (error) {

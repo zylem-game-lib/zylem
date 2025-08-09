@@ -1,6 +1,6 @@
 import { createEffect, createSignal, type Component } from 'solid-js';
-import { consoleStore } from './console-store';
-import { clearConsole } from './console-state';
+import { consoleStore } from '@lib/debug/console/console-store';
+import { clearConsole } from '@lib/debug/console/console-state';
 import './Console.css';
 
 /**
@@ -23,7 +23,7 @@ export const Console: Component = () => {
   return (
     <div class="zylem-debug-console-container">
       <div class="zylem-debug-console-header">
-        <button onClick={clearConsole} class="zylem-debug-console-clear">
+        <button onClick={clearConsole} class="zylem-debug-button">
           Clear
         </button>
       </div>

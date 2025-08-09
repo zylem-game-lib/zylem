@@ -8,11 +8,19 @@
   border: 1.5px solid var(--debug-primary);
   border-radius: 12px;
   box-sizing: border-box;
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: hidden;
   pointer-events: auto;
+  font-family: var(--debug-font-family);
 }
 
-::-webkit-scrollbar {
+/* Hide only the container's scrollbar; allow inner panels to style theirs */
+.zylem-debug-menu::-webkit-scrollbar {
   display: none;
+}
+
+/* Heading resets scoped to menu */
+.zylem-debug-menu h3,
+.zylem-debug-menu h4 {
+  margin: 0;
 }

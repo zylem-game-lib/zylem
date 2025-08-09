@@ -26,6 +26,14 @@ export default defineConfig(async ({ command, mode }) => {
           replacement: path.resolve(__dirname, './src'),
         },
         {
+          find: '@lib/debug',
+          replacement: path.resolve(__dirname, './src/lib/debug'),
+        },
+        {
+          find: '@lib/ui',
+          replacement: path.resolve(__dirname, './src/lib/ui'),
+        },
+        {
           find: '@lib',
           replacement: path.resolve(__dirname, './src/lib'),
         },

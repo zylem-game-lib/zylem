@@ -6,7 +6,6 @@ import { CameraWrapper } from '../camera/camera';
 import { subscribe } from 'valtio';
 import { setEntitiesToStage, setStageVariable, stageState } from './stage-state';
 import { BaseEntityInterface } from '../types';
-import { ZylemGame } from '../core';
 import { GameEntity } from '../entities/entity';
 
 export class Stage {

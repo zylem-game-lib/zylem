@@ -1,7 +1,7 @@
 import { render } from 'solid-js/web';
 import { createSignal } from 'solid-js';
 
-import { Menu } from './menu/Menu';
+import { Menu } from './debug-panel/Menu';
 import './Debug.css';
 
 /**

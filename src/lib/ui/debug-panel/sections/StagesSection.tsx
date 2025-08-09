@@ -1,9 +1,9 @@
 import { Component } from 'solid-js';
 import { stageState } from '../../../stage/stage-state';
-import { printToConsole } from '../../console/console-state';
+import { printToConsole } from '../../../debug/console/console-state';
 import { stageStateToString } from '../../../stage/stage-state';
 
-export const StageConfigPanel: Component = () => (
+export const StagesSection: Component = () => (
   <div class="panel-content">
     <section class="zylem-debug-toolbar">
       <button

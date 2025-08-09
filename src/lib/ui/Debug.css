@@ -12,7 +12,17 @@
   --debug-console-text: #72b3f4;
 
   --debug-icon-size: 28px;
+  --debug-icon-size-small: 16px;
+  --debug-icon-size-large: 96px;
+
   --debug-font-family: 'Exo 2', sans-serif;
+  --debug-font-size: 14px;
+
+  --debug-border-radius: 12px;
+  --debug-border-width: 1.5px;
+  --debug-space-large: 16px;
+  --debug-space-medium: 12px;
+  --debug-space-small: 8px;
 }
 
 button {
@@ -34,8 +44,8 @@ button {
   top: 0;
   right: 0;
 
-  width: 100px;
-  height: 100px;
+  width: var(--debug-icon-size-large);
+  height: var(--debug-icon-size-large);
 
   background-image: url(./assets/zylem-logo.png);
   background-size: contain;
@@ -79,4 +89,26 @@ button {
 .scroll-thin::-webkit-scrollbar-thumb {
   background-color: var(--debug-primary-active);
   border-radius: 3px;
+}
+
+.zylem-debug-button {
+  background: none;
+  color: var(--debug-primary);
+  border: var(--debug-border-width) solid var(--debug-primary);
+  border-radius: var(--debug-border-radius);
+  font-family: var(--debug-font-family);
+  cursor: pointer;
+  padding: var(--debug-space-small) var(--debug-space-medium);
+  font-size: var(--debug-font-size);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.zylem-debug-button:hover {
+  background: var(--debug-primary);
+  color: var(--debug-background);
+}
+
+.zylem-debug-button:active {
+  background: var(--debug-background-active);
+  color: var(--debug-background);
 }

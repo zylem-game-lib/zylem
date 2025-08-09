@@ -12,27 +12,6 @@
   margin-bottom: 8px;
 }
 
-.zylem-debug-console-clear {
-  background: var(--debug-background);
-  color: var(--debug-primary);
-  border: 1.5px solid var(--debug-primary);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-family: var(--debug-font-family);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.zylem-debug-console-clear:hover {
-  background: var(--debug-primary);
-  color: var(--debug-background);
-}
-
-.zylem-debug-console-clear:active {
-  background: var(--debug-background-active);
-  color: var(--debug-background);
-}
-
 .zylem-debug-console {
   width: 100%;
   height: 100%;

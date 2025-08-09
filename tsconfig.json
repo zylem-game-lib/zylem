@@ -21,6 +21,8 @@
     "paths": {
       "~/*": ["src/*"],
       "@/*": ["src/*"],
+      "@lib/debug/*": ["src/lib/debug/*"],
+      "@lib/ui/*": ["src/lib/ui/*"],
       "@lib": ["src/lib/*"],
       "@interfaces/*": ["src/lib/interfaces/*"],
       "@state/*": ["src/state/*"]

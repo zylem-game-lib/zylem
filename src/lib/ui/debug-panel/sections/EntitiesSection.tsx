@@ -1,8 +1,11 @@
 import { stageState } from '../../../stage/stage-state';
 import { Component, For } from 'solid-js';
-import { printToConsole } from '../../console/console-state';
-import { setHoveredEntity, resetHoveredEntity } from '../../debug-state';
-import './EntitiesPanel.css';
+import { printToConsole } from '../../../debug/console/console-state';
+import {
+  setHoveredEntity,
+  resetHoveredEntity,
+} from '../../../debug/debug-state';
+import './EntitiesSection.css';
 import Info from 'lucide-solid/icons/info';
 import { BaseEntityInterface } from '~/lib/types';
 
@@ -28,7 +31,7 @@ export const EntityRow: Component<EntityRowProps> = (props) => {
       <h4>{props.entity.name || `Entity ${props.entity.uuid}`}</h4>
       <div class="entity-details"></div>
       <button
-        class="zylem-debug-toolbar-btn"
+        class="zylem-debug-toolbar-btn zylem-debug-button"
         onClick={() => {
           printToConsole(`Entity: ${JSON.stringify(props.entity, null, 2)}`);
         }}
@@ -39,9 +42,8 @@ export const EntityRow: Component<EntityRowProps> = (props) => {
   );
 };
 
-export const EntitiesPanel: Component = () => (
+export const EntitiesSection: Component = () => (
   <div class="panel-content">
-    <h3 class="zylem-exo-2">Active Entities</h3>
     <div class="entities-list">
       <For each={stageState.entities}>
         {(entity, index) => <EntityRow entity={entity} index={index()} />}

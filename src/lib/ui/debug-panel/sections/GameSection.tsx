@@ -1,12 +1,12 @@
 import type { Component } from 'solid-js';
-import { getGlobalState, state } from '../../../game/game-state';
-import { printToConsole } from '../../console/console-state';
+import { printToConsole } from '@lib/debug/console/console-state';
+import { getGlobalState, state } from '~/lib/game/game-state';
 
-export const GlobalStatePanel: Component = () => (
+export const GameSection: Component = () => (
   <div class="panel-content">
     <section class="zylem-debug-toolbar">
       <button
-        class="zylem-debug-toolbar-btn"
+        class="zylem-debug-toolbar-btn zylem-debug-button"
         onClick={() => {
           const globalState = getGlobalState();
           printToConsole(
@@ -17,7 +17,7 @@ export const GlobalStatePanel: Component = () => (
         Print Global State
       </button>
       <button
-        class="zylem-debug-toolbar-btn"
+        class="zylem-debug-toolbar-btn zylem-debug-button"
         onClick={() => {
           const allState = state;
           printToConsole(`All State: ${JSON.stringify(allState, null, 2)}`);
