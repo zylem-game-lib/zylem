@@ -18,14 +18,20 @@ export declare class ZylemGame {
     timer: Timer;
     inputManager: InputManager;
     wrapperRef: Game;
+    statsRef: {
+        begin: () => void;
+        end: () => void;
+    } | null;
     static FRAME_LIMIT: number;
     static FRAME_DURATION: number;
+    static MAX_DELTA_SECONDS: number;
     constructor(options: ZylemGameConfig<Stage, ZylemGame>, wrapperRef: Game);
     loadStage(stage: Stage): Promise<void>;
     setGlobals(options: ZylemGameConfig<Stage, ZylemGame>): void;
     params(): UpdateContext<ZylemGame>;
     start(): void;
     loop(timestamp: number): void;
+    outOfLoop(): void;
     getStage(id: string): Stage | undefined;
     currentStage(): Stage | undefined;
     getGlobal(key: string): BasicTypes | GlobalVariablesType;

@@ -34,16 +34,10 @@ declare const setHoveredEntity: (uuid: string) => void;
 declare const resetHoveredEntity: () => void;
 declare const getHoveredEntity: () => string | null;
 export { debugState, setDebugFlag, setSelectedEntity, resetSelectedEntities, setDebugTool, getDebugTool, setHoveredEntity, resetHoveredEntity, getHoveredEntity };
-/**
- * Toggle pause state for the debug tools and print the new state to the console.
- */
 export declare const togglePause: () => void;
 /**
  * Set pause state directly and print the new state to the console.
  * @param paused Whether to pause (true) or resume (false)
  */
 export declare const setPaused: (paused: boolean) => void;
-/**
- * Get the current paused state.
- */
 export declare const isPaused: () => boolean;

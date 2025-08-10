@@ -1,5 +1,4 @@
-import { World } from '@dimforge/rapier3d-compat';
-import { Color, LineSegments, Vector3 } from 'three';
+import { Color, Vector3 } from 'three';
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
 import { Conditions } from '../interfaces/game';
@@ -9,6 +8,7 @@ import { BaseNode } from '../core/base-node';
 import { Stage } from './stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
+import { StageDebugDelegate } from './stage-debug-delegate';
 export interface ZylemStageConfig {
     inputs: Record<string, string[]>;
     backgroundColor: Color;
@@ -34,11 +34,11 @@ export declare class ZylemStage {
     children: Array<BaseNode>;
     _childrenMap: Map<string, BaseNode>;
     _removalMap: Map<string, BaseNode>;
-    _debugLines: LineSegments | null;
     _debugMap: Map<string, BaseNode>;
     ecs: import("bitecs").IWorld;
     testSystem: any;
     transformSystem: any;
+    debugDelegate: StageDebugDelegate | null;
     uuid: string;
     wrapperRef: Stage | null;
     camera?: CameraWrapper;
@@ -51,17 +51,8 @@ export declare class ZylemStage {
      * Parse the options array to extract config, entities, and camera
      */
     private parseOptions;
-    /**
-     * Type guard to check if an item is ZylemStageConfig
-     */
     private isZylemStageConfig;
-    /**
-     * Type guard to check if an item is BaseNode
-     */
     private isBaseNode;
-    /**
-     * Type guard to check if an item is CameraWrapper
-     */
     private isCameraWrapper;
     private saveState;
     private setState;
@@ -69,10 +60,11 @@ export declare class ZylemStage {
     private createDefaultCamera;
     setup(params: SetupContext<ZylemStage>): void;
     update(params: UpdateContext<ZylemStage>): void;
+    debugUpdate(): void;
     destroy(params: DestroyContext<ZylemStage>): void;
     spawnEntity(child: BaseNode): Promise<void>;
     addEntityToStage(entity: BaseNode): void;
-    debugStage(world: World): void;
+    removeEntityByUuid(uuid: string): boolean;
     getEntityByName(name: string): BaseNode<any, any> | null;
     logMissingEntities(): void;
     resize(width: number, height: number): void;
