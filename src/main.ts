@@ -34,6 +34,9 @@ export { Howl } from 'howler';
 export * as THREE from 'three';
 export * as RAPIER from '@dimforge/rapier3d-compat';
 
+// Update helpers
+export { globalChange, globalChanges } from './lib/actions/update/global-change';
+
 // Legacy namespace for backward compatibility (will bundle everything together)
 // Consider deprecating this in favor of named exports
 import * as actions from './lib/behaviors/actions';

@@ -4,7 +4,7 @@ import { Stage, stage } from '../stage/stage';
 import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 import { setPaused } from '../debug/debug-state';
 import { GameEntity, GameEntityLifeCycle } from '../entities/entity';
-import { GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 
 const defaultGameOptions = {
 	id: 'zylem',
@@ -143,8 +143,12 @@ export class Game implements IGame {
 		return this.gameRef?.getGlobal(key);
 	}
 
-	setGlobal(key: string, value: number) {
+	setGlobal(key: string, value: BasicTypes) {
 		this.gameRef?.setGlobal(key, value);
+	}
+
+	onGlobalChange(key: string, callback: (value: any) => void) {
+		this.gameRef?.onGlobalChange(key, callback);
 	}
 }
 

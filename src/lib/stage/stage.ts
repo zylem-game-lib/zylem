@@ -48,8 +48,10 @@ export class Stage {
 		setEntitiesToStage(stateEntities);
 	}
 
-	onUpdate(callback: UpdateFunction<ZylemStage>) {
-		this.stageRef._update = callback;
+	onUpdate(...callbacks: UpdateFunction<ZylemStage>[]) {
+		this.stageRef._update = (params) => {
+			callbacks.forEach((cb) => cb(params));
+		};
 	}
 
 	onSetup(callback: SetupFunction<ZylemStage>) {

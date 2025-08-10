@@ -9,6 +9,7 @@ import { Timer } from '../core/three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
 import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+import { subscribe } from 'valtio';
 
 
 export class ZylemGame {
@@ -127,6 +128,17 @@ export class ZylemGame {
 
 	setGlobal(key: string, value: BasicTypes) {
 		setGlobalState(key, value);
+	}
+
+	onGlobalChange(key: string, callback: (value: any) => void) {
+		let previous = getGlobalState(key);
+		subscribe(state, () => {
+			const current = getGlobalState(key);
+			if (current !== previous) {
+				previous = current;
+				callback(current);
+			}
+		});
 	}
 }
 

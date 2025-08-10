@@ -1,5 +1,5 @@
 import { Color, Vector3 } from 'three';
-import { game, box, sphere, stage, camera, zone } from '../../src/main';
+import { game, box, sphere, stage, camera, zone, globalChange, globalChanges } from '../../src/main';
 import { makeMoveable } from '../../src/lib/behaviors/moveable';
 import { Vec0 } from '../../src/lib/core/utility';
 import { pingPong } from '../../src/lib/actions/collision/ping-pong';
@@ -69,9 +69,8 @@ const p1Goal = await zone({
 });
 p1Goal.onEnter((params) => {
 	const { visitor } = params;
-	const p1Score = game1.getGlobal('p1Score');
+	const p1Score = game1.getGlobal('p1Score') as number;
 	if (visitor.uuid === ball.uuid) {
-		// @ts-ignore
 		game1.setGlobal('p1Score', p1Score + 1);
 		moveableBall.setPosition(0, 0, 0);
 		moveableBall.moveX(-5);
@@ -85,9 +84,8 @@ const p2Goal = await zone({
 });
 p2Goal.onEnter((params) => {
 	const { visitor } = params;
-	const p2Score = game1.getGlobal('p2Score');
+	const p2Score = game1.getGlobal('p2Score') as number;
 	if (visitor.uuid === ball.uuid) {
-		// @ts-ignore
 		game1.setGlobal('p2Score', p2Score + 1);
 		moveableBall.setPosition(0, 0, 0);
 		moveableBall.moveX(5);
@@ -110,9 +108,24 @@ const game1 = game({
 	id: 'pong',
 	debug: true,
 	globals: {
-		p1Score: 0,
-		p2Score: 0,
+		p1Score: 0 as number,
+		p2Score: 0 as number,
 		winner: '',
 	}
 }, stage1, ball, paddle1, paddle2, p1Goal, p2Goal);
+
+stage1.onUpdate(
+	globalChange('p1Score', (score) => {
+		console.log('P1 score:', score);
+	}),
+	globalChanges(['p1Score', 'p2Score'], ([p1, p2]) => {
+		if (p1 >= 3) game1.setGlobal('winner', 'p1' as any);
+		if (p2 >= 3) game1.setGlobal('winner', 'p2' as any);
+	}),
+	globalChange('winner', (value) => {
+		if (value) {
+			console.log('Winner:', value);
+		}
+	})
+);
 game1.start();
