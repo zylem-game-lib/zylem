@@ -28,7 +28,7 @@ moveableBall.onUpdate(
 	ricochet2d({
 		boundaries: gameBounds,
 		onRicochet: (event) => {
-			// ricochetSound();
+			ricochetSound();
 		}
 	})
 );
@@ -96,7 +96,7 @@ p2Goal.onEnter((params) => {
 
 moveableBall.onCollision(
 	pingPong({ minSpeed: 10 }),
-	// pingPongBeep()
+	pingPongBeep()
 );
 
 const camera1 = await camera({

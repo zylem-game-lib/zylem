@@ -6,9 +6,10 @@ export interface IGame {
 	nextStage: () => Promise<void>;
 	previousStage: () => Promise<void>;
 	reset: () => Promise<void>;
+	pause: () => Promise<void>;
+	resume: () => Promise<void>;
 
 	////////////////////////////////////////////////////
-	pause: () => Promise<void>; // TODO: need implementation
 	end: () => Promise<void>; // TODO: need implementation
 	goToStage: () => void; // TODO: need implementation
 	////////////////////////////////////////////////////

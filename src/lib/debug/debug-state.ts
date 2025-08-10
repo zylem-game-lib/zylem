@@ -1,4 +1,5 @@
 import { proxy } from 'valtio';
+import { printToConsole } from './console/console-state';
 
 export type DebugConfiguration = {
 	showCollisionBounds?: boolean;
@@ -16,6 +17,7 @@ export const DebugTools = {
 
 const debugState = proxy({
 	on: false,
+	paused: false,
 	configuration: {
 		showCollisionBounds: false,
 		showModelBounds: false,
@@ -38,8 +40,18 @@ const resetSelectedEntities = () => {
 	debugState.selected = [];
 }
 
+/**
+ * Set the active debug tool and print the selection to the debug console.
+ * @param tool The tool to activate
+ */
 const setDebugTool = (tool: keyof typeof DebugTools) => {
 	debugState.tool = tool;
+	if (tool === DebugTools.NONE) {
+		printToConsole('Tool deselected');
+		resetHoveredEntity();
+	} else {
+		printToConsole(`Tool selected: ${tool}`);
+	}
 }
 
 const getDebugTool = () => {
@@ -59,3 +71,19 @@ const getHoveredEntity = () => {
 }
 
 export { debugState, setDebugFlag, setSelectedEntity, resetSelectedEntities, setDebugTool, getDebugTool, setHoveredEntity, resetHoveredEntity, getHoveredEntity };
+
+export const togglePause = () => {
+	debugState.paused = !debugState.paused;
+	printToConsole(debugState.paused ? 'Paused' : 'Resumed');
+};
+
+/**
+ * Set pause state directly and print the new state to the console.
+ * @param paused Whether to pause (true) or resume (false)
+ */
+export const setPaused = (paused: boolean) => {
+	debugState.paused = paused;
+	printToConsole(paused ? 'Paused' : 'Resumed');
+};
+
+export const isPaused = () => debugState.paused;

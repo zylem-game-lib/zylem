@@ -6,6 +6,7 @@ export interface IGame {
     previousStage: () => Promise<void>;
     reset: () => Promise<void>;
     pause: () => Promise<void>;
+    resume: () => Promise<void>;
     end: () => Promise<void>;
     goToStage: () => void;
     getGlobal: (key: string) => any;

@@ -1,6 +1,6 @@
 import { state, setGlobalState, getGlobalState } from './game-state';
 
-import { setDebugFlag } from '../debug/debug-state';
+import { isPaused, setDebugFlag } from '../debug/debug-state';
 
 import { Game } from './game';
 import { UpdateContext, SetupContext, DestroyContext } from '../core/base-node-life-cycle';
@@ -30,10 +30,11 @@ export class ZylemGame {
 	inputManager: InputManager;
 
 	wrapperRef: Game;
-	// statsRef: Stats | null = null;
+	statsRef: { begin: () => void, end: () => void } | null = null;
 
 	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
+	static MAX_DELTA_SECONDS = 1 / 30;
 
 	constructor(options: ZylemGameConfig<Stage, ZylemGame>, wrapperRef: Game) {
 		this.wrapperRef = wrapperRef;
@@ -88,23 +89,28 @@ export class ZylemGame {
 	}
 
 	loop(timestamp: number) {
-		// this.statsRef && this.statsRef.begin();
-		const elapsed = timestamp - this.previousTimeStamp;
-		if (elapsed >= ZylemGame.FRAME_DURATION) {
-			this.timer.update();
+		this.statsRef && this.statsRef.begin();
+		if (!isPaused()) {
+			this.timer.update(timestamp);
 			const stage = this.currentStage();
 			const params = this.params();
+			const clampedDelta = Math.min(params.delta, ZylemGame.MAX_DELTA_SECONDS);
+			const clampedParams = { ...params, delta: clampedDelta };
 			if (this.customUpdate) {
-				this.customUpdate(params);
+				this.customUpdate(clampedParams);
 			}
-			stage!.stageRef!.update({ ...params, me: stage!.stageRef });
-			this.totalTime += params.delta;
+			stage!.stageRef!.update({ ...clampedParams, me: stage!.stageRef });
+			this.totalTime += clampedParams.delta;
 			state.time = this.totalTime;
 			this.previousTimeStamp = timestamp;
 		}
-
-		// this.statsRef && this.statsRef.end();
+		this.statsRef && this.statsRef.end();
+		this.outOfLoop();
 		requestAnimationFrame(this.loop.bind(this));
+	}
+
+	outOfLoop() {
+		this.currentStage()!.stageRef!.debugUpdate();
 	}
 
 	getStage(id: string) {

@@ -16,6 +16,7 @@ export declare class Game implements IGame {
     load(): Promise<ZylemGame>;
     setOverrides(): void;
     pause(): Promise<void>;
+    resume(): Promise<void>;
     reset(): Promise<void>;
     nextStage(): Promise<void>;
     previousStage(): Promise<void>;

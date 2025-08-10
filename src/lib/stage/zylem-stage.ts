@@ -1,17 +1,16 @@
 import { addComponent, addEntity, createWorld as createECS } from 'bitecs';
-import { World } from '@dimforge/rapier3d-compat';
-import { BufferAttribute, BufferGeometry, Color, LineBasicMaterial, LineSegments, Vector3, Vector2 } from 'three';
+import { Color, Vector3, Vector2 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
 
 import { Conditions } from '../interfaces/game';
 import { state } from '../game/game-state';
-import { setEntitiesToStage, setStageBackgroundColor, setStageBackgroundImage } from './stage-state';
+import { setStageBackgroundColor, setStageBackgroundImage } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
 import { ZylemBlueColor } from '../core/utility';
-import { debugState, getHoveredEntity } from '../debug/debug-state';
+import { debugState } from '../debug/debug-state';
 
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
 import createTransformSystem, { StageSystem } from '../systems/transformable.system';
@@ -21,6 +20,7 @@ import { Stage } from './stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { Perspectives } from '../camera/perspective';
 import { CameraWrapper } from '../camera/camera';
+import { StageDebugDelegate } from './stage-debug-delegate';
 
 export interface ZylemStageConfig {
 	inputs: Record<string, string[]>;
@@ -63,12 +63,12 @@ export class ZylemStage {
 	_childrenMap: Map<string, BaseNode> = new Map();
 	_removalMap: Map<string, BaseNode> = new Map();
 
-	_debugLines: LineSegments | null = null;
 	_debugMap: Map<string, BaseNode> = new Map();
 
 	ecs = createECS();
 	testSystem: any = null;
 	transformSystem: any = null;
+	debugDelegate: StageDebugDelegate | null = null;
 
 	uuid: string;
 	wrapperRef: Stage | null = null;
@@ -138,23 +138,14 @@ export class ZylemStage {
 		return { config, entities, camera };
 	}
 
-	/**
-	 * Type guard to check if an item is ZylemStageConfig
-	 */
 	private isZylemStageConfig(item: any): item is ZylemStageConfig {
 		return item && typeof item === 'object' && !(item instanceof BaseNode) && !(item instanceof CameraWrapper);
 	}
 
-	/**
-	 * Type guard to check if an item is BaseNode
-	 */
 	private isBaseNode(item: any): item is BaseNode {
 		return item && typeof item === 'object' && typeof item.create === 'function';
 	}
 
-	/**
-	 * Type guard to check if an item is CameraWrapper
-	 */
 	private isCameraWrapper(item: any): item is CameraWrapper {
 		return item && typeof item === 'object' && item.constructor.name === 'CameraWrapper';
 	}
@@ -184,7 +175,6 @@ export class ZylemStage {
 		for (let child of this.children) {
 			this.spawnEntity(child);
 		}
-		// setEntitiesToStage(this.children as unknown as GameEntityInterface[]);
 		this.transformSystem = createTransformSystem(this as unknown as StageSystem);
 	}
 
@@ -201,12 +191,7 @@ export class ZylemStage {
 			return;
 		}
 		if (debugState.on) {
-			this._debugLines = new LineSegments(
-				new BufferGeometry(),
-				new LineBasicMaterial({ vertexColors: true })
-			);
-			this.scene.scene.add(this._debugLines);
-			this._debugLines.visible = true;
+			this.debugDelegate = new StageDebugDelegate(this);
 		}
 		if (this._setup) {
 			this._setup({ ...params, me: this });
@@ -231,14 +216,19 @@ export class ZylemStage {
 			this._update({ ...params, me: this });
 		}
 		this.scene.update({ delta });
+	}
+
+	public debugUpdate() {
 		if (debugState.on) {
-			this.debugStage(this.world.world);
+			this.debugDelegate?.update();
 		}
 	}
 
 	public destroy(params: DestroyContext<ZylemStage>): void {
 		this.world?.destroy();
 		this.scene?.destroy();
+		this.debugDelegate?.dispose();
+
 		if (this._destroy) {
 			this._destroy({ ...params, me: this });
 		}
@@ -280,33 +270,33 @@ export class ZylemStage {
 		}
 	}
 
-	debugStage(world: World) {
-		if (!this._debugLines) {
-			return;
+	removeEntityByUuid(uuid: string): boolean {
+		if (!this.scene || !this.world) return false;
+		// Try mapping via world collision map first for physics-backed entities
+		// @ts-ignore - collisionMap is public Map<string, GameEntity<any>>
+		const mapEntity = this.world.collisionMap.get(uuid) as any | undefined;
+		const entity: any = mapEntity ?? this._debugMap.get(uuid);
+		if (!entity) return false;
+
+		this.world.destroyEntity(entity);
+
+		if (entity.group) {
+			this.scene.scene.remove(entity.group);
+		} else if (entity.mesh) {
+			this.scene.scene.remove(entity.mesh);
 		}
-		const { vertices, colors } = world.debugRender();
-		this._debugLines.geometry.setAttribute(
-			'position',
-			new BufferAttribute(vertices, 3),
-		);
-		this._debugLines.geometry.setAttribute(
-			'color',
-			new BufferAttribute(colors, 4),
-		);
-		const hoveredEntityUuid = getHoveredEntity();
-		this._debugMap.forEach((child) => {
-			// @ts-ignore
-			child.materials[0].wireframe = false;
-		});
-		if (hoveredEntityUuid) {
-			const hoveredEntity = this._debugMap.get(`${hoveredEntityUuid}`);
-			if (hoveredEntity) {
-				// @ts-ignore
-				hoveredEntity.materials[0].wireframe = true;
-				// @ts-ignore
-				hoveredEntity.materials[1] && (hoveredEntity.materials[1].wireframe = true);
+
+		let foundKey: string | null = null;
+		this._childrenMap.forEach((value, key) => {
+			if ((value as any).uuid === uuid) {
+				foundKey = key;
 			}
+		});
+		if (foundKey) {
+			this._childrenMap.delete(foundKey);
 		}
+		this._debugMap.delete(uuid);
+		return true;
 	}
 
 	getEntityByName(name: string) {

@@ -1,7 +1,8 @@
 import { BaseNode } from '../core/base-node';
 import { ZylemGame } from './zylem-game';
 import { Stage, stage } from '../stage/stage';
-import { DestroyFunction, IGame, IStage, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
+import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
+import { setPaused } from '../debug/debug-state';
 import { GameEntity, GameEntityLifeCycle } from '../entities/entity';
 import { GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 
@@ -84,7 +85,17 @@ export class Game implements IGame {
 		this.gameRef.customDestroy = this.destroy;
 	}
 
-	async pause() { }
+	async pause() {
+		setPaused(true);
+	}
+
+	async resume() {
+		setPaused(false);
+		if (this.gameRef) {
+			this.gameRef.previousTimeStamp = 0;
+			this.gameRef.timer.reset();
+		}
+	}
 
 	async reset() {
 		if (!this.gameRef) {

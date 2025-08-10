@@ -44,7 +44,7 @@ export declare const loadStage: () => Promise<{
     world: typeof import("../collision/world");
     scene: typeof import("../graphics/zylem-scene");
 }>;
-export declare const loadDebugTools: () => Promise<typeof import("../debug/Debug")>;
+export declare const loadDebugTools: () => Promise<typeof import("../ui/Debug")>;
 export declare const loadFullGame: () => Promise<{
     foundation: {
         baseNode: typeof import("./base-node");

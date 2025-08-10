@@ -20,6 +20,15 @@
   stroke: var(--debug-background);
 }
 
+.zylem-debug-toolbar-btn.selected {
+  background: var(--debug-background-active);
+  border-color: var(--debug-background-active);
+}
+
+.zylem-debug-toolbar-btn.selected svg {
+  stroke: var(--debug-background);
+}
+
 .zylem-debug-icon {
   width: var(--debug-icon-size);
   height: var(--debug-icon-size);

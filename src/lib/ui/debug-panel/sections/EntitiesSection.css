@@ -15,7 +15,7 @@ ul {
   cursor: pointer;
 }
 
-.entity-item-wrapper:hover .entity-item {
+.entity-item-wrapper.hovered .entity-item {
   background-color: var(--debug-background-hover);
   color: var(--debug-primary);
 }
@@ -36,7 +36,7 @@ ul {
   transition: background-color 200ms cubic-bezier(0.075, 0.82, 0.165, 1);
 }
 
-.entity-item:hover {
+.entity-item.hovered {
   background-color: var(--debug-background-active-hover);
 }
 
