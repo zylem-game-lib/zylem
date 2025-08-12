@@ -1,5 +1,5 @@
 import { Color, Vector3 } from 'three';
-import { proxy } from 'valtio';
+import { proxy } from 'valtio/vanilla';
 import { BaseEntityInterface } from '../types/entity-types';
 import { StageStateInterface } from '../types/stage-types';
 

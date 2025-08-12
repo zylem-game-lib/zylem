@@ -5,7 +5,7 @@
  * and loads the debug module when debug state changes to true.
  */
 
-import { subscribe } from 'valtio';
+import { subscribe } from 'valtio/vanilla';
 import { debugState } from './debug-state';
 
 let debugModuleLoaded = false;

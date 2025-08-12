@@ -9,7 +9,7 @@ import { Timer } from '../core/three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
 import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
-import { subscribe } from 'valtio';
+import { subscribe } from 'valtio/vanilla';
 
 
 export class ZylemGame {

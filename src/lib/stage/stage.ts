@@ -3,7 +3,7 @@ import { DestroyFunction, SetupContext, SetupFunction, UpdateFunction } from '..
 import { StageOptions, ZylemStage } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
-import { subscribe } from 'valtio';
+import { subscribe } from 'valtio/vanilla';
 import { setEntitiesToStage, setStageVariable, stageState } from './stage-state';
 import { BaseEntityInterface } from '../types';
 import { GameEntity } from '../entities/entity';

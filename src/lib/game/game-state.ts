@@ -1,4 +1,4 @@
-import { proxy } from 'valtio';
+import { proxy } from 'valtio/vanilla';
 import { GlobalVariablesType } from './game-interfaces';
 
 const state = proxy({

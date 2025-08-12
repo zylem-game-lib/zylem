@@ -10,7 +10,7 @@ import {
 import './EntitiesSection.css';
 import Info from 'lucide-solid/icons/info';
 import { BaseEntityInterface } from '~/lib/types';
-import { subscribe } from 'valtio';
+import { subscribe } from 'valtio/vanilla';
 
 interface EntityRowProps {
   entity: Partial<BaseEntityInterface>;

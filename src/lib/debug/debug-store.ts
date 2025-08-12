@@ -1,5 +1,5 @@
 import { createStore } from 'solid-js/store';
-import { subscribe } from 'valtio';
+import { subscribe } from 'valtio/vanilla';
 import { DebugTools, debugState } from './debug-state';
 
 export const [debugStore, setDebugStore] = createStore({
