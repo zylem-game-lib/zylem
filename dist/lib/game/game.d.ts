@@ -3,7 +3,7 @@ import { ZylemGame } from './zylem-game';
 import { Stage } from '../stage/stage';
 import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 import { GameEntityLifeCycle } from '../entities/entity';
-import { GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 export declare class Game implements IGame {
     gameRef: ZylemGame | null;
     options: GameOptions;
@@ -22,8 +22,9 @@ export declare class Game implements IGame {
     previousStage(): Promise<void>;
     goToStage(): Promise<void>;
     end(): Promise<void>;
-    getGlobal(key: string): import("./game-interfaces").BasicTypes | GlobalVariablesType | undefined;
-    setGlobal(key: string, value: number): void;
+    getGlobal(key: string): BasicTypes | GlobalVariablesType | undefined;
+    setGlobal(key: string, value: BasicTypes): void;
+    onGlobalChange(key: string, callback: (value: any) => void): void;
 }
 type GameOptions = Array<ZylemGameConfig<Stage, Game> | Stage | GameEntityLifeCycle | BaseNode>;
 /**

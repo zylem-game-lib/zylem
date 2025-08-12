@@ -36,5 +36,6 @@ export declare class ZylemGame {
     currentStage(): Stage | undefined;
     getGlobal(key: string): BasicTypes | GlobalVariablesType;
     setGlobal(key: string, value: BasicTypes): void;
+    onGlobalChange(key: string, callback: (value: any) => void): void;
 }
 export default ZylemGame;
