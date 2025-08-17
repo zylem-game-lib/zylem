@@ -69,7 +69,7 @@ const p1Goal = await zone({
 });
 p1Goal.onEnter((params) => {
 	const { visitor } = params;
-	const p1Score = game1.getGlobal('p1Score') as number;
+	const p1Score = game1.getGlobal('p1Score');
 	if (visitor.uuid === ball.uuid) {
 		game1.setGlobal('p1Score', p1Score + 1);
 		moveableBall.setPosition(0, 0, 0);
@@ -84,7 +84,7 @@ const p2Goal = await zone({
 });
 p2Goal.onEnter((params) => {
 	const { visitor } = params;
-	const p2Score = game1.getGlobal('p2Score') as number;
+	const p2Score = game1.getGlobal('p2Score');
 	if (visitor.uuid === ball.uuid) {
 		game1.setGlobal('p2Score', p2Score + 1);
 		moveableBall.setPosition(0, 0, 0);
@@ -108,8 +108,8 @@ const game1 = game({
 	id: 'pong',
 	debug: true,
 	globals: {
-		p1Score: 0 as number,
-		p2Score: 0 as number,
+		p1Score: 0,
+		p2Score: 0,
 		winner: '',
 	}
 }, stage1, ball, paddle1, paddle2, p1Goal, p2Goal);
@@ -119,13 +119,11 @@ stage1.onUpdate(
 		console.log('P1 score:', score);
 	}),
 	globalChanges(['p1Score', 'p2Score'], ([p1, p2]) => {
-		if (p1 >= 3) game1.setGlobal('winner', 'p1' as any);
-		if (p2 >= 3) game1.setGlobal('winner', 'p2' as any);
+		if (p1 >= 3) game1.setGlobal('winner', 'p1');
+		if (p2 >= 3) game1.setGlobal('winner', 'p2');
 	}),
-	globalChange('winner', (value) => {
-		if (value) {
-			console.log('Winner:', value);
-		}
-	})
 );
 game1.start();
+game1.onGlobalChange('winner', (value) => {
+	console.log('Winner:', value);
+});

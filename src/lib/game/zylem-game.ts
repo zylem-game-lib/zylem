@@ -12,13 +12,13 @@ import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfa
 import { subscribe } from 'valtio/vanilla';
 
 
-export class ZylemGame {
+export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> {
 	id: string;
-	initialGlobals = {} as GlobalVariablesType;
+	initialGlobals = {} as TGlobals;
 
-	customSetup: ((params: SetupContext<ZylemGame>) => void) | null = null;
-	customUpdate: ((params: UpdateContext<ZylemGame>) => void) | null = null;
-	customDestroy: ((params: DestroyContext<ZylemGame>) => void) | null = null;
+	customSetup: ((params: SetupContext<ZylemGame<TGlobals>, TGlobals>) => void) | null = null;
+	customUpdate: ((params: UpdateContext<ZylemGame<TGlobals>, TGlobals>) => void) | null = null;
+	customDestroy: ((params: DestroyContext<ZylemGame<TGlobals>, TGlobals>) => void) | null = null;
 
 	stages: Stage[] = [];
 	stageMap: Map<string, Stage> = new Map();
@@ -30,14 +30,14 @@ export class ZylemGame {
 	timer: Timer;
 	inputManager: InputManager;
 
-	wrapperRef: Game;
+	wrapperRef: Game<TGlobals>;
 	statsRef: { begin: () => void, end: () => void } | null = null;
 
 	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 	static MAX_DELTA_SECONDS = 1 / 30;
 
-	constructor(options: ZylemGameConfig<Stage, ZylemGame>, wrapperRef: Game) {
+	constructor(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>, wrapperRef: Game<TGlobals>) {
 		this.wrapperRef = wrapperRef;
 		this.inputManager = new InputManager();
 		this.timer = new Timer();
@@ -54,26 +54,26 @@ export class ZylemGame {
 		this.currentStageId = stage.stageRef!.uuid;
 	}
 
-	setGlobals(options: ZylemGameConfig<Stage, ZylemGame>) {
+	setGlobals(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>) {
 		setDebugFlag(options.debug);
-		this.initialGlobals = { ...options.globals };
+		this.initialGlobals = { ...(options.globals as TGlobals) };
 		for (const variable in this.initialGlobals) {
 			const value = this.initialGlobals[variable];
 			if (value === undefined) {
 				console.error(`global ${variable} is undefined`);
 			}
-			this.setGlobal(variable, value);
+			this.setGlobal(variable as keyof TGlobals, value);
 		}
 	}
 
-	params(): UpdateContext<ZylemGame> {
+	params(): UpdateContext<ZylemGame<TGlobals>, TGlobals> {
 		const stage = this.currentStage();
 		const delta = this.timer.getDelta();
 		const inputs = this.inputManager.getInputs(delta);
 		return {
 			delta,
 			inputs,
-			globals: state.globals,
+			globals: state.globals as unknown as TGlobals,
 			me: this,
 			camera: stage!.stageRef!.cameraRef!,
 		};
@@ -122,18 +122,18 @@ export class ZylemGame {
 		return this.getStage(this.currentStageId);
 	}
 
-	getGlobal(key: string) {
-		return getGlobalState(key);
+	getGlobal<K extends keyof TGlobals>(key: K) {
+		return getGlobalState<TGlobals, K>(key);
 	}
 
-	setGlobal(key: string, value: BasicTypes) {
-		setGlobalState(key, value);
+	setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]) {
+		setGlobalState<TGlobals, K>(key, value);
 	}
 
-	onGlobalChange(key: string, callback: (value: any) => void) {
-		let previous = getGlobalState(key);
+	onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void) {
+		let previous = getGlobalState<TGlobals, K>(key);
 		subscribe(state, () => {
-			const current = getGlobalState(key);
+			const current = getGlobalState<TGlobals, K>(key);
 			if (current !== previous) {
 				previous = current;
 				callback(current);

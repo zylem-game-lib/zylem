@@ -1,5 +1,5 @@
 import { proxy } from 'valtio/vanilla';
-import { GlobalVariablesType } from './game-interfaces';
+import { BasicTypes, GlobalVariablesType } from './game-interfaces';
 
 const state = proxy({
 	id: '',
@@ -7,15 +7,18 @@ const state = proxy({
 	time: 0,
 });
 
-const setGlobalState = (key: string, value: any) => {
-	state.globals[key] = value;
-};
+export function setGlobalState<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType, K extends keyof TGlobals = keyof TGlobals>(key: K, value: TGlobals[K]): void;
+export function setGlobalState(key: string, value: BasicTypes): void {
+	(state.globals as any)[key as string] = value as any;
+}
 
-const getGlobalState = (key?: string) => {
-	if (key) {
-		return state.globals[key];
+export function getGlobalState<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(): TGlobals;
+export function getGlobalState<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType, K extends keyof TGlobals = keyof TGlobals>(key: K): TGlobals[K];
+export function getGlobalState(key?: string): any {
+	if (key !== undefined) {
+		return (state.globals as any)[key as string];
 	}
-	return state.globals;
-};
+	return state.globals as any;
+}
 
-export { setGlobalState, getGlobalState, state };
+export { state };

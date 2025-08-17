@@ -5,6 +5,7 @@ import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/b
 import { setPaused } from '../debug/debug-state';
 import { GameEntity, GameEntityLifeCycle } from '../entities/entity';
 import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+import { getGlobalState, setGlobalState } from './game-state';
 
 const defaultGameOptions = {
 	id: 'zylem',
@@ -14,9 +15,9 @@ const defaultGameOptions = {
 	]
 };
 
-function convertNodes(_options: GameOptions): { id: string, globals: {}, stages: Stage[] } {
+function convertNodes<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(_options: GameOptions<TGlobals>): { id: string, globals: TGlobals, stages: Stage[] } {
 	let converted = { ...defaultGameOptions };
-	const configurations: ZylemGameConfig<Stage, Game>[] = [];
+	const configurations: ZylemGameConfig<Stage, Game<TGlobals>, TGlobals>[] = [];
 	const stages: Stage[] = [];
 	const entities: (BaseNode | GameEntity<any>)[] = [];
 	Object.values(_options).forEach((node) => {
@@ -28,7 +29,7 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 			entities.push(node);
 		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
 			const configuration = Object.assign(defaultGameOptions, { ...node });
-			configurations.push(configuration as ZylemGameConfig<Stage, Game>);
+			configurations.push(configuration as ZylemGameConfig<Stage, Game<TGlobals>, TGlobals>);
 		}
 	});
 	configurations.forEach((configuration) => {
@@ -42,20 +43,21 @@ function convertNodes(_options: GameOptions): { id: string, globals: {}, stages:
 	} else {
 		converted.stages[0].addEntities(entities as BaseNode[]);
 	}
-	return converted;
+	return converted as unknown as { id: string, globals: TGlobals, stages: Stage[] };
 }
 
-export class Game implements IGame {
-	gameRef: ZylemGame | null = null;
-	options: GameOptions;
+export class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> implements IGame<TGlobals> {
+	gameRef: ZylemGame<TGlobals> | null = null;
+	options: GameOptions<TGlobals>;
+	private pendingGlobalChangeHandlers: Array<{ key: keyof TGlobals; callback: (value: any) => void }> = [];
 
-	update: UpdateFunction<ZylemGame> = () => { };
-	setup: SetupFunction<ZylemGame> = () => { };
-	destroy: DestroyFunction<ZylemGame> = () => { };
+	update: UpdateFunction<ZylemGame<TGlobals>, TGlobals> = () => { };
+	setup: SetupFunction<ZylemGame<TGlobals>, TGlobals> = () => { };
+	destroy: DestroyFunction<ZylemGame<TGlobals>, TGlobals> = () => { };
 
 	refErrorMessage = 'lost reference to game';
 
-	constructor(options: GameOptions) {
+	constructor(options: GameOptions<TGlobals>) {
 		this.options = options;
 	}
 
@@ -67,10 +69,10 @@ export class Game implements IGame {
 		return this;
 	}
 
-	async load(): Promise<ZylemGame> {
+	async load(): Promise<ZylemGame<TGlobals>> {
 		console.log('loading game', this.options);
-		const options = convertNodes(this.options);
-		const game = new ZylemGame(options, this);
+		const options = convertNodes<TGlobals>(this.options);
+		const game = new ZylemGame<TGlobals>(options as any, this);
 		await game.loadStage(options.stages[0]);
 		return game;
 	}
@@ -83,6 +85,12 @@ export class Game implements IGame {
 		this.gameRef.customSetup = this.setup;
 		this.gameRef.customUpdate = this.update;
 		this.gameRef.customDestroy = this.destroy;
+		if (this.pendingGlobalChangeHandlers.length) {
+			for (const { key, callback } of this.pendingGlobalChangeHandlers) {
+				this.gameRef.onGlobalChange(key as keyof TGlobals, callback as (value: TGlobals[keyof TGlobals]) => void);
+			}
+			this.pendingGlobalChangeHandlers = [];
+		}
 	}
 
 	async pause() {
@@ -139,20 +147,31 @@ export class Game implements IGame {
 
 	async end() { }
 
-	getGlobal(key: string) {
-		return this.gameRef?.getGlobal(key);
+	getGlobal<K extends keyof TGlobals>(key: K) {
+		if (this.gameRef) {
+			return this.gameRef.getGlobal(key);
+		}
+		return getGlobalState<TGlobals, K>(key);
 	}
 
-	setGlobal(key: string, value: BasicTypes) {
-		this.gameRef?.setGlobal(key, value);
+	setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]) {
+		if (this.gameRef) {
+			this.gameRef.setGlobal(key, value);
+			return;
+		}
+		setGlobalState<TGlobals, K>(key, value);
 	}
 
-	onGlobalChange(key: string, callback: (value: any) => void) {
-		this.gameRef?.onGlobalChange(key, callback);
+	onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void) {
+		if (this.gameRef) {
+			this.gameRef.onGlobalChange(key, callback);
+			return;
+		}
+		this.pendingGlobalChangeHandlers.push({ key, callback: callback as unknown as (value: any) => void });
 	}
 }
 
-type GameOptions = Array<ZylemGameConfig<Stage, Game> | Stage | GameEntityLifeCycle | BaseNode>;
+type GameOptions<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> = Array<ZylemGameConfig<Stage, Game<TGlobals>, TGlobals> | Stage | GameEntityLifeCycle | BaseNode>;
 
 /**
  * create a new game
@@ -162,6 +181,6 @@ type GameOptions = Array<ZylemGameConfig<Stage, Game> | Stage | GameEntityLifeCy
  * @param options.stages Array of stage objects (when using IGameOptions)
  * @returns Game
  */
-export function game(...options: GameOptions): Game {
-	return new Game(options);
+export function game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(...options: GameOptions<TGlobals>): Game<TGlobals> {
+	return new Game<TGlobals>(options);
 }

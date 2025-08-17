@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 import { Inputs } from '../input/input';
 
-export interface IGame {
+export interface IGame<TGlobals extends Record<string, unknown> = any> {
 	start: () => Promise<this>;
 	nextStage: () => Promise<void>;
 	previousStage: () => Promise<void>;
@@ -14,8 +14,8 @@ export interface IGame {
 	goToStage: () => void; // TODO: need implementation
 	////////////////////////////////////////////////////
 
-	getGlobal: (key: string) => any;
-	setGlobal: (key: string, value: any) => void;
+	getGlobal: <K extends keyof TGlobals>(key: K) => TGlobals[K];
+	setGlobal: <K extends keyof TGlobals>(key: K, value: TGlobals[K]) => void;
 }
 
 export interface IStage {
@@ -29,38 +29,38 @@ export interface ICamera {
 	rotate: (pitch: number, yaw: number, roll: number) => void;
 }
 
-export interface SetupContext<T> {
+export interface SetupContext<T, TGlobals extends Record<string, unknown> = any> {
 	me: T;
-	globals: any;
+	globals: TGlobals;
 	inputs?: Inputs;
 	camera?: ICamera;
 	stage?: IStage;
-	game?: IGame;
+	game?: IGame<TGlobals>;
 }
 
-export interface SetupFunction<T> {
-	(context: SetupContext<T>): void;
+export interface SetupFunction<T, TGlobals extends Record<string, unknown> = any> {
+	(context: SetupContext<T, TGlobals>): void;
 }
 
-export type UpdateContext<T> = {
+export type UpdateContext<T, TGlobals extends Record<string, unknown> = any> = {
 	me: T;
 	delta: number;
 	inputs: Inputs;
-	globals: any;
+	globals: TGlobals;
 	camera: ICamera;
 	stage?: IStage;
-	game?: IGame;
+	game?: IGame<TGlobals>;
 };
 
-export interface UpdateFunction<T> {
-	(context: UpdateContext<T>): void;
+export interface UpdateFunction<T, TGlobals extends Record<string, unknown> = any> {
+	(context: UpdateContext<T, TGlobals>): void;
 }
 
-export interface DestroyContext<T> {
+export interface DestroyContext<T, TGlobals extends Record<string, unknown> = any> {
 	me: T;
-	globals: any;
+	globals: TGlobals;
 }
 
-export interface DestroyFunction<T> {
-	(context: DestroyContext<T>): void;
+export interface DestroyFunction<T, TGlobals extends Record<string, unknown> = any> {
+	(context: DestroyContext<T, TGlobals>): void;
 }
