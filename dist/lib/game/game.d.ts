@@ -4,16 +4,17 @@ import { Stage } from '../stage/stage';
 import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 import { GameEntityLifeCycle } from '../entities/entity';
 import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
-export declare class Game implements IGame {
-    gameRef: ZylemGame | null;
-    options: GameOptions;
-    update: UpdateFunction<ZylemGame>;
-    setup: SetupFunction<ZylemGame>;
-    destroy: DestroyFunction<ZylemGame>;
+export declare class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> implements IGame<TGlobals> {
+    gameRef: ZylemGame<TGlobals> | null;
+    options: GameOptions<TGlobals>;
+    private pendingGlobalChangeHandlers;
+    update: UpdateFunction<ZylemGame<TGlobals>, TGlobals>;
+    setup: SetupFunction<ZylemGame<TGlobals>, TGlobals>;
+    destroy: DestroyFunction<ZylemGame<TGlobals>, TGlobals>;
     refErrorMessage: string;
-    constructor(options: GameOptions);
+    constructor(options: GameOptions<TGlobals>);
     start(): Promise<this>;
-    load(): Promise<ZylemGame>;
+    load(): Promise<ZylemGame<TGlobals>>;
     setOverrides(): void;
     pause(): Promise<void>;
     resume(): Promise<void>;
@@ -22,11 +23,11 @@ export declare class Game implements IGame {
     previousStage(): Promise<void>;
     goToStage(): Promise<void>;
     end(): Promise<void>;
-    getGlobal(key: string): BasicTypes | GlobalVariablesType | undefined;
-    setGlobal(key: string, value: BasicTypes): void;
-    onGlobalChange(key: string, callback: (value: any) => void): void;
+    getGlobal<K extends keyof TGlobals>(key: K): TGlobals[K];
+    setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]): void;
+    onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void): void;
 }
-type GameOptions = Array<ZylemGameConfig<Stage, Game> | Stage | GameEntityLifeCycle | BaseNode>;
+type GameOptions<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> = Array<ZylemGameConfig<Stage, Game<TGlobals>, TGlobals> | Stage | GameEntityLifeCycle | BaseNode>;
 /**
  * create a new game
  * @param options GameOptions - Array of IGameOptions, Stage, GameEntity, or BaseNode objects
@@ -35,5 +36,5 @@ type GameOptions = Array<ZylemGameConfig<Stage, Game> | Stage | GameEntityLifeCy
  * @param options.stages Array of stage objects (when using IGameOptions)
  * @returns Game
  */
-export declare function game(...options: GameOptions): Game;
+export declare function game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(...options: GameOptions<TGlobals>): Game<TGlobals>;
 export {};

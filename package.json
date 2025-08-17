@@ -1,6 +1,6 @@
 {
   "name": "@tcool86/zylem",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "type": "module",
   "description": "A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.",
   "license": "MIT",
