@@ -6,6 +6,7 @@ import { PhysicsOptions } from "../collision/physics";
 import { CollisionOptions } from "../collision/collision";
 import { BaseNode } from "../core/base-node";
 import { DestroyContext, SetupContext, UpdateContext } from "../core/base-node-life-cycle";
+import type { EntityMeshBuilder, EntityCollisionBuilder } from "./builder";
 export declare abstract class AbstractEntity {
     abstract uuid: string;
     abstract eid: number;
@@ -45,8 +46,8 @@ export type GameEntityOptions = {
     collisionGroup?: string;
     collisionFilter?: string[];
     _builders?: {
-        meshBuilder?: IBuilder | null;
-        collisionBuilder?: IBuilder | null;
+        meshBuilder?: IBuilder | EntityMeshBuilder | null;
+        collisionBuilder?: IBuilder | EntityCollisionBuilder | null;
         materialBuilder?: MaterialBuilder | null;
     };
 };

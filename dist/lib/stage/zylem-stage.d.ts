@@ -4,11 +4,13 @@ import { ZylemScene } from '../graphics/zylem-scene';
 import { Conditions } from '../interfaces/game';
 import { GameEntityInterface } from '../types/entity-types';
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
+import { LifeCycleBase } from '../core/lifecycle-base';
 import { BaseNode } from '../core/base-node';
 import { Stage } from './stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 import { StageDebugDelegate } from './stage-debug-delegate';
+import { BaseEntityInterface } from '../types/entity-types';
 export interface ZylemStageConfig {
     inputs: Record<string, string[]>;
     backgroundColor: Color;
@@ -19,12 +21,13 @@ export interface ZylemStageConfig {
     children?: ({ globals }: any) => BaseNode[];
     stageRef?: Stage;
 }
-export type StageOptions = Array<Partial<ZylemStageConfig> | BaseNode | CameraWrapper>;
+type StageEntityInput = BaseNode | Promise<any> | (() => BaseNode | Promise<any>);
+export type StageOptions = Array<Partial<ZylemStageConfig> | CameraWrapper | StageEntityInput>;
 export type StageState = ZylemStageConfig & {
     entities: GameEntityInterface[];
 };
 export declare const STAGE_TYPE = "Stage";
-export declare class ZylemStage {
+export declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     type: string;
     state: StageState;
     gravity: Vector3;
@@ -34,7 +37,11 @@ export declare class ZylemStage {
     children: Array<BaseNode>;
     _childrenMap: Map<string, BaseNode>;
     _removalMap: Map<string, BaseNode>;
+    private pendingEntities;
+    private pendingPromises;
+    private isLoaded;
     _debugMap: Map<string, BaseNode>;
+    private entityAddedHandlers;
     ecs: import("bitecs").IWorld;
     testSystem: any;
     transformSystem: any;
@@ -43,29 +50,30 @@ export declare class ZylemStage {
     wrapperRef: Stage | null;
     camera?: CameraWrapper;
     cameraRef?: ZylemCamera | null;
-    _setup?: (params: SetupContext<ZylemStage>) => void;
-    _update?: (params: UpdateContext<ZylemStage>) => void;
-    _destroy?: (params: DestroyContext<ZylemStage>) => void;
     constructor(options?: StageOptions);
-    /**
-     * Parse the options array to extract config, entities, and camera
-     */
     private parseOptions;
     private isZylemStageConfig;
     private isBaseNode;
     private isCameraWrapper;
+    private isEntityInput;
     private saveState;
     private setState;
     load(id: string, camera?: ZylemCamera | null): Promise<void>;
     private createDefaultCamera;
-    setup(params: SetupContext<ZylemStage>): void;
-    update(params: UpdateContext<ZylemStage>): void;
+    protected _setup(params: SetupContext<ZylemStage>): void;
+    protected _update(params: UpdateContext<ZylemStage>): void;
     debugUpdate(): void;
-    destroy(params: DestroyContext<ZylemStage>): void;
+    protected _destroy(params: DestroyContext<ZylemStage>): void;
     spawnEntity(child: BaseNode): Promise<void>;
+    buildEntityState(child: BaseNode): Partial<BaseEntityInterface>;
     addEntityToStage(entity: BaseNode): void;
+    onEntityAdded(callback: (entity: BaseNode) => void, options?: {
+        replayExisting?: boolean;
+    }): () => void;
     removeEntityByUuid(uuid: string): boolean;
     getEntityByName(name: string): BaseNode<any, any> | null;
     logMissingEntities(): void;
     resize(width: number, height: number): void;
+    enqueue(...items: StageEntityInput[]): void;
 }
+export {};

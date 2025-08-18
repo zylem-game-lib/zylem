@@ -12,6 +12,7 @@ export declare class Stage {
     constructor(options: StageOptions);
     load(id: string, camera?: ZylemCamera | CameraWrapper | null): Promise<void>;
     addEntities(entities: BaseNode[]): Promise<void>;
+    add(...inputs: Array<BaseNode | Promise<BaseNode> | (() => BaseNode) | (() => Promise<BaseNode>)>): void;
     start(params: SetupContext<ZylemStage>): void;
     onUpdate(...callbacks: UpdateFunction<ZylemStage>[]): void;
     onSetup(callback: SetupFunction<ZylemStage>): void;
