@@ -13,6 +13,7 @@ export { sprite } from './lib/entities/sprite';
 export { plane } from './lib/entities/plane';
 export { zone } from './lib/entities/zone';
 export { actor } from './lib/entities/actor';
+export { text } from './lib/entities/text';
 export { ZylemBox } from './lib/entities/box';
 export { makeMoveable } from './lib/behaviors/moveable';
 export * as actions from './lib/behaviors/actions';
