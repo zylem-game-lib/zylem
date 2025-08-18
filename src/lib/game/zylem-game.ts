@@ -100,7 +100,7 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 			if (this.customUpdate) {
 				this.customUpdate(clampedParams);
 			}
-			stage!.stageRef!.update({ ...clampedParams, me: stage!.stageRef });
+			stage!.stageRef!.nodeUpdate({ ...clampedParams, me: stage!.stageRef });
 			this.totalTime += clampedParams.delta;
 			state.time = this.totalTime;
 			this.previousTimeStamp = timestamp;

@@ -9,101 +9,120 @@ import { boundary } from '../../src/lib/actions/update/boundary';
 
 const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
 
-const ball = await sphere({
-	name: 'ball',
-	position: Vec0,
-	radius: 0.1,
-	material: {
-		color: new Color(Color.NAMES.lightgreen),
-	},
-});
+// Keep a reference to the moveable ball for goal handlers
+let moveableBall: any;
 
-const moveableBall = makeMoveable(ball);
-moveableBall.onSetup(({ me }) => {
-	me.setPosition(0, 0, 0);
-	me.moveX(5);
-});
-
-moveableBall.onUpdate(
-	ricochet2d({
-		boundaries: gameBounds,
-		onRicochet: (event) => {
-			ricochetSound();
-		}
-	})
-);
+const ballFactory = async () => {
+	const ball = await sphere({
+		name: 'ball',
+		position: Vec0,
+		radius: 0.1,
+		material: {
+			color: new Color(Color.NAMES.lightgreen),
+		},
+	});
+	moveableBall = makeMoveable(ball);
+	moveableBall.onSetup(({ me }) => {
+		me.setPosition(0, 0, 0);
+		me.moveX(5);
+	});
+	moveableBall.onUpdate(
+		ricochet2d({
+			boundaries: gameBounds,
+			onRicochet: () => {
+				ricochetSound();
+			}
+		})
+	);
+	moveableBall.onCollision(
+		pingPong({ minSpeed: 10 }),
+		pingPongBeep()
+	);
+	return moveableBall;
+};
 
 const paddleSize = { x: 0.20, y: 1.5, z: 1 };
 const paddleMaterial = { color: new Color(Color.NAMES.lightblue) };
 const paddleSpeed = 5;
 
-const paddle1 = await box({
-	name: 'paddle1',
-	position: { x: -10, y: 0, z: 0 },
-	size: paddleSize,
-	material: paddleMaterial,
-});
-makeMoveable(paddle1).onUpdate(({ me, inputs }) => {
-	const { Vertical } = inputs.p1.axes;
-	const { value } = Vertical;
-	me.moveY(-value * paddleSpeed);
-}, boundary({ boundaries: gameBounds }));
+const paddle1Factory = async () => {
+	const paddle1 = await box({
+		name: 'paddle1',
+		position: { x: -10, y: 0, z: 0 },
+		size: paddleSize,
+		material: paddleMaterial,
+	});
+	makeMoveable(paddle1).onUpdate(({ me, inputs }) => {
+		const { Vertical } = inputs.p1.axes;
+		const { value } = Vertical;
+		me.moveY(-value * paddleSpeed);
+	}, boundary({ boundaries: gameBounds }));
+	return paddle1;
+};
 
-const paddle2 = await box({
-	name: 'paddle2',
-	position: { x: 10, y: 0, z: 0 },
-	size: paddleSize,
-	material: paddleMaterial,
-});
-makeMoveable(paddle2).onUpdate(({ me, inputs }) => {
-	const { Vertical } = inputs.p2.axes;
-	const { value } = Vertical;
-	me.moveY(-value * paddleSpeed);
-}, boundary({ boundaries: gameBounds }));
+const paddle2Factory = async () => {
+	const paddle2 = await box({
+		name: 'paddle2',
+		position: { x: 10, y: 0, z: 0 },
+		size: paddleSize,
+		material: paddleMaterial,
+	});
+	makeMoveable(paddle2).onUpdate(({ me, inputs }) => {
+		const { Vertical } = inputs.p2.axes;
+		const { value } = Vertical;
+		me.moveY(-value * paddleSpeed);
+	}, boundary({ boundaries: gameBounds }));
+	return paddle2;
+};
 
+const p1GoalFactory = async () => {
+	const p1Goal = await zone({
+		name: 'p1Goal',
+		position: { x: 12, y: 0, z: 0 },
+		size: new Vector3(2, 10, 1),
+	});
+	p1Goal.onEnter(({ visitor }) => {
+		const p1Score = game1.getGlobal('p1Score');
+		if (moveableBall && visitor.uuid === moveableBall.uuid) {
+			game1.setGlobal('p1Score', p1Score + 1);
+			moveableBall.setPosition(0, 0, 0);
+			moveableBall.moveX(-5);
+		}
+	});
+	return p1Goal;
+};
 
-const p1Goal = await zone({
-	name: 'p1Goal',
-	position: { x: 12, y: 0, z: 0 },
-	size: new Vector3(2, 10, 1),
-});
-p1Goal.onEnter((params) => {
-	const { visitor } = params;
-	const p1Score = game1.getGlobal('p1Score');
-	if (visitor.uuid === ball.uuid) {
-		game1.setGlobal('p1Score', p1Score + 1);
-		moveableBall.setPosition(0, 0, 0);
-		moveableBall.moveX(-5);
-	}
-});
+const p2GoalFactory = async () => {
+	const p2Goal = await zone({
+		name: 'p2Goal',
+		position: { x: -12, y: 0, z: 0 },
+		size: new Vector3(2, 10, 1),
+	});
+	p2Goal.onEnter(({ visitor }) => {
+		const p2Score = game1.getGlobal('p2Score');
+		if (moveableBall && visitor.uuid === moveableBall.uuid) {
+			game1.setGlobal('p2Score', p2Score + 1);
+			moveableBall.setPosition(0, 0, 0);
+			moveableBall.moveX(5);
+		}
+	});
+	return p2Goal;
+};
 
-const p2Goal = await zone({
-	name: 'p2Goal',
-	position: { x: -12, y: 0, z: 0 },
-	size: new Vector3(2, 10, 1),
-});
-p2Goal.onEnter((params) => {
-	const { visitor } = params;
-	const p2Score = game1.getGlobal('p2Score');
-	if (visitor.uuid === ball.uuid) {
-		game1.setGlobal('p2Score', p2Score + 1);
-		moveableBall.setPosition(0, 0, 0);
-		moveableBall.moveX(5);
-	}
-});
-
-moveableBall.onCollision(
-	pingPong({ minSpeed: 10 }),
-	pingPongBeep()
-);
-
-const camera1 = await camera({
+const camera1 = camera({
 	position: new Vector3(0, 0, 0),
 	perspective: 'fixed-2d',
 	zoom: 12,
 });
 
-const stage1 = await stage(camera1);
+const stage1 = stage(
+	camera1,
+	ballFactory(),
+	paddle1Factory(),
+	paddle2Factory(),
+	p1GoalFactory(),
+	p2GoalFactory(),
+);
 const game1 = game({
 	id: 'pong',
 	debug: true,
@@ -112,7 +131,7 @@ const game1 = game({
 		p2Score: 0,
 		winner: '',
 	}
-}, stage1, ball, paddle1, paddle2, p1Goal, p2Goal);
+}, stage1);
 
 stage1.onUpdate(
 	globalChange('p1Score', (score) => {

@@ -13,6 +13,7 @@ import { ZylemBlueColor } from '../core/utility';
 import { debugState } from '../debug/debug-state';
 
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
+import { LifeCycleBase } from '../core/lifecycle-base';
 import createTransformSystem, { StageSystem } from '../systems/transformable.system';
 import { BaseNode } from '../core/base-node';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,6 +22,8 @@ import { ZylemCamera } from '../camera/zylem-camera';
 import { Perspectives } from '../camera/perspective';
 import { CameraWrapper } from '../camera/camera';
 import { StageDebugDelegate } from './stage-debug-delegate';
+import { GameEntity } from '../entities/entity';
+import { BaseEntityInterface } from '../types/entity-types';
 
 export interface ZylemStageConfig {
 	inputs: Record<string, string[]>;
@@ -33,13 +36,15 @@ export interface ZylemStageConfig {
 	stageRef?: Stage;
 }
 
-export type StageOptions = Array<Partial<ZylemStageConfig> | BaseNode | CameraWrapper>;
+type StageEntityInput = BaseNode | Promise<any> | (() => BaseNode | Promise<any>);
+
+export type StageOptions = Array<Partial<ZylemStageConfig> | CameraWrapper | StageEntityInput>;
 
 export type StageState = ZylemStageConfig & { entities: GameEntityInterface[] };
 
 export const STAGE_TYPE = 'Stage';
 
-export class ZylemStage {
+export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	public type = STAGE_TYPE;
 
 	state: StageState = {
@@ -63,7 +68,13 @@ export class ZylemStage {
 	_childrenMap: Map<string, BaseNode> = new Map();
 	_removalMap: Map<string, BaseNode> = new Map();
 
+	private pendingEntities: StageEntityInput[] = [];
+	private pendingPromises: Promise<BaseNode>[] = [];
+	private isLoaded: boolean = false;
+
 	_debugMap: Map<string, BaseNode> = new Map();
+
+	private entityAddedHandlers: Array<(entity: BaseNode) => void> = [];
 
 	ecs = createECS();
 	testSystem: any = null;
@@ -75,19 +86,17 @@ export class ZylemStage {
 	camera?: CameraWrapper;
 	cameraRef?: ZylemCamera | null = null;
 
-	_setup?: (params: SetupContext<ZylemStage>) => void;
-	_update?: (params: UpdateContext<ZylemStage>) => void;
-	_destroy?: (params: DestroyContext<ZylemStage>) => void;
-
 	constructor(options: StageOptions = []) {
+		super();
 		this.world = null;
 		this.scene = null;
 		this.uuid = uuidv4();
 
 		// Parse the options array to extract different types of items
-		const { config, entities, camera } = this.parseOptions(options);
+		const { config, entities, asyncEntities, camera } = this.parseOptions(options);
 		this.camera = camera;
 		this.children = entities;
+		this.pendingEntities = asyncEntities;
 		this.saveState({
 			backgroundColor: config.backgroundColor ?? this.state.backgroundColor,
 			backgroundImage: config.backgroundImage ?? this.state.backgroundImage,
@@ -114,28 +123,29 @@ export class ZylemStage {
 		};
 	}
 
-	/**
-	 * Parse the options array to extract config, entities, and camera
-	 */
 	private parseOptions(options: StageOptions): {
 		config: Partial<ZylemStageConfig>;
 		entities: BaseNode[];
+		asyncEntities: StageEntityInput[];
 		camera?: CameraWrapper;
 	} {
 		let config: Partial<ZylemStageConfig> = {};
 		const entities: BaseNode[] = [];
+		const asyncEntities: StageEntityInput[] = [];
 		let camera: CameraWrapper | undefined;
 		for (const item of options) {
-			if (this.isZylemStageConfig(item)) {
-				config = { ...config, ...item };
+			if (this.isCameraWrapper(item)) {
+				camera = item;
 			} else if (this.isBaseNode(item)) {
 				entities.push(item);
-			} else if (this.isCameraWrapper(item)) {
-				camera = item;
+			} else if (this.isEntityInput(item)) {
+				asyncEntities.push(item as StageEntityInput);
+			} else if (this.isZylemStageConfig(item)) {
+				config = { ...config, ...item };
 			}
 		}
 
-		return { config, entities, camera };
+		return { config, entities, asyncEntities, camera };
 	}
 
 	private isZylemStageConfig(item: any): item is ZylemStageConfig {
@@ -148,6 +158,14 @@ export class ZylemStage {
 
 	private isCameraWrapper(item: any): item is CameraWrapper {
 		return item && typeof item === 'object' && item.constructor.name === 'CameraWrapper';
+	}
+
+	private isEntityInput(item: any): item is StageEntityInput {
+		if (!item) return false;
+		if (this.isBaseNode(item)) return true;
+		if (typeof item === 'function') return true;
+		if (typeof item === 'object' && typeof (item as any).then === 'function') return true;
+		return false;
 	}
 
 	private saveState(state: StageState) {
@@ -175,7 +193,18 @@ export class ZylemStage {
 		for (let child of this.children) {
 			this.spawnEntity(child);
 		}
+		if (this.pendingEntities.length) {
+			this.enqueue(...this.pendingEntities);
+			this.pendingEntities = [];
+		}
+		if (this.pendingPromises.length) {
+			for (const promise of this.pendingPromises) {
+				promise.then((entity) => this.spawnEntity(entity)).catch((e) => console.error('Failed to resolve pending stage entity', e));
+			}
+			this.pendingPromises = [];
+		}
 		this.transformSystem = createTransformSystem(this as unknown as StageSystem);
+		this.isLoaded = true;
 	}
 
 	private createDefaultCamera(): ZylemCamera {
@@ -185,7 +214,7 @@ export class ZylemStage {
 		return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
 	}
 
-	public setup(params: SetupContext<ZylemStage>): void {
+	protected _setup(params: SetupContext<ZylemStage>): void {
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
 			return;
@@ -193,12 +222,9 @@ export class ZylemStage {
 		if (debugState.on) {
 			this.debugDelegate = new StageDebugDelegate(this);
 		}
-		if (this._setup) {
-			this._setup({ ...params, me: this });
-		}
 	}
 
-	public update(params: UpdateContext<ZylemStage>): void {
+	protected _update(params: UpdateContext<ZylemStage>): void {
 		const { delta } = params;
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
@@ -212,9 +238,6 @@ export class ZylemStage {
 				me: child,
 			});
 		});
-		if (this._update) {
-			this._update({ ...params, me: this });
-		}
 		this.scene.update({ delta });
 	}
 
@@ -224,14 +247,10 @@ export class ZylemStage {
 		}
 	}
 
-	public destroy(params: DestroyContext<ZylemStage>): void {
+	protected _destroy(params: DestroyContext<ZylemStage>): void {
 		this.world?.destroy();
 		this.scene?.destroy();
 		this.debugDelegate?.dispose();
-
-		if (this._destroy) {
-			this._destroy({ ...params, me: this });
-		}
 	}
 
 	async spawnEntity(child: BaseNode) {
@@ -263,11 +282,41 @@ export class ZylemStage {
 		this.addEntityToStage(entity);
 	}
 
+	buildEntityState(child: BaseNode): Partial<BaseEntityInterface> {
+		if (child instanceof GameEntity) {
+			return { ...child.buildInfo() } as Partial<BaseEntityInterface>;
+		}
+		return {
+			uuid: child.uuid,
+			name: child.name,
+			eid: child.eid,
+		} as Partial<BaseEntityInterface>;
+	}
+
 	addEntityToStage(entity: BaseNode) {
 		this._childrenMap.set(`${entity.eid}-key`, entity);
 		if (debugState.on) {
 			this._debugMap.set(entity.uuid, entity);
 		}
+		for (const handler of this.entityAddedHandlers) {
+			try {
+				handler(entity);
+			} catch (e) {
+				console.error('onEntityAdded handler failed', e);
+			}
+		}
+	}
+
+	onEntityAdded(callback: (entity: BaseNode) => void, options?: { replayExisting?: boolean }) {
+		this.entityAddedHandlers.push(callback);
+		if (options?.replayExisting && this.isLoaded) {
+			this._childrenMap.forEach((entity) => {
+				try { callback(entity); } catch (e) { console.error('onEntityAdded replay failed', e); }
+			});
+		}
+		return () => {
+			this.entityAddedHandlers = this.entityAddedHandlers.filter((h) => h !== callback);
+		};
 	}
 
 	removeEntityByUuid(uuid: string): boolean {
@@ -315,6 +364,50 @@ export class ZylemStage {
 	resize(width: number, height: number) {
 		if (this.scene) {
 			this.scene.updateRenderer(width, height);
+		}
+	}
+
+	enqueue(...items: StageEntityInput[]) {
+		for (const item of items) {
+			if (!item) continue;
+			if (this.isBaseNode(item)) {
+				if (this.isLoaded) {
+					this.spawnEntity(item);
+				} else {
+					this.children.push(item);
+				}
+				continue;
+			}
+			if (typeof item === 'function') {
+				try {
+					const result = (item as (() => BaseNode | Promise<any>))();
+					if (this.isBaseNode(result)) {
+						if (this.isLoaded) {
+							this.spawnEntity(result);
+						} else {
+							this.children.push(result);
+						}
+					} else if (result && typeof (result as any).then === 'function') {
+						const promise = result as Promise<any>;
+						if (this.isLoaded) {
+							promise.then((entity) => this.spawnEntity(entity)).catch((e) => console.error('Failed to build async entity', e));
+						} else {
+							this.pendingPromises.push(promise);
+						}
+					}
+				} catch (error) {
+					console.error('Error executing entity factory', error);
+				}
+				continue;
+			}
+			if (item && typeof (item as any).then === 'function') {
+				const promise = item as Promise<any>;
+				if (this.isLoaded) {
+					promise.then((entity) => this.spawnEntity(entity)).catch((e) => console.error('Failed to build async entity', e));
+				} else {
+					this.pendingPromises.push(promise);
+				}
+			}
 		}
 	}
 }

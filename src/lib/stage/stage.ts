@@ -5,8 +5,6 @@ import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 import { subscribe } from 'valtio/vanilla';
 import { setEntitiesToStage, setStageVariable, stageState } from './stage-state';
-import { BaseEntityInterface } from '../types';
-import { GameEntity } from '../entities/entity';
 
 export class Stage {
 	stageRef: ZylemStage;
@@ -30,36 +28,36 @@ export class Stage {
 
 	async addEntities(entities: BaseNode[]) {
 		this.options.push(...entities);
-		this.stageRef.children = [...this.stageRef.children, ...entities];
+		this.stageRef.enqueue(...entities);
+	}
+
+	add(...inputs: Array<BaseNode | Promise<BaseNode> | (() => BaseNode) | (() => Promise<BaseNode>)>) {
+		this.stageRef.enqueue(...(inputs as any));
 	}
 
 	start(params: SetupContext<ZylemStage>) {
-		this.stageRef?.setup(params);
-		const stateEntities = this.stageRef.children.map((child) => {
-			if (child instanceof GameEntity) {
-				return { ...child.buildInfo() } as Partial<BaseEntityInterface>
-			}
-			return {
-				uuid: child.uuid,
-				name: child.name,
-				eid: child.eid,
-			};
-		});
+		this.stageRef?.nodeSetup(params);
+		const stateEntities = this.stageRef.children.map((child) => this.stageRef.buildEntityState(child));
 		setEntitiesToStage(stateEntities);
+
+		this.stageRef.onEntityAdded((child) => {
+			const next = this.stageRef.buildEntityState(child);
+			stageState.entities = [...stageState.entities, next];
+		}, { replayExisting: true });
 	}
 
 	onUpdate(...callbacks: UpdateFunction<ZylemStage>[]) {
-		this.stageRef._update = (params) => {
+		this.stageRef.update = (params) => {
 			callbacks.forEach((cb) => cb(params));
 		};
 	}
 
 	onSetup(callback: SetupFunction<ZylemStage>) {
-		this.stageRef._setup = callback;
+		this.stageRef.setup = callback;
 	}
 
 	onDestroy(callback: DestroyFunction<ZylemStage>) {
-		this.stageRef._destroy = callback;
+		this.stageRef.destroy = callback;
 	}
 
 	setVariable(key: string, value: any) {
