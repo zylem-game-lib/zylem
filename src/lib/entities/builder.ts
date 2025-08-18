@@ -1,6 +1,6 @@
 import { ColliderDesc } from "@dimforge/rapier3d-compat";
 import { GameEntity, GameEntityOptions } from "./entity";
-import { BufferGeometry, Group, Material, Mesh } from "three";
+import { BufferGeometry, Group, Material, Mesh, Color } from "three";
 import { CollisionBuilder } from "../collision/collision-builder";
 import { MeshBuilder } from "../graphics/mesh";
 import { MaterialBuilder, MaterialOptions } from "../graphics/material";
@@ -38,12 +38,12 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends GameE
 		this.meshBuilder = meshBuilder;
 		this.collisionBuilder = collisionBuilder;
 		this.materialBuilder = new MaterialBuilder();
-		// @ts-ignore TODO: material builder uses async build
-		this.options._builders = {
+		const builders: NonNullable<GameEntityOptions["_builders"]> = {
 			meshBuilder: this.meshBuilder,
 			collisionBuilder: this.collisionBuilder,
 			materialBuilder: this.materialBuilder,
 		};
+		(this.options as Partial<GameEntityOptions>)._builders = builders;
 	}
 
 	withPosition(setupPosition: Vec3): this {
@@ -62,9 +62,6 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends GameE
 		group.traverse((child) => {
 			if (child instanceof Mesh) {
 				if (child.type === 'SkinnedMesh' && materials[0] && !child.material.map) {
-					// const light = new PointLight(0xffffff, 10, 0, 2);
-					// light.position.set(0, 0, 0);
-					// child.add(light);
 					child.material = materials[0];
 				}
 			}
@@ -100,6 +97,30 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends GameE
 		}
 		if (this.options.collisionType) {
 			entity.collisionType = this.options.collisionType;
+		}
+
+		if (this.options.color instanceof Color) {
+			const applyColor = (material: Material) => {
+				const anyMat = material as any;
+				if (anyMat && anyMat.color && anyMat.color.set) {
+					anyMat.color.set(this.options.color as Color);
+				}
+			};
+			if (entity.materials?.length) {
+				for (const mat of entity.materials) applyColor(mat);
+			}
+			if (entity.mesh && entity.mesh.material) {
+				const mat = entity.mesh.material as any;
+				if (Array.isArray(mat)) mat.forEach(applyColor); else applyColor(mat);
+			}
+			if (entity.group) {
+				entity.group.traverse((child) => {
+					if (child instanceof Mesh && child.material) {
+						const mat = child.material as any;
+						if (Array.isArray(mat)) mat.forEach(applyColor); else applyColor(mat);
+					}
+				});
+			}
 		}
 
 		return entity;

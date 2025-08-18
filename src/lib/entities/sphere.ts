@@ -1,7 +1,6 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
-import { SphereGeometry } from 'three';
+import { Color, SphereGeometry } from 'three';
 import { Vector3 } from 'three';
-import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
 import { EntityBuilder } from './builder';
@@ -21,7 +20,7 @@ const sphereDefaults: ZylemSphereOptions = {
 		static: false,
 	},
 	material: {
-		color: ZylemBlueColor,
+		color: new Color('#ffffff'),
 		shader: 'standard'
 	},
 };

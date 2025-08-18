@@ -40,7 +40,7 @@ for (let k = 0; k < 5; k++) {
 }
 
 const stressTestGame = game(
-	{ debug: true },
+	{ debug: true, id: 'stress-test' },
 	stage1,
 	ground,
 	...spheres

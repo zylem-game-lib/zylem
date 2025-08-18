@@ -1,11 +1,10 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
-import { Group, Vector3 } from 'three';
+import { Color, Group, Vector3 } from 'three';
 import {
 	TextureLoader,
 	SpriteMaterial,
 	Sprite as ThreeSprite,
 } from 'three';
-import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
 import { EntityBuilder } from './builder';
@@ -34,7 +33,7 @@ const spriteDefaults: ZylemSpriteOptions = {
 		static: false,
 	},
 	material: {
-		color: ZylemBlueColor,
+		color: new Color('#ffffff'),
 		shader: 'standard'
 	},
 	images: [],

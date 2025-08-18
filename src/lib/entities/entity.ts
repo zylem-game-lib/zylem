@@ -7,7 +7,7 @@ import { PhysicsOptions } from "../collision/physics";
 import { CollisionOptions } from "../collision/collision";
 import { BaseNode } from "../core/base-node";
 import { DestroyContext, SetupContext, UpdateContext } from "../core/base-node-life-cycle";
-import { debugState } from '../debug/debug-state';
+import type { EntityMeshBuilder, EntityCollisionBuilder } from "./builder";
 
 export abstract class AbstractEntity {
 	abstract uuid: string;
@@ -51,8 +51,8 @@ export type GameEntityOptions = {
 	collisionGroup?: string;
 	collisionFilter?: string[];
 	_builders?: {
-		meshBuilder?: IBuilder | null;
-		collisionBuilder?: IBuilder | null;
+		meshBuilder?: IBuilder | EntityMeshBuilder | null;
+		collisionBuilder?: IBuilder | EntityCollisionBuilder | null;
 		materialBuilder?: MaterialBuilder | null;
 	};
 }
@@ -194,19 +194,6 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 					material.uniforms.iTime && (material.uniforms.iTime.value += params.delta);
 				}
 			}
-		}
-		if (debugState.on) {
-			// if (debugState.selected.includes(this.eid.toString())) {
-			// 	debugger;
-			// this.mesh?.geometry.computeVertexNormals();
-			// if (this.debugMaterial && !this.materials.find(material => material === this.debugMaterial)) {
-			// 	this.materials.unshift(this.debugMaterial);
-			// }
-			// } else {
-			// 	if (this.debugMaterial && this.materials.find(material => material === this.debugMaterial)) {
-			// 		this.materials = this.materials.filter(material => material !== this.debugMaterial);
-			// 	}
-			// }
 		}
 	}
 

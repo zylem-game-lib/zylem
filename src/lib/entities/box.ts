@@ -1,7 +1,6 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
-import { BoxGeometry } from 'three';
+import { BoxGeometry, Color } from 'three';
 import { Vector3 } from 'three';
-import { ZylemBlueColor } from '../core/utility';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
 import { EntityBuilder } from './builder';
@@ -18,9 +17,8 @@ const boxDefaults: ZylemBoxOptions = {
 	collision: {
 		static: false,
 	},
-	color: ZylemBlueColor,
 	material: {
-		color: ZylemBlueColor,
+		color: new Color('#ffffff'),
 		shader: 'standard'
 	},
 };

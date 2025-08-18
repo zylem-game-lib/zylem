@@ -9,7 +9,7 @@ import {
 	Vector2,
 	Vector3
 } from 'three';
-import { shortHash, sortedStringify, ZylemBlueColor } from '../core/utility';
+import { shortHash, sortedStringify } from '../core/utility';
 import shaderMap, { ZylemShaderObject, ZylemShaderType } from '../core/preset-shader';
 
 export interface MaterialOptions {
@@ -59,6 +59,9 @@ export class MaterialBuilder {
 		if (shader) this.withShader(shader);
 		if (color) this.withColor(color);
 		await this.setTexture(path ?? null, repeat);
+		if (this.materials.length === 0) {
+			this.setColor(new Color('#ffffff'));
+		}
 		this.batchMaterial(options, entityType);
 	}
 
