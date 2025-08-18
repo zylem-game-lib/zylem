@@ -1,5 +1,5 @@
-import { Color, Vector3 } from 'three';
-import { game, box, sphere, stage, camera, zone, globalChange, globalChanges } from '../../src/main';
+import { Color, Vector3, Vector2 } from 'three';
+import { game, box, sphere, stage, camera, zone, globalChange, globalChanges, text } from '../../src/main';
 import { makeMoveable } from '../../src/lib/behaviors/moveable';
 import { Vec0 } from '../../src/lib/core/utility';
 import { pingPong } from '../../src/lib/actions/collision/ping-pong';
@@ -94,6 +94,30 @@ const camera1 = camera({
 	zoom: 12,
 });
 
+const p1Text = await text({
+	name: 'p1Text',
+	text: '0',
+	fontSize: 24,
+	stickToViewport: true,
+	screenPosition: new Vector2(window.innerWidth / 2 - 100, 24),
+});
+
+const p2Text = await text({
+	name: 'p2Text',
+	text: '0',
+	fontSize: 24,
+	stickToViewport: true,
+	screenPosition: new Vector2(window.innerWidth / 2 + 100, 24),
+});
+
+const winnerText = await text({
+	name: 'winnerText',
+	text: '',
+	fontSize: 36,
+	stickToViewport: true,
+	screenPosition: new Vector2(window.innerWidth / 2, window.innerHeight / 2),
+});
+
 const stage1 = stage(camera1);
 const game1 = game({
 	id: 'pong',
@@ -107,18 +131,32 @@ const game1 = game({
 		p1: { key: { w: ['directions.up'], s: ['directions.down'] } },
 		p2: { key: { ArrowUp: ['directions.up'], ArrowDown: ['directions.down'] } },
 	},
-}, stage1, ball, paddle1, paddle2, p1Goal, p2Goal);
+}, stage1, ball, paddle1, paddle2, p1Goal, p2Goal, p1Text, p2Text, winnerText);
+
+const goalScore = 3;
 
 stage1.onUpdate(
-	globalChange('p1Score', (score) => {
-		console.log('P1 score:', score);
-	}),
 	globalChanges(['p1Score', 'p2Score'], ([p1, p2]) => {
-		if (p1 >= 3) game1.setGlobal('winner', 'p1');
-		if (p2 >= 3) game1.setGlobal('winner', 'p2');
+		if (p1 >= goalScore) game1.setGlobal('winner', 'p1');
+		if (p2 >= goalScore) game1.setGlobal('winner', 'p2');
 	}),
 );
-game1.start();
 game1.onGlobalChange('winner', (value) => {
 	console.log('Winner:', value);
+	if (value === 'p1') {
+		winnerText.updateText('P1 Wins!');
+	} else if (value === 'p2') {
+		winnerText.updateText('P2 Wins!');
+	} else {
+		winnerText.updateText('');
+	}
 });
+
+game1.onGlobalChange('p1Score', (value) => {
+	p1Text.updateText(String(value));
+});
+game1.onGlobalChange('p2Score', (value) => {
+	p2Text.updateText(String(value));
+});
+
+game1.start();
