@@ -2,6 +2,7 @@ import { InputProvider } from './input-provider';
 import { AnalogState, ButtonState, InputGamepad, InputPlayerNumber, Inputs } from './input';
 import { KeyboardProvider } from './keyboard-provider';
 import { GamepadProvider } from './gamepad-provider';
+import { GameInputConfig } from '../game/game-interfaces';
 
 
 export class InputManager {
@@ -9,15 +10,40 @@ export class InputManager {
 	private currentInputs: Inputs = {} as Inputs;
 	private previousInputs: Inputs = {} as Inputs;
 
-	constructor() {
-		this.addInputProvider(1, new KeyboardProvider());
+	constructor(config?: GameInputConfig) {
+		if (config?.p1?.key) {
+			this.addInputProvider(1, new KeyboardProvider(config.p1.key, { includeDefaultBase: false }));
+		} else {
+			this.addInputProvider(1, new KeyboardProvider());
+		}
 		this.addInputProvider(1, new GamepadProvider(0));
+		if (config?.p2?.key) {
+			this.addInputProvider(2, new KeyboardProvider(config.p2.key, { includeDefaultBase: false }));
+		}
 		this.addInputProvider(2, new GamepadProvider(1));
+		if (config?.p3?.key) {
+			this.addInputProvider(3, new KeyboardProvider(config.p3.key, { includeDefaultBase: false }));
+		}
 		this.addInputProvider(3, new GamepadProvider(2));
+		if (config?.p4?.key) {
+			this.addInputProvider(4, new KeyboardProvider(config.p4.key, { includeDefaultBase: false }));
+		}
 		this.addInputProvider(4, new GamepadProvider(3));
+		if (config?.p5?.key) {
+			this.addInputProvider(5, new KeyboardProvider(config.p5.key, { includeDefaultBase: false }));
+		}
 		this.addInputProvider(5, new GamepadProvider(4));
+		if (config?.p6?.key) {
+			this.addInputProvider(6, new KeyboardProvider(config.p6.key, { includeDefaultBase: false }));
+		}
 		this.addInputProvider(6, new GamepadProvider(5));
+		if (config?.p7?.key) {
+			this.addInputProvider(7, new KeyboardProvider(config.p7.key, { includeDefaultBase: false }));
+		}
 		this.addInputProvider(7, new GamepadProvider(6));
+		if (config?.p8?.key) {
+			this.addInputProvider(8, new KeyboardProvider(config.p8.key, { includeDefaultBase: false }));
+		}
 		this.addInputProvider(8, new GamepadProvider(7));
 	}
 

@@ -39,7 +39,7 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 
 	constructor(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>, wrapperRef: Game<TGlobals>) {
 		this.wrapperRef = wrapperRef;
-		this.inputManager = new InputManager();
+		this.inputManager = new InputManager(options.input);
 		this.timer = new Timer();
 		this.timer.connect(document);
 		this.id = options.id;

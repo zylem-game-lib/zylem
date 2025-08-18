@@ -41,9 +41,10 @@ const paddle1 = await box({
 	material: paddleMaterial,
 });
 makeMoveable(paddle1).onUpdate(({ me, inputs }) => {
+	const { Up, Down } = inputs.p1.directions;
 	const { Vertical } = inputs.p1.axes;
-	const { value } = Vertical;
-	me.moveY(-value * paddleSpeed);
+	let value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
+	me.moveY(value * paddleSpeed);
 }, boundary({ boundaries: gameBounds }));
 
 const paddle2 = await box({
@@ -53,9 +54,10 @@ const paddle2 = await box({
 	material: paddleMaterial,
 });
 makeMoveable(paddle2).onUpdate(({ me, inputs }) => {
+	const { Up, Down } = inputs.p2.directions;
 	const { Vertical } = inputs.p2.axes;
-	const { value } = Vertical;
-	me.moveY(-value * paddleSpeed);
+	const value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
+	me.moveY(value * paddleSpeed);
 }, boundary({ boundaries: gameBounds }));
 
 const p1Goal = await zone({
@@ -100,7 +102,11 @@ const game1 = game({
 		p1Score: 0,
 		p2Score: 0,
 		winner: '',
-	}
+	},
+	input: {
+		p1: { key: { w: ['directions.up'], s: ['directions.down'] } },
+		p2: { key: { ArrowUp: ['directions.up'], ArrowDown: ['directions.down'] } },
+	},
 }, stage1, ball, paddle1, paddle2, p1Goal, p2Goal);
 
 stage1.onUpdate(
