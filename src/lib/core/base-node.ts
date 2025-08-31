@@ -13,6 +13,7 @@ export abstract class BaseNode<Options = any, T = any> {
 	public eid: number = 0;
 	public uuid: string = '';
 	public name: string = '';
+	public markedForRemoval: boolean = false;
 
 	update: UpdateFunction<this> = () => { };
 	setup: SetupFunction<this> = () => { };
@@ -92,6 +93,7 @@ export abstract class BaseNode<Options = any, T = any> {
 		if (typeof this._destroy === 'function') {
 			this._destroy(params);
 		}
+		this.markedForRemoval = true;
 	}
 
 	public getOptions(): Options {

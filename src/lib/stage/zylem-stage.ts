@@ -237,6 +237,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 				...params,
 				me: child,
 			});
+			if (child.markedForRemoval) {
+				this.removeEntityByUuid(child.uuid);
+			}
 		});
 		this.scene.update({ delta });
 	}
