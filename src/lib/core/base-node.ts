@@ -1,4 +1,4 @@
-import { Behavior } from "~/lib/behaviors/behavior";
+import { Behavior } from "~/lib/actions/behaviors/behavior";
 import { DestroyContext, DestroyFunction, SetupContext, SetupFunction, UpdateContext, UpdateFunction } from "./base-node-life-cycle";
 import { DEBUG_FLAG } from "./flags";
 import { v4 as uuidv4 } from 'uuid';

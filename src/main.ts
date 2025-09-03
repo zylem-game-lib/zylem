@@ -22,10 +22,10 @@ export { zone } from './lib/entities/zone';
 export { actor } from './lib/entities/actor';
 export { text } from './lib/entities/text';
 export { ZylemBox } from './lib/entities/box';
-export { makeMoveable } from './lib/behaviors/moveable';
+export { makeMoveable } from './lib/actions/capabilities/moveable';
 
 // Behaviors and actions - tree-shakable
-export * as actions from './lib/behaviors/actions';
+export * as actions from './lib/actions/behaviors/actions';
 
 // Destruction utilities
 export { destroy } from './lib/entities/destroy';
@@ -36,11 +36,11 @@ export * as THREE from 'three';
 export * as RAPIER from '@dimforge/rapier3d-compat';
 
 // Update helpers
-export { globalChange, globalChanges } from './lib/actions/update/global-change';
+export { globalChange, globalChanges } from './lib/actions/global-change';
 
 // Legacy namespace for backward compatibility (will bundle everything together)
 // Consider deprecating this in favor of named exports
-import * as actions from './lib/behaviors/actions';
+import * as actions from './lib/actions/behaviors/actions';
 
 const Util = {
 	...actions

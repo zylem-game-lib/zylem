@@ -6,51 +6,67 @@ export interface EntityWithBody {
 }
 
 /**
- * Move an entity along the X axis
+ * Move an entity along the X axis, preserving other velocities
  */
 export function moveX(entity: EntityWithBody, delta: number): void {
-	const vec = new Vector3(delta, 0, 0);
-	move(entity, vec);
+	if (!entity.body) return;
+	const currentVelocity = entity.body.linvel();
+	const newVelocity = new Vector3(delta, currentVelocity.y, currentVelocity.z);
+	entity.body.setLinvel(newVelocity, true);
 }
 
 /**
- * Move an entity along the Y axis
+ * Move an entity along the Y axis, preserving other velocities
  */
 export function moveY(entity: EntityWithBody, delta: number): void {
-	const vec = new Vector3(0, delta, 0);
-	move(entity, vec);
+	if (!entity.body) return;
+	const currentVelocity = entity.body.linvel();
+	const newVelocity = new Vector3(currentVelocity.x, delta, currentVelocity.z);
+	entity.body.setLinvel(newVelocity, true);
 }
 
 /**
- * Move an entity along the Z axis
+ * Move an entity along the Z axis, preserving other velocities
  */
 export function moveZ(entity: EntityWithBody, delta: number): void {
-	const vec = new Vector3(0, 0, delta);
-	move(entity, vec);
+	if (!entity.body) return;
+	const currentVelocity = entity.body.linvel();
+	const newVelocity = new Vector3(currentVelocity.x, currentVelocity.y, delta);
+	entity.body.setLinvel(newVelocity, true);
 }
 
 /**
- * Move an entity along the X and Y axis
+ * Move an entity along the X and Y axis, preserving Z velocity
  */
 export function moveXY(entity: EntityWithBody, deltaX: number, deltaY: number): void {
-	const vec = new Vector3(deltaX, deltaY, 0);
-	move(entity, vec);
+	if (!entity.body) return;
+	const currentVelocity = entity.body.linvel();
+	const newVelocity = new Vector3(deltaX, deltaY, currentVelocity.z);
+	entity.body.setLinvel(newVelocity, true);
 }
 
 /**
- * Move an entity along the X and Z axis
+ * Move an entity along the X and Z axis, preserving Y velocity
  */
 export function moveXZ(entity: EntityWithBody, deltaX: number, deltaZ: number): void {
-	const vec = new Vector3(deltaX, 0, deltaZ);
-	move(entity, vec);
+	if (!entity.body) return;
+	const currentVelocity = entity.body.linvel();
+	const newVelocity = new Vector3(deltaX, currentVelocity.y, deltaZ);
+	entity.body.setLinvel(newVelocity, true);
 }
 
 /**
- * Move entity based on a vector
+ * Move entity based on a vector, adding to existing velocities
  */
 export function move(entity: EntityWithBody, vector: Vector3): void {
 	if (!entity.body) return;
-	entity.body.setLinvel(vector, true);
+	const currentVelocity = entity.body.linvel();
+	const newVelocity = new Vector3(
+		currentVelocity.x + vector.x,
+		currentVelocity.y + vector.y,
+		currentVelocity.z + vector.z
+	);
+	entity.body.setLinvel(newVelocity, true);
 }
 
 /**
@@ -58,11 +74,12 @@ export function move(entity: EntityWithBody, vector: Vector3): void {
  */
 export function resetVelocity(entity: EntityWithBody): void {
 	if (!entity.body) return;
+	entity.body.setLinvel(new Vector3(0, 0, 0), true);
 	entity.body.setLinearDamping(5);
 }
 
 /**
- * Move entity forward in 2D space
+ * Move entity forward in 2D space, preserving Z velocity
  */
 export function moveForwardXY(entity: EntityWithBody, delta: number, rotation2DAngle: number): void {
 	const deltaX = Math.sin(-rotation2DAngle) * delta;
@@ -173,10 +190,67 @@ export interface MoveableEntity extends EntityWithBody {
 	setPositionY(y: number): void;
 	setPositionZ(z: number): void;
 	wrapAroundXY(boundsX: number, boundsY: number): void;
+	wrapAround3D(boundsX: number, boundsY: number, boundsZ: number): void;
 }
 
 /**
- * Enhance an entity with movement methods
+ * Class decorator to enhance an entity with additive movement methods
+ */
+export function moveable<T extends { new(...args: any[]): EntityWithBody }>(constructor: T) {
+	return class extends constructor implements MoveableEntity {
+		moveX(delta: number): void {
+			moveX(this, delta);
+		}
+		moveY(delta: number): void {
+			moveY(this, delta);
+		}
+		moveZ(delta: number): void {
+			moveZ(this, delta);
+		}
+		moveXY(deltaX: number, deltaY: number): void {
+			moveXY(this, deltaX, deltaY);
+		}
+		moveXZ(deltaX: number, deltaZ: number): void {
+			moveXZ(this, deltaX, deltaZ);
+		}
+		move(vector: Vector3): void {
+			move(this, vector);
+		}
+		resetVelocity(): void {
+			resetVelocity(this);
+		}
+		moveForwardXY(delta: number, rotation2DAngle: number): void {
+			moveForwardXY(this, delta, rotation2DAngle);
+		}
+		getPosition(): Vector | null {
+			return getPosition(this);
+		}
+		getVelocity(): Vector | null {
+			return getVelocity(this);
+		}
+		setPosition(x: number, y: number, z: number): void {
+			setPosition(this, x, y, z);
+		}
+		setPositionX(x: number): void {
+			setPositionX(this, x);
+		}
+		setPositionY(y: number): void {
+			setPositionY(this, y);
+		}
+		setPositionZ(z: number): void {
+			setPositionZ(this, z);
+		}
+		wrapAroundXY(boundsX: number, boundsY: number): void {
+			wrapAroundXY(this, boundsX, boundsY);
+		}
+		wrapAround3D(boundsX: number, boundsY: number, boundsZ: number): void {
+			wrapAround3D(this, boundsX, boundsY, boundsZ);
+		}
+	};
+}
+
+/**
+ * Enhance an entity with additive movement methods (retained for compatibility)
  */
 export function makeMoveable<T extends EntityWithBody>(entity: T): T & MoveableEntity {
 	const moveable = entity as T & MoveableEntity;
@@ -196,6 +270,22 @@ export function makeMoveable<T extends EntityWithBody>(entity: T): T & MoveableE
 	moveable.setPositionY = (y: number) => setPositionY(entity, y);
 	moveable.setPositionZ = (z: number) => setPositionZ(entity, z);
 	moveable.wrapAroundXY = (boundsX: number, boundsY: number) => wrapAroundXY(entity, boundsX, boundsY);
+	moveable.wrapAround3D = (boundsX: number, boundsY: number, boundsZ: number) => wrapAround3D(entity, boundsX, boundsY, boundsZ);
 
 	return moveable;
+}
+
+/**
+ * Wrap a standalone function with movement capabilities
+ */
+export function withMovement<T extends (...args: any[]) => any>(
+	fn: T,
+	entity: EntityWithBody
+): (...args: Parameters<T>) => ReturnType<T> & MoveableEntity {
+	const wrapped = (...args: Parameters<T>) => {
+		const result = fn(...args);
+		const moveableEntity = makeMoveable(entity);
+		return Object.assign(result, moveableEntity);
+	};
+	return wrapped as (...args: Parameters<T>) => ReturnType<T> & MoveableEntity;
 }

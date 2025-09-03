@@ -1,5 +1,5 @@
-import { UpdateContext } from "../../core/base-node-life-cycle";
-import { MoveableEntity } from "../../behaviors/moveable";
+import { UpdateContext } from "../../../core/base-node-life-cycle";
+import { MoveableEntity } from "../../capabilities/moveable";
 import { Vector } from "@dimforge/rapier3d-compat";
 
 export interface BoundaryEvent {
@@ -78,6 +78,11 @@ function _boundary(updateContext: UpdateContext<MoveableEntity>, options: Partia
 			entity.moveY(0);
 		} else if (velocity?.y > 0 && boundaryHit === 'top') {
 			entity.moveY(0);
+		}
+		if (velocity?.x < 0 && boundaryHit === 'left') {
+			entity.moveX(0);
+		} else if (velocity?.x > 0 && boundaryHit === 'right') {
+			entity.moveX(0);
 		}
 	}
 	if (onBoundary && boundaryHit) {

@@ -21,11 +21,19 @@ export interface LifeCycleDelegate<U> {
 	destroy?: ((params: DestroyContext<U>) => void) | ((params: DestroyContext<U>) => void)[];
 }
 
-export interface CollisionContext<T, O extends GameEntityOptions> {
+export interface CollisionContext<T, O extends GameEntityOptions, TGlobals extends Record<string, unknown> = any> {
 	entity: T;
 	other: GameEntity<O>;
-	globals?: any;
+	globals: TGlobals;
 }
+
+export type BehaviorContext<T, O extends GameEntityOptions> =
+	SetupContext<T, O> |
+	UpdateContext<T, O> |
+	CollisionContext<T, O> |
+	DestroyContext<T>;
+
+export type BehaviorCallback<T, O extends GameEntityOptions> = (params: BehaviorContext<T, O>) => void;
 
 export interface CollisionDelegate<T, O extends GameEntityOptions> {
 	collision?: ((params: CollisionContext<T, O>) => void) | ((params: CollisionContext<T, O>) => void)[];
@@ -67,6 +75,8 @@ export interface EntityDebugInfo {
 	buildInfo: () => Record<string, string>;
 }
 
+export type BehaviorCallbackType = 'setup' | 'update' | 'destroy' | 'collision';
+
 export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implements GameEntityLifeCycle, EntityDebugInfo {
 	public group: Group | undefined;
 	public mesh: Mesh | undefined;
@@ -83,6 +93,13 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 	public lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
 	public collisionDelegate: CollisionDelegate<this, O> | undefined;
 	public collisionType?: string;
+
+	public behaviorCallbackMap: Record<BehaviorCallbackType, BehaviorCallback<this, O>[]> = {
+		setup: [],
+		update: [],
+		destroy: [],
+		collision: [],
+	};
 
 	constructor() {
 		super();
@@ -132,6 +149,9 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 	}
 
 	public _setup(params: SetupContext<this>): void {
+		this.behaviorCallbackMap.setup.forEach(callback => {
+			callback({ ...params, me: this });
+		});
 		if (this.lifeCycleDelegate?.setup) {
 			const callbacks = this.lifeCycleDelegate.setup;
 			if (typeof callbacks === 'function') {
@@ -146,6 +166,9 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 
 	public _update(params: UpdateContext<this>): void {
 		this.updateMaterials(params);
+		this.behaviorCallbackMap.update.forEach(callback => {
+			callback({ ...params, me: this });
+		});
 		if (this.lifeCycleDelegate?.update) {
 			const callbacks = this.lifeCycleDelegate.update;
 			if (typeof callbacks === 'function') {
@@ -159,6 +182,9 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 	}
 
 	public _destroy(params: DestroyContext<this>): void {
+		this.behaviorCallbackMap.destroy.forEach(callback => {
+			callback({ ...params, me: this });
+		});
 		if (this.lifeCycleDelegate?.destroy) {
 			const callbacks = this.lifeCycleDelegate.destroy;
 			if (typeof callbacks === 'function') {
@@ -172,6 +198,9 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 	}
 
 	public _collision(other: GameEntity<O>, globals?: any): void {
+		this.behaviorCallbackMap.collision.forEach(callback => {
+			callback({ entity: this, other, globals });
+		});
 		if (this.collisionDelegate?.collision) {
 			const callbacks = this.collisionDelegate.collision;
 			if (typeof callbacks === 'function') {
@@ -182,6 +211,28 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 				});
 			}
 		}
+	}
+
+	public addBehavior(
+		behaviorCallback: ({ type: BehaviorCallbackType, handler: any })
+	): this {
+		const handler = behaviorCallback.handler as unknown as BehaviorCallback<this, O>;
+		if (handler) {
+			this.behaviorCallbackMap[behaviorCallback.type].push(handler);
+		}
+		return this;
+	}
+
+	public addBehaviors(
+		behaviorCallbacks: ({ type: BehaviorCallbackType, handler: any })[]
+	): this {
+		behaviorCallbacks.forEach(callback => {
+			const handler = callback.handler as unknown as BehaviorCallback<this, O>;
+			if (handler) {
+				this.behaviorCallbackMap[callback.type].push(handler);
+			}
+		});
+		return this;
 	}
 
 	protected updateMaterials(params: any) {

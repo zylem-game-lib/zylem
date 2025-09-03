@@ -4,9 +4,11 @@ export type BasicTypes = number | string | boolean;
 export type GlobalVariablesType = Record<string, BasicTypes>;
 
 export type KeyboardMapping = Record<string, string[]>;
+export type MouseMapping = Record<string, string[]>;
 
 export interface GameInputPlayerConfig {
 	key?: KeyboardMapping;
+	mouse?: MouseMapping;
 }
 
 export interface GameInputConfig {

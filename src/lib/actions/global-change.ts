@@ -1,4 +1,4 @@
-import { UpdateContext } from "../../core/base-node-life-cycle";
+import { UpdateContext } from "../core/base-node-life-cycle";
 
 /**
  * Listen for a single global key change inside an onUpdate pipeline.

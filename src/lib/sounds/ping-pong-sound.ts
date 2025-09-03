@@ -1,15 +1,11 @@
 /**
- * Plays a beep sound when the collision occurs
+ * Plays a ping-pong beep sound effect.
  */
-export function pingPongBeep() {
-	return (collisionContext: any) => {
-		_pingPongBeep();
-	};
+export function pingPongBeep(frequency: number = 440, duration: number = 0.1) {
+	_pingPongBeep(frequency, duration);
 }
 
-function _pingPongBeep() {
-	const frequency = 440;
-	const duration = 0.1;
+function _pingPongBeep(frequency: number, duration: number) {
 	const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
 	const oscillator = audioCtx.createOscillator();
 	const gain = audioCtx.createGain();
@@ -17,7 +13,7 @@ function _pingPongBeep() {
 	oscillator.type = 'square';
 	oscillator.frequency.value = frequency;
 
-	gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+	gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
 	gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
 
 	oscillator.connect(gain);

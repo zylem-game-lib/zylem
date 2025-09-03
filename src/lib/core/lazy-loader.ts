@@ -87,7 +87,7 @@ export const loadEntity = async (entityType: 'box' | 'sphere' | 'sprite' | 'plan
 
 // Level 5: Behaviors (depends on entities)
 export const loadBehaviors = async () => {
-	const behaviors = await import('../behaviors/actions');
+	const behaviors = await import('../actions/behaviors/actions');
 	return behaviors;
 };
 

@@ -86,4 +86,4 @@ export function setRotation(entity: RotatableEntity, x: number, y: number, z: nu
 export function getRotation(entity: RotatableEntity): any {
 	if (!entity.body) return null;
 	return entity.body.rotation();
-} 
+}
