@@ -1,7 +1,7 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { game, stage, actor, box, plane, sphere, zone, Perspectives, Zylem } from '../../src/main';
-import { node } from '../../src/lib/entities';
-import { IGameEntity } from '../../src/lib/core';
+import { game, stage, actor, box, plane, sphere, zone, Perspectives, Zylem } from '../src/main';
+import { node } from '../src/lib/entities';
+import { IGameEntity } from '../src/lib/core';
 
 const { actionOnRelease, actionWithCooldown, actionOnPress } = Zylem.Util;
 const { ThirdPerson } = Perspectives;
@@ -136,7 +136,7 @@ const testHealth = actor({
 	models: ['playground/health-box.gltf'],
 	static: true,
 	setup: ({ entity }) => {
-		entity.setPosition(10,2,2);
+		entity.setPosition(10, 2, 2);
 	},
 	collision: (healthBox, other, globals) => {
 		const { health, maxHealth } = globals;
@@ -176,7 +176,7 @@ const stage1 = stage({
 			position: new Vector2(24, 22),
 			binding: 'health',
 			update: (element, value) => {
-				if (value < 500 ) {
+				if (value < 500) {
 					element.updateText(`Health is geting low! ${value}`);
 				} else {
 					element.updateText(`Health: ${value}`);

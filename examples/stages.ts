@@ -1,5 +1,5 @@
 import { Color } from 'three';
-import { game, stage, actions } from '../../src/main';
+import { game, stage, actions } from '../src/main';
 const { wait } = actions;
 
 /** Basic game with stages */

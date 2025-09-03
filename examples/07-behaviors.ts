@@ -1,10 +1,10 @@
-import { ArrowHelper, Color, Vector3 } from 'three';
-import { destroy, game, stage, zone } from '../../src/main';
-import { rotateInDirection } from '../../src/lib/behaviors/rotatable';
-import { move } from '../../src/lib/behaviors/moveable';
+import { ArrowHelper, Vector3 } from 'three';
+import { game, stage, zone } from '../src/main';
+import { rotateInDirection } from '../src/lib/actions/capabilities/rotatable';
+import { move, resetVelocity } from '../src/lib/actions/capabilities/moveable';
 import { Ray } from '@dimforge/rapier3d-compat';
 import { playgroundPlane, playgroundActor, playgroundPlatforms } from './utils';
-import { StageEntity } from '../../src/lib/interfaces/entity';
+import { StageEntity } from '../src/lib/interfaces/entity';
 
 const stage1 = await stage({
 	gravity: new Vector3(0, -9.82, 0),
@@ -52,9 +52,6 @@ const testGame = game(
 	{
 		id: 'behaviors-test',
 		debug: true,
-		behaviors: [
-			// moveable,
-		],
 	},
 	stage1,
 	startingZone,
@@ -165,6 +162,8 @@ testGame.update = ({ inputs, delta }) => {
 
 	// Apply movement using physics body
 	// @ts-ignore
+	resetVelocity(player);
+	// @ts-ignore
 	move(player, playerForce);
 
 	if (grounded) {
@@ -192,6 +191,8 @@ testGame.update = ({ inputs, delta }) => {
 	}
 
 	// Rotate player in movement direction
+	// @ts-ignore
+	// resetRotation(player);
 	// @ts-ignore
 	rotateInDirection(player, lastMovement);
 };

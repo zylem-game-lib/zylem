@@ -1,5 +1,5 @@
 import { Color } from 'three';
-import { game, stage } from '../../src/main';
+import { game, stage } from '../src/main';
 
 const stage1 = stage({
 	inputs: {

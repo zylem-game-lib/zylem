@@ -1,4 +1,4 @@
-import { game, sphere, makeMoveable } from '../../src/main';
+import { game, sphere, makeMoveable } from '../src/main';
 
 const ball = await sphere();
 makeMoveable(ball).onUpdate(({ me, inputs }) => {

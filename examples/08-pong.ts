@@ -1,11 +1,11 @@
 import { Color, Vector3, Vector2 } from 'three';
-import { game, box, sphere, stage, camera, zone, globalChange, globalChanges, text } from '../../src/main';
-import { makeMoveable } from '../../src/lib/behaviors/moveable';
-import { Vec0 } from '../../src/lib/core/utility';
-import { pingPong } from '../../src/lib/actions/collision/ping-pong';
-import { ricochet2d } from '../../src/lib/actions/update/ricochet';
-import { ricochetSound, pingPongBeep } from '../../src/lib/sounds';
-import { boundary } from '../../src/lib/actions/update/boundary';
+import { game, box, sphere, stage, camera, zone, globalChange, globalChanges, text } from '../src/main';
+import { makeMoveable } from '../src/lib/actions/capabilities/moveable';
+import { Vec0 } from '../src/lib/core/utility';
+import { ricochet2DInBounds } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
+import { ricochetSound, pingPongBeep } from '../src/lib/sounds';
+import { boundary } from '../src/lib/actions/behaviors/boundaries/boundary';
+import { ricochet2DCollision } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-collision';
 
 const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
 
@@ -18,17 +18,14 @@ const ball = await sphere({
 const moveableBall = makeMoveable(ball).onSetup(({ me }) => {
 	me.setPosition(0, 0, 0);
 	me.moveX(5);
-}).onUpdate(
-	ricochet2d({
-		boundaries: gameBounds,
-		onRicochet: () => {
-			ricochetSound();
-		}
+}).addBehaviors([
+	ricochet2DInBounds({ boundaries: gameBounds }, () => {
+		ricochetSound();
+	}),
+	ricochet2DCollision({ collisionWith: { name: RegExp('paddle') } }, () => {
+		pingPongBeep();
 	})
-).onCollision(
-	pingPong({ minSpeed: 10 }),
-	pingPongBeep()
-);
+]);
 
 const paddleSize = { x: 0.20, y: 1.5, z: 1 };
 const paddleMaterial = { color: new Color(Color.NAMES.lightblue) };
@@ -70,7 +67,7 @@ p1Goal.onEnter(({ visitor }) => {
 	if (visitor.uuid === moveableBall.uuid) {
 		game1.setGlobal('p1Score', p1Score + 1);
 		moveableBall.setPosition(0, 0, 0);
-		moveableBall.moveX(-5);
+		moveableBall.moveXY(-5, 0);
 	}
 });
 
@@ -84,7 +81,7 @@ p2Goal.onEnter(({ visitor }) => {
 	if (visitor.uuid === moveableBall.uuid) {
 		game1.setGlobal('p2Score', p2Score + 1);
 		moveableBall.setPosition(0, 0, 0);
-		moveableBall.moveX(5);
+		moveableBall.moveXY(5, 0);
 	}
 });
 

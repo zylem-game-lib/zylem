@@ -1,4 +1,4 @@
-import { game, vessel, stage } from '../../src/main';
+import { game, vessel, stage } from '../src/main';
 
 const test = vessel();
 test.setup = (params) => {

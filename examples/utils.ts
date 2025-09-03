@@ -1,7 +1,7 @@
-import { CollisionOptions } from "../../src/lib/collision/collision";
-import { ZylemBox } from "../../src/lib/entities/box";
-import { ZylemSphere } from "../../src/lib/entities/sphere";
-import { actor, box, plane, sphere } from "../../src/main";
+import { CollisionOptions } from "../src/lib/collision/collision";
+import { ZylemBox } from "../src/lib/entities/box";
+import { ZylemSphere } from "../src/lib/entities/sphere";
+import { actor, box, plane, sphere } from "../src/main";
 import { Color, Vector2, Vector3 } from "three";
 
 export type PlaygroundPlaneType = 'grass' | 'dirt' | 'wood' | 'mars' | 'steel';

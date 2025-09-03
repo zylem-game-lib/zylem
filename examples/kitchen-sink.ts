@@ -1,5 +1,5 @@
 import { Vector2, Vector3 } from 'three';
-import { game, stage, box, sphere } from '../../src/main';
+import { game, stage, box, sphere } from '../src/main';
 
 const rainPath = 'playground/rain-man.png';
 const grassPath = 'playground/grass.jpg';

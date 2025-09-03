@@ -1,6 +1,6 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { ZylemSphere, plane, sphere } from '../../src/lib/entities';
-import { game, stage } from '../../src/main';
+import { ZylemSphere, plane, sphere } from '../src/lib/entities';
+import { game, stage } from '../src/main';
 
 const ground = await plane({
 	tile: new Vector2(2000, 2000),

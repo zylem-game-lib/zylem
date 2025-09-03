@@ -1,5 +1,5 @@
 import { Color, Vector3 } from 'three';
-import { box, Perspectives, game, stage, camera } from '../../src/main';
+import { box, Perspectives, game, stage, camera } from '../src/main';
 
 const boxes = [
 	await box({

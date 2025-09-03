@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { game, stage, box, actor, move, bounce } from '../../src/main';
+import { game, stage, box, actor, move, bounce } from '../src/main';
 
 function behaviors(): any[] {
 	return [

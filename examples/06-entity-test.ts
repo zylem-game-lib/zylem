@@ -1,4 +1,4 @@
-import { game, stage, box, plane, sphere, sprite, actor, zone, destroy } from '../../src/main';
+import { game, stage, box, plane, sphere, sprite, actor, zone, destroy } from '../src/main';
 import { Vector3, Vector2 } from 'three';
 import { playgroundActor } from './utils';
 

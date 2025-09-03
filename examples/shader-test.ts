@@ -1,7 +1,7 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { game, stage } from '../../src/main';
-import { actor, plane, sphere } from '../../src/lib/entities';
-import { StageEntity  } from '../../src/lib/core';
+import { game, stage } from '../src/main';
+import { actor, plane, sphere } from '../src/lib/entities';
+import { StageEntity } from '../src/lib/core';
 
 const player = actor({
 	name: 'player',
@@ -117,7 +117,7 @@ const shaderTest = game(
 						entity.setPosition(-5, 6, 0);
 					}
 				})
-				
+
 			];
 		}
 	})

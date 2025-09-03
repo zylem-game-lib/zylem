@@ -1,4 +1,4 @@
-import { game } from '../../src/main';
+import { game } from '../src/main';
 
 /* Basic game */
 const basicGame = game({
