@@ -161,6 +161,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 					const euler = new Euler().setFromQuaternion(quat, 'XYZ');
 					_sprite.material.rotation = euler.z;
 				}
+				_sprite.scale.set(this.options.size?.x ?? 1, this.options.size?.y ?? 1, this.options.size?.z ?? 1);
 			}
 		});
 	}

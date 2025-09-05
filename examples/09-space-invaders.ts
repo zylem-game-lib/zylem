@@ -1,12 +1,13 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { camera, destroy, game, makeMoveable, makeRotatable, makeSpawnable, Perspectives, sprite, stage, text } from '../src/main';
+import { camera, destroy, entitySpawner, game, makeMoveable, makeRotatable, Perspectives, sprite, stage, text } from '../src/main';
 import { boundary } from '../src/lib/actions/behaviors/boundaries/boundary';
 import { movementSequence2D } from '../src/lib/actions/behaviors/movement/movement-sequence-2d';
 import { ZylemSprite } from '../src/lib/entities/sprite';
+import { makeTransformable } from '../src/lib/actions/capabilities/transformable';
 
 const directory = 'playground/space-2d/';
 
-const player = makeMoveable(await sprite({
+const player = makeTransformable(await sprite({
 	name: 'player',
 	images: [
 		{ name: 'player', file: `${directory}/player-ship.png` },
@@ -15,28 +16,30 @@ const player = makeMoveable(await sprite({
 }));
 
 async function createBullet(x: number, y: number) {
-	const bullet = makeRotatable(makeMoveable(await sprite({
+	const bullet = makeTransformable(await sprite({
 		name: 'bullet',
 		images: [
 			{ name: 'bullet', file: `${directory}/player-laser.png` },
 		],
-	}))).onSetup(({ me }) => {
+		position: new Vector3(x, y, 0),
+		size: new Vector3(0.5, 0.5, 1),
+	})).onSetup(({ me }) => {
 		me.setPosition(x, y, 0);
 		me.setRotationDegreesZ(180);
 	}).onUpdate(({ me }) => {
-		me.moveY(12);
-	}).onCollision(({ entity, other, globals }) => {
+		me.moveY(14);
+	}).onCollision(({ entity, other }) => {
 		if (other.name === 'enemy') {
 			destroy(other);
 			destroy(entity);
-			ableToShoot = true;
+			shotsFired = 0;
 		}
 	}).addBehavior(boundary({
 		boundaries: { top: 10, bottom: -10, left: -10, right: 10 },
 		onBoundary: ({ boundary }) => {
 			if (boundary.top) {
 				destroy(bullet);
-				ableToShoot = true;
+				shotsFired = maxShots - 1;
 			}
 		}
 	}));
@@ -44,16 +47,17 @@ async function createBullet(x: number, y: number) {
 }
 
 const speed = 5;
-let ableToShoot = true;
+const maxShots = 2;
+let shotsFired = 0;
 player.onUpdate(({ me, inputs }) => {
 	let { Horizontal, Vertical } = inputs.p1.axes;
-	const { A } = inputs.p1.buttons;
+	const { A, B } = inputs.p1.buttons;
 	const horizontal = Horizontal.value * speed;
 	const vertical = -(Vertical.value * speed);
 	me.moveXY(horizontal, vertical);
-	if (A.pressed && ableToShoot) {
-		ableToShoot = false;
-		stage1.add(createBullet(me.getPosition()?.x ?? 0, me.getPosition()?.y ?? 0 + 1));
+	if (A.pressed && shotsFired < maxShots) {
+		shotsFired++;
+		bulletSpawner.spawnRelative(player, stage1, new Vector2(0, 1));
 	}
 });
 player.addBehavior(boundary({ boundaries: { top: 1, bottom: -10, left: -10, right: 10 } }));
@@ -96,6 +100,8 @@ const camera1 = camera({
 const stage1 = stage({
 	backgroundColor: new Color(Color.NAMES.black),
 }, camera1, ...enemies, player);
+
+const bulletSpawner = entitySpawner(createBullet);
 
 const livesText = await text({
 	name: 'livesText',

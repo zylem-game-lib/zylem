@@ -1,8 +1,11 @@
 // Core game functionality - these will be in the main chunk
 export { game } from './lib/game/game';
 export type { ZylemGameConfig } from './lib/game/game-interfaces';
+
 export { stage } from './lib/stage/stage';
+export { entitySpawner } from './lib/stage/entity-spawner';
 export type { StageOptions } from './lib/stage/zylem-stage';
+
 export { vessel } from './lib/core/vessel';
 
 // Camera system - separate chunk
@@ -24,7 +27,7 @@ export { text } from './lib/entities/text';
 export { ZylemBox } from './lib/entities/box';
 export { makeMoveable } from './lib/actions/capabilities/moveable';
 export { makeRotatable } from './lib/actions/capabilities/rotatable';
-export { makeSpawnable } from './lib/actions/capabilities/spawnable';
+export { makeTransformable } from './lib/actions/capabilities/transformable';
 
 // Behaviors and actions - tree-shakable
 export * as actions from './lib/actions/behaviors/actions';

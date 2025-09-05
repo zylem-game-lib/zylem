@@ -142,9 +142,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 	 */
 	addEntity(entity: GameEntity<any>) {
 		if (entity.group) {
-			this.scene.add(entity.group);
+			this.add(entity.group, entity.options.position);
 		} else if (entity.mesh) {
-			this.scene.add(entity.mesh);
+			this.add(entity.mesh, entity.options.position);
 		}
 	}
 

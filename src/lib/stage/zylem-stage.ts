@@ -1,4 +1,4 @@
-import { addComponent, addEntity, createWorld as createECS } from 'bitecs';
+import { addComponent, addEntity, createWorld as createECS, removeEntity } from 'bitecs';
 import { Color, Vector3, Vector2 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
@@ -10,6 +10,7 @@ import { setStageBackgroundColor, setStageBackgroundImage } from './stage-state'
 import { GameEntityInterface } from '../types/entity-types';
 import { ZylemBlueColor } from '../core/utility';
 import { debugState } from '../debug/debug-state';
+import { getGlobalState } from "../game/game-state";
 
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
 import { LifeCycleBase } from '../core/lifecycle-base';
@@ -43,6 +44,15 @@ export type StageState = ZylemStageConfig & { entities: GameEntityInterface[] };
 
 export const STAGE_TYPE = 'Stage';
 
+/**
+ * ZylemStage orchestrates scene, physics world, entities, and lifecycle.
+ *
+ * Responsibilities:
+ * - Manage stage configuration (background, inputs, gravity, variables)
+ * - Initialize and own `ZylemScene` and `ZylemWorld`
+ * - Spawn, track, and remove entities; emit entity-added events
+ * - Drive per-frame updates and transform system
+ */
 export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	public type = STAGE_TYPE;
 
@@ -85,6 +95,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	camera?: CameraWrapper;
 	cameraRef?: ZylemCamera | null = null;
 
+	/**
+	 * Create a new stage.
+	 * @param options Stage options: partial config, camera, and initial entities or factories
+	 */
 	constructor(options: StageOptions = []) {
 		super();
 		this.world = null;
@@ -160,6 +174,28 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		return false;
 	}
 
+	private isThenable(value: any): value is Promise<any> {
+		return !!value && typeof (value as any).then === 'function';
+	}
+
+	private handleEntityImmediatelyOrQueue(entity: BaseNode): void {
+		if (this.isLoaded) {
+			this.spawnEntity(entity);
+		} else {
+			this.children.push(entity);
+		}
+	}
+
+	private handlePromiseWithSpawnOnResolve(promise: Promise<any>): void {
+		if (this.isLoaded) {
+			promise
+				.then((entity) => this.spawnEntity(entity))
+				.catch((e) => console.error('Failed to build async entity', e));
+		} else {
+			this.pendingPromises.push(promise as Promise<BaseNode>);
+		}
+	}
+
 	private saveState(state: StageState) {
 		this.state = state;
 	}
@@ -170,6 +206,11 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		setStageBackgroundImage(backgroundImage);
 	}
 
+	/**
+	 * Load and initialize the stage's scene and world.
+	 * @param id DOM element id for the renderer container
+	 * @param camera Optional camera override
+	 */
 	async load(id: string, camera?: ZylemCamera | null) {
 		this.setState();
 
@@ -224,7 +265,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		}
 		this.world.update(params);
 		this.transformSystem(this.ecs);
-		this._childrenMap.forEach((child, uuid) => {
+		this._childrenMap.forEach((child, eid) => {
 			child.nodeUpdate({
 				...params,
 				me: child,
@@ -236,18 +277,24 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.scene.update({ delta });
 	}
 
+	/** Update debug overlays and helpers if enabled. */
 	public debugUpdate() {
 		if (debugState.on) {
 			this.debugDelegate?.update();
 		}
 	}
 
+	/** Cleanup owned resources when the stage is destroyed. */
 	protected _destroy(params: DestroyContext<ZylemStage>): void {
 		this.world?.destroy();
 		this.scene?.destroy();
 		this.debugDelegate?.dispose();
 	}
 
+	/**
+	 * Create, register, and add an entity to the scene/world.
+	 * Safe to call only after `load` when scene/world exist.
+	 */
 	async spawnEntity(child: BaseNode) {
 		if (!this.scene || !this.world) {
 			return;
@@ -271,7 +318,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		}
 		child.nodeSetup({
 			me: child,
-			globals: {},
+			globals: getGlobalState(),
 			camera: this.scene.zylemCamera,
 		});
 		this.addEntityToStage(entity);
@@ -288,6 +335,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		} as Partial<BaseEntityInterface>;
 	}
 
+	/** Add the entity to internal maps and notify listeners. */
 	addEntityToStage(entity: BaseNode) {
 		this._childrenMap.set(entity.eid, entity);
 		if (debugState.on) {
@@ -302,6 +350,12 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		}
 	}
 
+	/**
+	 * Subscribe to entity-added events.
+	 * @param callback Invoked for each entity when added
+	 * @param options.replayExisting If true and stage already loaded, replays existing entities
+	 * @returns Unsubscribe function
+	 */
 	onEntityAdded(callback: (entity: BaseNode) => void, options?: { replayExisting?: boolean }) {
 		this.entityAddedHandlers.push(callback);
 		if (options?.replayExisting && this.isLoaded) {
@@ -314,6 +368,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		};
 	}
 
+	/**
+	 * Remove an entity and its resources by its UUID.
+	 * @returns true if removed, false if not found or stage not ready
+	 */
 	removeEntityByUuid(uuid: string): boolean {
 		if (!this.scene || !this.world) return false;
 		// Try mapping via world collision map first for physics-backed entities
@@ -330,19 +388,22 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			this.scene.scene.remove(entity.mesh);
 		}
 
+		removeEntity(this.ecs, entity.eid);
+
 		let foundKey: number | null = null;
 		this._childrenMap.forEach((value, key) => {
 			if ((value as any).uuid === uuid) {
 				foundKey = key;
 			}
 		});
-		if (foundKey) {
+		if (foundKey !== null) {
 			this._childrenMap.delete(foundKey);
 		}
 		this._debugMap.delete(uuid);
 		return true;
 	}
 
+	/** Get an entity by its name; returns null if not found. */
 	getEntityByName(name: string) {
 		const arr = Object.entries(Object.fromEntries(this._childrenMap)).map((entry) => entry[1]);
 		const entity = arr.find((child) => child.name === name);
@@ -356,52 +417,41 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		console.warn('Zylem world or scene is null');
 	}
 
+	/** Resize renderer viewport. */
 	resize(width: number, height: number) {
 		if (this.scene) {
 			this.scene.updateRenderer(width, height);
 		}
 	}
 
+	/**
+	 * Enqueue items to be spawned. Items can be:
+	 * - BaseNode instances (immediate or deferred until load)
+	 * - Factory functions returning BaseNode or Promise<BaseNode>
+	 * - Promises resolving to BaseNode
+	 */
 	enqueue(...items: StageEntityInput[]) {
 		for (const item of items) {
 			if (!item) continue;
 			if (this.isBaseNode(item)) {
-				if (this.isLoaded) {
-					this.spawnEntity(item);
-				} else {
-					this.children.push(item);
-				}
+				this.handleEntityImmediatelyOrQueue(item);
 				continue;
 			}
 			if (typeof item === 'function') {
 				try {
 					const result = (item as (() => BaseNode | Promise<any>))();
 					if (this.isBaseNode(result)) {
-						if (this.isLoaded) {
-							this.spawnEntity(result);
-						} else {
-							this.children.push(result);
-						}
-					} else if (result && typeof (result as any).then === 'function') {
-						const promise = result as Promise<any>;
-						if (this.isLoaded) {
-							promise.then((entity) => this.spawnEntity(entity)).catch((e) => console.error('Failed to build async entity', e));
-						} else {
-							this.pendingPromises.push(promise);
-						}
+						this.handleEntityImmediatelyOrQueue(result);
+					} else if (this.isThenable(result)) {
+						this.handlePromiseWithSpawnOnResolve(result as Promise<any>);
 					}
 				} catch (error) {
 					console.error('Error executing entity factory', error);
 				}
 				continue;
 			}
-			if (item && typeof (item as any).then === 'function') {
-				const promise = item as Promise<any>;
-				if (this.isLoaded) {
-					promise.then((entity) => this.spawnEntity(entity)).catch((e) => console.error('Failed to build async entity', e));
-				} else {
-					this.pendingPromises.push(promise);
-				}
+			if (this.isThenable(item)) {
+				this.handlePromiseWithSpawnOnResolve(item as Promise<any>);
 			}
 		}
 	}

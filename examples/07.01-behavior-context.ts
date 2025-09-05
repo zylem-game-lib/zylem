@@ -1,5 +1,5 @@
 import { game, sphere } from '../src/main';
-import { debugBehavior } from '../../src/lib/behaviors/debug/debug';
+import { debugBehavior } from '../src/lib/behaviors/debug/debug';
 
 const ball = await sphere();
 
