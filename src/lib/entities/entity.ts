@@ -172,39 +172,39 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 
 	public _update(params: UpdateContext<this>): void {
 		this.updateMaterials(params);
-		this.behaviorCallbackMap.update.forEach(callback => {
-			callback({ ...params, me: this });
-		});
 		if (this.lifeCycleDelegate.update?.length) {
 			const callbacks = this.lifeCycleDelegate.update;
 			callbacks.forEach(callback => {
 				callback({ ...params, me: this as unknown as O });
 			});
 		}
+		this.behaviorCallbackMap.update.forEach(callback => {
+			callback({ ...params, me: this });
+		});
 	}
 
 	public _destroy(params: DestroyContext<this>): void {
-		this.behaviorCallbackMap.destroy.forEach(callback => {
-			callback({ ...params, me: this });
-		});
 		if (this.lifeCycleDelegate.destroy?.length) {
 			const callbacks = this.lifeCycleDelegate.destroy;
 			callbacks.forEach(callback => {
 				callback({ ...params, me: this as unknown as O });
 			});
 		}
+		this.behaviorCallbackMap.destroy.forEach(callback => {
+			callback({ ...params, me: this });
+		});
 	}
 
 	public _collision(other: GameEntity<O>, globals?: any): void {
-		this.behaviorCallbackMap.collision.forEach(callback => {
-			callback({ entity: this, other, globals });
-		});
 		if (this.collisionDelegate.collision?.length) {
 			const callbacks = this.collisionDelegate.collision;
 			callbacks.forEach(callback => {
 				callback({ entity: this, other, globals });
 			});
 		}
+		this.behaviorCallbackMap.collision.forEach(callback => {
+			callback({ entity: this, other, globals });
+		});
 	}
 
 	public addBehavior(

@@ -1,5 +1,5 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { camera, destroy, entitySpawner, game, makeMoveable, makeRotatable, Perspectives, sprite, stage, text } from '../src/main';
+import { camera, destroy, entitySpawner, game, makeMoveable, Perspectives, sprite, stage, text } from '../src/main';
 import { boundary } from '../src/lib/actions/behaviors/boundaries/boundary';
 import { movementSequence2D } from '../src/lib/actions/behaviors/movement/movement-sequence-2d';
 import { ZylemSprite } from '../src/lib/entities/sprite';
