@@ -83,7 +83,31 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	destroy() {
-		// Scene cleanup if needed
+		if (this.containerElement && this.zylemCamera) {
+			try {
+				const canvas = this.zylemCamera.getDomElement();
+				if (canvas && canvas.parentElement === this.containerElement) {
+					this.containerElement.removeChild(canvas);
+				}
+			} catch { /* noop */ }
+		}
+		if (this.zylemCamera && (this.zylemCamera as any).destroy) {
+			(this.zylemCamera as any).destroy();
+		}
+		if (this.scene) {
+			this.scene.traverse((obj: any) => {
+				if (obj.geometry) {
+					obj.geometry.dispose?.();
+				}
+				if (obj.material) {
+					if (Array.isArray(obj.material)) {
+						obj.material.forEach((m: any) => m.dispose?.());
+					} else {
+						obj.material.dispose?.();
+					}
+				}
+			});
+		}
 	}
 
 	update({ delta }: Partial<any>) {

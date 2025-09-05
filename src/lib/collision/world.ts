@@ -132,6 +132,17 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		}
 	}
 
-	destroy() { }
+	destroy() {
+		try {
+			for (const [, entity] of this.collisionMap) {
+				try { this.destroyEntity(entity); } catch { /* noop */ }
+			}
+			this.collisionMap.clear();
+			this.collisionBehaviorMap.clear();
+			this._removalMap.clear();
+			// @ts-ignore
+			this.world = undefined as any;
+		} catch { /* noop */ }
+	}
 
 }

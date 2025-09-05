@@ -74,4 +74,17 @@ export default class RenderPass extends Pass {
 			fragmentShader: fragmentShader
 		});
 	}
+
+	dispose() {
+		try {
+			this.fsQuad?.dispose?.();
+		} catch { /* noop */ }
+		try {
+			(this.rgbRenderTarget as any)?.dispose?.();
+			(this.normalRenderTarget as any)?.dispose?.();
+		} catch { /* noop */ }
+		try {
+			(this.normalMaterial as any)?.dispose?.();
+		} catch { /* noop */ }
+	}
 }

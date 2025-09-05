@@ -286,9 +286,24 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	/** Cleanup owned resources when the stage is destroyed. */
 	protected _destroy(params: DestroyContext<ZylemStage>): void {
+		// Destroy children entities first to allow custom teardown
+		this._childrenMap.forEach((child) => {
+			try { child.nodeDestroy({ me: child, globals: getGlobalState() }); } catch { /* noop */ }
+		});
+		this._childrenMap.clear();
+		this._removalMap.clear();
+		this._debugMap.clear();
+
+		// Dispose world and scene
 		this.world?.destroy();
 		this.scene?.destroy();
 		this.debugDelegate?.dispose();
+
+		// Reset flags and references
+		this.isLoaded = false;
+		this.world = null as any;
+		this.scene = null as any;
+		this.cameraRef = null;
 	}
 
 	/**

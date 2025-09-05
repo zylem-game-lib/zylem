@@ -32,6 +32,7 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 
 	wrapperRef: Game<TGlobals>;
 	statsRef: { begin: () => void, end: () => void } | null = null;
+	defaultCamera: ZylemCamera | null = null;
 
 	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
@@ -48,10 +49,29 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 	}
 
 	async loadStage(stage: Stage) {
+		this.unloadCurrentStage();
 		const config = stage.options[0] as any;
 		await stage.load(this.id, config?.camera as ZylemCamera | null);
 		this.stageMap.set(stage.stageRef!.uuid, stage);
 		this.currentStageId = stage.stageRef!.uuid;
+		this.defaultCamera = stage.stageRef!.cameraRef!;
+	}
+
+	unloadCurrentStage() {
+		if (!this.currentStageId) return;
+		const current = this.getStage(this.currentStageId);
+		if (!current) return;
+		if (current?.stageRef) {
+			try {
+				current.stageRef.nodeDestroy({
+					me: current.stageRef,
+					globals: state.globals as unknown as TGlobals,
+				});
+			} catch (e) {
+				console.error('Failed to destroy previous stage', e);
+			}
+		}
+		this.stageMap.delete(this.currentStageId);
 	}
 
 	setGlobals(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>) {
@@ -70,12 +90,13 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 		const stage = this.currentStage();
 		const delta = this.timer.getDelta();
 		const inputs = this.inputManager.getInputs(delta);
+		const camera = stage?.stageRef?.cameraRef || this.defaultCamera;
 		return {
 			delta,
 			inputs,
 			globals: state.globals as unknown as TGlobals,
 			me: this,
-			camera: stage!.stageRef!.cameraRef!,
+			camera: camera!,
 		};
 	}
 
@@ -100,7 +121,9 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 			if (this.customUpdate) {
 				this.customUpdate(clampedParams);
 			}
-			stage!.stageRef!.nodeUpdate({ ...clampedParams, me: stage!.stageRef });
+			if (stage) {
+				stage.stageRef!.nodeUpdate({ ...clampedParams, me: stage.stageRef });
+			}
 			this.totalTime += clampedParams.delta;
 			state.time = this.totalTime;
 			this.previousTimeStamp = timestamp;
@@ -111,7 +134,9 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 	}
 
 	outOfLoop() {
-		this.currentStage()!.stageRef!.debugUpdate();
+		const currentStage = this.currentStage();
+		if (!currentStage) return;
+		currentStage.stageRef!.debugUpdate();
 	}
 
 	getStage(id: string) {

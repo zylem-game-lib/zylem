@@ -113,6 +113,28 @@ export class ZylemCamera {
 	}
 
 	/**
+	 * Dispose renderer, composer, controls, and detach from scene
+	 */
+	destroy() {
+		try {
+			this.renderer.setAnimationLoop(null as any);
+		} catch { /* noop */ }
+		try {
+			this.orbitControls?.dispose();
+			this.orbitControls = null;
+		} catch { /* noop */ }
+		try {
+			this.composer?.passes?.forEach((p: any) => p.dispose?.());
+			// @ts-ignore dispose exists on EffectComposer but not typed here
+			this.composer?.dispose?.();
+		} catch { /* noop */ }
+		try {
+			this.renderer.dispose();
+		} catch { /* noop */ }
+		this.sceneRef = null;
+	}
+
+	/**
 	 * Resize camera and renderer
 	 */
 	resize(width: number, height: number) {
