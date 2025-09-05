@@ -25,10 +25,10 @@ function _handleRicochet2DInBounds(
 ) {
 	const { me } = updateContext;
 	const {
-		restitution = 0.8,
+		restitution = 0,
 		minSpeed = 2,
 		maxSpeed = 20,
-		boundaries = { top: 5, bottom: -5, left: -10, right: 10 },
+		boundaries = { top: 5, bottom: -5, left: -6.5, right: 6.5 },
 		separation = 0.0
 	} = { ...options } as Ricochet2DInBoundsOptions;
 
@@ -70,6 +70,11 @@ function _handleRicochet2DInBounds(
 			newVelX *= scale;
 			newVelY *= scale;
 		}
+	}
+
+	if (restitution) {
+		newVelX *= restitution;
+		newVelY *= restitution;
 	}
 
 	if (newX !== position.x || newY !== position.y) {
