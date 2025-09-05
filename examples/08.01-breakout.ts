@@ -22,7 +22,8 @@ makeMoveable(paddle).onUpdate(({ me, inputs }) => {
 	const { Horizontal } = inputs.p1.axes;
 	const value = (Right.held ? 1 : 0) - (Left.held ? 1 : 0) || Horizontal.value;
 	me.moveX(value * paddleSpeed);
-}, boundary({ boundaries: board }));
+});
+paddle.addBehavior(boundary({ boundaries: board }));
 
 const ballRadius = 0.25;
 const ball = await sphere({
@@ -37,13 +38,13 @@ const moveableBall = makeMoveable(ball)
 	})
 	.addBehaviors([
 		ricochet2DInBounds(
-			{ boundaries: board, restitution: 0.9, maxSpeed: 25, minSpeed: 3 },
+			{ boundaries: board, maxSpeed: 25, minSpeed: 3 },
 			(event) => {
 				console.log(`Ball hit ${event.boundary} at ${event.position.x}, ${event.position.y}`);
 			}
 		),
 		ricochet2DCollision(
-			{ collisionWith: { name: 'brick' }, restitution: 1.0, reflectionMode: 'simple' },
+			{ collisionWith: { name: 'brick' }, reflectionMode: 'simple' },
 			({ other, globals }) => {
 				ricochetSound(900, 0.04);
 				const remaining = globals.bricksRemaining - 1;
@@ -53,7 +54,7 @@ const moveableBall = makeMoveable(ball)
 			}
 		),
 		ricochet2DCollision(
-			{ collisionWith: { name: 'paddle' }, restitution: 1.0, reflectionMode: 'angled' },
+			{ collisionWith: { name: 'paddle' }, reflectionMode: 'angled' },
 			() => {
 				ricochetSound(900, 0.04);
 			}

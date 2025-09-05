@@ -17,7 +17,6 @@ stage1.setup = ({ camera }) => {
 	if (camera) {
 		camera.move(new Vector3(0, 200, 900));
 		camera.rotate(-0.55, 0, 0);
-		stressTestGame.log(`total objects: ${spheres.length + 1}`);
 	}
 }
 

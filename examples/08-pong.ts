@@ -42,7 +42,8 @@ makeMoveable(paddle1).onUpdate(({ me, inputs }) => {
 	const { Vertical } = inputs.p1.axes;
 	let value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
 	me.moveY(value * paddleSpeed);
-}, boundary({ boundaries: gameBounds }));
+});
+paddle1.addBehavior(boundary({ boundaries: gameBounds }));
 
 const paddle2 = await box({
 	name: 'paddle2',
@@ -55,7 +56,8 @@ makeMoveable(paddle2).onUpdate(({ me, inputs }) => {
 	const { Vertical } = inputs.p2.axes;
 	const value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
 	me.moveY(value * paddleSpeed);
-}, boundary({ boundaries: gameBounds }));
+});
+paddle2.addBehavior(boundary({ boundaries: gameBounds }));
 
 const p1Goal = await zone({
 	name: 'p1Goal',
