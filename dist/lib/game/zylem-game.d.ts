@@ -2,6 +2,7 @@ import { Game } from './game';
 import { UpdateContext, SetupContext, DestroyContext } from '../core/base-node-life-cycle';
 import { InputManager } from '../input/input-manager';
 import { Timer } from '../core/three-addons/Timer';
+import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
 import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 export declare class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> {
@@ -22,11 +23,13 @@ export declare class ZylemGame<TGlobals extends Record<string, BasicTypes> = Glo
         begin: () => void;
         end: () => void;
     } | null;
+    defaultCamera: ZylemCamera | null;
     static FRAME_LIMIT: number;
     static FRAME_DURATION: number;
     static MAX_DELTA_SECONDS: number;
     constructor(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>, wrapperRef: Game<TGlobals>);
     loadStage(stage: Stage): Promise<void>;
+    unloadCurrentStage(): void;
     setGlobals(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>): void;
     params(): UpdateContext<ZylemGame<TGlobals>, TGlobals>;
     start(): void;
