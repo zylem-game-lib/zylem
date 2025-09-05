@@ -23,6 +23,7 @@ export declare class Game<TGlobals extends Record<string, BasicTypes> = GlobalVa
     previousStage(): Promise<void>;
     goToStage(): Promise<void>;
     end(): Promise<void>;
+    add(...inputs: Array<Stage | Promise<any> | (() => Stage | Promise<any>)>): this;
     getGlobal<K extends keyof TGlobals>(key: K): TGlobals[K];
     setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]): void;
     onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void): void;

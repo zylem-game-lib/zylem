@@ -22,6 +22,7 @@ export interface StageEntity extends Entity {
     controlledRotation: boolean;
     characterController: KinematicCharacterController;
     name: string;
+    markedForRemoval: boolean;
 }
 export type OptionalVector = {
     x?: number;

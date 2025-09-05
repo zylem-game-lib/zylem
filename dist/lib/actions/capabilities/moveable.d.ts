@@ -4,27 +4,27 @@ export interface EntityWithBody {
     body: RigidBody | null;
 }
 /**
- * Move an entity along the X axis
+ * Move an entity along the X axis, preserving other velocities
  */
 export declare function moveX(entity: EntityWithBody, delta: number): void;
 /**
- * Move an entity along the Y axis
+ * Move an entity along the Y axis, preserving other velocities
  */
 export declare function moveY(entity: EntityWithBody, delta: number): void;
 /**
- * Move an entity along the Z axis
+ * Move an entity along the Z axis, preserving other velocities
  */
 export declare function moveZ(entity: EntityWithBody, delta: number): void;
 /**
- * Move an entity along the X and Y axis
+ * Move an entity along the X and Y axis, preserving Z velocity
  */
 export declare function moveXY(entity: EntityWithBody, deltaX: number, deltaY: number): void;
 /**
- * Move an entity along the X and Z axis
+ * Move an entity along the X and Z axis, preserving Y velocity
  */
 export declare function moveXZ(entity: EntityWithBody, deltaX: number, deltaZ: number): void;
 /**
- * Move entity based on a vector
+ * Move entity based on a vector, adding to existing velocities
  */
 export declare function move(entity: EntityWithBody, vector: Vector3): void;
 /**
@@ -32,7 +32,7 @@ export declare function move(entity: EntityWithBody, vector: Vector3): void;
  */
 export declare function resetVelocity(entity: EntityWithBody): void;
 /**
- * Move entity forward in 2D space
+ * Move entity forward in 2D space, preserving Z velocity
  */
 export declare function moveForwardXY(entity: EntityWithBody, delta: number, rotation2DAngle: number): void;
 /**
@@ -86,8 +86,39 @@ export interface MoveableEntity extends EntityWithBody {
     setPositionY(y: number): void;
     setPositionZ(z: number): void;
     wrapAroundXY(boundsX: number, boundsY: number): void;
+    wrapAround3D(boundsX: number, boundsY: number, boundsZ: number): void;
 }
 /**
- * Enhance an entity with movement methods
+ * Class decorator to enhance an entity with additive movement methods
+ */
+export declare function moveable<T extends {
+    new (...args: any[]): EntityWithBody;
+}>(constructor: T): {
+    new (...args: any[]): {
+        moveX(delta: number): void;
+        moveY(delta: number): void;
+        moveZ(delta: number): void;
+        moveXY(deltaX: number, deltaY: number): void;
+        moveXZ(deltaX: number, deltaZ: number): void;
+        move(vector: Vector3): void;
+        resetVelocity(): void;
+        moveForwardXY(delta: number, rotation2DAngle: number): void;
+        getPosition(): Vector | null;
+        getVelocity(): Vector | null;
+        setPosition(x: number, y: number, z: number): void;
+        setPositionX(x: number): void;
+        setPositionY(y: number): void;
+        setPositionZ(z: number): void;
+        wrapAroundXY(boundsX: number, boundsY: number): void;
+        wrapAround3D(boundsX: number, boundsY: number, boundsZ: number): void;
+        body: RigidBody | null;
+    };
+} & T;
+/**
+ * Enhance an entity with additive movement methods (retained for compatibility)
  */
 export declare function makeMoveable<T extends EntityWithBody>(entity: T): T & MoveableEntity;
+/**
+ * Wrap a standalone function with movement capabilities
+ */
+export declare function withMovement<T extends (...args: any[]) => any>(fn: T, entity: EntityWithBody): (...args: Parameters<T>) => ReturnType<T> & MoveableEntity;

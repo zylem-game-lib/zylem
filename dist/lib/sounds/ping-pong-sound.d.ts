@@ -1,4 +1,4 @@
 /**
- * Plays a beep sound when the collision occurs
+ * Plays a ping-pong beep sound effect.
  */
-export declare function pingPongBeep(): (collisionContext: any) => void;
+export declare function pingPongBeep(frequency?: number, duration?: number): void;

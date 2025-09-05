@@ -18,15 +18,26 @@ export interface ZylemStageConfig {
     gravity: Vector3;
     variables: Record<string, any>;
     conditions?: Conditions<any>[];
-    children?: ({ globals }: any) => BaseNode[];
     stageRef?: Stage;
 }
-type StageEntityInput = BaseNode | Promise<any> | (() => BaseNode | Promise<any>);
+type NodeLike = {
+    create: Function;
+};
+type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
 export type StageOptions = Array<Partial<ZylemStageConfig> | CameraWrapper | StageEntityInput>;
 export type StageState = ZylemStageConfig & {
     entities: GameEntityInterface[];
 };
 export declare const STAGE_TYPE = "Stage";
+/**
+ * ZylemStage orchestrates scene, physics world, entities, and lifecycle.
+ *
+ * Responsibilities:
+ * - Manage stage configuration (background, inputs, gravity, variables)
+ * - Initialize and own `ZylemScene` and `ZylemWorld`
+ * - Spawn, track, and remove entities; emit entity-added events
+ * - Drive per-frame updates and transform system
+ */
 export declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     type: string;
     state: StageState;
@@ -35,8 +46,8 @@ export declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     scene: ZylemScene | null;
     conditions: Conditions<any>[];
     children: Array<BaseNode>;
-    _childrenMap: Map<string, BaseNode>;
-    _removalMap: Map<string, BaseNode>;
+    _childrenMap: Map<number, BaseNode>;
+    _removalMap: Map<number, BaseNode>;
     private pendingEntities;
     private pendingPromises;
     private isLoaded;
@@ -50,30 +61,67 @@ export declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     wrapperRef: Stage | null;
     camera?: CameraWrapper;
     cameraRef?: ZylemCamera | null;
+    /**
+     * Create a new stage.
+     * @param options Stage options: partial config, camera, and initial entities or factories
+     */
     constructor(options?: StageOptions);
     private parseOptions;
     private isZylemStageConfig;
     private isBaseNode;
     private isCameraWrapper;
     private isEntityInput;
+    private isThenable;
+    private handleEntityImmediatelyOrQueue;
+    private handlePromiseWithSpawnOnResolve;
     private saveState;
     private setState;
+    /**
+     * Load and initialize the stage's scene and world.
+     * @param id DOM element id for the renderer container
+     * @param camera Optional camera override
+     */
     load(id: string, camera?: ZylemCamera | null): Promise<void>;
     private createDefaultCamera;
     protected _setup(params: SetupContext<ZylemStage>): void;
     protected _update(params: UpdateContext<ZylemStage>): void;
+    /** Update debug overlays and helpers if enabled. */
     debugUpdate(): void;
+    /** Cleanup owned resources when the stage is destroyed. */
     protected _destroy(params: DestroyContext<ZylemStage>): void;
+    /**
+     * Create, register, and add an entity to the scene/world.
+     * Safe to call only after `load` when scene/world exist.
+     */
     spawnEntity(child: BaseNode): Promise<void>;
     buildEntityState(child: BaseNode): Partial<BaseEntityInterface>;
+    /** Add the entity to internal maps and notify listeners. */
     addEntityToStage(entity: BaseNode): void;
+    /**
+     * Subscribe to entity-added events.
+     * @param callback Invoked for each entity when added
+     * @param options.replayExisting If true and stage already loaded, replays existing entities
+     * @returns Unsubscribe function
+     */
     onEntityAdded(callback: (entity: BaseNode) => void, options?: {
         replayExisting?: boolean;
     }): () => void;
+    /**
+     * Remove an entity and its resources by its UUID.
+     * @returns true if removed, false if not found or stage not ready
+     */
     removeEntityByUuid(uuid: string): boolean;
+    /** Get an entity by its name; returns null if not found. */
     getEntityByName(name: string): BaseNode<any, any> | null;
     logMissingEntities(): void;
+    /** Resize renderer viewport. */
     resize(width: number, height: number): void;
+    /**
+     * Enqueue items to be spawned. Items can be:
+     * - BaseNode instances (immediate or deferred until load)
+     * - Factory functions returning BaseNode or Promise<BaseNode>
+     * - Promises resolving to BaseNode
+     */
     enqueue(...items: StageEntityInput[]): void;
 }
 export {};

@@ -5,6 +5,7 @@ import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
 import { EntityBuilder } from './builder';
 import { EntityCollisionBuilder } from './builder';
+import { DestroyContext, UpdateContext } from '../core/base-node-life-cycle';
 export type SpriteImage = {
     name: string;
     file: string;
@@ -43,6 +44,8 @@ export declare class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
     protected createAnimations(animations: SpriteAnimation[]): void;
     setSprite(key: string): void;
     setAnimation(name: string, delta: number): void;
+    spriteUpdate(params: UpdateContext<ZylemSpriteOptions>): Promise<void>;
+    spriteDestroy(params: DestroyContext<ZylemSpriteOptions>): Promise<void>;
 }
 type SpriteOptions = BaseNode | Partial<ZylemSpriteOptions>;
 export declare function sprite(...args: Array<SpriteOptions>): Promise<ZylemSprite>;

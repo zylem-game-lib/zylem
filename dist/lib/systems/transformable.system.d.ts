@@ -1,7 +1,7 @@
 import { StageEntity } from '../interfaces/entity';
 import RAPIER from '@dimforge/rapier3d-compat';
 export type StageSystem = {
-    _childrenMap: Map<string, StageEntity & {
+    _childrenMap: Map<number, StageEntity & {
         body: RAPIER.RigidBody;
     }>;
 };

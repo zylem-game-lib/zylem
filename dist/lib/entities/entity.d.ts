@@ -13,17 +13,19 @@ export declare abstract class AbstractEntity {
     abstract name: string;
 }
 export interface LifeCycleDelegate<U> {
-    setup?: ((params: SetupContext<U>) => void) | ((params: SetupContext<U>) => void)[];
-    update?: ((params: UpdateContext<U>) => void) | ((params: UpdateContext<U>) => void)[];
-    destroy?: ((params: DestroyContext<U>) => void) | ((params: DestroyContext<U>) => void)[];
+    setup?: ((params: SetupContext<U>) => void)[];
+    update?: ((params: UpdateContext<U>) => void)[];
+    destroy?: ((params: DestroyContext<U>) => void)[];
 }
-export interface CollisionContext<T, O extends GameEntityOptions> {
+export interface CollisionContext<T, O extends GameEntityOptions, TGlobals extends Record<string, unknown> = any> {
     entity: T;
     other: GameEntity<O>;
-    globals?: any;
+    globals: TGlobals;
 }
+export type BehaviorContext<T, O extends GameEntityOptions> = SetupContext<T, O> | UpdateContext<T, O> | CollisionContext<T, O> | DestroyContext<T, O>;
+export type BehaviorCallback<T, O extends GameEntityOptions> = (params: BehaviorContext<T, O>) => void;
 export interface CollisionDelegate<T, O extends GameEntityOptions> {
-    collision?: ((params: CollisionContext<T, O>) => void) | ((params: CollisionContext<T, O>) => void)[];
+    collision?: ((params: CollisionContext<T, O>) => void)[];
 }
 export type IBuilder<BuilderOptions = any> = {
     preBuild: (options: BuilderOptions) => BuilderOptions;
@@ -59,6 +61,7 @@ export declare abstract class GameEntityLifeCycle {
 export interface EntityDebugInfo {
     buildInfo: () => Record<string, string>;
 }
+export type BehaviorCallbackType = 'setup' | 'update' | 'destroy' | 'collision';
 export declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implements GameEntityLifeCycle, EntityDebugInfo {
     group: Group | undefined;
     mesh: Mesh | undefined;
@@ -70,9 +73,10 @@ export declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O>
     custom: Record<string, any>;
     debugInfo: Record<string, any>;
     debugMaterial: ShaderMaterial | undefined;
-    lifeCycleDelegate: LifeCycleDelegate<O> | undefined;
-    collisionDelegate: CollisionDelegate<this, O> | undefined;
+    lifeCycleDelegate: LifeCycleDelegate<O>;
+    collisionDelegate: CollisionDelegate<this, O>;
     collisionType?: string;
+    behaviorCallbackMap: Record<BehaviorCallbackType, BehaviorCallback<this, O>[]>;
     constructor();
     create(): this;
     onSetup(...callbacks: ((params: SetupContext<this>) => void)[]): this;
@@ -83,6 +87,14 @@ export declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O>
     _update(params: UpdateContext<this>): void;
     _destroy(params: DestroyContext<this>): void;
     _collision(other: GameEntity<O>, globals?: any): void;
+    addBehavior(behaviorCallback: ({
+        type: BehaviorCallbackType;
+        handler: any;
+    })): this;
+    addBehaviors(behaviorCallbacks: ({
+        type: BehaviorCallbackType;
+        handler: any;
+    })[]): this;
     protected updateMaterials(params: any): void;
     buildInfo(): Record<string, string>;
 }

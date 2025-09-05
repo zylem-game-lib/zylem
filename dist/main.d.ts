@@ -1,6 +1,7 @@
 export { game } from './lib/game/game';
 export type { ZylemGameConfig } from './lib/game/game-interfaces';
 export { stage } from './lib/stage/stage';
+export { entitySpawner } from './lib/stage/entity-spawner';
 export type { StageOptions } from './lib/stage/zylem-stage';
 export { vessel } from './lib/core/vessel';
 export { camera } from './lib/camera/camera';
@@ -15,13 +16,15 @@ export { zone } from './lib/entities/zone';
 export { actor } from './lib/entities/actor';
 export { text } from './lib/entities/text';
 export { ZylemBox } from './lib/entities/box';
-export { makeMoveable } from './lib/behaviors/moveable';
-export * as actions from './lib/behaviors/actions';
+export { makeMoveable } from './lib/actions/capabilities/moveable';
+export { makeRotatable } from './lib/actions/capabilities/rotatable';
+export { makeTransformable } from './lib/actions/capabilities/transformable';
+export * as actions from './lib/actions/behaviors/actions';
 export { destroy } from './lib/entities/destroy';
 export { Howl } from 'howler';
 export * as THREE from 'three';
 export * as RAPIER from '@dimforge/rapier3d-compat';
-export { globalChange, globalChanges } from './lib/actions/update/global-change';
+export { globalChange, globalChanges } from './lib/actions/global-change';
 declare const Zylem: {
     Util: {
         wait(delay: number, callback: Function): void;

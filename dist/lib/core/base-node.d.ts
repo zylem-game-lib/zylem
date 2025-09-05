@@ -1,4 +1,4 @@
-import { Behavior } from "~/lib/behaviors/behavior";
+import { Behavior } from "~/lib/actions/behaviors/behavior";
 import { DestroyContext, DestroyFunction, SetupContext, SetupFunction, UpdateContext, UpdateFunction } from "./base-node-life-cycle";
 export type BaseNodeOptions<T = any> = BaseNode | Partial<T>;
 export declare abstract class BaseNode<Options = any, T = any> {
@@ -9,6 +9,7 @@ export declare abstract class BaseNode<Options = any, T = any> {
     eid: number;
     uuid: string;
     name: string;
+    markedForRemoval: boolean;
     update: UpdateFunction<this>;
     setup: SetupFunction<this>;
     destroy: DestroyFunction<this>;

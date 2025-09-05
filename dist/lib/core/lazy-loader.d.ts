@@ -34,7 +34,7 @@ export declare const loadCamera: () => Promise<{
 }>;
 export declare const loadAllEntities: () => Promise<typeof import("../entities/entity")>;
 export declare const loadEntity: (entityType: "box" | "sphere" | "sprite" | "plane" | "zone" | "actor") => Promise<typeof import("../entities/box") | typeof import("../entities/sphere") | typeof import("../entities/sprite") | typeof import("../entities/plane") | typeof import("../entities/zone") | typeof import("../entities/actor")>;
-export declare const loadBehaviors: () => Promise<typeof import("../behaviors/actions")>;
+export declare const loadBehaviors: () => Promise<typeof import("../actions/behaviors/actions")>;
 export declare const loadGameCore: () => Promise<{
     game: typeof import("../game/game");
     vessel: typeof import("./vessel");
@@ -68,7 +68,7 @@ export declare const loadFullGame: () => Promise<{
         perspectives: typeof import("../camera/perspective");
     };
     entities: typeof import("../entities/entity");
-    behaviors: typeof import("../behaviors/actions");
+    behaviors: typeof import("../actions/behaviors/actions");
     gameCore: {
         game: typeof import("../game/game");
         vessel: typeof import("./vessel");
