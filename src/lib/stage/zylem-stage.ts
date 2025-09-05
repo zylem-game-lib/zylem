@@ -5,7 +5,6 @@ import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
 
 import { Conditions } from '../interfaces/game';
-import { state } from '../game/game-state';
 import { setStageBackgroundColor, setStageBackgroundImage } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
@@ -32,11 +31,11 @@ export interface ZylemStageConfig {
 	gravity: Vector3;
 	variables: Record<string, any>;
 	conditions?: Conditions<any>[];
-	children?: ({ globals }: any) => BaseNode[];
 	stageRef?: Stage;
 }
 
-type StageEntityInput = BaseNode | Promise<any> | (() => BaseNode | Promise<any>);
+type NodeLike = { create: Function };
+type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
 
 export type StageOptions = Array<Partial<ZylemStageConfig> | CameraWrapper | StageEntityInput>;
 
@@ -65,8 +64,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	conditions: Conditions<any>[] = [];
 
 	children: Array<BaseNode> = [];
-	_childrenMap: Map<string, BaseNode> = new Map();
-	_removalMap: Map<string, BaseNode> = new Map();
+	_childrenMap: Map<number, BaseNode> = new Map();
+	_removalMap: Map<number, BaseNode> = new Map();
 
 	private pendingEntities: StageEntityInput[] = [];
 	private pendingPromises: Promise<BaseNode>[] = [];
@@ -104,18 +103,11 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			gravity: config.gravity ?? this.state.gravity,
 			variables: config.variables ?? this.state.variables,
 			conditions: config.conditions,
-			children: config.children,
 			entities: []
 		});
 
 		this.gravity = config.gravity ?? new Vector3(0, 0, 0);
 		this.conditions = config.conditions ?? [];
-
-		// If children function is provided in config, merge with entities
-		if (config.children) {
-			const configChildren = config.children({ globals: state.globals });
-			this.children = [...this.children, ...configChildren];
-		}
 
 		const self = this;
 		window.onresize = function () {
@@ -297,7 +289,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	}
 
 	addEntityToStage(entity: BaseNode) {
-		this._childrenMap.set(`${entity.eid}-key`, entity);
+		this._childrenMap.set(entity.eid, entity);
 		if (debugState.on) {
 			this._debugMap.set(entity.uuid, entity);
 		}
@@ -338,7 +330,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			this.scene.scene.remove(entity.mesh);
 		}
 
-		let foundKey: string | null = null;
+		let foundKey: number | null = null;
 		this._childrenMap.forEach((value, key) => {
 			if ((value as any).uuid === uuid) {
 				foundKey = key;

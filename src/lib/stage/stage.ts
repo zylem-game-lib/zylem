@@ -4,7 +4,11 @@ import { StageOptions, ZylemStage } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 import { subscribe } from 'valtio/vanilla';
-import { setEntitiesToStage, setStageVariable, stageState } from './stage-state';
+import { setStageVariable, stageState } from './stage-state';
+
+type NodeLike = { create: Function };
+type AnyNode = NodeLike | Promise<NodeLike>;
+type EntityInput = AnyNode | (() => AnyNode) | (() => Promise<any>);
 
 export class Stage {
 	stageRef: ZylemStage;
@@ -31,15 +35,12 @@ export class Stage {
 		this.stageRef.enqueue(...entities);
 	}
 
-	add(...inputs: Array<BaseNode | Promise<BaseNode> | (() => BaseNode) | (() => Promise<BaseNode>)>) {
+	add(...inputs: Array<EntityInput>) {
 		this.stageRef.enqueue(...(inputs as any));
 	}
 
 	start(params: SetupContext<ZylemStage>) {
 		this.stageRef?.nodeSetup(params);
-		const stateEntities = this.stageRef.children.map((child) => this.stageRef.buildEntityState(child));
-		setEntitiesToStage(stateEntities);
-
 		this.stageRef.onEntityAdded((child) => {
 			const next = this.stageRef.buildEntityState(child);
 			stageState.entities = [...stageState.entities, next];

@@ -1,5 +1,5 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
-import { Color, Group, Vector3 } from 'three';
+import { Color, Euler, Group, Quaternion, Vector3 } from 'three';
 import {
 	TextureLoader,
 	SpriteMaterial,
@@ -10,6 +10,7 @@ import { GameEntityOptions, GameEntity } from './entity';
 import { EntityBuilder } from './builder';
 import { EntityCollisionBuilder } from './builder';
 import { createEntity } from './create';
+import { DestroyContext, DestroyFunction, UpdateContext, UpdateFunction } from '../core/base-node-life-cycle';
 
 export type SpriteImage = { name: string; file: string };
 export type SpriteAnimation = {
@@ -74,6 +75,10 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		this.options = { ...spriteDefaults, ...options };
 		this.createSpritesFromImages(options?.images || []);
 		this.createAnimations(options?.animations || []);
+		this.lifeCycleDelegate = {
+			update: [this.spriteUpdate.bind(this) as UpdateFunction<ZylemSpriteOptions>],
+			destroy: [this.spriteDestroy.bind(this) as DestroyFunction<ZylemSpriteOptions>],
+		};
 	}
 
 	protected createSpritesFromImages(images: SpriteImage[]) {
@@ -84,9 +89,9 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 				map: spriteMap,
 				transparent: true,
 			});
-			const sprite = new ThreeSprite(material);
-			sprite.position.normalize();
-			this.sprites.push(sprite);
+			const _sprite = new ThreeSprite(material);
+			_sprite.position.normalize();
+			this.sprites.push(_sprite);
 			this.spriteMap.set(image.name, index);
 		});
 		this.group = new Group();
@@ -113,8 +118,8 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		const spriteIndex = this.spriteMap.get(key);
 		const useIndex = spriteIndex ?? 0;
 		this.currentSpriteIndex = useIndex;
-		this.sprites.forEach((sprite, i) => {
-			sprite.visible = this.currentSpriteIndex === i;
+		this.sprites.forEach((_sprite, i) => {
+			_sprite.visible = this.currentSpriteIndex === i;
 		});
 	}
 
@@ -147,6 +152,26 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		}
 	}
 
+	async spriteUpdate(params: UpdateContext<ZylemSpriteOptions>): Promise<void> {
+		this.sprites.forEach(_sprite => {
+			if (_sprite.material) {
+				const q = this.body?.rotation();
+				if (q) {
+					const quat = new Quaternion(q.x, q.y, q.z, q.w);
+					const euler = new Euler().setFromQuaternion(quat, 'XYZ');
+					_sprite.material.rotation = euler.z;
+				}
+			}
+		});
+	}
+
+	async spriteDestroy(params: DestroyContext<ZylemSpriteOptions>): Promise<void> {
+		this.sprites.forEach(_sprite => {
+			_sprite.removeFromParent();
+		});
+		this.group?.remove(...this.sprites);
+		this.group?.removeFromParent();
+	}
 }
 
 type SpriteOptions = BaseNode | Partial<ZylemSpriteOptions>;

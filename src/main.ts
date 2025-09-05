@@ -23,6 +23,8 @@ export { actor } from './lib/entities/actor';
 export { text } from './lib/entities/text';
 export { ZylemBox } from './lib/entities/box';
 export { makeMoveable } from './lib/actions/capabilities/moveable';
+export { makeRotatable } from './lib/actions/capabilities/rotatable';
+export { makeSpawnable } from './lib/actions/capabilities/spawnable';
 
 // Behaviors and actions - tree-shakable
 export * as actions from './lib/actions/behaviors/actions';

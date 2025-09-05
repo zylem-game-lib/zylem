@@ -57,8 +57,8 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 		this.group = new Group();
 		this.createSprite();
 		this.lifeCycleDelegate = {
-			setup: this.textSetup.bind(this) as any,
-			update: this.textUpdate.bind(this) as any,
+			setup: [this.textSetup.bind(this) as any],
+			update: [this.textUpdate.bind(this) as any],
 		};
 	}
 

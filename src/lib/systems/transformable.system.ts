@@ -9,7 +9,7 @@ import { StageEntity } from '../interfaces/entity';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 export type StageSystem = {
-	_childrenMap: Map<string, StageEntity & { body: RAPIER.RigidBody }>;
+	_childrenMap: Map<number, StageEntity & { body: RAPIER.RigidBody }>;
 }
 
 export const position = defineComponent({
@@ -39,32 +39,16 @@ export default function createTransformSystem(stage: StageSystem) {
 		if (stageEntities === undefined) {
 			return world;
 		};
-		for (let i = 0; i < entities.length; ++i) {
-			const id = entities[i];
-			const stageEntity = stageEntities.get(`${id}-key`);
-			if (stageEntity === undefined || !stageEntity?.body) {
+		for (const [key, value] of stageEntities) {
+			const id = entities[key];
+			const stageEntity = value;
+			if (stageEntity === undefined || !stageEntity?.body || stageEntity.markedForRemoval) {
 				continue;
 			}
 			const { x, y, z } = stageEntity.body.translation();
 			position.x[id] = x;
 			position.y[id] = y;
 			position.z[id] = z;
-			if (stageEntity.controlledRotation) {
-				continue;
-			}
-			const { x: rx, y: ry, z: rz, w: rw } = stageEntity.body.rotation();
-			rotation.x[id] = rx;
-			rotation.y[id] = ry;
-			rotation.z[id] = rz;
-			rotation.w[id] = rw;
-		}
-
-		for (let i = 0; i < stageEntities.size; i++) {
-			const id = entities[i];
-			const stageEntity = stageEntities.get(`${id}-key`);
-			if (stageEntity === undefined || !stageEntity?.body) {
-				continue;
-			}
 			if (stageEntity.group) {
 				stageEntity.group.position.set(position.x[id], position.y[id], position.z[id]);
 			} else if (stageEntity.mesh) {
@@ -73,6 +57,11 @@ export default function createTransformSystem(stage: StageSystem) {
 			if (stageEntity.controlledRotation) {
 				continue;
 			}
+			const { x: rx, y: ry, z: rz, w: rw } = stageEntity.body.rotation();
+			rotation.x[id] = rx;
+			rotation.y[id] = ry;
+			rotation.z[id] = rz;
+			rotation.w[id] = rw;
 			const newRotation = new Quaternion(
 				rotation.x[id],
 				rotation.y[id],

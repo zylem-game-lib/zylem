@@ -147,6 +147,63 @@ export class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesT
 
 	async end() { }
 
+	add(...inputs: Array<Stage | Promise<any> | (() => Stage | Promise<any>)>) {
+		for (const input of inputs) {
+			if (!input) continue;
+			if (input instanceof Stage) {
+				if (this.gameRef) {
+					this.gameRef.stages.push(input);
+					this.gameRef.stageMap.set(input.stageRef!.uuid, input);
+				} else {
+					this.options.push(input as any);
+				}
+				continue;
+			}
+			if (typeof input === 'function') {
+				try {
+					const result = (input as (() => Stage | Promise<any>))();
+					if (result instanceof Stage) {
+						if (this.gameRef) {
+							this.gameRef.stages.push(result);
+							this.gameRef.stageMap.set(result.stageRef!.uuid, result);
+						} else {
+							this.options.push(result as any);
+						}
+					} else if (result && typeof (result as any).then === 'function') {
+						(result as Promise<any>)
+							.then((stage) => {
+								if (!(stage instanceof Stage)) return;
+								if (this.gameRef) {
+									this.gameRef.stages.push(stage);
+									this.gameRef.stageMap.set(stage.stageRef!.uuid, stage);
+								} else {
+									this.options.push(stage as any);
+								}
+							})
+							.catch((e) => console.error('Failed to add async stage', e));
+					}
+				} catch (e) {
+					console.error('Error executing stage factory', e);
+				}
+				continue;
+			}
+			if ((input as any) && typeof (input as any).then === 'function') {
+				(input as Promise<any>)
+					.then((stage) => {
+						if (!(stage instanceof Stage)) return;
+						if (this.gameRef) {
+							this.gameRef.stages.push(stage);
+							this.gameRef.stageMap.set(stage.stageRef!.uuid, stage);
+						} else {
+							this.options.push(stage as any);
+						}
+					})
+					.catch((e) => console.error('Failed to add async stage', e));
+			}
+		}
+		return this;
+	}
+
 	getGlobal<K extends keyof TGlobals>(key: K) {
 		if (this.gameRef) {
 			return this.gameRef.getGlobal(key);
