@@ -76,6 +76,9 @@ export abstract class BaseNode<Options = any, T = any> {
 	}
 
 	public nodeUpdate(params: UpdateContext<this>): void {
+		if (this.markedForRemoval) {
+			return;
+		}
 		if (typeof this._update === 'function') {
 			this._update(params);
 		}

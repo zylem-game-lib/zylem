@@ -101,7 +101,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		super();
 		this.options = { ...actorDefaults, ...options };
 		this.lifeCycleDelegate = {
-			update: this.actorUpdate.bind(this) as UpdateFunction<ZylemActorOptions>,
+			update: [this.actorUpdate.bind(this) as UpdateFunction<ZylemActorOptions>],
 		};
 		this.controlledRotation = true;
 	}
