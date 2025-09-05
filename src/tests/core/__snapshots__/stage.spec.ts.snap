@@ -1,0 +1,11 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`create a basic stage > default configuration 1`] = `
+Stage {
+  "destroy": [Function],
+  "options": [],
+  "setup": [Function],
+  "stageRef": null,
+  "update": [Function],
+}
+`;

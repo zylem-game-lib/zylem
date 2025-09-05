@@ -2,9 +2,12 @@
 
 exports[`create a basic game > default configuration 1`] = `
 Game {
+  "destroy": [Function],
   "gameRef": null,
   "options": [],
-  "setupOverride": [Function],
-  "updateOverride": [Function],
+  "pendingGlobalChangeHandlers": [],
+  "refErrorMessage": "lost reference to game",
+  "setup": [Function],
+  "update": [Function],
 }
 `;

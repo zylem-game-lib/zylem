@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { vessel } from '@/lib/core/vessel';
+import { vessel } from '../../lib/core/vessel';
 
 describe('Base vessel functionality', () => {
 	it('Initialize a base vessel', () => {
