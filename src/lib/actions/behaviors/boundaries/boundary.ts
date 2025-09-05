@@ -1,10 +1,11 @@
 import { UpdateContext } from "../../../core/base-node-life-cycle";
 import { MoveableEntity } from "../../capabilities/moveable";
 import { Vector } from "@dimforge/rapier3d-compat";
+import { BehaviorCallbackType } from "../../../entities/entity";
 
 export interface BoundaryEvent {
 	me: MoveableEntity;
-	boundary: 'top' | 'bottom' | 'left' | 'right';
+	boundary: BoundaryHits;
 	position: Vector;
 	updateContext: UpdateContext<MoveableEntity>;
 }
@@ -37,15 +38,22 @@ const defaultBoundaryOptions: BoundaryOptions = {
  * @param options.boundaries The boundaries of the stage
  * @param options.onBoundary A callback function that is called when the entity hits a boundary
  * @param options.stopMovement Whether to stop the entity's movement when it hits a boundary
- * @returns A function that can be used to check if the entity has hit a boundary
+ * @returns A behavior callback with type 'update' and a handler function
  */
 export function boundary(
 	options: Partial<BoundaryOptions> = {}
-) {
-	return (updateContext: UpdateContext<MoveableEntity>) => {
-		_boundary(updateContext, options);
+): { type: BehaviorCallbackType; handler: (ctx: UpdateContext<MoveableEntity>) => void } {
+	return {
+		type: 'update' as BehaviorCallbackType,
+		handler: (updateContext: UpdateContext<MoveableEntity>) => {
+			_boundary(updateContext, options);
+		}
 	};
 }
+
+type BoundaryHit = 'top' | 'bottom' | 'left' | 'right';
+
+type BoundaryHits = Record<BoundaryHit, boolean>;
 
 function _boundary(updateContext: UpdateContext<MoveableEntity>, options: Partial<BoundaryOptions>) {
 	const { me: entity } = updateContext;
@@ -57,38 +65,40 @@ function _boundary(updateContext: UpdateContext<MoveableEntity>, options: Partia
 	const position = entity.getPosition();
 	if (!position) return;
 
-	let boundaryHit: 'top' | 'bottom' | 'left' | 'right' | null = null;
+	let boundariesHit: BoundaryHits = { top: false, bottom: false, left: false, right: false };
 
 	if (position.x <= boundaries.left) {
-		boundaryHit = 'left';
+		boundariesHit.left = true;
 	} else if (position.x >= boundaries.right) {
-		boundaryHit = 'right';
+		boundariesHit.right = true;
 	}
 
 	if (position.y <= boundaries.bottom) {
-		boundaryHit = 'bottom';
+		boundariesHit.bottom = true;
 	} else if (position.y >= boundaries.top) {
-		boundaryHit = 'top';
+		boundariesHit.top = true;
 	}
 
 	const stopMovement = options.stopMovement ?? true;
-	if (stopMovement && boundaryHit) {
+	if (stopMovement && boundariesHit) {
 		const velocity = entity.getVelocity() ?? { x: 0, y: 0, z: 0 };
-		if (velocity?.y < 0 && boundaryHit === 'bottom') {
-			entity.moveY(0);
-		} else if (velocity?.y > 0 && boundaryHit === 'top') {
-			entity.moveY(0);
+		let { x: newX, y: newY } = velocity;
+		if (velocity?.y < 0 && boundariesHit.bottom) {
+			newY = 0;
+		} else if (velocity?.y > 0 && boundariesHit.top) {
+			newY = 0;
 		}
-		if (velocity?.x < 0 && boundaryHit === 'left') {
-			entity.moveX(0);
-		} else if (velocity?.x > 0 && boundaryHit === 'right') {
-			entity.moveX(0);
+		if (velocity?.x < 0 && boundariesHit.left) {
+			newX = 0;
+		} else if (velocity?.x > 0 && boundariesHit.right) {
+			newX = 0;
 		}
+		entity.moveXY(newX, newY);
 	}
-	if (onBoundary && boundaryHit) {
+	if (onBoundary && boundariesHit) {
 		onBoundary({
 			me: entity,
-			boundary: boundaryHit,
+			boundary: boundariesHit,
 			position: { x: position.x, y: position.y, z: position.z },
 			updateContext
 		});
