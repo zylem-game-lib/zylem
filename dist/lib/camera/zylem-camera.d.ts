@@ -38,6 +38,10 @@ export declare class ZylemCamera {
      */
     update(delta: number): void;
     /**
+     * Dispose renderer, composer, controls, and detach from scene
+     */
+    destroy(): void;
+    /**
      * Resize camera and renderer
      */
     resize(width: number, height: number): void;

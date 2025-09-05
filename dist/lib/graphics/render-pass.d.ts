@@ -12,4 +12,5 @@ export default class RenderPass extends Pass {
     constructor(resolution: THREE.Vector2, scene: THREE.Scene, camera: THREE.Camera);
     render(renderer: WebGLRenderer, writeBuffer: WebGLRenderTarget): void;
     material(): THREE.ShaderMaterial;
+    dispose(): void;
 }
