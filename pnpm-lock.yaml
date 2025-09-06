@@ -121,6 +121,9 @@ importers:
       '@types/node':
         specifier: ^20.19.13
         version: 20.19.13
+      '@types/stats.js':
+        specifier: ^0.17.4
+        version: 0.17.4
       '@types/three':
         specifier: 0.171.0
         version: 0.171.0

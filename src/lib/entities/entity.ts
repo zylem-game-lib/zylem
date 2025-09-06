@@ -3,7 +3,6 @@ import { Collider, ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapi
 import { position, rotation, scale } from "~/lib/systems/transformable.system";
 import { Vec3 } from "../core/vector";
 import { MaterialBuilder, MaterialOptions } from "../graphics/material";
-import { PhysicsOptions } from "../collision/physics";
 import { CollisionOptions } from "../collision/collision";
 import { BaseNode } from "../core/base-node";
 import { DestroyContext, SetupContext, UpdateContext } from "../core/base-node-life-cycle";
@@ -52,7 +51,6 @@ export type GameEntityOptions = {
 	position?: Vec3;
 	batched?: boolean;
 	collision?: Partial<CollisionOptions>;
-	physics?: Partial<PhysicsOptions>;
 	material?: Partial<MaterialOptions>;
 	custom?: { [key: string]: any };
 	collisionType?: string;

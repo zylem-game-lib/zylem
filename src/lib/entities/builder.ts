@@ -87,7 +87,6 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends GameE
 
 		if (this.collisionBuilder) {
 			this.collisionBuilder.withCollision(this.options?.collision || {});
-			this.collisionBuilder.withPhysics(this.options?.physics || {});
 			const [bodyDesc, colliderDesc] = this.collisionBuilder.build(this.options as any);
 			entity.bodyDesc = bodyDesc;
 			entity.colliderDesc = colliderDesc;

@@ -1,45 +1,6 @@
 import { GameEntity, GameEntityOptions } from '../entity';
 import { MeshStandardMaterial, MeshBasicMaterial, MeshPhongMaterial } from 'three';
-import debugVertexShader from "../graphics/shaders/vertex/debug.glsl";
-import debugFragmentShader from "../graphics/shaders/fragment/debug.glsl";
 
-
-// export abstract class DebugInfoBuilder {
-// 	abstract buildInfo(options: GameEntityOptions, entity?: GameEntity<any>): Record<string, string>;
-// }
-
-// export class DefaultDebugInfoBuilder extends DebugInfoBuilder {
-// 	buildInfo(options: GameEntityOptions, entity?: GameEntity<any>): Record<string, string> {
-// 		if (!entity) {
-// 			return {
-// 				name: 'n/a',
-// 				position: 'n/a',
-// 				message: 'default debug info'
-// 			};
-// 		}
-// 		const axesHelper = new AxesHelper(2);
-
-// 		if (entity.group) {
-// 			entity.group.add(axesHelper);
-// 		} else {
-// 			entity.mesh?.add(axesHelper);
-// 		}
-
-// 		const delegate = new DebugDelegate(entity);
-// 		return delegate.buildDebugInfo();
-// 	}
-// }
-
-// const material = new ShaderMaterial({
-// 	uniforms: {
-// 		baseColor: { value: new Color(0x555555) },
-// 		wireframeColor: { value: new Color(0x90EE90) },
-// 		wireframeThickness: { value: 1.0 }
-// 	},
-// 	vertexShader: debugVertexShader,
-// 	fragmentShader: debugFragmentShader
-// });
-// this.entity.debugMaterial = material;
 /**
  * Interface for entities that provide custom debug information
  */

@@ -96,6 +96,7 @@
     "@rollup/plugin-typescript": "^11.1.6",
     "@rollup/pluginutils": "^5.3.0",
     "@types/node": "^20.19.13",
+    "@types/stats.js": "^0.17.4",
     "@types/three": "0.171.0",
     "@typescript-eslint/eslint-plugin": "^8.42.0",
     "@typescript-eslint/parser": "^8.42.0",

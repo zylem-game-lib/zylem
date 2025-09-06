@@ -3,8 +3,6 @@ import { Color, Vector3, Vector2 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
-
-import { Conditions } from '../interfaces/game';
 import { setStageBackgroundColor, setStageBackgroundImage } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
@@ -31,7 +29,6 @@ export interface ZylemStageConfig {
 	backgroundImage: string | null;
 	gravity: Vector3;
 	variables: Record<string, any>;
-	conditions?: Conditions<any>[];
 	stageRef?: Stage;
 }
 
@@ -71,7 +68,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
-	conditions: Conditions<any>[] = [];
 
 	children: Array<BaseNode> = [];
 	_childrenMap: Map<number, BaseNode> = new Map();
@@ -116,12 +112,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			inputs: config.inputs ?? this.state.inputs,
 			gravity: config.gravity ?? this.state.gravity,
 			variables: config.variables ?? this.state.variables,
-			conditions: config.conditions,
 			entities: []
 		});
 
 		this.gravity = config.gravity ?? new Vector3(0, 0, 0);
-		this.conditions = config.conditions ?? [];
 
 		const self = this;
 		window.onresize = function () {
@@ -277,6 +271,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.scene.update({ delta });
 	}
 
+	public outOfLoop() {
+		this.debugUpdate();
+	}
+
 	/** Update debug overlays and helpers if enabled. */
 	public debugUpdate() {
 		if (debugState.on) {
@@ -286,7 +284,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	/** Cleanup owned resources when the stage is destroyed. */
 	protected _destroy(params: DestroyContext<ZylemStage>): void {
-		// Destroy children entities first to allow custom teardown
 		this._childrenMap.forEach((child) => {
 			try { child.nodeDestroy({ me: child, globals: getGlobalState() }); } catch { /* noop */ }
 		});
@@ -294,12 +291,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this._removalMap.clear();
 		this._debugMap.clear();
 
-		// Dispose world and scene
 		this.world?.destroy();
 		this.scene?.destroy();
 		this.debugDelegate?.dispose();
 
-		// Reset flags and references
 		this.isLoaded = false;
 		this.world = null as any;
 		this.scene = null as any;

@@ -10,6 +10,7 @@ import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
 import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
 import { subscribe } from 'valtio/vanilla';
+import Stats from 'stats.js';
 
 
 export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> {
@@ -31,7 +32,7 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 	inputManager: InputManager;
 
 	wrapperRef: Game<TGlobals>;
-	statsRef: { begin: () => void, end: () => void } | null = null;
+	statsRef: { begin: () => void, end: () => void, showPanel: (panel: number) => void, dom: HTMLElement } | null = null;
 	defaultCamera: ZylemCamera | null = null;
 
 	static FRAME_LIMIT = 120;
@@ -46,6 +47,16 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 		this.id = options.id;
 		this.stages = options.stages || [];
 		this.setGlobals(options);
+		if (options.debug) {
+			this.statsRef = new Stats();
+			this.statsRef.showPanel(0);
+			this.statsRef.dom.style.position = 'absolute'
+			this.statsRef.dom.style.bottom = '0';
+			this.statsRef.dom.style.right = '0';
+			this.statsRef.dom.style.top = 'auto';
+			this.statsRef.dom.style.left = 'auto';
+			document.body.appendChild(this.statsRef.dom);
+		}
 	}
 
 	async loadStage(stage: Stage) {
@@ -136,7 +147,7 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 	outOfLoop() {
 		const currentStage = this.currentStage();
 		if (!currentStage) return;
-		currentStage.stageRef!.debugUpdate();
+		currentStage.stageRef!.outOfLoop();
 	}
 
 	getStage(id: string) {

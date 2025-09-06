@@ -1,5 +1,4 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType, Vector3 } from "@dimforge/rapier3d-compat";
-import { PhysicsOptions } from "./physics";
 import { Vec3 } from "../core/vector";
 import { CollisionOptions } from "./collision";
 
@@ -60,11 +59,6 @@ export class CollisionBuilder {
 	withCollision(collisionOptions: Partial<CollisionOptions>): this {
 		this.sensor = collisionOptions?.sensor ?? this.sensor;
 		this.static = collisionOptions?.static ?? this.static;
-		return this;
-	}
-
-	withPhysics(physicsOptions: Partial<PhysicsOptions>): this {
-		this.gravity = physicsOptions.gravity ?? this.gravity;
 		return this;
 	}
 

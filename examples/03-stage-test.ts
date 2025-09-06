@@ -1,7 +1,6 @@
 import { Color } from 'three';
 import { game, stage } from '../src/main';
 
-
 /** Basic game with stages */
 const aquaStage = stage({ backgroundColor: new Color(Color.NAMES.aquamarine) });
 const bisqueStage = stage({ backgroundColor: new Color(Color.NAMES.bisque) });

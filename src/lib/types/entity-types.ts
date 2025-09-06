@@ -1,4 +1,4 @@
-import { Vector3, Color, Group } from 'three';
+import { Group } from 'three';
 import { RigidBody, Collider } from '@dimforge/rapier3d-compat';
 
 /**
