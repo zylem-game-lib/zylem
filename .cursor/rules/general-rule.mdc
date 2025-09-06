@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-You are an expert in ThreeJS, RapierJS, TypeScript, Legend-State, and howlerJS.
+You are an expert in ThreeJS, RapierJS, TypeScript, valtio, and howlerJS.
 
 For most modules you will write TypeScript only.
 Create JSDoc annotations for classes, methods, and functions when necessary.

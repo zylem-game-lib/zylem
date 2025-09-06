@@ -2,6 +2,23 @@
 
 A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.
 
+**Why Zylem?**
+
+I wanted to build something easy to jump into and deploy while still only writing code (no complex game IDEs).
+
+**Who should use Zylem?**
+
+This library is intended for hobbyist developers who want to play with 3D web technologies to build a game.
+
+**What does Zylem do?**
+
+The goal is to give you tools to build simple 3D games. It's basically comprised of:
+
+- Rendering via ThreeJS with some capability to handle postprocessing built-in. [ThreeJS](https://threejs.org/)
+- Collision handling, triggers, and rigid body physics via RapierRS [RapierRS](https://rapier.rs/)
+- Game state management with Valtio [Valtio](https://valtio.dev/)
+- Simplified input handling (gamepad, keyboard, mouse)
+
 >Note: This project is still in alpha. There are unfinished features and some APIs that may change.
 
 ## Installation
@@ -49,17 +66,3 @@ makeMoveable(ball).onUpdate(({ entity, inputs }) => {
 
 game(ball).start();
 ```
-
-## Repository Governance
-
-### Conventional commits
-
-- `feat`: A new feature
-- `fix`: A bug fix
-- `docs`: Documentation only changes
-- `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
-- `refactor`: A code change that neither fixes a bug nor adds a feature
-- `cleanup`: Removal of dead code, unused functionality, or code changes involving renaming
-- `perf`: A code change that improves performance
-- `test`: Adding missing or correcting existing tests
-- `build`: Changes that affect the build system or external dependencies (example scopes: vite, npm, typescript, etc)
