@@ -1,3 +1,5 @@
+/// <reference types="@zylem/assets" />
+
 import { ArrowHelper, Vector3 } from 'three';
 import { game, stage, zone } from '../src/main';
 import { rotateInDirection } from '../src/lib/actions/capabilities/rotatable';
@@ -5,10 +7,11 @@ import { move, resetVelocity } from '../src/lib/actions/capabilities/moveable';
 import { Ray } from '@dimforge/rapier3d-compat';
 import { playgroundPlane, playgroundActor, playgroundPlatforms } from './utils';
 import { StageEntity } from '../src/lib/interfaces/entity';
+import skybox from '@zylem/assets/3d/skybox/default.png';
 
 const stage1 = await stage({
 	gravity: new Vector3(0, -9.82, 0),
-	backgroundImage: 'playground/skybox.png',
+	backgroundImage: skybox,
 });
 
 const groundPlane = await playgroundPlane('dirt');

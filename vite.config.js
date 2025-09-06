@@ -19,6 +19,7 @@ export default defineConfig(async ({ command, mode }) => {
 
   const config = {
     plugins: [glsl(), solidPlugin()],
+    assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb'],
     resolve: {
       alias: [
         {

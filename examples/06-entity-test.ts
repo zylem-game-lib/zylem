@@ -1,10 +1,11 @@
-import { game, stage, box, plane, sphere, sprite, actor, zone, destroy } from '../src/main';
+import { game, stage, box, plane, sphere, sprite, zone } from '../src/main';
 import { Vector3, Vector2 } from 'three';
 import { playgroundActor } from './utils';
 
-const grassPath = 'playground/grass.jpg';
-const woodPath = 'playground/wood-box.jpg';
-const marsSurfacePath = 'playground/mars-surface.jpg';
+import grassPath from '@zylem/assets/3d/textures/grass.jpg';
+import woodPath from '@zylem/assets/3d/textures/wood-box.jpg';
+import marsSurfacePath from '@zylem/assets/3d/textures/mars-surface.jpg';
+import rainManPath from '@zylem/assets/2d/rain-man.png';
 
 const stage1 = stage({ gravity: new Vector3(0, -9.82, 0) });
 
@@ -51,7 +52,7 @@ const mySphere = await sphere({
 const mySprite = await sprite({
 	position: { x: 5, y: 5, z: 0 },
 	images: [
-		{ name: 'rain-man', file: 'playground/rain-man.png' },
+		{ name: 'rain-man', file: rainManPath },
 	],
 });
 

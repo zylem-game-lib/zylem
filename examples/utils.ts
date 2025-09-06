@@ -1,17 +1,34 @@
+/// <reference types="@zylem/assets" />
 import { CollisionOptions } from "../src/lib/collision/collision";
 import { ZylemBox } from "../src/lib/entities/box";
 import { ZylemSphere } from "../src/lib/entities/sphere";
-import { actor, box, plane, sphere } from "../src/main";
+import { actor, box, plane } from "../src/main";
 import { Color, Vector2, Vector3 } from "three";
+
+import grass from '@zylem/assets/3d/textures/grass.jpg';
+import dirt from '@zylem/assets/3d/textures/dirt.png';
+import wood from '@zylem/assets/3d/textures/wood-box.jpg';
+import mars from '@zylem/assets/3d/textures/mars-surface.jpg';
+import steel from '@zylem/assets/3d/textures/steel.png';
+
+import player from '@zylem/assets/3d/player/idle.fbx';
+import playerWalking from '@zylem/assets/3d/player/walking.fbx';
+import playerRunning from '@zylem/assets/3d/player/running.fbx';
+import playerJumpingUp from '@zylem/assets/3d/player/jumping-up.fbx';
+import playerJumpingDown from '@zylem/assets/3d/player/jumping-down.fbx';
+import playerIdle from '@zylem/assets/3d/player/idle.fbx';
+
+import mascotIdle from '@zylem/assets/3d/mascot/idle.fbx';
+import mascotRun from '@zylem/assets/3d/mascot/run.fbx';
 
 export type PlaygroundPlaneType = 'grass' | 'dirt' | 'wood' | 'mars' | 'steel';
 
 const planeTypeToPath: Record<PlaygroundPlaneType, string> = {
-	grass: 'playground/grass.jpg',
-	dirt: 'playground/dirt.png',
-	wood: 'playground/wood-box.jpg',
-	mars: 'playground/mars-surface.jpg',
-	steel: 'playground/steel.png'
+	grass: grass,
+	dirt: dirt,
+	wood: wood,
+	mars: mars,
+	steel: steel
 };
 
 export const playgroundPlane = async (type: PlaygroundPlaneType, size: Vector2 = new Vector2(100, 100)) => {
@@ -31,13 +48,27 @@ export const playgroundPlane = async (type: PlaygroundPlaneType, size: Vector2 =
 export type PlaygroundActorType = 'player' | 'mascot';
 
 const actorTypeToPath: Record<PlaygroundActorType, string> = {
-	player: 'playground/player/idle.fbx',
-	mascot: 'playground/mascot/idle.fbx'
+	player: player,
+	mascot: mascotIdle
 };
 
 const actorTypeToAnimations: Record<PlaygroundActorType, string[]> = {
 	player: ['idle', 'walking', 'running', 'jumping-up', 'jumping-down'],
 	mascot: ['idle', 'run']
+};
+
+const animationMap: Record<PlaygroundActorType, Record<string, string>> = {
+	player: {
+		idle: playerIdle,
+		walking: playerWalking,
+		running: playerRunning,
+		"jumping-up": playerJumpingUp,
+		"jumping-down": playerJumpingDown
+	},
+	mascot: {
+		idle: mascotIdle,
+		run: mascotRun
+	}
 };
 
 const actorTypeToScale: Record<PlaygroundActorType, Vector3> = {
@@ -55,7 +86,7 @@ export const playgroundActor = async (type: PlaygroundActorType) => {
 		position: { x: 0, y: 10, z: 4 },
 		scale: actorTypeToScale[type],
 		models: [actorTypeToPath[type]],
-		animations: actorTypeToAnimations[type].map(animation => ({ key: animation, path: `playground/${type}/${animation}.fbx` })),
+		animations: actorTypeToAnimations[type].map(animation => ({ key: animation, path: animationMap[type][animation] })),
 		material: {
 			color: new Color(Color.NAMES.lightgreen),
 		},
@@ -72,7 +103,7 @@ export const playgroundPlatforms = async () => {
 		size: { x: 6, y: 0.5, z: 4 },
 		collision: { static: true },
 		material: {
-			path: 'playground/steel.png',
+			path: steel,
 		}
 	});
 
@@ -105,7 +136,7 @@ export const playgroundPlatforms = async () => {
 			size: { x: config.width, y: 0.5, z: config.depth },
 			collision: { static: true },
 			material: {
-				path: 'playground/steel.png',
+				path: steel,
 			}
 		}));
 	}
@@ -140,7 +171,7 @@ export const playgroundPlatforms = async () => {
 				size: { x: 2, y: 0.5, z: 2 },
 				collision: { static: true },
 				material: {
-					path: 'playground/steel.png',
+					path: steel,
 				}
 			}));
 		}
@@ -150,7 +181,7 @@ export const playgroundPlatforms = async () => {
 			size: { x: width, y: 0.5, z: depth },
 			collision: { static: true },
 			material: {
-				path: 'playground/steel.png',
+				path: steel,
 			}
 		}));
 	}
