@@ -1,6 +1,6 @@
 {
   "name": "@zylem/game-lib",
-  "version": "0.3.14",
+  "version": "0.3.15",
   "type": "module",
   "description": "A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.",
   "license": "MIT",
@@ -87,7 +87,6 @@
     "three-instanced-uniforms-mesh": "^0.52.4",
     "three-spritetext": "^1.10.0",
     "tsimp": "^2.0.12",
-    "uuid": "^11.1.0",
     "valtio": "^2.1.7"
   },
   "devDependencies": {

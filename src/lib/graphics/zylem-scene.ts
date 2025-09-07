@@ -9,10 +9,11 @@ import {
 	GridHelper
 } from 'three';
 import { Entity } from '../interfaces/entity';
-import { SetupCallback } from '~/lib/interfaces/game';
 import { GameEntity } from '../entities/entity';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { debugState } from '../debug/debug-state';
+import { SetupFunction } from '../core/base-node-life-cycle';
+import { getGlobalState } from '../game/game-state';
 
 interface SceneState {
 	backgroundColor: Color;
@@ -22,7 +23,7 @@ interface SceneState {
 export class ZylemScene implements Entity<ZylemScene> {
 	public type = 'Scene';
 
-	_setup?: SetupCallback;
+	_setup?: SetupFunction<ZylemScene>;
 	scene!: Scene;
 	zylemCamera!: ZylemCamera;
 	containerElement: HTMLElement | null = null;
@@ -78,7 +79,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	setup() {
 		if (this._setup) {
-			this._setup({ scene: this, camera: this.zylemCamera });
+			this._setup({ me: this, camera: this.zylemCamera, globals: getGlobalState() });
 		}
 	}
 

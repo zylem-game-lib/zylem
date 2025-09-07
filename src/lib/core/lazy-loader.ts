@@ -43,12 +43,11 @@ export const loadGraphics = async () => {
 };
 
 export const loadPhysics = async () => {
-	const [physics, collision, collisionBuilder] = await Promise.all([
-		import('../collision/physics'),
+	const [collision, collisionBuilder] = await Promise.all([
 		import('../collision/collision'),
 		import('../collision/collision-builder')
 	]);
-	return { physics, collision, collisionBuilder };
+	return { collision, collisionBuilder };
 };
 
 // Level 3: Camera (depends on graphics)

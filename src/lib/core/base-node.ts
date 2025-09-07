@@ -1,7 +1,14 @@
 import { Behavior } from "~/lib/actions/behaviors/behavior";
-import { DestroyContext, DestroyFunction, SetupContext, SetupFunction, UpdateContext, UpdateFunction } from "./base-node-life-cycle";
+import {
+	DestroyContext,
+	DestroyFunction,
+	SetupContext,
+	SetupFunction,
+	UpdateContext,
+	UpdateFunction,
+} from "./base-node-life-cycle";
 import { DEBUG_FLAG } from "./flags";
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from "nanoid";
 
 export type BaseNodeOptions<T = any> = BaseNode | Partial<T>;
 
@@ -24,7 +31,7 @@ export abstract class BaseNode<Options = any, T = any> {
 			.filter(arg => !(arg instanceof BaseNode))
 			.reduce((acc, opt) => ({ ...acc, ...opt }), {});
 		this.options = options as Options;
-		this.uuid = uuidv4();
+		this.uuid = nanoid();
 	}
 
 	public setParent(parent: BaseNode | null): void {

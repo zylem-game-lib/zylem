@@ -14,7 +14,7 @@ import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-l
 import { LifeCycleBase } from '../core/lifecycle-base';
 import createTransformSystem, { StageSystem } from '../systems/transformable.system';
 import { BaseNode } from '../core/base-node';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 import { Stage } from './stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { Perspectives } from '../camera/perspective';
@@ -99,7 +99,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		super();
 		this.world = null;
 		this.scene = null;
-		this.uuid = uuidv4();
+		this.uuid = nanoid();
 
 		// Parse the options array to extract different types of items
 		const { config, entities, asyncEntities, camera } = this.parseOptions(options);
