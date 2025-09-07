@@ -22,6 +22,8 @@ export declare class ZylemGame<TGlobals extends Record<string, BasicTypes> = Glo
     statsRef: {
         begin: () => void;
         end: () => void;
+        showPanel: (panel: number) => void;
+        dom: HTMLElement;
     } | null;
     defaultCamera: ZylemCamera | null;
     static FRAME_LIMIT: number;

@@ -1,7 +1,6 @@
 import { Color, Vector3 } from 'three';
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
-import { Conditions } from '../interfaces/game';
 import { GameEntityInterface } from '../types/entity-types';
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
 import { LifeCycleBase } from '../core/lifecycle-base';
@@ -17,7 +16,6 @@ export interface ZylemStageConfig {
     backgroundImage: string | null;
     gravity: Vector3;
     variables: Record<string, any>;
-    conditions?: Conditions<any>[];
     stageRef?: Stage;
 }
 type NodeLike = {
@@ -44,7 +42,6 @@ export declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     gravity: Vector3;
     world: ZylemWorld | null;
     scene: ZylemScene | null;
-    conditions: Conditions<any>[];
     children: Array<BaseNode>;
     _childrenMap: Map<number, BaseNode>;
     _removalMap: Map<number, BaseNode>;
@@ -85,6 +82,7 @@ export declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     private createDefaultCamera;
     protected _setup(params: SetupContext<ZylemStage>): void;
     protected _update(params: UpdateContext<ZylemStage>): void;
+    outOfLoop(): void;
     /** Update debug overlays and helpers if enabled. */
     debugUpdate(): void;
     /** Cleanup owned resources when the stage is destroyed. */

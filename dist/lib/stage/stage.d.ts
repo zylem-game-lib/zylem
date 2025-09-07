@@ -24,7 +24,6 @@ export declare class Stage {
     onDestroy(callback: DestroyFunction<ZylemStage>): void;
     setVariable(key: string, value: any): void;
     getVariable(key: string): any;
-    watchVariable(key: string, callback: (value: any) => void): void;
 }
 /**
  * Create a stage with optional camera

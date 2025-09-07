@@ -1,5 +1,4 @@
 import { ColliderDesc, RigidBodyDesc } from "@dimforge/rapier3d-compat";
-import { PhysicsOptions } from "./physics";
 import { Vec3 } from "../core/vector";
 import { CollisionOptions } from "./collision";
 export declare function getOrCreateCollisionGroupId(type: string): number;
@@ -15,7 +14,6 @@ export declare class CollisionBuilder {
     gravity: Vec3;
     build(options: Partial<CollisionOptions>): [RigidBodyDesc, ColliderDesc];
     withCollision(collisionOptions: Partial<CollisionOptions>): this;
-    withPhysics(physicsOptions: Partial<PhysicsOptions>): this;
     collider(options: CollisionOptions): ColliderDesc;
     bodyDesc({ isDynamicBody }: {
         isDynamicBody?: boolean | undefined;

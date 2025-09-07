@@ -24,7 +24,6 @@ export declare const loadGraphics: () => Promise<{
     mesh: typeof import("../graphics/mesh");
 }>;
 export declare const loadPhysics: () => Promise<{
-    physics: typeof import("../collision/physics");
     collision: typeof import("../collision/collision");
     collisionBuilder: typeof import("../collision/collision-builder");
 }>;
@@ -59,7 +58,6 @@ export declare const loadFullGame: () => Promise<{
         mesh: typeof import("../graphics/mesh");
     };
     physics: {
-        physics: typeof import("../collision/physics");
         collision: typeof import("../collision/collision");
         collisionBuilder: typeof import("../collision/collision-builder");
     };

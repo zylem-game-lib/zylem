@@ -24,7 +24,7 @@ export { destroy } from './lib/entities/destroy';
 export { Howl } from 'howler';
 export * as THREE from 'three';
 export * as RAPIER from '@dimforge/rapier3d-compat';
-export { globalChange, globalChanges } from './lib/actions/global-change';
+export { globalChange, globalChanges, variableChange, variableChanges } from './lib/actions/global-change';
 declare const Zylem: {
     Util: {
         wait(delay: number, callback: Function): void;

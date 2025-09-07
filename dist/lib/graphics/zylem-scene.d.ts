@@ -1,15 +1,15 @@
 import { Scene, Color, Object3D, Vector3 } from 'three';
 import { Entity } from '../interfaces/entity';
-import { SetupCallback } from '~/lib/interfaces/game';
 import { GameEntity } from '../entities/entity';
 import { ZylemCamera } from '../camera/zylem-camera';
+import { SetupFunction } from '../core/base-node-life-cycle';
 interface SceneState {
     backgroundColor: Color;
     backgroundImage: string | null;
 }
 export declare class ZylemScene implements Entity<ZylemScene> {
     type: string;
-    _setup?: SetupCallback;
+    _setup?: SetupFunction<ZylemScene>;
     scene: Scene;
     zylemCamera: ZylemCamera;
     containerElement: HTMLElement | null;
