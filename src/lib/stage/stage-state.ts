@@ -32,11 +32,8 @@ const setEntitiesToStage = (entities: Partial<BaseEntityInterface>[]) => {
 };
 
 const setStageVariable = (key: string, value: any) => {
-	if (stageState.variables.hasOwnProperty(key)) {
-		stageState.variables[key] = value;
-	} else {
-		console.warn(`Stage variable ${key} not found`);
-	}
+	// Create or update the variable key
+	stageState.variables[key] = value;
 };
 
 const getStageVariable = (key: string) => {
@@ -45,6 +42,16 @@ const getStageVariable = (key: string) => {
 	} else {
 		console.warn(`Stage variable ${key} not found`);
 	}
+};
+
+/** Replace the entire stage variables object (used on stage load). */
+const setStageVariables = (variables: Record<string, any>) => {
+	stageState.variables = { ...variables };
+};
+
+/** Reset all stage variables (used on stage unload). */
+const resetStageVariables = () => {
+	stageState.variables = {};
 };
 
 const stageStateToString = (state: StageStateInterface) => {
@@ -81,4 +88,6 @@ export {
 	stageStateToString,
 	setStageVariable,
 	getStageVariable,
+	setStageVariables,
+	resetStageVariables,
 };

@@ -41,7 +41,7 @@ export * as THREE from 'three';
 export * as RAPIER from '@dimforge/rapier3d-compat';
 
 // Update helpers
-export { globalChange, globalChanges } from './lib/actions/global-change';
+export { globalChange, globalChanges, variableChange, variableChanges } from './lib/actions/global-change';
 
 // Legacy namespace for backward compatibility (will bundle everything together)
 // Consider deprecating this in favor of named exports

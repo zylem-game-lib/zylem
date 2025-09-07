@@ -47,3 +47,50 @@ export function globalChanges<T = any>(
 }
 
 
+/**
+ * Listen for a single stage variable change inside an onUpdate pipeline.
+ * Usage: onUpdate(variableChange('score', (value, ctx) => { ... }))
+ */
+export function variableChange<T = any>(
+	key: string,
+	callback: (value: T, ctx: UpdateContext<any>) => void
+) {
+	let previousValue: T | undefined = undefined;
+	return (ctx: UpdateContext<any>) => {
+		// @ts-ignore - stage is optional on UpdateContext
+		const currentValue = (ctx.stage?.getVariable?.(key) ?? undefined) as T;
+		if (previousValue !== currentValue) {
+			if (!(previousValue === undefined && currentValue === undefined)) {
+				callback(currentValue, ctx);
+			}
+			previousValue = currentValue;
+		}
+	};
+}
+
+/**
+ * Listen for multiple stage variable changes; fires when any changes.
+ * Usage: onUpdate(variableChanges(['a','b'], ([a,b], ctx) => { ... }))
+ */
+export function variableChanges<T = any>(
+	keys: string[],
+	callback: (values: T[], ctx: UpdateContext<any>) => void
+) {
+	let previousValues: (T | undefined)[] = new Array(keys.length).fill(undefined);
+	return (ctx: UpdateContext<any>) => {
+		// @ts-ignore - stage is optional on UpdateContext
+		const reader = (k: string) => ctx.stage?.getVariable?.(k) as T;
+		const currentValues = keys.map(reader);
+		const hasAnyChange = currentValues.some((val, idx) => previousValues[idx] !== val);
+		if (hasAnyChange) {
+			const allPrevUndef = previousValues.every((v) => v === undefined);
+			const allCurrUndef = currentValues.every((v) => v === undefined);
+			if (!(allPrevUndef && allCurrUndef)) {
+				callback(currentValues as T[], ctx);
+			}
+			previousValues = currentValues;
+		}
+	};
+}
+
+

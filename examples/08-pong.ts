@@ -1,5 +1,5 @@
 import { Color, Vector3, Vector2 } from 'three';
-import { game, box, sphere, stage, camera, zone, globalChange, globalChanges, text } from '../src/main';
+import { game, box, sphere, stage, camera, zone, globalChanges, text } from '../src/main';
 import { makeMoveable } from '../src/lib/actions/capabilities/moveable';
 import { Vec0 } from '../src/lib/core/utility';
 import { ricochet2DInBounds } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
@@ -117,7 +117,7 @@ const winnerText = await text({
 	screenPosition: new Vector2(window.innerWidth / 2, window.innerHeight / 2),
 });
 
-const stage1 = stage(camera1);
+const stage1 = stage({ variables: { screenBounces: 0 } }, camera1);
 const game1 = game({
 	id: 'pong',
 	debug: true,

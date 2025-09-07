@@ -3,7 +3,7 @@ import { Color, Vector3, Vector2 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
-import { setStageBackgroundColor, setStageBackgroundImage } from './stage-state';
+import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, setStageVariables } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
 import { ZylemBlueColor } from '../core/utility';
@@ -198,6 +198,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		const { backgroundColor, backgroundImage } = this.state;
 		setStageBackgroundColor(backgroundColor);
 		setStageBackgroundImage(backgroundImage);
+		// Initialize reactive stage variables on load
+		setStageVariables(this.state.variables ?? {});
 	}
 
 	/**
@@ -299,6 +301,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.world = null as any;
 		this.scene = null as any;
 		this.cameraRef = null;
+		// Clear reactive stage variables on unload
+		resetStageVariables();
 	}
 
 	/**

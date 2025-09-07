@@ -1,4 +1,4 @@
-import { Euler, Vector3, MathUtils } from 'three';
+import { Euler, Vector3, MathUtils, Quaternion } from 'three';
 import { RigidBody } from '@dimforge/rapier3d-compat';
 
 export interface RotatableEntity {
@@ -50,7 +50,10 @@ export function rotateZ(entity: RotatableEntity, delta: number): void {
  */
 export function setRotationY(entity: RotatableEntity, y: number): void {
 	if (!entity.body) return;
-	entity.body.setRotation({ w: 1, x: 0, y: y, z: 0 }, true);
+	const halfAngle = y / 2;
+	const w = Math.cos(halfAngle);
+	const yComponent = Math.sin(halfAngle);
+	entity.body.setRotation({ w: w, x: 0, y: yComponent, z: 0 }, true);
 }
 
 /**
@@ -66,7 +69,10 @@ export function setRotationDegreesY(entity: RotatableEntity, y: number): void {
  */
 export function setRotationX(entity: RotatableEntity, x: number): void {
 	if (!entity.body) return;
-	entity.body.setRotation({ w: 1, x: x, y: 0, z: 0 }, true);
+	const halfAngle = x / 2;
+	const w = Math.cos(halfAngle);
+	const xComponent = Math.sin(halfAngle);
+	entity.body.setRotation({ w: w, x: xComponent, y: 0, z: 0 }, true);
 }
 
 /**
@@ -101,7 +107,8 @@ export function setRotationDegreesZ(entity: RotatableEntity, z: number): void {
  */
 export function setRotation(entity: RotatableEntity, x: number, y: number, z: number): void {
 	if (!entity.body) return;
-	entity.body.setRotation({ w: 1, x, y, z }, true);
+	const quat = new Quaternion().setFromEuler(new Euler(x, y, z));
+	entity.body.setRotation({ w: quat.w, x: quat.x, y: quat.y, z: quat.z }, true);
 }
 
 /**
@@ -109,15 +116,7 @@ export function setRotation(entity: RotatableEntity, x: number, y: number, z: nu
  */
 export function setRotationDegrees(entity: RotatableEntity, x: number, y: number, z: number): void {
 	if (!entity.body) return;
-	entity.body.setRotation(
-		{
-			w: 1,
-			x: MathUtils.degToRad(x),
-			y: MathUtils.degToRad(y),
-			z: MathUtils.degToRad(z)
-		},
-		true
-	);
+	setRotation(entity, MathUtils.degToRad(x), MathUtils.degToRad(y), MathUtils.degToRad(z));
 }
 
 /**

@@ -3,8 +3,7 @@ import { DestroyFunction, SetupContext, SetupFunction, UpdateFunction } from '..
 import { StageOptions, ZylemStage } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
-import { subscribe } from 'valtio/vanilla';
-import { setStageVariable, stageState } from './stage-state';
+import { getStageVariable, setStageVariable, stageState } from './stage-state';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
@@ -49,7 +48,8 @@ export class Stage {
 
 	onUpdate(...callbacks: UpdateFunction<ZylemStage>[]) {
 		this.stageRef.update = (params) => {
-			callbacks.forEach((cb) => cb(params));
+			const extended = { ...params, stage: this } as any;
+			callbacks.forEach((cb) => cb(extended));
 		};
 	}
 
@@ -66,15 +66,7 @@ export class Stage {
 	}
 
 	getVariable(key: string) {
-		return this.stageRef.state.variables[key];
-	}
-
-	watchVariable(key: string, callback: (value: any) => void) {
-		subscribe(stageState, () => {
-			if (stageState.variables[key] !== undefined) {
-				callback(stageState.variables[key]);
-			}
-		});
+		return getStageVariable(key);
 	}
 }
 
