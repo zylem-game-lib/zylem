@@ -27,7 +27,7 @@ export interface BoundaryOptions {
  * @param options.stopMovement Whether to stop the entity's movement when it hits a boundary
  * @returns A behavior callback with type 'update' and a handler function
  */
-export declare function boundary(options?: Partial<BoundaryOptions>): {
+export declare function boundary2d(options?: Partial<BoundaryOptions>): {
     type: BehaviorCallbackType;
     handler: (ctx: UpdateContext<MoveableEntity>) => void;
 };

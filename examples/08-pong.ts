@@ -4,7 +4,7 @@ import { makeMoveable } from '../src/lib/actions/capabilities/moveable';
 import { Vec0 } from '../src/lib/core/utility';
 import { ricochet2DInBounds } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
 import { ricochetSound, pingPongBeep } from '../src/lib/sounds';
-import { boundary } from '../src/lib/actions/behaviors/boundaries/boundary';
+import { boundary2d } from '../src/lib/actions/behaviors/boundaries/boundary';
 import { ricochet2DCollision } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-collision';
 
 const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
@@ -43,7 +43,7 @@ makeMoveable(paddle1).onUpdate(({ me, inputs }) => {
 	let value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
 	me.moveY(value * paddleSpeed);
 });
-paddle1.addBehavior(boundary({ boundaries: gameBounds }));
+paddle1.addBehavior(boundary2d({ boundaries: gameBounds }));
 
 const paddle2 = await box({
 	name: 'paddle2',
@@ -57,7 +57,7 @@ makeMoveable(paddle2).onUpdate(({ me, inputs }) => {
 	const value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
 	me.moveY(value * paddleSpeed);
 });
-paddle2.addBehavior(boundary({ boundaries: gameBounds }));
+paddle2.addBehavior(boundary2d({ boundaries: gameBounds }));
 
 const p1Goal = await zone({
 	name: 'p1Goal',

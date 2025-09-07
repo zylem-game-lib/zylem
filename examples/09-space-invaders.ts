@@ -1,7 +1,7 @@
 /// <reference types="@zylem/assets" />
 import { Color, Vector2, Vector3 } from 'three';
 import { camera, destroy, entitySpawner, game, makeMoveable, Perspectives, sprite, stage, text } from '../src/main';
-import { boundary } from '../src/lib/actions/behaviors/boundaries/boundary';
+import { boundary2d } from '../src/lib/actions/behaviors/boundaries/boundary';
 import { movementSequence2D } from '../src/lib/actions/behaviors/movement/movement-sequence-2d';
 import { ZylemSprite } from '../src/lib/entities/sprite';
 import { makeTransformable } from '../src/lib/actions/capabilities/transformable';
@@ -37,7 +37,7 @@ async function createBullet(x: number, y: number) {
 			destroy(entity);
 			shotsFired = 0;
 		}
-	}).addBehavior(boundary({
+	}).addBehavior(boundary2d({
 		boundaries: { top: 10, bottom: -10, left: -10, right: 10 },
 		onBoundary: ({ boundary }) => {
 			if (boundary.top) {
@@ -63,7 +63,7 @@ player.onUpdate(({ me, inputs }) => {
 		bulletSpawner.spawnRelative(player, stage1, new Vector2(0, 1));
 	}
 });
-player.addBehavior(boundary({ boundaries: { top: 1, bottom: -10, left: -10, right: 10 } }));
+player.addBehavior(boundary2d({ boundaries: { top: 1, bottom: -10, left: -10, right: 10 } }));
 
 const enemies: ZylemSprite[] = [];
 
@@ -88,7 +88,7 @@ for (let i = 0; i < 10; i++) {
 		enemy.onDestroy(({ globals }) => {
 			globals.score += 10;
 		});
-		enemy.addBehavior(boundary({ boundaries: { top: 10, bottom: -10, left: -20, right: 20 } }));
+		enemy.addBehavior(boundary2d({ boundaries: { top: 10, bottom: -10, left: -20, right: 20 } }));
 		enemies.push(enemy);
 	}
 }

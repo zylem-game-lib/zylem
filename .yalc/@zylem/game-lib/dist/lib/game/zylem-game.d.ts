@@ -1,0 +1,46 @@
+import { Game } from './game';
+import { UpdateContext, SetupContext, DestroyContext } from '../core/base-node-life-cycle';
+import { InputManager } from '../input/input-manager';
+import { Timer } from '../core/three-addons/Timer';
+import { ZylemCamera } from '~/lib/camera/zylem-camera';
+import { Stage } from '../stage/stage';
+import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+export declare class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> {
+    id: string;
+    initialGlobals: TGlobals;
+    customSetup: ((params: SetupContext<ZylemGame<TGlobals>, TGlobals>) => void) | null;
+    customUpdate: ((params: UpdateContext<ZylemGame<TGlobals>, TGlobals>) => void) | null;
+    customDestroy: ((params: DestroyContext<ZylemGame<TGlobals>, TGlobals>) => void) | null;
+    stages: Stage[];
+    stageMap: Map<string, Stage>;
+    currentStageId: string;
+    previousTimeStamp: number;
+    totalTime: number;
+    timer: Timer;
+    inputManager: InputManager;
+    wrapperRef: Game<TGlobals>;
+    statsRef: {
+        begin: () => void;
+        end: () => void;
+        showPanel: (panel: number) => void;
+        dom: HTMLElement;
+    } | null;
+    defaultCamera: ZylemCamera | null;
+    static FRAME_LIMIT: number;
+    static FRAME_DURATION: number;
+    static MAX_DELTA_SECONDS: number;
+    constructor(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>, wrapperRef: Game<TGlobals>);
+    loadStage(stage: Stage): Promise<void>;
+    unloadCurrentStage(): void;
+    setGlobals(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>): void;
+    params(): UpdateContext<ZylemGame<TGlobals>, TGlobals>;
+    start(): void;
+    loop(timestamp: number): void;
+    outOfLoop(): void;
+    getStage(id: string): Stage | undefined;
+    currentStage(): Stage | undefined;
+    getGlobal<K extends keyof TGlobals>(key: K): TGlobals[K];
+    setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]): void;
+    onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void): void;
+}
+export default ZylemGame;

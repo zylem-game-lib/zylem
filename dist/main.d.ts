@@ -15,26 +15,16 @@ export { plane } from './lib/entities/plane';
 export { zone } from './lib/entities/zone';
 export { actor } from './lib/entities/actor';
 export { text } from './lib/entities/text';
+export { rect } from './lib/entities/rect';
 export { ZylemBox } from './lib/entities/box';
 export { makeMoveable } from './lib/actions/capabilities/moveable';
 export { makeRotatable } from './lib/actions/capabilities/rotatable';
 export { makeTransformable } from './lib/actions/capabilities/transformable';
-export * as actions from './lib/actions/behaviors/actions';
+export { ricochet2DInBounds } from './lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
+export { ricochet2DCollision } from './lib/actions/behaviors/ricochet/ricochet-2d-collision';
+export { boundary2d } from './lib/actions/behaviors/boundaries/boundary';
 export { destroy } from './lib/entities/destroy';
 export { Howl } from 'howler';
 export * as THREE from 'three';
 export * as RAPIER from '@dimforge/rapier3d-compat';
 export { globalChange, globalChanges, variableChange, variableChanges } from './lib/actions/global-change';
-declare const Zylem: {
-    Util: {
-        wait(delay: number, callback: Function): void;
-        actionOnPress: (isPressed: boolean, callback: Function) => void;
-        actionOnRelease: (isPressed: boolean, callback: Function) => void;
-        actionWithCooldown: ({ timer, immediate }: {
-            timer: number;
-            immediate?: boolean;
-        }, callback: Function, update: Function) => void;
-        actionWithThrottle: (timer: number, callback: Function) => void;
-    };
-};
-export { Zylem };

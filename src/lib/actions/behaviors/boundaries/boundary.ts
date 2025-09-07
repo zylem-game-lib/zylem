@@ -40,13 +40,13 @@ const defaultBoundaryOptions: BoundaryOptions = {
  * @param options.stopMovement Whether to stop the entity's movement when it hits a boundary
  * @returns A behavior callback with type 'update' and a handler function
  */
-export function boundary(
+export function boundary2d(
 	options: Partial<BoundaryOptions> = {}
 ): { type: BehaviorCallbackType; handler: (ctx: UpdateContext<MoveableEntity>) => void } {
 	return {
 		type: 'update' as BehaviorCallbackType,
 		handler: (updateContext: UpdateContext<MoveableEntity>) => {
-			_boundary(updateContext, options);
+			_boundary2d(updateContext, options);
 		}
 	};
 }
@@ -55,7 +55,7 @@ type BoundaryHit = 'top' | 'bottom' | 'left' | 'right';
 
 type BoundaryHits = Record<BoundaryHit, boolean>;
 
-function _boundary(updateContext: UpdateContext<MoveableEntity>, options: Partial<BoundaryOptions>) {
+function _boundary2d(updateContext: UpdateContext<MoveableEntity>, options: Partial<BoundaryOptions>) {
 	const { me: entity } = updateContext;
 	const { boundaries, onBoundary } = {
 		...defaultBoundaryOptions,

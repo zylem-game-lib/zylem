@@ -47,3 +47,6 @@ export type Ricochet2DCollisionCallback = (event: RicochetCollisionEvent) => voi
 export function clamp(value: number, min: number, max: number): number {
 	return Math.max(min, Math.min(max, value));
 }
+
+export { ricochet2DInBounds } from './ricochet-2d-in-bounds';
+export { ricochet2DCollision } from './ricochet-2d-collision';

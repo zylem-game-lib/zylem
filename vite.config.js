@@ -13,8 +13,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // https://vitejs.dev/config/
 export default defineConfig(async ({ command, mode }) => {
   const glsl = (await import('vite-plugin-glsl')).default;
-
-  // Determine if we're building the library or running dev/preview
   const isLibraryBuild = command === 'build' && mode === 'production';
 
   const config = {
@@ -52,19 +50,46 @@ export default defineConfig(async ({ command, mode }) => {
     },
   };
 
-  // Only add library build configuration when building for production
   if (isLibraryBuild) {
     config.build = {
       manifest: true,
       minify: true,
       reportCompressedSize: true,
       lib: {
-        entry: path.resolve(__dirname, 'src/main.ts'),
-        fileName: 'main',
-        formats: ['es', 'cjs'],
+        entry: {
+          main: path.resolve(__dirname, 'src/main.ts'),
+          core: path.resolve(__dirname, 'src/core.ts'),
+          camera: path.resolve(__dirname, 'src/camera.ts'),
+          stage: path.resolve(__dirname, 'src/stage.ts'),
+          entities: path.resolve(__dirname, 'src/entities.ts'),
+          actions: path.resolve(__dirname, 'src/actions.ts'),
+          behaviors: path.resolve(__dirname, 'src/behaviors.ts'),
+        },
+        fileName: (format, name) => name,
+        formats: ['es'],
       },
       rollupOptions: {
-        external: [],
+        external: (id) => {
+          const pkgs = [
+            'three',
+            '@dimforge/rapier3d-compat',
+            '@dimforge/rapier3d',
+            'howler',
+            'solid-js',
+            'dat.gui',
+            'lil-gui',
+            'valtio',
+            'stats.js',
+            'three-addons',
+            'three-full',
+            'three-instanced-uniforms-mesh',
+            'three-spritetext',
+            'nanoid',
+            'bitecs',
+            'lucide-solid',
+          ];
+          return pkgs.some((pkg) => id === pkg || id.startsWith(pkg + '/'));
+        },
         plugins: [
           typescriptPaths({
             preserveExtensions: true,
@@ -80,127 +105,15 @@ export default defineConfig(async ({ command, mode }) => {
             template: 'network',
           }),
         ],
+        output: {
+          entryFileNames: '[name].js',
+          chunkFileNames: 'chunks/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash].[ext]',
+          preserveModules: true,
+          preserveModulesRoot: 'src',
+        },
       },
     };
-  } else {
-    // // For dev/preview, use standard web app build
-    // config.build = {
-    //   outDir: 'dist-preview',
-    //   minify: true,
-    //   reportCompressedSize: true,
-    //   target: 'esnext', // Support top-level await
-    //   rollupOptions: {
-    //     output: {
-    //       manualChunks: {
-    //         // External vendor libraries (no dependencies on each other)
-    //         'vendor-three': ['three'],
-    //         'vendor-rapier': ['@dimforge/rapier3d-compat'],
-    //         'vendor-howler': ['howler'],
-    //         // Core foundation (no internal dependencies)
-    //         'zylem-foundation': [
-    //           './src/lib/core/base-node.ts',
-    //           './src/lib/core/base-node-life-cycle.ts',
-    //           './src/lib/core/utility.ts',
-    //           './src/lib/core/vector.ts',
-    //           './src/lib/core/errors.ts',
-    //           './src/lib/core/composable.ts',
-    //           './src/lib/interfaces/entity.ts',
-    //           './src/lib/interfaces/game.ts',
-    //         ],
-    //         // State management (depends only on foundation)
-    //         'zylem-state': [
-    //           './src/lib/state/index.ts',
-    //           './src/lib/state/game-state.ts',
-    //           './src/lib/state/stage-state.ts',
-    //           './src/lib/state/debug-state.ts',
-    //           './src/lib/state/console-state.ts',
-    //         ],
-    //         // Input system (minimal dependencies)
-    //         'zylem-input': [
-    //           './src/lib/input/input.ts',
-    //           './src/lib/input/input-manager.ts',
-    //           './src/lib/input/input-provider.ts',
-    //           './src/lib/input/keyboard-provider.ts',
-    //           './src/lib/input/gamepad-provider.ts',
-    //         ],
-    //         // Graphics and materials (depends on foundation)
-    //         'zylem-graphics': [
-    //           './src/lib/graphics/material.ts',
-    //           './src/lib/graphics/mesh.ts',
-    //           './src/lib/graphics/geometries/XZPlaneGeometry.ts',
-    //           './src/lib/core/preset-shader.ts',
-    //         ],
-    //         // Physics/Collision (depends on foundation)
-    //         'zylem-physics': [
-    //           './src/lib/collision/physics.ts',
-    //           './src/lib/collision/collision.ts',
-    //           './src/lib/collision/collision-builder.ts',
-    //           './src/lib/collision/collision-delegate.ts',
-    //         ],
-    //         // Camera system (depends on graphics)
-    //         'zylem-camera': [
-    //           './src/lib/camera/camera.ts',
-    //           './src/lib/camera/zylem-camera.ts',
-    //           './src/lib/camera/perspective.ts',
-    //           './src/lib/camera/third-person.ts',
-    //           './src/lib/camera/fixed-2d.ts',
-    //           './src/lib/graphics/render-pass.ts',
-    //         ],
-    //         // Entities (depends on foundation, graphics, physics)
-    //         'zylem-entities': [
-    //           './src/lib/entities/entity.ts',
-    //           './src/lib/entities/box.ts',
-    //           './src/lib/entities/sphere.ts',
-    //           './src/lib/entities/sprite.ts',
-    //           './src/lib/entities/plane.ts',
-    //           './src/lib/entities/zone.ts',
-    //           './src/lib/entities/actor.ts',
-    //           './src/lib/entities/create.ts',
-    //           './src/lib/entities/destroy.ts',
-    //           './src/lib/entities/delegates/animation.ts',
-    //           './src/lib/entities/delegates/loader.ts',
-    //         ],
-    //         // Behaviors (depends on entities)
-    //         'zylem-behaviors': [
-    //           './src/lib/behaviors/actions.ts',
-    //           './src/lib/behaviors/behavior.ts',
-    //           './src/lib/behaviors/character-controller.ts',
-    //           './src/lib/behaviors/entity-movement.ts',
-    //           './src/lib/behaviors/entity-spawner.ts',
-    //           './src/lib/behaviors/moveable.ts',
-    //           './src/lib/behaviors/rotatable.ts',
-    //           './src/lib/behaviors/transformable.system.ts',
-    //         ],
-    //         // Core game systems (depends on most other chunks)
-    //         'zylem-core': [
-    //           './src/lib/core/game/game.ts',
-    //           './src/lib/core/game/zylem-game.ts',
-    //           './src/lib/core/vessel.ts',
-    //           './src/lib/core/asset-manager.ts',
-    //           './src/lib/core/entity-asset-loader.ts',
-    //           './src/lib/core/three-addons/Timer.ts',
-    //         ],
-    //         // Stage system (depends on everything - should load last)
-    //         'zylem-stage': [
-    //           './src/lib/core/stage/stage.ts',
-    //           './src/lib/core/stage/zylem-stage.ts',
-    //           './src/lib/collision/world.ts',
-    //           './src/lib/graphics/zylem-scene.ts',
-    //         ],
-    //         // UI and Debug (optional, can be lazy loaded)
-    //         'zylem-ui': [
-    //           './src/lib/ui/hud.ts',
-    //           './src/lib/ui/hud-bar.ts',
-    //           './src/lib/ui/hud-label.ts',
-    //           './src/lib/ui/hud-custom.ts',
-    //         ],
-    //       },
-    //       chunkFileNames: 'assets/[name]-[hash].js',
-    //       entryFileNames: 'assets/[name]-[hash].js',
-    //       assetFileNames: 'assets/[name]-[hash].[ext]',
-    //     },
-    //   },
-    // };
   }
 
   return config;

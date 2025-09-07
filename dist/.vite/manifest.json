@@ -1,8 +1,601 @@
 {
+  "src/actions.ts": {
+    "file": "actions.js",
+    "name": "actions",
+    "src": "src/actions.ts",
+    "isEntry": true,
+    "imports": [
+      "src/lib/actions/behaviors/actions.ts",
+      "src/lib/actions/capabilities/moveable.ts",
+      "src/lib/actions/capabilities/rotatable.ts",
+      "src/lib/actions/capabilities/transformable.ts"
+    ]
+  },
+  "src/behaviors.ts": {
+    "file": "behaviors.js",
+    "name": "behaviors",
+    "src": "src/behaviors.ts",
+    "isEntry": true,
+    "imports": [
+      "src/lib/actions/behaviors/boundaries/boundary.ts",
+      "src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.ts",
+      "src/lib/actions/behaviors/ricochet/ricochet-2d-collision.ts"
+    ]
+  },
+  "src/camera.ts": {
+    "file": "camera.js",
+    "name": "camera",
+    "src": "src/camera.ts",
+    "isEntry": true,
+    "imports": [
+      "src/lib/camera/camera.ts",
+      "src/lib/camera/perspective.ts"
+    ]
+  },
+  "src/core.ts": {
+    "file": "core.js",
+    "name": "core",
+    "src": "src/core.ts",
+    "isEntry": true,
+    "imports": [
+      "src/lib/game/game.ts",
+      "src/lib/core/vessel.ts",
+      "src/lib/actions/global-change.ts"
+    ]
+  },
+  "src/entities.ts": {
+    "file": "entities.js",
+    "name": "entities",
+    "src": "src/entities.ts",
+    "isEntry": true,
+    "imports": [
+      "src/lib/entities/box.ts",
+      "src/lib/entities/sphere.ts",
+      "src/lib/entities/sprite.ts",
+      "src/lib/entities/plane.ts",
+      "src/lib/entities/zone.ts",
+      "src/lib/entities/actor.ts",
+      "src/lib/entities/text.ts",
+      "src/lib/entities/rect.ts"
+    ]
+  },
+  "src/lib/actions/behaviors/actions.ts": {
+    "file": "lib/actions/behaviors/actions.js",
+    "name": "lib/actions/behaviors/actions",
+    "src": "src/lib/actions/behaviors/actions.ts"
+  },
+  "src/lib/actions/behaviors/boundaries/boundary.ts": {
+    "file": "lib/actions/behaviors/boundaries/boundary.js",
+    "name": "lib/actions/behaviors/boundaries/boundary",
+    "src": "src/lib/actions/behaviors/boundaries/boundary.ts"
+  },
+  "src/lib/actions/behaviors/ricochet/ricochet-2d-collision.ts": {
+    "file": "lib/actions/behaviors/ricochet/ricochet-2d-collision.js",
+    "name": "lib/actions/behaviors/ricochet/ricochet-2d-collision",
+    "src": "src/lib/actions/behaviors/ricochet/ricochet-2d-collision.ts",
+    "imports": [
+      "src/lib/collision/utils.ts",
+      "src/lib/actions/behaviors/ricochet/ricochet.ts"
+    ]
+  },
+  "src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.ts": {
+    "file": "lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.js",
+    "name": "lib/actions/behaviors/ricochet/ricochet-2d-in-bounds",
+    "src": "src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.ts",
+    "imports": [
+      "src/lib/actions/behaviors/ricochet/ricochet.ts"
+    ]
+  },
+  "src/lib/actions/behaviors/ricochet/ricochet.ts": {
+    "file": "lib/actions/behaviors/ricochet/ricochet.js",
+    "name": "lib/actions/behaviors/ricochet/ricochet",
+    "src": "src/lib/actions/behaviors/ricochet/ricochet.ts"
+  },
+  "src/lib/actions/capabilities/moveable.ts": {
+    "file": "lib/actions/capabilities/moveable.js",
+    "name": "lib/actions/capabilities/moveable",
+    "src": "src/lib/actions/capabilities/moveable.ts"
+  },
+  "src/lib/actions/capabilities/rotatable.ts": {
+    "file": "lib/actions/capabilities/rotatable.js",
+    "name": "lib/actions/capabilities/rotatable",
+    "src": "src/lib/actions/capabilities/rotatable.ts"
+  },
+  "src/lib/actions/capabilities/transformable.ts": {
+    "file": "lib/actions/capabilities/transformable.js",
+    "name": "lib/actions/capabilities/transformable",
+    "src": "src/lib/actions/capabilities/transformable.ts",
+    "imports": [
+      "src/lib/actions/capabilities/moveable.ts",
+      "src/lib/actions/capabilities/rotatable.ts"
+    ]
+  },
+  "src/lib/actions/global-change.ts": {
+    "file": "lib/actions/global-change.js",
+    "name": "lib/actions/global-change",
+    "src": "src/lib/actions/global-change.ts"
+  },
+  "src/lib/camera/camera.ts": {
+    "file": "lib/camera/camera.js",
+    "name": "lib/camera/camera",
+    "src": "src/lib/camera/camera.ts",
+    "imports": [
+      "src/lib/camera/zylem-camera.ts"
+    ]
+  },
+  "src/lib/camera/fixed-2d.ts": {
+    "file": "lib/camera/fixed-2d.js",
+    "name": "lib/camera/fixed-2d",
+    "src": "src/lib/camera/fixed-2d.ts"
+  },
+  "src/lib/camera/perspective.ts": {
+    "file": "lib/camera/perspective.js",
+    "name": "lib/camera/perspective",
+    "src": "src/lib/camera/perspective.ts"
+  },
+  "src/lib/camera/third-person.ts": {
+    "file": "lib/camera/third-person.js",
+    "name": "lib/camera/third-person",
+    "src": "src/lib/camera/third-person.ts"
+  },
+  "src/lib/camera/zylem-camera.ts": {
+    "file": "lib/camera/zylem-camera.js",
+    "name": "lib/camera/zylem-camera",
+    "src": "src/lib/camera/zylem-camera.ts",
+    "imports": [
+      "src/lib/camera/perspective.ts",
+      "src/lib/camera/third-person.ts",
+      "src/lib/camera/fixed-2d.ts",
+      "src/lib/graphics/render-pass.ts"
+    ]
+  },
+  "src/lib/collision/collision-builder.ts": {
+    "file": "lib/collision/collision-builder.js",
+    "name": "lib/collision/collision-builder",
+    "src": "src/lib/collision/collision-builder.ts"
+  },
+  "src/lib/collision/collision-delegate.ts": {
+    "file": "lib/collision/collision-delegate.js",
+    "name": "lib/collision/collision-delegate",
+    "src": "src/lib/collision/collision-delegate.ts"
+  },
+  "src/lib/collision/utils.ts": {
+    "file": "lib/collision/utils.js",
+    "name": "lib/collision/utils",
+    "src": "src/lib/collision/utils.ts",
+    "imports": [
+      "src/lib/collision/collision-builder.ts"
+    ]
+  },
+  "src/lib/collision/world.ts": {
+    "file": "lib/collision/world.js",
+    "name": "lib/collision/world",
+    "src": "src/lib/collision/world.ts",
+    "imports": [
+      "src/lib/game/game-state.ts",
+      "src/lib/entities/actor.ts",
+      "src/lib/collision/collision-delegate.ts"
+    ]
+  },
+  "src/lib/core/base-node.ts": {
+    "file": "lib/core/base-node.js",
+    "name": "lib/core/base-node",
+    "src": "src/lib/core/base-node.ts"
+  },
+  "src/lib/core/entity-asset-loader.ts": {
+    "file": "lib/core/entity-asset-loader.js",
+    "name": "lib/core/entity-asset-loader",
+    "src": "src/lib/core/entity-asset-loader.ts"
+  },
+  "src/lib/core/lifecycle-base.ts": {
+    "file": "lib/core/lifecycle-base.js",
+    "name": "lib/core/lifecycle-base",
+    "src": "src/lib/core/lifecycle-base.ts"
+  },
+  "src/lib/core/preset-shader.ts": {
+    "file": "lib/core/preset-shader.js",
+    "name": "lib/core/preset-shader",
+    "src": "src/lib/core/preset-shader.ts",
+    "imports": [
+      "src/lib/graphics/shaders/fragment/stars.glsl",
+      "src/lib/graphics/shaders/fragment/fire.glsl",
+      "src/lib/graphics/shaders/fragment/standard.glsl",
+      "src/lib/graphics/shaders/fragment/debug.glsl",
+      "src/lib/graphics/shaders/vertex/object-shader.glsl",
+      "src/lib/graphics/shaders/vertex/debug.glsl"
+    ]
+  },
+  "src/lib/core/three-addons/Timer.ts": {
+    "file": "lib/core/three-addons/Timer.js",
+    "name": "lib/core/three-addons/Timer",
+    "src": "src/lib/core/three-addons/Timer.ts"
+  },
+  "src/lib/core/utility.ts": {
+    "file": "lib/core/utility.js",
+    "name": "lib/core/utility",
+    "src": "src/lib/core/utility.ts"
+  },
+  "src/lib/core/vessel.ts": {
+    "file": "lib/core/vessel.js",
+    "name": "lib/core/vessel",
+    "src": "src/lib/core/vessel.ts",
+    "imports": [
+      "src/lib/core/base-node.ts"
+    ]
+  },
+  "src/lib/debug/console/console-state.ts": {
+    "file": "lib/debug/console/console-state.js",
+    "name": "lib/debug/console/console-state",
+    "src": "src/lib/debug/console/console-state.ts"
+  },
+  "src/lib/debug/debug-state.ts": {
+    "file": "lib/debug/debug-state.js",
+    "name": "lib/debug/debug-state",
+    "src": "src/lib/debug/debug-state.ts",
+    "imports": [
+      "src/lib/debug/console/console-state.ts"
+    ]
+  },
+  "src/lib/entities/actor.ts": {
+    "file": "lib/entities/actor.js",
+    "name": "lib/entities/actor",
+    "src": "src/lib/entities/actor.ts",
+    "imports": [
+      "src/lib/entities/entity.ts",
+      "src/lib/entities/create.ts",
+      "src/lib/core/entity-asset-loader.ts",
+      "src/lib/entities/delegates/animation.ts",
+      "src/lib/entities/builder.ts"
+    ]
+  },
+  "src/lib/entities/box.ts": {
+    "file": "lib/entities/box.js",
+    "name": "lib/entities/box",
+    "src": "src/lib/entities/box.ts",
+    "imports": [
+      "src/lib/entities/entity.ts",
+      "src/lib/entities/builder.ts",
+      "src/lib/entities/delegates/debug.ts",
+      "src/lib/entities/create.ts"
+    ]
+  },
+  "src/lib/entities/builder.ts": {
+    "file": "lib/entities/builder.js",
+    "name": "lib/entities/builder",
+    "src": "src/lib/entities/builder.ts",
+    "imports": [
+      "src/lib/collision/collision-builder.ts",
+      "src/lib/graphics/mesh.ts",
+      "src/lib/graphics/material.ts"
+    ]
+  },
+  "src/lib/entities/create.ts": {
+    "file": "lib/entities/create.js",
+    "name": "lib/entities/create",
+    "src": "src/lib/entities/create.ts",
+    "imports": [
+      "src/lib/core/base-node.ts",
+      "src/lib/entities/delegates/loader.ts"
+    ]
+  },
+  "src/lib/entities/delegates/animation.ts": {
+    "file": "lib/entities/delegates/animation.js",
+    "name": "lib/entities/delegates/animation",
+    "src": "src/lib/entities/delegates/animation.ts",
+    "imports": [
+      "src/lib/core/entity-asset-loader.ts"
+    ]
+  },
+  "src/lib/entities/delegates/debug.ts": {
+    "file": "lib/entities/delegates/debug.js",
+    "name": "lib/entities/delegates/debug",
+    "src": "src/lib/entities/delegates/debug.ts"
+  },
+  "src/lib/entities/delegates/loader.ts": {
+    "file": "lib/entities/delegates/loader.js",
+    "name": "lib/entities/delegates/loader",
+    "src": "src/lib/entities/delegates/loader.ts"
+  },
+  "src/lib/entities/destroy.ts": {
+    "file": "lib/entities/destroy.js",
+    "name": "lib/entities/destroy",
+    "src": "src/lib/entities/destroy.ts",
+    "imports": [
+      "src/lib/game/game-state.ts"
+    ]
+  },
+  "src/lib/entities/entity.ts": {
+    "file": "lib/entities/entity.js",
+    "name": "lib/entities/entity",
+    "src": "src/lib/entities/entity.ts",
+    "imports": [
+      "src/lib/systems/transformable.system.ts",
+      "src/lib/core/base-node.ts"
+    ]
+  },
+  "src/lib/entities/plane.ts": {
+    "file": "lib/entities/plane.js",
+    "name": "lib/entities/plane",
+    "src": "src/lib/entities/plane.ts",
+    "imports": [
+      "src/lib/entities/entity.ts",
+      "src/lib/entities/builder.ts",
+      "src/lib/graphics/geometries/XZPlaneGeometry.ts",
+      "src/lib/entities/create.ts"
+    ]
+  },
+  "src/lib/entities/rect.ts": {
+    "file": "lib/entities/rect.js",
+    "name": "lib/entities/rect",
+    "src": "src/lib/entities/rect.ts",
+    "imports": [
+      "src/lib/entities/entity.ts",
+      "src/lib/entities/builder.ts",
+      "src/lib/entities/create.ts",
+      "src/lib/entities/delegates/debug.ts"
+    ]
+  },
+  "src/lib/entities/sphere.ts": {
+    "file": "lib/entities/sphere.js",
+    "name": "lib/entities/sphere",
+    "src": "src/lib/entities/sphere.ts",
+    "imports": [
+      "src/lib/entities/entity.ts",
+      "src/lib/entities/builder.ts",
+      "src/lib/entities/delegates/debug.ts",
+      "src/lib/entities/create.ts"
+    ]
+  },
+  "src/lib/entities/sprite.ts": {
+    "file": "lib/entities/sprite.js",
+    "name": "lib/entities/sprite",
+    "src": "src/lib/entities/sprite.ts",
+    "imports": [
+      "src/lib/entities/entity.ts",
+      "src/lib/entities/builder.ts",
+      "src/lib/entities/create.ts"
+    ]
+  },
+  "src/lib/entities/text.ts": {
+    "file": "lib/entities/text.js",
+    "name": "lib/entities/text",
+    "src": "src/lib/entities/text.ts",
+    "imports": [
+      "src/lib/entities/entity.ts",
+      "src/lib/entities/builder.ts",
+      "src/lib/entities/create.ts",
+      "src/lib/entities/delegates/debug.ts"
+    ]
+  },
+  "src/lib/entities/zone.ts": {
+    "file": "lib/entities/zone.js",
+    "name": "lib/entities/zone",
+    "src": "src/lib/entities/zone.ts",
+    "imports": [
+      "src/lib/entities/entity.ts",
+      "src/lib/entities/builder.ts",
+      "src/lib/entities/create.ts",
+      "src/lib/game/game-state.ts"
+    ]
+  },
+  "src/lib/game/game-state.ts": {
+    "file": "lib/game/game-state.js",
+    "name": "lib/game/game-state",
+    "src": "src/lib/game/game-state.ts"
+  },
+  "src/lib/game/game.ts": {
+    "file": "lib/game/game.js",
+    "name": "lib/game/game",
+    "src": "src/lib/game/game.ts",
+    "imports": [
+      "src/lib/core/base-node.ts",
+      "src/lib/game/zylem-game.ts",
+      "src/lib/stage/stage.ts",
+      "src/lib/debug/debug-state.ts",
+      "src/lib/entities/entity.ts",
+      "src/lib/game/game-state.ts"
+    ]
+  },
+  "src/lib/game/zylem-game.ts": {
+    "file": "lib/game/zylem-game.js",
+    "name": "lib/game/zylem-game",
+    "src": "src/lib/game/zylem-game.ts",
+    "imports": [
+      "src/lib/game/game-state.ts",
+      "src/lib/debug/debug-state.ts",
+      "src/lib/input/input-manager.ts",
+      "src/lib/core/three-addons/Timer.ts"
+    ]
+  },
+  "src/lib/graphics/geometries/XZPlaneGeometry.ts": {
+    "file": "lib/graphics/geometries/XZPlaneGeometry.js",
+    "name": "lib/graphics/geometries/XZPlaneGeometry",
+    "src": "src/lib/graphics/geometries/XZPlaneGeometry.ts"
+  },
+  "src/lib/graphics/material.ts": {
+    "file": "lib/graphics/material.js",
+    "name": "lib/graphics/material",
+    "src": "src/lib/graphics/material.ts",
+    "imports": [
+      "src/lib/core/utility.ts",
+      "src/lib/core/preset-shader.ts"
+    ]
+  },
+  "src/lib/graphics/mesh.ts": {
+    "file": "lib/graphics/mesh.js",
+    "name": "lib/graphics/mesh",
+    "src": "src/lib/graphics/mesh.ts"
+  },
+  "src/lib/graphics/render-pass.ts": {
+    "file": "lib/graphics/render-pass.js",
+    "name": "lib/graphics/render-pass",
+    "src": "src/lib/graphics/render-pass.ts",
+    "imports": [
+      "src/lib/graphics/shaders/fragment/standard.glsl",
+      "src/lib/graphics/shaders/vertex/standard.glsl"
+    ]
+  },
+  "src/lib/graphics/shaders/fragment/debug.glsl": {
+    "file": "lib/graphics/shaders/fragment/debug.glsl.js",
+    "name": "lib/graphics/shaders/fragment/debug.glsl",
+    "src": "src/lib/graphics/shaders/fragment/debug.glsl"
+  },
+  "src/lib/graphics/shaders/fragment/fire.glsl": {
+    "file": "lib/graphics/shaders/fragment/fire.glsl.js",
+    "name": "lib/graphics/shaders/fragment/fire.glsl",
+    "src": "src/lib/graphics/shaders/fragment/fire.glsl"
+  },
+  "src/lib/graphics/shaders/fragment/standard.glsl": {
+    "file": "lib/graphics/shaders/fragment/standard.glsl.js",
+    "name": "lib/graphics/shaders/fragment/standard.glsl",
+    "src": "src/lib/graphics/shaders/fragment/standard.glsl"
+  },
+  "src/lib/graphics/shaders/fragment/stars.glsl": {
+    "file": "lib/graphics/shaders/fragment/stars.glsl.js",
+    "name": "lib/graphics/shaders/fragment/stars.glsl",
+    "src": "src/lib/graphics/shaders/fragment/stars.glsl"
+  },
+  "src/lib/graphics/shaders/vertex/debug.glsl": {
+    "file": "lib/graphics/shaders/vertex/debug.glsl.js",
+    "name": "lib/graphics/shaders/vertex/debug.glsl",
+    "src": "src/lib/graphics/shaders/vertex/debug.glsl"
+  },
+  "src/lib/graphics/shaders/vertex/object-shader.glsl": {
+    "file": "lib/graphics/shaders/vertex/object-shader.glsl.js",
+    "name": "lib/graphics/shaders/vertex/object-shader.glsl",
+    "src": "src/lib/graphics/shaders/vertex/object-shader.glsl"
+  },
+  "src/lib/graphics/shaders/vertex/standard.glsl": {
+    "file": "lib/graphics/shaders/vertex/standard.glsl.js",
+    "name": "lib/graphics/shaders/vertex/standard.glsl",
+    "src": "src/lib/graphics/shaders/vertex/standard.glsl"
+  },
+  "src/lib/graphics/zylem-scene.ts": {
+    "file": "lib/graphics/zylem-scene.js",
+    "name": "lib/graphics/zylem-scene",
+    "src": "src/lib/graphics/zylem-scene.ts",
+    "imports": [
+      "src/lib/debug/debug-state.ts",
+      "src/lib/game/game-state.ts"
+    ]
+  },
+  "src/lib/input/gamepad-provider.ts": {
+    "file": "lib/input/gamepad-provider.js",
+    "name": "lib/input/gamepad-provider",
+    "src": "src/lib/input/gamepad-provider.ts"
+  },
+  "src/lib/input/input-manager.ts": {
+    "file": "lib/input/input-manager.js",
+    "name": "lib/input/input-manager",
+    "src": "src/lib/input/input-manager.ts",
+    "imports": [
+      "src/lib/input/keyboard-provider.ts",
+      "src/lib/input/gamepad-provider.ts"
+    ]
+  },
+  "src/lib/input/keyboard-provider.ts": {
+    "file": "lib/input/keyboard-provider.js",
+    "name": "lib/input/keyboard-provider",
+    "src": "src/lib/input/keyboard-provider.ts"
+  },
+  "src/lib/stage/debug-entity-cursor.ts": {
+    "file": "lib/stage/debug-entity-cursor.js",
+    "name": "lib/stage/debug-entity-cursor",
+    "src": "src/lib/stage/debug-entity-cursor.ts"
+  },
+  "src/lib/stage/entity-spawner.ts": {
+    "file": "lib/stage/entity-spawner.js",
+    "name": "lib/stage/entity-spawner",
+    "src": "src/lib/stage/entity-spawner.ts"
+  },
+  "src/lib/stage/stage-debug-delegate.ts": {
+    "file": "lib/stage/stage-debug-delegate.js",
+    "name": "lib/stage/stage-debug-delegate",
+    "src": "src/lib/stage/stage-debug-delegate.ts",
+    "imports": [
+      "src/lib/debug/debug-state.ts",
+      "src/lib/stage/debug-entity-cursor.ts"
+    ]
+  },
+  "src/lib/stage/stage-state.ts": {
+    "file": "lib/stage/stage-state.js",
+    "name": "lib/stage/stage-state",
+    "src": "src/lib/stage/stage-state.ts"
+  },
+  "src/lib/stage/stage.ts": {
+    "file": "lib/stage/stage.js",
+    "name": "lib/stage/stage",
+    "src": "src/lib/stage/stage.ts",
+    "imports": [
+      "src/lib/stage/zylem-stage.ts",
+      "src/lib/camera/camera.ts",
+      "src/lib/stage/stage-state.ts"
+    ]
+  },
+  "src/lib/stage/zylem-stage.ts": {
+    "file": "lib/stage/zylem-stage.js",
+    "name": "lib/stage/zylem-stage",
+    "src": "src/lib/stage/zylem-stage.ts",
+    "imports": [
+      "src/lib/collision/world.ts",
+      "src/lib/graphics/zylem-scene.ts",
+      "src/lib/stage/stage-state.ts",
+      "src/lib/core/utility.ts",
+      "src/lib/debug/debug-state.ts",
+      "src/lib/game/game-state.ts",
+      "src/lib/core/lifecycle-base.ts",
+      "src/lib/systems/transformable.system.ts",
+      "src/lib/core/base-node.ts",
+      "src/lib/camera/zylem-camera.ts",
+      "src/lib/camera/perspective.ts",
+      "src/lib/camera/camera.ts",
+      "src/lib/stage/stage-debug-delegate.ts",
+      "src/lib/entities/entity.ts"
+    ]
+  },
+  "src/lib/systems/transformable.system.ts": {
+    "file": "lib/systems/transformable.system.js",
+    "name": "lib/systems/transformable.system",
+    "src": "src/lib/systems/transformable.system.ts"
+  },
   "src/main.ts": {
-    "file": "main.cjs",
+    "file": "main.js",
     "name": "main",
     "src": "src/main.ts",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "src/lib/game/game.ts",
+      "src/lib/stage/stage.ts",
+      "src/lib/stage/entity-spawner.ts",
+      "src/lib/core/vessel.ts",
+      "src/lib/camera/camera.ts",
+      "src/lib/camera/perspective.ts",
+      "src/lib/entities/box.ts",
+      "src/lib/entities/sphere.ts",
+      "src/lib/entities/sprite.ts",
+      "src/lib/entities/plane.ts",
+      "src/lib/entities/zone.ts",
+      "src/lib/entities/actor.ts",
+      "src/lib/entities/text.ts",
+      "src/lib/entities/rect.ts",
+      "src/lib/actions/capabilities/moveable.ts",
+      "src/lib/actions/capabilities/rotatable.ts",
+      "src/lib/actions/capabilities/transformable.ts",
+      "src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.ts",
+      "src/lib/actions/behaviors/ricochet/ricochet-2d-collision.ts",
+      "src/lib/actions/behaviors/boundaries/boundary.ts",
+      "src/lib/entities/destroy.ts",
+      "src/lib/actions/global-change.ts"
+    ]
+  },
+  "src/stage.ts": {
+    "file": "stage.js",
+    "name": "stage",
+    "src": "src/stage.ts",
+    "isEntry": true,
+    "imports": [
+      "src/lib/stage/stage.ts",
+      "src/lib/stage/entity-spawner.ts"
+    ]
   }
 }
