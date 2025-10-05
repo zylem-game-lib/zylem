@@ -16,7 +16,7 @@ import { SetupFunction } from '../core/base-node-life-cycle';
 import { getGlobalState } from '../game/game-state';
 
 interface SceneState {
-	backgroundColor: Color;
+	backgroundColor: Color | string;
 	backgroundImage: string | null;
 }
 
@@ -31,7 +31,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 	constructor(id: string, camera: ZylemCamera, state: SceneState) {
 		// Create Three.js scene
 		const scene = new Scene();
-		scene.background = new Color(state.backgroundColor);
+		const isColor = state.backgroundColor instanceof Color;
+		const backgroundColor = (isColor) ? state.backgroundColor : new Color(state.backgroundColor);
+		scene.background = backgroundColor as Color;
 
 		// Setup background image if provided
 		if (state.backgroundImage) {

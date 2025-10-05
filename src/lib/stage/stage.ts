@@ -70,6 +70,11 @@ export class Stage {
 	}
 }
 
+export interface StageContext {
+	instance: Stage; // TODO: make this a factory function
+	stageBlueprint: StageOptions;
+}
+
 /**
  * Create a stage with optional camera
  */

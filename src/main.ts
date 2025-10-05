@@ -14,7 +14,7 @@ export type { PerspectiveType } from './lib/camera/perspective';
 export { Perspectives } from './lib/camera/perspective';
 
 // Utility types
-export type { Vect3 } from './lib/core/utility';
+export type { Vect3 } from './lib/core/utility/vector';
 
 // Entities
 export { box } from './lib/entities/box';

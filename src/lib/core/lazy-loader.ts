@@ -17,7 +17,7 @@ export const loadFoundation = async () => {
 	const [baseNode, lifeCycle, utility, vector] = await Promise.all([
 		import('./base-node'),
 		import('./base-node-life-cycle'),
-		import('./utility'),
+		import('./utility/vector'),
 		import('./vector')
 	]);
 	return { baseNode, lifeCycle, utility, vector };

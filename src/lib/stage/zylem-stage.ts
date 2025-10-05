@@ -6,7 +6,7 @@ import { ZylemScene } from '../graphics/zylem-scene';
 import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, setStageVariables } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
-import { ZylemBlueColor } from '../core/utility';
+import { ZylemBlueColor } from '../core/utility/vector';
 import { debugState } from '../debug/debug-state';
 import { getGlobalState } from "../game/game-state";
 
@@ -25,7 +25,7 @@ import { BaseEntityInterface } from '../types/entity-types';
 
 export interface ZylemStageConfig {
 	inputs: Record<string, string[]>;
-	backgroundColor: Color;
+	backgroundColor: Color | string;
 	backgroundImage: string | null;
 	gravity: Vector3;
 	variables: Record<string, any>;
@@ -196,7 +196,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	private setState() {
 		const { backgroundColor, backgroundImage } = this.state;
-		setStageBackgroundColor(backgroundColor);
+		const color = backgroundColor instanceof Color ? backgroundColor : new Color(backgroundColor);
+		setStageBackgroundColor(color);
 		setStageBackgroundImage(backgroundImage);
 		// Initialize reactive stage variables on load
 		setStageVariables(this.state.variables ?? {});

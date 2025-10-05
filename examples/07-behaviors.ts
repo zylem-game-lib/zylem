@@ -98,7 +98,9 @@ testGame.update = ({ inputs, delta }) => {
 		);
 		arrow = new ArrowHelper(rayDirection, rayOrigin, rayLength, 0xff0000);
 		// @ts-ignore
-		stage1.stageRef!.scene.scene.add(arrow);
+		if (stage1.stageRef!.scene) {
+			stage1.stageRef!.scene.scene.add(arrow);
+		}
 		// @ts-ignore
 	}
 	// @ts-ignore
@@ -106,17 +108,19 @@ testGame.update = ({ inputs, delta }) => {
 	const rayDirection = new Vector3(0, -1, 0); // Downward
 	rapierRay.origin = rayOrigin;
 	rapierRay.direction = rayDirection;
-	stage1.stageRef!.world!.world.castRay(rapierRay, rayLength, true, undefined, undefined, undefined, undefined, (collider) => {
-		// @ts-ignore
-		const ref = collider._parent.userData.uuid;
-		if (ref === player.uuid) {
-			return false;
-		}
-		if (ref !== player.uuid && !jumping) {
-			grounded = true;
-		}
-		return true;
-	});
+	if (stage1.stageRef!.world) {
+		stage1.stageRef!.world.world.castRay(rapierRay, rayLength, true, undefined, undefined, undefined, undefined, (collider) => {
+			// @ts-ignore
+			const ref = collider._parent.userData.uuid;
+			if (ref === player.uuid) {
+				return false;
+			}
+			if (ref !== player.uuid && !jumping) {
+				grounded = true;
+			}
+			return true;
+		});
+	}
 
 	// Get input values
 	const horizontal = p1.axes.Horizontal.value;

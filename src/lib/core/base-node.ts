@@ -1,7 +1,11 @@
 import { Behavior } from "~/lib/actions/behaviors/behavior";
 import {
+	CleanupContext,
+	CleanupFunction,
 	DestroyContext,
 	DestroyFunction,
+	LoadedContext,
+	LoadedFunction,
 	SetupContext,
 	SetupFunction,
 	UpdateContext,
@@ -22,9 +26,11 @@ export abstract class BaseNode<Options = any, T = any> {
 	public name: string = '';
 	public markedForRemoval: boolean = false;
 
-	update: UpdateFunction<this> = () => { };
 	setup: SetupFunction<this> = () => { };
+	loaded: LoadedFunction<this> = () => { };
+	update: UpdateFunction<this> = () => { };
 	destroy: DestroyFunction<this> = () => { };
+	cleanup: CleanupFunction<this> = () => { };
 
 	constructor(args: BaseNodeOptions[] = []) {
 		const options = args
@@ -67,9 +73,13 @@ export abstract class BaseNode<Options = any, T = any> {
 
 	protected abstract _setup(params: SetupContext<this>): void;
 
+	protected abstract _loaded(params: LoadedContext<this>): Promise<void>;
+
 	protected abstract _update(params: UpdateContext<this>): void;
 
 	protected abstract _destroy(params: DestroyContext<this>): void;
+
+	protected abstract _cleanup(params: CleanupContext<this>): Promise<void>;
 
 	public nodeSetup(params: SetupContext<this>) {
 		if (DEBUG_FLAG) { /**  */ }

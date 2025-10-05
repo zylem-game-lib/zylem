@@ -42,6 +42,15 @@ export interface SetupFunction<T, TGlobals extends Record<string, unknown> = any
 	(context: SetupContext<T, TGlobals>): void;
 }
 
+export interface LoadedFunction<T, TGlobals extends Record<string, unknown> = any> {
+	(context: LoadedContext<T, TGlobals>): void;
+}
+
+export interface LoadedContext<T, TGlobals extends Record<string, unknown> = any> {
+	me: T;
+	globals: TGlobals;
+}
+
 export type UpdateContext<T, TGlobals extends Record<string, unknown> = any> = {
 	me: T;
 	delta: number;
@@ -63,4 +72,13 @@ export interface DestroyContext<T, TGlobals extends Record<string, unknown> = an
 
 export interface DestroyFunction<T, TGlobals extends Record<string, unknown> = any> {
 	(context: DestroyContext<T, TGlobals>): void;
+}
+
+export interface CleanupFunction<T, TGlobals extends Record<string, unknown> = any> {
+	(context: CleanupContext<T, TGlobals>): void;
+}
+
+export interface CleanupContext<T, TGlobals extends Record<string, unknown> = any> {
+	me: T;
+	globals: TGlobals;
 }

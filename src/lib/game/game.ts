@@ -1,50 +1,10 @@
-import { BaseNode } from '../core/base-node';
 import { ZylemGame } from './zylem-game';
-import { Stage, stage } from '../stage/stage';
+import { Stage } from '../stage/stage';
 import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 import { setPaused } from '../debug/debug-state';
-import { GameEntity, GameEntityLifeCycle } from '../entities/entity';
-import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+import { BasicTypes, GlobalVariablesType } from './game-interfaces';
 import { getGlobalState, setGlobalState } from './game-state';
-
-const defaultGameOptions = {
-	id: 'zylem',
-	globals: {} as GlobalVariablesType,
-	stages: [
-		stage()
-	]
-};
-
-function convertNodes<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(_options: GameOptions<TGlobals>): { id: string, globals: TGlobals, stages: Stage[] } {
-	let converted = { ...defaultGameOptions };
-	const configurations: ZylemGameConfig<Stage, Game<TGlobals>, TGlobals>[] = [];
-	const stages: Stage[] = [];
-	const entities: (BaseNode | GameEntity<any>)[] = [];
-	Object.values(_options).forEach((node) => {
-		if (node instanceof Stage) {
-			stages.push(node);
-		} else if (node instanceof GameEntity) {
-			entities.push(node);
-		} else if (node instanceof BaseNode) {
-			entities.push(node);
-		} else if (node.constructor.name === 'Object' && typeof node === 'object') {
-			const configuration = Object.assign(defaultGameOptions, { ...node });
-			configurations.push(configuration as ZylemGameConfig<Stage, Game<TGlobals>, TGlobals>);
-		}
-	});
-	configurations.forEach((configuration) => {
-		converted = Object.assign(converted, { ...configuration });
-	});
-	stages.forEach((stage) => {
-		stage.addEntities(entities as BaseNode[]);
-	});
-	if (stages.length) {
-		converted.stages = stages;
-	} else {
-		converted.stages[0].addEntities(entities as BaseNode[]);
-	}
-	return converted as unknown as { id: string, globals: TGlobals, stages: Stage[] };
-}
+import { convertNodes, GameOptions } from '../core/utility/nodes';
 
 export class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> implements IGame<TGlobals> {
 	gameRef: ZylemGame<TGlobals> | null = null;
@@ -228,7 +188,7 @@ export class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesT
 	}
 }
 
-type GameOptions<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> = Array<ZylemGameConfig<Stage, Game<TGlobals>, TGlobals> | Stage | GameEntityLifeCycle | BaseNode>;
+
 
 /**
  * create a new game
