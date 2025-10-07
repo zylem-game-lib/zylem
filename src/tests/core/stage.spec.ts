@@ -9,9 +9,12 @@ describe('create a basic stage', () => {
 		result.stageRef = null as any;
 		expect(result).toMatchSnapshot();
 	});
-	it('should create a stage with a blue background', async () => {
-		const result = stage({ backgroundColor: new Color(Color.NAMES.blue) });
+	it('should create a stage with a coral background', async () => {
+		const coral = new Color(Color.NAMES.coral);
+		const result = stage({ backgroundColor: coral });
 		const options = result.options[0] as ZylemStageConfig;
-		expect(options.backgroundColor).toEqual(new Color(Color.NAMES.blue));
+
+		expect(options.backgroundColor).toBeInstanceOf(Color);
+		expect(options.backgroundColor).toEqual(coral);
 	});
 });

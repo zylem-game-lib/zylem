@@ -1,9 +1,10 @@
 import { BaseNode } from '../core/base-node';
 import { DestroyFunction, SetupContext, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
-import { StageOptions, ZylemStage } from './zylem-stage';
+import { StageOptionItem, StageOptions, ZylemStage } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 import { getStageVariable, setStageVariable, stageState } from './stage-state';
+import { getStageDefaultConfig, getStageOptions } from './stage-default';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
@@ -11,7 +12,7 @@ type EntityInput = AnyNode | (() => AnyNode) | (() => Promise<any>);
 
 export class Stage {
 	stageRef: ZylemStage;
-	options: StageOptions = [];
+	options: StageOptionItem[] = [];
 
 	update: UpdateFunction<ZylemStage> = () => { };
 	setup: SetupFunction<ZylemStage> = () => { };
@@ -19,7 +20,7 @@ export class Stage {
 
 	constructor(options: StageOptions) {
 		this.options = options;
-		this.stageRef = new ZylemStage(this.options);
+		this.stageRef = new ZylemStage(this.options as StageOptions);
 	}
 
 	async load(id: string, camera?: ZylemCamera | CameraWrapper | null) {
@@ -30,7 +31,7 @@ export class Stage {
 	}
 
 	async addEntities(entities: BaseNode[]) {
-		this.options.push(...entities);
+		this.options.push(...(entities as unknown as StageOptionItem[]));
 		this.stageRef.enqueue(...entities);
 	}
 
@@ -70,14 +71,10 @@ export class Stage {
 	}
 }
 
-export interface StageContext {
-	instance: Stage; // TODO: make this a factory function
-	stageBlueprint: StageOptions;
-}
-
 /**
  * Create a stage with optional camera
  */
 export function stage(...options: StageOptions): Stage {
-	return new Stage(options);
+	const _options = getStageOptions(options);
+	return new Stage([..._options] as StageOptions);
 }

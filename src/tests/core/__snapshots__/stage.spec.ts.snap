@@ -3,7 +3,28 @@
 exports[`create a basic stage > default configuration 1`] = `
 Stage {
   "destroy": [Function],
-  "options": [],
+  "options": [
+    {
+      "backgroundColor": 209900,
+      "backgroundImage": null,
+      "gravity": Vector3 {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+      },
+      "inputs": {
+        "p1": [
+          "gamepad-1",
+          "keyboard",
+        ],
+        "p2": [
+          "gamepad-2",
+          "keyboard",
+        ],
+      },
+      "variables": {},
+    },
+  ],
   "setup": [Function],
   "stageRef": null,
   "update": [Function],

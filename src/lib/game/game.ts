@@ -31,7 +31,7 @@ export class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesT
 
 	async load(): Promise<ZylemGame<TGlobals>> {
 		console.log('loading game', this.options);
-		const options = convertNodes<TGlobals>(this.options);
+		const options = await convertNodes<TGlobals>(this.options);
 		const game = new ZylemGame<TGlobals>(options as any, this);
 		await game.loadStage(options.stages[0]);
 		return game;

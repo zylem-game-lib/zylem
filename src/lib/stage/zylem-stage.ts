@@ -33,9 +33,10 @@ export interface ZylemStageConfig {
 }
 
 type NodeLike = { create: Function };
-type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
+export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
 
-export type StageOptions = Array<Partial<ZylemStageConfig> | CameraWrapper | StageEntityInput>;
+export type StageOptionItem = Partial<ZylemStageConfig> | CameraWrapper | StageEntityInput;
+export type StageOptions = [] | [Partial<ZylemStageConfig>, ...StageOptionItem[]];
 
 export type StageState = ZylemStageConfig & { entities: GameEntityInterface[] };
 
@@ -106,14 +107,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.camera = camera;
 		this.children = entities;
 		this.pendingEntities = asyncEntities;
-		this.saveState({
-			backgroundColor: config.backgroundColor ?? this.state.backgroundColor,
-			backgroundImage: config.backgroundImage ?? this.state.backgroundImage,
-			inputs: config.inputs ?? this.state.inputs,
-			gravity: config.gravity ?? this.state.gravity,
-			variables: config.variables ?? this.state.variables,
-			entities: []
-		});
+		this.saveState({ ...this.state, ...config, entities: [] });
 
 		this.gravity = config.gravity ?? new Vector3(0, 0, 0);
 
