@@ -111,10 +111,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 		this.gravity = config.gravity ?? new Vector3(0, 0, 0);
 
-		const self = this;
-		window.onresize = function () {
-			self.resize(window.innerWidth, window.innerHeight);
-		};
 	}
 
 	private parseOptions(options: StageOptions): {

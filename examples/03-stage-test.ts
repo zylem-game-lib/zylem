@@ -1,5 +1,5 @@
 import { Color } from 'three';
-import { game, stage } from '../src/main';
+import { game, gameConfig, stage } from '../src/main';
 import { startingStage } from './03-stage-test/startingStage';
 import { stage1 } from './03-stage-test/stage1';
 
@@ -9,8 +9,14 @@ const bisqueStage = stage({ backgroundColor: new Color(Color.NAMES.bisque) });
 const crimsonStage = stage({ backgroundColor: new Color(Color.NAMES.crimson) });
 const darkStage = stage({ backgroundColor: new Color(Color.NAMES.darkblue) });
 
+const myGameConfig = gameConfig({
+	id: 'stage-test',
+	debug: true,
+	bodyBackground: '#000000',
+});
+
 const myGame = game(
-	{ id: 'stage-test', debug: true },
+	myGameConfig,
 	startingStage,
 	stage1,
 	aquaStage,

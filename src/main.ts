@@ -1,6 +1,7 @@
 // Core game functionality
 export { game } from './lib/game/game';
 export type { ZylemGameConfig } from './lib/game/game-interfaces';
+export { gameConfig } from './lib/game/game-config';
 
 export { stage } from './lib/stage/stage';
 export { entitySpawner } from './lib/stage/entity-spawner';

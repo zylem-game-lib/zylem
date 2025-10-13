@@ -8,7 +8,7 @@ import {
 	TextureLoader,
 	GridHelper
 } from 'three';
-import { Entity } from '../interfaces/entity';
+import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { debugState } from '../debug/debug-state';
@@ -27,15 +27,17 @@ export class ZylemScene implements Entity<ZylemScene> {
 	scene!: Scene;
 	zylemCamera!: ZylemCamera;
 	containerElement: HTMLElement | null = null;
+	update: LifecycleFunction<ZylemScene> = () => { };
+	_collision?: ((entity: any, other: any, globals?: any) => void) | undefined;
+	_destroy?: ((globals?: any) => void) | undefined;
+	name?: string | undefined;
+	tag?: Set<string> | undefined;
 
 	constructor(id: string, camera: ZylemCamera, state: SceneState) {
-		// Create Three.js scene
 		const scene = new Scene();
 		const isColor = state.backgroundColor instanceof Color;
 		const backgroundColor = (isColor) ? state.backgroundColor : new Color(state.backgroundColor);
 		scene.background = backgroundColor as Color;
-
-		// Setup background image if provided
 		if (state.backgroundImage) {
 			const loader = new TextureLoader();
 			const texture = loader.load(state.backgroundImage);
@@ -45,38 +47,11 @@ export class ZylemScene implements Entity<ZylemScene> {
 		this.scene = scene;
 		this.zylemCamera = camera;
 
-		// Setup DOM element
-		this.setupContainer(id);
-
-		// Setup lighting
 		this.setupLighting(scene);
-
-		// Setup camera with scene
 		this.setupCamera(scene, camera);
-
-		// Debug setup
 		if (debugState.on) {
 			this.debugScene();
 		}
-	}
-
-	/**
-	 * Setup the container element and append camera's renderer
-	 */
-	private setupContainer(id: string) {
-		let element = document.getElementById(id);
-		if (!element) {
-			console.warn(`Could not find element with id: ${id}`);
-			const main = document.createElement('main');
-			main.setAttribute('id', id);
-			document.body.appendChild(main);
-			element = main;
-		}
-		if (element?.firstChild) {
-			element.removeChild(element.firstChild);
-		}
-		this.containerElement = element;
-		element?.appendChild(this.zylemCamera.getDomElement());
 	}
 
 	setup() {
@@ -86,14 +61,6 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	destroy() {
-		if (this.containerElement && this.zylemCamera) {
-			try {
-				const canvas = this.zylemCamera.getDomElement();
-				if (canvas && canvas.parentElement === this.containerElement) {
-					this.containerElement.removeChild(canvas);
-				}
-			} catch { /* noop */ }
-		}
 		if (this.zylemCamera && (this.zylemCamera as any).destroy) {
 			(this.zylemCamera as any).destroy();
 		}
@@ -112,12 +79,6 @@ export class ZylemScene implements Entity<ZylemScene> {
 			});
 		}
 	}
-
-	update({ delta }: Partial<any>) {
-		// Scene no longer handles rendering - camera does this
-		// Any scene-specific updates can go here
-	}
-
 	/**
 	 * Setup camera with the scene
 	 */

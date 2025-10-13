@@ -2,13 +2,14 @@ import { BaseNode } from '../base-node';
 import { Stage } from '../../stage/stage';
 import { GameEntity, GameEntityLifeCycle } from '../../entities/entity';
 import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from '../../game/game-interfaces';
+import { GameConfigLike } from '~/lib/game/game-config';
 
 // export function isStageContext(value: unknown): value is StageContext {
 // 	return !!value && typeof value === 'object' && 'instance' in (value as any) && 'stageBlueprint' in (value as any);
 // }
 
 export type GameOptions<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> = Array<
-	ZylemGameConfig<Stage, any, TGlobals> | Stage | GameEntityLifeCycle | BaseNode
+	ZylemGameConfig<Stage, any, TGlobals> | GameConfigLike | Stage | GameEntityLifeCycle | BaseNode
 >;
 
 export async function convertNodes<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(

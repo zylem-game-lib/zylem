@@ -5,6 +5,7 @@ import { setPaused } from '../debug/debug-state';
 import { BasicTypes, GlobalVariablesType } from './game-interfaces';
 import { getGlobalState, setGlobalState } from './game-state';
 import { convertNodes, GameOptions } from '../core/utility/nodes';
+import { resolveGameConfig, gameConfig } from './game-config';
 
 export class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> implements IGame<TGlobals> {
 	gameRef: ZylemGame<TGlobals> | null = null;
@@ -32,7 +33,11 @@ export class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesT
 	async load(): Promise<ZylemGame<TGlobals>> {
 		console.log('loading game', this.options);
 		const options = await convertNodes<TGlobals>(this.options);
-		const game = new ZylemGame<TGlobals>(options as any, this);
+		const resolved = resolveGameConfig(options as any);
+		const game = new ZylemGame<TGlobals>({
+			...options as any,
+			...resolved as any,
+		} as any, this);
 		await game.loadStage(options.stages[0]);
 		return game;
 	}

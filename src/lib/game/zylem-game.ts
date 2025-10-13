@@ -9,9 +9,14 @@ import { Timer } from '../core/three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
 import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+import { GameConfig, resolveGameConfig } from './game-config';
+import { AspectRatioDelegate } from '../device/aspect-ratio';
+import { GameCanvas } from './game-canvas';
 import { subscribe } from 'valtio/vanilla';
 import Stats from 'stats.js';
 
+
+type ZylemGameOptions<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>
 
 export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> {
 	id: string;
@@ -34,19 +39,50 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 	wrapperRef: Game<TGlobals>;
 	statsRef: { begin: () => void, end: () => void, showPanel: (panel: number) => void, dom: HTMLElement } | null = null;
 	defaultCamera: ZylemCamera | null = null;
+	container: HTMLElement | null = null;
+	canvas: HTMLCanvasElement | null = null;
+	aspectRatioDelegate: AspectRatioDelegate | null = null;
+	resolvedConfig: GameConfig | null = null;
+	gameCanvas: GameCanvas | null = null;
 
 	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 	static MAX_DELTA_SECONDS = 1 / 30;
 
-	constructor(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>, wrapperRef: Game<TGlobals>) {
+	constructor(options: ZylemGameOptions<TGlobals>, wrapperRef: Game<TGlobals>) {
 		this.wrapperRef = wrapperRef;
 		this.inputManager = new InputManager(options.input);
 		this.timer = new Timer();
 		this.timer.connect(document);
-		this.id = options.id;
-		this.stages = options.stages || [];
+		const config = resolveGameConfig(options as any);
+		this.id = config.id;
+		this.stages = (config.stages as any) || [];
+		this.container = config.container;
+		this.canvas = config.canvas ?? null;
+		this.resolvedConfig = config;
+		this.loadGameCanvas(config);
+		this.loadDebugOptions(options);
 		this.setGlobals(options);
+	}
+
+	loadGameCanvas(config: GameConfig) {
+		this.gameCanvas = new GameCanvas({
+			id: config.id,
+			container: config.container,
+			containerId: config.containerId,
+			canvas: this.canvas ?? undefined,
+			bodyBackground: config.bodyBackground,
+			fullscreen: config.fullscreen,
+			aspectRatio: config.aspectRatio,
+		});
+		this.gameCanvas.applyBodyBackground();
+		this.gameCanvas.mountCanvas();
+		this.gameCanvas.centerIfFullscreen();
+	}
+
+	loadDebugOptions(options: ZylemGameOptions<TGlobals>) {
+		setDebugFlag(Boolean(options.debug));
+
 		if (options.debug) {
 			this.statsRef = new Stats();
 			this.statsRef.showPanel(0);
@@ -66,6 +102,11 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 		this.stageMap.set(stage.stageRef!.uuid, stage);
 		this.currentStageId = stage.stageRef!.uuid;
 		this.defaultCamera = stage.stageRef!.cameraRef!;
+
+		if (this.container && this.defaultCamera) {
+			const dom = this.defaultCamera.getDomElement();
+			this.gameCanvas?.mountRenderer(dom, (w, h) => this.defaultCamera?.resize(w, h));
+		}
 	}
 
 	unloadCurrentStage() {
@@ -86,7 +127,6 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 	}
 
 	setGlobals(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>) {
-		setDebugFlag(options.debug);
 		this.initialGlobals = { ...(options.globals as TGlobals) };
 		for (const variable in this.initialGlobals) {
 			const value = this.initialGlobals[variable];
