@@ -5,7 +5,7 @@ import { Vec3 } from "../core/vector";
 import { MaterialBuilder, MaterialOptions } from "../graphics/material";
 import { CollisionOptions } from "../collision/collision";
 import { BaseNode } from "../core/base-node";
-import { DestroyContext, SetupContext, UpdateContext } from "../core/base-node-life-cycle";
+import { DestroyContext, SetupContext, UpdateContext, LoadedContext, CleanupContext } from "../core/base-node-life-cycle";
 import type { EntityMeshBuilder, EntityCollisionBuilder } from "./builder";
 
 export abstract class AbstractEntity {
@@ -168,6 +168,8 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 		}
 	}
 
+	protected async _loaded(_params: LoadedContext<this>): Promise<void> { }
+
 	public _update(params: UpdateContext<this>): void {
 		this.updateMaterials(params);
 		if (this.lifeCycleDelegate.update?.length) {
@@ -192,6 +194,8 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 			callback({ ...params, me: this });
 		});
 	}
+
+	protected async _cleanup(_params: CleanupContext<this>): Promise<void> { }
 
 	public _collision(other: GameEntity<O>, globals?: any): void {
 		if (this.collisionDelegate.collision?.length) {
@@ -240,7 +244,7 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 		}
 	}
 
-	buildInfo(): Record<string, string> {
+	public buildInfo(): Record<string, string> {
 		const info: Record<string, string> = {};
 		info.name = this.name;
 		info.uuid = this.uuid;
