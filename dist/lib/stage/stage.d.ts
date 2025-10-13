@@ -1,6 +1,6 @@
 import { BaseNode } from '../core/base-node';
 import { DestroyFunction, SetupContext, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
-import { StageOptions, ZylemStage } from './zylem-stage';
+import { StageOptionItem, StageOptions, ZylemStage } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 type NodeLike = {
@@ -10,7 +10,7 @@ type AnyNode = NodeLike | Promise<NodeLike>;
 type EntityInput = AnyNode | (() => AnyNode) | (() => Promise<any>);
 export declare class Stage {
     stageRef: ZylemStage;
-    options: StageOptions;
+    options: StageOptionItem[];
     update: UpdateFunction<ZylemStage>;
     setup: SetupFunction<ZylemStage>;
     destroy: DestroyFunction<ZylemStage>;

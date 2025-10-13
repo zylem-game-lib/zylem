@@ -1,25 +1,25 @@
-import { createWorld as l, addEntity as c, addComponent as u, removeEntity as f } from "bitecs";
-import { Vector3 as o, Vector2 as p } from "three";
-import { ZylemWorld as d } from "../collision/world.js";
-import { ZylemScene as m } from "../graphics/zylem-scene.js";
-import { setStageBackgroundColor as y, setStageBackgroundImage as g, setStageVariables as b, resetStageVariables as w } from "./stage-state.js";
-import { ZylemBlueColor as E } from "../core/utility.js";
+import { createWorld as c, addEntity as f, addComponent as u, removeEntity as p } from "bitecs";
+import { Vector3 as o, Color as d, Vector2 as m } from "three";
+import { ZylemWorld as h } from "../collision/world.js";
+import { ZylemScene as y } from "../graphics/zylem-scene.js";
+import { setStageBackgroundColor as g, setStageBackgroundImage as E, setStageVariables as w, resetStageVariables as b } from "./stage-state.js";
+import { ZylemBlueColor as S } from "../core/utility/vector.js";
 import { debugState as a } from "../debug/debug-state.js";
-import { getGlobalState as h } from "../game/game-state.js";
+import { getGlobalState as l } from "../game/game-state.js";
 import { LifeCycleBase as v } from "../core/lifecycle-base.js";
-import S from "../systems/transformable.system.js";
-import { BaseNode as M } from "../core/base-node.js";
+import M from "../systems/transformable.system.js";
+import { BaseNode as _ } from "../core/base-node.js";
 import { nanoid as C } from "nanoid";
-import { ZylemCamera as _ } from "../camera/zylem-camera.js";
-import { Perspectives as k } from "../camera/perspective.js";
-import { CameraWrapper as B } from "../camera/camera.js";
-import { StageDebugDelegate as I } from "./stage-debug-delegate.js";
-import { GameEntity as O } from "../entities/entity.js";
-const P = "Stage";
-class K extends v {
-  type = P;
+import { ZylemCamera as B } from "../camera/zylem-camera.js";
+import { Perspectives as O } from "../camera/perspective.js";
+import { CameraWrapper as P } from "../camera/camera.js";
+import { StageDebugDelegate as R } from "./stage-debug-delegate.js";
+import { GameEntity as W } from "../entities/entity.js";
+const k = "Stage";
+class Y extends v {
+  type = k;
   state = {
-    backgroundColor: E,
+    backgroundColor: S,
     backgroundImage: null,
     inputs: {
       p1: ["gamepad-1", "keyboard"],
@@ -40,7 +40,7 @@ class K extends v {
   isLoaded = !1;
   _debugMap = /* @__PURE__ */ new Map();
   entityAddedHandlers = [];
-  ecs = l();
+  ecs = c();
   testSystem = null;
   transformSystem = null;
   debugDelegate = null;
@@ -55,18 +55,7 @@ class K extends v {
   constructor(e = []) {
     super(), this.world = null, this.scene = null, this.uuid = C();
     const { config: t, entities: i, asyncEntities: s, camera: r } = this.parseOptions(e);
-    this.camera = r, this.children = i, this.pendingEntities = s, this.saveState({
-      backgroundColor: t.backgroundColor ?? this.state.backgroundColor,
-      backgroundImage: t.backgroundImage ?? this.state.backgroundImage,
-      inputs: t.inputs ?? this.state.inputs,
-      gravity: t.gravity ?? this.state.gravity,
-      variables: t.variables ?? this.state.variables,
-      entities: []
-    }), this.gravity = t.gravity ?? new o(0, 0, 0);
-    const n = this;
-    window.onresize = function() {
-      n.resize(window.innerWidth, window.innerHeight);
-    };
+    this.camera = r, this.children = i, this.pendingEntities = s, this.saveState({ ...this.state, ...t, entities: [] }), this.gravity = t.gravity ?? new o(0, 0, 0);
   }
   parseOptions(e) {
     let t = {};
@@ -77,7 +66,7 @@ class K extends v {
     return { config: t, entities: i, asyncEntities: s, camera: r };
   }
   isZylemStageConfig(e) {
-    return e && typeof e == "object" && !(e instanceof M) && !(e instanceof B);
+    return e && typeof e == "object" && !(e instanceof _) && !(e instanceof P);
   }
   isBaseNode(e) {
     return e && typeof e == "object" && typeof e.create == "function";
@@ -101,8 +90,8 @@ class K extends v {
     this.state = e;
   }
   setState() {
-    const { backgroundColor: e, backgroundImage: t } = this.state;
-    y(e), g(t), b(this.state.variables ?? {});
+    const { backgroundColor: e, backgroundImage: t } = this.state, i = e instanceof d ? e : new d(e);
+    g(i), E(t), w(this.state.variables ?? {});
   }
   /**
    * Load and initialize the stage's scene and world.
@@ -112,9 +101,9 @@ class K extends v {
   async load(e, t) {
     this.setState();
     const i = t || (this.camera ? this.camera.cameraRef : this.createDefaultCamera());
-    this.cameraRef = i, this.scene = new m(e, i, this.state);
-    const s = await d.loadPhysics(this.gravity ?? new o(0, 0, 0));
-    this.world = new d(s), this.scene.setup();
+    this.cameraRef = i, this.scene = new y(e, i, this.state);
+    const s = await h.loadPhysics(this.gravity ?? new o(0, 0, 0));
+    this.world = new h(s), this.scene.setup();
     for (let r of this.children)
       this.spawnEntity(r);
     if (this.pendingEntities.length && (this.enqueue(...this.pendingEntities), this.pendingEntities = []), this.pendingPromises.length) {
@@ -122,18 +111,18 @@ class K extends v {
         r.then((n) => this.spawnEntity(n)).catch((n) => console.error("Failed to resolve pending stage entity", n));
       this.pendingPromises = [];
     }
-    this.transformSystem = S(this), this.isLoaded = !0;
+    this.transformSystem = M(this), this.isLoaded = !0;
   }
   createDefaultCamera() {
-    const e = window.innerWidth, t = window.innerHeight, i = new p(e, t);
-    return new _(k.ThirdPerson, i);
+    const e = window.innerWidth, t = window.innerHeight, i = new m(e, t);
+    return new B(O.ThirdPerson, i);
   }
   _setup(e) {
     if (!this.scene || !this.world) {
       this.logMissingEntities();
       return;
     }
-    a.on && (this.debugDelegate = new I(this));
+    a.on && (this.debugDelegate = new R(this));
   }
   _update(e) {
     const { delta: t } = e;
@@ -159,10 +148,10 @@ class K extends v {
   _destroy(e) {
     this._childrenMap.forEach((t) => {
       try {
-        t.nodeDestroy({ me: t, globals: h() });
+        t.nodeDestroy({ me: t, globals: l() });
       } catch {
       }
-    }), this._childrenMap.clear(), this._removalMap.clear(), this._debugMap.clear(), this.world?.destroy(), this.scene?.destroy(), this.debugDelegate?.dispose(), this.isLoaded = !1, this.world = null, this.scene = null, this.cameraRef = null, w();
+    }), this._childrenMap.clear(), this._removalMap.clear(), this._debugMap.clear(), this.world?.destroy(), this.scene?.destroy(), this.debugDelegate?.dispose(), this.isLoaded = !1, this.world = null, this.scene = null, this.cameraRef = null, b();
   }
   /**
    * Create, register, and add an entity to the scene/world.
@@ -171,7 +160,7 @@ class K extends v {
   async spawnEntity(e) {
     if (!this.scene || !this.world)
       return;
-    const t = e.create(), i = c(this.ecs);
+    const t = e.create(), i = f(this.ecs);
     if (t.eid = i, this.scene.addEntity(t), e.behaviors)
       for (let s of e.behaviors) {
         u(this.ecs, s.component, t.eid);
@@ -181,12 +170,12 @@ class K extends v {
       }
     t.colliderDesc && this.world.addEntity(t), e.nodeSetup({
       me: e,
-      globals: h(),
+      globals: l(),
       camera: this.scene.zylemCamera
     }), this.addEntityToStage(t);
   }
   buildEntityState(e) {
-    return e instanceof O ? { ...e.buildInfo() } : {
+    return e instanceof W ? { ...e.buildInfo() } : {
       uuid: e.uuid,
       name: e.name,
       eid: e.eid
@@ -229,7 +218,7 @@ class K extends v {
     const i = this.world.collisionMap.get(e) ?? this._debugMap.get(e);
     if (!i)
       return !1;
-    this.world.destroyEntity(i), i.group ? this.scene.scene.remove(i.group) : i.mesh && this.scene.scene.remove(i.mesh), f(this.ecs, i.eid);
+    this.world.destroyEntity(i), i.group ? this.scene.scene.remove(i.group) : i.mesh && this.scene.scene.remove(i.mesh), p(this.ecs, i.eid);
     let s = null;
     return this._childrenMap.forEach((r, n) => {
       r.uuid === e && (s = n);
@@ -274,6 +263,6 @@ class K extends v {
   }
 }
 export {
-  P as STAGE_TYPE,
-  K as ZylemStage
+  k as STAGE_TYPE,
+  Y as ZylemStage
 };

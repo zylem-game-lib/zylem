@@ -8,11 +8,15 @@ class s {
   uuid = "";
   name = "";
   markedForRemoval = !1;
-  update = () => {
-  };
   setup = () => {
   };
+  loaded = () => {
+  };
+  update = () => {
+  };
   destroy = () => {
+  };
+  cleanup = () => {
   };
   constructor(t = []) {
     const e = t.filter((i) => !(i instanceof s)).reduce((i, n) => ({ ...i, ...n }), {});

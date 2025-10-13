@@ -210,10 +210,28 @@
     "name": "lib/core/three-addons/Timer",
     "src": "src/lib/core/three-addons/Timer.ts"
   },
-  "src/lib/core/utility.ts": {
-    "file": "lib/core/utility.js",
-    "name": "lib/core/utility",
-    "src": "src/lib/core/utility.ts"
+  "src/lib/core/utility/nodes.ts": {
+    "file": "lib/core/utility/nodes.js",
+    "name": "lib/core/utility/nodes",
+    "src": "src/lib/core/utility/nodes.ts",
+    "imports": [
+      "src/lib/core/base-node.ts",
+      "src/lib/stage/stage.ts",
+      "src/lib/entities/entity.ts"
+    ],
+    "dynamicImports": [
+      "src/lib/game/game-default.ts"
+    ]
+  },
+  "src/lib/core/utility/strings.ts": {
+    "file": "lib/core/utility/strings.js",
+    "name": "lib/core/utility/strings",
+    "src": "src/lib/core/utility/strings.ts"
+  },
+  "src/lib/core/utility/vector.ts": {
+    "file": "lib/core/utility/vector.js",
+    "name": "lib/core/utility/vector",
+    "src": "src/lib/core/utility/vector.ts"
   },
   "src/lib/core/vessel.ts": {
     "file": "lib/core/vessel.js",
@@ -235,6 +253,11 @@
     "imports": [
       "src/lib/debug/console/console-state.ts"
     ]
+  },
+  "src/lib/device/aspect-ratio.ts": {
+    "file": "lib/device/aspect-ratio.js",
+    "name": "lib/device/aspect-ratio",
+    "src": "src/lib/device/aspect-ratio.ts"
   },
   "src/lib/entities/actor.ts": {
     "file": "lib/entities/actor.js",
@@ -378,6 +401,31 @@
       "src/lib/game/game-state.ts"
     ]
   },
+  "src/lib/game/game-canvas.ts": {
+    "file": "lib/game/game-canvas.js",
+    "name": "lib/game/game-canvas",
+    "src": "src/lib/game/game-canvas.ts",
+    "imports": [
+      "src/lib/device/aspect-ratio.ts"
+    ]
+  },
+  "src/lib/game/game-config.ts": {
+    "file": "lib/game/game-config.js",
+    "name": "lib/game/game-config",
+    "src": "src/lib/game/game-config.ts",
+    "imports": [
+      "src/lib/device/aspect-ratio.ts"
+    ]
+  },
+  "src/lib/game/game-default.ts": {
+    "file": "lib/game/game-default.js",
+    "name": "lib/game/game-default",
+    "src": "src/lib/game/game-default.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/lib/stage/stage.ts"
+    ]
+  },
   "src/lib/game/game-state.ts": {
     "file": "lib/game/game-state.js",
     "name": "lib/game/game-state",
@@ -388,12 +436,12 @@
     "name": "lib/game/game",
     "src": "src/lib/game/game.ts",
     "imports": [
-      "src/lib/core/base-node.ts",
       "src/lib/game/zylem-game.ts",
       "src/lib/stage/stage.ts",
       "src/lib/debug/debug-state.ts",
-      "src/lib/entities/entity.ts",
-      "src/lib/game/game-state.ts"
+      "src/lib/game/game-state.ts",
+      "src/lib/core/utility/nodes.ts",
+      "src/lib/game/game-config.ts"
     ]
   },
   "src/lib/game/zylem-game.ts": {
@@ -404,7 +452,9 @@
       "src/lib/game/game-state.ts",
       "src/lib/debug/debug-state.ts",
       "src/lib/input/input-manager.ts",
-      "src/lib/core/three-addons/Timer.ts"
+      "src/lib/core/three-addons/Timer.ts",
+      "src/lib/game/game-config.ts",
+      "src/lib/game/game-canvas.ts"
     ]
   },
   "src/lib/graphics/geometries/XZPlaneGeometry.ts": {
@@ -417,7 +467,7 @@
     "name": "lib/graphics/material",
     "src": "src/lib/graphics/material.ts",
     "imports": [
-      "src/lib/core/utility.ts",
+      "src/lib/core/utility/strings.ts",
       "src/lib/core/preset-shader.ts"
     ]
   },
@@ -508,6 +558,14 @@
     "name": "lib/stage/entity-spawner",
     "src": "src/lib/stage/entity-spawner.ts"
   },
+  "src/lib/stage/stage-blueprint.ts": {
+    "file": "lib/stage/stage-blueprint.js",
+    "name": "lib/stage/stage-blueprint",
+    "src": "src/lib/stage/stage-blueprint.ts",
+    "imports": [
+      "src/lib/stage/stage.ts"
+    ]
+  },
   "src/lib/stage/stage-debug-delegate.ts": {
     "file": "lib/stage/stage-debug-delegate.js",
     "name": "lib/stage/stage-debug-delegate",
@@ -515,6 +573,14 @@
     "imports": [
       "src/lib/debug/debug-state.ts",
       "src/lib/stage/debug-entity-cursor.ts"
+    ]
+  },
+  "src/lib/stage/stage-default.ts": {
+    "file": "lib/stage/stage-default.js",
+    "name": "lib/stage/stage-default",
+    "src": "src/lib/stage/stage-default.ts",
+    "imports": [
+      "src/lib/core/utility/vector.ts"
     ]
   },
   "src/lib/stage/stage-state.ts": {
@@ -529,7 +595,8 @@
     "imports": [
       "src/lib/stage/zylem-stage.ts",
       "src/lib/camera/camera.ts",
-      "src/lib/stage/stage-state.ts"
+      "src/lib/stage/stage-state.ts",
+      "src/lib/stage/stage-default.ts"
     ]
   },
   "src/lib/stage/zylem-stage.ts": {
@@ -540,7 +607,7 @@
       "src/lib/collision/world.ts",
       "src/lib/graphics/zylem-scene.ts",
       "src/lib/stage/stage-state.ts",
-      "src/lib/core/utility.ts",
+      "src/lib/core/utility/vector.ts",
       "src/lib/debug/debug-state.ts",
       "src/lib/game/game-state.ts",
       "src/lib/core/lifecycle-base.ts",
@@ -565,6 +632,7 @@
     "isEntry": true,
     "imports": [
       "src/lib/game/game.ts",
+      "src/lib/game/game-config.ts",
       "src/lib/stage/stage.ts",
       "src/lib/stage/entity-spawner.ts",
       "src/lib/core/vessel.ts",
@@ -595,7 +663,9 @@
     "isEntry": true,
     "imports": [
       "src/lib/stage/stage.ts",
-      "src/lib/stage/entity-spawner.ts"
+      "src/lib/stage/entity-spawner.ts",
+      "src/lib/stage/stage-blueprint.ts",
+      "src/lib/stage/stage-default.ts"
     ]
   }
 }

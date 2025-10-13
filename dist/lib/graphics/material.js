@@ -1,5 +1,5 @@
 import { Color as n, Vector2 as m, TextureLoader as c, RepeatWrapping as o, MeshPhongMaterial as p, MeshStandardMaterial as u, ShaderMaterial as f, Vector3 as d } from "three";
-import { shortHash as M, sortedStringify as w } from "../core/utility.js";
+import { shortHash as M, sortedStringify as w } from "../core/utility/strings.js";
 import h from "../core/preset-shader.js";
 class i {
   static batchMaterialMap = /* @__PURE__ */ new Map();

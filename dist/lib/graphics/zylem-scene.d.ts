@@ -1,10 +1,10 @@
 import { Scene, Color, Object3D, Vector3 } from 'three';
-import { Entity } from '../interfaces/entity';
+import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { SetupFunction } from '../core/base-node-life-cycle';
 interface SceneState {
-    backgroundColor: Color;
+    backgroundColor: Color | string;
     backgroundImage: string | null;
 }
 export declare class ZylemScene implements Entity<ZylemScene> {
@@ -13,14 +13,14 @@ export declare class ZylemScene implements Entity<ZylemScene> {
     scene: Scene;
     zylemCamera: ZylemCamera;
     containerElement: HTMLElement | null;
+    update: LifecycleFunction<ZylemScene>;
+    _collision?: ((entity: any, other: any, globals?: any) => void) | undefined;
+    _destroy?: ((globals?: any) => void) | undefined;
+    name?: string | undefined;
+    tag?: Set<string> | undefined;
     constructor(id: string, camera: ZylemCamera, state: SceneState);
-    /**
-     * Setup the container element and append camera's renderer
-     */
-    private setupContainer;
     setup(): void;
     destroy(): void;
-    update({ delta }: Partial<any>): void;
     /**
      * Setup camera with the scene
      */

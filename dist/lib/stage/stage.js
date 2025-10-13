@@ -1,7 +1,8 @@
 import { ZylemStage as n } from "./zylem-stage.js";
 import { CameraWrapper as r } from "../camera/camera.js";
 import { stageState as i, setStageVariable as g, getStageVariable as p } from "./stage-state.js";
-class f {
+import { getStageOptions as f } from "./stage-default.js";
+class d {
   stageRef;
   options = [];
   update = () => {
@@ -49,10 +50,11 @@ class f {
     return p(t);
   }
 }
-function R(...a) {
-  return new f(a);
+function l(...a) {
+  const t = f(a);
+  return new d([...t]);
 }
 export {
-  f as Stage,
-  R as stage
+  d as Stage,
+  l as stage
 };

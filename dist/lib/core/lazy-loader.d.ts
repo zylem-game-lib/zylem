@@ -14,7 +14,7 @@
 export declare const loadFoundation: () => Promise<{
     baseNode: typeof import("./base-node");
     lifeCycle: typeof import("./base-node-life-cycle");
-    utility: typeof import("./utility");
+    utility: typeof import("./utility/vector");
     vector: typeof import("./vector");
 }>;
 export declare const loadState: () => Promise<typeof import("../game/game-state")>;
@@ -48,7 +48,7 @@ export declare const loadFullGame: () => Promise<{
     foundation: {
         baseNode: typeof import("./base-node");
         lifeCycle: typeof import("./base-node-life-cycle");
-        utility: typeof import("./utility");
+        utility: typeof import("./utility/vector");
         vector: typeof import("./vector");
     };
     state: typeof import("../game/game-state");

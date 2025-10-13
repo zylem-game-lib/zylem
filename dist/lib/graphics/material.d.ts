@@ -1,5 +1,5 @@
 import { Color, Material, Vector2 } from 'three';
-import { shortHash } from '../core/utility';
+import { shortHash } from '../core/utility/strings';
 import { ZylemShaderType } from '../core/preset-shader';
 export interface MaterialOptions {
     path?: string;

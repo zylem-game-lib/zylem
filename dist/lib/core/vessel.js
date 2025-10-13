@@ -1,23 +1,27 @@
-import { BaseNode as a } from "./base-node.js";
+import { BaseNode as t } from "./base-node.js";
 const r = Symbol("vessel");
-class n extends a {
+class n extends t {
   static type = r;
-  _setup(e) {
+  _setup(s) {
   }
-  _update(e) {
+  async _loaded(s) {
   }
-  _destroy(e) {
+  _update(s) {
+  }
+  _destroy(s) {
+  }
+  async _cleanup(s) {
   }
   create() {
     return this;
   }
 }
-function c(...s) {
-  const e = new n();
-  return s.forEach((t) => e.add(t)), e;
+function o(...e) {
+  const s = new n();
+  return e.forEach((a) => s.add(a)), s;
 }
 export {
   r as VESSEL_TYPE,
   n as Vessel,
-  c as vessel
+  o as vessel
 };

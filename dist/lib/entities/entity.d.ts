@@ -4,7 +4,7 @@ import { Vec3 } from "../core/vector";
 import { MaterialBuilder, MaterialOptions } from "../graphics/material";
 import { CollisionOptions } from "../collision/collision";
 import { BaseNode } from "../core/base-node";
-import { DestroyContext, SetupContext, UpdateContext } from "../core/base-node-life-cycle";
+import { DestroyContext, SetupContext, UpdateContext, LoadedContext, CleanupContext } from "../core/base-node-life-cycle";
 import type { EntityMeshBuilder, EntityCollisionBuilder } from "./builder";
 export declare abstract class AbstractEntity {
     abstract uuid: string;
@@ -82,8 +82,10 @@ export declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O>
     onDestroy(...callbacks: ((params: DestroyContext<this>) => void)[]): this;
     onCollision(...callbacks: ((params: CollisionContext<this, O>) => void)[]): this;
     _setup(params: SetupContext<this>): void;
+    protected _loaded(_params: LoadedContext<this>): Promise<void>;
     _update(params: UpdateContext<this>): void;
     _destroy(params: DestroyContext<this>): void;
+    protected _cleanup(_params: CleanupContext<this>): Promise<void>;
     _collision(other: GameEntity<O>, globals?: any): void;
     addBehavior(behaviorCallback: ({
         type: BehaviorCallbackType;

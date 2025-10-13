@@ -1,5 +1,5 @@
 import { Behavior } from "~/lib/actions/behaviors/behavior";
-import { DestroyContext, DestroyFunction, SetupContext, SetupFunction, UpdateContext, UpdateFunction } from "./base-node-life-cycle";
+import { CleanupContext, CleanupFunction, DestroyContext, DestroyFunction, LoadedContext, LoadedFunction, SetupContext, SetupFunction, UpdateContext, UpdateFunction } from "./base-node-life-cycle";
 export type BaseNodeOptions<T = any> = BaseNode | Partial<T>;
 export declare abstract class BaseNode<Options = any, T = any> {
     protected parent: BaseNode | null;
@@ -10,9 +10,11 @@ export declare abstract class BaseNode<Options = any, T = any> {
     uuid: string;
     name: string;
     markedForRemoval: boolean;
-    update: UpdateFunction<this>;
     setup: SetupFunction<this>;
+    loaded: LoadedFunction<this>;
+    update: UpdateFunction<this>;
     destroy: DestroyFunction<this>;
+    cleanup: CleanupFunction<this>;
     constructor(args?: BaseNodeOptions[]);
     setParent(parent: BaseNode | null): void;
     getParent(): BaseNode | null;
@@ -22,8 +24,10 @@ export declare abstract class BaseNode<Options = any, T = any> {
     isComposite(): boolean;
     abstract create(): T;
     protected abstract _setup(params: SetupContext<this>): void;
+    protected abstract _loaded(params: LoadedContext<this>): Promise<void>;
     protected abstract _update(params: UpdateContext<this>): void;
     protected abstract _destroy(params: DestroyContext<this>): void;
+    protected abstract _cleanup(params: CleanupContext<this>): Promise<void>;
     nodeSetup(params: SetupContext<this>): void;
     nodeUpdate(params: UpdateContext<this>): void;
     nodeDestroy(params: DestroyContext<this>): void;

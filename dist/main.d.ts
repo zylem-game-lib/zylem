@@ -1,5 +1,6 @@
 export { game } from './lib/game/game';
 export type { ZylemGameConfig } from './lib/game/game-interfaces';
+export { gameConfig } from './lib/game/game-config';
 export { stage } from './lib/stage/stage';
 export { entitySpawner } from './lib/stage/entity-spawner';
 export type { StageOptions } from './lib/stage/zylem-stage';
@@ -7,7 +8,7 @@ export { vessel } from './lib/core/vessel';
 export { camera } from './lib/camera/camera';
 export type { PerspectiveType } from './lib/camera/perspective';
 export { Perspectives } from './lib/camera/perspective';
-export type { Vect3 } from './lib/core/utility';
+export type { Vect3 } from './lib/core/utility/vector';
 export { box } from './lib/entities/box';
 export { sphere } from './lib/entities/sphere';
 export { sprite } from './lib/entities/sprite';

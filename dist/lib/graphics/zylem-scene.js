@@ -1,74 +1,60 @@
-import { Scene as r, Color as n, TextureLoader as o, AmbientLight as m, DirectionalLight as d, Vector3 as h, GridHelper as l } from "three";
-import { debugState as c } from "../debug/debug-state.js";
+import { Scene as d, Color as i, TextureLoader as n, AmbientLight as m, DirectionalLight as c, Vector3 as h, GridHelper as l } from "three";
+import { debugState as g } from "../debug/debug-state.js";
 import { getGlobalState as p } from "../game/game-state.js";
-class y {
+class b {
   type = "Scene";
   _setup;
   scene;
   zylemCamera;
   containerElement = null;
-  constructor(e, t, a) {
-    const i = new r();
-    if (i.background = new n(a.backgroundColor), a.backgroundImage) {
-      const s = new o().load(a.backgroundImage);
-      i.background = s;
+  update = () => {
+  };
+  _collision;
+  _destroy;
+  name;
+  tag;
+  constructor(e, s, a) {
+    const o = new d(), t = a.backgroundColor instanceof i ? a.backgroundColor : new i(a.backgroundColor);
+    if (o.background = t, a.backgroundImage) {
+      const r = new n().load(a.backgroundImage);
+      o.background = r;
     }
-    this.scene = i, this.zylemCamera = t, this.setupContainer(e), this.setupLighting(i), this.setupCamera(i, t), c.on && this.debugScene();
-  }
-  /**
-   * Setup the container element and append camera's renderer
-   */
-  setupContainer(e) {
-    let t = document.getElementById(e);
-    if (!t) {
-      console.warn(`Could not find element with id: ${e}`);
-      const a = document.createElement("main");
-      a.setAttribute("id", e), document.body.appendChild(a), t = a;
-    }
-    t?.firstChild && t.removeChild(t.firstChild), this.containerElement = t, t?.appendChild(this.zylemCamera.getDomElement());
+    this.scene = o, this.zylemCamera = s, this.setupLighting(o), this.setupCamera(o, s), g.on && this.debugScene();
   }
   setup() {
     this._setup && this._setup({ me: this, camera: this.zylemCamera, globals: p() });
   }
   destroy() {
-    if (this.containerElement && this.zylemCamera)
-      try {
-        const e = this.zylemCamera.getDomElement();
-        e && e.parentElement === this.containerElement && this.containerElement.removeChild(e);
-      } catch {
-      }
     this.zylemCamera && this.zylemCamera.destroy && this.zylemCamera.destroy(), this.scene && this.scene.traverse((e) => {
-      e.geometry && e.geometry.dispose?.(), e.material && (Array.isArray(e.material) ? e.material.forEach((t) => t.dispose?.()) : e.material.dispose?.());
+      e.geometry && e.geometry.dispose?.(), e.material && (Array.isArray(e.material) ? e.material.forEach((s) => s.dispose?.()) : e.material.dispose?.());
     });
-  }
-  update({ delta: e }) {
   }
   /**
    * Setup camera with the scene
    */
-  setupCamera(e, t) {
-    e.add(t.cameraRig), t.setup(e);
+  setupCamera(e, s) {
+    e.add(s.cameraRig), s.setup(e);
   }
   /**
    * Setup scene lighting
    */
   setupLighting(e) {
-    const t = new m(16777215, 2);
-    e.add(t);
-    const a = new d(16777215, 2);
+    const s = new m(16777215, 2);
+    e.add(s);
+    const a = new c(16777215, 2);
     a.name = "Light", a.position.set(0, 100, 0), a.castShadow = !0, a.shadow.camera.near = 0.1, a.shadow.camera.far = 2e3, a.shadow.camera.left = -100, a.shadow.camera.right = 100, a.shadow.camera.top = 100, a.shadow.camera.bottom = -100, a.shadow.mapSize.width = 2048, a.shadow.mapSize.height = 2048, e.add(a);
   }
   /**
    * Update renderer size - delegates to camera
    */
-  updateRenderer(e, t) {
-    this.zylemCamera.resize(e, t);
+  updateRenderer(e, s) {
+    this.zylemCamera.resize(e, s);
   }
   /**
    * Add object to scene
    */
-  add(e, t = new h(0, 0, 0)) {
-    e.position.set(t.x, t.y, t.z), this.scene.add(e);
+  add(e, s = new h(0, 0, 0)) {
+    e.position.set(s.x, s.y, s.z), this.scene.add(e);
   }
   /**
    * Add game entity to scene
@@ -85,5 +71,5 @@ class y {
   }
 }
 export {
-  y as ZylemScene
+  b as ZylemScene
 };

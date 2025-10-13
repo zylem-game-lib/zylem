@@ -1,7 +1,7 @@
 import { ShaderMaterial as s } from "three";
-import { position as o, scale as a, rotation as n } from "../systems/transformable.system.js";
+import { position as a, scale as o, rotation as n } from "../systems/transformable.system.js";
 import { BaseNode as c } from "../core/base-node.js";
-class d extends c {
+class f extends c {
   group;
   mesh;
   materials;
@@ -33,8 +33,8 @@ class d extends c {
   create() {
     const { position: e } = this.options, { x: t, y: i, z: l } = e || { x: 0, y: 0, z: 0 };
     return this.behaviors = [
-      { component: o, values: { x: t, y: i, z: l } },
-      { component: a, values: { x: 0, y: 0, z: 0 } },
+      { component: a, values: { x: t, y: i, z: l } },
+      { component: o, values: { x: 0, y: 0, z: 0 } },
       { component: n, values: { x: 0, y: 0, z: 0, w: 0 } }
     ], this.name = this.options.name || "", this;
   }
@@ -70,6 +70,8 @@ class d extends c {
       i({ ...e, me: this });
     });
   }
+  async _loaded(e) {
+  }
   _update(e) {
     this.updateMaterials(e), this.lifeCycleDelegate.update?.length && this.lifeCycleDelegate.update.forEach((i) => {
       i({ ...e, me: this });
@@ -83,6 +85,8 @@ class d extends c {
     }), this.behaviorCallbackMap.destroy.forEach((t) => {
       t({ ...e, me: this });
     });
+  }
+  async _cleanup(e) {
   }
   _collision(e, t) {
     this.collisionDelegate.collision?.length && this.collisionDelegate.collision.forEach((l) => {
@@ -112,5 +116,5 @@ class d extends c {
   }
 }
 export {
-  d as GameEntity
+  f as GameEntity
 };

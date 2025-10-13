@@ -12,7 +12,7 @@ import { StageDebugDelegate } from './stage-debug-delegate';
 import { BaseEntityInterface } from '../types/entity-types';
 export interface ZylemStageConfig {
     inputs: Record<string, string[]>;
-    backgroundColor: Color;
+    backgroundColor: Color | string;
     backgroundImage: string | null;
     gravity: Vector3;
     variables: Record<string, any>;
@@ -21,8 +21,9 @@ export interface ZylemStageConfig {
 type NodeLike = {
     create: Function;
 };
-type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
-export type StageOptions = Array<Partial<ZylemStageConfig> | CameraWrapper | StageEntityInput>;
+export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
+export type StageOptionItem = Partial<ZylemStageConfig> | CameraWrapper | StageEntityInput;
+export type StageOptions = [] | [Partial<ZylemStageConfig>, ...StageOptionItem[]];
 export type StageState = ZylemStageConfig & {
     entities: GameEntityInterface[];
 };
