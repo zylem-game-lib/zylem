@@ -80,13 +80,10 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 		this.redrawText(this.options.text ?? '');
 	}
 
-	private redrawText(_text: string) {
-		if (!this._canvas || !this._ctx) return;
-		const fontSize = this.options.fontSize ?? 18;
-		const fontFamily = this.options.fontFamily ?? (textDefaults.fontFamily as string);
-		const padding = this.options.padding ?? 4;
+	private measureAndResizeCanvas(text: string, fontSize: number, fontFamily: string, padding: number) {
+		if (!this._canvas || !this._ctx) return { sizeChanged: false };
 		this._ctx.font = `${fontSize}px ${fontFamily}`;
-		const metrics = this._ctx.measureText(_text);
+		const metrics = this._ctx.measureText(text);
 		const textWidth = Math.ceil(metrics.width);
 		const textHeight = Math.ceil(fontSize * 1.4);
 		const nextW = Math.max(2, textWidth + padding * 2);
@@ -96,32 +93,53 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 		this._canvas.height = nextH;
 		this._lastCanvasW = nextW;
 		this._lastCanvasH = nextH;
+		return { sizeChanged };
+	}
 
+	private drawCenteredText(text: string, fontSize: number, fontFamily: string) {
+		if (!this._canvas || !this._ctx) return;
 		this._ctx.font = `${fontSize}px ${fontFamily}`;
-		this._ctx.textBaseline = 'top';
+		this._ctx.textAlign = 'center';
+		this._ctx.textBaseline = 'middle';
 		this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
 		if (this.options.backgroundColor) {
 			this._ctx.fillStyle = this.toCssColor(this.options.backgroundColor);
 			this._ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
 		}
 		this._ctx.fillStyle = this.toCssColor(this.options.fontColor ?? '#FFFFFF');
-		this._ctx.fillText(_text, padding, padding);
+		this._ctx.fillText(text, this._canvas.width / 2, this._canvas.height / 2);
+	}
 
-		if (this._texture) {
-			if (sizeChanged) {
-				this._texture.dispose();
-				this._texture = new CanvasTexture(this._canvas);
-				this._texture.minFilter = LinearFilter;
-				this._texture.magFilter = LinearFilter;
-				this._texture.wrapS = ClampToEdgeWrapping;
-				this._texture.wrapT = ClampToEdgeWrapping;
-			}
-			this._texture.image = this._canvas;
-			this._texture.needsUpdate = true;
-			if (this._sprite && this._sprite.material) {
-				(this._sprite.material as any).map = this._texture;
-				this._sprite.material.needsUpdate = true;
-			}
+	private updateTexture(sizeChanged: boolean) {
+		if (!this._texture || !this._canvas) return;
+		if (sizeChanged) {
+			this._texture.dispose();
+			this._texture = new CanvasTexture(this._canvas);
+			this._texture.minFilter = LinearFilter;
+			this._texture.magFilter = LinearFilter;
+			this._texture.wrapS = ClampToEdgeWrapping;
+			this._texture.wrapT = ClampToEdgeWrapping;
+		}
+		this._texture.image = this._canvas;
+		this._texture.needsUpdate = true;
+		if (this._sprite && this._sprite.material) {
+			(this._sprite.material as any).map = this._texture;
+			this._sprite.material.needsUpdate = true;
+		}
+	}
+
+	private redrawText(_text: string) {
+		if (!this._canvas || !this._ctx) return;
+		const fontSize = this.options.fontSize ?? 18;
+		const fontFamily = this.options.fontFamily ?? (textDefaults.fontFamily as string);
+		const padding = this.options.padding ?? 4;
+
+		const { sizeChanged } = this.measureAndResizeCanvas(_text, fontSize, fontFamily, padding);
+		this.drawCenteredText(_text, fontSize, fontFamily);
+		this.updateTexture(Boolean(sizeChanged));
+
+		if (this.options.stickToViewport && this._cameraRef) {
+			this.updateStickyTransform();
 		}
 	}
 
@@ -135,6 +153,7 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 		this._cameraRef = (params.camera as unknown) as ZylemCamera | null;
 		if (this.options.stickToViewport && this._cameraRef) {
 			(this._cameraRef.camera as any).add(this.group);
+			this.updateStickyTransform();
 		}
 	}
 
@@ -145,16 +164,23 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 		}
 	}
 
-	private updateStickyTransform() {
-		if (!this._sprite || !this._cameraRef) return;
-		const camera = this._cameraRef.camera;
-		const dom = this._cameraRef.renderer.domElement;
-		const width = dom.clientWidth;
-		const height = dom.clientHeight;
-		const px = (this.options.screenPosition ?? new Vector2(24, 24)).x;
-		const py = (this.options.screenPosition ?? new Vector2(24, 24)).y;
-		const zDist = Math.max(0.001, this.options.zDistance ?? 1);
+	private getResolution() {
+		return {
+			width: this._cameraRef?.screenResolution.x ?? 1,
+			height: this._cameraRef?.screenResolution.y ?? 1,
+		};
+	}
 
+	private getScreenPixels(sp: Vector2, width: number, height: number) {
+		const isPercentX = sp.x >= 0 && sp.x <= 1;
+		const isPercentY = sp.y >= 0 && sp.y <= 1;
+		return {
+			px: isPercentX ? sp.x * width : sp.x,
+			py: isPercentY ? sp.y * height : sp.y,
+		};
+	}
+
+	private computeWorldExtents(camera: PerspectiveCamera | OrthographicCamera, zDist: number) {
 		let worldHalfW = 1;
 		let worldHalfH = 1;
 		if ((camera as PerspectiveCamera).isPerspectiveCamera) {
@@ -168,22 +194,35 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 			worldHalfW = (oc.right - oc.left) / 2;
 			worldHalfH = (oc.top - oc.bottom) / 2;
 		}
+		return { worldHalfW, worldHalfH };
+	}
+
+	private updateSpriteScale(worldHalfH: number, viewportHeight: number) {
+		if (!this._canvas || !this._sprite) return;
+		const planeH = worldHalfH * 2;
+		const unitsPerPixel = planeH / viewportHeight;
+		const pixelH = this._canvas.height;
+		const scaleY = Math.max(0.0001, pixelH * unitsPerPixel);
+		const aspect = this._canvas.width / this._canvas.height;
+		const scaleX = scaleY * aspect;
+		this._sprite.scale.set(scaleX, scaleY, 1);
+	}
+
+	private updateStickyTransform() {
+		if (!this._sprite || !this._cameraRef) return;
+		const camera = this._cameraRef.camera as PerspectiveCamera | OrthographicCamera;
+		const { width, height } = this.getResolution();
+		const sp = this.options.screenPosition ?? new Vector2(24, 24);
+		const { px, py } = this.getScreenPixels(sp, width, height);
+		const zDist = Math.max(0.001, this.options.zDistance ?? 1);
+		const { worldHalfW, worldHalfH } = this.computeWorldExtents(camera, zDist);
 
 		const ndcX = (px / width) * 2 - 1;
 		const ndcY = 1 - (py / height) * 2;
 		const localX = ndcX * worldHalfW;
 		const localY = ndcY * worldHalfH;
 		this.group?.position.set(localX, localY, -zDist);
-
-		if (this._canvas) {
-			const planeH = worldHalfH * 2;
-			const unitsPerPixel = planeH / height;
-			const pixelH = this._canvas.height;
-			const scaleY = Math.max(0.0001, pixelH * unitsPerPixel);
-			const aspect = this._canvas.width / this._canvas.height;
-			const scaleX = scaleY * aspect;
-			this._sprite.scale.set(scaleX, scaleY, 1);
-		}
+		this.updateSpriteScale(worldHalfH, height);
 	}
 
 	updateText(_text: string) {

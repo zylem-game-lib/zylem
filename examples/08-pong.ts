@@ -1,7 +1,6 @@
 import { Color, Vector3, Vector2 } from 'three';
 import { game, box, sphere, stage, camera, zone, globalChanges, text } from '../src/main';
 import { makeMoveable } from '../src/lib/actions/capabilities/moveable';
-import { Vec0 } from '../src/lib/core/utility';
 import { ricochet2DInBounds } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
 import { ricochetSound, pingPongBeep } from '../src/lib/sounds';
 import { boundary2d } from '../src/lib/actions/behaviors/boundaries/boundary';
@@ -11,7 +10,7 @@ const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
 
 const ball = await sphere({
 	name: 'ball',
-	position: Vec0,
+	position: new Vector3(0, 0, 0),
 	radius: 0.1,
 	color: new Color(Color.NAMES.lightgreen),
 });
@@ -67,7 +66,7 @@ const p1Goal = await zone({
 p1Goal.onEnter(({ visitor }) => {
 	const p1Score = game1.getGlobal('p1Score');
 	if (visitor.uuid === moveableBall.uuid) {
-		game1.setGlobal('p1Score', p1Score + 1);
+		game1.setGlobal('p1Score', Number(p1Score) + 1);
 		moveableBall.setPosition(0, 0, 0);
 		moveableBall.moveXY(-5, 0);
 	}
@@ -81,7 +80,7 @@ const p2Goal = await zone({
 p2Goal.onEnter(({ visitor }) => {
 	const p2Score = game1.getGlobal('p2Score');
 	if (visitor.uuid === moveableBall.uuid) {
-		game1.setGlobal('p2Score', p2Score + 1);
+		game1.setGlobal('p2Score', Number(p2Score) + 1);
 		moveableBall.setPosition(0, 0, 0);
 		moveableBall.moveXY(5, 0);
 	}
@@ -97,24 +96,21 @@ const p1Text = await text({
 	name: 'p1Text',
 	text: '0',
 	fontSize: 24,
-	stickToViewport: true,
-	screenPosition: new Vector2(window.innerWidth / 2 - 100, 24),
+	screenPosition: new Vector2(0.45, 0.05),
 });
 
 const p2Text = await text({
 	name: 'p2Text',
 	text: '0',
 	fontSize: 24,
-	stickToViewport: true,
-	screenPosition: new Vector2(window.innerWidth / 2 + 100, 24),
+	screenPosition: new Vector2(0.55, 0.05),
 });
 
 const winnerText = await text({
 	name: 'winnerText',
 	text: '',
 	fontSize: 36,
-	stickToViewport: true,
-	screenPosition: new Vector2(window.innerWidth / 2, window.innerHeight / 2),
+	screenPosition: new Vector2(0.5, 0.5),
 });
 
 const stage1 = stage({ variables: { screenBounces: 0 } }, camera1);
