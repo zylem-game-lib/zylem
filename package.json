@@ -113,15 +113,16 @@
     "three-instanced-uniforms-mesh": "^0.52.4",
     "three-spritetext": "^1.10.0",
     "tsimp": "^2.0.12",
+    "typescript-fsm": "^1.6.0",
     "valtio": "^2.1.7"
   },
   "peerDependencies": {
-    "three": "^0.180.0",
     "@dimforge/rapier3d-compat": "^0.11.2",
+    "bitecs": "^0.3.40",
     "howler": "^2.2.4",
-    "valtio": "^2.1.7",
     "nanoid": "^5.1.5",
-    "bitecs": "^0.3.40"
+    "three": "^0.180.0",
+    "valtio": "^2.1.7"
   },
   "devDependencies": {
     "@ava/typescript": "^5.0.0",
@@ -157,5 +158,5 @@
     "vite-plugin-solid": "^2.11.8",
     "vitest": "^3.2.4"
   },
-  "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748"
+  "packageManager": "pnpm@10.18.3"
 }

@@ -1,6 +1,7 @@
 import { StageInterface } from "../types";
 import { GameInputConfig } from "./game-interfaces";
 import { AspectRatio, AspectRatioValue } from "../device/aspect-ratio";
+import { getDisplayAspect, getPresetResolution, parseResolution, RetroPresetKey } from "./game-retro-resolutions";
 
 export type GameConfigLike = Partial<{
 	id: string;
@@ -11,6 +12,10 @@ export type GameConfigLike = Partial<{
 	input: GameInputConfig;
 	/** numeric value or key in AspectRatio */
 	aspectRatio: AspectRatioValue | keyof typeof AspectRatio;
+	/** console/display preset to derive aspect ratio */
+	preset: RetroPresetKey;
+	/** lock internal render buffer to this resolution (e.g., '256x240' or { width, height }) */
+	resolution: string | { width: number; height: number };
 	fullscreen: boolean;
 	/** CSS background value for document body */
 	bodyBackground: string;
@@ -31,6 +36,7 @@ export class GameConfig {
 		public time: number,
 		public input: GameInputConfig | undefined,
 		public aspectRatio: number,
+		public internalResolution: { width: number; height: number } | undefined,
 		public fullscreen: boolean,
 		public bodyBackground: string | undefined,
 		public container: HTMLElement,
@@ -66,6 +72,7 @@ export function createDefaultGameConfig(base?: Partial<Pick<GameConfig, 'id' | '
 		base?.time ?? 0,
 		base?.input,
 		AspectRatio.SixteenByNine,
+		undefined,
 		true,
 		'#000000',
 		container,
@@ -88,12 +95,41 @@ export function resolveGameConfig(user?: GameConfigLike): GameConfig {
 	const containerId = (user?.containerId as string) ?? defaults.containerId;
 	const container = ensureContainer(containerId, user?.container ?? null);
 
-	// Normalize aspect ratio to a number
-	const rawAspect = (user?.aspectRatio as any) ?? defaults.aspectRatio;
-	const aspectRatio = typeof rawAspect === 'number' ? rawAspect : (AspectRatio as any)[rawAspect] ?? AspectRatio.SixteenByNine;
+	// Derive aspect ratio: explicit numeric -> preset -> default
+	const explicitAspect = user?.aspectRatio as any;
+	let aspectRatio = defaults.aspectRatio;
+	if (typeof explicitAspect === 'number' || (explicitAspect && typeof explicitAspect === 'string')) {
+		aspectRatio = typeof explicitAspect === 'number' ? explicitAspect : (AspectRatio as any)[explicitAspect] ?? defaults.aspectRatio;
+	} else if (user?.preset) {
+		try {
+			aspectRatio = getDisplayAspect(user.preset as RetroPresetKey) || defaults.aspectRatio;
+		} catch {
+			aspectRatio = defaults.aspectRatio;
+		}
+	}
 
 	const fullscreen = (user?.fullscreen as boolean) ?? defaults.fullscreen;
 	const bodyBackground = (user?.bodyBackground as string) ?? defaults.bodyBackground;
+
+	// Normalize internal resolution lock
+	let internalResolution: { width: number; height: number } | undefined;
+	if (user?.resolution) {
+		if (typeof user.resolution === 'string') {
+			const parsed = parseResolution(user.resolution);
+			if (parsed) internalResolution = parsed;
+			// fallback: allow preset resolution keys like '256x240' under a preset
+			if (!internalResolution && user.preset) {
+				const res = getPresetResolution(user.preset as RetroPresetKey, user.resolution);
+				if (res) internalResolution = { width: res.width, height: res.height };
+			}
+		} else if (typeof user.resolution === 'object') {
+			const w = (user.resolution as any).width;
+			const h = (user.resolution as any).height;
+			if (Number.isFinite(w) && Number.isFinite(h)) {
+				internalResolution = { width: w, height: h };
+			}
+		}
+	}
 
 	// Prefer provided canvas if any
 	const canvas = user?.canvas ?? undefined;
@@ -106,6 +142,7 @@ export function resolveGameConfig(user?: GameConfigLike): GameConfig {
 		(user?.time as number) ?? defaults.time,
 		user?.input ?? defaults.input,
 		aspectRatio,
+		internalResolution,
 		fullscreen,
 		bodyBackground,
 		container,

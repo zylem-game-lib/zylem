@@ -139,7 +139,7 @@ export class ZylemCamera {
 	 */
 	resize(width: number, height: number) {
 		this.screenResolution.set(width, height);
-		this.renderer.setSize(width, height, true);
+		this.renderer.setSize(width, height, false);
 		this.composer.setSize(width, height);
 
 		if (this.camera instanceof PerspectiveCamera) {
@@ -150,6 +150,14 @@ export class ZylemCamera {
 		if (this.perspectiveController) {
 			this.perspectiveController.resize(width, height);
 		}
+	}
+
+	/**
+	 * Update renderer pixel ratio (DPR)
+	 */
+	setPixelRatio(dpr: number) {
+		const safe = Math.max(1, Number.isFinite(dpr) ? dpr : 1);
+		this.renderer.setPixelRatio(safe);
 	}
 
 	/**

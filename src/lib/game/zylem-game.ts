@@ -105,7 +105,18 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 
 		if (this.container && this.defaultCamera) {
 			const dom = this.defaultCamera.getDomElement();
-			this.gameCanvas?.mountRenderer(dom, (w, h) => this.defaultCamera?.resize(w, h));
+			const internal = this.resolvedConfig?.internalResolution;
+			this.gameCanvas?.mountRenderer(dom, (cssW, cssH) => {
+				if (!this.defaultCamera) return;
+				if (internal) {
+					this.defaultCamera.setPixelRatio(1);
+					this.defaultCamera.resize(internal.width, internal.height);
+				} else {
+					const dpr = (window.devicePixelRatio || 1);
+					this.defaultCamera.setPixelRatio(dpr);
+					this.defaultCamera.resize(cssW, cssH);
+				}
+			});
 		}
 	}
 
