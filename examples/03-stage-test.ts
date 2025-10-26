@@ -1,13 +1,8 @@
-import { Color } from 'three';
-import { game, gameConfig, stage } from '../src/main';
+import { game, gameConfig } from '../src/main';
 import { startingStage } from './03-stage-test/startingStage';
 import { stage1 } from './03-stage-test/stage1';
-
-/** Basic game with stages */
-const aquaStage = stage({ backgroundColor: new Color(Color.NAMES.aquamarine) });
-const bisqueStage = stage({ backgroundColor: new Color(Color.NAMES.bisque) });
-const crimsonStage = stage({ backgroundColor: new Color(Color.NAMES.crimson) });
-const darkStage = stage({ backgroundColor: new Color(Color.NAMES.darkblue) });
+import { stage2 } from './03-stage-test/stage2';
+import { stage3 } from './03-stage-test/stage3';
 
 const myGameConfig = gameConfig({
 	id: 'stage-test',
@@ -19,10 +14,8 @@ const myGame = game(
 	myGameConfig,
 	startingStage,
 	stage1,
-	aquaStage,
-	bisqueStage,
-	crimsonStage,
-	darkStage,
+	stage2,
+	stage3,
 );
 
 myGame.update = ({ me, inputs }) => {
@@ -40,5 +33,4 @@ myGame.update = ({ me, inputs }) => {
 }
 
 // TODO: stage transitions
-
 myGame.start();

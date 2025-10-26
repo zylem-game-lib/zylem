@@ -6,7 +6,7 @@ const startGameText = await text({
 	text: 'Press A to start the game',
 	fontSize: 20,
 	stickToViewport: true,
-	screenPosition: new Vector2(window.innerWidth / 2, window.innerHeight / 2),
+	screenPosition: new Vector2(0.5, 0.5),
 });
 
 export const startingStage = stage({
