@@ -77,6 +77,9 @@ export class GameCanvas {
 			});
 			this.ratioDelegate.attach();
 		} else {
+			this.ratioDelegate.canvas = this.canvas;
+			this.ratioDelegate.onResize = onResize;
+			this.ratioDelegate.aspectRatio = this.aspectRatio;
 			this.ratioDelegate.apply();
 		}
 	}
