@@ -4,7 +4,7 @@ import { makeMoveable } from '../src/lib/actions/capabilities/moveable';
 import { ricochet2DCollision } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-collision';
 import { ricochet2DInBounds } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
 import { ricochetSound } from '../src/lib/sounds';
-import { boundary } from '../src/lib/actions/behaviors/boundaries/boundary';
+import { boundary2d } from '../src/lib/actions/behaviors/boundaries/boundary';
 
 const board = { top: 10, bottom: -10, left: -12, right: 12 };
 
@@ -23,7 +23,7 @@ makeMoveable(paddle).onUpdate(({ me, inputs }) => {
 	const value = (Right.held ? 1 : 0) - (Left.held ? 1 : 0) || Horizontal.value;
 	me.moveX(value * paddleSpeed);
 });
-paddle.addBehavior(boundary({ boundaries: board }));
+paddle.addBehavior(boundary2d({ boundaries: board }));
 
 const ballRadius = 0.25;
 const ball = await sphere({
@@ -107,7 +107,7 @@ const scoreText = await text({
 	text: 'Score: 0',
 	fontSize: 20,
 	stickToViewport: true,
-	screenPosition: new Vector2(120, 24),
+	screenPosition: new Vector2(0.1, 0.05),
 });
 
 const livesText = await text({
@@ -115,7 +115,7 @@ const livesText = await text({
 	text: 'Lives: 3',
 	fontSize: 20,
 	stickToViewport: true,
-	screenPosition: new Vector2(window.innerWidth - 120, 24),
+	screenPosition: new Vector2(0.9, 0.05),
 });
 
 const statusText = await text({
@@ -123,12 +123,13 @@ const statusText = await text({
 	text: '',
 	fontSize: 32,
 	stickToViewport: true,
-	screenPosition: new Vector2(window.innerWidth / 2, window.innerHeight / 2),
+	screenPosition: new Vector2(0.5, 0.5),
 });
 
-const stage1 = stage(camera1);
+const stage1 = stage({}, camera1);
 const game1 = game({
 	id: 'breakout',
+	debug: true,
 	globals: {
 		score: 0,
 		lives: 3,

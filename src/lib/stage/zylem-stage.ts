@@ -16,12 +16,13 @@ import createTransformSystem, { StageSystem } from '../systems/transformable.sys
 import { BaseNode } from '../core/base-node';
 import { nanoid } from 'nanoid';
 import { Stage } from './stage';
-import { ZylemCamera } from '../camera/zylem-camera';
 import { Perspectives } from '../camera/perspective';
 import { CameraWrapper } from '../camera/camera';
 import { StageDebugDelegate } from './stage-debug-delegate';
+import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
 import { GameEntity } from '../entities/entity';
 import { BaseEntityInterface } from '../types/entity-types';
+import { ZylemCamera } from '../camera/zylem-camera';
 
 export interface ZylemStageConfig {
 	inputs: Record<string, string[]>;
@@ -86,6 +87,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	testSystem: any = null;
 	transformSystem: any = null;
 	debugDelegate: StageDebugDelegate | null = null;
+	cameraDebugDelegate: StageCameraDebugDelegate | null = null;
 
 	uuid: string;
 	wrapperRef: Stage | null = null;
@@ -287,6 +289,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.world?.destroy();
 		this.scene?.destroy();
 		this.debugDelegate?.dispose();
+		this.cameraRef?.setDebugDelegate(null);
+		this.cameraDebugDelegate = null;
 
 		this.isLoaded = false;
 		this.world = null as any;

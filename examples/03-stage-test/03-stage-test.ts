@@ -1,8 +1,8 @@
-import { game, gameConfig } from '../src/main';
-import { startingStage } from './03-stage-test/startingStage';
-import { stage1 } from './03-stage-test/stage1';
-import { stage2 } from './03-stage-test/stage2';
-import { stage3 } from './03-stage-test/stage3';
+import { game, gameConfig } from '../../src/main';
+import { stage0 } from './stage0';
+import { stage1 } from './stage1';
+import { stage2 } from './stage2';
+import { stage3 } from './stage3';
 
 const myGameConfig = gameConfig({
 	id: 'stage-test',
@@ -12,7 +12,7 @@ const myGameConfig = gameConfig({
 
 const myGame = game(
 	myGameConfig,
-	startingStage,
+	stage0,
 	stage1,
 	stage2,
 	stage3,

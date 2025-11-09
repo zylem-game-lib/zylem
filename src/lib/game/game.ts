@@ -193,8 +193,6 @@ export class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesT
 	}
 }
 
-
-
 /**
  * create a new game
  * @param options GameOptions - Array of IGameOptions, Stage, GameEntity, or BaseNode objects

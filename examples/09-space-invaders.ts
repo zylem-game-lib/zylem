@@ -9,7 +9,6 @@ import playerShip from '@zylem/assets/2d/space/player-ship.png';
 import enemyShip from '@zylem/assets/2d/space/enemy-ship.png';
 import playerLaser from '@zylem/assets/2d/space/player-laser.png';
 
-
 const player = makeTransformable(await sprite({
 	name: 'player',
 	images: [
@@ -63,7 +62,7 @@ player.onUpdate(({ me, inputs }) => {
 		bulletSpawner.spawnRelative(player, stage1, new Vector2(0, 1));
 	}
 });
-player.addBehavior(boundary2d({ boundaries: { top: 1, bottom: -10, left: -10, right: 10 } }));
+player.addBehavior(boundary2d({ boundaries: { top: 1, bottom: -7, left: -10, right: 10 } }));
 
 const enemies: ZylemSprite[] = [];
 
@@ -111,7 +110,7 @@ const livesText = await text({
 	text: 'Lives: 3',
 	fontSize: 20,
 	stickToViewport: true,
-	screenPosition: new Vector2(window.innerWidth - 120, 24),
+	screenPosition: new Vector2(0.1, 0.05),
 });
 
 const scoreText = await text({
@@ -119,17 +118,19 @@ const scoreText = await text({
 	text: 'Score: 0',
 	fontSize: 20,
 	stickToViewport: true,
-	screenPosition: new Vector2(120, 24),
+	screenPosition: new Vector2(0.9, 0.05),
 });
 
 const spaceInvadersGame = game({
 	id: 'space-invaders',
-	debug: true,
+	// debug: true,
 	globals: {
 		score: 0,
 		lives: 3,
 		enemies: enemies.length,
-	}
+	},
+	// preset: 'SNES',
+	// resolution: '512x448',
 }, stage1, livesText, scoreText);
 
 

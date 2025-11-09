@@ -16,6 +16,16 @@ export interface PerspectiveController {
 	resize(width: number, height: number): void;
 }
 
+export interface CameraDebugState {
+	enabled: boolean;
+	selected: string[];
+}
+
+export interface CameraDebugDelegate {
+	subscribe(listener: (state: CameraDebugState) => void): () => void;
+	resolveTarget(uuid: string): Object3D | null;
+}
+
 export class ZylemCamera {
 	cameraRig: Object3D;
 	camera: Camera;
@@ -30,6 +40,12 @@ export class ZylemCamera {
 
 	// Perspective controller delegation
 	perspectiveController: PerspectiveController | null = null;
+
+	debugDelegate: CameraDebugDelegate | null = null;
+	private debugUnsubscribe: (() => void) | null = null;
+	private debugStateSnapshot: CameraDebugState = { enabled: false, selected: [] };
+	private orbitTarget: Object3D | null = null;
+	private orbitTargetWorldPos: Vector3 = new Vector3();
 
 	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10) {
 		this._perspective = perspective;
@@ -101,6 +117,10 @@ export class ZylemCamera {
 	 * Update camera and render
 	 */
 	update(delta: number) {
+		if (this.orbitControls && this.orbitTarget) {
+			this.orbitTarget.getWorldPosition(this.orbitTargetWorldPos);
+			this.orbitControls.target.copy(this.orbitTargetWorldPos);
+		}
 		this.orbitControls?.update();
 
 		// Delegate to perspective controller
@@ -120,8 +140,7 @@ export class ZylemCamera {
 			this.renderer.setAnimationLoop(null as any);
 		} catch { /* noop */ }
 		try {
-			this.orbitControls?.dispose();
-			this.orbitControls = null;
+			this.disableOrbitControls();
 		} catch { /* noop */ }
 		try {
 			this.composer?.passes?.forEach((p: any) => p.dispose?.());
@@ -131,7 +150,29 @@ export class ZylemCamera {
 		try {
 			this.renderer.dispose();
 		} catch { /* noop */ }
+		this.detachDebugDelegate();
 		this.sceneRef = null;
+	}
+
+	/**
+	 * Attach a delegate to react to debug state changes.
+	 */
+	setDebugDelegate(delegate: CameraDebugDelegate | null) {
+		if (this.debugDelegate === delegate) {
+			return;
+		}
+		this.detachDebugDelegate();
+		this.debugDelegate = delegate;
+		if (!delegate) {
+			this.applyDebugState({ enabled: false, selected: [] });
+			return;
+		}
+		const unsubscribe = delegate.subscribe((state) => {
+			this.applyDebugState(state);
+		});
+		this.debugUnsubscribe = () => {
+			unsubscribe?.();
+		};
 	}
 
 	/**
@@ -253,5 +294,70 @@ export class ZylemCamera {
 	 */
 	getDomElement(): HTMLCanvasElement {
 		return this.renderer.domElement;
+	}
+
+	private applyDebugState(state: CameraDebugState) {
+		this.debugStateSnapshot = {
+			enabled: state.enabled,
+			selected: [...state.selected],
+		};
+		if (state.enabled) {
+			this.enableOrbitControls();
+			this.updateOrbitTargetFromSelection(state.selected);
+		} else {
+			this.orbitTarget = null;
+			this.disableOrbitControls();
+		}
+	}
+
+	private enableOrbitControls() {
+		if (this.orbitControls) {
+			return;
+		}
+		this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
+		this.orbitControls.enableDamping = true;
+		this.orbitControls.dampingFactor = 0.05;
+		this.orbitControls.screenSpacePanning = false;
+		this.orbitControls.minDistance = 1;
+		this.orbitControls.maxDistance = 500;
+		this.orbitControls.maxPolarAngle = Math.PI / 2;
+	}
+
+	private disableOrbitControls() {
+		if (!this.orbitControls) {
+			return;
+		}
+		this.orbitControls.dispose();
+		this.orbitControls = null;
+	}
+
+	private updateOrbitTargetFromSelection(selected: string[]) {
+		if (!this.debugDelegate || selected.length === 0) {
+			this.orbitTarget = null;
+			return;
+		}
+		for (let i = selected.length - 1; i >= 0; i -= 1) {
+			const uuid = selected[i];
+			const targetObject = this.debugDelegate.resolveTarget(uuid);
+			if (targetObject) {
+				this.orbitTarget = targetObject;
+				if (this.orbitControls) {
+					targetObject.getWorldPosition(this.orbitTargetWorldPos);
+					this.orbitControls.target.copy(this.orbitTargetWorldPos);
+				}
+				return;
+			}
+		}
+		this.orbitTarget = null;
+	}
+
+	private detachDebugDelegate() {
+		if (this.debugUnsubscribe) {
+			try {
+				this.debugUnsubscribe();
+			} catch { /* noop */ }
+		}
+		this.debugUnsubscribe = null;
+		this.debugDelegate = null;
 	}
 }

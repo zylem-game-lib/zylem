@@ -9,6 +9,6 @@ const startGameText = await text({
 	screenPosition: new Vector2(0.5, 0.5),
 });
 
-export const startingStage = stage({
+export const stage0 = stage({
 	backgroundColor: new Color(Color.NAMES.black),
 }, startGameText);

@@ -83,6 +83,7 @@ export abstract class BaseNode<Options = any, T = any> {
 
 	public nodeSetup(params: SetupContext<this>) {
 		if (DEBUG_FLAG) { /**  */ }
+		this.markedForRemoval = false;
 		if (typeof this._setup === 'function') {
 			this._setup(params);
 		}

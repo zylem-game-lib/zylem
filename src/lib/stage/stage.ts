@@ -4,7 +4,7 @@ import { StageOptionItem, StageOptions, ZylemStage } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 import { getStageVariable, setStageVariable, stageState } from './stage-state';
-import { getStageDefaultConfig, getStageOptions } from './stage-default';
+import { getStageOptions } from './stage-default';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
