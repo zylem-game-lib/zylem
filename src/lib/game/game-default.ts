@@ -1,8 +1,8 @@
 import { proxy } from 'valtio/vanilla';
 import { stage, Stage } from '../stage/stage';
-import type { BasicTypes, GlobalVariablesType, ZylemGameConfig, GameInputConfig } from './game-interfaces';
+import type { BasicTypes, BaseGlobals, ZylemGameConfig, GameInputConfig } from './game-interfaces';
 
-type InitialDefaults = Partial<ZylemGameConfig<Stage, any, GlobalVariablesType>>;
+type InitialDefaults = Partial<ZylemGameConfig<Stage, any, BaseGlobals>>;
 /**
  * Reactive defaults for building `Game` instances. These values are applied
  * automatically by the `game()` builder via `convertNodes` and can be changed
@@ -11,7 +11,7 @@ type InitialDefaults = Partial<ZylemGameConfig<Stage, any, GlobalVariablesType>>
 const initialDefaults: () => InitialDefaults = (): InitialDefaults => {
 	return {
 		id: 'zylem',
-		globals: {} as GlobalVariablesType,
+		globals: {} as BaseGlobals,
 		stages: [stage()],
 		debug: false,
 		time: 0,
@@ -19,12 +19,12 @@ const initialDefaults: () => InitialDefaults = (): InitialDefaults => {
 	};
 }
 
-export const gameDefaultsState = proxy<Partial<ZylemGameConfig<Stage, any, GlobalVariablesType>>>(
+export const gameDefaultsState = proxy<Partial<ZylemGameConfig<Stage, any, BaseGlobals>>>(
 	{ ...initialDefaults() }
 );
 
 /** Replace multiple defaults at once (shallow merge). */
-export function setGameDefaults(partial: Partial<ZylemGameConfig<Stage, any, GlobalVariablesType>>): void {
+export function setGameDefaults(partial: Partial<ZylemGameConfig<Stage, any, BaseGlobals>>): void {
 	Object.assign(gameDefaultsState, partial);
 }
 
@@ -36,7 +36,7 @@ export function resetGameDefaults(): void {
 /**
  * Get a plain object copy of the current defaults.
  */
-export function getGameDefaultConfig<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(): {
+export function getGameDefaultConfig<TGlobals extends Record<string, BasicTypes> = BaseGlobals>(): {
 	id: string;
 	globals: TGlobals;
 	stages: Stage[];

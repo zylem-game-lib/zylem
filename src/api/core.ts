@@ -1,4 +1,4 @@
-export { game } from '../lib/game/game';
+export { createGame } from '../lib/game/game';
 export type { ZylemGameConfig } from '../lib/game/game-interfaces';
 
 export { vessel } from '../lib/core/vessel';

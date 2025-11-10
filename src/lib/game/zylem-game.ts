@@ -14,7 +14,7 @@ import { AspectRatioDelegate } from '../device/aspect-ratio';
 import { GameCanvas } from './game-canvas';
 import { subscribe } from 'valtio/vanilla';
 import Stats from 'stats.js';
-
+import { ZylemStage } from '../core';
 
 type ZylemGameOptions<TGlobals extends BaseGlobals> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>
 
@@ -167,7 +167,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	start() {
 		const stage = this.currentStage();
 		const params = this.params();
-		stage!.start({ ...params, me: stage!.wrappedStage });
+		stage!.start({ ...params, me: stage!.wrappedStage as ZylemStage });
 		if (this.customSetup) {
 			this.customSetup(params);
 		}
@@ -186,7 +186,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 				this.customUpdate(clampedParams);
 			}
 			if (stage) {
-				stage.wrappedStage!.nodeUpdate({ ...clampedParams, me: stage.wrappedStage });
+				stage.wrappedStage!.nodeUpdate({ ...clampedParams, me: stage!.wrappedStage as ZylemStage });
 			}
 			this.totalTime += clampedParams.delta;
 			state.time = this.totalTime;

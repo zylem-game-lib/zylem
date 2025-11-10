@@ -3,10 +3,9 @@ import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/b
 import { setPaused } from '../debug/debug-state';
 import { BaseGlobals } from './game-interfaces';
 import { getGlobalState, setGlobalState } from './game-state';
-import { convertNodes, GameOptions } from '../core/utility/nodes';
+import { convertNodes, GameOptions, hasStages } from '../core/utility/nodes';
 import { resolveGameConfig } from './game-config';
-
-
+import { stage } from '../stage/stage';
 
 export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private wrappedGame: ZylemGame<TGlobals> | null = null;
@@ -22,6 +21,9 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 
 	constructor(options: GameOptions<TGlobals>) {
 		this.options = options;
+		if (!hasStages(options)) {
+			this.options.push(stage());
+		}
 	}
 
 	async start(): Promise<this> {

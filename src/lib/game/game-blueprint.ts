@@ -3,15 +3,14 @@ import { deepClone } from 'valtio/utils';
 import { nanoid } from 'nanoid';
 
 import type { Stage } from '../stage/stage';
-import type { GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
-import { GlobalsBase } from './game';
+import type { BaseGlobals, ZylemGameConfig } from './game-interfaces';
 
 /**
  * A lightweight, serializable blueprint representing the initial configuration
  * of a `Game`. It should not include runtime references. Use blueprints only to
  * build games.
  */
-export interface GameBlueprint<TGlobals extends GlobalsBase = GlobalVariablesType> {
+export interface GameBlueprint<TGlobals extends BaseGlobals = BaseGlobals> {
 	id: string;
 	name?: string;
 	config: Partial<ZylemGameConfig<Stage, any, TGlobals>>;
@@ -38,7 +37,7 @@ export function resetGameBlueprints(): void {
 }
 
 /** Create and register a new `GameBlueprint`. */
-export function createGameBlueprint<TGlobals extends GlobalsBase = GlobalVariablesType>(
+export function createGameBlueprint<TGlobals extends BaseGlobals>(
 	config: Partial<ZylemGameConfig<Stage, any, TGlobals>>,
 	options?: { id?: string; name?: string; setCurrent?: boolean; }
 ): GameBlueprint<TGlobals> {
@@ -55,7 +54,7 @@ export function createGameBlueprint<TGlobals extends GlobalsBase = GlobalVariabl
 }
 
 /** Upsert a blueprint into the store. */
-export function upsertGameBlueprint<TGlobals extends GlobalsBase = GlobalVariablesType>(
+export function upsertGameBlueprint<TGlobals extends BaseGlobals>(
 	blueprint: GameBlueprint<TGlobals>
 ): void {
 	(gameBlueprintsState.byId as Record<string, GameBlueprint<TGlobals>>)[blueprint.id] = { ...blueprint, config: { ...blueprint.config } } as GameBlueprint<TGlobals>;

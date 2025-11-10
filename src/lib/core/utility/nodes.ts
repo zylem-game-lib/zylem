@@ -9,7 +9,11 @@ import { GameConfigLike } from '~/lib/game/game-config';
 // }
 
 export type GameOptions<TGlobals extends BaseGlobals> = Array<
-	ZylemGameConfig<Stage, any, TGlobals> | GameConfigLike | Stage | GameEntityLifeCycle | BaseNode
+	ZylemGameConfig<Stage, any, TGlobals> |
+	GameConfigLike |
+	Stage |
+	GameEntityLifeCycle |
+	BaseNode
 >;
 
 export async function convertNodes<TGlobals extends BaseGlobals>(
@@ -48,3 +52,7 @@ export async function convertNodes<TGlobals extends BaseGlobals>(
 	return converted as unknown as { id: string, globals: TGlobals, stages: Stage[] };
 }
 
+export function hasStages<TGlobals extends BaseGlobals>(_options: GameOptions<TGlobals>): Boolean {
+	const stage = _options.find(option => option instanceof Stage);
+	return Boolean(stage);
+}
