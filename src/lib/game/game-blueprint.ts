@@ -1,17 +1,17 @@
 import { proxy } from 'valtio/vanilla';
 import { deepClone } from 'valtio/utils';
 import { nanoid } from 'nanoid';
-import { game } from './game';
+
 import type { Stage } from '../stage/stage';
-import type { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
-import type { GameOptions } from '../core/utility/nodes';
+import type { GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+import { GlobalsBase } from './game';
 
 /**
  * A lightweight, serializable blueprint representing the initial configuration
  * of a `Game`. It should not include runtime references. Use blueprints only to
  * build games.
  */
-export interface GameBlueprint<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> {
+export interface GameBlueprint<TGlobals extends GlobalsBase = GlobalVariablesType> {
 	id: string;
 	name?: string;
 	config: Partial<ZylemGameConfig<Stage, any, TGlobals>>;
@@ -38,7 +38,7 @@ export function resetGameBlueprints(): void {
 }
 
 /** Create and register a new `GameBlueprint`. */
-export function createGameBlueprint<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(
+export function createGameBlueprint<TGlobals extends GlobalsBase = GlobalVariablesType>(
 	config: Partial<ZylemGameConfig<Stage, any, TGlobals>>,
 	options?: { id?: string; name?: string; setCurrent?: boolean; }
 ): GameBlueprint<TGlobals> {
@@ -55,7 +55,7 @@ export function createGameBlueprint<TGlobals extends Record<string, BasicTypes> 
 }
 
 /** Upsert a blueprint into the store. */
-export function upsertGameBlueprint<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(
+export function upsertGameBlueprint<TGlobals extends GlobalsBase = GlobalVariablesType>(
 	blueprint: GameBlueprint<TGlobals>
 ): void {
 	(gameBlueprintsState.byId as Record<string, GameBlueprint<TGlobals>>)[blueprint.id] = { ...blueprint, config: { ...blueprint.config } } as GameBlueprint<TGlobals>;
@@ -94,20 +94,4 @@ export function setCurrentGameBlueprint(id: string | null): void {
 export function getCurrentGameBlueprint(): GameBlueprint | null {
 	const id = gameBlueprintsState.currentId;
 	return id ? gameBlueprintsState.byId[id] ?? null : null;
-}
-
-/**
- * Build a `Game` instance from a blueprint and optional extra `GameOptions`
- * (e.g., additional stages or nodes). This returns a `Game` wrapper instance;
- * call `.start()` to run it.
- */
-export function buildGameFromBlueprint<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(
-	input: string | GameBlueprint<TGlobals>,
-	...extras: GameOptions<TGlobals>
-) {
-	const blueprint = typeof input === 'string' ? getGameBlueprint(input) : input;
-	if (!blueprint) {
-		throw new Error('Game blueprint not found');
-	}
-	return game<TGlobals>({ ...(blueprint.config as any) }, ...(extras as any));
 }

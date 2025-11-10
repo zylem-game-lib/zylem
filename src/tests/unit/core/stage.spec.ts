@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { stage } from '../../main';
+import { stage } from '../../../api/main';
 import { Color } from 'three';
 import { ZylemStageConfig } from '~/lib/core';
 
 describe('create a basic stage', () => {
 	it('default configuration', () => {
 		const result = stage();
-		result.stageRef = null as any;
+		result.wrappedStage = null as any;
 		expect(result).toMatchSnapshot();
 	});
 	it('should create a stage with a coral background', async () => {

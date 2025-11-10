@@ -1,4 +1,4 @@
-import { game, gameConfig } from '../../src/main';
+import { createGame, gameConfig } from '../../src/api/main';
 import { stage0 } from './stage0';
 import { stage1 } from './stage1';
 import { stage2 } from './stage2';
@@ -10,7 +10,7 @@ const myGameConfig = gameConfig({
 	bodyBackground: '#000000',
 });
 
-const myGame = game(
+const game = createGame(
 	myGameConfig,
 	stage0,
 	stage1,
@@ -18,19 +18,19 @@ const myGame = game(
 	stage3,
 );
 
-myGame.update = ({ me, inputs }) => {
+game.update = ({ me, inputs }) => {
 	const { p1 } = inputs;
 
 	if (p1.buttons.A.pressed) {
-		myGame.nextStage();
+		game.nextStage();
 	}
 	if (p1.buttons.B.pressed) {
-		myGame.previousStage();
+		game.previousStage();
 	}
 	if (p1.buttons.Start.pressed) {
-		myGame.reset();
+		game.reset();
 	}
 }
 
 // TODO: stage transitions
-myGame.start();
+game.start();

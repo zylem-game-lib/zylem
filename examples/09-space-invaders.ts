@@ -1,6 +1,6 @@
 /// <reference types="@zylem/assets" />
 import { Color, Vector2, Vector3 } from 'three';
-import { camera, destroy, entitySpawner, game, makeMoveable, Perspectives, sprite, stage, text } from '../src/main';
+import { camera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, stage, text } from '../src/api/main';
 import { boundary2d } from '../src/lib/actions/behaviors/boundaries/boundary';
 import { movementSequence2D } from '../src/lib/actions/behaviors/movement/movement-sequence-2d';
 import { ZylemSprite } from '../src/lib/entities/sprite';
@@ -121,7 +121,7 @@ const scoreText = await text({
 	screenPosition: new Vector2(0.9, 0.05),
 });
 
-const spaceInvadersGame = game({
+const game = createGame({
 	id: 'space-invaders',
 	// debug: true,
 	globals: {
@@ -134,12 +134,12 @@ const spaceInvadersGame = game({
 }, stage1, livesText, scoreText);
 
 
-spaceInvadersGame.onGlobalChange('score', (score) => {
+game.onGlobalChange('score', (score) => {
 	scoreText.updateText(`Score: ${score}`);
 });
 
-spaceInvadersGame.onGlobalChange('lives', (lives) => {
+game.onGlobalChange('lives', (lives) => {
 	livesText.updateText(`Lives: ${lives}`);
 });
 
-spaceInvadersGame.start();
+game.start();

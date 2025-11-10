@@ -1,9 +1,9 @@
-import { game } from '../src/main';
+import { createGame } from '../src/api/main';
 
 /* Basic game */
-const basicGame = game({
+const game = createGame({
 	id: 'basic-game',
 	debug: true
 });
 
-basicGame.start();
+game.start();

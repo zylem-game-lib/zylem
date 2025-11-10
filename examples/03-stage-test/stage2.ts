@@ -1,5 +1,5 @@
 import { Color, Vector3 } from "three";
-import { stage } from "../../src/main";
+import { stage } from "../../src/api/main";
 import { box } from "../../src/lib/entities";
 
 const box1 = await box({

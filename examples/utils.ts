@@ -2,7 +2,7 @@
 import { CollisionOptions } from "../src/lib/collision/collision";
 import { ZylemBox } from "../src/lib/entities/box";
 import { ZylemSphere } from "../src/lib/entities/sphere";
-import { actor, box, plane } from "../src/main";
+import { actor, box, plane } from "../src/api/main";
 import { Color, Vector2, Vector3 } from "three";
 
 import grass from '@zylem/assets/3d/textures/grass.jpg';

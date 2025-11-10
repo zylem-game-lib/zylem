@@ -10,11 +10,11 @@ import {
 	buildStageFromBlueprint,
 	stageBlueprintsState,
 	resetStageBlueprints,
-} from '../../lib/stage/stage-blueprint';
+} from '../../../lib/stage/stage-blueprint';
 import {
 	resetStageDefaults,
 	setStageDefaults,
-} from '../../lib/stage/stage-default';
+} from '../../../lib/stage/stage-default';
 
 describe('stage blueprints', () => {
 	beforeEach(() => {

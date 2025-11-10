@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { game, stage } from '../../main';
+import { createGame, stage } from '../../../api/main';
 
 describe('create a basic game', () => {
 	it('default configuration', () => {
-		const result = game();
+		const result = createGame();
 		expect(result).toMatchSnapshot();
 	});
 	it('should create a game with multiple stages', async () => {
-		const result = game(
+		const result = createGame(
 			stage(),
 			stage(),
 			stage()

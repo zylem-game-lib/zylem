@@ -11,7 +11,7 @@ type AnyNode = NodeLike | Promise<NodeLike>;
 type EntityInput = AnyNode | (() => AnyNode) | (() => Promise<any>);
 
 export class Stage {
-	stageRef: ZylemStage;
+	wrappedStage: ZylemStage | null;
 	options: StageOptionItem[] = [];
 
 	update: UpdateFunction<ZylemStage> = () => { };
@@ -20,46 +20,49 @@ export class Stage {
 
 	constructor(options: StageOptions) {
 		this.options = options;
-		this.stageRef = new ZylemStage(this.options as StageOptions);
+		this.wrappedStage = null;
 	}
 
 	async load(id: string, camera?: ZylemCamera | CameraWrapper | null) {
-		this.stageRef.wrapperRef = this;
-		const zylemCamera = camera instanceof CameraWrapper ? camera.cameraRef : camera;
+		this.wrappedStage = new ZylemStage(this.options as StageOptions);
+		this.wrappedStage.wrapperRef = this;
 
-		await this.stageRef.load(id, zylemCamera);
+		const zylemCamera = camera instanceof CameraWrapper ? camera.cameraRef : camera;
+		await this.wrappedStage!.load(id, zylemCamera);
 	}
 
 	async addEntities(entities: BaseNode[]) {
 		this.options.push(...(entities as unknown as StageOptionItem[]));
-		this.stageRef.enqueue(...entities);
+		// TODO: this check is unnecessary
+		if (!this.wrappedStage) { return; }
+		this.wrappedStage!.enqueue(...entities);
 	}
 
 	add(...inputs: Array<EntityInput>) {
-		this.stageRef.enqueue(...(inputs as any));
+		this.wrappedStage!.enqueue(...(inputs as any));
 	}
 
 	start(params: SetupContext<ZylemStage>) {
-		this.stageRef?.nodeSetup(params);
-		this.stageRef.onEntityAdded((child) => {
-			const next = this.stageRef.buildEntityState(child);
+		this.wrappedStage?.nodeSetup(params);
+		this.wrappedStage!.onEntityAdded((child) => {
+			const next = this.wrappedStage!.buildEntityState(child);
 			stageState.entities = [...stageState.entities, next];
 		}, { replayExisting: true });
 	}
 
 	onUpdate(...callbacks: UpdateFunction<ZylemStage>[]) {
-		this.stageRef.update = (params) => {
+		this.wrappedStage!.update = (params) => {
 			const extended = { ...params, stage: this } as any;
 			callbacks.forEach((cb) => cb(extended));
 		};
 	}
 
 	onSetup(callback: SetupFunction<ZylemStage>) {
-		this.stageRef.setup = callback;
+		this.wrappedStage!.setup = callback;
 	}
 
 	onDestroy(callback: DestroyFunction<ZylemStage>) {
-		this.stageRef.destroy = callback;
+		this.wrappedStage!.destroy = callback;
 	}
 
 	setVariable(key: string, value: any) {

@@ -1,4 +1,4 @@
-import { stage, box, plane, sphere, sprite, zone } from '../../src/main';
+import { stage, box, plane, sphere, sprite, zone } from '../../src/api/main';
 import { Vector3, Vector2, Color } from 'three';
 import { playgroundActor } from '../../examples/utils';
 

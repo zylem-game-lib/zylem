@@ -1,5 +1,5 @@
 import { Color } from "three";
-import { stage } from "../../src/main";
+import { stage } from "../../src/api/main";
 import { sphere } from "../../src/lib/entities";
 
 const planet = await sphere({

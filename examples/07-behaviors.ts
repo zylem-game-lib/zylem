@@ -1,7 +1,7 @@
 /// <reference types="@zylem/assets" />
 
 import { ArrowHelper, Vector3 } from 'three';
-import { game, stage, zone } from '../src/main';
+import { createGame, stage, zone } from '../src/api/main';
 import { rotateInDirection } from '../src/lib/actions/capabilities/rotatable';
 import { move, resetVelocity } from '../src/lib/actions/capabilities/moveable';
 import { Ray } from '@dimforge/rapier3d-compat';
@@ -51,12 +51,12 @@ platforms[4].destroy = () => {
 	// console.log('platform has been destroyed');
 };
 
-const testGame = game(
+const testGame = createGame(
 	{
 		id: 'behaviors-test',
 		debug: true,
-		// preset: 'SNES',
-		// resolution: '512x448',
+		preset: 'SNES',
+		resolution: '512x448',
 	},
 	stage1,
 	startingZone,
@@ -100,8 +100,8 @@ testGame.update = ({ inputs, delta }) => {
 		);
 		arrow = new ArrowHelper(rayDirection, rayOrigin, rayLength, 0xff0000);
 		// @ts-ignore
-		if (stage1.stageRef!.scene) {
-			stage1.stageRef!.scene.scene.add(arrow);
+		if (stage1.wrappedStage!.scene) {
+			stage1.wrappedStage!.scene.scene.add(arrow);
 		}
 		// @ts-ignore
 	}
@@ -110,8 +110,8 @@ testGame.update = ({ inputs, delta }) => {
 	const rayDirection = new Vector3(0, -1, 0); // Downward
 	rapierRay.origin = rayOrigin;
 	rapierRay.direction = rayDirection;
-	if (stage1.stageRef!.world) {
-		stage1.stageRef!.world.world.castRay(rapierRay, rayLength, true, undefined, undefined, undefined, undefined, (collider) => {
+	if (stage1.wrappedStage!.world) {
+		stage1.wrappedStage!.world.world.castRay(rapierRay, rayLength, true, undefined, undefined, undefined, undefined, (collider) => {
 			// @ts-ignore
 			const ref = collider._parent.userData.uuid;
 			if (ref === player.uuid) {

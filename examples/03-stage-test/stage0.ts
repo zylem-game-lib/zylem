@@ -1,5 +1,5 @@
 import { Color, Vector2 } from "three";
-import { stage, text } from "../../src/main";
+import { stage, text } from "../../src/api/main";
 
 const startGameText = await text({
 	name: 'startGameText',

@@ -8,7 +8,7 @@ import { InputManager } from '../input/input-manager';
 import { Timer } from '../core/three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
-import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+import { BaseGlobals, ZylemGameConfig } from './game-interfaces';
 import { GameConfig, resolveGameConfig } from './game-config';
 import { AspectRatioDelegate } from '../device/aspect-ratio';
 import { GameCanvas } from './game-canvas';
@@ -16,9 +16,9 @@ import { subscribe } from 'valtio/vanilla';
 import Stats from 'stats.js';
 
 
-type ZylemGameOptions<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>
+type ZylemGameOptions<TGlobals extends BaseGlobals> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>
 
-export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> {
+export class ZylemGame<TGlobals extends BaseGlobals> {
 	id: string;
 	initialGlobals = {} as TGlobals;
 
@@ -98,10 +98,12 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 	async loadStage(stage: Stage) {
 		this.unloadCurrentStage();
 		const config = stage.options[0] as any;
+
 		await stage.load(this.id, config?.camera as ZylemCamera | null);
-		this.stageMap.set(stage.stageRef!.uuid, stage);
-		this.currentStageId = stage.stageRef!.uuid;
-		this.defaultCamera = stage.stageRef!.cameraRef!;
+
+		this.stageMap.set(stage.wrappedStage!.uuid, stage);
+		this.currentStageId = stage.wrappedStage!.uuid;
+		this.defaultCamera = stage.wrappedStage!.cameraRef!;
 
 		if (this.container && this.defaultCamera) {
 			const dom = this.defaultCamera.getDomElement();
@@ -124,10 +126,10 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 		if (!this.currentStageId) return;
 		const current = this.getStage(this.currentStageId);
 		if (!current) return;
-		if (current?.stageRef) {
+		if (current?.wrappedStage) {
 			try {
-				current.stageRef.nodeDestroy({
-					me: current.stageRef,
+				current.wrappedStage.nodeDestroy({
+					me: current.wrappedStage,
 					globals: state.globals as unknown as TGlobals,
 				});
 			} catch (e) {
@@ -152,7 +154,7 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 		const stage = this.currentStage();
 		const delta = this.timer.getDelta();
 		const inputs = this.inputManager.getInputs(delta);
-		const camera = stage?.stageRef?.cameraRef || this.defaultCamera;
+		const camera = stage?.wrappedStage?.cameraRef || this.defaultCamera;
 		return {
 			delta,
 			inputs,
@@ -165,7 +167,7 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 	start() {
 		const stage = this.currentStage();
 		const params = this.params();
-		stage!.start({ ...params, me: stage!.stageRef });
+		stage!.start({ ...params, me: stage!.wrappedStage });
 		if (this.customSetup) {
 			this.customSetup(params);
 		}
@@ -184,7 +186,7 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 				this.customUpdate(clampedParams);
 			}
 			if (stage) {
-				stage.stageRef!.nodeUpdate({ ...clampedParams, me: stage.stageRef });
+				stage.wrappedStage!.nodeUpdate({ ...clampedParams, me: stage.wrappedStage });
 			}
 			this.totalTime += clampedParams.delta;
 			state.time = this.totalTime;
@@ -198,7 +200,7 @@ export class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVaria
 	outOfLoop() {
 		const currentStage = this.currentStage();
 		if (!currentStage) return;
-		currentStage.stageRef!.outOfLoop();
+		currentStage.wrappedStage!.outOfLoop();
 	}
 
 	getStage(id: string) {
