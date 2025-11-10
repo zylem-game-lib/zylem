@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { game, sphere, makeMoveable } from '../src/main';
+import { createGame, sphere, makeMoveable } from '../src/api/main';
 import { ricochet2DInBounds } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
 import { ricochetSound } from '../src/lib/sounds';
 
@@ -13,8 +13,8 @@ ball.addBehavior(
 	({ me }) => { me.move(new Vector3(3, 4, 0)) }
 );
 
-const myGame = game({
+const game = createGame({
 	id: 'ricochet-test',
 }, ball);
 
-myGame.start();
+game.start();

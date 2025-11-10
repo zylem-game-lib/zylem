@@ -1,4 +1,4 @@
-import { game, sphere, makeMoveable } from '../src/main';
+import { createGame, sphere, makeMoveable } from '../src/api/main';
 
 const ball = await sphere();
 makeMoveable(ball).onUpdate(({ me, inputs }) => {
@@ -6,7 +6,7 @@ makeMoveable(ball).onUpdate(({ me, inputs }) => {
 	me.moveXY(Horizontal.value * 5, -Vertical.value * 5);
 });
 
-const myGame = await game({
+const myGame = await createGame({
 	debug: true,
 	id: 'basic-ball',
 	globals: {
