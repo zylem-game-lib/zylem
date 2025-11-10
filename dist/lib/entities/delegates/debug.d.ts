@@ -35,3 +35,4 @@ export declare class EnhancedDebugInfoBuilder {
     constructor(customBuilder?: (options: GameEntityOptions) => Record<string, any>);
     buildInfo(options: GameEntityOptions, entity?: GameEntity<any>): Record<string, any>;
 }
+//# sourceMappingURL=debug.d.ts.map

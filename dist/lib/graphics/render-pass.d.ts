@@ -14,3 +14,4 @@ export default class RenderPass extends Pass {
     material(): THREE.ShaderMaterial;
     dispose(): void;
 }
+//# sourceMappingURL=render-pass.d.ts.map

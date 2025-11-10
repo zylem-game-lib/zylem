@@ -17,3 +17,4 @@ export declare const clearConsole: () => void;
  * Get all console messages as a single string
  */
 export declare const getConsoleContent: () => string;
+//# sourceMappingURL=console-state.d.ts.map

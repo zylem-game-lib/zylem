@@ -4,3 +4,4 @@ export interface InputProvider {
     isConnected(): boolean;
     getName(): string;
 }
+//# sourceMappingURL=input-provider.d.ts.map

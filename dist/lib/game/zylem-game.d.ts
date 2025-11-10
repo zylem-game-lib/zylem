@@ -4,12 +4,12 @@ import { InputManager } from '../input/input-manager';
 import { Timer } from '../core/three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
-import { BasicTypes, GlobalVariablesType, ZylemGameConfig } from './game-interfaces';
+import { BaseGlobals, ZylemGameConfig } from './game-interfaces';
 import { GameConfig } from './game-config';
 import { AspectRatioDelegate } from '../device/aspect-ratio';
 import { GameCanvas } from './game-canvas';
-type ZylemGameOptions<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>;
-export declare class ZylemGame<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> {
+type ZylemGameOptions<TGlobals extends BaseGlobals> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>;
+export declare class ZylemGame<TGlobals extends BaseGlobals> {
     id: string;
     initialGlobals: TGlobals;
     customSetup: ((params: SetupContext<ZylemGame<TGlobals>, TGlobals>) => void) | null;
@@ -55,3 +55,4 @@ export declare class ZylemGame<TGlobals extends Record<string, BasicTypes> = Glo
     onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void): void;
 }
 export default ZylemGame;
+//# sourceMappingURL=zylem-game.d.ts.map

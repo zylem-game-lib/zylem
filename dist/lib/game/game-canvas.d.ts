@@ -32,3 +32,4 @@ export declare class GameCanvas {
     destroy(): void;
     private ensureContainer;
 }
+//# sourceMappingURL=game-canvas.d.ts.map

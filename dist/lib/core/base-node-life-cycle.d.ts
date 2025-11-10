@@ -65,3 +65,4 @@ export interface CleanupContext<T, TGlobals extends Record<string, unknown> = an
     me: T;
     globals: TGlobals;
 }
+//# sourceMappingURL=base-node-life-cycle.d.ts.map

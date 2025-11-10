@@ -9,3 +9,4 @@ interface EntityRowProps {
 export declare const EntityRow: Component<EntityRowProps>;
 export declare const EntitiesSection: Component;
 export {};
+//# sourceMappingURL=EntitiesSection.d.ts.map

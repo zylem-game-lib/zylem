@@ -4,3 +4,4 @@ import './AccordionMenu.css';
  * Accordion menu for debug UI with multiple panels.
  */
 export declare const AccordionMenu: Component;
+//# sourceMappingURL=AccordionMenu.d.ts.map

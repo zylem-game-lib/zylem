@@ -1,6 +1,6 @@
 import { UpdateFunction } from "../core/base-node-life-cycle";
 export type BasicTypes = number | string | boolean;
-export type GlobalVariablesType = Record<string, BasicTypes>;
+export type BaseGlobals = Record<string, BasicTypes>;
 export type KeyboardMapping = Record<string, string[]>;
 export type MouseMapping = Record<string, string[]>;
 export interface GameInputPlayerConfig {
@@ -17,7 +17,7 @@ export interface GameInputConfig {
     p7?: GameInputPlayerConfig;
     p8?: GameInputPlayerConfig;
 }
-export interface ZylemGameConfig<StageInterface, GameInterface, TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> {
+export interface ZylemGameConfig<StageInterface, GameInterface, TGlobals extends BaseGlobals> {
     id: string;
     globals?: TGlobals;
     stages?: StageInterface[];
@@ -26,3 +26,4 @@ export interface ZylemGameConfig<StageInterface, GameInterface, TGlobals extends
     time?: number;
     input?: GameInputConfig;
 }
+//# sourceMappingURL=game-interfaces.d.ts.map

@@ -22,3 +22,4 @@ export declare const scale: import("bitecs").ComponentType<{
     z: "f32";
 }>;
 export default function createTransformSystem(stage: StageSystem): import("bitecs").System<[], import("bitecs").IWorld>;
+//# sourceMappingURL=transformable.system.d.ts.map

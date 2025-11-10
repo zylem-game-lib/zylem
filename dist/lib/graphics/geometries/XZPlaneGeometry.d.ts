@@ -5,3 +5,4 @@ declare class XZPlaneGeometry extends BufferGeometry {
     static fromJSON(data: any): XZPlaneGeometry;
 }
 export { XZPlaneGeometry };
+//# sourceMappingURL=XZPlaneGeometry.d.ts.map

@@ -26,3 +26,4 @@ export declare class ZylemSphere extends GameEntity<ZylemSphereOptions> {
 type SphereOptions = BaseNode | Partial<ZylemSphereOptions>;
 export declare function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere>;
 export {};
+//# sourceMappingURL=sphere.d.ts.map

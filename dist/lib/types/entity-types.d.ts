@@ -36,3 +36,4 @@ export interface CollisionEntityInterface extends GameEntityInterface {
     onEnter?: (other: GameEntityInterface) => void;
     onExit?: (other: GameEntityInterface) => void;
 }
+//# sourceMappingURL=entity-types.d.ts.map

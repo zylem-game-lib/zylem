@@ -49,3 +49,4 @@ export interface InputHandler {
     onPress(button: ButtonName, callback: InputHandlerCallback): void;
     update(currentInputs: Inputs): void;
 }
+//# sourceMappingURL=input.d.ts.map

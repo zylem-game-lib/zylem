@@ -1,23 +1,23 @@
-import { createWorld as c, addEntity as f, addComponent as u, removeEntity as p } from "bitecs";
+import { createWorld as c, addEntity as u, addComponent as f, removeEntity as p } from "bitecs";
 import { Vector3 as o, Color as d, Vector2 as m } from "three";
-import { ZylemWorld as h } from "../collision/world.js";
+import { ZylemWorld as l } from "../collision/world.js";
 import { ZylemScene as y } from "../graphics/zylem-scene.js";
-import { setStageBackgroundColor as g, setStageBackgroundImage as E, setStageVariables as w, resetStageVariables as b } from "./stage-state.js";
+import { setStageBackgroundColor as g, setStageBackgroundImage as E, setStageVariables as b, resetStageVariables as w } from "./stage-state.js";
 import { ZylemBlueColor as S } from "../core/utility/vector.js";
 import { debugState as a } from "../debug/debug-state.js";
-import { getGlobalState as l } from "../game/game-state.js";
+import { getGlobalState as h } from "../game/game-state.js";
 import { LifeCycleBase as v } from "../core/lifecycle-base.js";
 import M from "../systems/transformable.system.js";
 import { BaseNode as _ } from "../core/base-node.js";
 import { nanoid as C } from "nanoid";
-import { ZylemCamera as B } from "../camera/zylem-camera.js";
-import { Perspectives as O } from "../camera/perspective.js";
-import { CameraWrapper as P } from "../camera/camera.js";
-import { StageDebugDelegate as R } from "./stage-debug-delegate.js";
-import { GameEntity as W } from "../entities/entity.js";
-const k = "Stage";
+import { Perspectives as D } from "../camera/perspective.js";
+import { CameraWrapper as B } from "../camera/camera.js";
+import { StageDebugDelegate as O } from "./stage-debug-delegate.js";
+import { GameEntity as P } from "../entities/entity.js";
+import { ZylemCamera as R } from "../camera/zylem-camera.js";
+const W = "Stage";
 class Y extends v {
-  type = k;
+  type = W;
   state = {
     backgroundColor: S,
     backgroundImage: null,
@@ -44,6 +44,7 @@ class Y extends v {
   testSystem = null;
   transformSystem = null;
   debugDelegate = null;
+  cameraDebugDelegate = null;
   uuid;
   wrapperRef = null;
   camera;
@@ -66,7 +67,7 @@ class Y extends v {
     return { config: t, entities: i, asyncEntities: s, camera: r };
   }
   isZylemStageConfig(e) {
-    return e && typeof e == "object" && !(e instanceof _) && !(e instanceof P);
+    return e && typeof e == "object" && !(e instanceof _) && !(e instanceof B);
   }
   isBaseNode(e) {
     return e && typeof e == "object" && typeof e.create == "function";
@@ -91,7 +92,7 @@ class Y extends v {
   }
   setState() {
     const { backgroundColor: e, backgroundImage: t } = this.state, i = e instanceof d ? e : new d(e);
-    g(i), E(t), w(this.state.variables ?? {});
+    g(i), E(t), b(this.state.variables ?? {});
   }
   /**
    * Load and initialize the stage's scene and world.
@@ -102,8 +103,8 @@ class Y extends v {
     this.setState();
     const i = t || (this.camera ? this.camera.cameraRef : this.createDefaultCamera());
     this.cameraRef = i, this.scene = new y(e, i, this.state);
-    const s = await h.loadPhysics(this.gravity ?? new o(0, 0, 0));
-    this.world = new h(s), this.scene.setup();
+    const s = await l.loadPhysics(this.gravity ?? new o(0, 0, 0));
+    this.world = new l(s), this.scene.setup();
     for (let r of this.children)
       this.spawnEntity(r);
     if (this.pendingEntities.length && (this.enqueue(...this.pendingEntities), this.pendingEntities = []), this.pendingPromises.length) {
@@ -115,14 +116,14 @@ class Y extends v {
   }
   createDefaultCamera() {
     const e = window.innerWidth, t = window.innerHeight, i = new m(e, t);
-    return new B(O.ThirdPerson, i);
+    return new R(D.ThirdPerson, i);
   }
   _setup(e) {
     if (!this.scene || !this.world) {
       this.logMissingEntities();
       return;
     }
-    a.on && (this.debugDelegate = new R(this));
+    a.on && (this.debugDelegate = new O(this));
   }
   _update(e) {
     const { delta: t } = e;
@@ -148,10 +149,10 @@ class Y extends v {
   _destroy(e) {
     this._childrenMap.forEach((t) => {
       try {
-        t.nodeDestroy({ me: t, globals: l() });
+        t.nodeDestroy({ me: t, globals: h() });
       } catch {
       }
-    }), this._childrenMap.clear(), this._removalMap.clear(), this._debugMap.clear(), this.world?.destroy(), this.scene?.destroy(), this.debugDelegate?.dispose(), this.isLoaded = !1, this.world = null, this.scene = null, this.cameraRef = null, b();
+    }), this._childrenMap.clear(), this._removalMap.clear(), this._debugMap.clear(), this.world?.destroy(), this.scene?.destroy(), this.debugDelegate?.dispose(), this.cameraRef?.setDebugDelegate(null), this.cameraDebugDelegate = null, this.isLoaded = !1, this.world = null, this.scene = null, this.cameraRef = null, w();
   }
   /**
    * Create, register, and add an entity to the scene/world.
@@ -160,22 +161,22 @@ class Y extends v {
   async spawnEntity(e) {
     if (!this.scene || !this.world)
       return;
-    const t = e.create(), i = f(this.ecs);
+    const t = e.create(), i = u(this.ecs);
     if (t.eid = i, this.scene.addEntity(t), e.behaviors)
       for (let s of e.behaviors) {
-        u(this.ecs, s.component, t.eid);
+        f(this.ecs, s.component, t.eid);
         const r = Object.keys(s.values);
         for (const n of r)
           s.component[n][t.eid] = s.values[n];
       }
     t.colliderDesc && this.world.addEntity(t), e.nodeSetup({
       me: e,
-      globals: l(),
+      globals: h(),
       camera: this.scene.zylemCamera
     }), this.addEntityToStage(t);
   }
   buildEntityState(e) {
-    return e instanceof W ? { ...e.buildInfo() } : {
+    return e instanceof P ? { ...e.buildInfo() } : {
       uuid: e.uuid,
       name: e.name,
       eid: e.eid
@@ -263,6 +264,6 @@ class Y extends v {
   }
 }
 export {
-  k as STAGE_TYPE,
+  W as STAGE_TYPE,
   Y as ZylemStage
 };

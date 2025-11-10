@@ -28,10 +28,17 @@ export declare class ZylemText extends GameEntity<ZylemTextOptions> {
     private _lastCanvasH;
     constructor(options?: ZylemTextOptions);
     private createSprite;
+    private measureAndResizeCanvas;
+    private drawCenteredText;
+    private updateTexture;
     private redrawText;
     private toCssColor;
     private textSetup;
     private textUpdate;
+    private getResolution;
+    private getScreenPixels;
+    private computeWorldExtents;
+    private updateSpriteScale;
     private updateStickyTransform;
     updateText(_text: string): void;
     buildInfo(): Record<string, any>;
@@ -39,3 +46,4 @@ export declare class ZylemText extends GameEntity<ZylemTextOptions> {
 type TextOptions = BaseNode | Partial<ZylemTextOptions>;
 export declare function text(...args: Array<TextOptions>): Promise<ZylemText>;
 export {};
+//# sourceMappingURL=text.d.ts.map

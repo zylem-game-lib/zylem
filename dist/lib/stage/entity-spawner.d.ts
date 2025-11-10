@@ -6,3 +6,4 @@ export interface EntitySpawner {
     spawnRelative: (source: any, stage: Stage, offset?: Vector2) => Promise<any | void>;
 }
 export declare function entitySpawner(factory: (x: number, y: number) => Promise<any> | GameEntity<any>): EntitySpawner;
+//# sourceMappingURL=entity-spawner.d.ts.map

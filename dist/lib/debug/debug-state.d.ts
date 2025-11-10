@@ -41,3 +41,4 @@ export declare const togglePause: () => void;
  */
 export declare const setPaused: (paused: boolean) => void;
 export declare const isPaused: () => boolean;
+//# sourceMappingURL=debug-state.d.ts.map

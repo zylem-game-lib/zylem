@@ -26,3 +26,4 @@ export declare class MaterialBuilder {
     setShader(customShader: ZylemShaderType): void;
 }
 export {};
+//# sourceMappingURL=material.d.ts.map

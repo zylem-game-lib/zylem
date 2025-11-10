@@ -1,8 +1,8 @@
 {
-  "src/actions.ts": {
+  "src/api/actions.ts": {
     "file": "actions.js",
     "name": "actions",
-    "src": "src/actions.ts",
+    "src": "src/api/actions.ts",
     "isEntry": true,
     "imports": [
       "src/lib/actions/behaviors/actions.ts",
@@ -11,10 +11,10 @@
       "src/lib/actions/capabilities/transformable.ts"
     ]
   },
-  "src/behaviors.ts": {
+  "src/api/behaviors.ts": {
     "file": "behaviors.js",
     "name": "behaviors",
-    "src": "src/behaviors.ts",
+    "src": "src/api/behaviors.ts",
     "isEntry": true,
     "imports": [
       "src/lib/actions/behaviors/boundaries/boundary.ts",
@@ -22,20 +22,20 @@
       "src/lib/actions/behaviors/ricochet/ricochet-2d-collision.ts"
     ]
   },
-  "src/camera.ts": {
+  "src/api/camera.ts": {
     "file": "camera.js",
     "name": "camera",
-    "src": "src/camera.ts",
+    "src": "src/api/camera.ts",
     "isEntry": true,
     "imports": [
       "src/lib/camera/camera.ts",
       "src/lib/camera/perspective.ts"
     ]
   },
-  "src/core.ts": {
+  "src/api/core.ts": {
     "file": "core.js",
     "name": "core",
-    "src": "src/core.ts",
+    "src": "src/api/core.ts",
     "isEntry": true,
     "imports": [
       "src/lib/game/game.ts",
@@ -43,10 +43,10 @@
       "src/lib/actions/global-change.ts"
     ]
   },
-  "src/entities.ts": {
+  "src/api/entities.ts": {
     "file": "entities.js",
     "name": "entities",
-    "src": "src/entities.ts",
+    "src": "src/api/entities.ts",
     "isEntry": true,
     "imports": [
       "src/lib/entities/box.ts",
@@ -57,6 +57,49 @@
       "src/lib/entities/actor.ts",
       "src/lib/entities/text.ts",
       "src/lib/entities/rect.ts"
+    ]
+  },
+  "src/api/main.ts": {
+    "file": "main.js",
+    "name": "main",
+    "src": "src/api/main.ts",
+    "isEntry": true,
+    "imports": [
+      "src/lib/game/game.ts",
+      "src/lib/game/game-config.ts",
+      "src/lib/stage/stage.ts",
+      "src/lib/stage/entity-spawner.ts",
+      "src/lib/core/vessel.ts",
+      "src/lib/camera/camera.ts",
+      "src/lib/camera/perspective.ts",
+      "src/lib/entities/box.ts",
+      "src/lib/entities/sphere.ts",
+      "src/lib/entities/sprite.ts",
+      "src/lib/entities/plane.ts",
+      "src/lib/entities/zone.ts",
+      "src/lib/entities/actor.ts",
+      "src/lib/entities/text.ts",
+      "src/lib/entities/rect.ts",
+      "src/lib/actions/capabilities/moveable.ts",
+      "src/lib/actions/capabilities/rotatable.ts",
+      "src/lib/actions/capabilities/transformable.ts",
+      "src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.ts",
+      "src/lib/actions/behaviors/ricochet/ricochet-2d-collision.ts",
+      "src/lib/actions/behaviors/boundaries/boundary.ts",
+      "src/lib/entities/destroy.ts",
+      "src/lib/actions/global-change.ts"
+    ]
+  },
+  "src/api/stage.ts": {
+    "file": "stage.js",
+    "name": "stage",
+    "src": "src/api/stage.ts",
+    "isEntry": true,
+    "imports": [
+      "src/lib/stage/stage.ts",
+      "src/lib/stage/entity-spawner.ts",
+      "src/lib/stage/stage-blueprint.ts",
+      "src/lib/stage/stage-default.ts"
     ]
   },
   "src/lib/actions/behaviors/actions.ts": {
@@ -414,7 +457,8 @@
     "name": "lib/game/game-config",
     "src": "src/lib/game/game-config.ts",
     "imports": [
-      "src/lib/device/aspect-ratio.ts"
+      "src/lib/device/aspect-ratio.ts",
+      "src/lib/game/game-retro-resolutions.ts"
     ]
   },
   "src/lib/game/game-default.ts": {
@@ -425,6 +469,11 @@
     "imports": [
       "src/lib/stage/stage.ts"
     ]
+  },
+  "src/lib/game/game-retro-resolutions.ts": {
+    "file": "lib/game/game-retro-resolutions.js",
+    "name": "lib/game/game-retro-resolutions",
+    "src": "src/lib/game/game-retro-resolutions.ts"
   },
   "src/lib/game/game-state.ts": {
     "file": "lib/game/game-state.js",
@@ -437,11 +486,11 @@
     "src": "src/lib/game/game.ts",
     "imports": [
       "src/lib/game/zylem-game.ts",
-      "src/lib/stage/stage.ts",
       "src/lib/debug/debug-state.ts",
       "src/lib/game/game-state.ts",
       "src/lib/core/utility/nodes.ts",
-      "src/lib/game/game-config.ts"
+      "src/lib/game/game-config.ts",
+      "src/lib/stage/stage.ts"
     ]
   },
   "src/lib/game/zylem-game.ts": {
@@ -613,59 +662,16 @@
       "src/lib/core/lifecycle-base.ts",
       "src/lib/systems/transformable.system.ts",
       "src/lib/core/base-node.ts",
-      "src/lib/camera/zylem-camera.ts",
       "src/lib/camera/perspective.ts",
       "src/lib/camera/camera.ts",
       "src/lib/stage/stage-debug-delegate.ts",
-      "src/lib/entities/entity.ts"
+      "src/lib/entities/entity.ts",
+      "src/lib/camera/zylem-camera.ts"
     ]
   },
   "src/lib/systems/transformable.system.ts": {
     "file": "lib/systems/transformable.system.js",
     "name": "lib/systems/transformable.system",
     "src": "src/lib/systems/transformable.system.ts"
-  },
-  "src/main.ts": {
-    "file": "main.js",
-    "name": "main",
-    "src": "src/main.ts",
-    "isEntry": true,
-    "imports": [
-      "src/lib/game/game.ts",
-      "src/lib/game/game-config.ts",
-      "src/lib/stage/stage.ts",
-      "src/lib/stage/entity-spawner.ts",
-      "src/lib/core/vessel.ts",
-      "src/lib/camera/camera.ts",
-      "src/lib/camera/perspective.ts",
-      "src/lib/entities/box.ts",
-      "src/lib/entities/sphere.ts",
-      "src/lib/entities/sprite.ts",
-      "src/lib/entities/plane.ts",
-      "src/lib/entities/zone.ts",
-      "src/lib/entities/actor.ts",
-      "src/lib/entities/text.ts",
-      "src/lib/entities/rect.ts",
-      "src/lib/actions/capabilities/moveable.ts",
-      "src/lib/actions/capabilities/rotatable.ts",
-      "src/lib/actions/capabilities/transformable.ts",
-      "src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.ts",
-      "src/lib/actions/behaviors/ricochet/ricochet-2d-collision.ts",
-      "src/lib/actions/behaviors/boundaries/boundary.ts",
-      "src/lib/entities/destroy.ts",
-      "src/lib/actions/global-change.ts"
-    ]
-  },
-  "src/stage.ts": {
-    "file": "stage.js",
-    "name": "stage",
-    "src": "src/stage.ts",
-    "isEntry": true,
-    "imports": [
-      "src/lib/stage/stage.ts",
-      "src/lib/stage/entity-spawner.ts",
-      "src/lib/stage/stage-blueprint.ts",
-      "src/lib/stage/stage-default.ts"
-    ]
   }
 }

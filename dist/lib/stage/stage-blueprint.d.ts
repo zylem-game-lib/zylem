@@ -42,3 +42,4 @@ export declare function getCurrentStageBlueprint(): StageBlueprint | null;
  * should pass the returned `Stage` to the game and call `load` as usual.
  */
 export declare function buildStageFromBlueprint(input: string | StageBlueprint, ...extras: StageOptions): Stage;
+//# sourceMappingURL=stage-blueprint.d.ts.map

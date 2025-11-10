@@ -12,3 +12,4 @@ export type CollisionSelector = {
  * Returns true if the `other` entity matches the provided selector.
  */
 export declare function matchesCollisionSelector(other: GameEntity<any>, selector?: CollisionSelector): boolean;
+//# sourceMappingURL=utils.d.ts.map

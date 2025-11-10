@@ -23,3 +23,4 @@ export declare class StageDebugDelegate {
     private handleActionOnHit;
     private attachDomListeners;
 }
+//# sourceMappingURL=stage-debug-delegate.d.ts.map

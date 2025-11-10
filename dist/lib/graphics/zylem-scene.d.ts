@@ -47,3 +47,4 @@ export declare class ZylemScene implements Entity<ZylemScene> {
     debugScene(): void;
 }
 export {};
+//# sourceMappingURL=zylem-scene.d.ts.map

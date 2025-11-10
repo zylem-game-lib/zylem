@@ -60,3 +60,4 @@ export declare class ZylemRect extends GameEntity<ZylemRectOptions> {
 type RectOptions = BaseNode | Partial<ZylemRectOptions>;
 export declare function rect(...args: Array<RectOptions>): Promise<ZylemRect>;
 export {};
+//# sourceMappingURL=rect.d.ts.map

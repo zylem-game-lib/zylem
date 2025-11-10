@@ -3,3 +3,4 @@ import './Toolbar.css';
 export declare const Toolbar: Component<{
     onClose?: () => void;
 }>;
+//# sourceMappingURL=Toolbar.d.ts.map

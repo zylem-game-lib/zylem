@@ -21,3 +21,4 @@ export declare function movementSequence2D(opts: MovementSequence2DOptions, onSt
     type: BehaviorCallbackType;
     handler: (ctx: UpdateContext<MoveableEntity>) => void;
 };
+//# sourceMappingURL=movement-sequence-2d.d.ts.map

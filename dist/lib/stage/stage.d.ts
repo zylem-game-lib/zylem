@@ -9,7 +9,7 @@ type NodeLike = {
 type AnyNode = NodeLike | Promise<NodeLike>;
 type EntityInput = AnyNode | (() => AnyNode) | (() => Promise<any>);
 export declare class Stage {
-    stageRef: ZylemStage;
+    wrappedStage: ZylemStage | null;
     options: StageOptionItem[];
     update: UpdateFunction<ZylemStage>;
     setup: SetupFunction<ZylemStage>;
@@ -30,3 +30,4 @@ export declare class Stage {
  */
 export declare function stage(...options: StageOptions): Stage;
 export {};
+//# sourceMappingURL=stage.d.ts.map

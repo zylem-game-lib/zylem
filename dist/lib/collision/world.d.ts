@@ -20,3 +20,4 @@ export declare class ZylemWorld implements Entity<ZylemWorld> {
     updateColliders(delta: number): void;
     destroy(): void;
 }
+//# sourceMappingURL=world.d.ts.map

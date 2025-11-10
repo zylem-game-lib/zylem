@@ -32,3 +32,4 @@ export interface StageInterface {
     children: any[];
     state: StageStateInterface;
 }
+//# sourceMappingURL=stage-types.d.ts.map

@@ -16,6 +16,14 @@ export interface PerspectiveController {
     update(delta: number): void;
     resize(width: number, height: number): void;
 }
+export interface CameraDebugState {
+    enabled: boolean;
+    selected: string[];
+}
+export interface CameraDebugDelegate {
+    subscribe(listener: (state: CameraDebugState) => void): () => void;
+    resolveTarget(uuid: string): Object3D | null;
+}
 export declare class ZylemCamera {
     cameraRig: Object3D;
     camera: Camera;
@@ -28,6 +36,11 @@ export declare class ZylemCamera {
     sceneRef: Scene | null;
     frustumSize: number;
     perspectiveController: PerspectiveController | null;
+    debugDelegate: CameraDebugDelegate | null;
+    private debugUnsubscribe;
+    private debugStateSnapshot;
+    private orbitTarget;
+    private orbitTargetWorldPos;
     constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize?: number);
     /**
      * Setup the camera with a scene
@@ -42,9 +55,17 @@ export declare class ZylemCamera {
      */
     destroy(): void;
     /**
+     * Attach a delegate to react to debug state changes.
+     */
+    setDebugDelegate(delegate: CameraDebugDelegate | null): void;
+    /**
      * Resize camera and renderer
      */
     resize(width: number, height: number): void;
+    /**
+     * Update renderer pixel ratio (DPR)
+     */
+    setPixelRatio(dpr: number): void;
     /**
      * Create camera based on perspective type
      */
@@ -65,4 +86,10 @@ export declare class ZylemCamera {
      * Get the DOM element for the renderer
      */
     getDomElement(): HTMLCanvasElement;
+    private applyDebugState;
+    private enableOrbitControls;
+    private disableOrbitControls;
+    private updateOrbitTargetFromSelection;
+    private detachDebugDelegate;
 }
+//# sourceMappingURL=zylem-camera.d.ts.map

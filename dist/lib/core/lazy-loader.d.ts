@@ -77,3 +77,4 @@ export declare const loadFullGame: () => Promise<{
         scene: typeof import("../graphics/zylem-scene");
     };
 }>;
+//# sourceMappingURL=lazy-loader.d.ts.map

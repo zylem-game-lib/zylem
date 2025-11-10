@@ -1,9 +1,9 @@
-import { ZylemStage as n } from "./zylem-stage.js";
-import { CameraWrapper as r } from "../camera/camera.js";
-import { stageState as i, setStageVariable as g, getStageVariable as p } from "./stage-state.js";
-import { getStageOptions as f } from "./stage-default.js";
-class d {
-  stageRef;
+import { ZylemStage as i } from "./zylem-stage.js";
+import { CameraWrapper as o } from "../camera/camera.js";
+import { stageState as s, setStageVariable as n, getStageVariable as d } from "./stage-state.js";
+import { getStageOptions as g } from "./stage-default.js";
+class S {
+  wrappedStage;
   options = [];
   update = () => {
   };
@@ -12,49 +12,49 @@ class d {
   destroy = () => {
   };
   constructor(t) {
-    this.options = t, this.stageRef = new n(this.options);
+    this.options = t, this.wrappedStage = null;
   }
   async load(t, e) {
-    this.stageRef.wrapperRef = this;
-    const s = e instanceof r ? e.cameraRef : e;
-    await this.stageRef.load(t, s);
+    this.wrappedStage = new i(this.options), this.wrappedStage.wrapperRef = this;
+    const a = e instanceof o ? e.cameraRef : e;
+    await this.wrappedStage.load(t, a);
   }
   async addEntities(t) {
-    this.options.push(...t), this.stageRef.enqueue(...t);
+    this.options.push(...t), this.wrappedStage && this.wrappedStage.enqueue(...t);
   }
   add(...t) {
-    this.stageRef.enqueue(...t);
+    this.wrappedStage.enqueue(...t);
   }
   start(t) {
-    this.stageRef?.nodeSetup(t), this.stageRef.onEntityAdded((e) => {
-      const s = this.stageRef.buildEntityState(e);
-      i.entities = [...i.entities, s];
+    this.wrappedStage?.nodeSetup(t), this.wrappedStage.onEntityAdded((e) => {
+      const a = this.wrappedStage.buildEntityState(e);
+      s.entities = [...s.entities, a];
     }, { replayExisting: !0 });
   }
   onUpdate(...t) {
-    this.stageRef.update = (e) => {
-      const s = { ...e, stage: this };
-      t.forEach((o) => o(s));
+    this.wrappedStage.update = (e) => {
+      const a = { ...e, stage: this };
+      t.forEach((r) => r(a));
     };
   }
   onSetup(t) {
-    this.stageRef.setup = t;
+    this.wrappedStage.setup = t;
   }
   onDestroy(t) {
-    this.stageRef.destroy = t;
+    this.wrappedStage.destroy = t;
   }
   setVariable(t, e) {
-    g(t, e);
+    n(t, e);
   }
   getVariable(t) {
-    return p(t);
+    return d(t);
   }
 }
-function l(...a) {
-  const t = f(a);
-  return new d([...t]);
+function c(...p) {
+  const t = g(p);
+  return new S([...t]);
 }
 export {
-  d as Stage,
-  l as stage
+  S as Stage,
+  c as stage
 };

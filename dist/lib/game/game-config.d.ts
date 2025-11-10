@@ -1,6 +1,7 @@
 import { StageInterface } from "../types";
 import { GameInputConfig } from "./game-interfaces";
 import { AspectRatio, AspectRatioValue } from "../device/aspect-ratio";
+import { RetroPresetKey } from "./game-retro-resolutions";
 export type GameConfigLike = Partial<{
     id: string;
     globals: Record<string, any>;
@@ -10,6 +11,13 @@ export type GameConfigLike = Partial<{
     input: GameInputConfig;
     /** numeric value or key in AspectRatio */
     aspectRatio: AspectRatioValue | keyof typeof AspectRatio;
+    /** console/display preset to derive aspect ratio */
+    preset: RetroPresetKey;
+    /** lock internal render buffer to this resolution (e.g., '256x240' or { width, height }) */
+    resolution: string | {
+        width: number;
+        height: number;
+    };
     fullscreen: boolean;
     /** CSS background value for document body */
     bodyBackground: string;
@@ -28,12 +36,19 @@ export declare class GameConfig {
     time: number;
     input: GameInputConfig | undefined;
     aspectRatio: number;
+    internalResolution: {
+        width: number;
+        height: number;
+    } | undefined;
     fullscreen: boolean;
     bodyBackground: string | undefined;
     container: HTMLElement;
     containerId?: string | undefined;
     canvas?: HTMLCanvasElement | undefined;
-    constructor(id: string, globals: Record<string, any>, stages: StageInterface[], debug: boolean, time: number, input: GameInputConfig | undefined, aspectRatio: number, fullscreen: boolean, bodyBackground: string | undefined, container: HTMLElement, containerId?: string | undefined, canvas?: HTMLCanvasElement | undefined);
+    constructor(id: string, globals: Record<string, any>, stages: StageInterface[], debug: boolean, time: number, input: GameInputConfig | undefined, aspectRatio: number, internalResolution: {
+        width: number;
+        height: number;
+    } | undefined, fullscreen: boolean, bodyBackground: string | undefined, container: HTMLElement, containerId?: string | undefined, canvas?: HTMLCanvasElement | undefined);
 }
 export declare function createDefaultGameConfig(base?: Partial<Pick<GameConfig, 'id' | 'debug' | 'time' | 'input'>> & {
     stages?: StageInterface[];
@@ -45,3 +60,4 @@ export declare function resolveGameConfig(user?: GameConfigLike): GameConfig;
  * Returns a plain object that can be passed to `game(...)`.
  */
 export declare function gameConfig(config: GameConfigLike): GameConfigLike;
+//# sourceMappingURL=game-config.d.ts.map

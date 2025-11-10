@@ -98,3 +98,4 @@ export declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O>
     protected updateMaterials(params: any): void;
     buildInfo(): Record<string, string>;
 }
+//# sourceMappingURL=entity.d.ts.map

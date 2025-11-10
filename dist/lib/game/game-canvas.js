@@ -18,10 +18,10 @@ class o {
       this.container.removeChild(this.container.firstChild);
     this.container.appendChild(this.canvas);
   }
-  mountRenderer(t, i) {
+  mountRenderer(t, a) {
     for (; this.container.firstChild; )
       this.container.removeChild(this.container.firstChild);
-    this.container.appendChild(t), this.canvas = t, this.attachAspectRatio(i);
+    this.container.appendChild(t), this.canvas = t, this.attachAspectRatio(a);
   }
   centerIfFullscreen() {
     if (!this.fullscreen)
@@ -30,7 +30,7 @@ class o {
     t.display = "flex", t.alignItems = "center", t.justifyContent = "center", t.position = "fixed", t.inset = "0";
   }
   attachAspectRatio(t) {
-    this.ratioDelegate ? this.ratioDelegate.apply() : (this.ratioDelegate = new s({
+    this.ratioDelegate ? (this.ratioDelegate.canvas = this.canvas, this.ratioDelegate.onResize = t, this.ratioDelegate.aspectRatio = this.aspectRatio, this.ratioDelegate.apply()) : (this.ratioDelegate = new s({
       container: this.container,
       canvas: this.canvas,
       aspectRatio: this.aspectRatio,
@@ -40,13 +40,13 @@ class o {
   destroy() {
     this.ratioDelegate?.detach(), this.ratioDelegate = null;
   }
-  ensureContainer(t, i) {
-    if (i)
-      return i;
+  ensureContainer(t, a) {
+    if (a)
+      return a;
     if (t) {
-      const a = document.getElementById(t);
-      if (a)
-        return a;
+      const i = document.getElementById(t);
+      if (i)
+        return i;
     }
     const n = t || this.id || "zylem-root", e = document.createElement("main");
     return e.setAttribute("id", n), e.style.position = "relative", e.style.width = "100%", e.style.height = "100%", document.body.appendChild(e), e;

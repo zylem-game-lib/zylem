@@ -15,3 +15,4 @@ export declare function buildCollisionMask(...types: string[]): CollisionMask;
  * Tests whether the given entity's collision type is included in the mask.
  */
 export declare function entityMatchesMask(entity: GameEntity<any>, mask: CollisionMask): boolean;
+//# sourceMappingURL=collision-mask.d.ts.map

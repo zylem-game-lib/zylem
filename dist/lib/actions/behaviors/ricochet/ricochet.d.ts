@@ -41,3 +41,4 @@ export type Ricochet2DCollisionCallback = (event: RicochetCollisionEvent) => voi
 export declare function clamp(value: number, min: number, max: number): number;
 export { ricochet2DInBounds } from './ricochet-2d-in-bounds';
 export { ricochet2DCollision } from './ricochet-2d-collision';
+//# sourceMappingURL=ricochet.d.ts.map

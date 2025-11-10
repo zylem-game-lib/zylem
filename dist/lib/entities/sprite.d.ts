@@ -50,3 +50,4 @@ export declare class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 type SpriteOptions = BaseNode | Partial<ZylemSpriteOptions>;
 export declare function sprite(...args: Array<SpriteOptions>): Promise<ZylemSprite>;
 export {};
+//# sourceMappingURL=sprite.d.ts.map

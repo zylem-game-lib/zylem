@@ -108,3 +108,4 @@ export declare function rotatable<T extends {
  * Enhance an entity instance with rotatable methods
  */
 export declare function makeRotatable<T extends RotatableEntity>(entity: T): T & RotatableEntityAPI;
+//# sourceMappingURL=rotatable.d.ts.map

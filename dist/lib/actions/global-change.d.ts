@@ -20,3 +20,4 @@ export declare function variableChange<T = any>(key: string, callback: (value: T
  * Usage: onUpdate(variableChanges(['a','b'], ([a,b], ctx) => { ... }))
  */
 export declare function variableChanges<T = any>(keys: string[], callback: (values: T[], ctx: UpdateContext<any>) => void): (ctx: UpdateContext<any>) => void;
+//# sourceMappingURL=global-change.d.ts.map

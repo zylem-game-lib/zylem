@@ -9,3 +9,4 @@ export declare class CollisionHandler {
     handlePostCollision(params: any): boolean;
     handleIntersectionEvent(params: any): void;
 }
+//# sourceMappingURL=collision-delegate.d.ts.map

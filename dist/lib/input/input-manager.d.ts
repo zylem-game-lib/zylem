@@ -12,3 +12,4 @@ export declare class InputManager {
     mergeAnalogState(a: AnalogState | undefined, b: AnalogState | undefined): AnalogState;
     private mergeInputs;
 }
+//# sourceMappingURL=input-manager.d.ts.map

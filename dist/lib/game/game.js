@@ -1,13 +1,13 @@
 import { ZylemGame as n } from "./zylem-game.js";
-import { Stage as o } from "../stage/stage.js";
-import { setPaused as r } from "../debug/debug-state.js";
-import { getGlobalState as g, setGlobalState as f } from "./game-state.js";
-import { convertNodes as h } from "../core/utility/nodes.js";
-import { resolveGameConfig as l } from "./game-config.js";
-class u {
-  gameRef = null;
-  options;
+import { setPaused as o } from "../debug/debug-state.js";
+import { getGlobalState as i, setGlobalState as p } from "./game-state.js";
+import { hasStages as d, convertNodes as l } from "../core/utility/nodes.js";
+import { resolveGameConfig as h } from "./game-config.js";
+import { stage as g } from "../stage/stage.js";
+class m {
+  wrappedGame = null;
   pendingGlobalChangeHandlers = [];
+  options;
   update = () => {
   };
   setup = () => {
@@ -15,119 +15,95 @@ class u {
   destroy = () => {
   };
   refErrorMessage = "lost reference to game";
-  constructor(t) {
-    this.options = t;
+  constructor(e) {
+    this.options = e, d(e) || this.options.push(g());
   }
   async start() {
-    const t = await this.load();
-    return this.gameRef = t, this.setOverrides(), t.start(), this;
+    const e = await this.load();
+    return this.wrappedGame = e, this.setOverrides(), e.start(), this;
   }
   async load() {
     console.log("loading game", this.options);
-    const t = await h(this.options), s = l(t), e = new n({
-      ...t,
-      ...s
+    const e = await l(this.options), a = h(e), t = new n({
+      ...e,
+      ...a
     }, this);
-    return await e.loadStage(t.stages[0]), e;
+    return await t.loadStage(e.stages[0]), t;
   }
   setOverrides() {
-    if (!this.gameRef) {
+    if (!this.wrappedGame) {
       console.error(this.refErrorMessage);
       return;
     }
-    if (this.gameRef.customSetup = this.setup, this.gameRef.customUpdate = this.update, this.gameRef.customDestroy = this.destroy, this.pendingGlobalChangeHandlers.length) {
-      for (const { key: t, callback: s } of this.pendingGlobalChangeHandlers)
-        this.gameRef.onGlobalChange(t, s);
+    if (this.wrappedGame.customSetup = this.setup, this.wrappedGame.customUpdate = this.update, this.wrappedGame.customDestroy = this.destroy, this.pendingGlobalChangeHandlers.length) {
+      for (const { key: e, callback: a } of this.pendingGlobalChangeHandlers)
+        this.wrappedGame.onGlobalChange(e, a);
       this.pendingGlobalChangeHandlers = [];
     }
   }
   async pause() {
-    r(!0);
+    o(!0);
   }
   async resume() {
-    r(!1), this.gameRef && (this.gameRef.previousTimeStamp = 0, this.gameRef.timer.reset());
+    o(!1), this.wrappedGame && (this.wrappedGame.previousTimeStamp = 0, this.wrappedGame.timer.reset());
   }
   async reset() {
-    if (!this.gameRef) {
+    if (!this.wrappedGame) {
       console.error(this.refErrorMessage);
       return;
     }
-    await this.gameRef.loadStage(this.gameRef.stages[0]);
+    await this.wrappedGame.loadStage(this.wrappedGame.stages[0]);
   }
   async nextStage() {
-    if (!this.gameRef) {
+    if (!this.wrappedGame) {
       console.error(this.refErrorMessage);
       return;
     }
-    const t = this.gameRef.currentStageId, s = this.gameRef.stages.findIndex((a) => a.stageRef.uuid === t), e = this.gameRef.stages[s + 1];
-    if (!e) {
+    const e = this.wrappedGame.currentStageId, a = this.wrappedGame.stages.findIndex((r) => r.wrappedStage.uuid === e), t = this.wrappedGame.stages[a + 1];
+    if (!t) {
       console.error("next stage called on last stage");
       return;
     }
-    await this.gameRef.loadStage(e);
+    await this.wrappedGame.loadStage(t);
   }
   async previousStage() {
-    if (!this.gameRef) {
+    if (!this.wrappedGame) {
       console.error(this.refErrorMessage);
       return;
     }
-    const t = this.gameRef.currentStageId, s = this.gameRef.stages.findIndex((a) => a.stageRef.uuid === t), e = this.gameRef.stages[s - 1];
-    if (!e) {
+    const e = this.wrappedGame.currentStageId, a = this.wrappedGame.stages.findIndex((r) => r.wrappedStage.uuid === e), t = this.wrappedGame.stages[a - 1];
+    if (!t) {
       console.error("previous stage called on first stage");
       return;
     }
-    await this.gameRef.loadStage(e);
+    await this.wrappedGame.loadStage(t);
   }
   async goToStage() {
   }
   async end() {
   }
-  add(...t) {
-    for (const s of t)
-      if (s) {
-        if (s instanceof o) {
-          this.gameRef ? (this.gameRef.stages.push(s), this.gameRef.stageMap.set(s.stageRef.uuid, s)) : this.options.push(s);
-          continue;
-        }
-        if (typeof s == "function") {
-          try {
-            const e = s();
-            e instanceof o ? this.gameRef ? (this.gameRef.stages.push(e), this.gameRef.stageMap.set(e.stageRef.uuid, e)) : this.options.push(e) : e && typeof e.then == "function" && e.then((a) => {
-              a instanceof o && (this.gameRef ? (this.gameRef.stages.push(a), this.gameRef.stageMap.set(a.stageRef.uuid, a)) : this.options.push(a));
-            }).catch((a) => console.error("Failed to add async stage", a));
-          } catch (e) {
-            console.error("Error executing stage factory", e);
-          }
-          continue;
-        }
-        s && typeof s.then == "function" && s.then((e) => {
-          e instanceof o && (this.gameRef ? (this.gameRef.stages.push(e), this.gameRef.stageMap.set(e.stageRef.uuid, e)) : this.options.push(e));
-        }).catch((e) => console.error("Failed to add async stage", e));
-      }
-    return this;
+  getGlobal(e) {
+    return this.wrappedGame ? this.wrappedGame.getGlobal(e) : i(e);
   }
-  getGlobal(t) {
-    return this.gameRef ? this.gameRef.getGlobal(t) : g(t);
-  }
-  setGlobal(t, s) {
-    if (this.gameRef) {
-      this.gameRef.setGlobal(t, s);
+  setGlobal(e, a) {
+    if (this.wrappedGame) {
+      this.wrappedGame.setGlobal(e, a);
       return;
     }
-    f(t, s);
+    p(e, a);
   }
-  onGlobalChange(t, s) {
-    if (this.gameRef) {
-      this.gameRef.onGlobalChange(t, s);
+  onGlobalChange(e, a) {
+    if (this.wrappedGame) {
+      this.wrappedGame.onGlobalChange(e, a);
       return;
     }
-    this.pendingGlobalChangeHandlers.push({ key: t, callback: s });
+    this.pendingGlobalChangeHandlers.push({ key: e, callback: a });
   }
 }
-function S(...i) {
-  return new u(i);
+function b(...s) {
+  return new m(s);
 }
 export {
-  u as Game,
-  S as game
+  m as Game,
+  b as createGame
 };

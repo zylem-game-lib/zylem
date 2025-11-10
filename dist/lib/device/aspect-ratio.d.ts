@@ -35,3 +35,4 @@ export declare class AspectRatioDelegate {
     /** Apply measured size to canvas and notify. */
     apply(): void;
 }
+//# sourceMappingURL=aspect-ratio.d.ts.map

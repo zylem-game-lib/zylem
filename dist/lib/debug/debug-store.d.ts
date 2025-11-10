@@ -12,3 +12,4 @@ export declare const debugStore: {
     hovered: string | null;
     selected: string[];
 }>;
+//# sourceMappingURL=debug-store.d.ts.map

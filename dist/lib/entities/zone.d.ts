@@ -51,3 +51,4 @@ export declare class ZylemZone extends GameEntity<ZylemZoneOptions> implements C
 type ZoneOptions = BaseNode | Partial<ZylemZoneOptions>;
 export declare function zone(...args: Array<ZoneOptions>): Promise<ZylemZone>;
 export {};
+//# sourceMappingURL=zone.d.ts.map

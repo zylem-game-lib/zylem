@@ -11,3 +11,4 @@ export declare class GamepadProvider implements InputProvider {
     getName(): string;
     isConnected(): boolean;
 }
+//# sourceMappingURL=gamepad-provider.d.ts.map

@@ -42,7 +42,7 @@ class s {
     return this.children.length > 0;
   }
   nodeSetup(t) {
-    typeof this._setup == "function" && this._setup(t), this.setup && this.setup(t), this.children.forEach((e) => e.nodeSetup(t));
+    this.markedForRemoval = !1, typeof this._setup == "function" && this._setup(t), this.setup && this.setup(t), this.children.forEach((e) => e.nodeSetup(t));
   }
   nodeUpdate(t) {
     this.markedForRemoval || (typeof this._update == "function" && this._update(t), this.update && this.update(t), this.children.forEach((e) => e.nodeUpdate(t)));

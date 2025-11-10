@@ -25,3 +25,4 @@ export interface CollisionOptions {
     collisionType?: string;
     collisionFilter?: string[];
 }
+//# sourceMappingURL=collision.d.ts.map

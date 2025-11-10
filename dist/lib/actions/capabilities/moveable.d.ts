@@ -122,3 +122,4 @@ export declare function makeMoveable<T extends EntityWithBody>(entity: T): T & M
  * Wrap a standalone function with movement capabilities
  */
 export declare function withMovement<T extends (...args: any[]) => any>(fn: T, entity: EntityWithBody): (...args: Parameters<T>) => ReturnType<T> & MoveableEntity;
+//# sourceMappingURL=moveable.d.ts.map

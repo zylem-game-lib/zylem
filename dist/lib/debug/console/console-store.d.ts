@@ -3,3 +3,4 @@ export declare const consoleStore: {
 }, setConsoleStore: import("solid-js/store").SetStoreFunction<{
     messages: string[];
 }>;
+//# sourceMappingURL=console-store.d.ts.map

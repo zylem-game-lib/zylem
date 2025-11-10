@@ -12,3 +12,4 @@ export interface CreateGameEntityOptions<T extends GameEntity<any>, CreateOption
     entityType: symbol;
 }
 export declare function createEntity<T extends GameEntity<any>, CreateOptions extends GameEntityOptions>(params: CreateGameEntityOptions<T, CreateOptions>): Promise<T>;
+//# sourceMappingURL=create.d.ts.map

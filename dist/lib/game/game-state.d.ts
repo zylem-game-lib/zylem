@@ -1,10 +1,11 @@
-import { BasicTypes, GlobalVariablesType } from './game-interfaces';
+import { BaseGlobals } from './game-interfaces';
 declare const state: {
     id: string;
-    globals: GlobalVariablesType;
+    globals: BaseGlobals;
     time: number;
 };
-export declare function setGlobalState<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType, K extends keyof TGlobals = keyof TGlobals>(key: K, value: TGlobals[K]): void;
-export declare function getGlobalState<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(): TGlobals;
-export declare function getGlobalState<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType, K extends keyof TGlobals = keyof TGlobals>(key: K): TGlobals[K];
+export declare function setGlobalState<TGlobals extends BaseGlobals, K extends keyof TGlobals = keyof TGlobals>(key: K, value: TGlobals[K]): void;
+export declare function getGlobalState<TGlobals extends BaseGlobals>(): TGlobals;
+export declare function getGlobalState<TGlobals extends BaseGlobals, K extends keyof TGlobals = keyof TGlobals>(key: K): TGlobals[K];
 export { state };
+//# sourceMappingURL=game-state.d.ts.map

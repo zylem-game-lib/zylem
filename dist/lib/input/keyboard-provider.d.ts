@@ -18,3 +18,4 @@ export declare class KeyboardProvider implements InputProvider {
     private getAxisValue;
     isConnected(): boolean;
 }
+//# sourceMappingURL=keyboard-provider.d.ts.map

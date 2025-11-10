@@ -29,3 +29,4 @@ export type OptionalVector = {
     y?: number;
     z?: number;
 };
+//# sourceMappingURL=entity.d.ts.map

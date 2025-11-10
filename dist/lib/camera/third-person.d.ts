@@ -37,3 +37,4 @@ export declare class ThirdPersonCamera implements PerspectiveController {
      */
     setDistance(distance: Vector3): void;
 }
+//# sourceMappingURL=third-person.d.ts.map

@@ -21,3 +21,4 @@ export declare class DebugEntityCursor {
     hide(): void;
     dispose(): void;
 }
+//# sourceMappingURL=debug-entity-cursor.d.ts.map

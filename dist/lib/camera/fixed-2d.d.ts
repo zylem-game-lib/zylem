@@ -29,3 +29,4 @@ export declare class Fixed2DCamera implements PerspectiveController {
      */
     resize(width: number, height: number): void;
 }
+//# sourceMappingURL=fixed-2d.d.ts.map

@@ -19,3 +19,4 @@ export declare class CollisionBuilder {
         isDynamicBody?: boolean | undefined;
     }): RigidBodyDesc;
 }
+//# sourceMappingURL=collision-builder.d.ts.map

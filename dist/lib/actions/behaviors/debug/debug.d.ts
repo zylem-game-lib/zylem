@@ -7,3 +7,4 @@ export declare function debugBehavior(options?: Partial<DebugBehaviorOptions>): 
     type: 'update';
     handler: BehaviorCallback<BaseNode, any>;
 };
+//# sourceMappingURL=debug.d.ts.map

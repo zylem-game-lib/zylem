@@ -1,19 +1,18 @@
 import { ZylemGame } from './zylem-game';
-import { Stage } from '../stage/stage';
 import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
-import { BasicTypes, GlobalVariablesType } from './game-interfaces';
+import { BaseGlobals } from './game-interfaces';
 import { GameOptions } from '../core/utility/nodes';
-export declare class Game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType> implements IGame<TGlobals> {
-    gameRef: ZylemGame<TGlobals> | null;
-    options: GameOptions<TGlobals>;
+export declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
+    private wrappedGame;
     private pendingGlobalChangeHandlers;
+    options: GameOptions<TGlobals>;
     update: UpdateFunction<ZylemGame<TGlobals>, TGlobals>;
     setup: SetupFunction<ZylemGame<TGlobals>, TGlobals>;
     destroy: DestroyFunction<ZylemGame<TGlobals>, TGlobals>;
     refErrorMessage: string;
     constructor(options: GameOptions<TGlobals>);
     start(): Promise<this>;
-    load(): Promise<ZylemGame<TGlobals>>;
+    private load;
     setOverrides(): void;
     pause(): Promise<void>;
     resume(): Promise<void>;
@@ -22,7 +21,6 @@ export declare class Game<TGlobals extends Record<string, BasicTypes> = GlobalVa
     previousStage(): Promise<void>;
     goToStage(): Promise<void>;
     end(): Promise<void>;
-    add(...inputs: Array<Stage | Promise<any> | (() => Stage | Promise<any>)>): this;
     getGlobal<K extends keyof TGlobals>(key: K): TGlobals[K];
     setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]): void;
     onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void): void;
@@ -35,4 +33,5 @@ export declare class Game<TGlobals extends Record<string, BasicTypes> = GlobalVa
  * @param options.stages Array of stage objects (when using IGameOptions)
  * @returns Game
  */
-export declare function game<TGlobals extends Record<string, BasicTypes> = GlobalVariablesType>(...options: GameOptions<TGlobals>): Game<TGlobals>;
+export declare function createGame<TGlobals extends BaseGlobals>(...options: GameOptions<TGlobals>): Game<TGlobals>;
+//# sourceMappingURL=game.d.ts.map

@@ -104,3 +104,4 @@ declare class FixedTimer extends Timer {
     update(): FixedTimer;
 }
 export { Timer, FixedTimer };
+//# sourceMappingURL=Timer.d.ts.map

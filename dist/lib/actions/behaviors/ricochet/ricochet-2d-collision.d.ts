@@ -8,3 +8,4 @@ export declare function ricochet2DCollision(options?: Partial<Ricochet2DCollisio
     type: 'collision';
     handler: (ctx: CollisionContext<MoveableEntity, GameEntity<any>>) => void;
 };
+//# sourceMappingURL=ricochet-2d-collision.d.ts.map

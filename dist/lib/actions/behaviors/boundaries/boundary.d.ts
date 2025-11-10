@@ -34,3 +34,4 @@ export declare function boundary2d(options?: Partial<BoundaryOptions>): {
 type BoundaryHit = 'top' | 'bottom' | 'left' | 'right';
 type BoundaryHits = Record<BoundaryHit, boolean>;
 export {};
+//# sourceMappingURL=boundary.d.ts.map

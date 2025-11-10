@@ -55,3 +55,4 @@ export declare class ZylemActor extends GameEntity<ZylemActorOptions> implements
 type ActorOptions = BaseNode | ZylemActorOptions;
 export declare function actor(...args: Array<ActorOptions>): Promise<ZylemActor>;
 export {};
+//# sourceMappingURL=actor.d.ts.map

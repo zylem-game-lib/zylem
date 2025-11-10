@@ -8,3 +8,4 @@ type CooldownOptions = {
 export declare const actionWithCooldown: ({ timer, immediate }: CooldownOptions, callback: Function, update: Function) => void;
 export declare const actionWithThrottle: (timer: number, callback: Function) => void;
 export {};
+//# sourceMappingURL=actions.d.ts.map

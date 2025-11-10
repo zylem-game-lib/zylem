@@ -8,3 +8,4 @@ import { GameEntity } from '../entities/entity';
  * @returns The entity for method chaining
  */
 export declare function collisionGroup<T extends GameEntity<any>>(entity: T, allowedTypes: string[]): T;
+//# sourceMappingURL=collision-group.d.ts.map

@@ -33,3 +33,4 @@ export declare class ZylemPlane extends GameEntity<ZylemPlaneOptions> {
 type PlaneOptions = BaseNode | Partial<ZylemPlaneOptions>;
 export declare function plane(...args: Array<PlaneOptions>): Promise<ZylemPlane>;
 export {};
+//# sourceMappingURL=plane.d.ts.map

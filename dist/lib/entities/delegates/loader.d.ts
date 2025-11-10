@@ -9,3 +9,4 @@ export declare class EntityLoader {
     load(): Promise<void>;
     data(): Promise<any>;
 }
+//# sourceMappingURL=loader.d.ts.map

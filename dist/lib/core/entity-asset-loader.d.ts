@@ -27,3 +27,4 @@ export declare class EntityAssetLoader {
     private loaders;
     loadFile(file: string): Promise<AssetLoaderResult>;
 }
+//# sourceMappingURL=entity-asset-loader.d.ts.map

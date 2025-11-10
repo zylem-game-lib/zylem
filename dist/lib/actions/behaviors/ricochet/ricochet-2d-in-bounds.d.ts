@@ -9,3 +9,4 @@ export declare function ricochet2DInBounds(options?: Partial<Ricochet2DInBoundsO
     type: BehaviorCallbackType;
     handler: (ctx: UpdateContext<MoveableEntity>) => void;
 };
+//# sourceMappingURL=ricochet-2d-in-bounds.d.ts.map

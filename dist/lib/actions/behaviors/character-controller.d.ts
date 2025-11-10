@@ -3,3 +3,4 @@ export declare class ZylemCharacterController {
     constructor(inputs: any);
 }
 export declare function CharacterController(inputs: any): ZylemCharacterController;
+//# sourceMappingURL=character-controller.d.ts.map

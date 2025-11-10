@@ -16,3 +16,4 @@ export declare class MeshBuilder {
     _build(meshOptions: MeshBuilderOptions, geometry: BufferGeometry, materials: Material[]): Mesh;
     _postBuild(): void;
 }
+//# sourceMappingURL=mesh.d.ts.map

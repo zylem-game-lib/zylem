@@ -14,3 +14,4 @@ export declare abstract class LifeCycleBase<TSelf> {
     nodeUpdate(context: UpdateContext<TSelf>): void;
     nodeDestroy(context: DestroyContext<TSelf>): void;
 }
+//# sourceMappingURL=lifecycle-base.d.ts.map

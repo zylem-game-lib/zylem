@@ -1,0 +1,1 @@
+{"version":3,"file":"character-controller.d.ts","sourceRoot":"","sources":["../../../../src/lib/actions/behaviors/character-controller.ts"],"names":[],"mappings":"AACA,qBAAa,wBAAwB;IACpC,MAAM,EAAE,GAAG,CAAC;gBAEA,MAAM,EAAE,GAAG;CAIvB;AAED,wBAAgB,mBAAmB,CAAC,MAAM,EAAE,GAAG,4BAE9C"}

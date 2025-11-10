@@ -6,3 +6,4 @@ export declare const Perspectives: {
     readonly Fixed2D: "fixed-2d";
 };
 export type PerspectiveType = (typeof Perspectives)[keyof typeof Perspectives];
+//# sourceMappingURL=perspective.d.ts.map

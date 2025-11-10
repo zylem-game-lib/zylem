@@ -13,3 +13,4 @@ export declare class CameraWrapper {
     constructor(camera: ZylemCamera);
 }
 export declare function camera(options: CameraOptions): CameraWrapper;
+//# sourceMappingURL=camera.d.ts.map

@@ -25,3 +25,4 @@ export declare abstract class EntityBuilder<T extends GameEntity<U> & P, U exten
     build(): Promise<T>;
     protected abstract createEntity(options: Partial<U>): T;
 }
+//# sourceMappingURL=builder.d.ts.map

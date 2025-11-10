@@ -14,3 +14,4 @@ declare const setStageVariables: (variables: Record<string, any>) => void;
 declare const resetStageVariables: () => void;
 declare const stageStateToString: (state: StageStateInterface) => string;
 export { stageState, setStageState, setStageBackgroundColor, setStageBackgroundImage, setEntitiesToStage, stageStateToString, setStageVariable, getStageVariable, setStageVariables, resetStageVariables, };
+//# sourceMappingURL=stage-state.d.ts.map

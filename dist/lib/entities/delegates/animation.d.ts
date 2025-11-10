@@ -30,3 +30,4 @@ export declare class AnimationDelegate {
     get animations(): AnimationClip[];
 }
 export {};
+//# sourceMappingURL=animation.d.ts.map

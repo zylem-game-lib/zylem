@@ -34,3 +34,4 @@ export declare abstract class BaseNode<Options = any, T = any> {
     getOptions(): Options;
     setOptions(options: Partial<Options>): void;
 }
+//# sourceMappingURL=base-node.d.ts.map

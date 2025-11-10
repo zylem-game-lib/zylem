@@ -24,3 +24,4 @@ export declare class ZylemBox extends GameEntity<ZylemBoxOptions> {
 type BoxOptions = BaseNode | ZylemBoxOptions;
 export declare function box(...args: Array<BoxOptions>): Promise<ZylemBox>;
 export {};
+//# sourceMappingURL=box.d.ts.map

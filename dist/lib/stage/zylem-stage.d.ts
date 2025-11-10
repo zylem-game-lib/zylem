@@ -6,10 +6,11 @@ import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-l
 import { LifeCycleBase } from '../core/lifecycle-base';
 import { BaseNode } from '../core/base-node';
 import { Stage } from './stage';
-import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 import { StageDebugDelegate } from './stage-debug-delegate';
+import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
 import { BaseEntityInterface } from '../types/entity-types';
+import { ZylemCamera } from '../camera/zylem-camera';
 export interface ZylemStageConfig {
     inputs: Record<string, string[]>;
     backgroundColor: Color | string;
@@ -55,6 +56,7 @@ export declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     testSystem: any;
     transformSystem: any;
     debugDelegate: StageDebugDelegate | null;
+    cameraDebugDelegate: StageCameraDebugDelegate | null;
     uuid: string;
     wrapperRef: Stage | null;
     camera?: CameraWrapper;
@@ -124,3 +126,4 @@ export declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     enqueue(...items: StageEntityInput[]): void;
 }
 export {};
+//# sourceMappingURL=zylem-stage.d.ts.map

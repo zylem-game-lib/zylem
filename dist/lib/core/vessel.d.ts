@@ -11,3 +11,4 @@ export declare class Vessel extends BaseNode<{}, Vessel> {
     create(): this;
 }
 export declare function vessel(...args: Array<BaseNode>): BaseNode<{}, Vessel>;
+//# sourceMappingURL=vessel.d.ts.map
