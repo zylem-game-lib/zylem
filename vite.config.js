@@ -7,8 +7,44 @@ import { typescriptPaths } from 'rollup-plugin-typescript-paths';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 import solidPlugin from 'vite-plugin-solid';
+import { Extractor, ExtractorConfig } from '@microsoft/api-extractor';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// TODO: needs to be updated once TS 5.9+ is supported
+function apiExtractorPlugin() {
+  return {
+    name: 'api-extractor',
+    apply: 'build',
+    closeBundle() {
+      const apiExtractorJsonPath = path.resolve(
+        __dirname,
+        './config/api-extractor.json',
+      );
+      try {
+        const extractorConfig =
+          ExtractorConfig.loadFileAndPrepare(apiExtractorJsonPath);
+        const result = Extractor.invoke(extractorConfig, {
+          localBuild: true,
+          showVerboseMessages: true,
+        });
+        if (result.succeeded) {
+          console.log('API Extractor completed successfully');
+        } else {
+          console.warn(
+            `API Extractor completed with ${result.errorCount} errors and ${result.warningCount} warnings`,
+          );
+        }
+      } catch (err) {
+        console.warn(
+          `API Extractor was skipped due to configuration error: ${
+            err && err.message ? err.message : String(err)
+          }`,
+        );
+      }
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(async ({ command, mode }) => {
@@ -16,7 +52,7 @@ export default defineConfig(async ({ command, mode }) => {
   const isLibraryBuild = command === 'build' && mode === 'production';
 
   const config = {
-    plugins: [glsl(), solidPlugin()],
+    plugins: [glsl(), solidPlugin(), apiExtractorPlugin()],
     assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb'],
     resolve: {
       alias: [
