@@ -18,6 +18,8 @@
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "baseUrl": "./",
+    "declaration": true,
+    "declarationMap": true,
     "paths": {
       "~/*": ["src/*"],
       "@/*": ["src/*"],
