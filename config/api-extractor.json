@@ -132,7 +132,7 @@
      *
      * DEFAULT VALUE: false
      */
-    // "skipLibCheck": true,
+    "skipLibCheck": true
   },
 
   /**
