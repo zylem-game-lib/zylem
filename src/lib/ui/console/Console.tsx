@@ -1,6 +1,6 @@
 import { createEffect, createSignal, type Component } from 'solid-js';
-import { consoleStore } from '@lib/debug/console/console-store';
-import { clearConsole } from '@lib/debug/console/console-state';
+import { consoleStore } from '../../debug/console/console-store';
+import { clearConsole } from '../../debug/console/console-state';
 import './Console.css';
 
 /**

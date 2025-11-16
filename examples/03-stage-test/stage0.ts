@@ -1,5 +1,5 @@
 import { Color, Vector2 } from "three";
-import { stage, text } from "../../src/api/main";
+import { stage, text } from "@zylem/game-lib";
 
 const startGameText = await text({
 	name: 'startGameText',

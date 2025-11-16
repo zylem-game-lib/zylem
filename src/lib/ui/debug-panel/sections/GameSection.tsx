@@ -1,6 +1,6 @@
 import type { Component } from 'solid-js';
-import { printToConsole } from '@lib/debug/console/console-state';
-import { getGlobalState, state } from '~/lib/game/game-state';
+import { printToConsole } from '../../../debug/console/console-state';
+import { getGlobalState, state } from '../../../game/game-state';
 
 export const GameSection: Component = () => (
   <div class="panel-content">

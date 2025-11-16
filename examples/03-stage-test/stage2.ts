@@ -1,6 +1,5 @@
 import { Color, Vector3 } from "three";
-import { stage } from "../../src/api/main";
-import { box } from "../../src/lib/entities";
+import { stage, box } from "@zylem/game-lib";
 
 const box1 = await box({
 	size: new Vector3(10, 10, 10),

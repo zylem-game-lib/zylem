@@ -1,4 +1,4 @@
-import { createGame, gameConfig } from '../../src/api/main';
+import { createGame, gameConfig } from '@zylem/game-lib';
 import { stage0 } from './stage0';
 import { stage1 } from './stage1';
 import { stage2 } from './stage2';

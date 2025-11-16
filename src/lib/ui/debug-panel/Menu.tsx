@@ -1,7 +1,7 @@
 import type { Component } from 'solid-js';
 import { Toolbar } from '../toolbar/Toolbar';
 import { AccordionMenu } from './AccordionMenu';
-import { Console } from '@lib/ui/console/Console';
+import { Console } from '../console/Console';
 import './Menu.css';
 
 export const Menu: Component<{ onClose?: () => void }> = (props) => {

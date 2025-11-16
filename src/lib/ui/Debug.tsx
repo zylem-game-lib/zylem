@@ -7,7 +7,7 @@ import './Debug.css';
 /**
  * DebugMenu root component. Handles open/close state and layout.
  */
-function Debug() {
+export function Debug() {
   const [isOpen, setIsOpen] = createSignal(false);
 
   const toggleMenu = () => {
@@ -44,4 +44,10 @@ function Debug() {
   );
 }
 
-render(() => <Debug />, document.getElementById('zylem-debug-container')!);
+// Only render if we're not in a test environment and the container exists
+if (typeof window !== 'undefined' && !import.meta.env.VITEST) {
+  const container = document.getElementById('zylem-debug-container');
+  if (container) {
+    render(() => <Debug />, container);
+  }
+}

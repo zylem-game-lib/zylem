@@ -55,8 +55,8 @@ const testGame = createGame(
 	{
 		id: 'behaviors-test',
 		debug: true,
-		preset: 'SNES',
-		resolution: '512x448',
+		// preset: 'SNES',
+		// resolution: '512x448',
 	},
 	stage1,
 	startingZone,

@@ -1,6 +1,5 @@
 import { Color } from "three";
-import { stage } from "../../src/api/main";
-import { sphere } from "../../src/lib/entities";
+import { stage, sphere } from "@zylem/game-lib";
 
 const planet = await sphere({
 	radius: 10,

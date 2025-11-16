@@ -1,6 +1,6 @@
 import { Mesh, Material, ShaderMaterial, Group, Color } from "three";
 import { Collider, ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapier3d-compat";
-import { position, rotation, scale } from "~/lib/systems/transformable.system";
+import { position, rotation, scale } from "../systems/transformable.system";
 import { Vec3 } from "../core/vector";
 import { MaterialBuilder, MaterialOptions } from "../graphics/material";
 import { CollisionOptions } from "../collision/collision";
