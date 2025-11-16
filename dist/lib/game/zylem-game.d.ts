@@ -54,5 +54,5 @@ export declare class ZylemGame<TGlobals extends BaseGlobals> {
     setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]): void;
     onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void): void;
 }
-export default ZylemGame;
+export {};
 //# sourceMappingURL=zylem-game.d.ts.map

@@ -98,8 +98,7 @@
     "imports": [
       "src/lib/stage/stage.ts",
       "src/lib/stage/entity-spawner.ts",
-      "src/lib/stage/stage-blueprint.ts",
-      "src/lib/stage/stage-default.ts"
+      "src/lib/stage/stage-blueprint.ts"
     ]
   },
   "src/lib/actions/behaviors/actions.ts": {

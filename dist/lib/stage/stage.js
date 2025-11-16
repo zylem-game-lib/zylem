@@ -1,6 +1,6 @@
 import { ZylemStage as i } from "./zylem-stage.js";
 import { CameraWrapper as o } from "../camera/camera.js";
-import { stageState as s, setStageVariable as n, getStageVariable as d } from "./stage-state.js";
+import { stageState as r, setStageVariable as n, getStageVariable as d } from "./stage-state.js";
 import { getStageOptions as g } from "./stage-default.js";
 class S {
   wrappedStage;
@@ -28,14 +28,14 @@ class S {
   start(t) {
     this.wrappedStage?.nodeSetup(t), this.wrappedStage.onEntityAdded((e) => {
       const a = this.wrappedStage.buildEntityState(e);
-      s.entities = [...s.entities, a];
+      r.entities = [...r.entities, a];
     }, { replayExisting: !0 });
   }
   onUpdate(...t) {
-    this.wrappedStage.update = (e) => {
+    this.wrappedStage && (this.wrappedStage.update = (e) => {
       const a = { ...e, stage: this };
-      t.forEach((r) => r(a));
-    };
+      t.forEach((s) => s(a));
+    });
   }
   onSetup(t) {
     this.wrappedStage.setup = t;

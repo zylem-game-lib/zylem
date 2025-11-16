@@ -21,7 +21,6 @@ function o(...e) {
   return e.forEach((a) => s.add(a)), s;
 }
 export {
-  r as VESSEL_TYPE,
   n as Vessel,
   o as vessel
 };

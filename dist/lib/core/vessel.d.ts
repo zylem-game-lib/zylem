@@ -1,6 +1,5 @@
 import { BaseNode } from './base-node';
 import { SetupContext, UpdateContext, DestroyContext, LoadedContext, CleanupContext } from './base-node-life-cycle';
-export declare const VESSEL_TYPE: unique symbol;
 export declare class Vessel extends BaseNode<{}, Vessel> {
     static type: symbol;
     protected _setup(_params: SetupContext<this>): void;

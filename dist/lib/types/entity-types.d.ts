@@ -21,19 +21,4 @@ export interface GameEntityInterface extends BaseEntityInterface {
     setRotation(x: number, y: number, z: number): void;
     setScale(x: number, y: number, z: number): void;
 }
-/**
- * Stage entity interface - for entities that can be part of a stage
- */
-export interface StageEntityInterface extends GameEntityInterface {
-    stageId?: string;
-    isActive: boolean;
-}
-/**
- * Entity with collision capabilities
- */
-export interface CollisionEntityInterface extends GameEntityInterface {
-    onCollision?: (other: GameEntityInterface) => void;
-    onEnter?: (other: GameEntityInterface) => void;
-    onExit?: (other: GameEntityInterface) => void;
-}
 //# sourceMappingURL=entity-types.d.ts.map

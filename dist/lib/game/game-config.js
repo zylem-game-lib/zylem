@@ -73,7 +73,6 @@ function k(t) {
 }
 export {
   f as GameConfig,
-  B as createDefaultGameConfig,
   k as gameConfig,
   C as resolveGameConfig
 };

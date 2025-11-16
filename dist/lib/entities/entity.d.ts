@@ -6,11 +6,6 @@ import { CollisionOptions } from "../collision/collision";
 import { BaseNode } from "../core/base-node";
 import { DestroyContext, SetupContext, UpdateContext, LoadedContext, CleanupContext } from "../core/base-node-life-cycle";
 import type { EntityMeshBuilder, EntityCollisionBuilder } from "./builder";
-export declare abstract class AbstractEntity {
-    abstract uuid: string;
-    abstract eid: number;
-    abstract name: string;
-}
 export interface LifeCycleDelegate<U> {
     setup?: ((params: SetupContext<U>) => void)[];
     update?: ((params: UpdateContext<U>) => void)[];

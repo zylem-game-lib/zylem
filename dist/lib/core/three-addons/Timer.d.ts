@@ -88,20 +88,5 @@ declare class Timer {
      */
     update(timestamp?: number): Timer;
 }
-/**
- * A special version of a timer with a fixed time delta value.
- * Can be useful for testing and debugging purposes.
- *
- * @augments Timer
- */
-declare class FixedTimer extends Timer {
-    /**
-     * Constructs a new timer.
-     *
-     * @param {number} [fps=60] - The fixed FPS of this timer.
-     */
-    constructor(fps?: number);
-    update(): FixedTimer;
-}
-export { Timer, FixedTimer };
+export { Timer, };
 //# sourceMappingURL=Timer.d.ts.map

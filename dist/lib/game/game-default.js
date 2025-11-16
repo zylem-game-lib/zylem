@@ -19,6 +19,5 @@ function g() {
   };
 }
 export {
-  t as gameDefaultsState,
   g as getGameDefaultConfig
 };

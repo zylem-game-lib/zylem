@@ -45,8 +45,4 @@ export interface InputGamepad {
 export type Inputs = Record<InputPlayer, InputGamepad>;
 export type ButtonName = keyof InputGamepad['buttons'];
 export type InputHandlerCallback = () => void;
-export interface InputHandler {
-    onPress(button: ButtonName, callback: InputHandlerCallback): void;
-    update(currentInputs: Inputs): void;
-}
 //# sourceMappingURL=input.d.ts.map

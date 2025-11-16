@@ -50,8 +50,5 @@ class u {
   }
 }
 export {
-  u as EntityAssetLoader,
-  l as FBXAssetLoader,
-  t as FileExtensionTypes,
-  p as GLTFAssetLoader
+  u as EntityAssetLoader
 };

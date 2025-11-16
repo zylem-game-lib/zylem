@@ -28,7 +28,6 @@ export type StageOptions = [] | [Partial<ZylemStageConfig>, ...StageOptionItem[]
 export type StageState = ZylemStageConfig & {
     entities: GameEntityInterface[];
 };
-export declare const STAGE_TYPE = "Stage";
 /**
  * ZylemStage orchestrates scene, physics world, entities, and lifecycle.
  *

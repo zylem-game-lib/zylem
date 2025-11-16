@@ -1,22 +1,17 @@
 import { stage as r } from "./lib/stage/stage.js";
-import { entitySpawner as g } from "./lib/stage/entity-spawner.js";
-import { buildStageFromBlueprint as l, createStageBlueprint as p, getCurrentStageBlueprint as n, getStageBlueprint as s, listStageBlueprints as S, removeStageBlueprint as i, resetStageBlueprints as o, setCurrentStageBlueprint as B, stageBlueprintsState as f, upsertStageBlueprint as m } from "./lib/stage/stage-blueprint.js";
-import { getStageDefaultConfig as D, resetStageDefaults as C, setStageDefaults as b, stageDefaultsState as c } from "./lib/stage/stage-default.js";
+import { entitySpawner as a } from "./lib/stage/entity-spawner.js";
+import { buildStageFromBlueprint as u, createStageBlueprint as g, getCurrentStageBlueprint as i, getStageBlueprint as l, listStageBlueprints as S, removeStageBlueprint as B, resetStageBlueprints as s, setCurrentStageBlueprint as o, stageBlueprintsState as m, upsertStageBlueprint as f } from "./lib/stage/stage-blueprint.js";
 export {
-  l as buildStageFromBlueprint,
-  p as createStageBlueprint,
-  g as entitySpawner,
-  n as getCurrentStageBlueprint,
-  s as getStageBlueprint,
-  D as getStageDefaultConfig,
+  u as buildStageFromBlueprint,
+  g as createStageBlueprint,
+  a as entitySpawner,
+  i as getCurrentStageBlueprint,
+  l as getStageBlueprint,
   S as listStageBlueprints,
-  i as removeStageBlueprint,
-  o as resetStageBlueprints,
-  C as resetStageDefaults,
-  B as setCurrentStageBlueprint,
-  b as setStageDefaults,
+  B as removeStageBlueprint,
+  s as resetStageBlueprints,
+  o as setCurrentStageBlueprint,
   r as stage,
-  f as stageBlueprintsState,
-  c as stageDefaultsState,
-  m as upsertStageBlueprint
+  m as stageBlueprintsState,
+  f as upsertStageBlueprint
 };

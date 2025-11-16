@@ -74,7 +74,6 @@ function l(e) {
   return !Number.isFinite(i) || !Number.isFinite(s) ? null : { width: i, height: s };
 }
 export {
-  n as RetroPresets,
   h as getDisplayAspect,
   r as getPresetResolution,
   l as parseResolution

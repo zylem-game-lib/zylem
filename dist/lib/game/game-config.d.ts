@@ -50,10 +50,6 @@ export declare class GameConfig {
         height: number;
     } | undefined, fullscreen: boolean, bodyBackground: string | undefined, container: HTMLElement, containerId?: string | undefined, canvas?: HTMLCanvasElement | undefined);
 }
-export declare function createDefaultGameConfig(base?: Partial<Pick<GameConfig, 'id' | 'debug' | 'time' | 'input'>> & {
-    stages?: StageInterface[];
-    globals?: Record<string, any>;
-}): GameConfig;
 export declare function resolveGameConfig(user?: GameConfigLike): GameConfig;
 /**
  * Factory for authoring configuration objects in user code.

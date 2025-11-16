@@ -16,15 +16,6 @@ export interface StageStateInterface {
     stageRef?: any;
 }
 /**
- * Stage configuration interface
- */
-export interface StageConfigInterface {
-    id?: string;
-    backgroundColor?: Color;
-    backgroundImage?: string;
-    gravity?: Vector3;
-}
-/**
  * Minimal stage interface to break circular dependencies
  */
 export interface StageInterface {

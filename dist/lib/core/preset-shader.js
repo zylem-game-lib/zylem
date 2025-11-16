@@ -22,9 +22,5 @@ e.set("fire", m);
 e.set("star", s);
 e.set("debug", u);
 export {
-  u as debugShader,
-  e as default,
-  m as fireShader,
-  n as standardShader,
-  s as starShader
+  e as default
 };

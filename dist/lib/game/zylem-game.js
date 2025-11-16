@@ -136,6 +136,5 @@ class n {
   }
 }
 export {
-  n as ZylemGame,
-  n as default
+  n as ZylemGame
 };

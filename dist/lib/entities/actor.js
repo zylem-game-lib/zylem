@@ -117,9 +117,6 @@ async function T(...n) {
   });
 }
 export {
-  D as ACTOR_TYPE,
-  C as ActorBuilder,
-  j as ActorCollisionBuilder,
   a as ZylemActor,
   T as actor
 };

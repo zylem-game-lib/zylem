@@ -264,6 +264,5 @@ class Y extends v {
   }
 }
 export {
-  W as STAGE_TYPE,
   Y as ZylemStage
 };

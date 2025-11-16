@@ -67,6 +67,5 @@ class d {
   }
 }
 export {
-  d as DebugDelegate,
-  g as hasDebugInfo
+  d as DebugDelegate
 };

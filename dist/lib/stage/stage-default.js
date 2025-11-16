@@ -1,42 +1,32 @@
-import { proxy as i } from "valtio/vanilla";
-import { Vector3 as r } from "three";
-import { ZylemBlueColor as g } from "../core/utility/vector.js";
-const o = {
-  backgroundColor: g,
+import { proxy as r } from "valtio/vanilla";
+import { Vector3 as i } from "three";
+import { ZylemBlueColor as n } from "../core/utility/vector.js";
+const g = {
+  backgroundColor: n,
   backgroundImage: null,
   inputs: {
     p1: ["gamepad-1", "keyboard"],
     p2: ["gamepad-2", "keyboard"]
   },
-  gravity: new r(0, 0, 0),
+  gravity: new i(0, 0, 0),
   variables: {}
-}, t = i({
-  ...o
+}, o = r({
+  ...g
 });
 function b(a) {
-  Object.assign(t, a);
+  const e = l();
+  let t = {};
+  return typeof a[0] == "object" && (t = a.shift() ?? {}), [{ ...e, ...t }, ...a];
 }
-function d() {
-  Object.assign(t, o);
-}
-function m(a) {
-  const n = u();
-  let e = {};
-  return typeof a[0] == "object" && (e = a.shift() ?? {}), [{ ...n, ...e }, ...a];
-}
-function u() {
+function l() {
   return {
-    backgroundColor: t.backgroundColor,
-    backgroundImage: t.backgroundImage ?? null,
-    inputs: t.inputs ? { ...t.inputs } : void 0,
-    gravity: t.gravity,
-    variables: t.variables ? { ...t.variables } : void 0
+    backgroundColor: o.backgroundColor,
+    backgroundImage: o.backgroundImage ?? null,
+    inputs: o.inputs ? { ...o.inputs } : void 0,
+    gravity: o.gravity,
+    variables: o.variables ? { ...o.variables } : void 0
   };
 }
 export {
-  u as getStageDefaultConfig,
-  m as getStageOptions,
-  d as resetStageDefaults,
-  b as setStageDefaults,
-  t as stageDefaultsState
+  b as getStageOptions
 };
