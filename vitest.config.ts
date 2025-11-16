@@ -1,7 +1,6 @@
 import path from 'path';
 import { defineConfig, mergeConfig } from 'vitest/config';
 import { createBaseConfig } from './config/vite.base';
-// import { playwright } from '@vitest/browser-playwright';
 import solidPlugin from 'vite-plugin-solid';
 
 export default defineConfig(async (env) => {
@@ -37,16 +36,6 @@ export default defineConfig(async (env) => {
 								],
 							},
 						},
-						// browser: {
-						// 	provider: playwright(),
-						// 	enabled: false,
-						// 	instances: [
-						// 		{
-						// 			browser: 'chromium',
-						// 			viewport: { width: 1280, height: 720 },
-						// 		}
-						// 	]
-						// },
 						include: [path.resolve(import.meta.dirname, './src/tests/integration/**/*.sim.spec.tsx')],
 						exclude: [path.resolve(import.meta.dirname, './src/tests/unit/**/*.spec.ts')],
 					}
