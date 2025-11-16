@@ -27,7 +27,7 @@ export interface GameEntityInterface extends BaseEntityInterface {
 /**
  * Stage entity interface - for entities that can be part of a stage
  */
-export interface StageEntityInterface extends GameEntityInterface {
+interface StageEntityInterface extends GameEntityInterface {
 	stageId?: string;
 	isActive: boolean;
 }
@@ -35,7 +35,7 @@ export interface StageEntityInterface extends GameEntityInterface {
 /**
  * Entity with collision capabilities
  */
-export interface CollisionEntityInterface extends GameEntityInterface {
+interface CollisionEntityInterface extends GameEntityInterface {
 	onCollision?: (other: GameEntityInterface) => void;
 	onEnter?: (other: GameEntityInterface) => void;
 	onExit?: (other: GameEntityInterface) => void;

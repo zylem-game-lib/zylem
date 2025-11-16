@@ -10,7 +10,6 @@ export { createEntity } from './create';
 export * from './delegates/debug';
 
 export type {
-	AbstractEntity,
 	GameEntity,
 	GameEntityOptions,
 } from './entity';

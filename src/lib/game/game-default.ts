@@ -19,17 +19,17 @@ const initialDefaults: () => InitialDefaults = (): InitialDefaults => {
 	};
 }
 
-export const gameDefaultsState = proxy<Partial<ZylemGameConfig<Stage, any, BaseGlobals>>>(
+const gameDefaultsState = proxy<Partial<ZylemGameConfig<Stage, any, BaseGlobals>>>(
 	{ ...initialDefaults() }
 );
 
 /** Replace multiple defaults at once (shallow merge). */
-export function setGameDefaults(partial: Partial<ZylemGameConfig<Stage, any, BaseGlobals>>): void {
+function setGameDefaults(partial: Partial<ZylemGameConfig<Stage, any, BaseGlobals>>): void {
 	Object.assign(gameDefaultsState, partial);
 }
 
 /** Reset defaults back to library defaults. */
-export function resetGameDefaults(): void {
+function resetGameDefaults(): void {
 	Object.assign(gameDefaultsState, initialDefaults());
 }
 

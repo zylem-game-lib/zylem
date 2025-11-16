@@ -81,10 +81,10 @@ const stageStateToString = (state: StageStateInterface) => {
 
 export {
 	stageState,
-	setStageState,
+	
 	setStageBackgroundColor,
 	setStageBackgroundImage,
-	setEntitiesToStage,
+	
 	stageStateToString,
 	setStageVariable,
 	getStageVariable,

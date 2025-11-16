@@ -11,7 +11,7 @@ export interface DebugInfoProvider {
 /**
  * Helper to check if an object implements DebugInfoProvider
  */
-export function hasDebugInfo(obj: any): obj is DebugInfoProvider {
+function hasDebugInfo(obj: any): obj is DebugInfoProvider {
 	return obj && typeof obj.getDebugInfo === 'function';
 }
 
@@ -131,7 +131,7 @@ export class DebugDelegate {
 	}
 }
 
-export class EnhancedDebugInfoBuilder {
+class EnhancedDebugInfoBuilder {
 	private customBuilder?: (options: GameEntityOptions) => Record<string, any>;
 
 	constructor(customBuilder?: (options: GameEntityOptions) => Record<string, any>) {

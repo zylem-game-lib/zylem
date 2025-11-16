@@ -61,7 +61,7 @@ function ensureContainer(containerId?: string, existing?: HTMLElement | null): H
 	return el;
 }
 
-export function createDefaultGameConfig(base?: Partial<Pick<GameConfig, 'id' | 'debug' | 'time' | 'input'>> & { stages?: StageInterface[]; globals?: Record<string, any> }): GameConfig {
+function createDefaultGameConfig(base?: Partial<Pick<GameConfig, 'id' | 'debug' | 'time' | 'input'>> & { stages?: StageInterface[]; globals?: Record<string, any> }): GameConfig {
 	const id = base?.id ?? 'zylem';
 	const container = ensureContainer(id);
 	return new GameConfig(

@@ -2,7 +2,7 @@ import { Scene, Vector2, Vector3, WebGLRenderer } from 'three';
 import { PerspectiveController, ZylemCamera } from './zylem-camera';
 import { StageEntity } from '../interfaces/entity';
 
-export interface ThirdPersonCameraOptions {
+interface ThirdPersonCameraOptions {
 	target: StageEntity;
 	distance: Vector3;
 	screenResolution: Vector2;

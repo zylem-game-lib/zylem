@@ -10,7 +10,7 @@ export type RetroPreset = {
  * displayAspect represents the intended display aspect (letterboxing target),
  * not necessarily the raw pixel aspect of internal buffers.
  */
-export const RetroPresets: Record<string, RetroPreset> = {
+const RetroPresets: Record<string, RetroPreset> = {
 	NES: {
 		displayAspect: 4 / 3,
 		resolutions: [

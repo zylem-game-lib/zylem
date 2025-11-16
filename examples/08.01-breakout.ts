@@ -1,5 +1,5 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { game, box, sphere, stage, camera, zone, text, globalChanges } from '../src/main';
+import { createGame, box, sphere, stage, camera, zone, text, globalChanges } from '@zylem/game-lib';
 import { makeMoveable } from '../src/lib/actions/capabilities/moveable';
 import { ricochet2DCollision } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-collision';
 import { ricochet2DInBounds } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
@@ -127,7 +127,7 @@ const statusText = await text({
 });
 
 const stage1 = stage({}, camera1);
-const game1 = game({
+const game = createGame({
 	id: 'breakout',
 	debug: true,
 	globals: {
@@ -150,25 +150,25 @@ const game1 = game({
 
 stage1.onUpdate(
 	globalChanges(['bricksRemaining', 'lives'], ([remaining, lives]) => {
-		if (remaining <= 0) game1.setGlobal('status', 'win');
-		if (lives <= 0) game1.setGlobal('status', 'lose');
+		if (remaining <= 0) game.setGlobal('status', 'win');
+		if (lives <= 0) game.setGlobal('status', 'lose');
 	}),
 );
 
-game1.onGlobalChange('status', (value) => {
+game.onGlobalChange('status', (value) => {
 	if (value === 'win') statusText.updateText('You Win!');
 	else if (value === 'lose') statusText.updateText('Game Over');
 	else statusText.updateText('');
 });
 
-game1.onGlobalChange('score', (value) => {
+game.onGlobalChange('score', (value) => {
 	scoreText.updateText(`Score: ${String(value)}`);
 });
 
-game1.onGlobalChange('lives', (value) => {
+game.onGlobalChange('lives', (value) => {
 	livesText.updateText(`Lives: ${String(value)}`);
 });
 
-game1.start();
+game.start();
 
 

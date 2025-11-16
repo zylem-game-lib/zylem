@@ -20,7 +20,7 @@ export interface StageStateInterface {
 /**
  * Stage configuration interface
  */
-export interface StageConfigInterface {
+interface StageConfigInterface {
 	id?: string;
 	backgroundColor?: Color;
 	backgroundImage?: string;

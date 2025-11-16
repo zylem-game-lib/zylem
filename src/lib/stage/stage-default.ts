@@ -19,17 +19,17 @@ const initialDefaults: Partial<ZylemStageConfig> = {
 	variables: {},
 };
 
-export const stageDefaultsState = proxy<Partial<ZylemStageConfig>>({
+const stageDefaultsState = proxy<Partial<ZylemStageConfig>>({
 	...initialDefaults,
 });
 
 /** Replace multiple defaults at once (shallow merge). */
-export function setStageDefaults(partial: Partial<ZylemStageConfig>): void {
+function setStageDefaults(partial: Partial<ZylemStageConfig>): void {
 	Object.assign(stageDefaultsState, partial);
 }
 
 /** Reset defaults back to library defaults. */
-export function resetStageDefaults(): void {
+function resetStageDefaults(): void {
 	Object.assign(stageDefaultsState, initialDefaults);
 }
 
@@ -44,7 +44,7 @@ export function getStageOptions(options: StageOptions): StageOptions {
 }
 
 /** Get a plain object copy of the current defaults. */
-export function getStageDefaultConfig(): Partial<ZylemStageConfig> {
+function getStageDefaultConfig(): Partial<ZylemStageConfig> {
 	return {
 		backgroundColor: stageDefaultsState.backgroundColor,
 		backgroundImage: stageDefaultsState.backgroundImage ?? null,

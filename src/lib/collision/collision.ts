@@ -17,13 +17,13 @@ export class BaseCollision {
 	}
 }
 
-export const CollisionComponent = defineComponent({
+const CollisionComponent = defineComponent({
 	static: Types.i8,
 	isSensor: Types.i8,
 	bodyDescription: Types.i8 //RigidBodyDesc;
 });
 
-export const CollisionDebugComponent = defineComponent({
+const CollisionDebugComponent = defineComponent({
 	active: Types.i8,
 	color: Types.f32
 });

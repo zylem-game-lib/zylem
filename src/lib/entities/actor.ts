@@ -40,7 +40,7 @@ const actorDefaults: ZylemActorOptions = {
 	models: []
 };
 
-export class ActorCollisionBuilder extends EntityCollisionBuilder {
+class ActorCollisionBuilder extends EntityCollisionBuilder {
 	private height: number = 1;
 	private objectModel: Group | null = null;
 
@@ -79,13 +79,13 @@ export class ActorCollisionBuilder extends EntityCollisionBuilder {
 	}
 }
 
-export class ActorBuilder extends EntityBuilder<ZylemActor, ZylemActorOptions> {
+class ActorBuilder extends EntityBuilder<ZylemActor, ZylemActorOptions> {
 	protected createEntity(options: Partial<ZylemActorOptions>): ZylemActor {
 		return new ZylemActor(options);
 	}
 }
 
-export const ACTOR_TYPE = Symbol('Actor');
+const ACTOR_TYPE = Symbol('Actor');
 
 export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityLoaderDelegate, DebugInfoProvider {
 	static type = ACTOR_TYPE;

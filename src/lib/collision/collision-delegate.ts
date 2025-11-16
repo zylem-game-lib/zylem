@@ -8,7 +8,7 @@ export interface CollisionHandlerDelegate {
 	handleIntersectionEvent(params: any): void;
 }
 
-export class CollisionHandler {
+class CollisionHandler {
 	entityReference: CollisionHandlerDelegate;
 
 	constructor(entity: CollisionHandlerDelegate) {

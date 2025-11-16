@@ -23,15 +23,6 @@ export function createCollisionFilter(allowedTypes: string[]): number {
 	return filter;
 }
 
-export function setCollisionGroups(collider: ColliderDesc, entityType: string, allowedTypes: string[]): void {
-	const groupId = getOrCreateCollisionGroupId(entityType);
-	const filter = createCollisionFilter(allowedTypes);
-	collider.setCollisionGroups((groupId << 16) | filter);
-}
-
-export type ColliderFunction = () => ColliderDesc;
-export type RigidBodyFunction = ({ isDynamicBody }: { isDynamicBody: boolean }) => RigidBodyDesc;
-
 export class CollisionBuilder {
 	static: boolean = false;
 	sensor: boolean = false;

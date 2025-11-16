@@ -14,10 +14,10 @@ export {
 	resetStageBlueprints,
 } from '../lib/stage/stage-blueprint';
 export type { StageBlueprint } from '../lib/stage/stage-blueprint';
-export {
-	stageDefaultsState,
-	setStageDefaults,
-	resetStageDefaults,
-	getStageDefaultConfig,
-} from '../lib/stage/stage-default';
+// export {
+// 	stageDefaultsState,
+// 	setStageDefaults,
+// 	resetStageDefaults,
+// 	getStageDefaultConfig,
+// } from '../lib/stage/stage-default';
 

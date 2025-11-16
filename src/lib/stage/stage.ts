@@ -51,6 +51,8 @@ export class Stage {
 	}
 
 	onUpdate(...callbacks: UpdateFunction<ZylemStage>[]) {
+		// TODO: this check is unnecessary
+		if (!this.wrappedStage) { return; }
 		this.wrappedStage!.update = (params) => {
 			const extended = { ...params, stage: this } as any;
 			callbacks.forEach((cb) => cb(extended));

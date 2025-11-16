@@ -10,22 +10,22 @@ import debugVertexShader from '../graphics/shaders/vertex/debug.glsl';
 
 export type ZylemShaderObject = { fragment: string, vertex: string };
 
-export const starShader: ZylemShaderObject = {
+const starShader: ZylemShaderObject = {
 	fragment: starsTest,
 	vertex: vertexShader
 };
 
-export const fireShader: ZylemShaderObject = {
+const fireShader: ZylemShaderObject = {
 	fragment: fireFragment,
 	vertex: vertexShader
 };
 
-export const standardShader: ZylemShaderObject = {
+const standardShader: ZylemShaderObject = {
 	fragment: fragmentShader,
 	vertex: vertexShader
 };
 
-export const debugShader: ZylemShaderObject = {
+const debugShader: ZylemShaderObject = {
 	fragment: debugFragment,
 	vertex: debugVertexShader
 };

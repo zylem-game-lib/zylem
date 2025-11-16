@@ -2,8 +2,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import type { ConfigEnv, UserConfig, AliasOptions } from 'vite';
-import { PluginOption } from 'vite';
-import { defineConfig } from 'vite';
 
 import solidPlugin from 'vite-plugin-solid';
 import glsl from 'vite-plugin-glsl';
@@ -39,8 +37,5 @@ export async function createBaseConfig(_env: ConfigEnv): Promise<UserConfig> {
 	};
 }
 
-export default defineConfig(async (env) => {
-	return await createBaseConfig(env);
-});
 
 

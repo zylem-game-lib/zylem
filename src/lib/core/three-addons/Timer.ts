@@ -227,4 +227,4 @@ function handleVisibilityChange(this: Timer): void {
 
 }
 
-export { Timer, FixedTimer };
+export { Timer,  };

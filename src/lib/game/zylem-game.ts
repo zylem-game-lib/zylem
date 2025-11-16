@@ -231,4 +231,3 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	}
 }
 
-export default ZylemGame;

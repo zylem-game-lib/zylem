@@ -2,7 +2,7 @@ import { AnimationClip, Object3D } from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-export enum FileExtensionTypes {
+enum FileExtensionTypes {
 	FBX = 'fbx',
 	GLTF = 'gltf'
 }
@@ -18,7 +18,7 @@ export interface IAssetLoader {
 	isSupported(file: string): boolean;
 }
 
-export class FBXAssetLoader implements IAssetLoader {
+class FBXAssetLoader implements IAssetLoader {
 	private loader: FBXLoader = new FBXLoader();
 
 	isSupported(file: string): boolean {
@@ -43,7 +43,7 @@ export class FBXAssetLoader implements IAssetLoader {
 	}
 }
 
-export class GLTFAssetLoader implements IAssetLoader {
+class GLTFAssetLoader implements IAssetLoader {
 	private loader: GLTFLoader = new GLTFLoader();
 
 	isSupported(file: string): boolean {

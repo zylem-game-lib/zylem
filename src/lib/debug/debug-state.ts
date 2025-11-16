@@ -1,7 +1,7 @@
 import { proxy } from 'valtio/vanilla';
 import { printToConsole } from './console/console-state';
 
-export type DebugConfiguration = {
+type DebugConfiguration = {
 	showCollisionBounds?: boolean;
 	showModelBounds?: boolean;
 	showSpriteBounds?: boolean;
@@ -70,7 +70,7 @@ const getHoveredEntity = () => {
 	return debugState.hovered;
 }
 
-export { debugState, setDebugFlag, setSelectedEntity, resetSelectedEntities, setDebugTool, getDebugTool, setHoveredEntity, resetHoveredEntity, getHoveredEntity };
+export { debugState, setDebugFlag, setSelectedEntity,  setDebugTool, getDebugTool, setHoveredEntity, resetHoveredEntity, getHoveredEntity };
 
 export const togglePause = () => {
 	debugState.paused = !debugState.paused;

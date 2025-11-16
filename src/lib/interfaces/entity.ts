@@ -3,7 +3,7 @@ import { Group, Mesh } from "three";
 
 export type LifecycleFunction<T> = (params?: any) => void;
 
-export type CollisionOption = (entity: any, other: any, globals?: Global) => void;
+type CollisionOption = (entity: any, other: any, globals?: Global) => void;
 
 export interface Entity<T = any> {
 	setup: (entity: T) => void;
@@ -29,4 +29,4 @@ export interface StageEntity extends Entity {
 	markedForRemoval: boolean;
 }
 
-export type OptionalVector = { x?: number, y?: number, z?: number };
+type OptionalVector = { x?: number, y?: number, z?: number };

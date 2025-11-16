@@ -18,7 +18,7 @@ interface EntityRowProps {
   hoveredUuid: string | null;
 }
 
-export const EntityRow: Component<EntityRowProps> = (props) => {
+const EntityRow: Component<EntityRowProps> = (props) => {
   return (
     <div
       class={`entity-item ${

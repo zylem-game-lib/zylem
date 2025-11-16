@@ -7,7 +7,7 @@ import {
 	CleanupContext,
 } from './base-node-life-cycle';
 
-export const VESSEL_TYPE = Symbol('vessel');
+const VESSEL_TYPE = Symbol('vessel');
 
 export class Vessel extends BaseNode<{}, Vessel> {
 	static type = VESSEL_TYPE;
