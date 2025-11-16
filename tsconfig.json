@@ -25,9 +25,10 @@
       "@/*": ["src/*"],
       "@lib/debug/*": ["src/lib/debug/*"],
       "@lib/ui/*": ["src/lib/ui/*"],
-      "@lib": ["src/lib/*"],
+      "@lib/*": ["src/lib/*"],
       "@interfaces/*": ["src/lib/interfaces/*"],
-      "@state/*": ["src/state/*"]
+      "@state/*": ["src/state/*"],
+      "@zylem/game-lib": ["src/api/main.ts"]
     }
   },
   "include": ["./src"],

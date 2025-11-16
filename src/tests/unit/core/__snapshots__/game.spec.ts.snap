@@ -1,13 +1,42 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`create a basic game > default configuration 1`] = `
-Game {
+m {
   "destroy": [Function],
-  "gameRef": null,
-  "options": [],
+  "options": [
+    S {
+      "destroy": [Function],
+      "options": [
+        {
+          "backgroundColor": 209900,
+          "backgroundImage": null,
+          "gravity": Vector3 {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+          },
+          "inputs": {
+            "p1": [
+              "gamepad-1",
+              "keyboard",
+            ],
+            "p2": [
+              "gamepad-2",
+              "keyboard",
+            ],
+          },
+          "variables": {},
+        },
+      ],
+      "setup": [Function],
+      "update": [Function],
+      "wrappedStage": null,
+    },
+  ],
   "pendingGlobalChangeHandlers": [],
   "refErrorMessage": "lost reference to game",
   "setup": [Function],
   "update": [Function],
+  "wrappedGame": null,
 }
 `;

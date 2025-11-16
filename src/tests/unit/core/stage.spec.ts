@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stage } from '../../../api/main';
+import { stage } from '@zylem/game-lib';
 import { Color } from 'three';
 import { ZylemStageConfig } from '~/lib/core';
 
