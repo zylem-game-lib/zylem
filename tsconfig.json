@@ -31,6 +31,6 @@
       "@zylem/game-lib": ["src/api/main.ts"]
     }
   },
-  "include": ["./src"],
+  "include": ["./src", "tests"],
   "exclude": ["node_modules"]
 }

@@ -82,7 +82,9 @@
     "dev": "VITE_TARGET=app-dev vite --host",
     "serve": "npm run build:preview && vite preview --outDir dist-preview",
     "docs": "yarn typedoc",
-    "knip": "knip"
+    "knip": "knip",
+    "test:e2e": "exec playwright test --project=chromium",
+    "test:e2e:debug": "exec playwright test --debug --project=chromium"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.11.2",
@@ -107,6 +109,7 @@
     "valtio": "^2.1.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "@rollup/plugin-typescript": "^11.1.6",
     "@rollup/pluginutils": "^5.3.0",
     "@solidjs/testing-library": "^0.8.10",

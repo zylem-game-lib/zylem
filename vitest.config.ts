@@ -13,8 +13,8 @@ export default defineConfig(async (env) => {
 					test: {
 						name: 'unit',
 						environment: 'happy-dom',
-						include: [path.resolve(import.meta.dirname, './src/tests/unit/**/*.spec.ts')],
-						exclude: [path.resolve(import.meta.dirname, './src/tests/integration/**/*.spec.ts')],
+						include: [path.resolve(import.meta.dirname, './tests/unit/**/*.spec.ts')],
+						exclude: [path.resolve(import.meta.dirname, './tests/integration/**/*.spec.ts')],
 					}
 				},
 				{
@@ -36,8 +36,8 @@ export default defineConfig(async (env) => {
 								],
 							},
 						},
-						include: [path.resolve(import.meta.dirname, './src/tests/integration/**/*.sim.spec.tsx')],
-						exclude: [path.resolve(import.meta.dirname, './src/tests/unit/**/*.spec.ts')],
+						include: [path.resolve(import.meta.dirname, './tests/integration/**/*.sim.spec.tsx')],
+						exclude: [path.resolve(import.meta.dirname, './tests/unit/**/*.spec.ts')],
 					}
 				}
 			],

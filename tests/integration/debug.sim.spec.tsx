@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { render } from '@solidjs/testing-library';
-import { Debug } from '../../lib/ui/Debug';
+import { Debug } from '../../src/lib/ui/Debug';
 
 describe('<Debug />', () => {
   test('renders with debug button', () => {

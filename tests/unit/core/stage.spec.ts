@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stage } from '@zylem/game-lib';
 import { Color } from 'three';
-import { ZylemStageConfig } from '~/lib/core';
+import { ZylemStageConfig } from '@lib/core';
 
 describe('create a basic stage', () => {
 	it('default configuration', () => {
