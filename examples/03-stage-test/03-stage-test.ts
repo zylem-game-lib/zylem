@@ -1,5 +1,5 @@
 import { createGame, gameConfig } from '@zylem/game-lib';
-import { stage0 } from './stage0';
+import { stageZero } from './stage0';
 import { stage1 } from './stage1';
 import { stage2 } from './stage2';
 import { stage3 } from './stage3';
@@ -12,7 +12,7 @@ const myGameConfig = gameConfig({
 
 const game = createGame(
 	myGameConfig,
-	stage0,
+	stageZero,
 	stage1,
 	stage2,
 	stage3,

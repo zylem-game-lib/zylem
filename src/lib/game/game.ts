@@ -1,11 +1,14 @@
 import { ZylemGame } from './zylem-game';
-import { DestroyFunction, IGame, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
+import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
+import { IGame } from '../core/interfaces';
 import { setPaused } from '../debug/debug-state';
 import { BaseGlobals } from './game-interfaces';
 import { getGlobalState, setGlobalState } from './game-state';
 import { convertNodes, GameOptions, hasStages } from '../core/utility/nodes';
 import { resolveGameConfig } from './game-config';
-import { stage } from '../stage/stage';
+import { createStage } from '../stage/stage';
+import { StageManager, stageState } from '../stage/stage-manager';
+import { StageFactory } from '../stage/stage-factory';
 
 export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private wrappedGame: ZylemGame<TGlobals> | null = null;
@@ -22,7 +25,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	constructor(options: GameOptions<TGlobals>) {
 		this.options = options;
 		if (!hasStages(options)) {
-			this.options.push(stage());
+			this.options.push(createStage());
 		}
 	}
 
@@ -82,21 +85,6 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		await this.wrappedGame.loadStage(this.wrappedGame.stages[0]);
 	}
 
-	async nextStage() {
-		if (!this.wrappedGame) {
-			console.error(this.refErrorMessage);
-			return;
-		}
-		const currentStageId = this.wrappedGame.currentStageId;
-		const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage!.uuid === currentStageId);
-		const nextStage = this.wrappedGame.stages[currentIndex + 1];
-		if (!nextStage) {
-			console.error('next stage called on last stage');
-			return;
-		}
-		await this.wrappedGame.loadStage(nextStage);
-	}
-
 	async previousStage() {
 		if (!this.wrappedGame) {
 			console.error(this.refErrorMessage);
@@ -110,6 +98,52 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 			return;
 		}
 		await this.wrappedGame.loadStage(previousStage);
+	}
+
+	async loadStageFromId(stageId: string) {
+		if (!this.wrappedGame) {
+			console.error(this.refErrorMessage);
+			return;
+		}
+		try {
+			const blueprint = await StageManager.loadStageData(stageId);
+			const stage = await StageFactory.createFromBlueprint(blueprint);
+			await this.wrappedGame.loadStage(stage);
+			
+			// Update StageManager state
+			stageState.current = blueprint;
+		} catch (e) {
+			console.error(`Failed to load stage ${stageId}`, e);
+		}
+	}
+
+	async nextStage() {
+		if (!this.wrappedGame) {
+			console.error(this.refErrorMessage);
+			return;
+		}
+		
+		// Try to use StageManager first if we have a next stage in state
+		if (stageState.next) {
+			const nextId = stageState.next.id;
+			await StageManager.transitionForward(nextId);
+			// After transition, current is the new stage
+			if (stageState.current) {
+				const stage = await StageFactory.createFromBlueprint(stageState.current);
+				await this.wrappedGame.loadStage(stage);
+				return;
+			}
+		}
+
+		// Fallback to legacy array-based navigation
+		const currentStageId = this.wrappedGame.currentStageId;
+		const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage!.uuid === currentStageId);
+		const nextStage = this.wrappedGame.stages[currentIndex + 1];
+		if (!nextStage) {
+			console.error('next stage called on last stage');
+			return;
+		}
+		await this.wrappedGame.loadStage(nextStage);
 	}
 
 	async goToStage() { }

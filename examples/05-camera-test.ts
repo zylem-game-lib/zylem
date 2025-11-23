@@ -1,5 +1,5 @@
 import { Color, Vector3 } from 'three';
-import { box, Perspectives, game, stage, camera } from '../src/main';
+import { box, Perspectives, createGame, createStage, camera } from '../src/api/main';
 
 const boxes = [
 	await box({
@@ -16,7 +16,7 @@ const boxes = [
 	}),
 ];
 
-const myStage = await stage(
+const myStage = createStage(
 	{ backgroundColor: new Color(Color.NAMES.gainsboro) },
 	camera({
 		position: new Vector3(0, 5, 10),
@@ -26,7 +26,7 @@ const myStage = await stage(
 	})
 );
 
-const cameraTest = await game(
+const cameraTest = createGame(
 	{ id: 'camera-test', debug: true },
 	myStage,
 	...boxes,

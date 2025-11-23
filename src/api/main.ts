@@ -3,7 +3,7 @@ export { createGame } from '../lib/game/game';
 export type { ZylemGameConfig } from '../lib/game/game-interfaces';
 export { gameConfig } from '../lib/game/game-config';
 
-export { stage } from '../lib/stage/stage';
+export { createStage } from '../lib/stage/stage';
 export { entitySpawner } from '../lib/stage/entity-spawner';
 export type { StageOptions } from '../lib/stage/zylem-stage';
 

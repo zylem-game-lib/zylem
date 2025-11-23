@@ -1,5 +1,5 @@
 import { Color, Vector3 } from 'three';
-import { game, stage, sphere, camera, Perspectives } from '../src/main';
+import { createGame, createStage, sphere, camera, Perspectives } from '../src/api/main';
 
 // TODO: custom shader and texture for planet
 const planet = await sphere({
@@ -17,13 +17,13 @@ const camera1 = await camera({
 });
 
 // TODO: particle system for stage
-const stage1 = stage({
+const stage1 = createStage({
 	backgroundColor: new Color(Color.NAMES.black),
 }, camera1);
 
 stage1.add(planet);
 
-const game1 = game({
+const game1 = createGame({
 	id: 'zylem-planet-demo',
 	debug: true,
 }, stage1);

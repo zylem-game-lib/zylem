@@ -1,5 +1,5 @@
 import { proxy } from 'valtio/vanilla';
-import { stage, Stage } from '../stage/stage';
+import { createStage, Stage } from '../stage/stage';
 import type { BasicTypes, BaseGlobals, ZylemGameConfig, GameInputConfig } from './game-interfaces';
 
 type InitialDefaults = Partial<ZylemGameConfig<Stage, any, BaseGlobals>>;
@@ -12,7 +12,7 @@ const initialDefaults: () => InitialDefaults = (): InitialDefaults => {
 	return {
 		id: 'zylem',
 		globals: {} as BaseGlobals,
-		stages: [stage()],
+		stages: [createStage()],
 		debug: false,
 		time: 0,
 		input: undefined,
@@ -22,16 +22,6 @@ const initialDefaults: () => InitialDefaults = (): InitialDefaults => {
 const gameDefaultsState = proxy<Partial<ZylemGameConfig<Stage, any, BaseGlobals>>>(
 	{ ...initialDefaults() }
 );
-
-/** Replace multiple defaults at once (shallow merge). */
-function setGameDefaults(partial: Partial<ZylemGameConfig<Stage, any, BaseGlobals>>): void {
-	Object.assign(gameDefaultsState, partial);
-}
-
-/** Reset defaults back to library defaults. */
-function resetGameDefaults(): void {
-	Object.assign(gameDefaultsState, initialDefaults());
-}
 
 /**
  * Get a plain object copy of the current defaults.
@@ -47,7 +37,7 @@ export function getGameDefaultConfig<TGlobals extends Record<string, BasicTypes>
 	return {
 		id: (gameDefaultsState.id as string) ?? 'zylem',
 		globals: (gameDefaultsState.globals as TGlobals) ?? ({} as unknown as TGlobals),
-		stages: (gameDefaultsState.stages as Stage[]) ?? [stage()],
+		stages: (gameDefaultsState.stages as Stage[]) ?? [createStage()],
 		debug: gameDefaultsState.debug,
 		time: gameDefaultsState.time,
 		input: gameDefaultsState.input,

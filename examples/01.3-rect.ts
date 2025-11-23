@@ -1,5 +1,4 @@
-import { game } from '../src/main';
-import { rect } from '../src/lib/entities';
+import { createGame, rect } from '../src/api/main';
 import { Vector2 } from 'three';
 
 const rect1 = await rect({
@@ -27,7 +26,7 @@ rect1.onUpdate(({ me, delta }) => {
 	});
 });
 
-const myGame = game({
+const myGame = createGame({
 	id: 'rect-test',
 	debug: true,
 }, rect1);

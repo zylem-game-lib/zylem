@@ -14,6 +14,7 @@ export class Stage {
 	wrappedStage: ZylemStage | null;
 	options: StageOptionItem[] = [];
 
+	// TODO: these shouldn't be here maybe more like nextFrame(stageInstance, () => {})
 	update: UpdateFunction<ZylemStage> = () => { };
 	setup: SetupFunction<ZylemStage> = () => { };
 	destroy: DestroyFunction<ZylemStage> = () => { };
@@ -24,11 +25,17 @@ export class Stage {
 	}
 
 	async load(id: string, camera?: ZylemCamera | CameraWrapper | null) {
+		stageState.entities = [];
 		this.wrappedStage = new ZylemStage(this.options as StageOptions);
 		this.wrappedStage.wrapperRef = this;
 
 		const zylemCamera = camera instanceof CameraWrapper ? camera.cameraRef : camera;
 		await this.wrappedStage!.load(id, zylemCamera);
+
+		this.wrappedStage!.onEntityAdded((child) => {
+			const next = this.wrappedStage!.buildEntityState(child);
+			stageState.entities = [...stageState.entities, next];
+		}, { replayExisting: true });
 	}
 
 	async addEntities(entities: BaseNode[]) {
@@ -39,15 +46,22 @@ export class Stage {
 	}
 
 	add(...inputs: Array<EntityInput>) {
+		this.addToBlueprints(...inputs);
+		this.addToStage(...inputs);
+	}
+
+	private addToBlueprints(...inputs: Array<EntityInput>) {
+		if (this.wrappedStage) { return; }
+		this.options.push(...(inputs as unknown as StageOptionItem[]));
+	}
+
+	private addToStage(...inputs: Array<EntityInput>) {
+		if (!this.wrappedStage) { return; }
 		this.wrappedStage!.enqueue(...(inputs as any));
 	}
 
 	start(params: SetupContext<ZylemStage>) {
 		this.wrappedStage?.nodeSetup(params);
-		this.wrappedStage!.onEntityAdded((child) => {
-			const next = this.wrappedStage!.buildEntityState(child);
-			stageState.entities = [...stageState.entities, next];
-		}, { replayExisting: true });
 	}
 
 	onUpdate(...callbacks: UpdateFunction<ZylemStage>[]) {
@@ -79,7 +93,7 @@ export class Stage {
 /**
  * Create a stage with optional camera
  */
-export function stage(...options: StageOptions): Stage {
+export function createStage(...options: StageOptions): Stage {
 	const _options = getStageOptions(options);
 	return new Stage([..._options] as StageOptions);
 }

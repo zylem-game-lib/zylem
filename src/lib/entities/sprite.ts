@@ -11,6 +11,7 @@ import { EntityBuilder } from './builder';
 import { EntityCollisionBuilder } from './builder';
 import { createEntity } from './create';
 import { DestroyContext, DestroyFunction, UpdateContext, UpdateFunction } from '../core/base-node-life-cycle';
+import { DebugDelegate } from './delegates/debug';
 
 export type SpriteImage = { name: string; file: string };
 export type SpriteAnimation = {
@@ -172,6 +173,15 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		});
 		this.group?.remove(...this.sprites);
 		this.group?.removeFromParent();
+	}
+
+	buildInfo(): Record<string, any> {
+		const delegate = new DebugDelegate(this as any);
+		const baseInfo = delegate.buildDebugInfo();
+		return {
+			...baseInfo,
+			type: String(ZylemSprite.type),
+		};
 	}
 }
 

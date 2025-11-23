@@ -1,0 +1,1 @@
+{"version":3,"file":"stage-factory.d.ts","sourceRoot":"","sources":["../../../../src/lib/stage/stage-factory.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,cAAc,EAAE,MAAM,oBAAoB,CAAC;AACpD,OAAO,EAAe,KAAK,EAAE,MAAM,SAAS,CAAC;AAG7C,eAAO,MAAM,YAAY;mCACc,cAAc,GAAG,OAAO,CAAC,KAAK,CAAC;CAyBrE,CAAC"}

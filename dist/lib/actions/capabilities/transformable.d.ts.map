@@ -1,1 +1,0 @@
-{"version":3,"file":"transformable.d.ts","sourceRoot":"","sources":["../../../../src/lib/actions/capabilities/transformable.ts"],"names":[],"mappings":"AAAA,OAAO,EAAgB,cAAc,EAAE,cAAc,EAAE,MAAM,YAAY,CAAC;AAC1E,OAAO,EAAiB,eAAe,EAAE,kBAAkB,EAAE,MAAM,aAAa,CAAC;AAEjF;;GAEG;AACH,wBAAgB,iBAAiB,CAChC,CAAC,SAAS,eAAe,GAAG,cAAc,EACzC,MAAM,EAAE,CAAC,GAAG,CAAC,GAAG,cAAc,GAAG,kBAAkB,CAIpD"}

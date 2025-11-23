@@ -2,7 +2,6 @@ import { nanoid as o } from "nanoid";
 class s {
   parent = null;
   children = [];
-  behaviors = [];
   options;
   eid = 0;
   uuid = "";

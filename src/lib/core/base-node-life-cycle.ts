@@ -1,35 +1,10 @@
-import { Vector3 } from 'three';
 import { Inputs } from '../input/input';
+import { IGame, IStage, ICamera } from './interfaces';
 
-export interface IGame<TGlobals extends Record<string, unknown> = any> {
-	start: () => Promise<this>;
-	nextStage: () => Promise<void>;
-	previousStage: () => Promise<void>;
-	reset: () => Promise<void>;
-	pause: () => Promise<void>;
-	resume: () => Promise<void>;
+type GlobalRecord = Record<string, unknown>;
 
-	////////////////////////////////////////////////////
-	end: () => Promise<void>; // TODO: need implementation
-	goToStage: () => void; // TODO: need implementation
-	////////////////////////////////////////////////////
-
-	getGlobal: <K extends keyof TGlobals>(key: K) => TGlobals[K];
-	setGlobal: <K extends keyof TGlobals>(key: K, value: TGlobals[K]) => void;
-}
-
-export interface IStage {
-	onUpdate: (callback: UpdateFunction<IStage>) => void;
-	onSetup: (callback: SetupFunction<IStage>) => void;
-	onDestroy: (callback: DestroyFunction<IStage>) => void;
-}
-
-export interface ICamera {
-	move: (position: Vector3) => void;
-	rotate: (pitch: number, yaw: number, roll: number) => void;
-}
-
-export interface SetupContext<T, TGlobals extends Record<string, unknown> = any> {
+/** Setup */
+export interface SetupContext<T, TGlobals extends GlobalRecord = any> {
 	me: T;
 	globals: TGlobals;
 	inputs?: Inputs;
@@ -38,20 +13,22 @@ export interface SetupContext<T, TGlobals extends Record<string, unknown> = any>
 	game?: IGame<TGlobals>;
 }
 
-export interface SetupFunction<T, TGlobals extends Record<string, unknown> = any> {
+export interface SetupFunction<T, TGlobals extends GlobalRecord = any> {
 	(context: SetupContext<T, TGlobals>): void;
 }
 
-export interface LoadedFunction<T, TGlobals extends Record<string, unknown> = any> {
-	(context: LoadedContext<T, TGlobals>): void;
-}
-
-export interface LoadedContext<T, TGlobals extends Record<string, unknown> = any> {
+/** Loaded */
+export interface LoadedContext<T, TGlobals extends GlobalRecord = any> {
 	me: T;
 	globals: TGlobals;
 }
 
-export type UpdateContext<T, TGlobals extends Record<string, unknown> = any> = {
+export interface LoadedFunction<T, TGlobals extends GlobalRecord = any> {
+	(context: LoadedContext<T, TGlobals>): void;
+}
+
+/** Update */
+export type UpdateContext<T, TGlobals extends GlobalRecord = any> = {
 	me: T;
 	delta: number;
 	inputs: Inputs;
@@ -61,24 +38,26 @@ export type UpdateContext<T, TGlobals extends Record<string, unknown> = any> = {
 	game?: IGame<TGlobals>;
 };
 
-export interface UpdateFunction<T, TGlobals extends Record<string, unknown> = any> {
+export interface UpdateFunction<T, TGlobals extends GlobalRecord = any> {
 	(context: UpdateContext<T, TGlobals>): void;
 }
 
-export interface DestroyContext<T, TGlobals extends Record<string, unknown> = any> {
+/** Destroy */
+export interface DestroyContext<T, TGlobals extends GlobalRecord = any> {
 	me: T;
 	globals: TGlobals;
 }
 
-export interface DestroyFunction<T, TGlobals extends Record<string, unknown> = any> {
+export interface DestroyFunction<T, TGlobals extends GlobalRecord = any> {
 	(context: DestroyContext<T, TGlobals>): void;
 }
 
-export interface CleanupFunction<T, TGlobals extends Record<string, unknown> = any> {
-	(context: CleanupContext<T, TGlobals>): void;
-}
-
-export interface CleanupContext<T, TGlobals extends Record<string, unknown> = any> {
+/** Cleanup */
+export interface CleanupContext<T, TGlobals extends GlobalRecord = any> {
 	me: T;
 	globals: TGlobals;
+}
+
+export interface CleanupFunction<T, TGlobals extends GlobalRecord = any> {
+	(context: CleanupContext<T, TGlobals>): void;
 }

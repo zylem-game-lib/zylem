@@ -1,0 +1,1 @@
+{"version":3,"file":"input-provider.d.ts","sourceRoot":"","sources":["../../../../src/lib/input/input-provider.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AAEvC,MAAM,WAAW,aAAa;IAC7B,QAAQ,CAAC,KAAK,EAAE,MAAM,GAAG,OAAO,CAAC,YAAY,CAAC,CAAC;IAC/C,WAAW,IAAI,OAAO,CAAC;IACvB,OAAO,IAAI,MAAM,CAAC;CAClB"}

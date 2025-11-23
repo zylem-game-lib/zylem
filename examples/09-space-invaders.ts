@@ -1,6 +1,6 @@
 /// <reference types="@zylem/assets" />
 import { Color, Vector2, Vector3 } from 'three';
-import { camera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, stage, text } from '../src/api/main';
+import { camera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, createStage, text } from '../src/api/main';
 import { boundary2d } from '../src/lib/actions/behaviors/boundaries/boundary';
 import { movementSequence2D } from '../src/lib/actions/behaviors/movement/movement-sequence-2d';
 import { ZylemSprite } from '../src/lib/entities/sprite';
@@ -99,7 +99,7 @@ const camera1 = camera({
 	perspective: Perspectives.Fixed2D,
 });
 
-const stage1 = stage({
+const stage1 = createStage({
 	backgroundColor: new Color(Color.NAMES.black),
 }, camera1, ...enemies, player);
 

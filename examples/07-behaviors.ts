@@ -1,15 +1,16 @@
 /// <reference types="@zylem/assets" />
 
 import { ArrowHelper, Vector3 } from 'three';
-import { createGame, stage, zone } from '../src/api/main';
+import { createGame, createStage, zone } from '../src/api/main';
 import { rotateInDirection } from '../src/lib/actions/capabilities/rotatable';
 import { move, resetVelocity } from '../src/lib/actions/capabilities/moveable';
 import { Ray } from '@dimforge/rapier3d-compat';
 import { playgroundPlane, playgroundActor, playgroundPlatforms } from './utils';
 import { StageEntity } from '../src/lib/interfaces/entity';
 import skybox from '@zylem/assets/3d/skybox/default.png';
+import { SetupContext, UpdateContext } from '../src/lib/core/base-node-life-cycle';
 
-const stage1 = await stage({
+const stage1 = await createStage({
 	gravity: new Vector3(0, -9.82, 0),
 	backgroundImage: skybox,
 });
@@ -40,7 +41,7 @@ const endingZone = await zone({
 });
 
 let counter = 0;
-platforms[4].update = ({ delta }) => {
+platforms[4].update = ({ delta }: UpdateContext<any>) => {
 	counter += delta;
 	if (counter > 3) {
 		// destroy(platforms[4]);
@@ -72,27 +73,28 @@ let lastMovement = new Vector3();
 let playerForce = new Vector3();
 
 let rayLength = 1;
-let rapierRay;
-let arrow;
+let rapierRay: Ray;
+let arrow: ArrowHelper;
 
 let grounded = false;
 let jumping = false;
 let jumpStart = 5;
 const maxJumpHeight = 12;
 
-testGame.setup = ({ camera }) => {
-	if (player.group && camera && !camera.target) {
-		camera.target = player as unknown as StageEntity;
+testGame.setup = ({ camera }: SetupContext<any>) => {
+	if (player.group && camera && !(camera as any).target) {
+		(camera as any).target = player as unknown as StageEntity;
 	}
 }
 
-testGame.update = ({ inputs, delta }) => {
+testGame.update = ({ inputs, delta }: UpdateContext<any>) => {
 	const { p1 } = inputs;
 
 	if (!rapierRay) {
 		// Ray casting for ground detection
 		// @ts-ignore
-		const rayOrigin = player.body.translation();
+		const translation = player.body.translation();
+		const rayOrigin = new Vector3(translation.x, translation.y, translation.z);
 		const rayDirection = new Vector3(0, -1, 0); // Downward
 		rapierRay = new Ray(
 			{ x: rayOrigin.x, y: rayOrigin.y, z: rayOrigin.z },
@@ -109,7 +111,7 @@ testGame.update = ({ inputs, delta }) => {
 	const rayOrigin = player.body.translation();
 	const rayDirection = new Vector3(0, -1, 0); // Downward
 	rapierRay.origin = rayOrigin;
-	rapierRay.direction = rayDirection;
+	rapierRay.dir = rayDirection;
 	if (stage1.wrappedStage!.world) {
 		stage1.wrappedStage!.world.world.castRay(rapierRay, rayLength, true, undefined, undefined, undefined, undefined, (collider) => {
 			// @ts-ignore

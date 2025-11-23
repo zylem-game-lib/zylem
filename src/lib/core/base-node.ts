@@ -1,4 +1,3 @@
-import { Behavior } from "~/lib/actions/behaviors/behavior";
 import {
 	CleanupContext,
 	CleanupFunction,
@@ -13,13 +12,13 @@ import {
 } from "./base-node-life-cycle";
 import { DEBUG_FLAG } from "./flags";
 import { nanoid } from "nanoid";
+import { NodeInterface } from "./node-interface";
 
 export type BaseNodeOptions<T = any> = BaseNode | Partial<T>;
 
-export abstract class BaseNode<Options = any, T = any> {
-	protected parent: BaseNode | null = null;
-	protected children: BaseNode[] = [];
-	public behaviors: Behavior[] = [];
+export abstract class BaseNode<Options = any, T = any> implements NodeInterface {
+	protected parent: NodeInterface | null = null;
+	protected children: NodeInterface[] = [];
 	public options: Options;
 	public eid: number = 0;
 	public uuid: string = '';
@@ -40,20 +39,20 @@ export abstract class BaseNode<Options = any, T = any> {
 		this.uuid = nanoid();
 	}
 
-	public setParent(parent: BaseNode | null): void {
+	public setParent(parent: NodeInterface | null): void {
 		this.parent = parent;
 	}
 
-	public getParent(): BaseNode | null {
+	public getParent(): NodeInterface | null {
 		return this.parent;
 	}
 
-	public add(baseNode: BaseNode): void {
+	public add(baseNode: NodeInterface): void {
 		this.children.push(baseNode);
 		baseNode.setParent(this);
 	}
 
-	public remove(baseNode: BaseNode): void {
+	public remove(baseNode: NodeInterface): void {
 		const index = this.children.indexOf(baseNode);
 		if (index !== -1) {
 			this.children.splice(index, 1);
@@ -61,7 +60,7 @@ export abstract class BaseNode<Options = any, T = any> {
 		}
 	}
 
-	public getChildren(): BaseNode[] {
+	public getChildren(): NodeInterface[] {
 		return this.children;
 	}
 

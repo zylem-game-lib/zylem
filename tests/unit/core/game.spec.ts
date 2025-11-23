@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, stage } from '@zylem/game-lib';
+import { createGame, createStage } from '@zylem/game-lib';
 
 describe('create a basic game', () => {
 	it('default configuration', () => {
@@ -8,9 +8,9 @@ describe('create a basic game', () => {
 	});
 	it('should create a game with multiple stages', async () => {
 		const result = createGame(
-			stage(),
-			stage(),
-			stage()
+			createStage(),
+			createStage(),
+			createStage()
 		);
 		expect(result.options.length).toEqual(3);
 	});

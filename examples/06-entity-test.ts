@@ -1,17 +1,18 @@
-import { game, stage, box, plane, sphere, sprite, zone } from '../src/main';
+import { createGame, createStage, box, plane, sphere, sprite, zone } from '../src/api/main';
 import { Vector3, Vector2 } from 'three';
 import { playgroundActor } from './utils';
+import { SetupContext, UpdateContext } from '../src/lib/core/base-node-life-cycle';
 
 import grassPath from '@zylem/assets/3d/textures/grass.jpg';
 import woodPath from '@zylem/assets/3d/textures/wood-box.jpg';
 import marsSurfacePath from '@zylem/assets/3d/textures/mars-surface.jpg';
 import rainManPath from '@zylem/assets/2d/rain-man.png';
 
-const stage1 = stage({ gravity: new Vector3(0, -9.82, 0) });
+const stage1 = createStage({ gravity: new Vector3(0, -9.82, 0) });
 
-stage1.setup = ({ camera }) => {
-	camera?.camera.position.set(0, 10, 40);
-	camera?.camera.lookAt(0, 0, 0);
+stage1.setup = ({ camera }: SetupContext<any>) => {
+	(camera as any)?.camera.position.set(0, 10, 40);
+	(camera as any)?.camera.lookAt(0, 0, 0);
 };
 
 const myBox = await box({
@@ -23,7 +24,7 @@ const myBox = await box({
 
 let counter = 0;
 
-myBox.update = ({ delta }) => {
+myBox.update = ({ delta }: UpdateContext<any>) => {
 	counter += delta;
 	// console.log('counter', counter);
 	if (counter > 3) {
@@ -61,15 +62,15 @@ const myActor = await playgroundActor('mascot');
 const myZone = await zone({
 	position: { x: 14, y: 3, z: 3 },
 	size: new Vector3(5, 5, 10),
-	onEnter: ({ self, visitor, globals }) => {
+	onEnter: ({ self, visitor, globals }: any) => {
 		console.log('entered', visitor, globals);
 	},
-	onExit: ({ self, visitor, globals }) => {
+	onExit: ({ self, visitor, globals }: any) => {
 		console.log('exited', visitor, globals);
 	},
 });
 
-const testGame = game(
+const testGame = createGame(
 	{ id: 'zylem', debug: true },
 	stage1,
 	myBox,

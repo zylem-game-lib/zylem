@@ -2,6 +2,7 @@ import { ShaderMaterial as s } from "three";
 import { position as a, scale as o, rotation as n } from "../systems/transformable.system.js";
 import { BaseNode as c } from "../core/base-node.js";
 class f extends c {
+  behaviors = [];
   group;
   mesh;
   materials;

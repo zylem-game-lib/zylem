@@ -1,9 +1,9 @@
 import { createGame as m } from "./lib/game/game.js";
 import { gameConfig as a } from "./lib/game/game-config.js";
-import { stage as f } from "./lib/stage/stage.js";
-import { entitySpawner as s } from "./lib/stage/entity-spawner.js";
+import { createStage as f } from "./lib/stage/stage.js";
+import { entitySpawner as n } from "./lib/stage/entity-spawner.js";
 import { vessel as i } from "./lib/core/vessel.js";
-import { camera as c } from "./lib/camera/camera.js";
+import { camera as b } from "./lib/camera/camera.js";
 import { Perspectives as h } from "./lib/camera/perspective.js";
 import { ZylemBox as v, box as d } from "./lib/entities/box.js";
 import { sphere as R } from "./lib/entities/sphere.js";
@@ -11,9 +11,9 @@ import { sprite as E } from "./lib/entities/sprite.js";
 import { plane as w } from "./lib/entities/plane.js";
 import { zone as D } from "./lib/entities/zone.js";
 import { actor as I } from "./lib/entities/actor.js";
-import { text as T } from "./lib/entities/text.js";
-import { rect as A } from "./lib/entities/rect.js";
-import { makeMoveable as M } from "./lib/actions/capabilities/moveable.js";
+import { text as S } from "./lib/entities/text.js";
+import { rect as z } from "./lib/entities/rect.js";
+import { makeMoveable as G } from "./lib/actions/capabilities/moveable.js";
 import { makeRotatable as Z } from "./lib/actions/capabilities/rotatable.js";
 import { makeTransformable as q } from "./lib/actions/capabilities/transformable.js";
 import { ricochet2DInBounds as J } from "./lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.js";
@@ -33,24 +33,24 @@ export {
   I as actor,
   O as boundary2d,
   d as box,
-  c as camera,
+  b as camera,
   m as createGame,
+  f as createStage,
   U as destroy,
-  s as entitySpawner,
+  n as entitySpawner,
   a as gameConfig,
   Y as globalChange,
   _ as globalChanges,
-  M as makeMoveable,
+  G as makeMoveable,
   Z as makeRotatable,
   q as makeTransformable,
   w as plane,
-  A as rect,
+  z as rect,
   L as ricochet2DCollision,
   J as ricochet2DInBounds,
   R as sphere,
   E as sprite,
-  f as stage,
-  T as text,
+  S as text,
   $ as variableChange,
   oo as variableChanges,
   i as vessel,

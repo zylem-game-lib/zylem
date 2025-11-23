@@ -1,10 +1,10 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`create a basic game > default configuration 1`] = `
-m {
+w {
   "destroy": [Function],
   "options": [
-    S {
+    h {
       "destroy": [Function],
       "options": [
         {

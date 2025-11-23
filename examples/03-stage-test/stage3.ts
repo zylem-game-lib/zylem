@@ -1,4 +1,4 @@
-import { stage, box, plane, sphere, sprite, zone } from '@zylem/game-lib';
+import { createStage, box, plane, sphere, sprite, zone } from '@zylem/game-lib';
 import { Vector3, Vector2, Color } from 'three';
 import { playgroundActor } from '../../examples/utils';
 
@@ -47,6 +47,7 @@ const mySprite = await sprite({
 	images: [
 		{ name: 'rain-man', file: rainManPath },
 	],
+	name: 'rain-man',
 });
 
 const myActor = await playgroundActor('mascot');
@@ -62,7 +63,7 @@ const myZone = await zone({
 	},
 });
 
-export const stage3 = stage({
+export const stage3 = createStage({
 	backgroundColor: new Color(Color.NAMES.green),
 	gravity: new Vector3(0, -9.82, 0),
 }, myBox, myPlane, mySphere, mySprite, myActor, myZone);

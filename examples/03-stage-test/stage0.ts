@@ -1,7 +1,7 @@
 import { Color, Vector2 } from "three";
-import { stage, text } from "@zylem/game-lib";
+import { createStage, text } from "@zylem/game-lib";
 
-const startGameText = await text({
+const startGameText = text({
 	name: 'startGameText',
 	text: 'Press A to start the game',
 	fontSize: 20,
@@ -9,6 +9,8 @@ const startGameText = await text({
 	screenPosition: new Vector2(0.5, 0.5),
 });
 
-export const stage0 = stage({
+export const stageZero = createStage({
 	backgroundColor: new Color(Color.NAMES.black),
-}, startGameText);
+});
+
+stageZero.add(startGameText);

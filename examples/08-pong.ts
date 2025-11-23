@@ -1,5 +1,5 @@
 import { Color, Vector3, Vector2 } from 'three';
-import { createGame, box, sphere, stage, camera, zone, globalChanges, text } from '../src/api/main';
+import { createGame, box, sphere, createStage, camera, zone, globalChanges, text } from '../src/api/main';
 import { makeMoveable } from '../src/lib/actions/capabilities/moveable';
 import { ricochet2DInBounds } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
 import { ricochetSound, pingPongBeep } from '../src/lib/sounds';
@@ -113,7 +113,7 @@ const winnerText = await text({
 	screenPosition: new Vector2(0.5, 0.5),
 });
 
-const stage1 = stage({ variables: { screenBounces: 0 } }, camera1);
+const stage1 = createStage({ variables: { screenBounces: 0 } }, camera1);
 const game = createGame({
 	id: 'pong',
 	debug: true,

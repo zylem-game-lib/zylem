@@ -1,10 +1,12 @@
-import { ZylemGame as n } from "./zylem-game.js";
-import { setPaused as o } from "../debug/debug-state.js";
-import { getGlobalState as i, setGlobalState as p } from "./game-state.js";
-import { hasStages as d, convertNodes as l } from "../core/utility/nodes.js";
-import { resolveGameConfig as h } from "./game-config.js";
-import { stage as g } from "../stage/stage.js";
-class m {
+import { ZylemGame as l } from "./zylem-game.js";
+import { setPaused as n } from "../debug/debug-state.js";
+import { getGlobalState as g, setGlobalState as m } from "./game-state.js";
+import { hasStages as h, convertNodes as c } from "../core/utility/nodes.js";
+import { resolveGameConfig as u } from "./game-config.js";
+import { createStage as G } from "../stage/stage.js";
+import { StageManager as i, stageState as s } from "../stage/stage-manager.js";
+import { StageFactory as p } from "../stage/stage-factory.js";
+class w {
   wrappedGame = null;
   pendingGlobalChangeHandlers = [];
   options;
@@ -16,7 +18,7 @@ class m {
   };
   refErrorMessage = "lost reference to game";
   constructor(e) {
-    this.options = e, d(e) || this.options.push(g());
+    this.options = e, h(e) || this.options.push(G());
   }
   async start() {
     const e = await this.load();
@@ -24,7 +26,7 @@ class m {
   }
   async load() {
     console.log("loading game", this.options);
-    const e = await l(this.options), a = h(e), t = new n({
+    const e = await c(this.options), a = u(e), t = new l({
       ...e,
       ...a
     }, this);
@@ -42,10 +44,10 @@ class m {
     }
   }
   async pause() {
-    o(!0);
+    n(!0);
   }
   async resume() {
-    o(!1), this.wrappedGame && (this.wrappedGame.previousTimeStamp = 0, this.wrappedGame.timer.reset());
+    n(!1), this.wrappedGame && (this.wrappedGame.previousTimeStamp = 0, this.wrappedGame.timer.reset());
   }
   async reset() {
     if (!this.wrappedGame) {
@@ -53,18 +55,6 @@ class m {
       return;
     }
     await this.wrappedGame.loadStage(this.wrappedGame.stages[0]);
-  }
-  async nextStage() {
-    if (!this.wrappedGame) {
-      console.error(this.refErrorMessage);
-      return;
-    }
-    const e = this.wrappedGame.currentStageId, a = this.wrappedGame.stages.findIndex((r) => r.wrappedStage.uuid === e), t = this.wrappedGame.stages[a + 1];
-    if (!t) {
-      console.error("next stage called on last stage");
-      return;
-    }
-    await this.wrappedGame.loadStage(t);
   }
   async previousStage() {
     if (!this.wrappedGame) {
@@ -78,19 +68,51 @@ class m {
     }
     await this.wrappedGame.loadStage(t);
   }
+  async loadStageFromId(e) {
+    if (!this.wrappedGame) {
+      console.error(this.refErrorMessage);
+      return;
+    }
+    try {
+      const a = await i.loadStageData(e), t = await p.createFromBlueprint(a);
+      await this.wrappedGame.loadStage(t), s.current = a;
+    } catch (a) {
+      console.error(`Failed to load stage ${e}`, a);
+    }
+  }
+  async nextStage() {
+    if (!this.wrappedGame) {
+      console.error(this.refErrorMessage);
+      return;
+    }
+    if (s.next) {
+      const r = s.next.id;
+      if (await i.transitionForward(r), s.current) {
+        const d = await p.createFromBlueprint(s.current);
+        await this.wrappedGame.loadStage(d);
+        return;
+      }
+    }
+    const e = this.wrappedGame.currentStageId, a = this.wrappedGame.stages.findIndex((r) => r.wrappedStage.uuid === e), t = this.wrappedGame.stages[a + 1];
+    if (!t) {
+      console.error("next stage called on last stage");
+      return;
+    }
+    await this.wrappedGame.loadStage(t);
+  }
   async goToStage() {
   }
   async end() {
   }
   getGlobal(e) {
-    return this.wrappedGame ? this.wrappedGame.getGlobal(e) : i(e);
+    return this.wrappedGame ? this.wrappedGame.getGlobal(e) : g(e);
   }
   setGlobal(e, a) {
     if (this.wrappedGame) {
       this.wrappedGame.setGlobal(e, a);
       return;
     }
-    p(e, a);
+    m(e, a);
   }
   onGlobalChange(e, a) {
     if (this.wrappedGame) {
@@ -100,10 +122,10 @@ class m {
     this.pendingGlobalChangeHandlers.push({ key: e, callback: a });
   }
 }
-function b(...s) {
-  return new m(s);
+function M(...o) {
+  return new w(o);
 }
 export {
-  m as Game,
-  b as createGame
+  w as Game,
+  M as createGame
 };

@@ -1,11 +1,11 @@
-import { game, sphere } from '../src/main';
-import { debugBehavior } from '../src/lib/behaviors/debug/debug';
-
+import { createGame, sphere } from '../src/api/main';
+import { debugBehavior } from '../src/lib/actions/behaviors/debug/debug';
+	
 const ball = await sphere();
 
 ball.addBehavior(debugBehavior());
 
-const myGame = game(
+const myGame = createGame(
 	{
 		debug: true,
 		id: 'behavior-context-test',

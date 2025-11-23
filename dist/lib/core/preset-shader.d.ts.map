@@ -1,1 +1,0 @@
-{"version":3,"file":"preset-shader.d.ts","sourceRoot":"","sources":["../../../src/lib/core/preset-shader.ts"],"names":[],"mappings":"AAUA,MAAM,MAAM,iBAAiB,GAAG;IAAE,QAAQ,EAAE,MAAM,CAAC;IAAC,MAAM,EAAE,MAAM,CAAA;CAAE,CAAC;AAsBrE,MAAM,MAAM,eAAe,GAAG,UAAU,GAAG,MAAM,GAAG,MAAM,GAAG,OAAO,CAAC;AAErE,QAAA,MAAM,SAAS,EAAE,GAAG,CAAC,eAAe,EAAE,iBAAiB,CAAa,CAAC;AAMrE,eAAe,SAAS,CAAC"}

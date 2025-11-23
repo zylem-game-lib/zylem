@@ -1,5 +1,5 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { createGame, box, sphere, stage, camera, zone, text, globalChanges } from '@zylem/game-lib';
+import { createGame, box, sphere, createStage, camera, zone, text, globalChanges } from '../src/api/main';
 import { makeMoveable } from '../src/lib/actions/capabilities/moveable';
 import { ricochet2DCollision } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-collision';
 import { ricochet2DInBounds } from '../src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds';
@@ -126,7 +126,7 @@ const statusText = await text({
 	screenPosition: new Vector2(0.5, 0.5),
 });
 
-const stage1 = stage({}, camera1);
+const stage1 = createStage({}, camera1);
 const game = createGame({
 	id: 'breakout',
 	debug: true,

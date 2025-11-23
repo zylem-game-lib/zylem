@@ -1,7 +1,7 @@
 import { Color, Vector2 } from 'three';
-import { game, stage, box, text, variableChange, makeRotatable } from '../src/main';
+import { createGame, createStage, box, text, variableChange, makeRotatable } from '../src/api/main';
 
-const stage1 = stage({ variables: { totalAngle: 0 } });
+const stage1 = createStage({ variables: { totalAngle: 0 } });
 
 const box1 = makeRotatable(await box({
 	name: 'box1',
@@ -34,5 +34,5 @@ stage1.onUpdate(variableChange('totalAngle', (value) => {
 	rotationsText.updateText(`Rotations: ${rotations.toFixed(2)}`);
 }));
 
-const testGame = game({ id: 'stage-variable-test', debug: true }, stage1, box1, rotationsText);
+const testGame = createGame({ id: 'stage-variable-test', debug: true }, stage1, box1, rotationsText);
 testGame.start();

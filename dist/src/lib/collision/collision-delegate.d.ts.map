@@ -1,0 +1,1 @@
+{"version":3,"file":"collision-delegate.d.ts","sourceRoot":"","sources":["../../../../src/lib/collision/collision-delegate.ts"],"names":[],"mappings":"AACA,wBAAgB,0BAA0B,CAAC,GAAG,EAAE,GAAG,GAAG,GAAG,IAAI,wBAAwB,CAEpF;AAED,MAAM,WAAW,wBAAwB;IACxC,mBAAmB,CAAC,MAAM,EAAE,GAAG,GAAG,OAAO,CAAC;IAC1C,uBAAuB,CAAC,MAAM,EAAE,GAAG,GAAG,IAAI,CAAC;CAC3C"}

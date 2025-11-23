@@ -1,5 +1,5 @@
 import { proxy as i } from "valtio/vanilla";
-import { stage as e } from "../stage/stage.js";
+import { createStage as e } from "../stage/stage.js";
 const a = () => ({
   id: "zylem",
   globals: {},

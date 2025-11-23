@@ -312,7 +312,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		const eid = addEntity(this.ecs);
 		entity.eid = eid;
 		this.scene.addEntity(entity);
+		// @ts-ignore
 		if (child.behaviors) {
+			// @ts-ignore
 			for (let behavior of child.behaviors) {
 				addComponent(this.ecs, behavior.component, entity.eid);
 				const keys = Object.keys(behavior.values);

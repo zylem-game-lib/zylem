@@ -4,7 +4,7 @@
 // TODO: need to create a material map for reused materials
 
 import { Color, Vector2, Vector3 } from 'three';
-import { game, stage, box, sphere, camera } from '../src/main';
+import { createGame, createStage, box, sphere, camera } from '../src/api/main';
 import { plane, ZylemSphere } from '../src/lib/entities';
 
 import rainManPath from '@zylem/assets/2d/rain-man.png';
@@ -66,7 +66,7 @@ for (let k = 0; k < 5; k++) {
 			const key = colorKeys.at(Math.floor(Math.random() * totalColors)) ?? '';
 			const s = await sphere({
 				collision: { static: false },
-				material: { color: Color.NAMES[key] },
+				material: { color: new Color(Color.NAMES[key as keyof typeof Color.NAMES]) },
 				radius: 0.5 + Math.random() * 3,
 				position: { x: (j * 5) - 5, y: i + 5 + (i * 5), z: 10 + k * 5 },
 			});
@@ -76,9 +76,9 @@ for (let k = 0; k < 5; k++) {
 }
 
 
-const example = game(
+const example = createGame(
 	{ id: 'stress-test', debug: true },
-	stage(
+	createStage(
 		{ gravity: new Vector3(0, -9.81, 0) },
 		camera({
 			position: new Vector3(0, 25, 40),
