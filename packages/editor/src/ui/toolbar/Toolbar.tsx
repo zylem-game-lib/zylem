@@ -7,8 +7,16 @@ import Pause from 'lucide-solid/icons/pause';
 import Play from 'lucide-solid/icons/play';
 import type { Component } from 'solid-js';
 import './Toolbar.css';
-import { DebugTools, setDebugTool, togglePause } from '../../debug/debug-state';
+import {
+  setDebugTool,
+  setPaused,
+  debugState,
+} from '../../../../game-lib/src/lib/debug/debug-state';
 import { debugStore } from '../../debug/debug-store';
+
+const togglePause = () => {
+  setPaused(!debugState.paused);
+};
 
 export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
   return (
@@ -18,7 +26,7 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
           <Button.Root
             aria-label="Close"
             onClick={() => {
-              setDebugTool(DebugTools.NONE);
+              setDebugTool('none');
               props.onClose?.();
             }}
             class="zylem-debug-toolbar-btn zylem-debug-button"
@@ -38,14 +46,10 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
           <Button.Root
             aria-label="Delete"
             onClick={() =>
-              setDebugTool(
-                debugStore.tool === DebugTools.DELETE
-                  ? DebugTools.NONE
-                  : DebugTools.DELETE,
-              )
+              setDebugTool(debugStore.tool === 'delete' ? 'none' : 'delete')
             }
             class={`zylem-debug-toolbar-btn zylem-debug-button ${
-              debugStore.tool === DebugTools.DELETE ? 'selected' : ''
+              debugStore.tool === 'delete' ? 'selected' : ''
             }`}
           >
             <Trash2 class="zylem-debug-icon" />
@@ -64,13 +68,11 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
             aria-label="Add"
             onClick={() =>
               setDebugTool(
-                debugStore.tool === DebugTools.ADD
-                  ? DebugTools.NONE
-                  : DebugTools.ADD,
+                debugStore.tool === 'translate' ? 'none' : 'translate',
               )
             }
             class={`zylem-debug-toolbar-btn zylem-debug-button ${
-              debugStore.tool === DebugTools.ADD ? 'selected' : ''
+              debugStore.tool === 'translate' ? 'selected' : ''
             }`}
           >
             <Plus class="zylem-debug-icon" />
@@ -88,14 +90,10 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
           <Button.Root
             aria-label="Select"
             onClick={() =>
-              setDebugTool(
-                debugStore.tool === DebugTools.SELECT
-                  ? DebugTools.NONE
-                  : DebugTools.SELECT,
-              )
+              setDebugTool(debugStore.tool === 'select' ? 'none' : 'select')
             }
             class={`zylem-debug-toolbar-btn zylem-debug-button ${
-              debugStore.tool === DebugTools.SELECT ? 'selected' : ''
+              debugStore.tool === 'select' ? 'selected' : ''
             }`}
           >
             <MousePointer class="zylem-debug-icon" />
