@@ -1,63 +1,57 @@
-# Zylem
+# Zylem Monorepo
 
 A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.
 
-**Why Zylem?**
+## 📦 Packages
 
-I wanted to build something easy to jump into and deploy while still only writing code (no complex game IDEs).
+This is a pnpm workspace monorepo containing:
 
-**Who should use Zylem?**
+- **[@zylem/game-lib](./packages/game-lib)** - Core game engine library (published to npm)
+- **[@zylem/editor](./packages/editor)** - SolidJS-based debug UI and editor
+- **[@zylem/examples](./packages/examples)** - Example applications and playground
+- **[@zylem/spacetime-server](./packages/server)** - SpacetimeDB multiplayer server (scaffold)
 
-This library is intended for hobbyist developers who want to play with 3D web technologies to build a game.
+## 🚀 Quick Start
 
-**What does Zylem do?**
-
-The goal is to give you tools to build simple 3D games. It's basically comprised of:
-
-- Rendering via ThreeJS with some capability to handle postprocessing built-in. [ThreeJS](https://threejs.org/)
-- Collision handling, triggers, and rigid body physics via RapierRS [RapierRS](https://rapier.rs/)
-- Game state management with Valtio [Valtio](https://valtio.dev/)
-- Simplified input handling (gamepad, keyboard, mouse)
-
->Note: This project is still in alpha. There are unfinished features and some APIs that may change.
-
-## Installation
+### Installation
 
 ```bash
 pnpm install
 ```
 
+### Development
+
 ```bash
-npm run dev
+# Start the editor dev server
+pnpm dev:editor
+
+# Start the examples playground
+pnpm dev:examples
+
+# Build the game library
+pnpm build:lib
+
+# Run tests
+pnpm test
+
+# Type check all packages
+pnpm typecheck
+
+# Lint all packages
+pnpm lint
 ```
 
-## Getting started with a basic game
+## 🎮 Using the Library
 
-[Basic example](https://github.com/zylem-game-lib/zylem-basic)
+The `@zylem/game-lib` package can be installed in any project:
 
-```html
-<!DOCTYPE html>
-<html lang="en">
- <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zylem - Basic Usage</title>
-  <link rel="stylesheet" href="./index.css" />
- </head>
- <body>
-  <script src="./src/index.ts" type="module"></script>
- </body>
-</html>
+```bash
+npm install @zylem/game-lib
 ```
+
+### Basic Example
 
 ```typescript
-/**
- * @author: Tim Cool
- * 
- * @description: basic ball movement
- * the ball can be controlled with the arrow keys or gamepad
- * the ball cannot go outside the boundaries
-*/
 import { boundary2d, createGame, makeMoveable, sphere } from '@zylem/game-lib';
 
 // Creates a moveable sphere
@@ -65,29 +59,52 @@ const ball = makeMoveable(await sphere());
 
 // when the ball is updated, move it based on the inputs
 ball.onUpdate(({ me, inputs, delta }) => {
- // get the horizontal and vertical inputs from player one's controller
- const { Horizontal, Vertical } = inputs.p1.axes;
- // set the speed of the ball based on the delta time for smoother movement
- const speed = 600 * delta;
- // move the ball based on the inputs and the speed
- me.moveXY(
-  Horizontal.value * speed,
-  -Vertical.value * speed
- );
+  const { Horizontal, Vertical } = inputs.p1.axes;
+  const speed = 600 * delta;
+  me.moveXY(Horizontal.value * speed, -Vertical.value * speed);
 });
 
 // add a boundary behavior to the ball
 ball.addBehavior(
- boundary2d({
-  boundaries: {
-   top: 3,
-   bottom: -3,
-   left: -6,
-   right: 6,
-  },
- })
+  boundary2d({
+    boundaries: { top: 3, bottom: -3, left: -6, right: 6 },
+  }),
 );
 
 // start the game with the ball
 createGame(ball).start();
 ```
+
+## 🏗️ Monorepo Structure
+
+- ⚡ **pnpm workspaces** - Fast dependency management with instant local linking
+- 🧠 **TypeScript project references** - Real-time type sharing across packages
+- 🔥 **Biome** - Modern linting and formatting
+- 📦 **tsup** - Fast library bundling
+- 🎨 **SolidJS + Valtio** - Reactive editor UI with shared state
+
+### Why Monorepo?
+
+- ✅ Zero version drift between packages
+- ✅ Instant type updates across editor and library
+- ✅ Unified development environment
+- ✅ No constant publishing during development
+
+## 🛠️ Technology Stack
+
+- **Rendering**: ThreeJS [ThreeJS](https://threejs.org/)
+- **Physics**: RapierRS [RapierRS](https://rapier.rs/)
+- **State Management**: Valtio [Valtio](https://valtio.dev/)
+- **ECS**: bitECS
+- **UI Framework**: SolidJS
+- **Build Tool**: Vite + tsup
+
+## 📝 License
+
+MIT - See [LICENSE](./LICENSE)
+
+## 👨‍💻 Author
+
+Tim Cool - [@tcool86](https://github.com/tcool86)
+
+> Note: This project is still in alpha. There are unfinished features and some APIs that may change.

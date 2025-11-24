@@ -1,0 +1,11 @@
+{
+  "name": "@zylem/spacetime-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "SpacetimeDB server module for Zylem multiplayer - placeholder",
+  "scripts": {
+    "dev": "echo 'SpacetimeDB server - not yet configured'",
+    "publish": "echo 'SpacetimeDB publish - not yet configured'"
+  }
+}
