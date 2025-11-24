@@ -6,7 +6,7 @@
  */
 
 import { subscribe } from 'valtio/vanilla';
-import { debugState } from './debug-state';
+import { debugState } from '../../../game-lib/src/lib/debug/debug-state';
 
 let debugModuleLoaded = false;
 
@@ -26,11 +26,11 @@ async function loadDebugModule(): Promise<void> {
 }
 
 subscribe(debugState, async () => {
-	if (debugState.on && !debugModuleLoaded) {
+	if (debugState.enabled && !debugModuleLoaded) {
 		await loadDebugModule();
 	}
 });
 
-if (debugState.on && !debugModuleLoaded) {
+if (debugState.enabled && !debugModuleLoaded) {
 	loadDebugModule();
 } 

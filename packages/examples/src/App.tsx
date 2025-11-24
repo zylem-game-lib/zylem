@@ -1,4 +1,10 @@
-import { Component, createSignal, For, createEffect } from 'solid-js';
+import {
+  Component,
+  createSignal,
+  For,
+  createEffect,
+  onCleanup,
+} from 'solid-js';
 import { ZylemGameElement } from '@zylem/game-lib';
 
 // Manually register web component if not already registered
@@ -79,30 +85,29 @@ const App: Component = () => {
 const ExampleRunner: Component<{ example: any }> = (props) => {
   let gameElement: any;
   let editorElement: any;
+  let currentGame: any = null;
   const [loading, setLoading] = createSignal(false);
   const [progress, setProgress] = createSignal(0);
   const [message, setMessage] = createSignal('');
 
   const loadExample = async (path: string) => {
-    setLoading(true);
+    setLoading(false);
     setProgress(0);
     setMessage('Loading example...');
 
+    // TODO: custom element callback doesn't work
     try {
-      // Dynamic import
-      // Note: Vite needs to know about these imports.
-      // Since they are in the same directory, we might need a glob import or specific switch.
-      // For now, let's try explicit switch or a map if dynamic import fails.
-
       // Load the module dynamically using the config
       const module = await props.example.load();
 
       const game = module.default;
 
       if (gameElement && game) {
+        // Store reference to current game for cleanup
+        currentGame = game;
+
         // Set the game on the element (this injects the container)
         gameElement.game = game;
-
         // Subscribe to loading events BEFORE starting the game
         game.onLoading((event: any) => {
           console.log('Loading event:', event);
@@ -124,11 +129,19 @@ const ExampleRunner: Component<{ example: any }> = (props) => {
     }
   };
 
-  // Load example on mount and when example changes
+  // Load example when example changes, with proper cleanup
   createEffect(() => {
     if (props.example) {
       loadExample(props.example.path);
     }
+
+    // Cleanup previous game when switching examples
+    onCleanup(() => {
+      if (currentGame && typeof currentGame.stop === 'function') {
+        currentGame.stop();
+      }
+      currentGame = null;
+    });
   });
 
   return (

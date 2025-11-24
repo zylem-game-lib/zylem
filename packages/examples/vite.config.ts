@@ -25,6 +25,7 @@ export default defineConfig({
 			'@lib/ui': path.resolve(__dirname, '../editor/src/ui'),
 
 			// Alias for game-lib internals (general pattern - must come after specific @lib/* patterns)
+			// Using explicit wildcard-style aliases to match tsconfig.json patterns
 			'@lib': path.resolve(__dirname, '../game-lib/src/lib'),
 			'@interfaces': path.resolve(__dirname, '../game-lib/src/lib/interfaces'),
 			'@state': path.resolve(__dirname, '../game-lib/src/state'),

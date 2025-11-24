@@ -1,0 +1,1 @@
+import{z as a,a as e}from"./game-v6-6msmH.js";import"./index-BD54UopH.js";const i=()=>({id:"zylem",globals:{},stages:[e()],debug:!1,time:0,input:void 0}),t=a({...i()});function l(){return{id:t.id??"zylem",globals:t.globals??{},stages:t.stages??[e()],debug:t.debug,time:t.time,input:t.input}}export{l as getGameDefaultConfig};
