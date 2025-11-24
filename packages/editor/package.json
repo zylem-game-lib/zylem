@@ -1,0 +1,24 @@
+{
+  "name": "@zylem/editor",
+  "private": true,
+  "version": "0.5.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@zylem/game-lib": "workspace:*",
+    "solid-js": "^1.9.9",
+    "@solidjs/router": "^0.14.0",
+    "valtio": "^2.1.7",
+    "lucide-solid": "^0.511.0",
+    "@kobalte/core": "^0.13.11"
+  },
+  "devDependencies": {
+    "typescript": "5.8.2",
+    "vite": "7.0.4",
+    "vite-plugin-solid": "^2.11.8"
+  }
+}

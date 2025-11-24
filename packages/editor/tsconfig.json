@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "types": ["vite/client"],
+    "noEmit": true
+  },
+  "include": ["src", "*.html"],
+  "references": [{ "path": "../game-lib" }]
+}

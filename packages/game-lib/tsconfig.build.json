@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "baseUrl": "./",
+    "composite": false,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "types": ["node"],
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "paths": {
+      "~/*": ["src/*"],
+      "@/*": ["src/*"],
+      "@lib/debug/*": ["src/lib/debug/*"],
+      "@lib/ui/*": ["src/lib/ui/*"],
+      "@lib/*": ["src/lib/*"],
+      "@interfaces/*": ["src/lib/interfaces/*"],
+      "@state/*": ["src/state/*"],
+      "@zylem/game-lib": ["src/api/main.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "src/lib/ui/**/*.tsx",
+    "src/lib/debug/**/*.tsx",
+    "src/lib/debug/**/console-store.ts",
+    "src/lib/debug/state-based-debug-loader.ts",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "tests"
+  ]
+}

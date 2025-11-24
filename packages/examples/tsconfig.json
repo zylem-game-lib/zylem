@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "vite-plugin-glsl/ext"],
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@zylem/game-lib": ["../game-lib/src/api/main.ts"],
+      "~/*": ["../game-lib/src/*"],
+      "@/*": ["../game-lib/src/*"],
+      "@lib/debug/*": ["../game-lib/src/lib/debug/*"],
+      "@lib/ui/*": ["../game-lib/src/lib/ui/*"],
+      "@lib/*": ["../game-lib/src/lib/*"],
+      "@interfaces/*": ["../game-lib/src/lib/interfaces/*"],
+      "@state/*": ["../game-lib/src/state/*"]
+    }
+  },
+  "include": ["src", "*.html", "../game-lib/src"]
+}

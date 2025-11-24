@@ -1,0 +1,35 @@
+{
+  "name": "@zylem/examples",
+  "private": true,
+  "version": "0.5.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.11.2",
+    "@solidjs/router": "^0.14.10",
+    "@zylem/assets": "^0.1.1",
+    "@zylem/editor": "workspace:*",
+    "@zylem/game-lib": "workspace:*",
+    "bitecs": "^0.3.40",
+    "howler": "^2.2.4",
+    "nanoid": "^5.1.5",
+    "solid-js": "^1.9.9",
+    "three": "^0.180.0",
+    "valtio": "^2.1.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/three": "0.171.0",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "typescript": "5.8.2",
+    "vite": "7.0.4",
+    "vite-plugin-glsl": "^1.5.4",
+    "vite-plugin-solid": "^2.11.8"
+  }
+}

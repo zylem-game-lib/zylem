@@ -1,145 +1,41 @@
 {
-  "name": "@zylem/game-lib",
+  "name": "zylem-monorepo",
   "version": "0.5.0",
+  "private": true,
   "type": "module",
-  "description": "A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.",
+  "description": "Zylem game library monorepo - TypeScript 2025 Edition",
   "license": "MIT",
   "author": "Tim Cool",
   "repository": {
     "type": "git",
     "url": "https://github.com/zylem-game-lib/zylem.git"
   },
-  "contributors": [
-    {
-      "name": "Tim Cool",
-      "email": "tcoolpg@gmail.com",
-      "url": "https://github.com/tcool86"
-    }
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/main.d.ts",
-      "import": "./dist/main.js",
-      "require": null
-    },
-    "./core": {
-      "types": "./dist/core.d.ts",
-      "import": "./dist/core.js"
-    },
-    "./camera": {
-      "types": "./dist/camera.d.ts",
-      "import": "./dist/camera.js"
-    },
-    "./stage": {
-      "types": "./dist/stage.d.ts",
-      "import": "./dist/stage.js"
-    },
-    "./entities": {
-      "types": "./dist/entities.d.ts",
-      "import": "./dist/entities.js"
-    },
-    "./actions": {
-      "types": "./dist/actions.d.ts",
-      "import": "./dist/actions.js"
-    },
-    "./behaviors": {
-      "types": "./dist/behaviors.d.ts",
-      "import": "./dist/behaviors.js"
-    }
-  },
-  "keywords": [
-    "game",
-    "three",
-    "typescript",
-    "rapier3d",
-    "physics",
-    "framework",
-    "vite",
-    "simple",
-    "interactive"
-  ],
-  "main": "./dist/main.js",
-  "module": "./dist/main.js",
-  "types": "./dist/main.d.ts",
-  "sideEffects": false,
-  "files": [
-    "dist"
-  ],
   "engines": {
     "node": ">=22.12.0",
     "npm": ">=10.0.0",
     "pnpm": ">=10.14.0"
   },
   "scripts": {
-    "build": "VITE_TARGET=lib tsc && vite build",
-    "build:watch": "VITE_TARGET=lib tsc && vite build --watch",
-    "build:preview": "VITE_TARGET=app-prod vite build --outDir dist-preview",
-    "lint": "eslint \"**/*.{ts,tsx}\"",
-    "lint:fix": "eslint \"**/*.{ts,tsx}\" --fix",
-    "test": "npx vitest --reporter=verbose",
-    "coverage": "vitest run --coverage",
-    "start": "vite",
-    "dev": "VITE_TARGET=app-dev vite --host",
-    "serve": "npm run build:preview && vite preview --outDir dist-preview",
-    "docs": "yarn typedoc",
-    "knip": "knip",
-    "test:e2e": "exec playwright test --project=chromium",
-    "test:e2e:debug": "exec playwright test --debug --project=chromium"
-  },
-  "dependencies": {
-    "@dimforge/rapier3d-compat": "^0.11.2",
-    "@kobalte/core": "^0.13.11",
-    "@sinclair/typebox": "^0.34.41",
-    "@types/howler": "^2.2.12",
-    "@zylem/assets": "^0.1.1",
-    "bitecs": "^0.3.40",
-    "howler": "^2.2.4",
-    "idb-keyval": "^6.2.2",
-    "lucide-solid": "^0.511.0",
-    "msgpackr": "^1.11.5",
-    "nanoid": "^5.1.5",
-    "solid-js": "^1.9.9",
-    "stats.js": "^0.17.0",
-    "three": "^0.180.0",
-    "valtio": "^2.1.7"
-  },
-  "peerDependencies": {
-    "@dimforge/rapier3d-compat": "^0.11.2",
-    "bitecs": "^0.3.40",
-    "howler": "^2.2.4",
-    "nanoid": "^5.1.5",
-    "three": "^0.180.0",
-    "valtio": "^2.1.7"
+    "dev:editor": "pnpm --filter @zylem/editor dev",
+    "dev:examples": "pnpm --filter @zylem/examples dev",
+    "dev:server": "pnpm --filter @zylem/spacetime-server dev",
+    "build:lib": "pnpm --filter @zylem/game-lib build",
+    "build:editor": "pnpm --filter @zylem/editor build",
+    "build:examples": "pnpm --filter @zylem/examples build",
+    "build": "pnpm -r build",
+    "test": "pnpm --filter @zylem/game-lib test",
+    "test:e2e": "pnpm --filter @zylem/examples test:e2e",
+    "coverage": "pnpm --filter @zylem/game-lib coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r exec rm -rf dist node_modules",
+    "install:all": "pnpm install"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.1",
-    "@rollup/plugin-typescript": "^11.1.6",
-    "@rollup/pluginutils": "^5.3.0",
-    "@solidjs/testing-library": "^0.8.10",
-    "@types/node": "^20.19.13",
-    "@types/stats.js": "^0.17.4",
-    "@types/three": "0.171.0",
-    "@typescript-eslint/eslint-plugin": "^8.42.0",
-    "@typescript-eslint/parser": "^8.42.0",
-    "@vitest/browser": "^3.2.4",
-    "@vitest/browser-playwright": "^4.0.8",
-    "@vitest/coverage-v8": "^2.1.9",
-    "esbuild": "^0.25.9",
-    "eslint": "^9.35.0",
-    "happy-dom": "^18.0.1",
-    "jsdom": "^27.2.0",
-    "knip": "^5.69.1",
-    "rollup": "^4.50.0",
-    "rollup-plugin-typescript-paths": "^1.5.0",
-    "rollup-plugin-visualizer": "^5.14.0",
-    "tslib": "^2.8.1",
-    "tsx": "^4.1.2",
-    "typedoc": "^0.25.13",
-    "typescript": "5.8.2",
-    "vite": "7.0.4",
-    "vite-plugin-glsl": "^1.5.4",
-    "vite-plugin-solid": "^2.11.8",
-    "vitest": "^4.0.9"
+    "@biomejs/biome": "^2.3.7",
+    "tsup": "^8.5.1",
+    "typescript": "5.8.2"
   },
   "packageManager": "pnpm@10.18.3"
 }

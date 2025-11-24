@@ -1,36 +1,25 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["DOM", "DOM.Iterable", "ES2022"],
-    "types": ["vite/client", "node", "vite-plugin-glsl/ext"],
-    "allowJs": false,
-    "skipLibCheck": true,
-    "esModuleInterop": false,
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "moduleDetection": "force",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
+    "moduleResolution": "bundler",
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "baseUrl": "./",
+    "strict": true,
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "composite": true,
     "declaration": true,
     "declarationMap": true,
-    "paths": {
-      "~/*": ["src/*"],
-      "@/*": ["src/*"],
-      "@lib/debug/*": ["src/lib/debug/*"],
-      "@lib/ui/*": ["src/lib/ui/*"],
-      "@lib/*": ["src/lib/*"],
-      "@interfaces/*": ["src/lib/interfaces/*"],
-      "@state/*": ["src/state/*"],
-      "@zylem/game-lib": ["src/api/main.ts"]
-    }
+    "sourceMap": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": false
   },
-  "include": ["./src", "tests", "examples"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist", "packages/**/dist", "packages/**/node_modules"]
 }
