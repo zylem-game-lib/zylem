@@ -3,17 +3,19 @@
   "compilerOptions": {
     "types": ["vite/client", "vite-plugin-glsl/ext"],
     "noEmit": true,
+    "exactOptionalPropertyTypes": false,
     "baseUrl": ".",
     "paths": {
       "@zylem/game-lib": ["../game-lib/src/api/main.ts"],
       "~/*": ["../game-lib/src/*"],
       "@/*": ["../game-lib/src/*"],
-      "@lib/debug/*": ["../game-lib/src/lib/debug/*"],
-      "@lib/ui/*": ["../game-lib/src/lib/ui/*"],
+      "@lib/debug/*": ["../editor/src/debug/*"],
+      "@lib/ui/*": ["../editor/src/ui/*"],
       "@lib/*": ["../game-lib/src/lib/*"],
       "@interfaces/*": ["../game-lib/src/lib/interfaces/*"],
       "@state/*": ["../game-lib/src/state/*"]
     }
   },
-  "include": ["src", "*.html", "../game-lib/src"]
+  "include": ["src", "*.html", "../editor/src"],
+  "references": [{ "path": "../game-lib" }]
 }
