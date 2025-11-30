@@ -22,12 +22,11 @@ export async function convertNodes<TGlobals extends BaseGlobals>(
 	const { getGameDefaultConfig } = await import('../../game/game-default');
 	let converted = { ...getGameDefaultConfig<TGlobals>() } as { id: string, globals: TGlobals, stages: Stage[] };
 	const configurations: ZylemGameConfig<Stage, any, TGlobals>[] = [];
-	// const stageContexts: Stage[] = [];
 	const stages: Stage[] = [];
 	const entities: (BaseNode | GameEntity<any>)[] = [];
+	debugger;
 	Object.values(_options).forEach((node) => {
 		if (node instanceof Stage) {
-			// stageContexts.push(node);
 			stages.push(node);
 		} else if (node instanceof GameEntity) {
 			entities.push(node);

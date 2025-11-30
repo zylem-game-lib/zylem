@@ -70,6 +70,9 @@ importers:
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
+      '@zylem/styles':
+        specifier: workspace:*
+        version: link:../zylem-styles
       bitecs:
         specifier: ^0.3.40
         version: 0.3.40
@@ -185,6 +188,15 @@ importers:
         version: 4.0.9(@types/node@20.19.13)(happy-dom@18.0.1)(jiti@2.6.1)(jsdom@27.2.0)(tsx@4.20.6)
 
   packages/server: {}
+
+  packages/zylem-styles:
+    devDependencies:
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.6)(typescript@5.8.2)
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
 
 packages:
 

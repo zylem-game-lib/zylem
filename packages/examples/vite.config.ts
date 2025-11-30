@@ -34,6 +34,9 @@ export default defineConfig({
 
 			// Alias for examples source
 			'@examples': path.resolve(__dirname, './src'),
+
+			// Alias for zylem-styles
+			'@zylem/styles': path.resolve(__dirname, '../zylem-styles/src'),
 		},
 	},
 	assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb'],
