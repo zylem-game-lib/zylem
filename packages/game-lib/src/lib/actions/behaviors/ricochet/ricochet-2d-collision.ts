@@ -13,6 +13,7 @@ export function ricochet2DCollision(
 	return {
 		type: 'collision',
 		handler: (collisionContext: CollisionContext<MoveableEntity, GameEntity<any>>) => {
+			debugger;
 			_handleRicochet2DCollision(collisionContext, options, callback);
 		},
 	};

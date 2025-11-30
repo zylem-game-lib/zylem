@@ -35,14 +35,14 @@ const App: Component = () => {
     );
 
   return (
-    <div class="flex h-screen w-screen bg-gray-900 text-white font-sans overflow-hidden">
-      <aside class="basis-[19.1%] flex-shrink-0 border-r border-gray-700 flex flex-col bg-gray-900 z-10">
-        <div class="p-4 border-b border-gray-700">
-          <h1 class="text-xl font-bold mb-4 text-blue-400">Zylem Examples</h1>
+    <div class="flex h-screen w-screen bg-zylem-background text-zylem-text font-zylem overflow-hidden">
+      <aside class="basis-[19.1%] flex-shrink-0 border-r border-zylem-background-active flex flex-col bg-zylem-background z-10">
+        <div class="p-4 border-b border-zylem-background-active">
+          <h1 class="text-xl font-bold mb-4 text-zylem-primary">Zylem Examples</h1>
           <input
             type="text"
             placeholder="Search..."
-            class="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+            class="w-full bg-zylem-background-hover border border-zylem-background-active rounded-zylem px-3 py-2 text-sm focus:outline-none focus:border-zylem-primary"
             value={searchTerm()}
             onInput={(e) => setSearchTerm(e.currentTarget.value)}
           />
@@ -51,10 +51,10 @@ const App: Component = () => {
           <For each={filteredExamples()}>
             {(example) => (
               <button
-                class={`w-full text-left px-4 py-3 hover:bg-gray-800 transition-colors border-l-4 ${
+                class={`w-full text-left px-4 py-3 hover:bg-zylem-background-hover transition-colors border-l-4 ${
                   activeExample()?.id === example.id
-                    ? 'bg-gray-800 border-blue-500 text-blue-400'
-                    : 'border-transparent text-gray-300'
+                    ? 'bg-zylem-background-hover border-zylem-primary text-zylem-primary'
+                    : 'border-transparent text-zylem-text/80'
                 }`}
                 onClick={() => setActiveExample(example)}
               >
@@ -69,10 +69,10 @@ const App: Component = () => {
           <ExampleRunner example={activeExample()!} />
         ) : (
           <div class="flex items-center justify-center h-full">
-            <div class="text-center text-gray-400">
-              <p class="text-2xl mb-2">No examples found</p>
+            <div class="text-center text-zylem-text/60">
+              <p class="text-2xl mb-2">Select an example</p>
               <p class="text-sm">
-                Make sure example files exist in the demos directory
+                Use the sidebar to select an example
               </p>
             </div>
           </div>
@@ -106,22 +106,22 @@ const ExampleRunner: Component<{ example: ExampleConfig }> = (props) => {
           <zylem-game class="block w-full h-full" game={example()}></zylem-game>
         )}
         {loading() && (
-          <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div class="absolute inset-0 flex items-center justify-center bg-zylem-background z-50">
             <div class="text-center">
               <div class="text-xl font-bold mb-2">Loading...</div>
-              <div class="w-64 h-2 bg-gray-700 rounded overflow-hidden">
+              <div class="w-64 h-2 bg-zylem-background-hover rounded-zylem overflow-hidden">
                 <div
-                  class="h-full bg-blue-500 transition-all duration-200"
+                  class="h-full bg-zylem-primary transition-all duration-200"
                   style={{ width: `${progress() * 100}%` }}
                 ></div>
               </div>
-              <div class="text-sm text-gray-400 mt-2">{message()}</div>
+              <div class="text-sm text-zylem-text/60 mt-2">{message()}</div>
             </div>
           </div>
         )}
       </div>
       {/* Editor panel temporarily disabled
-        <div class="w-80 border-l border-gray-700 bg-gray-900">
+        <div class="w-80 border-l border-zylem-background-active bg-zylem-background">
             <zylem-editor ref={editorElement} class="block w-full h-full"></zylem-editor>
         </div>
         */}

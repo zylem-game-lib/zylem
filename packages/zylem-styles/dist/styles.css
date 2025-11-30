@@ -1,0 +1,25 @@
+/* src/styles.css */
+:root {
+  --zylem-color-primary: #9fcfff;
+  --zylem-color-primary-hover: #72b3f4;
+  --zylem-color-primary-active: #003c77;
+  --zylem-color-secondary: #10b981;
+  --zylem-color-background: rgba(10, 20, 30, 0.54);
+  --zylem-color-background-hover: #2a6734b3;
+  --zylem-color-background-active: rgba(20, 255, 60, 0.7);
+  --zylem-color-background-active-hover: rgba(20, 255, 60, 0.4);
+  --zylem-color-text: #f3f4f6;
+  --zylem-color-console-background: rgba(20, 40, 60, 0.2);
+  --zylem-color-console-text: #72b3f4;
+  --zylem-spacing-sm: 8px;
+  --zylem-spacing-md: 12px;
+  --zylem-spacing-lg: 16px;
+  --zylem-size-icon: 28px;
+  --zylem-size-icon-sm: 16px;
+  --zylem-size-icon-lg: 96px;
+  --zylem-font-family: "Exo 2", sans-serif;
+  --zylem-font-size: 14px;
+  --zylem-radius: 12px;
+  --zylem-border: 1.5px;
+}
+/*# sourceMappingURL=styles.css.map */

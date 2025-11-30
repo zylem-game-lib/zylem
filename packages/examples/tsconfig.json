@@ -6,6 +6,7 @@
     "exactOptionalPropertyTypes": false,
     "baseUrl": ".",
     "paths": {
+      "@zylem/styles": ["../zylem-styles/src/index.ts"],
       "@zylem/game-lib": ["../game-lib/src/api/main.ts"],
       "~/*": ["../game-lib/src/*"],
       "@/*": ["../game-lib/src/*"],
@@ -16,6 +17,6 @@
       "@state/*": ["../game-lib/src/state/*"]
     }
   },
-  "include": ["src", "*.html", "../editor/src"],
+  "include": ["src", "*.html", "../editor/src", "../zylem-styles/src"],
   "references": [{ "path": "../game-lib" }]
 }
