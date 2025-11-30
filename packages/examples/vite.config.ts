@@ -43,6 +43,7 @@ export default defineConfig({
 	server: {
 		port: 1337,
 		open: true,
+		allowedHosts: ['zylem.onrender.com'],
 	},
 	// Resolve paths relative to the package root where index.html is
 	root: __dirname,
