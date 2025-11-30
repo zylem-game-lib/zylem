@@ -1,3 +1,4 @@
+import { Game } from "@zylem/game-lib";
 
 export interface ExampleConfig {
   id: string;
@@ -12,6 +13,10 @@ const stageTestModules = import.meta.glob('./demos/03-stage-test/03-stage-test.t
 
 // Combine the globs
 const allModules = { ...demoModules, ...stageTestModules };
+
+export type GameModule = {
+  default: Game<any>;
+};
 
 export const examples: ExampleConfig[] = Object.entries(allModules)
   .map(([path, load]) => {
@@ -36,7 +41,7 @@ export const examples: ExampleConfig[] = Object.entries(allModules)
       id,
       name,
       path,
-      load: load as () => Promise<any>
+      load: load as () => Promise<GameModule>
     };
   })
   .filter((config): config is ExampleConfig => config !== null)

@@ -1,5 +1,4 @@
 import { Game } from '../lib/game/game';
-import { LoadingEvent } from '../lib/stage/zylem-stage';
 
 export class ZylemGameElement extends HTMLElement {
   private _game: Game<any> | null = null;
@@ -17,12 +16,19 @@ export class ZylemGameElement extends HTMLElement {
 
   set game(game: Game<any>) {
     this._game = game;
-    // Inject our container into the game options
     game.options.push({ container: this.container });
+    game.start();
   }
 
   get game(): Game<any> | null {
     return this._game;
+  }
+
+  disconnectedCallback() {
+    if (this._game) {
+      this._game.dispose();
+      this._game = null;
+    }
   }
 }
 

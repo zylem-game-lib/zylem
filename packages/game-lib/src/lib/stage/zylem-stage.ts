@@ -23,6 +23,7 @@ import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
 import { GameEntity } from '../entities/entity';
 import { BaseEntityInterface } from '../types/entity-types';
 import { ZylemCamera } from '../camera/zylem-camera';
+import { LoadingEvent } from '../core/interfaces';
 
 export interface ZylemStageConfig {
 	inputs: Record<string, string[]>;
@@ -42,15 +43,6 @@ export type StageOptions = [] | [Partial<ZylemStageConfig>, ...StageOptionItem[]
 export type StageState = ZylemStageConfig & { entities: GameEntityInterface[] };
 
 const STAGE_TYPE = 'Stage';
-
-export type LoadingEvent = {
-	type: 'start' | 'progress' | 'complete';
-	message?: string;
-	progress?: number; // 0 to 1
-	total?: number;
-	current?: number;
-};
-
 
 /**
  * ZylemStage orchestrates scene, physics world, entities, and lifecycle.

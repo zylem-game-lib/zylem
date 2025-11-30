@@ -3,7 +3,6 @@ import {
   createSignal,
   For,
   createEffect,
-  onCleanup,
 } from 'solid-js';
 import { ZylemGameElement } from '@zylem/game-lib';
 
@@ -22,11 +21,12 @@ declare module 'solid-js' {
   }
 }
 
-import { examples } from './examples-config';
+import { ExampleConfig, examples } from './examples-config';
 
 const App: Component = () => {
-  const [activeExample, setActiveExample] = createSignal(examples[0] || null);
-  const [isSidebarOpen, setIsSidebarOpen] = createSignal(true);
+  const startingExample = examples.find((e) => e.id === 'simple');
+  const [activeExample, setActiveExample] = createSignal(startingExample || null);
+  // const [isSidebarOpen, setIsSidebarOpen] = createSignal(true);
   const [searchTerm, setSearchTerm] = createSignal('');
 
   const filteredExamples = () =>
@@ -36,7 +36,7 @@ const App: Component = () => {
 
   return (
     <div class="flex h-screen w-screen bg-gray-900 text-white font-sans overflow-hidden">
-      <aside class="w-64 border-r border-gray-700 flex flex-col bg-gray-900 z-10">
+      <aside class="basis-[19.1%] flex-shrink-0 border-r border-gray-700 flex flex-col bg-gray-900 z-10">
         <div class="p-4 border-b border-gray-700">
           <h1 class="text-xl font-bold mb-4 text-blue-400">Zylem Examples</h1>
           <input
@@ -64,7 +64,7 @@ const App: Component = () => {
           </For>
         </div>
       </aside>
-      <main class="flex-1 relative flex flex-col">
+      <main class="basis-[80.9%] flex-shrink-0 relative flex flex-col">
         {activeExample() ? (
           <ExampleRunner example={activeExample()!} />
         ) : (
@@ -82,72 +82,29 @@ const App: Component = () => {
   );
 };
 
-const ExampleRunner: Component<{ example: any }> = (props) => {
-  let gameElement: any;
+const ExampleRunner: Component<{ example: ExampleConfig }> = (props) => {
   let editorElement: any;
   let currentGame: any = null;
+  const [example, setExample] = createSignal(null);
   const [loading, setLoading] = createSignal(false);
   const [progress, setProgress] = createSignal(0);
   const [message, setMessage] = createSignal('');
 
-  const loadExample = async (path: string) => {
-    setLoading(false);
-    setProgress(0);
-    setMessage('Loading example...');
-
-    // TODO: custom element callback doesn't work
-    try {
-      // Load the module dynamically using the config
-      const module = await props.example.load();
-
-      const game = module.default;
-
-      if (gameElement && game) {
-        // Store reference to current game for cleanup
-        currentGame = game;
-
-        // Set the game on the element (this injects the container)
-        gameElement.game = game;
-        // Subscribe to loading events BEFORE starting the game
-        game.onLoading((event: any) => {
-          console.log('Loading event:', event);
-          if (event.type === 'progress') {
-            setProgress(event.progress || 0);
-            setMessage(event.message || '');
-          } else if (event.type === 'complete') {
-            setLoading(false);
-          }
-        });
-
-        // Now start the game
-        await game.start();
-      }
-    } catch (err) {
-      console.error('Failed to load example', err);
-      setMessage('Error loading example');
-      setLoading(false);
-    }
-  };
-
-  // Load example when example changes, with proper cleanup
   createEffect(() => {
-    if (props.example) {
-      loadExample(props.example.path);
-    }
-
-    // Cleanup previous game when switching examples
-    onCleanup(() => {
-      if (currentGame && typeof currentGame.stop === 'function') {
-        currentGame.stop();
-      }
-      currentGame = null;
+    setLoading(true);
+    setExample(null);
+    props.example.load().then((gameModule) => {
+      setExample(gameModule.default);
+      setLoading(false);
     });
   });
 
   return (
     <div class="relative w-full h-full flex">
       <div class="flex-1 relative">
-        <zylem-game ref={gameElement} class="block w-full h-full"></zylem-game>
+        {example() && (
+          <zylem-game class="block w-full h-full" game={example()}></zylem-game>
+        )}
         {loading() && (
           <div class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div class="text-center">

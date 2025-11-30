@@ -1,6 +1,6 @@
 import { ZylemGame } from './zylem-game';
 import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
-import { IGame } from '../core/interfaces';
+import { IGame, LoadingEvent } from '../core/interfaces';
 import { setPaused } from '../debug/debug-state';
 import { BaseGlobals } from './game-interfaces';
 import { getGlobalState, setGlobalState } from './game-state';
@@ -9,7 +9,6 @@ import { resolveGameConfig } from './game-config';
 import { createStage } from '../stage/stage';
 import { StageManager, stageState } from '../stage/stage-manager';
 import { StageFactory } from '../stage/stage-factory';
-import { LoadingEvent } from '../stage/zylem-stage';
 
 export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private wrappedGame: ZylemGame<TGlobals> | null = null;
@@ -39,7 +38,6 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	}
 
 	private async load(): Promise<ZylemGame<TGlobals>> {
-		console.log('loading game', this.options);
 		const options = await convertNodes<TGlobals>(this.options);
 		const resolved = resolveGameConfig(options as any);
 		const game = new ZylemGame<TGlobals>({
@@ -151,6 +149,12 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 
 	async end() { }
 
+	dispose() {
+		if (this.wrappedGame) {
+			this.wrappedGame.dispose();
+		}
+	}
+
 	getGlobal<K extends keyof TGlobals>(key: K) {
 		if (this.wrappedGame) {
 			return this.wrappedGame.getGlobal(key);
@@ -175,18 +179,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	}
 
 	onLoading(callback: (event: LoadingEvent) => void) {
-		// We can't easily subscribe to the "current" stage loading if it changes.
-		// But we can try to subscribe to the wrappedGame's current stage loading if it exists.
-		// A better approach might be to have ZylemGame emit it.
 		
-		// For now, let's just check if we have a wrapped game and current stage
-		if (this.wrappedGame) {
-			const stage = this.wrappedGame.currentStage();
-			if (stage) {
-				return stage.onLoading(callback);
-			}
-		}
-		return () => {};
 	}
 }
 
