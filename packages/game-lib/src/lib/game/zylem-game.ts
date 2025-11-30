@@ -44,6 +44,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	aspectRatioDelegate: AspectRatioDelegate | null = null;
 	resolvedConfig: GameConfig | null = null;
 	gameCanvas: GameCanvas | null = null;
+	private animationFrameId: number | null = null;
+	private isDisposed = false;
 
 	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
@@ -194,7 +196,32 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		}
 		this.statsRef && this.statsRef.end();
 		this.outOfLoop();
-		requestAnimationFrame(this.loop.bind(this));
+		if (!this.isDisposed) {
+			this.animationFrameId = requestAnimationFrame(this.loop.bind(this));
+		}
+	}
+
+	dispose() {
+		this.isDisposed = true;
+		if (this.animationFrameId !== null) {
+			cancelAnimationFrame(this.animationFrameId);
+			this.animationFrameId = null;
+		}
+
+		this.unloadCurrentStage();
+
+		if (this.statsRef && this.statsRef.dom && this.statsRef.dom.parentNode) {
+			this.statsRef.dom.parentNode.removeChild(this.statsRef.dom);
+		}
+
+		this.timer.dispose();
+		
+		if (this.customDestroy) {
+			this.customDestroy({
+				me: this,
+				globals: state.globals as unknown as TGlobals
+			});
+		}
 	}
 
 	outOfLoop() {

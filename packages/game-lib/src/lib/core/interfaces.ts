@@ -1,6 +1,14 @@
 import { Vector3 } from 'three';
 import { UpdateFunction, SetupFunction, DestroyFunction } from './base-node-life-cycle';
 
+export type LoadingEvent = {
+	type: 'start' | 'progress' | 'complete';
+	message?: string;
+	progress?: number; // 0 to 1
+	total?: number;
+	current?: number;
+};
+
 export interface IGame<TGlobals extends Record<string, unknown> = any> {
     start: () => Promise<this>;
     nextStage: () => Promise<void>;
@@ -8,6 +16,7 @@ export interface IGame<TGlobals extends Record<string, unknown> = any> {
     reset: () => Promise<void>;
     pause: () => Promise<void>;
     resume: () => Promise<void>;
+    onLoading: (callback: (event: LoadingEvent) => void) => void;
     loadStageFromId: (stageId: string) => Promise<void>;
 
     ////////////////////////////////////////////////////

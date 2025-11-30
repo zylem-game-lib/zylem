@@ -63,7 +63,7 @@ export class GameCanvas {
 		style.display = 'flex';
 		style.alignItems = 'center';
 		style.justifyContent = 'center';
-		style.position = 'fixed';
+		style.position = 'relative';
 		style.inset = '0';
 	}
 
