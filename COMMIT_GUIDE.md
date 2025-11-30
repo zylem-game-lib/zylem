@@ -15,3 +15,4 @@ We use conventional commits to help with release management.
 - `perf`: A code change that improves performance
 - `test`: Adding missing or correcting existing tests
 - `build`: Changes that affect the build system or external dependencies (example scopes: vite, npm, typescript, etc)
+- `refinement`: General improvements to the codebase that do not fall into any of the above categories.

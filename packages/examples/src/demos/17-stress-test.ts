@@ -9,6 +9,7 @@ import { plane } from '@zylem/game-lib';
 
 import rainManPath from '@zylem/assets/2d/rain-man.png';
 import grassNormalPath from '@zylem/assets/3d/textures/grass-normal.png';
+import skybox from '@zylem/assets/3d/skybox/default.png';
 
 const rainMan = rainManPath;
 const grassNormal = grassNormalPath;
@@ -25,6 +26,7 @@ let testBoxes: any[] = [];
 for (let i = 0; i < 20; i++) {
 	for (let j = 0; j < 5; j++) {
 		const nextBox = await box({
+			size: new Vector3(1 + Math.random() * 1, 1 + Math.random() * 1, 1 + Math.random() * 1),
 			position: new Vector3(i - 10, j + 2, 5),
 			material: { shader: 'star' },
 			custom: {
@@ -33,7 +35,7 @@ for (let i = 0; i < 20; i++) {
 		});
 		testBoxes.push(nextBox);
 		const nextBox2 = await sphere({
-			radius: 0.5,
+			radius: 0.25 + Math.random() * 0.5,
 			position: new Vector3(i - 10, 10 + j, 3),
 			material: { shader: 'fire' }
 		});
@@ -45,7 +47,7 @@ const testground = await plane({
 	collision: {
 		static: true,
 	},
-	tile: new Vector2(300, 300),
+	tile: new Vector2(400, 400),
 	position: new Vector3(-10, -1, 0),
 	material: { path: grassNormal, repeat: new Vector2(50, 50) },
 });
@@ -60,15 +62,19 @@ const testSphere = await sphere({
 const spheres: any[] = [];
 const colorKeys = Object.keys(Color.NAMES);
 const totalColors = colorKeys.length - 1;
-for (let k = 0; k < 5; k++) {
-	for (let j = 0; j < 5; j++) {
-		for (let i = 0; i < 5; i++) {
+for (let k = 0; k < 6; k++) {
+	for (let j = 0; j < 6; j++) {
+		for (let i = 0; i < 6; i++) {
+			const useShader = Math.random() < 0.2;
 			const key = colorKeys.at(Math.floor(Math.random() * totalColors)) ?? '';
 			const s = await sphere({
 				collision: { static: false },
-				material: { color: new Color(Color.NAMES[key as keyof typeof Color.NAMES]) },
-				radius: 0.5 + Math.random() * 3,
-				position: { x: (j * 5) - 5, y: i + 5 + (i * 5), z: 10 + k * 5 },
+				material: {
+					color: useShader ? undefined : new Color(Color.NAMES[key as keyof typeof Color.NAMES]),
+					shader: useShader ? 'star' : 'standard'
+				},
+				radius: 0.2 + Math.random() * 1.5,
+				position: { x: (j * 2) - 2, y: i + 2 + (i * 2), z: 10 + k * 2 },
 			});
 			spheres.push(s);
 		}
@@ -79,9 +85,9 @@ for (let k = 0; k < 5; k++) {
 const example = createGame(
 	{ id: 'stress-test', debug: true },
 	createStage(
-		{ gravity: new Vector3(0, -9.81, 0) },
+		{ gravity: new Vector3(0, -9.81, 0), backgroundImage: skybox },
 		camera({
-			position: new Vector3(0, 25, 40),
+			position: new Vector3(0, 10, 25),
 		})
 	),
 	...testBoxes,

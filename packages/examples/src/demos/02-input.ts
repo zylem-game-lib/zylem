@@ -11,7 +11,7 @@ const stage1 = createStage({
 
 const inputText = await text({
 	name: 'inputText',
-	text: '',
+	text: 'Use a gamepad or keyboard to control the game',
 	fontSize: 36,
 	screenPosition: new Vector2(0.5, 0.5),
 });

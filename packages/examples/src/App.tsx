@@ -35,8 +35,11 @@ const App: Component = () => {
     );
 
   return (
-    <div class="flex h-screen w-screen bg-zylem-background text-zylem-text font-zylem overflow-hidden">
-      <aside class="basis-[19.1%] flex-shrink-0 border-r border-zylem-background-active flex flex-col bg-zylem-background z-10">
+    <div class="flex h-screen w-screen bg-zylem-background text-zylem-text font-zylem overflow-hidden relative">
+      {/* Scanline overlay effect */}
+      <div class="overlay absolute inset-0 z-50"></div>
+      
+      <aside class="sidebar basis-[19.1%] flex-shrink-0 flex flex-col z-10">
         <div class="p-4 border-b border-zylem-background-active">
           <h1 class="text-xl font-bold mb-4 text-zylem-primary">Zylem Examples</h1>
           <input
@@ -51,9 +54,9 @@ const App: Component = () => {
           <For each={filteredExamples()}>
             {(example) => (
               <button
-                class={`w-full text-left px-4 py-3 hover:bg-zylem-background-hover transition-colors border-l-4 ${
+                class={`sidebar-item w-full text-left px-4 py-3 transition-colors border-l-4 ${
                   activeExample()?.id === example.id
-                    ? 'bg-zylem-background-hover border-zylem-primary text-zylem-primary'
+                    ? 'active'
                     : 'border-transparent text-zylem-text/80'
                 }`}
                 onClick={() => setActiveExample(example)}

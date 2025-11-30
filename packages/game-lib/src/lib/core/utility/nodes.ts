@@ -24,7 +24,7 @@ export async function convertNodes<TGlobals extends BaseGlobals>(
 	const configurations: ZylemGameConfig<Stage, any, TGlobals>[] = [];
 	const stages: Stage[] = [];
 	const entities: (BaseNode | GameEntity<any>)[] = [];
-	debugger;
+
 	Object.values(_options).forEach((node) => {
 		if (node instanceof Stage) {
 			stages.push(node);

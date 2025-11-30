@@ -1,39 +1,72 @@
 :root {
-  /* Colors */
-  --zylem-color-primary: #9fcfff;
-  --zylem-color-primary-hover: #72b3f4;
-  --zylem-color-primary-active: #003c77;
+  --zylem-color-primary: #61A6E8;
+  --zylem-color-primary-hover: #3B8AD8;
+  --zylem-color-primary-active: #0C6EB8;
 
-  --zylem-color-secondary: #10b981; /* Kept from original as it wasn't in debug set */
+  --zylem-color-accent: #E64534;
 
-  --zylem-color-background: rgba(10, 20, 30, 0.54);
-  --zylem-color-background-hover: #2a6734b3;
-  --zylem-color-background-active: rgba(20, 255, 60, 0.7);
-  --zylem-color-background-active-hover: rgba(20, 255, 60, 0.4);
+  --zylem-color-background: #11151C;
+  --zylem-color-surface: #1A1F27;
+  --zylem-color-surface-hover: #222831;
+  --zylem-color-border: #2D3643;
 
-  --zylem-color-text: #f3f4f6; /* Kept from original */
+  --zylem-color-text: #E6EBEF;
+  --zylem-color-text-secondary: #88929E;
 
-  --zylem-color-console-background: rgba(20, 40, 60, 0.2);
-  --zylem-color-console-text: #72b3f4;
+  --zylem-color-console-background: rgba(20, 40, 60, 0.25);
+  --zylem-color-console-text: #61A6E8;
 
-  /* Spacing */
   --zylem-spacing-sm: 8px;
   --zylem-spacing-md: 12px;
   --zylem-spacing-lg: 16px;
 
-  /* Sizes */
   --zylem-size-icon: 28px;
   --zylem-size-icon-sm: 16px;
   --zylem-size-icon-lg: 96px;
 
-  /* Typography */
   --zylem-font-family: 'Exo 2', sans-serif;
   --zylem-font-size: 14px;
 
-  /* Borders */
   --zylem-radius: 12px;
   --zylem-border: 1.5px;
 }
+
+.selected {
+  background: var(--zylem-color-primary-active);
+  box-shadow: inset 0 0 6px rgba(97,166,232,0.4);
+}
+
+button {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04),
+              inset 0 -1px 0 rgba(0,0,0,0.2);
+}
+
+.overlay {
+  background: linear-gradient(
+    rgba(255,255,255,0.04) 1px,
+    transparent 1px
+  );
+  background-size: 100% 3px;
+  pointer-events: none;
+}
+
+.sidebar {
+  background: var(--zylem-color-surface);
+  border-right: 1px solid var(--zylem-color-border);
+}
+
+.sidebar-item:hover {
+  background: var(--zylem-color-surface-hover);
+}
+
+.sidebar-item.active {
+  background: var(--zylem-color-primary-active);
+  color: white;
+  font-weight: 600;
+  box-shadow: inset 0 0 8px rgba(97,166,232,0.4);
+}
+
+
 
 @layer utilities {
   ::-webkit-scrollbar {

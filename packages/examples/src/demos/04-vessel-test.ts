@@ -1,41 +1,47 @@
-import { createGame, vessel, createStage } from '@zylem/game-lib';
+import { createGame, vessel, createStage, text } from '@zylem/game-lib';
+import marsSurfacePath from '@zylem/assets/3d/textures/mars-surface.jpg';
+import { Vector2 } from 'three';
 
-const test = vessel();
-test.setup = (params: any) => {
-	console.log('setup', params);
+const testVessel = vessel();
+let vesselCounter = 0;
+testVessel.setup = (params: any) => {
+	vesselCounter = 0;
+	vesselTextSetup.updateText(`Vessel was setup ${Math.ceil(vesselCounter)}`);
 }
-test.update = (params: any) => {
-	// console.log('update', params);
+testVessel.update = (params: any) => {
+	vesselCounter += params.delta;
+	vesselTextUpdate.updateText(`Vessel was updated ${Math.ceil(vesselCounter)}`);
 }
-test.destroy = (params: any) => {
-	console.log('destroy', params);
+testVessel.destroy = (params: any) => {
+	vesselTextSetup.updateText(`Vessel was destroyed ${Math.ceil(vesselCounter)}`);
 }
 
-const stage1 = createStage();
+const vesselTextSetup = await text({
+	text: '',
+	stickToViewport: true,
+	screenPosition: new Vector2(0.5, 0.25),
+});
+
+const vesselText = await text({
+	text: 'Hello World',
+	stickToViewport: true,
+	screenPosition: new Vector2(0.5, 0.5),
+});
+
+const vesselTextUpdate = await text({
+	text: '',
+	stickToViewport: true,
+	screenPosition: new Vector2(0.5, 0.75),
+});
+
+const stage1 = createStage({ backgroundImage: marsSurfacePath });
 const testGame = createGame(
 	{ id: 'zylem', debug: true },
 	stage1,
-	test
+	testVessel,
+	vesselText,
+	vesselTextSetup,
+	vesselTextUpdate,
 );
 
-
-
 export default testGame;
-
-
-/**
- * 
- * import { update } from '../src/lib/actions/update';
- * import { sphere } from '../src/lib/entities';
- * const mySphere = await sphere({
- * 	size: new Vector3(4, 4, 4),
- * 	position: { x: 0, y: 0, z: 0 },
- * 	collision: { static: false },
- * 	material: { path: marsSurfacePath },
- * });
- * 
- * update(mySphere, (context) => {
- * 
- * });
- * 
- */
