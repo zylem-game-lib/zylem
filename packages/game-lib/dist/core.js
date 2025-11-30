@@ -3662,7 +3662,7 @@ var GameCanvas = class {
     style.display = "flex";
     style.alignItems = "center";
     style.justifyContent = "center";
-    style.position = "fixed";
+    style.position = "relative";
     style.inset = "0";
   }
   attachAspectRatio(onResize) {
@@ -3726,6 +3726,8 @@ var ZylemGame = class _ZylemGame {
   aspectRatioDelegate = null;
   resolvedConfig = null;
   gameCanvas = null;
+  animationFrameId = null;
+  isDisposed = false;
   static FRAME_LIMIT = 120;
   static FRAME_DURATION = 1e3 / _ZylemGame.FRAME_LIMIT;
   static MAX_DELTA_SECONDS = 1 / 30;
@@ -3862,7 +3864,27 @@ var ZylemGame = class _ZylemGame {
     }
     this.statsRef && this.statsRef.end();
     this.outOfLoop();
-    requestAnimationFrame(this.loop.bind(this));
+    if (!this.isDisposed) {
+      this.animationFrameId = requestAnimationFrame(this.loop.bind(this));
+    }
+  }
+  dispose() {
+    this.isDisposed = true;
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    this.unloadCurrentStage();
+    if (this.statsRef && this.statsRef.dom && this.statsRef.dom.parentNode) {
+      this.statsRef.dom.parentNode.removeChild(this.statsRef.dom);
+    }
+    this.timer.dispose();
+    if (this.customDestroy) {
+      this.customDestroy({
+        me: this,
+        globals: state.globals
+      });
+    }
   }
   outOfLoop() {
     const currentStage = this.currentStage();
@@ -3907,6 +3929,7 @@ async function convertNodes(_options) {
   const configurations = [];
   const stages = [];
   const entities = [];
+  debugger;
   Object.values(_options).forEach((node) => {
     if (node instanceof Stage) {
       stages.push(node);
@@ -4553,7 +4576,6 @@ var Game = class {
     return this;
   }
   async load() {
-    console.log("loading game", this.options);
     const options = await convertNodes(this.options);
     const resolved = resolveGameConfig(options);
     const game = new ZylemGame({
@@ -4650,6 +4672,11 @@ var Game = class {
   }
   async end() {
   }
+  dispose() {
+    if (this.wrappedGame) {
+      this.wrappedGame.dispose();
+    }
+  }
   getGlobal(key) {
     if (this.wrappedGame) {
       return this.wrappedGame.getGlobal(key);
@@ -4671,14 +4698,6 @@ var Game = class {
     this.pendingGlobalChangeHandlers.push({ key, callback });
   }
   onLoading(callback) {
-    if (this.wrappedGame) {
-      const stage = this.wrappedGame.currentStage();
-      if (stage) {
-        return stage.onLoading(callback);
-      }
-    }
-    return () => {
-    };
   }
 };
 function createGame(...options) {

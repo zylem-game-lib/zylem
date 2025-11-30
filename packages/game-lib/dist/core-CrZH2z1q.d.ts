@@ -1,6 +1,6 @@
-import { I as InputGamepad, a as UpdateFunction, e as InputPlayerNumber, f as Inputs, g as ButtonState, A as AnalogState, b as SetupContext, U as UpdateContext, c as DestroyContext, h as GameEntityLifeCycle, d as BaseNode, i as IGame, S as SetupFunction, D as DestroyFunction, L as LoadedContext, C as CleanupContext } from './entity-n1qsMHll.js';
+import { I as InputGamepad, b as UpdateFunction, f as InputPlayerNumber, g as Inputs, h as ButtonState, A as AnalogState, c as SetupContext, U as UpdateContext, d as DestroyContext, i as GameEntityLifeCycle, e as BaseNode, j as IGame, S as SetupFunction, D as DestroyFunction, L as LoadingEvent, k as LoadedContext, C as CleanupContext } from './entity-Xlc2H_ZT.js';
 import { Z as ZylemCamera } from './camera-Dk-fOVZE.js';
-import { B as BaseEntityInterface, a as Stage, L as LoadingEvent } from './stage-B_kwbrgw.js';
+import { B as BaseEntityInterface, a as Stage } from './stage-BkTBKBaN.js';
 import { Color, Vector3 } from 'three';
 import { Vector3 as Vector3$1 } from '@dimforge/rapier3d-compat';
 
@@ -336,6 +336,8 @@ declare class ZylemGame<TGlobals extends BaseGlobals> {
     aspectRatioDelegate: AspectRatioDelegate | null;
     resolvedConfig: GameConfig | null;
     gameCanvas: GameCanvas | null;
+    private animationFrameId;
+    private isDisposed;
     static FRAME_LIMIT: number;
     static FRAME_DURATION: number;
     static MAX_DELTA_SECONDS: number;
@@ -348,6 +350,7 @@ declare class ZylemGame<TGlobals extends BaseGlobals> {
     params(): UpdateContext<ZylemGame<TGlobals>, TGlobals>;
     start(): void;
     loop(timestamp: number): void;
+    dispose(): void;
     outOfLoop(): void;
     getStage(id: string): Stage | undefined;
     currentStage(): Stage | undefined;
@@ -378,10 +381,11 @@ declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
     nextStage(): Promise<void>;
     goToStage(): Promise<void>;
     end(): Promise<void>;
+    dispose(): void;
     getGlobal<K extends keyof TGlobals>(key: K): TGlobals[K];
     setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]): void;
     onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void): void;
-    onLoading(callback: (event: LoadingEvent) => void): () => void;
+    onLoading(callback: (event: LoadingEvent) => void): void;
 }
 /**
  * create a new game

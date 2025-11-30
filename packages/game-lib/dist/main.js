@@ -3760,7 +3760,7 @@ var GameCanvas = class {
     style.display = "flex";
     style.alignItems = "center";
     style.justifyContent = "center";
-    style.position = "fixed";
+    style.position = "relative";
     style.inset = "0";
   }
   attachAspectRatio(onResize) {
@@ -3824,6 +3824,8 @@ var ZylemGame = class _ZylemGame {
   aspectRatioDelegate = null;
   resolvedConfig = null;
   gameCanvas = null;
+  animationFrameId = null;
+  isDisposed = false;
   static FRAME_LIMIT = 120;
   static FRAME_DURATION = 1e3 / _ZylemGame.FRAME_LIMIT;
   static MAX_DELTA_SECONDS = 1 / 30;
@@ -3960,7 +3962,27 @@ var ZylemGame = class _ZylemGame {
     }
     this.statsRef && this.statsRef.end();
     this.outOfLoop();
-    requestAnimationFrame(this.loop.bind(this));
+    if (!this.isDisposed) {
+      this.animationFrameId = requestAnimationFrame(this.loop.bind(this));
+    }
+  }
+  dispose() {
+    this.isDisposed = true;
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    this.unloadCurrentStage();
+    if (this.statsRef && this.statsRef.dom && this.statsRef.dom.parentNode) {
+      this.statsRef.dom.parentNode.removeChild(this.statsRef.dom);
+    }
+    this.timer.dispose();
+    if (this.customDestroy) {
+      this.customDestroy({
+        me: this,
+        globals: state.globals
+      });
+    }
   }
   outOfLoop() {
     const currentStage = this.currentStage();
@@ -4005,6 +4027,7 @@ async function convertNodes(_options) {
   const configurations = [];
   const stages = [];
   const entities = [];
+  debugger;
   Object.values(_options).forEach((node) => {
     if (node instanceof Stage) {
       stages.push(node);
@@ -4651,7 +4674,6 @@ var Game = class {
     return this;
   }
   async load() {
-    console.log("loading game", this.options);
     const options = await convertNodes(this.options);
     const resolved = resolveGameConfig(options);
     const game = new ZylemGame({
@@ -4748,6 +4770,11 @@ var Game = class {
   }
   async end() {
   }
+  dispose() {
+    if (this.wrappedGame) {
+      this.wrappedGame.dispose();
+    }
+  }
   getGlobal(key) {
     if (this.wrappedGame) {
       return this.wrappedGame.getGlobal(key);
@@ -4769,14 +4796,6 @@ var Game = class {
     this.pendingGlobalChangeHandlers.push({ key, callback });
   }
   onLoading(callback) {
-    if (this.wrappedGame) {
-      const stage = this.wrappedGame.currentStage();
-      if (stage) {
-        return stage.onLoading(callback);
-      }
-    }
-    return () => {
-    };
   }
 };
 function createGame(...options) {
@@ -5594,6 +5613,7 @@ function ricochet2DCollision(options = {}, callback) {
   return {
     type: "collision",
     handler: (collisionContext) => {
+      debugger;
       _handleRicochet2DCollision(collisionContext, options, callback);
     }
   };
@@ -5938,6 +5958,55 @@ function _boundary2d(updateContext, options) {
       updateContext
     });
   }
+}
+
+// src/lib/actions/behaviors/movement/movement-sequence-2d.ts
+var STATE_KEY = "__movementSequence2D";
+function movementSequence2D(opts, onStep) {
+  const { sequence, loop = true } = opts;
+  return {
+    type: "update",
+    handler: (ctx) => {
+      const { me, delta } = ctx;
+      if (!sequence || sequence.length === 0) return;
+      const custom = me.custom ?? (me.custom = {});
+      let state2 = custom[STATE_KEY];
+      if (!state2) {
+        state2 = {
+          currentIndex: 0,
+          timeRemaining: sequence[0].timeInSeconds,
+          lastNotifiedIndex: -1,
+          done: false
+        };
+        custom[STATE_KEY] = state2;
+      }
+      if (state2.done) return;
+      let current = sequence[state2.currentIndex];
+      const moveX2 = current.moveX ?? 0;
+      const moveY2 = current.moveY ?? 0;
+      me.moveXY(moveX2, moveY2);
+      if (state2.lastNotifiedIndex !== state2.currentIndex) {
+        state2.lastNotifiedIndex = state2.currentIndex;
+        onStep?.(current, state2.currentIndex, ctx);
+      }
+      let timeLeft = state2.timeRemaining - delta;
+      while (timeLeft <= 0) {
+        const overflow = -timeLeft;
+        state2.currentIndex += 1;
+        if (state2.currentIndex >= sequence.length) {
+          if (!loop) {
+            state2.done = true;
+            me.moveXY(0, 0);
+            return;
+          }
+          state2.currentIndex = 0;
+        }
+        current = sequence[state2.currentIndex];
+        timeLeft = current.timeInSeconds - overflow;
+      }
+      state2.timeRemaining = timeLeft;
+    }
+  };
 }
 
 // src/lib/actions/capabilities/moveable.ts
@@ -6380,9 +6449,16 @@ var ZylemGameElement = class extends HTMLElement {
   set game(game) {
     this._game = game;
     game.options.push({ container: this.container });
+    game.start();
   }
   get game() {
     return this._game;
+  }
+  disconnectedCallback() {
+    if (this._game) {
+      this._game.dispose();
+      this._game = null;
+    }
   }
 };
 customElements.define("zylem-game", ZylemGameElement);
@@ -6410,6 +6486,7 @@ export {
   makeTransformable,
   move,
   moveable,
+  movementSequence2D,
   pingPongBeep,
   plane,
   rect,

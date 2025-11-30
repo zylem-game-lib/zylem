@@ -24,6 +24,7 @@ import { GameEntity } from '../entities/entity';
 import { BaseEntityInterface } from '../types/entity-types';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { LoadingEvent } from '../core/interfaces';
+export type { LoadingEvent };
 
 export interface ZylemStageConfig {
 	inputs: Record<string, string[]>;

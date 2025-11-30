@@ -22,4 +22,20 @@
   --zylem-radius: 12px;
   --zylem-border: 1.5px;
 }
+@layer utilities {
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--zylem-color-background);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--zylem-color-background-hover);
+    border-radius: var(--zylem-radius);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--zylem-color-background-active-hover);
+  }
+}
 /*# sourceMappingURL=styles.css.map */

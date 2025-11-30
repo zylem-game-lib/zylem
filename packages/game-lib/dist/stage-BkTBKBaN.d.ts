@@ -1,4 +1,4 @@
-import { G as GameEntity, U as UpdateContext, S as SetupFunction, a as UpdateFunction, D as DestroyFunction, b as SetupContext, c as DestroyContext, d as BaseNode } from './entity-n1qsMHll.js';
+import { G as GameEntity, U as UpdateContext, S as SetupFunction, b as UpdateFunction, D as DestroyFunction, c as SetupContext, d as DestroyContext, e as BaseNode, L as LoadingEvent } from './entity-Xlc2H_ZT.js';
 import * as bitecs from 'bitecs';
 import { Vector3, Scene, Color, Object3D, Group } from 'three';
 import RAPIER__default, { World, RigidBody, Collider } from '@dimforge/rapier3d-compat';
@@ -156,13 +156,6 @@ type StageOptions = [] | [Partial<ZylemStageConfig>, ...StageOptionItem[]];
 type StageState = ZylemStageConfig & {
     entities: GameEntityInterface[];
 };
-type LoadingEvent = {
-    type: 'start' | 'progress' | 'complete';
-    message?: string;
-    progress?: number;
-    total?: number;
-    current?: number;
-};
 /**
  * ZylemStage orchestrates scene, physics world, entities, and lifecycle.
  *
@@ -293,4 +286,4 @@ declare class Stage {
  */
 declare function createStage(...options: StageOptions): Stage;
 
-export { type BaseEntityInterface as B, type LoadingEvent as L, type StageOptions as S, Stage as a, createStage as c };
+export { type BaseEntityInterface as B, type StageOptions as S, Stage as a, createStage as c };

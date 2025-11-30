@@ -1,6 +1,6 @@
 import { Vector2 } from 'three';
-import { G as GameEntity } from './entity-n1qsMHll.js';
-import { a as Stage } from './stage-B_kwbrgw.js';
+import { G as GameEntity } from './entity-Xlc2H_ZT.js';
+import { a as Stage } from './stage-BkTBKBaN.js';
 
 interface EntitySpawner {
     spawn: (stage: Stage, x: number, y: number) => Promise<GameEntity<any>>;

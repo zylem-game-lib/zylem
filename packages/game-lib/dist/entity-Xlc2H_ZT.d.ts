@@ -48,6 +48,13 @@ interface InputGamepad {
 }
 type Inputs = Record<InputPlayer, InputGamepad>;
 
+type LoadingEvent = {
+    type: 'start' | 'progress' | 'complete';
+    message?: string;
+    progress?: number;
+    total?: number;
+    current?: number;
+};
 interface IGame<TGlobals extends Record<string, unknown> = any> {
     start: () => Promise<this>;
     nextStage: () => Promise<void>;
@@ -55,6 +62,7 @@ interface IGame<TGlobals extends Record<string, unknown> = any> {
     reset: () => Promise<void>;
     pause: () => Promise<void>;
     resume: () => Promise<void>;
+    onLoading: (callback: (event: LoadingEvent) => void) => void;
     loadStageFromId: (stageId: string) => Promise<void>;
     end: () => Promise<void>;
     goToStage: () => void;
@@ -338,4 +346,4 @@ declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implem
     buildInfo(): Record<string, string>;
 }
 
-export { type AnalogState as A, type Behavior as B, type CleanupContext as C, type DestroyFunction as D, GameEntity as G, type InputGamepad as I, type LoadedContext as L, type MaterialOptions as M, type SetupFunction as S, type TexturePath as T, type UpdateContext as U, type Vec3 as V, type UpdateFunction as a, type SetupContext as b, type DestroyContext as c, BaseNode as d, type InputPlayerNumber as e, type Inputs as f, type ButtonState as g, GameEntityLifeCycle as h, type IGame as i, type GameEntityOptions as j, type CollisionContext as k, type BehaviorCallbackType as l };
+export { type AnalogState as A, type BehaviorCallbackType as B, type CleanupContext as C, type DestroyFunction as D, GameEntity as G, type InputGamepad as I, type LoadingEvent as L, type MaterialOptions as M, type SetupFunction as S, type TexturePath as T, type UpdateContext as U, type Vec3 as V, type Behavior as a, type UpdateFunction as b, type SetupContext as c, type DestroyContext as d, BaseNode as e, type InputPlayerNumber as f, type Inputs as g, type ButtonState as h, GameEntityLifeCycle as i, type IGame as j, type LoadedContext as k, type GameEntityOptions as l, type CollisionContext as m };

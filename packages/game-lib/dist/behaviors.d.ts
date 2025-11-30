@@ -1,4 +1,4 @@
-import { G as GameEntity, k as CollisionContext, U as UpdateContext, l as BehaviorCallbackType } from './entity-n1qsMHll.js';
+import { G as GameEntity, m as CollisionContext, U as UpdateContext, B as BehaviorCallbackType } from './entity-Xlc2H_ZT.js';
 import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
 import { Vector } from '@dimforge/rapier3d-compat';
 import 'three';
