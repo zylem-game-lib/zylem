@@ -1,11 +1,9 @@
 import { Color, Vector3, Vector2 } from 'three';
 import { 
-    createGame, box, sphere, createStage, camera, zone, globalChanges, text,
+    createGame, box, sphere, createStage, camera, zone, text,
     makeMoveable, ricochet2DInBounds, ricochetSound, pingPongBeep, boundary2d, ricochet2DCollision,
-    Game
+    getGlobal, setGlobal, onGlobalChange, onGlobalChanges
 } from '@zylem/game-lib';
-
-let game: Game<any>;
 
 const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
 
@@ -65,9 +63,9 @@ const p1Goal = await zone({
 	size: new Vector3(2, 10, 1),
 });
 p1Goal.onEnter(({ visitor }) => {
-	const p1Score = game.getGlobal('p1Score');
+	const p1Score = getGlobal<number>('p1Score') ?? 0;
 	if (visitor.uuid === moveableBall.uuid) {
-		game.setGlobal('p1Score', Number(p1Score) + 1);
+		setGlobal('p1Score', p1Score + 1);
 		moveableBall.setPosition(0, 0, 0);
 		moveableBall.moveXY(-5, 0);
 	}
@@ -79,9 +77,9 @@ const p2Goal = await zone({
 	size: new Vector3(2, 10, 1),
 });
 p2Goal.onEnter(({ visitor }) => {
-	const p2Score = game.getGlobal('p2Score');
+	const p2Score = getGlobal<number>('p2Score') ?? 0;
 	if (visitor.uuid === moveableBall.uuid) {
-		game.setGlobal('p2Score', Number(p2Score) + 1);
+		setGlobal('p2Score', p2Score + 1);
 		moveableBall.setPosition(0, 0, 0);
 		moveableBall.moveXY(5, 0);
 	}
@@ -114,8 +112,8 @@ const winnerText = await text({
 	screenPosition: new Vector2(0.5, 0.5),
 });
 
-const stage1 = createStage({ variables: { screenBounces: 0 } }, camera1);
-game = createGame({
+const stage1 = createStage({}, camera1);
+const game = createGame({
 	id: 'pong',
 	debug: true,
 	globals: {
@@ -131,13 +129,12 @@ game = createGame({
 
 const goalScore = 3;
 
-stage1.onUpdate(
-	globalChanges(['p1Score', 'p2Score'], ([p1, p2]) => {
-		if (p1 >= goalScore) game.setGlobal('winner', 'p1');
-		if (p2 >= goalScore) game.setGlobal('winner', 'p2');
-	}),
-);
-game.onGlobalChange('winner', (value) => {
+onGlobalChanges<[number, number]>(['p1Score', 'p2Score'], ([p1, p2]) => {
+	if (p1 >= goalScore) setGlobal('winner', 'p1');
+	if (p2 >= goalScore) setGlobal('winner', 'p2');
+});
+
+onGlobalChange<string>('winner', (value) => {
 	console.log('Winner:', value);
 	if (value === 'p1') {
 		winnerText.updateText('P1 Wins!');
@@ -148,10 +145,11 @@ game.onGlobalChange('winner', (value) => {
 	}
 });
 
-game.onGlobalChange('p1Score', (value) => {
+onGlobalChange<number>('p1Score', (value) => {
 	p1Text.updateText(String(value));
 });
-game.onGlobalChange('p2Score', (value) => {
+
+onGlobalChange<number>('p2Score', (value) => {
 	p2Text.updateText(String(value));
 });
 

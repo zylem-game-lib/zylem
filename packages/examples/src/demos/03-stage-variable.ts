@@ -1,7 +1,9 @@
 import { Color, Vector2 } from 'three';
-import { createGame, createStage, box, text, variableChange, makeRotatable } from '@zylem/game-lib';
+import { createGame, createStage, box, text, makeRotatable, setVariable, getVariable, createVariable, onVariableChange } from '@zylem/game-lib';
 
-const stage1 = createStage({ variables: { totalAngle: 0 } });
+const stage1 = createStage();
+
+createVariable(stage1, 'totalAngle', 0);
 
 const box1 = makeRotatable(await box({
 	name: 'box1',
@@ -15,10 +17,10 @@ box1.onSetup(({ me }) => {
 });
 
 box1.onUpdate(({ me, delta }) => {
-	const total = stage1.getVariable('totalAngle') ?? 0;
+	const total = getVariable<number>(stage1, 'totalAngle') ?? 0;
 	const nextTotal = total + delta * 2;
 	me.rotateY(nextTotal);
-	stage1.setVariable('totalAngle', nextTotal);
+	setVariable(stage1, 'totalAngle', nextTotal);
 });
 
 const rotationsText = await text({
@@ -29,10 +31,11 @@ const rotationsText = await text({
 	screenPosition: new Vector2(200, 100),
 });
 
-stage1.onUpdate(variableChange('totalAngle', (value) => {
+// Use standalone onVariableChange
+onVariableChange<number>(stage1, 'totalAngle', (value) => {
 	const rotations = Math.round(value / (Math.PI * 2));
 	rotationsText.updateText(`Rotations: ${rotations.toFixed(2)}`);
-}));
+});
 
 const testGame = createGame({ id: 'stage-variable-test', debug: true }, stage1, box1, rotationsText);
 

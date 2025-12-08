@@ -1,5 +1,5 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { camera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, createStage, text } from '@zylem/game-lib';
+import { camera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, createStage, text, onGlobalChange, setGlobal } from '@zylem/game-lib';
 import { boundary2d } from '@zylem/game-lib';
 import { movementSequence2D } from '@zylem/game-lib';
 import { makeTransformable } from '@zylem/game-lib';
@@ -83,7 +83,7 @@ for (let i = 0; i < 10; i++) {
 			loop: true,
 		}));
 		enemy.onDestroy(({ globals }) => {
-			globals.score += 10;
+			setGlobal('score', (globals.score as number) + 10);
 		});
 		enemy.addBehavior(boundary2d({ boundaries: { top: 10, bottom: -10, left: -20, right: 20 } }));
 		enemies.push(enemy);
@@ -132,11 +132,11 @@ const game = createGame({
 }, stage1, livesText, scoreText);
 
 
-game.onGlobalChange('score', (score) => {
+onGlobalChange<number>('score', (score) => {
 	scoreText.updateText(`Score: ${score}`);
 });
 
-game.onGlobalChange('lives', (lives) => {
+onGlobalChange<number>('lives', (lives) => {
 	livesText.updateText(`Lives: ${lives}`);
 });
 

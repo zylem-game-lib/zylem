@@ -1,19 +1,19 @@
-import { createGame, vessel, createStage, text } from '@zylem/game-lib';
+import { createGame, vessel, createStage, text, createGlobal, getGlobal, setGlobal } from '@zylem/game-lib';
 import marsSurfacePath from '@zylem/assets/3d/textures/mars-surface.jpg';
 import { Vector2 } from 'three';
 
+createGlobal('vesselCounter', 0);
+
 const testVessel = vessel();
-let vesselCounter = 0;
 testVessel.setup = (params: any) => {
-	vesselCounter = 0;
+	const vesselCounter = getGlobal('vesselCounter') as number;
 	vesselTextSetup.updateText(`Vessel was setup ${Math.ceil(vesselCounter)}`);
 }
 testVessel.update = (params: any) => {
+	let vesselCounter = getGlobal('vesselCounter') as number;
 	vesselCounter += params.delta;
+	setGlobal('vesselCounter', vesselCounter);
 	vesselTextUpdate.updateText(`Vessel was updated ${Math.ceil(vesselCounter)}`);
-}
-testVessel.destroy = (params: any) => {
-	vesselTextSetup.updateText(`Vessel was destroyed ${Math.ceil(vesselCounter)}`);
 }
 
 const vesselTextSetup = await text({
@@ -36,7 +36,7 @@ const vesselTextUpdate = await text({
 
 const stage1 = createStage({ backgroundImage: marsSurfacePath });
 const testGame = createGame(
-	{ id: 'zylem', debug: true },
+	{ id: 'zylem', debug: true, globals: { vesselCounter: 0 } },
 	stage1,
 	testVessel,
 	vesselText,

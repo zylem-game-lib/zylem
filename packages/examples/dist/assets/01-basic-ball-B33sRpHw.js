@@ -1,1 +1,0 @@
-import{c as r}from"./game-DGs2HSrw.js";import{s as l}from"./sphere-BkefUtBB.js";import{m as s}from"./moveable-CHW4bsP1.js";import"./index-DgYtinLc.js";const a=await l();s(a).onUpdate(({me:e,inputs:o})=>{const{Horizontal:t,Vertical:m}=o.p1.axes;e.moveXY(t.value*5,-m.value*5)});const u=await r({debug:!0,id:"basic-ball",globals:{gameNumber:0}},a);export{u as default};
