@@ -6,16 +6,13 @@ import { Color as Color6, Vector3 as Vector310, Vector2 as Vector25 } from "thre
 import RAPIER from "@dimforge/rapier3d-compat";
 
 // src/lib/game/game-state.ts
-import { proxy } from "valtio/vanilla";
+import { proxy, subscribe } from "valtio/vanilla";
 var state = proxy({
   id: "",
   globals: {},
   time: 0
 });
-function getGlobalState(key) {
-  if (key !== void 0) {
-    return state.globals[key];
-  }
+function getGlobals() {
   return state.globals;
 }
 
@@ -804,7 +801,7 @@ var ZylemScene = class {
   }
   setup() {
     if (this._setup) {
-      this._setup({ me: this, camera: this.zylemCamera, globals: getGlobalState() });
+      this._setup({ me: this, camera: this.zylemCamera, globals: getGlobals() });
     }
   }
   destroy() {
@@ -889,7 +886,7 @@ var ZylemScene = class {
 
 // src/lib/stage/stage-state.ts
 import { Color as Color3, Vector3 as Vector33 } from "three";
-import { proxy as proxy3 } from "valtio/vanilla";
+import { proxy as proxy3, subscribe as subscribe2 } from "valtio/vanilla";
 var stageState = proxy3({
   backgroundColor: new Color3(Color3.NAMES.cornflowerblue),
   backgroundImage: null,
@@ -907,22 +904,16 @@ var setStageBackgroundColor = (value) => {
 var setStageBackgroundImage = (value) => {
   stageState.backgroundImage = value;
 };
-var setStageVariable = (key, value) => {
-  stageState.variables[key] = value;
-};
-var getStageVariable = (key) => {
-  if (stageState.variables.hasOwnProperty(key)) {
-    return stageState.variables[key];
-  } else {
-    console.warn(`Stage variable ${key} not found`);
-  }
-};
 var setStageVariables = (variables) => {
   stageState.variables = { ...variables };
 };
 var resetStageVariables = () => {
   stageState.variables = {};
 };
+var variableProxyStore = /* @__PURE__ */ new Map();
+function clearVariables(target) {
+  variableProxyStore.delete(target);
+}
 
 // src/lib/core/utility/vector.ts
 import { Color as Color4 } from "three";
@@ -1904,7 +1895,7 @@ var ZylemStage = class extends LifeCycleBase {
   _destroy(params) {
     this._childrenMap.forEach((child) => {
       try {
-        child.nodeDestroy({ me: child, globals: getGlobalState() });
+        child.nodeDestroy({ me: child, globals: getGlobals() });
       } catch {
       }
     });
@@ -1921,6 +1912,7 @@ var ZylemStage = class extends LifeCycleBase {
     this.scene = null;
     this.cameraRef = null;
     resetStageVariables();
+    clearVariables(this);
   }
   /**
    * Create, register, and add an entity to the scene/world.
@@ -1948,7 +1940,7 @@ var ZylemStage = class extends LifeCycleBase {
     }
     child.nodeSetup({
       me: child,
-      globals: getGlobalState(),
+      globals: getGlobals(),
       camera: this.scene.zylemCamera
     });
     this.addEntityToStage(entity);
@@ -2194,12 +2186,6 @@ var Stage = class {
       };
     }
     return this.wrappedStage.onLoading(callback);
-  }
-  setVariable(key, value) {
-    setStageVariable(key, value);
-  }
-  getVariable(key) {
-    return getStageVariable(key);
   }
 };
 function createStage(...options) {

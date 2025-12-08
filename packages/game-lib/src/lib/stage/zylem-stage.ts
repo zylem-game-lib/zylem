@@ -3,12 +3,12 @@ import { Color, Vector3, Vector2 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
-import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, setStageVariables } from './stage-state';
+import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, setStageVariables, clearVariables } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
 import { ZylemBlueColor } from '../core/utility/vector';
 import { debugState } from '../debug/debug-state';
-import { getGlobalState } from "../game/game-state";
+import { getGlobals } from "../game/game-state";
 
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
 import { LifeCycleBase } from '../core/lifecycle-base';
@@ -310,7 +310,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	/** Cleanup owned resources when the stage is destroyed. */
 	protected _destroy(params: DestroyContext<ZylemStage>): void {
 		this._childrenMap.forEach((child) => {
-			try { child.nodeDestroy({ me: child, globals: getGlobalState() }); } catch { /* noop */ }
+			try { child.nodeDestroy({ me: child, globals: getGlobals() }); } catch { /* noop */ }
 		});
 		this._childrenMap.clear();
 		this._removalMap.clear();
@@ -328,6 +328,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.cameraRef = null;
 		// Clear reactive stage variables on unload
 		resetStageVariables();
+		// Clear object-scoped variables for this stage
+		clearVariables(this);
 	}
 
 	/**
@@ -359,7 +361,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		}
 		child.nodeSetup({
 			me: child,
-			globals: getGlobalState(),
+			globals: getGlobals(),
 			camera: this.scene.zylemCamera,
 		});
 		this.addEntityToStage(entity);

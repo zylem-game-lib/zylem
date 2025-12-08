@@ -3,16 +3,15 @@ import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-nod
 import { IGame, LoadingEvent } from '../core/interfaces';
 import { setPaused } from '../debug/debug-state';
 import { BaseGlobals } from './game-interfaces';
-import { getGlobalState, setGlobalState } from './game-state';
-import { convertNodes, GameOptions, hasStages } from '../core/utility/nodes';
+import { convertNodes, GameOptions, hasStages, extractGlobalsFromOptions } from '../core/utility/nodes';
 import { resolveGameConfig } from './game-config';
 import { createStage } from '../stage/stage';
 import { StageManager, stageState } from '../stage/stage-manager';
 import { StageFactory } from '../stage/stage-factory';
+import { initGlobals } from './game-state';
 
 export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private wrappedGame: ZylemGame<TGlobals> | null = null;
-	private pendingGlobalChangeHandlers: Array<{ key: keyof TGlobals; callback: (value: any) => void }> = [];
 
 	options: GameOptions<TGlobals>;
 
@@ -26,6 +25,11 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		this.options = options;
 		if (!hasStages(options)) {
 			this.options.push(createStage());
+		}
+		// Initialize globals immediately so onGlobalChange subscriptions work
+		const globals = extractGlobalsFromOptions(options);
+		if (globals) {
+			initGlobals(globals as Record<string, unknown>);
 		}
 	}
 
@@ -56,12 +60,6 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		this.wrappedGame.customSetup = this.setup;
 		this.wrappedGame.customUpdate = this.update;
 		this.wrappedGame.customDestroy = this.destroy;
-		if (this.pendingGlobalChangeHandlers.length) {
-			for (const { key, callback } of this.pendingGlobalChangeHandlers) {
-				this.wrappedGame.onGlobalChange(key as keyof TGlobals, callback as (value: TGlobals[keyof TGlobals]) => void);
-			}
-			this.pendingGlobalChangeHandlers = [];
-		}
 	}
 
 	async pause() {
@@ -153,29 +151,6 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		if (this.wrappedGame) {
 			this.wrappedGame.dispose();
 		}
-	}
-
-	getGlobal<K extends keyof TGlobals>(key: K) {
-		if (this.wrappedGame) {
-			return this.wrappedGame.getGlobal(key);
-		}
-		return getGlobalState<TGlobals, K>(key);
-	}
-
-	setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]) {
-		if (this.wrappedGame) {
-			this.wrappedGame.setGlobal(key, value);
-			return;
-		}
-		setGlobalState<TGlobals, K>(key, value);
-	}
-
-	onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void) {
-		if (this.wrappedGame) {
-			this.wrappedGame.onGlobalChange(key, callback);
-			return;
-		}
-		this.pendingGlobalChangeHandlers.push({ key, callback: callback as unknown as (value: any) => void });
 	}
 
 	onLoading(callback: (event: LoadingEvent) => void) {

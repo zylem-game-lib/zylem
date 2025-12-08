@@ -23,9 +23,6 @@ export interface IGame<TGlobals extends Record<string, unknown> = any> {
     end: () => Promise<void>; // TODO: need implementation
     goToStage: () => void; // TODO: need implementation
     ////////////////////////////////////////////////////
-
-    getGlobal: <K extends keyof TGlobals>(key: K) => TGlobals[K];
-    setGlobal: <K extends keyof TGlobals>(key: K, value: TGlobals[K]) => void;
 }
 
 export interface IStage {

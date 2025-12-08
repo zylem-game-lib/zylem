@@ -66,8 +66,6 @@ interface IGame<TGlobals extends Record<string, unknown> = any> {
     loadStageFromId: (stageId: string) => Promise<void>;
     end: () => Promise<void>;
     goToStage: () => void;
-    getGlobal: <K extends keyof TGlobals>(key: K) => TGlobals[K];
-    setGlobal: <K extends keyof TGlobals>(key: K, value: TGlobals[K]) => void;
 }
 interface IStage {
     onUpdate: (callback: UpdateFunction<IStage>) => void;

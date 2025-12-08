@@ -108,7 +108,6 @@ function ricochet2DCollision(options = {}, callback) {
   return {
     type: "collision",
     handler: (collisionContext) => {
-      debugger;
       _handleRicochet2DCollision(collisionContext, options, callback);
     }
   };

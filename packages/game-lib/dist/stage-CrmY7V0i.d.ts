@@ -1,4 +1,4 @@
-import { G as GameEntity, U as UpdateContext, S as SetupFunction, b as UpdateFunction, D as DestroyFunction, c as SetupContext, d as DestroyContext, e as BaseNode, L as LoadingEvent } from './entity-Xlc2H_ZT.js';
+import { G as GameEntity, U as UpdateContext, S as SetupFunction, b as UpdateFunction, D as DestroyFunction, c as SetupContext, d as DestroyContext, e as BaseNode, L as LoadingEvent } from './entity-bQElAdpo.js';
 import * as bitecs from 'bitecs';
 import { Vector3, Scene, Color, Object3D, Group } from 'three';
 import RAPIER__default, { World, RigidBody, Collider } from '@dimforge/rapier3d-compat';
@@ -278,8 +278,6 @@ declare class Stage {
     onSetup(callback: SetupFunction<ZylemStage>): void;
     onDestroy(callback: DestroyFunction<ZylemStage>): void;
     onLoading(callback: (event: LoadingEvent) => void): () => void;
-    setVariable(key: string, value: any): void;
-    getVariable(key: string): any;
 }
 /**
  * Create a stage with optional camera

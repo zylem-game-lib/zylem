@@ -3,7 +3,7 @@ import { DestroyFunction, SetupContext, SetupFunction, UpdateFunction } from '..
 import { LoadingEvent, StageOptionItem, StageOptions, ZylemStage } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
-import { getStageVariable, setStageVariable, stageState } from './stage-state';
+import { stageState } from './stage-state';
 import { getStageOptions } from './stage-default';
 
 type NodeLike = { create: Function };
@@ -84,14 +84,6 @@ export class Stage {
 	onLoading(callback: (event: LoadingEvent) => void) {
 		if (!this.wrappedStage) { return () => { }; }
 		return this.wrappedStage.onLoading(callback);
-	}
-
-	setVariable(key: string, value: any) {
-		setStageVariable(key, value);
-	}
-
-	getVariable(key: string) {
-		return getStageVariable(key);
 	}
 }
 

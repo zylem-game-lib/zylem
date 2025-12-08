@@ -1,5 +1,5 @@
 import { DestroyContext, DestroyFunction } from "../core/base-node-life-cycle";
-import { getGlobalState } from "../game/game-state";
+import { getGlobals } from "../game/game-state";
 
 export function destroyEntity<T>(entity: T, globals: any, destroyFunction: DestroyFunction<T>): void {
 	const context: DestroyContext<T> = {
@@ -10,6 +10,6 @@ export function destroyEntity<T>(entity: T, globals: any, destroyFunction: Destr
 }
 
 export function destroy(entity: any, globals?: any): void {
-	const resolvedGlobals = globals ?? getGlobalState();
+	const resolvedGlobals = globals ?? getGlobals();
 	destroyEntity(entity, resolvedGlobals, entity.nodeDestroy.bind(entity));
 }

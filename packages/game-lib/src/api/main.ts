@@ -60,7 +60,10 @@ export * as RAPIER from '@dimforge/rapier3d-compat';
 
 // Update helpers
 export { globalChange, globalChanges, variableChange, variableChanges } from '../lib/actions/global-change';
+
+// State management - standalone functions
+export { setGlobal, getGlobal, createGlobal, onGlobalChange, onGlobalChanges, getGlobals } from '../lib/game/game-state';
+export { setVariable, getVariable, createVariable, onVariableChange, onVariableChanges } from '../lib/stage/stage-state';
+
 // Web Components
 export { ZylemGameElement } from '../web-components/zylem-game';
-
-

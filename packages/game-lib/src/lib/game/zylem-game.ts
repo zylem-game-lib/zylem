@@ -1,4 +1,4 @@
-import { state, setGlobalState, getGlobalState } from './game-state';
+import { state, setGlobal, getGlobals, initGlobals, resetGlobals } from './game-state';
 
 import { debugState, isPaused, setDebugFlag } from '../debug/debug-state';
 
@@ -148,7 +148,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			if (value === undefined) {
 				console.error(`global ${variable} is undefined`);
 			}
-			this.setGlobal(variable as keyof TGlobals, value);
+			setGlobal(variable, value);
 		}
 	}
 
@@ -160,7 +160,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		return {
 			delta,
 			inputs,
-			globals: state.globals as unknown as TGlobals,
+			globals: getGlobals<TGlobals>(),
 			me: this,
 			camera: camera!,
 		};
@@ -182,7 +182,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			this.timer.update(timestamp);
 			const stage = this.currentStage();
 			const params = this.params();
-			const clampedDelta = Math.min(params.delta, ZylemGame.MAX_DELTA_SECONDS);
+			const clampedDelta = Math.min(Math.max(params.delta, 0), ZylemGame.MAX_DELTA_SECONDS);
 			const clampedParams = { ...params, delta: clampedDelta };
 			if (this.customUpdate) {
 				this.customUpdate(clampedParams);
@@ -222,6 +222,9 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 				globals: state.globals as unknown as TGlobals
 			});
 		}
+
+		// Clear global state
+		resetGlobals();
 	}
 
 	outOfLoop() {
@@ -238,23 +241,5 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		return this.getStage(this.currentStageId);
 	}
 
-	getGlobal<K extends keyof TGlobals>(key: K) {
-		return getGlobalState<TGlobals, K>(key);
-	}
-
-	setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]) {
-		setGlobalState<TGlobals, K>(key, value);
-	}
-
-	onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void) {
-		let previous = getGlobalState<TGlobals, K>(key);
-		subscribe(state, () => {
-			const current = getGlobalState<TGlobals, K>(key);
-			if (current !== previous) {
-				previous = current;
-				callback(current);
-			}
-		});
-	}
 }
 

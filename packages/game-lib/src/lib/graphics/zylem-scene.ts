@@ -13,7 +13,7 @@ import { GameEntity } from '../entities/entity';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { debugState } from '../debug/debug-state';
 import { SetupFunction } from '../core/base-node-life-cycle';
-import { getGlobalState } from '../game/game-state';
+import { getGlobals } from '../game/game-state';
 
 interface SceneState {
 	backgroundColor: Color | string;
@@ -56,7 +56,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	setup() {
 		if (this._setup) {
-			this._setup({ me: this, camera: this.zylemCamera, globals: getGlobalState() });
+			this._setup({ me: this, camera: this.zylemCamera, globals: getGlobals() });
 		}
 	}
 

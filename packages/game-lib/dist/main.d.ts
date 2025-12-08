@@ -1,11 +1,11 @@
-import { G as Game } from './core-CrZH2z1q.js';
-export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-CrZH2z1q.js';
-export { S as StageOptions, c as createStage } from './stage-BkTBKBaN.js';
-export { e as entitySpawner } from './entity-spawner-BrU-JJ-g.js';
+import { G as Game } from './core-C2mjetAd.js';
+export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-C2mjetAd.js';
+export { S as StageOptions, c as createStage } from './stage-CrmY7V0i.js';
+export { e as entitySpawner } from './entity-spawner-DNnLYnZq.js';
 export { P as PerspectiveType, a as Perspectives, c as camera } from './camera-Dk-fOVZE.js';
 export { ZylemBox, actor, box, plane, rect, sphere, sprite, text, zone } from './entities.js';
-import { U as UpdateContext, B as BehaviorCallbackType } from './entity-Xlc2H_ZT.js';
-export { a as Behavior, L as LoadingEvent } from './entity-Xlc2H_ZT.js';
+import { U as UpdateContext, B as BehaviorCallbackType } from './entity-bQElAdpo.js';
+export { a as Behavior, L as LoadingEvent } from './entity-bQElAdpo.js';
 export { boundary2d, ricochet2DCollision, ricochet2DInBounds } from './behaviors.js';
 import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
 export { m as makeMoveable, b as move, a as moveable, r as resetVelocity } from './moveable-B_vyA6cw.js';
@@ -52,6 +52,77 @@ declare function ricochetSound(frequency?: number, duration?: number): void;
  */
 declare function pingPongBeep(frequency?: number, duration?: number): void;
 
+/**
+ * Set a global value by path.
+ * @example setGlobal('score', 100)
+ * @example setGlobal('player.health', 50)
+ */
+declare function setGlobal(path: string, value: unknown): void;
+/**
+ * Create/initialize a global with a default value.
+ * Only sets the value if it doesn't already exist.
+ * Use this to ensure globals have initial values before game starts.
+ * @example createGlobal('score', 0)
+ * @example createGlobal('player.health', 100)
+ */
+declare function createGlobal<T>(path: string, defaultValue: T): T;
+/**
+ * Get a global value by path.
+ * @example getGlobal('score') // 100
+ * @example getGlobal<number>('player.health') // 50
+ */
+declare function getGlobal<T = unknown>(path: string): T | undefined;
+/**
+ * Subscribe to changes on a global value at a specific path.
+ * Returns an unsubscribe function.
+ * @example const unsub = onGlobalChange('score', (val) => console.log(val));
+ */
+declare function onGlobalChange<T = unknown>(path: string, callback: (value: T) => void): () => void;
+/**
+ * Subscribe to changes on multiple global paths.
+ * Callback fires when any of the paths change, receiving all current values.
+ * Returns an unsubscribe function.
+ * @example const unsub = onGlobalChanges(['score', 'lives'], ([score, lives]) => console.log(score, lives));
+ */
+declare function onGlobalChanges<T extends unknown[] = unknown[]>(paths: string[], callback: (values: T) => void): () => void;
+/**
+ * Get the entire globals object (read-only snapshot).
+ */
+declare function getGlobals<T = Record<string, unknown>>(): T;
+
+/**
+ * Set a variable on an object by path.
+ * @example setVariable(stage1, 'totalAngle', 0.5)
+ * @example setVariable(entity, 'enemy.count', 10)
+ */
+declare function setVariable(target: object, path: string, value: unknown): void;
+/**
+ * Create/initialize a variable with a default value on a target object.
+ * Only sets the value if it doesn't already exist.
+ * @example createVariable(stage1, 'totalAngle', 0)
+ * @example createVariable(entity, 'enemy.count', 10)
+ */
+declare function createVariable<T>(target: object, path: string, defaultValue: T): T;
+/**
+ * Get a variable from an object by path.
+ * @example getVariable(stage1, 'totalAngle') // 0.5
+ * @example getVariable<number>(entity, 'enemy.count') // 10
+ */
+declare function getVariable<T = unknown>(target: object, path: string): T | undefined;
+/**
+ * Subscribe to changes on a variable at a specific path for a target object.
+ * Returns an unsubscribe function.
+ * @example const unsub = onVariableChange(stage1, 'score', (val) => console.log(val));
+ */
+declare function onVariableChange<T = unknown>(target: object, path: string, callback: (value: T) => void): () => void;
+/**
+ * Subscribe to changes on multiple variable paths for a target object.
+ * Callback fires when any of the paths change, receiving all current values.
+ * Returns an unsubscribe function.
+ * @example const unsub = onVariableChanges(stage1, ['count', 'total'], ([count, total]) => console.log(count, total));
+ */
+declare function onVariableChanges<T extends unknown[] = unknown[]>(target: object, paths: string[], callback: (values: T) => void): () => void;
+
 declare class ZylemGameElement extends HTMLElement {
     private _game;
     private container;
@@ -61,4 +132,4 @@ declare class ZylemGameElement extends HTMLElement {
     disconnectedCallback(): void;
 }
 
-export { Game, ZylemGameElement, destroy, movementSequence2D, pingPongBeep, ricochetSound };
+export { Game, ZylemGameElement, createGlobal, createVariable, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setGlobal, setVariable };

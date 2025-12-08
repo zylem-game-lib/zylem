@@ -1236,7 +1236,7 @@ import { ActiveCollisionTypes as ActiveCollisionTypes2, ColliderDesc as Collider
 import { Vector3 as Vector37 } from "three";
 
 // src/lib/game/game-state.ts
-import { proxy } from "valtio/vanilla";
+import { proxy, subscribe } from "valtio/vanilla";
 var state = proxy({
   id: "",
   globals: {},

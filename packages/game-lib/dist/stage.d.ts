@@ -1,8 +1,8 @@
-export { S as StageOptions, c as createStage } from './stage-BkTBKBaN.js';
-export { e as entitySpawner } from './entity-spawner-BrU-JJ-g.js';
+export { S as StageOptions, c as createStage } from './stage-CrmY7V0i.js';
+export { e as entitySpawner } from './entity-spawner-DNnLYnZq.js';
 import * as _sinclair_typebox from '@sinclair/typebox';
 import { Static } from '@sinclair/typebox';
-import './entity-Xlc2H_ZT.js';
+import './entity-bQElAdpo.js';
 import 'three';
 import '@dimforge/rapier3d-compat';
 import 'bitecs';

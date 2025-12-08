@@ -8,21 +8,47 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// src/lib/game/game-state.ts
-import { proxy } from "valtio/vanilla";
-function setGlobalState(key, value) {
-  state.globals[key] = value;
-}
-function getGlobalState(key) {
-  if (key !== void 0) {
-    return state.globals[key];
+// src/lib/core/utility/path-utils.ts
+function setByPath(obj, path, value) {
+  if (!path) return;
+  const keys = path.split(".");
+  let current = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    if (current[key] == null || typeof current[key] !== "object") {
+      current[key] = {};
+    }
+    current = current[key];
   }
+  current[keys[keys.length - 1]] = value;
+}
+var init_path_utils = __esm({
+  "src/lib/core/utility/path-utils.ts"() {
+    "use strict";
+  }
+});
+
+// src/lib/game/game-state.ts
+import { proxy, subscribe } from "valtio/vanilla";
+function setGlobal(path, value) {
+  setByPath(state.globals, path, value);
+}
+function getGlobals() {
   return state.globals;
+}
+function initGlobals(globals) {
+  for (const [key, value] of Object.entries(globals)) {
+    setByPath(state.globals, key, value);
+  }
+}
+function resetGlobals() {
+  state.globals = {};
 }
 var state;
 var init_game_state = __esm({
   "src/lib/game/game-state.ts"() {
     "use strict";
+    init_path_utils();
     state = proxy({
       id: "",
       globals: {},
@@ -1357,7 +1383,7 @@ var init_zylem_scene = __esm({
       }
       setup() {
         if (this._setup) {
-          this._setup({ me: this, camera: this.zylemCamera, globals: getGlobalState() });
+          this._setup({ me: this, camera: this.zylemCamera, globals: getGlobals() });
         }
       }
       destroy() {
@@ -1444,8 +1470,11 @@ var init_zylem_scene = __esm({
 
 // src/lib/stage/stage-state.ts
 import { Color as Color5, Vector3 as Vector35 } from "three";
-import { proxy as proxy3 } from "valtio/vanilla";
-var stageState, setStageBackgroundColor, setStageBackgroundImage, setStageVariable, getStageVariable, setStageVariables, resetStageVariables;
+import { proxy as proxy3, subscribe as subscribe2 } from "valtio/vanilla";
+function clearVariables(target) {
+  variableProxyStore.delete(target);
+}
+var stageState, setStageBackgroundColor, setStageBackgroundImage, setStageVariables, resetStageVariables, variableProxyStore;
 var init_stage_state = __esm({
   "src/lib/stage/stage-state.ts"() {
     "use strict";
@@ -1466,22 +1495,13 @@ var init_stage_state = __esm({
     setStageBackgroundImage = (value) => {
       stageState.backgroundImage = value;
     };
-    setStageVariable = (key, value) => {
-      stageState.variables[key] = value;
-    };
-    getStageVariable = (key) => {
-      if (stageState.variables.hasOwnProperty(key)) {
-        return stageState.variables[key];
-      } else {
-        console.warn(`Stage variable ${key} not found`);
-      }
-    };
     setStageVariables = (variables) => {
       stageState.variables = { ...variables };
     };
     resetStageVariables = () => {
       stageState.variables = {};
     };
+    variableProxyStore = /* @__PURE__ */ new Map();
   }
 });
 
@@ -2547,7 +2567,7 @@ var init_zylem_stage = __esm({
       _destroy(params) {
         this._childrenMap.forEach((child) => {
           try {
-            child.nodeDestroy({ me: child, globals: getGlobalState() });
+            child.nodeDestroy({ me: child, globals: getGlobals() });
           } catch {
           }
         });
@@ -2564,6 +2584,7 @@ var init_zylem_stage = __esm({
         this.scene = null;
         this.cameraRef = null;
         resetStageVariables();
+        clearVariables(this);
       }
       /**
        * Create, register, and add an entity to the scene/world.
@@ -2591,7 +2612,7 @@ var init_zylem_stage = __esm({
         }
         child.nodeSetup({
           me: child,
-          globals: getGlobalState(),
+          globals: getGlobals(),
           camera: this.scene.zylemCamera
         });
         this.addEntityToStage(entity);
@@ -2858,12 +2879,6 @@ var init_stage = __esm({
           };
         }
         return this.wrappedStage.onLoading(callback);
-      }
-      setVariable(key, value) {
-        setStageVariable(key, value);
-      }
-      getVariable(key) {
-        return getStageVariable(key);
       }
     };
   }
@@ -3703,7 +3718,6 @@ var GameCanvas = class {
 };
 
 // src/lib/game/zylem-game.ts
-import { subscribe } from "valtio/vanilla";
 import Stats from "stats.js";
 var ZylemGame = class _ZylemGame {
   id;
@@ -3819,7 +3833,7 @@ var ZylemGame = class _ZylemGame {
       if (value === void 0) {
         console.error(`global ${variable} is undefined`);
       }
-      this.setGlobal(variable, value);
+      setGlobal(variable, value);
     }
   }
   params() {
@@ -3830,7 +3844,7 @@ var ZylemGame = class _ZylemGame {
     return {
       delta,
       inputs,
-      globals: state.globals,
+      globals: getGlobals(),
       me: this,
       camera
     };
@@ -3850,7 +3864,7 @@ var ZylemGame = class _ZylemGame {
       this.timer.update(timestamp);
       const stage = this.currentStage();
       const params = this.params();
-      const clampedDelta = Math.min(params.delta, _ZylemGame.MAX_DELTA_SECONDS);
+      const clampedDelta = Math.min(Math.max(params.delta, 0), _ZylemGame.MAX_DELTA_SECONDS);
       const clampedParams = { ...params, delta: clampedDelta };
       if (this.customUpdate) {
         this.customUpdate(clampedParams);
@@ -3885,6 +3899,7 @@ var ZylemGame = class _ZylemGame {
         globals: state.globals
       });
     }
+    resetGlobals();
   }
   outOfLoop() {
     const currentStage = this.currentStage();
@@ -3897,27 +3912,10 @@ var ZylemGame = class _ZylemGame {
   currentStage() {
     return this.getStage(this.currentStageId);
   }
-  getGlobal(key) {
-    return getGlobalState(key);
-  }
-  setGlobal(key, value) {
-    setGlobalState(key, value);
-  }
-  onGlobalChange(key, callback) {
-    let previous = getGlobalState(key);
-    subscribe(state, () => {
-      const current = getGlobalState(key);
-      if (current !== previous) {
-        previous = current;
-        callback(current);
-      }
-    });
-  }
 };
 
 // src/lib/game/game.ts
 init_debug_state();
-init_game_state();
 
 // src/lib/core/utility/nodes.ts
 init_base_node();
@@ -3929,7 +3927,6 @@ async function convertNodes(_options) {
   const configurations = [];
   const stages = [];
   const entities = [];
-  debugger;
   Object.values(_options).forEach((node) => {
     if (node instanceof Stage) {
       stages.push(node);
@@ -3958,6 +3955,17 @@ async function convertNodes(_options) {
 function hasStages(_options) {
   const stage = _options.find((option) => option instanceof Stage);
   return Boolean(stage);
+}
+function extractGlobalsFromOptions(_options) {
+  for (const option of _options) {
+    if (option && typeof option === "object" && !(option instanceof Stage) && !(option instanceof BaseNode) && !(option instanceof GameEntity)) {
+      const config = option;
+      if (config.globals) {
+        return config.globals;
+      }
+    }
+  }
+  return void 0;
 }
 
 // src/lib/game/game.ts
@@ -4551,9 +4559,9 @@ var StageFactory = {
 };
 
 // src/lib/game/game.ts
+init_game_state();
 var Game = class {
   wrappedGame = null;
-  pendingGlobalChangeHandlers = [];
   options;
   update = () => {
   };
@@ -4566,6 +4574,10 @@ var Game = class {
     this.options = options;
     if (!hasStages(options)) {
       this.options.push(createStage());
+    }
+    const globals = extractGlobalsFromOptions(options);
+    if (globals) {
+      initGlobals(globals);
     }
   }
   async start() {
@@ -4593,12 +4605,6 @@ var Game = class {
     this.wrappedGame.customSetup = this.setup;
     this.wrappedGame.customUpdate = this.update;
     this.wrappedGame.customDestroy = this.destroy;
-    if (this.pendingGlobalChangeHandlers.length) {
-      for (const { key, callback } of this.pendingGlobalChangeHandlers) {
-        this.wrappedGame.onGlobalChange(key, callback);
-      }
-      this.pendingGlobalChangeHandlers = [];
-    }
   }
   async pause() {
     setPaused(true);
@@ -4676,26 +4682,6 @@ var Game = class {
     if (this.wrappedGame) {
       this.wrappedGame.dispose();
     }
-  }
-  getGlobal(key) {
-    if (this.wrappedGame) {
-      return this.wrappedGame.getGlobal(key);
-    }
-    return getGlobalState(key);
-  }
-  setGlobal(key, value) {
-    if (this.wrappedGame) {
-      this.wrappedGame.setGlobal(key, value);
-      return;
-    }
-    setGlobalState(key, value);
-  }
-  onGlobalChange(key, callback) {
-    if (this.wrappedGame) {
-      this.wrappedGame.onGlobalChange(key, callback);
-      return;
-    }
-    this.pendingGlobalChangeHandlers.push({ key, callback });
   }
   onLoading(callback) {
   }

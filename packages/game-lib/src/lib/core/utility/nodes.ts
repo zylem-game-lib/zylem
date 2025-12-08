@@ -55,3 +55,21 @@ export function hasStages<TGlobals extends BaseGlobals>(_options: GameOptions<TG
 	const stage = _options.find(option => option instanceof Stage);
 	return Boolean(stage);
 }
+
+/**
+ * Extract globals object from game options array.
+ * Used to initialize globals before game starts.
+ */
+export function extractGlobalsFromOptions<TGlobals extends BaseGlobals>(
+	_options: GameOptions<TGlobals>
+): TGlobals | undefined {
+	for (const option of _options) {
+		if (option && typeof option === 'object' && !(option instanceof Stage) && !(option instanceof BaseNode) && !(option instanceof GameEntity)) {
+			const config = option as ZylemGameConfig<Stage, any, TGlobals>;
+			if (config.globals) {
+				return config.globals;
+			}
+		}
+	}
+	return undefined;
+}

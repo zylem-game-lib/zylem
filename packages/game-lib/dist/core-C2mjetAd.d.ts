@@ -1,6 +1,6 @@
-import { I as InputGamepad, b as UpdateFunction, f as InputPlayerNumber, g as Inputs, h as ButtonState, A as AnalogState, c as SetupContext, U as UpdateContext, d as DestroyContext, i as GameEntityLifeCycle, e as BaseNode, j as IGame, S as SetupFunction, D as DestroyFunction, L as LoadingEvent, k as LoadedContext, C as CleanupContext } from './entity-Xlc2H_ZT.js';
+import { I as InputGamepad, b as UpdateFunction, f as InputPlayerNumber, g as Inputs, h as ButtonState, A as AnalogState, c as SetupContext, U as UpdateContext, d as DestroyContext, i as GameEntityLifeCycle, e as BaseNode, j as IGame, S as SetupFunction, D as DestroyFunction, L as LoadingEvent, k as LoadedContext, C as CleanupContext } from './entity-bQElAdpo.js';
 import { Z as ZylemCamera } from './camera-Dk-fOVZE.js';
-import { B as BaseEntityInterface, a as Stage } from './stage-BkTBKBaN.js';
+import { B as BaseEntityInterface, a as Stage } from './stage-CrmY7V0i.js';
 import { Color, Vector3 } from 'three';
 import { Vector3 as Vector3$1 } from '@dimforge/rapier3d-compat';
 
@@ -354,16 +354,12 @@ declare class ZylemGame<TGlobals extends BaseGlobals> {
     outOfLoop(): void;
     getStage(id: string): Stage | undefined;
     currentStage(): Stage | undefined;
-    getGlobal<K extends keyof TGlobals>(key: K): TGlobals[K];
-    setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]): void;
-    onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void): void;
 }
 
 type GameOptions<TGlobals extends BaseGlobals> = Array<ZylemGameConfig<Stage, any, TGlobals> | GameConfigLike | Stage | GameEntityLifeCycle | BaseNode>;
 
 declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
     private wrappedGame;
-    private pendingGlobalChangeHandlers;
     options: GameOptions<TGlobals>;
     update: UpdateFunction<ZylemGame<TGlobals>, TGlobals>;
     setup: SetupFunction<ZylemGame<TGlobals>, TGlobals>;
@@ -382,9 +378,6 @@ declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
     goToStage(): Promise<void>;
     end(): Promise<void>;
     dispose(): void;
-    getGlobal<K extends keyof TGlobals>(key: K): TGlobals[K];
-    setGlobal<K extends keyof TGlobals>(key: K, value: TGlobals[K]): void;
-    onGlobalChange<K extends keyof TGlobals>(key: K, callback: (value: TGlobals[K]) => void): void;
     onLoading(callback: (event: LoadingEvent) => void): void;
 }
 /**
