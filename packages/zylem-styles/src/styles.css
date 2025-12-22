@@ -6,9 +6,14 @@
   --zylem-color-accent: #E64534;
 
   --zylem-color-background: #11151C;
+  --zylem-color-background-translucent: rgba(10, 20, 30, 0.54);
   --zylem-color-surface: #1A1F27;
   --zylem-color-surface-hover: #222831;
   --zylem-color-border: #2D3643;
+
+  --zylem-color-active: rgba(20, 255, 60, 0.7);
+  --zylem-color-active-hover: rgba(20, 255, 60, 0.4);
+  --zylem-color-success-hover: #2a6734b3;
 
   --zylem-color-text: #E6EBEF;
   --zylem-color-text-secondary: #88929E;

@@ -1,0 +1,28 @@
+/* Editor Menu Styles */
+
+/* Main menu container */
+.zylem-menu {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--zylem-color-background-translucent);
+  border: 1.5px solid var(--zylem-color-primary);
+  border-radius: 12px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  pointer-events: auto;
+  font-family: var(--zylem-font-family);
+}
+
+/* Hide only the container's scrollbar; allow inner panels to style theirs */
+.zylem-menu::-webkit-scrollbar {
+  display: none;
+}
+
+/* Heading resets scoped to menu */
+.zylem-menu h3,
+.zylem-menu h4 {
+  margin: 0;
+}

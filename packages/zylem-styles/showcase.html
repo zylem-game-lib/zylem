@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zylem Styles Showcase</title>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles.css">
+  <link rel="stylesheet" href="./src/editor/index.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--zylem-color-background);
+      color: var(--zylem-color-text);
+      font-family: var(--zylem-font-family);
+      font-size: var(--zylem-font-size);
+      min-height: 100vh;
+    }
+    
+    .showcase {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--zylem-spacing-lg);
+    }
+    
+    .showcase h1 {
+      color: var(--zylem-color-primary);
+      font-size: 2rem;
+      margin-bottom: var(--zylem-spacing-lg);
+      border-bottom: 2px solid var(--zylem-color-border);
+      padding-bottom: var(--zylem-spacing-md);
+    }
+    
+    .section {
+      margin-bottom: 48px;
+    }
+    
+    .section h2 {
+      color: var(--zylem-color-primary);
+      font-size: 1.25rem;
+      margin-bottom: var(--zylem-spacing-md);
+    }
+    
+    .section h3 {
+      color: var(--zylem-color-text-secondary);
+      font-size: 1rem;
+      margin: var(--zylem-spacing-md) 0;
+    }
+    
+    .demo-row {
+      display: flex;
+      gap: var(--zylem-spacing-md);
+      flex-wrap: wrap;
+      align-items: flex-start;
+      margin-bottom: var(--zylem-spacing-md);
+    }
+    
+    .demo-container {
+      background: var(--zylem-color-background-translucent);
+      padding: var(--zylem-spacing-lg);
+      border-radius: var(--zylem-radius);
+      border: 1px solid var(--zylem-color-primary);
+    }
+
+    .code-label {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--zylem-color-text-secondary);
+      margin-top: 4px;
+    }
+
+    .color-token {
+      min-width: 280px;
+      height: 48px;
+      border-radius: var(--zylem-radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--zylem-color-border);
+    }
+
+    .color-token-label {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--zylem-color-text);
+      padding: 4px 8px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="showcase">
+    <h1>🎮 Zylem Styles Showcase</h1>
+    
+    <!-- Base Colors Section -->
+    <div class="section">
+      <h2>Colors (--zylem-color-*)</h2>
+      <div class="demo-row">
+        <div class="color-token" style="background: var(--zylem-color-primary);">
+          <span class="color-token-label">--zylem-color-primary</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-primary-hover);">
+          <span class="color-token-label">--zylem-color-primary-hover</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-primary-active);">
+          <span class="color-token-label">--zylem-color-primary-active</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-accent);">
+          <span class="color-token-label">--zylem-color-accent</span>
+        </div>
+      </div>
+      <div class="demo-row">
+        <div class="color-token" style="background: var(--zylem-color-background);">
+          <span class="color-token-label">--zylem-color-background</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-background-translucent);">
+          <span class="color-token-label">--zylem-color-background-translucent</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-surface);">
+          <span class="color-token-label">--zylem-color-surface</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-border);">
+          <span class="color-token-label">--zylem-color-border</span>
+        </div>
+      </div>
+      <div class="demo-row">
+        <div class="color-token" style="background: var(--zylem-color-active);">
+          <span class="color-token-label" style="color: var(--zylem-color-background);">--zylem-color-active</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-active-hover);">
+          <span class="color-token-label" style="color: var(--zylem-color-background);">--zylem-color-active-hover</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-success-hover);">
+          <span class="color-token-label">--zylem-color-success-hover</span>
+        </div>
+      </div>
+      <div class="demo-row">
+        <div class="color-token" style="background: var(--zylem-color-text);">
+          <span class="color-token-label" style="color: var(--zylem-color-background);">--zylem-color-text</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-text-secondary);">
+          <span class="color-token-label" style="color: var(--zylem-color-background);">--zylem-color-text-secondary</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-console-background);">
+          <span class="color-token-label">--zylem-color-console-background</span>
+        </div>
+        <div class="color-token" style="background: var(--zylem-color-console-text);">
+          <span class="color-token-label" style="color: var(--zylem-color-background);">--zylem-color-console-text</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Buttons Section -->
+    <div class="section">
+      <h2>Buttons</h2>
+      <h3>.zylem-button</h3>
+      <div class="demo-row">
+        <button class="zylem-button">Default Button</button>
+        <button class="zylem-button" style="background: var(--zylem-color-primary); color: var(--zylem-color-background-translucent);">Hover State</button>
+        <button class="zylem-button" style="background: var(--zylem-color-active); color: var(--zylem-color-background-translucent);">Active State</button>
+      </div>
+    </div>
+
+    <!-- Toolbar Section -->
+    <div class="section">
+      <h2>Toolbar</h2>
+      <h3>.zylem-toolbar + .zylem-toolbar-btn</h3>
+      <div class="demo-container">
+        <div class="zylem-toolbar">
+          <button class="zylem-toolbar-btn zylem-button">
+            <svg class="zylem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <button class="zylem-toolbar-btn zylem-button">
+            <svg class="zylem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+          <button class="zylem-toolbar-btn zylem-button selected">
+            <svg class="zylem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <button class="zylem-toolbar-btn zylem-button">
+            <svg class="zylem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path>
+              <path d="M13 13l6 6"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu Container Section -->
+    <div class="section">
+      <h2>Menu Container</h2>
+      <h3>.zylem-menu</h3>
+      <div style="width: 400px; height: 300px;">
+        <div class="zylem-menu" style="height: 100%;">
+          <div class="zylem-toolbar separator">
+            <button class="zylem-toolbar-btn zylem-button">
+              <svg class="zylem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div style="padding: var(--zylem-spacing-md); color: var(--zylem-color-primary);">
+            Menu content goes here...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accordion Section -->
+    <div class="section">
+      <h2>Accordion</h2>
+      <h3>.zylem-accordion + .accordion-*</h3>
+      <div class="demo-container" style="width: 400px;">
+        <div class="zylem-accordion">
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-trigger zylem-exo-2">
+                Game Settings
+              </button>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header" data-expanded>
+              <button class="accordion-trigger zylem-exo-2" data-expanded>
+                Stages
+              </button>
+            </div>
+            <div class="accordion-content">
+              <div class="panel-content">
+                <p>Stage 1: Introduction</p>
+                <p>Stage 2: Tutorial</p>
+                <p>Stage 3: Main Level</p>
+              </div>
+            </div>
+          </div>
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-trigger zylem-exo-2">
+                Entities
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Console Section -->
+    <div class="section">
+      <h2>Console</h2>
+      <h3>.zylem-console</h3>
+      <div style="width: 500px;">
+        <div class="zylem-console-container" style="height: 200px;">
+          <div class="zylem-console-header">
+            <button class="zylem-button">Clear</button>
+          </div>
+          <textarea class="zylem-console" readonly style="flex: 1;">
+[INFO] Game initialized
+[INFO] Stage loaded: main-level
+[DEBUG] Entity count: 15
+[INFO] Frame rate: 60 FPS
+          </textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entity List Section -->
+    <div class="section">
+      <h2>Entity List</h2>
+      <h3>.entity-item + .entities-list</h3>
+      <div class="demo-container" style="width: 500px;">
+        <div class="panel-content">
+          <div class="entities-list">
+            <div class="entity-item-wrapper">
+              <div class="entity-item">
+                <h4>Player</h4>
+                <div class="entity-info-item">
+                  <span>Type:</span>
+                  <span>Character</span>
+                </div>
+                <button class="zylem-toolbar-btn zylem-button">
+                  <svg class="zylem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="entity-item-wrapper hovered">
+              <div class="entity-item">
+                <h4>Enemy</h4>
+                <div class="entity-info-item">
+                  <span>Type:</span>
+                  <span>NPC</span>
+                </div>
+                <button class="zylem-toolbar-btn zylem-button">
+                  <svg class="zylem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="entity-item-wrapper">
+              <div class="entity-item">
+                <h4>Platform</h4>
+                <div class="entity-info-item">
+                  <span>Type:</span>
+                  <span>Static</span>
+                </div>
+                <button class="zylem-toolbar-btn zylem-button">
+                  <svg class="zylem-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Section -->
+    <div class="section">
+      <h2>Sidebar</h2>
+      <h3>.sidebar + .sidebar-item</h3>
+      <div style="width: 250px;">
+        <div class="sidebar" style="padding: var(--zylem-spacing-sm);">
+          <div class="sidebar-item" style="padding: var(--zylem-spacing-sm); cursor: pointer;">
+            Dashboard
+          </div>
+          <div class="sidebar-item active" style="padding: var(--zylem-spacing-sm); cursor: pointer;">
+            Game Editor
+          </div>
+          <div class="sidebar-item" style="padding: var(--zylem-spacing-sm); cursor: pointer;">
+            Settings
+          </div>
+          <div class="sidebar-item" style="padding: var(--zylem-spacing-sm); cursor: pointer;">
+            Help
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Typography Section -->
+    <div class="section">
+      <h2>Typography</h2>
+      <h3>.zylem-exo-2</h3>
+      <div class="demo-container">
+        <p class="zylem-exo-2" style="font-size: 24px; font-weight: 700; margin: 0 0 8px 0; color: var(--zylem-color-primary);">
+          Exo 2 Bold - Heading
+        </p>
+        <p class="zylem-exo-2" style="font-size: 18px; font-weight: 600; margin: 0 0 8px 0; color: var(--zylem-color-primary);">
+          Exo 2 SemiBold - Subheading
+        </p>
+        <p class="zylem-exo-2" style="font-size: 14px; font-weight: 400; margin: 0; color: var(--zylem-color-primary);">
+          Exo 2 Regular - Body text for the Zylem game engine interface. This is the default font style used throughout the editor.
+        </p>
+      </div>
+    </div>
+
+    <!-- Spacing & Sizing Section -->
+    <div class="section">
+      <h2>Spacing & Sizing Tokens</h2>
+      <div class="demo-row">
+        <div class="demo-container">
+          <h3 style="margin-top: 0;">Spacing</h3>
+          <div style="display: flex; gap: 16px; align-items: flex-end;">
+            <div>
+              <div style="width: 8px; height: 8px; background: var(--zylem-color-primary);"></div>
+              <div class="code-label">sm: 8px</div>
+            </div>
+            <div>
+              <div style="width: 12px; height: 12px; background: var(--zylem-color-primary);"></div>
+              <div class="code-label">md: 12px</div>
+            </div>
+            <div>
+              <div style="width: 16px; height: 16px; background: var(--zylem-color-primary);"></div>
+              <div class="code-label">lg: 16px</div>
+            </div>
+          </div>
+        </div>
+        <div class="demo-container">
+          <h3 style="margin-top: 0;">Icon Sizes</h3>
+          <div style="display: flex; gap: 16px; align-items: flex-end;">
+            <div>
+              <div style="width: var(--zylem-size-icon-sm); height: var(--zylem-size-icon-sm); background: var(--zylem-color-primary); border-radius: 4px;"></div>
+              <div class="code-label">sm: 16px</div>
+            </div>
+            <div>
+              <div style="width: var(--zylem-size-icon); height: var(--zylem-size-icon); background: var(--zylem-color-primary); border-radius: 4px;"></div>
+              <div class="code-label">default: 28px</div>
+            </div>
+            <div>
+              <div style="width: 48px; height: 48px; background: var(--zylem-color-primary); border-radius: 4px;"></div>
+              <div class="code-label">lg: 96px (scaled)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,31 @@
+/* Editor Console Styles */
+
+.zylem-console-container {
+  flex: 1;
+  min-height: 0;
+  margin: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.zylem-console-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.zylem-console {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  resize: none;
+  background: var(--zylem-color-console-background);
+  color: var(--zylem-color-primary);
+  font-size: 14px;
+  border: 1.5px solid var(--zylem-color-primary);
+  border-radius: 8px;
+  padding: 10px;
+  box-sizing: border-box;
+  outline: none;
+  font-family: 'Courier New', monospace;
+}

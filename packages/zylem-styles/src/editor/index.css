@@ -1,0 +1,9 @@
+/* Editor Styles Entry Point */
+/* These styles were migrated from @zylem/editor to centralize styling */
+
+@import './base.css';
+@import './toolbar.css';
+@import './console.css';
+@import './accordion.css';
+@import './menu.css';
+@import './entities.css';

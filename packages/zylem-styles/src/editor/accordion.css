@@ -1,0 +1,88 @@
+/* Editor Accordion Styles */
+
+.zylem-accordion {
+  color: var(--zylem-color-primary);
+}
+
+/* Accordion animations and styles */
+.accordion-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--zylem-color-background-translucent);
+  transition: background-color 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.accordion-header[data-expanded] {
+  background-color: var(--zylem-color-primary-active);
+}
+
+.accordion-item {
+  position: relative;
+  border-bottom: 1px solid var(--zylem-color-primary);
+}
+
+.accordion-item:last-child {
+  border-bottom: none;
+}
+
+.accordion-trigger {
+  width: 100%;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--zylem-color-primary);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.accordion-trigger:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.accordion-item {
+  scrollbar-width: none;
+}
+
+.accordion-item[data-expanded] {
+  scrollbar-width: thin;
+}
+
+.accordion-trigger[data-expanded] {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.accordion-content {
+  overflow-y: auto;
+  max-height: 50vh;
+  transition: height 0.3s ease;
+}
+
+/* Add a chevron icon that rotates on expansion */
+.accordion-trigger::after {
+  content: '▼';
+  right: 20px;
+  position: relative;
+  color: var(--zylem-color-primary);
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.accordion-trigger[data-expanded]::after {
+  transform: rotate(180deg);
+}
+
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--zylem-spacing-md);
+  padding: var(--zylem-spacing-md);
+  color: var(--zylem-color-primary);
+  background-color: var(--zylem-color-background-translucent);
+  border-left: var(--zylem-border) solid var(--zylem-color-background-translucent);
+  border-right: var(--zylem-border) solid var(--zylem-color-background-translucent);
+  border-bottom: var(--zylem-border) solid var(--zylem-color-background-translucent);
+}

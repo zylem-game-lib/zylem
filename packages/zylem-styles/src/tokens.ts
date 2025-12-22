@@ -1,16 +1,32 @@
 export const tokens = {
   colors: {
-    primary: '#9fcfff',
-    primaryHover: '#72b3f4',
-    primaryActive: '#003c77',
-    secondary: '#10b981',
-    background: 'rgba(10, 20, 30, 0.54)',
-    backgroundHover: '#2a6734b3',
-    backgroundActive: 'rgba(20, 255, 60, 0.7)',
-    backgroundActiveHover: 'rgba(20, 255, 60, 0.4)',
-    text: '#f3f4f6',
-    consoleBackground: 'rgba(20, 40, 60, 0.2)',
-    consoleText: '#72b3f4',
+    // Primary colors
+    primary: '#61A6E8',
+    primaryHover: '#3B8AD8',
+    primaryActive: '#0C6EB8',
+
+    // Accent
+    accent: '#E64534',
+
+    // Backgrounds
+    background: '#11151C',
+    backgroundTranslucent: 'rgba(10, 20, 30, 0.54)',
+    surface: '#1A1F27',
+    surfaceHover: '#222831',
+    border: '#2D3643',
+
+    // Active states
+    active: 'rgba(20, 255, 60, 0.7)',
+    activeHover: 'rgba(20, 255, 60, 0.4)',
+    successHover: '#2a6734b3',
+
+    // Text
+    text: '#E6EBEF',
+    textSecondary: '#88929E',
+
+    // Console
+    consoleBackground: 'rgba(20, 40, 60, 0.25)',
+    consoleText: '#61A6E8',
   },
   spacing: {
     sm: '8px',

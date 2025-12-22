@@ -1,0 +1,65 @@
+/* Editor Toolbar Styles */
+
+.zylem-toolbar {
+  display: flex;
+  position: sticky;
+  top: 0;
+  gap: var(--zylem-spacing-sm);
+  padding: var(--zylem-spacing-sm);
+  z-index: 1;
+}
+
+.zylem-toolbar.separator {
+  border-bottom: 1.5px solid var(--zylem-color-primary);
+}
+
+/* Toolbar-specific tweaks; base styles come from .zylem-button */
+.zylem-toolbar-btn {
+  padding: var(--zylem-spacing-sm);
+}
+
+.zylem-toolbar-btn:hover svg {
+  stroke: var(--zylem-color-background-translucent);
+}
+
+.zylem-toolbar-btn.selected {
+  background: var(--zylem-color-active);
+  border-color: var(--zylem-color-active);
+}
+
+.zylem-toolbar-btn.selected svg {
+  stroke: var(--zylem-color-background-translucent);
+}
+
+.zylem-icon {
+  width: var(--zylem-size-icon);
+  height: var(--zylem-size-icon);
+  stroke: var(--zylem-color-primary);
+}
+
+.zylem-tooltip {
+  background: var(--zylem-color-background-translucent);
+  color: var(--zylem-color-primary);
+  padding: var(--zylem-spacing-sm) var(--zylem-spacing-md);
+  margin-top: var(--zylem-spacing-sm);
+  border-radius: var(--zylem-radius);
+  border: var(--zylem-border) solid var(--zylem-color-primary);
+  font-size: var(--zylem-font-size);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.zylem-tooltip[data-enter] {
+  animation: tooltip-enter 0.2s ease-out;
+}
+
+@keyframes tooltip-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

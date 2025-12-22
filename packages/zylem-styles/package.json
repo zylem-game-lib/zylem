@@ -10,7 +10,9 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./styles.css": "./dist/styles.css"
+    "./styles.css": "./dist/styles.css",
+    "./editor.css": "./dist/index.css",
+    "./css": "./dist/index.css"
   },
   "files": [
     "dist"
@@ -18,6 +20,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "showcase": "npx -y serve -l 3030 .",
     "lint": "biome check ."
   },
   "devDependencies": {

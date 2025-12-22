@@ -1,0 +1,49 @@
+/* Editor Entities Section Styles */
+
+.entities-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--zylem-spacing-md);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+ul {
+  all: unset;
+}
+
+.entity-item-wrapper {
+  all: unset;
+  cursor: pointer;
+}
+
+.entity-item-wrapper.hovered .entity-item {
+  background-color: var(--zylem-color-success-hover);
+  color: var(--zylem-color-primary);
+}
+
+.entity-item-wrapper:active .entity-item {
+  background-color: var(--zylem-color-active);
+  color: var(--zylem-color-background-translucent);
+}
+
+.entity-item {
+  display: grid;
+  gap: var(--zylem-spacing-sm);
+  grid-template-columns: 1fr 1fr 1fr;
+  border: var(--zylem-border) outset var(--zylem-color-success-hover);
+  padding: var(--zylem-spacing-md);
+  margin: var(--zylem-spacing-md) 0;
+  font-weight: 600;
+  transition: background-color 200ms cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
+.entity-item.hovered {
+  background-color: var(--zylem-color-active-hover);
+}
+
+.entity-info-item {
+  display: grid;
+  grid-template-columns: min-content max-content;
+  gap: var(--zylem-spacing-sm);
+}
