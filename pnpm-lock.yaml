@@ -33,6 +33,9 @@ importers:
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
+      '@zylem/styles':
+        specifier: workspace:*
+        version: link:../zylem-styles
       lucide-solid:
         specifier: ^0.511.0
         version: 0.511.0(solid-js@1.9.9)
