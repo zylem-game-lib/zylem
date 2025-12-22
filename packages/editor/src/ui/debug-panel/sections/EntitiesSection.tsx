@@ -1,16 +1,8 @@
-import { stageState } from '../../../../../game-lib/src/lib/stage/stage-state';
 import { Component, For, createSignal, onCleanup, onMount } from 'solid-js';
-import { printToConsole } from '../../../debug/console/console-state';
-import {
-  setHoveredEntity,
-  resetHoveredEntity,
-  debugState,
-  getHoveredEntity,
-} from '../../../../../game-lib/src/lib/debug/debug-state';
-import './EntitiesSection.css';
-import Info from 'lucide-solid/icons/info';
-import { BaseEntityInterface } from '../../../../../game-lib/src/lib/types/entity-types';
 import { subscribe } from 'valtio/vanilla';
+import Info from 'lucide-solid/icons/info';
+import { stageState, debugState, printToConsole, resetHoveredEntity, getHoveredEntityId } from '../../../store';
+import type { BaseEntityInterface } from '../../../store/types';
 
 interface EntityRowProps {
   entity: Partial<BaseEntityInterface>;
@@ -34,12 +26,12 @@ const EntityRow: Component<EntityRowProps> = (props) => {
       <h4>{props.entity.name || `Entity ${props.entity.uuid}`}</h4>
       <div class="entity-details"></div>
       <button
-        class="zylem-debug-toolbar-btn zylem-debug-button"
+        class="zylem-toolbar-btn zylem-button"
         onClick={() => {
           printToConsole(`Entity: ${JSON.stringify(props.entity, null, 2)}`);
         }}
       >
-        <Info class="zylem-debug-icon" />
+        <Info class="zylem-icon" />
       </button>
     </div>
   );
@@ -47,12 +39,12 @@ const EntityRow: Component<EntityRowProps> = (props) => {
 
 export const EntitiesSection: Component = () => {
   const [hoveredUuid, setHoveredUuid] = createSignal<string | null>(
-    getHoveredEntity()?.uuid ?? null,
+    getHoveredEntityId(),
   );
 
   onMount(() => {
     const unsub = subscribe(debugState, () => {
-      setHoveredUuid(debugState.hoveredEntity?.uuid ?? null);
+      setHoveredUuid(debugState.hoveredEntityId);
     });
     onCleanup(() => unsub());
   });

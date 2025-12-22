@@ -6,21 +6,15 @@ import Trash2 from 'lucide-solid/icons/trash-2';
 import Pause from 'lucide-solid/icons/pause';
 import Play from 'lucide-solid/icons/play';
 import type { Component } from 'solid-js';
-import './Toolbar.css';
-import {
-  setDebugTool,
-  setPaused,
-  debugState,
-} from '../../../../game-lib/src/lib/debug/debug-state';
-import { debugStore } from '../../debug/debug-store';
+import { setDebugTool, setPaused, debugState, debugStore } from '../../store';
 
 const togglePause = () => {
   setPaused(!debugState.paused);
 };
 
-export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
+export const Toolbar: Component<{ onClose?: (() => void) | undefined }> = (props) => {
   return (
-    <div class="zylem-debug-toolbar">
+    <div class="zylem-toolbar">
       <Tooltip.Root>
         <Tooltip.Trigger>
           <Button.Root
@@ -29,13 +23,13 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
               setDebugTool('none');
               props.onClose?.();
             }}
-            class="zylem-debug-toolbar-btn zylem-debug-button"
+            class="zylem-toolbar-btn zylem-button"
           >
-            <X class="zylem-debug-icon" />
+            <X class="zylem-icon" />
           </Button.Root>
         </Tooltip.Trigger>
         <Tooltip.Portal>
-          <Tooltip.Content class="zylem-debug-tooltip zylem-exo-2">
+          <Tooltip.Content class="zylem-tooltip zylem-exo-2">
             Close
           </Tooltip.Content>
         </Tooltip.Portal>
@@ -48,15 +42,15 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
             onClick={() =>
               setDebugTool(debugStore.tool === 'delete' ? 'none' : 'delete')
             }
-            class={`zylem-debug-toolbar-btn zylem-debug-button ${
+            class={`zylem-toolbar-btn zylem-button ${
               debugStore.tool === 'delete' ? 'selected' : ''
             }`}
           >
-            <Trash2 class="zylem-debug-icon" />
+            <Trash2 class="zylem-icon" />
           </Button.Root>
         </Tooltip.Trigger>
         <Tooltip.Portal>
-          <Tooltip.Content class="zylem-debug-tooltip zylem-exo-2">
+          <Tooltip.Content class="zylem-tooltip zylem-exo-2">
             Delete
           </Tooltip.Content>
         </Tooltip.Portal>
@@ -71,15 +65,15 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
                 debugStore.tool === 'translate' ? 'none' : 'translate',
               )
             }
-            class={`zylem-debug-toolbar-btn zylem-debug-button ${
+            class={`zylem-toolbar-btn zylem-button ${
               debugStore.tool === 'translate' ? 'selected' : ''
             }`}
           >
-            <Plus class="zylem-debug-icon" />
+            <Plus class="zylem-icon" />
           </Button.Root>
         </Tooltip.Trigger>
         <Tooltip.Portal>
-          <Tooltip.Content class="zylem-debug-tooltip zylem-exo-2">
+          <Tooltip.Content class="zylem-tooltip zylem-exo-2">
             Add
           </Tooltip.Content>
         </Tooltip.Portal>
@@ -92,15 +86,15 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
             onClick={() =>
               setDebugTool(debugStore.tool === 'select' ? 'none' : 'select')
             }
-            class={`zylem-debug-toolbar-btn zylem-debug-button ${
+            class={`zylem-toolbar-btn zylem-button ${
               debugStore.tool === 'select' ? 'selected' : ''
             }`}
           >
-            <MousePointer class="zylem-debug-icon" />
+            <MousePointer class="zylem-icon" />
           </Button.Root>
         </Tooltip.Trigger>
         <Tooltip.Portal>
-          <Tooltip.Content class="zylem-debug-tooltip zylem-exo-2">
+          <Tooltip.Content class="zylem-tooltip zylem-exo-2">
             Select
           </Tooltip.Content>
         </Tooltip.Portal>
@@ -111,19 +105,19 @@ export const Toolbar: Component<{ onClose?: () => void }> = (props) => {
           <Button.Root
             aria-label={debugStore.paused ? 'Play' : 'Pause'}
             onClick={() => togglePause()}
-            class={`zylem-debug-toolbar-btn zylem-debug-button ${
+            class={`zylem-toolbar-btn zylem-button ${
               debugStore.paused ? 'selected' : ''
             }`}
           >
             {debugStore.paused ? (
-              <Play class="zylem-debug-icon" />
+              <Play class="zylem-icon" />
             ) : (
-              <Pause class="zylem-debug-icon" />
+              <Pause class="zylem-icon" />
             )}
           </Button.Root>
         </Tooltip.Trigger>
         <Tooltip.Portal>
-          <Tooltip.Content class="zylem-debug-tooltip zylem-exo-2">
+          <Tooltip.Content class="zylem-tooltip zylem-exo-2">
             {debugStore.paused ? 'Play' : 'Pause'}
           </Tooltip.Content>
         </Tooltip.Portal>

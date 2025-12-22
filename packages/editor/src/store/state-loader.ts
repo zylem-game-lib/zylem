@@ -1,12 +1,11 @@
 /**
  * State-Based Debug Module Loader
  *
- * This approach integrates with the existing debug state system
- * and loads the debug module when debug state changes to true.
+ * Loads the debug module when debug state becomes enabled.
  */
 
 import { subscribe } from 'valtio/vanilla';
-import { debugState } from '../../../game-lib/src/lib/debug/debug-state';
+import { debugState } from './debug-state';
 
 let debugModuleLoaded = false;
 
@@ -33,4 +32,4 @@ subscribe(debugState, async () => {
 
 if (debugState.enabled && !debugModuleLoaded) {
 	loadDebugModule();
-} 
+}

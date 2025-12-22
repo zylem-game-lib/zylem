@@ -1,6 +1,11 @@
+/**
+ * SolidJS store for debug UI state.
+ * Syncs with the valtio-based debug-state for reactivity in Solid components.
+ */
+
 import { createStore } from 'solid-js/store';
 import { subscribe } from 'valtio/vanilla';
-import { debugState, type DebugTools } from '../../../game-lib/src/lib/debug/debug-state';
+import { debugState, type DebugTools } from './debug-state';
 
 export const [debugStore, setDebugStore] = createStore({
 	debug: false,
@@ -10,10 +15,11 @@ export const [debugStore, setDebugStore] = createStore({
 	selected: [] as string[],
 });
 
+// Sync valtio state to SolidJS store
 subscribe(debugState, () => {
 	setDebugStore('debug', debugState.enabled);
 	setDebugStore('tool', debugState.tool);
 	setDebugStore('paused', debugState.paused);
-	setDebugStore('hovered', debugState.hoveredEntity?.uuid ?? null);
-	setDebugStore('selected', debugState.selectedEntity ? [debugState.selectedEntity.uuid] : []);
+	setDebugStore('hovered', debugState.hoveredEntityId);
+	setDebugStore('selected', debugState.selectedEntityId ? [debugState.selectedEntityId] : []);
 });

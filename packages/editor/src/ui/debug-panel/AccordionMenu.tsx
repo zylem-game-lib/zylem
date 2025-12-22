@@ -1,13 +1,12 @@
 import { Accordion } from '@kobalte/core';
 import type { Component } from 'solid-js';
 import { GameSection, StagesSection, EntitiesSection } from './sections/all';
-import './AccordionMenu.css';
 
 /**
  * Accordion menu for debug UI with multiple panels.
  */
 export const AccordionMenu: Component = () => (
-  <Accordion.Root multiple class="zylem-debug-accordion">
+  <Accordion.Root multiple class="zylem-accordion">
     <Accordion.Item value="game-config" class="accordion-item">
       <Accordion.Header class="accordion-header">
         <Accordion.Trigger class="accordion-trigger zylem-exo-2">

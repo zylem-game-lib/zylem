@@ -1,4 +1,4 @@
-import { Component, ComponentProps, splitProps } from 'solid-js';
+import { Component, splitProps } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
 import { LucideProps } from 'lucide-solid';
 

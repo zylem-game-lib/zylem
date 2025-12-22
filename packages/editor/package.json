@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@zylem/game-lib": "workspace:*",
+    "@zylem/styles": "workspace:*",
     "solid-js": "^1.9.9",
     "@solidjs/router": "^0.14.0",
     "valtio": "^2.1.7",

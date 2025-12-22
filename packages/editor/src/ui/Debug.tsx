@@ -2,7 +2,6 @@ import { render } from 'solid-js/web';
 import { createSignal } from 'solid-js';
 
 import { Menu } from './debug-panel/Menu';
-import './Debug.css';
 
 /**
  * DebugMenu root component. Handles open/close state and layout.
@@ -24,7 +23,7 @@ export function Debug() {
       }}
     >
       <div style={{ display: 'flex', 'z-index': 1001 }}>
-        <button id="zylem-debug-button" type="button" onClick={toggleMenu} />
+        <button id="zylem-editor-toggle" type="button" onClick={toggleMenu} />
       </div>
       {isOpen() && (
         <div
@@ -46,7 +45,7 @@ export function Debug() {
 
 // Only render if we're not in a test environment and the container exists
 if (typeof window !== 'undefined' && !import.meta.env.VITEST) {
-  const container = document.getElementById('zylem-debug-container');
+  const container = document.getElementById('zylem-editor-container');
   if (container) {
     render(() => <Debug />, container);
   }

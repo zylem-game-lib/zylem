@@ -1,13 +1,11 @@
 import { Component } from 'solid-js';
-import { stageState } from '../../../stage/stage-state';
-import { printToConsole } from '../../../debug/console/console-state';
-import { stageStateToString } from '../../../stage/stage-state';
+import { stageState, stageStateToString, printToConsole } from '../../../store';
 
 export const StagesSection: Component = () => (
   <div class="panel-content">
-    <section class="zylem-debug-toolbar">
+    <section class="zylem-toolbar">
       <button
-        class="zylem-debug-toolbar-btn"
+        class="zylem-toolbar-btn zylem-button"
         onClick={() => {
           const currentStageState = stageState;
           printToConsole(
@@ -18,7 +16,7 @@ export const StagesSection: Component = () => (
         Print Stage State
       </button>
       <button
-        class="zylem-debug-toolbar-btn"
+        class="zylem-toolbar-btn zylem-button"
         onClick={() => {
           const allStageState = stageState;
           printToConsole(
