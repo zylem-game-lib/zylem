@@ -15,10 +15,6 @@ button {
 }
 
 #zylem-editor-toggle {
-  position: fixed;
-  top: 0;
-  right: 0;
-
   width: var(--zylem-size-icon-lg);
   height: var(--zylem-size-icon-lg);
 
@@ -27,7 +23,7 @@ button {
   background-repeat: no-repeat;
   background-position: center;
 
-  cursor: pointer;
+  cursor: grab;
   z-index: 1;
 
   transition: transform 0.3s ease-in-out;
@@ -48,7 +44,8 @@ button {
 }
 
 .scroll-thin {
-  scrollbar-width: thin; /* For Firefox */
+  scrollbar-width: thin;
+  /* For Firefox */
   scrollbar-color: var(--zylem-color-primary) transparent;
 }
 
@@ -63,7 +60,7 @@ button {
 
 .scroll-thin::-webkit-scrollbar-thumb {
   background-color: var(--zylem-color-primary-active);
-  border-radius: 3px;
+  border-radius: calc(var(--zylem-radius) / 4);
 }
 
 .zylem-button {
@@ -86,4 +83,62 @@ button {
 .zylem-button:active {
   background: var(--zylem-color-active);
   color: var(--zylem-color-background-translucent);
+}
+
+/* Floating Panel Styles */
+.floating-panel {
+  background: var(--zylem-color-background-translucent);
+  border: var(--zylem-border) solid var(--zylem-color-primary);
+  border-radius: var(--zylem-radius);
+  box-shadow: 0 var(--zylem-spacing-sm) 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(var(--zylem-spacing-sm));
+  pointer-events: auto;
+}
+
+.floating-panel-titlebar {
+  padding: var(--zylem-spacing-sm) var(--zylem-spacing-md);
+  background: var(--zylem-color-accent);
+  border: 1px solid var(--zylem-color-background);
+  border-radius: calc(var(--zylem-radius) - 1px) calc(var(--zylem-radius) - 1px) 0 0;
+  font-family: var(--zylem-font-family);
+  font-weight: 600;
+  transition: background-color 0.15s ease;
+}
+
+.floating-panel-titlebar:hover {
+  background: var(--zylem-color-accent-hover);
+}
+
+.floating-panel-titlebar:active {
+  background: var(--zylem-color-accent-active);
+  cursor: grabbing;
+}
+
+.floating-panel-title {
+  font-size: var(--zylem-font-size);
+  color: var(--zylem-color-background);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.floating-panel-close {
+  all: unset;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--zylem-color-background);
+  border-radius: calc(var(--zylem-radius) / 3);
+  transition: background-color 0.15s ease;
+}
+
+.floating-panel-close:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.floating-panel-close:active {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.floating-panel-content {
+  background: transparent;
 }

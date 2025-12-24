@@ -4,6 +4,8 @@
   --zylem-color-primary-hover: #3B8AD8;
   --zylem-color-primary-active: #0C6EB8;
   --zylem-color-accent: #E64534;
+  --zylem-color-accent-hover: #C93A2C;
+  --zylem-color-accent-active: #A82F24;
   --zylem-color-background: #11151C;
   --zylem-color-background-translucent: rgba(10, 20, 30, 0.54);
   --zylem-color-surface: #1A1F27;
@@ -83,16 +85,13 @@ button {
   pointer-events: none;
 }
 #zylem-editor-toggle {
-  position: fixed;
-  top: 0;
-  right: 0;
   width: var(--zylem-size-icon-lg);
   height: var(--zylem-size-icon-lg);
   background-image: url("./zylem-logo-ICRHC3DQ.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  cursor: pointer;
+  cursor: grab;
   z-index: 1;
   transition: transform 0.3s ease-in-out;
   pointer-events: auto;
@@ -121,7 +120,7 @@ button {
 }
 .scroll-thin::-webkit-scrollbar-thumb {
   background-color: var(--zylem-color-primary-active);
-  border-radius: 3px;
+  border-radius: calc(var(--zylem-radius) / 4);
 }
 .zylem-button {
   background: none;
@@ -142,6 +141,54 @@ button {
   background: var(--zylem-color-active);
   color: var(--zylem-color-background-translucent);
 }
+.floating-panel {
+  background: var(--zylem-color-background-translucent);
+  border: var(--zylem-border) solid var(--zylem-color-primary);
+  border-radius: var(--zylem-radius);
+  box-shadow: 0 var(--zylem-spacing-sm) 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(var(--zylem-spacing-sm));
+  pointer-events: auto;
+}
+.floating-panel-titlebar {
+  padding: var(--zylem-spacing-sm) var(--zylem-spacing-md);
+  background: var(--zylem-color-accent);
+  border: 1px solid var(--zylem-color-background);
+  border-radius: calc(var(--zylem-radius) - 1px) calc(var(--zylem-radius) - 1px) 0 0;
+  font-family: var(--zylem-font-family);
+  font-weight: 600;
+  transition: background-color 0.15s ease;
+}
+.floating-panel-titlebar:hover {
+  background: var(--zylem-color-accent-hover);
+}
+.floating-panel-titlebar:active {
+  background: var(--zylem-color-accent-active);
+  cursor: grabbing;
+}
+.floating-panel-title {
+  font-size: var(--zylem-font-size);
+  color: var(--zylem-color-background);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.floating-panel-close {
+  all: unset;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--zylem-color-background);
+  border-radius: calc(var(--zylem-radius) / 3);
+  transition: background-color 0.15s ease;
+}
+.floating-panel-close:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+.floating-panel-close:active {
+  background: rgba(0, 0, 0, 0.3);
+}
+.floating-panel-content {
+  background: transparent;
+}
 
 /* src/editor/toolbar.css */
 .zylem-toolbar {
@@ -153,7 +200,7 @@ button {
   z-index: 1;
 }
 .zylem-toolbar.separator {
-  border-bottom: 1.5px solid var(--zylem-color-primary);
+  border-bottom: var(--zylem-border) solid var(--zylem-color-primary);
 }
 .zylem-toolbar-btn {
   padding: var(--zylem-spacing-sm);
@@ -200,16 +247,18 @@ button {
 
 /* src/editor/console.css */
 .zylem-console-container {
-  flex: 1;
-  min-height: 0;
-  margin: 8px;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: var(--zylem-spacing-sm);
+  height: 100%;
 }
-.zylem-console-header {
+.zylem-console-wrapper {
+  position: relative;
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
+  flex: 1;
+  min-height: 0;
 }
 .zylem-console {
   width: 100%;
@@ -218,18 +267,30 @@ button {
   resize: none;
   background: var(--zylem-color-console-background);
   color: var(--zylem-color-primary);
-  font-size: 14px;
-  border: 1.5px solid var(--zylem-color-primary);
-  border-radius: 8px;
-  padding: 10px;
+  font-size: var(--zylem-font-size);
+  border: var(--zylem-border) solid var(--zylem-color-primary);
+  border-radius: var(--zylem-radius);
+  padding: var(--zylem-spacing-md);
   box-sizing: border-box;
   outline: none;
   font-family: "Courier New", monospace;
+}
+.zylem-console-clear {
+  position: absolute;
+  top: var(--zylem-spacing-sm);
+  right: var(--zylem-spacing-sm);
+  padding: 4px var(--zylem-spacing-md);
+  font-size: 12px;
+  z-index: 1;
 }
 
 /* src/editor/accordion.css */
 .zylem-accordion {
   color: var(--zylem-color-primary);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 .accordion-header {
   position: sticky;
@@ -244,13 +305,16 @@ button {
 .accordion-item {
   position: relative;
   border-bottom: 1px solid var(--zylem-color-primary);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .accordion-item:last-child {
   border-bottom: none;
 }
 .accordion-trigger {
   width: 100%;
-  padding: 12px;
+  padding: var(--zylem-spacing-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -268,18 +332,21 @@ button {
 }
 .accordion-item[data-expanded] {
   scrollbar-width: thin;
+  flex: 1;
+  min-height: 0;
 }
 .accordion-trigger[data-expanded] {
   background-color: rgba(255, 255, 255, 0.05);
 }
 .accordion-content {
   overflow-y: auto;
-  max-height: 50vh;
+  flex: 1;
+  min-height: 0;
   transition: height 0.3s ease;
 }
 .accordion-trigger::after {
   content: "\25bc";
-  right: 20px;
+  right: var(--zylem-spacing-lg);
   position: relative;
   color: var(--zylem-color-primary);
   font-size: 12px;
@@ -294,10 +361,6 @@ button {
   gap: var(--zylem-spacing-md);
   padding: var(--zylem-spacing-md);
   color: var(--zylem-color-primary);
-  background-color: var(--zylem-color-background-translucent);
-  border-left: var(--zylem-border) solid var(--zylem-color-background-translucent);
-  border-right: var(--zylem-border) solid var(--zylem-color-background-translucent);
-  border-bottom: var(--zylem-border) solid var(--zylem-color-background-translucent);
 }
 
 /* src/editor/menu.css */
@@ -307,8 +370,7 @@ button {
   height: 100%;
   width: 100%;
   background: var(--zylem-color-background-translucent);
-  border: 1.5px solid var(--zylem-color-primary);
-  border-radius: 12px;
+  border-radius: var(--zylem-radius);
   box-sizing: border-box;
   overflow-y: auto;
   overflow-x: hidden;
@@ -363,6 +425,32 @@ ul {
   display: grid;
   grid-template-columns: min-content max-content;
   gap: var(--zylem-spacing-sm);
+}
+
+/* src/editor/detached-panel.css */
+.detached-panel {
+  min-width: 250px;
+  min-height: 150px;
+}
+.detached-panel-titlebar {
+  padding: var(--zylem-spacing-sm) var(--zylem-spacing-md);
+}
+.detached-panel-content {
+  background: var(--zylem-color-background-translucent);
+}
+.accordion-item--dragging {
+  opacity: 0.6;
+  outline: 2px dashed var(--zylem-color-primary);
+  outline-offset: -2px;
+}
+.accordion-item--drop-target::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--zylem-color-accent);
 }
 
 /* src/editor/index.css */

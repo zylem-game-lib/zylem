@@ -1,8 +1,8 @@
 import type { Component } from 'solid-js';
-import { Debug } from './ui/Debug';
+import { Editor } from './components/Editor';
 
 const App: Component = () => {
-	return <Debug />;
+	return <Editor />;
 };
 
 export default App;

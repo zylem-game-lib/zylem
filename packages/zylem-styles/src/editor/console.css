@@ -1,17 +1,19 @@
 /* Editor Console Styles */
 
 .zylem-console-container {
-  flex: 1;
-  min-height: 0;
-  margin: 8px;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: var(--zylem-spacing-sm);
+  height: 100%;
 }
 
-.zylem-console-header {
+.zylem-console-wrapper {
+  position: relative;
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
+  flex: 1;
+  min-height: 0;
 }
 
 .zylem-console {
@@ -21,11 +23,20 @@
   resize: none;
   background: var(--zylem-color-console-background);
   color: var(--zylem-color-primary);
-  font-size: 14px;
-  border: 1.5px solid var(--zylem-color-primary);
-  border-radius: 8px;
-  padding: 10px;
+  font-size: var(--zylem-font-size);
+  border: var(--zylem-border) solid var(--zylem-color-primary);
+  border-radius: var(--zylem-radius);
+  padding: var(--zylem-spacing-md);
   box-sizing: border-box;
   outline: none;
   font-family: 'Courier New', monospace;
+}
+
+.zylem-console-clear {
+  position: absolute;
+  top: var(--zylem-spacing-sm);
+  right: var(--zylem-spacing-sm);
+  padding: 4px var(--zylem-spacing-md);
+  font-size: 12px;
+  z-index: 1;
 }

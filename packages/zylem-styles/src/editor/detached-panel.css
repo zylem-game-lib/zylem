@@ -1,0 +1,32 @@
+/* Detached Panel Styles */
+
+.detached-panel {
+    min-width: 250px;
+    min-height: 150px;
+}
+
+.detached-panel-titlebar {
+    padding: var(--zylem-spacing-sm) var(--zylem-spacing-md);
+}
+
+.detached-panel-content {
+    background: var(--zylem-color-background-translucent);
+}
+
+/* Drag state for accordion items */
+.accordion-item--dragging {
+    opacity: 0.6;
+    outline: 2px dashed var(--zylem-color-primary);
+    outline-offset: -2px;
+}
+
+/* Drop target indicator for reordering */
+.accordion-item--drop-target::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--zylem-color-accent);
+}

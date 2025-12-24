@@ -12,7 +12,6 @@
   },
   "engines": {
     "node": ">=22.12.0",
-    "npm": ">=10.0.0",
     "pnpm": ">=10.14.0"
   },
   "scripts": {
@@ -22,6 +21,7 @@
     "build:lib": "pnpm --filter @zylem/game-lib build",
     "build:editor": "pnpm --filter @zylem/editor build",
     "build:examples": "pnpm --filter @zylem/examples build",
+    "build:styles": "pnpm --filter @zylem/styles build",
     "build": "pnpm -r build",
     "test": "pnpm --filter @zylem/game-lib test",
     "test:e2e": "pnpm --filter @zylem/examples test:e2e",

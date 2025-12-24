@@ -7,10 +7,10 @@
 import { createContext, useContext, onCleanup, type JSX } from 'solid-js';
 import { createStore, reconcile } from 'solid-js/store';
 import { subscribe } from 'valtio/vanilla';
-import { debugState, type DebugState } from './debug-state';
-import { gameState, type GameState } from './game-state';
-import { stageState } from './stage-state';
-import type { StageStateInterface } from './types';
+import { debugState, type DebugState } from './entities/entities-state';
+import { gameState, type GameState } from './game/game-state';
+import { stageState } from './stages/stage-state';
+import type { StageStateInterface } from '../types';
 
 export interface EditorContextValue {
 	debug: DebugState;

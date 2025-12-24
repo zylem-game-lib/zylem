@@ -10,7 +10,7 @@
 }
 
 .zylem-toolbar.separator {
-  border-bottom: 1.5px solid var(--zylem-color-primary);
+  border-bottom: var(--zylem-border) solid var(--zylem-color-primary);
 }
 
 /* Toolbar-specific tweaks; base styles come from .zylem-button */
@@ -58,6 +58,7 @@
     opacity: 0;
     transform: translateY(4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
