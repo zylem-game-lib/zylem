@@ -1,0 +1,40 @@
+/* Common Styles */
+/* Non-component specific utility styles */
+
+.selected {
+    background: var(--zylem-color-primary-active);
+    box-shadow: inset 0 0 6px rgba(97, 166, 232, 0.4);
+}
+
+button {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.overlay {
+    background: linear-gradient(rgba(255, 255, 255, 0.04) 1px,
+            transparent 1px);
+    background-size: 100% 3px;
+    pointer-events: none;
+}
+
+/* Scrollbar styles */
+@layer utilities {
+    ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--zylem-color-background);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--zylem-color-background-hover);
+        border-radius: var(--zylem-radius);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--zylem-color-background-active-hover);
+    }
+}

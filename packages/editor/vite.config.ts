@@ -4,10 +4,23 @@ import path from 'path';
 
 export default defineConfig({
 	plugins: [solid()],
-	build: { target: 'esnext' },
+	build: {
+		target: 'esnext',
+		lib: {
+			entry: path.resolve(__dirname, 'src/index.ts'),
+			name: 'ZylemEditor',
+			fileName: 'zylem-editor',
+			formats: ['es'],
+		},
+		rollupOptions: {
+			// Externalize deps that shouldn't be bundled locally
+			external: ['solid-js', 'solid-js/web', '@zylem/styles'],
+		},
+	},
 	resolve: {
 		alias: {
-			'@zylem/game-lib': path.resolve(__dirname, '../game-lib/src/api/main.ts'),
+			// Resolve styles to the built dist folder for proper CSS bundling
+			'@zylem/styles/styles.css': path.resolve(__dirname, '../zylem-styles/dist/styles.css'),
 		},
 	},
 });

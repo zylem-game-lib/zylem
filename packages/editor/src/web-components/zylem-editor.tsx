@@ -2,9 +2,8 @@ import { render } from 'solid-js/web';
 import App from '../App';
 import { EditorProvider } from '../components/EditorContext';
 
-// Import bundled CSS (local copies, no external package dependencies for styles)
-import stylesCSS from '../styles/base.css?raw';
-import editorCSS from '../styles/editor.css?raw';
+// Import bundled CSS (single file with all tokens and component styles)
+import zylemCSS from '../../../zylem-styles/dist/styles.css?raw';
 
 /**
  * Configuration options for the ZylemEditorElement
@@ -111,7 +110,8 @@ export class ZylemEditorElement extends HTMLElement {
     // Add bundled styles unless explicitly disabled
     if (this._config.includeStyles !== false) {
       const styleElement = document.createElement('style');
-      styleElement.textContent = stylesCSS + editorCSS;
+
+      styleElement.textContent = zylemCSS;
       this.shadowRoot!.appendChild(styleElement);
     }
 

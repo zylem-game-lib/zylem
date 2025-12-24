@@ -6,7 +6,4 @@ declare module '@zylem/styles/styles.css?raw' {
     export default css;
 }
 
-declare module '@zylem/styles/editor.css?raw' {
-    const css: string;
-    export default css;
-}
+

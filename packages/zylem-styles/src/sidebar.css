@@ -1,0 +1,17 @@
+/* Sidebar Component Styles */
+
+.sidebar {
+    background: var(--zylem-color-surface);
+    border-right: 1px solid var(--zylem-color-border);
+}
+
+.sidebar-item:hover {
+    background: var(--zylem-color-surface-hover);
+}
+
+.sidebar-item.active {
+    background: var(--zylem-color-primary-active);
+    color: white;
+    font-weight: 600;
+    box-shadow: inset 0 0 8px rgba(97, 166, 232, 0.4);
+}

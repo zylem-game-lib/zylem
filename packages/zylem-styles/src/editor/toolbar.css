@@ -15,7 +15,10 @@
 
 /* Toolbar-specific tweaks; base styles come from .zylem-button */
 .zylem-toolbar-btn {
+  display: flex;
+  align-items: center;
   padding: var(--zylem-spacing-sm);
+  cursor: pointer;
 }
 
 .zylem-toolbar-btn:hover svg {

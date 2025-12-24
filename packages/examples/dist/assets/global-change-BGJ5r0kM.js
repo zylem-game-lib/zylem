@@ -1,1 +1,0 @@
-function v(r,l){let a=new Array(r.length).fill(void 0);return n=>{const e=r.map(o=>n.globals?.[o]);if(e.some((o,i)=>a[i]!==o)){const o=a.every(s=>s===void 0),i=e.every(s=>s===void 0);o&&i||l(e,n),a=e}}}function u(r,l){let a;return n=>{const e=n.stage?.getVariable?.(r)??void 0;a!==e&&(a===void 0&&e===void 0||l(e,n),a=e)}}export{v as g,u as v};

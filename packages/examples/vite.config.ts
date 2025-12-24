@@ -12,34 +12,18 @@ export default defineConfig({
 		target: 'esnext',
 	},
 	resolve: {
-		alias: {
-			// Use the built package for game-lib
-			// '@zylem/game-lib': path.resolve(__dirname, '../game-lib/dist/main.js'),
-			// Or if you want to develop against the source:
-			'@zylem/game-lib': path.resolve(__dirname, '../game-lib/src/api/main.ts'),
+		alias: [
+			// Examples source
+			{ find: '@examples', replacement: path.resolve(__dirname, './src') },
 
-			// Alias for editor package (source files for debug, UI, etc.)
-			// Note: More specific paths must come before general patterns
-			'@zylem/editor': path.resolve(__dirname, '../editor/src'),
-			'@lib/debug': path.resolve(__dirname, '../editor/src/debug'),
-			'@lib/ui': path.resolve(__dirname, '../editor/src/ui'),
+			// Editor package aliases REMOVED - using built package
 
-			// Alias for game-lib internals (general pattern - must come after specific @lib/* patterns)
-			// Using explicit wildcard-style aliases to match tsconfig.json patterns
-			'@lib': path.resolve(__dirname, '../game-lib/src/lib'),
-			'@interfaces': path.resolve(__dirname, '../game-lib/src/lib/interfaces'),
-			'@state': path.resolve(__dirname, '../game-lib/src/state'),
-			'~': path.resolve(__dirname, '../game-lib/src'),
-			'@': path.resolve(__dirname, '../game-lib/src'),
-
-			// Alias for examples source
-			'@examples': path.resolve(__dirname, './src'),
-
-			// Alias for zylem-styles - use dist for compiled CSS (no PostCSS processing needed)
-			'@zylem/styles/styles.css': path.resolve(__dirname, '../zylem-styles/dist/styles.css'),
-			'@zylem/styles/editor.css': path.resolve(__dirname, '../zylem-styles/dist/index.css'),
-			'@zylem/styles': path.resolve(__dirname, '../zylem-styles/src'),
-		},
+			// Styles aliases - Strict ordering required
+			// 1. Force styles.css to resolve to the bundled dist file
+			{ find: '@zylem/styles/styles.css', replacement: path.resolve(__dirname, '../zylem-styles/dist/styles.css') },
+			// 2. Fallback for other imports (e.g. source files)
+			{ find: '@zylem/styles', replacement: path.resolve(__dirname, '../zylem-styles/src') },
+		],
 	},
 	assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb'],
 	server: {

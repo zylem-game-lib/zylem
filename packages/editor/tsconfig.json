@@ -1,11 +1,21 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "types": ["vite/client"],
-    "noEmit": true
+    "composite": false,
+    "types": [
+      "vite/client"
+    ]
   },
-  "include": ["src", "*.html"],
-  "references": [{ "path": "../game-lib" }]
+  "include": [
+    "src/**/*",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+  ]
 }

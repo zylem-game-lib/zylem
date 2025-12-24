@@ -1,11 +1,11 @@
-import { G as Game } from './core-C2mjetAd.js';
-export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-C2mjetAd.js';
-export { S as StageOptions, c as createStage } from './stage-CrmY7V0i.js';
-export { e as entitySpawner } from './entity-spawner-DNnLYnZq.js';
-export { P as PerspectiveType, a as Perspectives, c as camera } from './camera-Dk-fOVZE.js';
+import { G as Game } from './core-DQNlxWD0.js';
+export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-DQNlxWD0.js';
+export { S as StageOptions, c as createStage } from './stage--a8knCQ7.js';
+export { e as entitySpawner } from './entity-spawner-DER2Pu7_.js';
+export { P as PerspectiveType, a as Perspectives, S as StageEntity, c as camera } from './camera-BLcG7KL-.js';
 export { ZylemBox, actor, box, plane, rect, sphere, sprite, text, zone } from './entities.js';
-import { U as UpdateContext, B as BehaviorCallbackType } from './entity-bQElAdpo.js';
-export { a as Behavior, L as LoadingEvent } from './entity-bQElAdpo.js';
+import { U as UpdateContext, B as BehaviorCallbackType } from './entity-CY24uyzB.js';
+export { a as Behavior, L as LoadingEvent, S as SetupContext } from './entity-CY24uyzB.js';
 export { boundary2d, ricochet2DCollision, ricochet2DInBounds } from './behaviors.js';
 import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
 export { m as makeMoveable, b as move, a as moveable, r as resetVelocity } from './moveable-B_vyA6cw.js';
@@ -132,4 +132,4 @@ declare class ZylemGameElement extends HTMLElement {
     disconnectedCallback(): void;
 }
 
-export { Game, ZylemGameElement, createGlobal, createVariable, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setGlobal, setVariable };
+export { Game, UpdateContext, ZylemGameElement, createGlobal, createVariable, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setGlobal, setVariable };

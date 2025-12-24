@@ -1,12 +1,12 @@
-export { S as StageOptions, c as createStage } from './stage-CrmY7V0i.js';
-export { e as entitySpawner } from './entity-spawner-DNnLYnZq.js';
+export { S as StageOptions, c as createStage } from './stage--a8knCQ7.js';
+export { e as entitySpawner } from './entity-spawner-DER2Pu7_.js';
 import * as _sinclair_typebox from '@sinclair/typebox';
 import { Static } from '@sinclair/typebox';
-import './entity-bQElAdpo.js';
+import './entity-CY24uyzB.js';
 import 'three';
 import '@dimforge/rapier3d-compat';
 import 'bitecs';
-import './camera-Dk-fOVZE.js';
+import './camera-BLcG7KL-.js';
 import 'three/addons/controls/OrbitControls.js';
 import 'three/examples/jsm/postprocessing/EffectComposer.js';
 

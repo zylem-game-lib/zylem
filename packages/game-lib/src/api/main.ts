@@ -67,3 +67,9 @@ export { setVariable, getVariable, createVariable, onVariableChange, onVariableC
 
 // Web Components
 export { ZylemGameElement } from '../web-components/zylem-game';
+
+// Lifecycle types
+export type { SetupContext, UpdateContext } from '../lib/core/base-node-life-cycle';
+
+// Interfaces
+export type { StageEntity } from '../lib/interfaces/entity';

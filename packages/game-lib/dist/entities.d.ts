@@ -1,4 +1,4 @@
-import { e as BaseNode, l as GameEntityOptions, V as Vec3, M as MaterialOptions, G as GameEntity, U as UpdateContext, T as TexturePath, d as DestroyContext } from './entity-bQElAdpo.js';
+import { e as BaseNode, l as GameEntityOptions, V as Vec3, M as MaterialOptions, G as GameEntity, U as UpdateContext, T as TexturePath, d as DestroyContext } from './entity-CY24uyzB.js';
 import { Object3D, Vector2, Vector3, Sprite, Color } from 'three';
 import '@dimforge/rapier3d-compat';
 import 'bitecs';

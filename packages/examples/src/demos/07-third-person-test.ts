@@ -4,9 +4,9 @@ import { ArrowHelper, Vector3 } from 'three';
 import { createGame, createStage, zone, rotateInDirection, move, resetVelocity } from '@zylem/game-lib';
 import { Ray } from '@dimforge/rapier3d-compat';
 import { playgroundPlane, playgroundActor, playgroundPlatforms } from '../utils';
-import { StageEntity } from '@interfaces/entity';
+import { StageEntity } from '@zylem/game-lib';
 import skybox from '@zylem/assets/3d/skybox/default.png';
-import { SetupContext, UpdateContext } from '@lib/core/base-node-life-cycle';
+import { SetupContext, UpdateContext } from '@zylem/game-lib';
 
 const stage1 = await createStage({
 	gravity: new Vector3(0, -9.82, 0),

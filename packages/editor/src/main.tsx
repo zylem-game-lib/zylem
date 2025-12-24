@@ -1,5 +1,4 @@
 import '@zylem/styles/styles.css';
-import '@zylem/styles/editor.css';
 import './web-components/zylem-editor';
 
 const root = document.getElementById('root');

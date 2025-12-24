@@ -1,24 +1,23 @@
 {
   "name": "@zylem/editor",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.1",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/zylem-editor.js",
+  "module": "./dist/zylem-editor.js",
   "types": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "import": "./dist/zylem-editor.js"
     }
   },
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
-    "preview": "vite preview",
-    "sync-styles": "cp ../zylem-styles/dist/styles.css ./src/styles/base.css && cp ../zylem-styles/dist/index.css ./src/styles/editor.css"
+    "build": "tsup",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@zylem/game-lib": "workspace:*",
     "@zylem/styles": "workspace:*",
     "solid-js": "^1.9.9",
     "@solidjs/router": "^0.14.0",
