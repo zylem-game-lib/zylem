@@ -3,17 +3,31 @@
  * 
  * Features:
  * - Draggable title bar
- * - Resizable
+ * - Resizable from edges and corners
+ * - Z-index ordering (click to bring to front)
+ * - Drag back over accordion to reattach at specific position
  * - Close button reattaches to accordion
- * - Stores position in store
  */
 
 import { createSignal, onCleanup, onMount, type Component, type JSX } from 'solid-js';
-import { reattachPanel, updateDetachedPanelPosition, debugStore } from '../editor-store';
+import {
+    reattachPanel,
+    updateDetachedPanelPosition,
+    updateDetachedPanelSize,
+    debugStore,
+    setDraggingPanel,
+    setDropTargetIndex,
+    clearDragState,
+    bringPanelToFront,
+} from '../editor-store';
 import { getPanelTitle, renderPanelContent } from './panel-config';
 
 // Minimum drag threshold to distinguish from clicks
 const DRAG_THRESHOLD = 3;
+const MIN_WIDTH = 250;
+const MIN_HEIGHT = 150;
+
+type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null;
 
 export interface DetachedPanelProps {
     panelId: string;
@@ -21,6 +35,10 @@ export interface DetachedPanelProps {
 
 export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
     const panelState = () => debugStore.detachedPanels[props.panelId];
+    const zIndex = () => {
+        const index = debugStore.panelZOrder.indexOf(props.panelId);
+        return 1003 + index;
+    };
 
     const [position, setPosition] = createSignal(
         panelState()?.position ?? { x: 100, y: 100 }
@@ -30,44 +48,142 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
     );
 
     let isDragging = false;
+    let isResizing = false;
+    let resizeDirection: ResizeDirection = null;
     let dragStartPos = { x: 0, y: 0 };
     let panelStartPos = { x: 0, y: 0 };
+    let panelStartSize = { width: 0, height: 0 };
     let hasMoved = false;
+
+    const handlePanelMouseDown = () => {
+        // Bring to front on any click
+        bringPanelToFront(props.panelId);
+    };
 
     const handleTitleBarMouseDown = (e: MouseEvent) => {
         isDragging = true;
         hasMoved = false;
         dragStartPos = { x: e.clientX, y: e.clientY };
         panelStartPos = { ...position() };
+        bringPanelToFront(props.panelId);
         e.preventDefault();
     };
 
+    const handleResizeMouseDown = (direction: ResizeDirection) => (e: MouseEvent) => {
+        isResizing = true;
+        resizeDirection = direction;
+        dragStartPos = { x: e.clientX, y: e.clientY };
+        panelStartPos = { ...position() };
+        panelStartSize = { ...size() };
+        bringPanelToFront(props.panelId);
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
-        if (!isDragging) return;
+        if (isDragging) {
+            const deltaX = e.clientX - dragStartPos.x;
+            const deltaY = e.clientY - dragStartPos.y;
 
-        const deltaX = e.clientX - dragStartPos.x;
-        const deltaY = e.clientY - dragStartPos.y;
+            if (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD) {
+                if (!hasMoved) {
+                    hasMoved = true;
+                    setDraggingPanel(props.panelId);
+                }
+            }
 
-        if (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD) {
-            hasMoved = true;
-        }
+            if (hasMoved) {
+                const newPos = {
+                    x: Math.max(0, Math.min(panelStartPos.x + deltaX, window.innerWidth - 100)),
+                    y: Math.max(0, Math.min(panelStartPos.y + deltaY, window.innerHeight - 50)),
+                };
+                setPosition(newPos);
 
-        if (hasMoved) {
-            const newPos = {
-                x: Math.max(0, Math.min(panelStartPos.x + deltaX, window.innerWidth - 100)),
-                y: Math.max(0, Math.min(panelStartPos.y + deltaY, window.innerHeight - 50)),
-            };
-            setPosition(newPos);
+                // Check if over the main editor panel and determine drop index
+                const editorPanel = document.querySelector('.zylem-accordion');
+                if (editorPanel) {
+                    const panelRect = editorPanel.getBoundingClientRect();
+                    const isOverPanel =
+                        e.clientX >= panelRect.left &&
+                        e.clientX <= panelRect.right &&
+                        e.clientY >= panelRect.top &&
+                        e.clientY <= panelRect.bottom;
+
+                    if (isOverPanel) {
+                        const accordionItems = editorPanel.querySelectorAll('.accordion-item');
+                        let dropIndex = 0;
+
+                        for (let i = 0; i < accordionItems.length; i++) {
+                            const item = accordionItems[i];
+                            if (!item) continue;
+                            const itemRect = item.getBoundingClientRect();
+                            const itemMiddle = itemRect.top + itemRect.height / 2;
+                            if (e.clientY > itemMiddle) {
+                                dropIndex = i + 1;
+                            }
+                        }
+                        setDropTargetIndex(dropIndex);
+                    } else {
+                        setDropTargetIndex(null);
+                    }
+                }
+            }
+        } else if (isResizing && resizeDirection) {
+            const deltaX = e.clientX - dragStartPos.x;
+            const deltaY = e.clientY - dragStartPos.y;
+
+            let newWidth = panelStartSize.width;
+            let newHeight = panelStartSize.height;
+            let newX = panelStartPos.x;
+            let newY = panelStartPos.y;
+
+            // Handle horizontal resizing
+            if (resizeDirection.includes('e')) {
+                newWidth = Math.max(MIN_WIDTH, panelStartSize.width + deltaX);
+            } else if (resizeDirection.includes('w')) {
+                const proposedWidth = panelStartSize.width - deltaX;
+                if (proposedWidth >= MIN_WIDTH) {
+                    newWidth = proposedWidth;
+                    newX = panelStartPos.x + deltaX;
+                }
+            }
+
+            // Handle vertical resizing
+            if (resizeDirection.includes('s')) {
+                newHeight = Math.max(MIN_HEIGHT, panelStartSize.height + deltaY);
+            } else if (resizeDirection.includes('n')) {
+                const proposedHeight = panelStartSize.height - deltaY;
+                if (proposedHeight >= MIN_HEIGHT) {
+                    newHeight = proposedHeight;
+                    newY = panelStartPos.y + deltaY;
+                }
+            }
+
+            setSize({ width: newWidth, height: newHeight });
+            setPosition({ x: newX, y: newY });
         }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
         if (isDragging && hasMoved) {
-            // Save position to store
+            const dropIndex = debugStore.dropTargetIndex;
+            if (dropIndex !== null) {
+                reattachPanel(props.panelId, dropIndex);
+            } else {
+                updateDetachedPanelPosition(props.panelId, position());
+            }
+        }
+
+        if (isResizing) {
+            updateDetachedPanelSize(props.panelId, size());
             updateDetachedPanelPosition(props.panelId, position());
         }
+
         isDragging = false;
+        isResizing = false;
+        resizeDirection = null;
         hasMoved = false;
+        clearDragState();
     };
 
     const handleClose = () => {
@@ -84,31 +200,28 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
         window.removeEventListener('mouseup', handleMouseUp);
     });
 
+    const resizeHandleStyle = (cursor: string): JSX.CSSProperties => ({
+        position: 'absolute',
+        'z-index': 10,
+        cursor,
+    });
+
     return (
         <div
             class="detached-panel floating-panel"
+            onMouseDown={handlePanelMouseDown}
             style={{
-                position: 'fixed',
                 left: `${position().x}px`,
                 top: `${position().y}px`,
                 width: `${size().width}px`,
                 height: `${size().height}px`,
-                'z-index': 1003,
-                display: 'flex',
-                'flex-direction': 'column',
+                'z-index': zIndex(),
             }}
         >
             {/* Title bar */}
             <div
                 class="detached-panel-titlebar floating-panel-titlebar"
                 onMouseDown={handleTitleBarMouseDown}
-                style={{
-                    cursor: 'grab',
-                    display: 'flex',
-                    'align-items': 'center',
-                    'justify-content': 'space-between',
-                    'user-select': 'none',
-                }}
             >
                 <span class="floating-panel-title">{getPanelTitle(props.panelId)}</span>
                 <button
@@ -124,15 +237,45 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
             {/* Content area */}
             <div
                 class="detached-panel-content floating-panel-content"
-                style={{
-                    flex: 1,
-                    overflow: 'auto',
-                    display: 'flex',
-                    'flex-direction': 'column',
-                }}
             >
                 {renderPanelContent(props.panelId)}
             </div>
+
+            {/* Resize handles - edges */}
+            <div
+                style={{ ...resizeHandleStyle('ns-resize'), top: 0, left: '10px', right: '10px', height: '6px' }}
+                onMouseDown={handleResizeMouseDown('n')}
+            />
+            <div
+                style={{ ...resizeHandleStyle('ns-resize'), bottom: 0, left: '10px', right: '10px', height: '6px' }}
+                onMouseDown={handleResizeMouseDown('s')}
+            />
+            <div
+                style={{ ...resizeHandleStyle('ew-resize'), left: 0, top: '10px', bottom: '10px', width: '6px' }}
+                onMouseDown={handleResizeMouseDown('w')}
+            />
+            <div
+                style={{ ...resizeHandleStyle('ew-resize'), right: 0, top: '10px', bottom: '10px', width: '6px' }}
+                onMouseDown={handleResizeMouseDown('e')}
+            />
+
+            {/* Resize handles - corners */}
+            <div
+                style={{ ...resizeHandleStyle('nwse-resize'), top: 0, left: 0, width: '10px', height: '10px' }}
+                onMouseDown={handleResizeMouseDown('nw')}
+            />
+            <div
+                style={{ ...resizeHandleStyle('nesw-resize'), top: 0, right: 0, width: '10px', height: '10px' }}
+                onMouseDown={handleResizeMouseDown('ne')}
+            />
+            <div
+                style={{ ...resizeHandleStyle('nesw-resize'), bottom: 0, left: 0, width: '10px', height: '10px' }}
+                onMouseDown={handleResizeMouseDown('sw')}
+            />
+            <div
+                style={{ ...resizeHandleStyle('nwse-resize'), bottom: 0, right: 0, width: '10px', height: '10px' }}
+                onMouseDown={handleResizeMouseDown('se')}
+            />
         </div>
     );
 };

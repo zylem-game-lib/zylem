@@ -1,5 +1,5 @@
 import { Accordion } from '@kobalte/core';
-import { For, type Component } from 'solid-js';
+import { Index, Show, type Component } from 'solid-js';
 import { debugStore, setOpenSections } from '../editor-store';
 import { PANEL_CONFIGS, renderPanelContent } from './panel-config';
 import { DraggableAccordionItem } from './DraggableAccordionItem';
@@ -19,6 +19,10 @@ export const AccordionMenu: Component = () => {
       .filter((p): p is NonNullable<typeof p> => p !== undefined);
   };
 
+  // Check if we're in a drag-to-reattach operation
+  const isDraggingToReattach = () => debugStore.draggingPanelId !== null;
+  const dropTargetIndex = () => debugStore.dropTargetIndex;
+
   return (
     <Accordion.Root
       multiple
@@ -26,13 +30,24 @@ export const AccordionMenu: Component = () => {
       value={debugStore.openSections}
       onChange={setOpenSections}
     >
-      <For each={getDockedPanels()}>
-        {(panel) => (
-          <DraggableAccordionItem value={panel.id} title={panel.title}>
-            {renderPanelContent(panel.id)}
-          </DraggableAccordionItem>
+      {/* Drop indicator at the top */}
+      <Show when={isDraggingToReattach() && dropTargetIndex() === 0}>
+        <div class="accordion-drop-indicator" />
+      </Show>
+
+      <Index each={getDockedPanels()}>
+        {(panel, index) => (
+          <>
+            <DraggableAccordionItem value={panel().id} title={panel().title}>
+              {renderPanelContent(panel().id)}
+            </DraggableAccordionItem>
+            {/* Drop indicator after each item */}
+            <Show when={isDraggingToReattach() && dropTargetIndex() === index + 1}>
+              <div class="accordion-drop-indicator" />
+            </Show>
+          </>
         )}
-      </For>
+      </Index>
     </Accordion.Root>
   );
 };

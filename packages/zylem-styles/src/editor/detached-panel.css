@@ -3,30 +3,72 @@
 .detached-panel {
     min-width: 250px;
     min-height: 150px;
+    position: fixed;
+    display: flex;
+    flex-direction: column;
 }
 
 .detached-panel-titlebar {
     padding: var(--zylem-spacing-sm) var(--zylem-spacing-md);
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+}
+
+.detached-panel-titlebar:active {
+    cursor: grabbing;
 }
 
 .detached-panel-content {
     background: var(--zylem-color-background-translucent);
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Drag state for accordion items */
 .accordion-item--dragging {
-    opacity: 0.6;
-    outline: 2px dashed var(--zylem-color-primary);
-    outline-offset: -2px;
+    opacity: 0.5;
 }
 
-/* Drop target indicator for reordering */
-.accordion-item--drop-target::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
+/* Ghost outline that follows cursor during drag */
+.accordion-drag-ghost {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--zylem-color-background-translucent);
+    border: 2px dotted var(--zylem-color-accent);
+    border-radius: var(--zylem-radius);
+    color: var(--zylem-color-primary);
+    font-family: var(--zylem-font-family);
+    backdrop-filter: blur(var(--zylem-spacing-sm));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--zylem-color-accent);
+
+    /* Styles moved from inline */
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* Drop indicator for drag-to-reattach */
+.accordion-drop-indicator {
+    height: 4px;
     background: var(--zylem-color-accent);
+    border-radius: 2px;
+    margin: var(--zylem-spacing-sm) var(--zylem-spacing-md);
+    box-shadow: 0 0 8px var(--zylem-color-accent);
+    animation: drop-indicator-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes drop-indicator-pulse {
+    from {
+        opacity: 0.6;
+    }
+
+    to {
+        opacity: 1;
+    }
 }

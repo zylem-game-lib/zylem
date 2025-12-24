@@ -35,7 +35,9 @@ export default defineConfig({
 			// Alias for examples source
 			'@examples': path.resolve(__dirname, './src'),
 
-			// Alias for zylem-styles
+			// Alias for zylem-styles - use dist for compiled CSS (no PostCSS processing needed)
+			'@zylem/styles/styles.css': path.resolve(__dirname, '../zylem-styles/dist/styles.css'),
+			'@zylem/styles/editor.css': path.resolve(__dirname, '../zylem-styles/dist/index.css'),
 			'@zylem/styles': path.resolve(__dirname, '../zylem-styles/src'),
 		},
 	},

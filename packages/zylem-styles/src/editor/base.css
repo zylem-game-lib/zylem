@@ -18,7 +18,7 @@ button {
   width: var(--zylem-size-icon-lg);
   height: var(--zylem-size-icon-lg);
 
-  background-image: url(./assets/zylem-logo.png);
+  background-image: var(--zylem-logo-url);
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

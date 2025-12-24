@@ -1,6 +1,7 @@
 /* Editor Styles Entry Point */
 /* These styles were migrated from @zylem/editor to centralize styling */
 
+@import './_logo-base64.css';
 @import './base.css';
 @import './toolbar.css';
 @import './console.css';

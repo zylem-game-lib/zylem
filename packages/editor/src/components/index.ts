@@ -35,9 +35,14 @@ export {
 	detachPanel,
 	reattachPanel,
 	updateDetachedPanelPosition,
+	updateDetachedPanelSize,
 	reorderPanels,
 	setOpenSections,
 	isPanelDetached,
+	setDraggingPanel,
+	setDropTargetIndex,
+	clearDragState,
+	bringPanelToFront,
 	type DetachedPanelState,
 } from './editor-store';
 export { EditorProvider, useEditor, type EditorContextValue } from './EditorContext';

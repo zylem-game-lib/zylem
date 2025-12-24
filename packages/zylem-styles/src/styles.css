@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100..900;1,100..900&display=swap');
+
 :root {
   --zylem-color-primary: #61A6E8;
   --zylem-color-primary-hover: #3B8AD8;
@@ -70,8 +72,6 @@ button {
   font-weight: 600;
   box-shadow: inset 0 0 8px rgba(97, 166, 232, 0.4);
 }
-
-
 
 @layer utilities {
   ::-webkit-scrollbar {
