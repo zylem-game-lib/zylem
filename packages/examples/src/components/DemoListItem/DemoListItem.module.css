@@ -1,0 +1,31 @@
+.listItem {
+    width: 100%;
+    text-align: left;
+    padding: var(--zylem-spacing-lg);
+    box-sizing: border-box;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    border-left: 4px solid transparent;
+    color: var(--zylem-color-text);
+    opacity: 0.8;
+    background: transparent;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    font-family: var(--zylem-font-family);
+    font-size: var(--zylem-font-size);
+    cursor: pointer;
+}
+
+.listItem:hover {
+    background: var(--zylem-color-surface-hover);
+    opacity: 1;
+}
+
+.is-active {
+    background: var(--zylem-color-primary-active);
+    border-left-color: var(--zylem-color-primary);
+    color: white;
+    font-weight: 600;
+    opacity: 1;
+    box-shadow: inset 0 0 8px rgba(97, 166, 232, 0.4);
+}

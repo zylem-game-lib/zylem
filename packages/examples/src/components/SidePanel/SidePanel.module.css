@@ -1,0 +1,50 @@
+.sidePanel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    background: var(--zylem-color-background);
+    border-right: 1px solid var(--zylem-color-border);
+    transform: translateX(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidePanelClosed {
+    transform: translateX(-100%);
+}
+
+.toggleButton {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 48px;
+    background: var(--zylem-color-surface);
+    border: 1px solid var(--zylem-color-border);
+    border-left: none;
+    border-radius: 0 var(--zylem-radius) var(--zylem-radius) 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--zylem-color-text);
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.toggleButton:hover {
+    background: var(--zylem-color-surface-hover);
+    color: var(--zylem-color-primary);
+}
+
+.toggleIcon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toggleIconClosed {
+    transform: rotate(180deg);
+}

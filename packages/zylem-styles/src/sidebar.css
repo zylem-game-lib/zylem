@@ -9,7 +9,7 @@
     background: var(--zylem-color-surface-hover);
 }
 
-.sidebar-item.active {
+.sidebar-item.is-active {
     background: var(--zylem-color-primary-active);
     color: white;
     font-weight: 600;

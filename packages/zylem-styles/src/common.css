@@ -26,15 +26,19 @@ button {
     }
 
     ::-webkit-scrollbar-track {
-        background: var(--zylem-color-background);
+        background: var(--zylem-color-surface);
     }
 
     ::-webkit-scrollbar-thumb {
-        background: var(--zylem-color-background-hover);
+        background: var(--zylem-color-accent);
         border-radius: var(--zylem-radius);
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: var(--zylem-color-background-active-hover);
+        background: var(--zylem-color-accent-hover);
+    }
+
+    ::-webkit-scrollbar-thumb:active {
+        background: var(--zylem-color-accent-active);
     }
 }

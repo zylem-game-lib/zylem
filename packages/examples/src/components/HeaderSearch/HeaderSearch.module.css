@@ -1,0 +1,31 @@
+.header {
+    padding: var(--zylem-spacing-xl);
+    border-bottom: 1px solid var(--zylem-color-border);
+}
+
+.title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: var(--zylem-spacing-xl);
+    color: var(--zylem-color-primary);
+}
+
+.searchInput {
+    width: 100%;
+    background: var(--zylem-color-surface-hover);
+    border: 1px solid var(--zylem-color-border);
+    border-radius: var(--zylem-radius);
+    padding: var(--zylem-spacing-md) var(--zylem-spacing-lg);
+    font-size: 0.875rem;
+    font-family: var(--zylem-font-family);
+    color: var(--zylem-color-text);
+}
+
+.searchInput:focus {
+    outline: none;
+    border-color: var(--zylem-color-primary);
+}
+
+.searchInput::placeholder {
+    color: var(--zylem-color-text-secondary);
+}

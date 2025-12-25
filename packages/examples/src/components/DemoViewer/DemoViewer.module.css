@@ -1,0 +1,79 @@
+.viewer {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    position: relative;
+    display: flex;
+}
+
+.gameContainer {
+    flex: 1;
+    position: relative;
+}
+
+.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.placeholderContent {
+    text-align: center;
+    color: var(--zylem-color-text);
+    opacity: 0.6;
+}
+
+.placeholderTitle {
+    font-size: 1.5rem;
+    margin-bottom: var(--zylem-spacing-md);
+}
+
+.placeholderSubtitle {
+    font-size: 0.875rem;
+}
+
+.loadingOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--zylem-color-background);
+    z-index: 50;
+}
+
+.loadingContent {
+    text-align: center;
+}
+
+.loadingTitle {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: var(--zylem-spacing-md);
+}
+
+.progressBar {
+    width: 16rem;
+    height: 0.5rem;
+    background: var(--zylem-color-surface-hover);
+    border-radius: var(--zylem-radius);
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: var(--zylem-color-primary);
+    transition: width 0.2s ease;
+}
+
+.loadingMessage {
+    font-size: 0.875rem;
+    color: var(--zylem-color-text);
+    opacity: 0.6;
+    margin-top: var(--zylem-spacing-md);
+}

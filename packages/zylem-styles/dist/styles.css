@@ -54,14 +54,17 @@ button {
     height: 4px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--zylem-color-background);
+    background: var(--zylem-color-surface);
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--zylem-color-background-hover);
+    background: var(--zylem-color-accent);
     border-radius: var(--zylem-radius);
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--zylem-color-background-active-hover);
+    background: var(--zylem-color-accent-hover);
+  }
+  ::-webkit-scrollbar-thumb:active {
+    background: var(--zylem-color-accent-active);
   }
 }
 
@@ -73,7 +76,7 @@ button {
 .sidebar-item:hover {
   background: var(--zylem-color-surface-hover);
 }
-.sidebar-item.active {
+.sidebar-item.is-active {
   background: var(--zylem-color-primary-active);
   color: white;
   font-weight: 600;
