@@ -9,7 +9,7 @@ var tokens = {
     accent: "#E64534",
     // Backgrounds
     background: "#11151C",
-    backgroundTranslucent: "rgba(10, 20, 30, 0.54)",
+    backgroundTranslucent: "rgba(10, 20, 30, 0.46)",
     surface: "#1A1F27",
     surfaceHover: "#222831",
     border: "#2D3643",
@@ -25,9 +25,12 @@ var tokens = {
     consoleText: "#61A6E8"
   },
   spacing: {
-    sm: "8px",
-    md: "12px",
-    lg: "16px"
+    xs: "2px",
+    sm: "4px",
+    md: "8px",
+    lg: "12px",
+    xl: "16px",
+    xxl: "32px"
   },
   sizes: {
     icon: "28px",

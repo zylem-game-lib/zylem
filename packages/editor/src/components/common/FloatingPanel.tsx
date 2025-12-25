@@ -1,4 +1,7 @@
-import { createSignal, onCleanup, onMount, type JSX, type Component } from 'solid-js';
+import { createSignal, onCleanup, onMount, Show, type JSX, type Component, type Accessor } from 'solid-js';
+import PanelBottomOpen from 'lucide-solid/icons/panel-bottom-open';
+import PanelBottomClose from 'lucide-solid/icons/panel-bottom-close';
+import X from 'lucide-solid/icons/x';
 
 // Minimum drag threshold to distinguish from clicks
 const DRAG_THRESHOLD = 3;
@@ -10,9 +13,10 @@ export interface FloatingPanelProps {
     initialPosition?: { x: number; y: number };
     initialSize?: { width: number; height: number };
     minSize?: { width: number; height: number };
+    collapsible?: boolean;
     onClose?: () => void;
     onMove?: (position: { x: number; y: number }) => void;
-    children: JSX.Element;
+    children: JSX.Element | ((isCollapsed: Accessor<boolean>) => JSX.Element);
 }
 
 /**
@@ -28,6 +32,9 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
     const [size, setSize] = createSignal(
         props.initialSize ?? { width: 460, height: 600 }
     );
+    const [isCollapsed, setIsCollapsed] = createSignal(false);
+
+    const toggleCollapse = () => setIsCollapsed(!isCollapsed());
 
     let isDragging = false;
     let isResizing = false;
@@ -164,7 +171,7 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                 left: `${position().x}px`,
                 top: `${position().y}px`,
                 width: `${size().width}px`,
-                height: `${size().height}px`,
+                height: isCollapsed() ? 'auto' : `${size().height}px`,
                 'z-index': 1002,
                 display: 'flex',
                 'flex-direction': 'column',
@@ -183,15 +190,27 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                 }}
             >
                 <span class="floating-panel-title">{props.title ?? 'Panel'}</span>
-                {props.onClose && (
-                    <button
-                        class="floating-panel-close zylem-button"
-                        onClick={props.onClose}
-                        type="button"
-                    >
-                        ✕
-                    </button>
-                )}
+                <div class="floating-panel-controls">
+                    <Show when={props.collapsible}>
+                        <button
+                            class="floating-panel-button"
+                            onClick={toggleCollapse}
+                            title={isCollapsed() ? 'Expand panel' : 'Collapse panel'}
+                            type="button"
+                        >
+                            {isCollapsed() ? <PanelBottomOpen size={12} /> : <PanelBottomClose size={12} />}
+                        </button>
+                    </Show>
+                    <Show when={props.onClose}>
+                        <button
+                            class="floating-panel-button"
+                            onClick={props.onClose}
+                            type="button"
+                        >
+                            <X size={12} />
+                        </button>
+                    </Show>
+                </div>
             </div>
 
             {/* Content area */}
@@ -204,7 +223,9 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                     'flex-direction': 'column',
                 }}
             >
-                {props.children}
+                {typeof props.children === 'function'
+                    ? props.children(isCollapsed)
+                    : props.children}
             </div>
 
             {/* Resize handles - edges */}

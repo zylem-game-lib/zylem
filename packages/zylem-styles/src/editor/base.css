@@ -120,7 +120,8 @@ button {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.floating-panel-close {
+/* Shared styles for title bar buttons (close, collapse, etc.) */
+.floating-panel-button {
   all: unset;
   cursor: pointer;
   padding: 2px 6px;
@@ -131,14 +132,21 @@ button {
   transition: background-color 0.15s ease;
 }
 
-.floating-panel-close:hover {
+.floating-panel-button:hover {
   background: rgba(0, 0, 0, 0.2);
 }
 
-.floating-panel-close:active {
+.floating-panel-button:active {
   background: rgba(0, 0, 0, 0.3);
 }
 
 .floating-panel-content {
   background: transparent;
+}
+
+/* Title bar button container */
+.floating-panel-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--zylem-spacing-xs);
 }

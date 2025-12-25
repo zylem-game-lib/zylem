@@ -16,7 +16,7 @@
 
     /* Background colors */
     --zylem-color-background: #11151C;
-    --zylem-color-background-translucent: rgba(10, 20, 30, 0.54);
+    --zylem-color-background-translucent: rgba(10, 20, 30, 0.46);
     --zylem-color-surface: #1A1F27;
     --zylem-color-surface-hover: #222831;
     --zylem-color-border: #2D3643;
@@ -35,9 +35,12 @@
     --zylem-color-console-text: #61A6E8;
 
     /* Spacing */
-    --zylem-spacing-sm: 8px;
-    --zylem-spacing-md: 12px;
-    --zylem-spacing-lg: 16px;
+    --zylem-spacing-xs: 2px;
+    --zylem-spacing-sm: 4px;
+    --zylem-spacing-md: 8px;
+    --zylem-spacing-lg: 12px;
+    --zylem-spacing-xl: 16px;
+    --zylem-spacing-xxl: 32px;
 
     /* Sizes */
     --zylem-size-icon: 28px;

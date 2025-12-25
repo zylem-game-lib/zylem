@@ -225,7 +225,7 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
             >
                 <span class="floating-panel-title">{getPanelTitle(props.panelId)}</span>
                 <button
-                    class="floating-panel-close zylem-button"
+                    class="floating-panel-button zylem-button"
                     onClick={handleClose}
                     type="button"
                     title="Dock back to panel"

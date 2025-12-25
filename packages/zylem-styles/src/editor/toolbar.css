@@ -4,8 +4,8 @@
   display: flex;
   position: sticky;
   top: 0;
-  gap: var(--zylem-spacing-sm);
-  padding: var(--zylem-spacing-sm);
+  gap: var(--zylem-spacing-md);
+  padding: var(--zylem-spacing-md);
   z-index: 1;
 }
 
@@ -17,7 +17,7 @@
 .zylem-toolbar-btn {
   display: flex;
   align-items: center;
-  padding: var(--zylem-spacing-sm);
+  padding: var(--zylem-spacing-md);
   cursor: pointer;
 }
 

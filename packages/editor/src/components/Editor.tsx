@@ -87,10 +87,11 @@ export function Editor() {
           initialPosition={getInitialPanelPosition()}
           initialSize={{ width: PANEL_WIDTH, height: PANEL_HEIGHT }}
           minSize={{ width: 300, height: 200 }}
+          collapsible={true}
           onClose={closeMenu}
           onMove={handlePanelMove}
         >
-          <Menu />
+          {(isCollapsed) => <Menu isCollapsed={isCollapsed} />}
         </FloatingPanel>
       </Show>
 

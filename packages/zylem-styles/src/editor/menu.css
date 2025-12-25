@@ -20,6 +20,24 @@
   display: none;
 }
 
+/* Menu header: toolbar + collapse button */
+.zylem-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--zylem-spacing-sm);
+  border-bottom: var(--zylem-border) solid var(--zylem-color-primary);
+}
+
+/* Collapse/expand button */
+.zylem-collapse-button {
+  flex-shrink: 0;
+  padding: var(--zylem-spacing-sm);
+  font-size: 12px;
+  line-height: 1;
+  margin-right: var(--zylem-spacing-sm);
+}
+
 /* Heading resets scoped to menu */
 .zylem-menu h3,
 .zylem-menu h4 {

@@ -18,9 +18,12 @@ declare const tokens: {
         consoleText: string;
     };
     spacing: {
+        xs: string;
         sm: string;
         md: string;
         lg: string;
+        xl: string;
+        xxl: string;
     };
     sizes: {
         icon: string;
