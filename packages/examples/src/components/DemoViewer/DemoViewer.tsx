@@ -8,6 +8,8 @@ import {
 import { ZylemGameElement } from '@zylem/game-lib';
 import { editorEvents } from '@zylem/editor';
 import { appStore } from '../../store/appStore';
+// editorStateStore is imported for side effects (sets up event listener)
+import '../../store/editorStateStore';
 import styles from './DemoViewer.module.css';
 
 // TypeScript declarations for custom elements
@@ -67,6 +69,9 @@ const ExampleRunner: Component = () => {
     onCleanup(() => {
         editorEvents.emit({ type: 'debug', payload: { enabled: false } });
     });
+
+    // Note: debug state sync happens directly in editorStateStore via valtio mutation
+    // This avoids any re-renders of the game component
 
     return (
         <div class={styles.container}>

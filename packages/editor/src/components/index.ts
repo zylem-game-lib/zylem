@@ -5,6 +5,13 @@
 // Event bus for external state sync
 export { editorEvents, type EditorEvent, type EditorEventType } from './events';
 
+// Editor-to-app events (window CustomEvents)
+export {
+	dispatchEditorUpdate,
+	EDITOR_UPDATE_EVENT,
+	type EditorUpdatePayload,
+} from './editor-events';
+
 // State modules - re-exported from UI section directories
 export {
 	debugState,

@@ -818,7 +818,7 @@ var BoxBuilder = class extends EntityBuilder {
     return new ZylemBox(options);
   }
 };
-var BOX_TYPE = Symbol("Box");
+var BOX_TYPE = /* @__PURE__ */ Symbol("Box");
 var ZylemBox = class _ZylemBox extends GameEntity {
   static type = BOX_TYPE;
   constructor(options) {
@@ -881,7 +881,7 @@ var SphereBuilder = class extends EntityBuilder {
     return new ZylemSphere(options);
   }
 };
-var SPHERE_TYPE = Symbol("Sphere");
+var SPHERE_TYPE = /* @__PURE__ */ Symbol("Sphere");
 var ZylemSphere = class _ZylemSphere extends GameEntity {
   static type = SPHERE_TYPE;
   constructor(options) {
@@ -945,7 +945,7 @@ var SpriteBuilder = class extends EntityBuilder {
     return new ZylemSprite(options);
   }
 };
-var SPRITE_TYPE = Symbol("Sprite");
+var SPRITE_TYPE = /* @__PURE__ */ Symbol("Sprite");
 var ZylemSprite = class _ZylemSprite extends GameEntity {
   static type = SPRITE_TYPE;
   sprites = [];
@@ -1211,7 +1211,7 @@ var PlaneBuilder = class extends EntityBuilder {
     return new ZylemPlane(options);
   }
 };
-var PLANE_TYPE = Symbol("Plane");
+var PLANE_TYPE = /* @__PURE__ */ Symbol("Plane");
 var ZylemPlane = class extends GameEntity {
   static type = PLANE_TYPE;
   constructor(options) {
@@ -1269,7 +1269,7 @@ var ZoneBuilder = class extends EntityBuilder {
     return new ZylemZone(options);
   }
 };
-var ZONE_TYPE = Symbol("Zone");
+var ZONE_TYPE = /* @__PURE__ */ Symbol("Zone");
 var ZylemZone = class extends GameEntity {
   static type = ZONE_TYPE;
   _enteredZone = /* @__PURE__ */ new Map();
@@ -1557,7 +1557,7 @@ var ActorBuilder = class extends EntityBuilder {
     return new ZylemActor(options);
   }
 };
-var ACTOR_TYPE = Symbol("Actor");
+var ACTOR_TYPE = /* @__PURE__ */ Symbol("Actor");
 var ZylemActor = class extends GameEntity {
   static type = ACTOR_TYPE;
   _object = null;
@@ -1676,7 +1676,7 @@ var TextBuilder = class extends EntityBuilder {
     return new ZylemText(options);
   }
 };
-var TEXT_TYPE = Symbol("Text");
+var TEXT_TYPE = /* @__PURE__ */ Symbol("Text");
 var ZylemText = class _ZylemText extends GameEntity {
   static type = TEXT_TYPE;
   _sprite = null;
@@ -1892,7 +1892,7 @@ var RectBuilder = class extends EntityBuilder {
     return new ZylemRect(options);
   }
 };
-var RECT_TYPE = Symbol("Rect");
+var RECT_TYPE = /* @__PURE__ */ Symbol("Rect");
 var ZylemRect = class _ZylemRect extends GameEntity {
   static type = RECT_TYPE;
   _sprite = null;

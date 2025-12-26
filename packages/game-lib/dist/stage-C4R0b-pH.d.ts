@@ -185,6 +185,7 @@ declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     transformSystem: any;
     debugDelegate: StageDebugDelegate | null;
     cameraDebugDelegate: StageCameraDebugDelegate | null;
+    private debugStateUnsubscribe;
     uuid: string;
     wrapperRef: Stage | null;
     camera?: CameraWrapper;
@@ -212,6 +213,7 @@ declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     load(id: string, camera?: ZylemCamera | null): Promise<void>;
     private createDefaultCamera;
     protected _setup(params: SetupContext<ZylemStage>): void;
+    private updateDebugDelegate;
     protected _update(params: UpdateContext<ZylemStage>): void;
     outOfLoop(): void;
     /** Update debug overlays and helpers if enabled. */

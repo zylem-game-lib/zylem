@@ -65,8 +65,11 @@ export { globalChange, globalChanges, variableChange, variableChanges } from '..
 export { setGlobal, getGlobal, createGlobal, onGlobalChange, onGlobalChanges, getGlobals } from '../lib/game/game-state';
 export { setVariable, getVariable, createVariable, onVariableChange, onVariableChanges } from '../lib/stage/stage-state';
 
+// Debug state - exposed for direct mutation by editor integration
+export { debugState } from '../lib/debug/debug-state';
+
 // Web Components
-export { ZylemGameElement } from '../web-components/zylem-game';
+export { ZylemGameElement, type ZylemGameState } from '../web-components/zylem-game';
 
 // Lifecycle types
 export type { SetupContext, UpdateContext } from '../lib/core/base-node-life-cycle';

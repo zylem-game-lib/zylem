@@ -8,6 +8,7 @@ import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, 
 import { GameEntityInterface } from '../types/entity-types';
 import { ZylemBlueColor } from '../core/utility/vector';
 import { debugState } from '../debug/debug-state';
+import { subscribe } from 'valtio/vanilla';
 import { getGlobals } from "../game/game-state";
 
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
@@ -92,6 +93,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	transformSystem: any = null;
 	debugDelegate: StageDebugDelegate | null = null;
 	cameraDebugDelegate: StageCameraDebugDelegate | null = null;
+	private debugStateUnsubscribe: (() => void) | null = null;
 
 	uuid: string;
 	wrapperRef: Stage | null = null;
@@ -271,8 +273,23 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			this.logMissingEntities();
 			return;
 		}
-		if (debugState.enabled) {
+		// Setup debug delegate based on current state
+		this.updateDebugDelegate();
+
+		// Subscribe to debugState changes for runtime toggle
+		this.debugStateUnsubscribe = subscribe(debugState, () => {
+			this.updateDebugDelegate();
+		});
+	}
+
+	private updateDebugDelegate(): void {
+		if (debugState.enabled && !this.debugDelegate && this.scene && this.world) {
+			// Create debug delegate when debug is enabled
 			this.debugDelegate = new StageDebugDelegate(this);
+		} else if (!debugState.enabled && this.debugDelegate) {
+			// Dispose debug delegate when debug is disabled
+			this.debugDelegate.dispose();
+			this.debugDelegate = null;
 		}
 	}
 
@@ -318,7 +335,15 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 		this.world?.destroy();
 		this.scene?.destroy();
+
+		// Cleanup debug state subscription
+		if (this.debugStateUnsubscribe) {
+			this.debugStateUnsubscribe();
+			this.debugStateUnsubscribe = null;
+		}
+
 		this.debugDelegate?.dispose();
+		this.debugDelegate = null;
 		this.cameraRef?.setDebugDelegate(null);
 		this.cameraDebugDelegate = null;
 

@@ -506,7 +506,7 @@ var actorDefaults = {
   animations: [],
   models: []
 };
-var ACTOR_TYPE = Symbol("Actor");
+var ACTOR_TYPE = /* @__PURE__ */ Symbol("Actor");
 var ZylemActor = class extends GameEntity {
   static type = ACTOR_TYPE;
   _object = null;
@@ -921,6 +921,9 @@ import { Vector3 as Vector34 } from "@dimforge/rapier3d-compat";
 var ZylemBlueColor = new Color4("#0333EC");
 var Vec0 = new Vector34(0, 0, 0);
 var Vec1 = new Vector34(1, 1, 1);
+
+// src/lib/stage/zylem-stage.ts
+import { subscribe as subscribe3 } from "valtio/vanilla";
 
 // src/lib/core/lifecycle-base.ts
 var LifeCycleBase = class {
@@ -1722,6 +1725,7 @@ var ZylemStage = class extends LifeCycleBase {
   transformSystem = null;
   debugDelegate = null;
   cameraDebugDelegate = null;
+  debugStateUnsubscribe = null;
   uuid;
   wrapperRef = null;
   camera;
@@ -1859,8 +1863,17 @@ var ZylemStage = class extends LifeCycleBase {
       this.logMissingEntities();
       return;
     }
-    if (debugState.enabled) {
+    this.updateDebugDelegate();
+    this.debugStateUnsubscribe = subscribe3(debugState, () => {
+      this.updateDebugDelegate();
+    });
+  }
+  updateDebugDelegate() {
+    if (debugState.enabled && !this.debugDelegate && this.scene && this.world) {
       this.debugDelegate = new StageDebugDelegate(this);
+    } else if (!debugState.enabled && this.debugDelegate) {
+      this.debugDelegate.dispose();
+      this.debugDelegate = null;
     }
   }
   _update(params) {
@@ -1904,7 +1917,12 @@ var ZylemStage = class extends LifeCycleBase {
     this._debugMap.clear();
     this.world?.destroy();
     this.scene?.destroy();
+    if (this.debugStateUnsubscribe) {
+      this.debugStateUnsubscribe();
+      this.debugStateUnsubscribe = null;
+    }
     this.debugDelegate?.dispose();
+    this.debugDelegate = null;
     this.cameraRef?.setDebugDelegate(null);
     this.cameraDebugDelegate = null;
     this.isLoaded = false;

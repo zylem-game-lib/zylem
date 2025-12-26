@@ -1,10 +1,10 @@
-import { G as Game } from './core-DQNlxWD0.js';
-export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-DQNlxWD0.js';
-export { S as StageOptions, c as createStage } from './stage--a8knCQ7.js';
-export { e as entitySpawner } from './entity-spawner-DER2Pu7_.js';
+import { G as Game } from './core-DhF4RQW7.js';
+export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-DhF4RQW7.js';
+export { S as StageOptions, c as createStage } from './stage-C4R0b-pH.js';
+export { e as entitySpawner } from './entity-spawner-BHfM97nF.js';
 export { P as PerspectiveType, a as Perspectives, S as StageEntity, c as camera } from './camera-BLcG7KL-.js';
 export { ZylemBox, actor, box, plane, rect, sphere, sprite, text, zone } from './entities.js';
-import { U as UpdateContext, B as BehaviorCallbackType } from './entity-CY24uyzB.js';
+import { U as UpdateContext, B as BehaviorCallbackType, G as GameEntity } from './entity-CY24uyzB.js';
 export { a as Behavior, L as LoadingEvent, S as SetupContext } from './entity-CY24uyzB.js';
 export { boundary2d, ricochet2DCollision, ricochet2DInBounds } from './behaviors.js';
 import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
@@ -123,13 +123,41 @@ declare function onVariableChange<T = unknown>(target: object, path: string, cal
  */
 declare function onVariableChanges<T extends unknown[] = unknown[]>(target: object, paths: string[], callback: (values: T) => void): () => void;
 
+type DebugTools = 'select' | 'translate' | 'rotate' | 'scale' | 'delete' | 'none';
+interface DebugState {
+    enabled: boolean;
+    paused: boolean;
+    tool: DebugTools;
+    selectedEntity: GameEntity<any> | null;
+    hoveredEntity: GameEntity<any> | null;
+    flags: Set<string>;
+}
+declare const debugState: DebugState;
+
+/**
+ * State interface for editor-to-game communication
+ */
+interface ZylemGameState {
+    gameState?: {
+        debugFlag?: boolean;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
 declare class ZylemGameElement extends HTMLElement {
     private _game;
+    private _state;
     private container;
     constructor();
     set game(game: Game<any>);
     get game(): Game<any> | null;
+    set state(value: ZylemGameState);
+    get state(): ZylemGameState;
+    /**
+     * Sync the web component's state with the game-lib's internal debug state
+     */
+    private syncDebugState;
     disconnectedCallback(): void;
 }
 
-export { Game, UpdateContext, ZylemGameElement, createGlobal, createVariable, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setGlobal, setVariable };
+export { Game, UpdateContext, ZylemGameElement, type ZylemGameState, createGlobal, createVariable, debugState, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setGlobal, setVariable };

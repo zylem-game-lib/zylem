@@ -4,6 +4,11 @@ export * from './components/common/Icon';
 export { editorEvents } from './components/events';
 export type { EditorEvent, EditorEventType } from './components/events';
 export {
+    dispatchEditorUpdate,
+    EDITOR_UPDATE_EVENT,
+    type EditorUpdatePayload,
+} from './components/editor-events';
+export {
     debugStore,
     debugState,
     gameState,

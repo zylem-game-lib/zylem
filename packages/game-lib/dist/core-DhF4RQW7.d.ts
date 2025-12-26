@@ -1,6 +1,6 @@
 import { I as InputGamepad, c as UpdateFunction, f as InputPlayerNumber, g as Inputs, h as ButtonState, A as AnalogState, S as SetupContext, U as UpdateContext, d as DestroyContext, i as GameEntityLifeCycle, e as BaseNode, j as IGame, b as SetupFunction, D as DestroyFunction, L as LoadingEvent, k as LoadedContext, C as CleanupContext } from './entity-CY24uyzB.js';
 import { Z as ZylemCamera } from './camera-BLcG7KL-.js';
-import { B as BaseEntityInterface, a as Stage } from './stage--a8knCQ7.js';
+import { B as BaseEntityInterface, a as Stage } from './stage-C4R0b-pH.js';
 import { Color, Vector3 } from 'three';
 import { Vector3 as Vector3$1 } from '@dimforge/rapier3d-compat';
 
@@ -324,12 +324,6 @@ declare class ZylemGame<TGlobals extends BaseGlobals> {
     timer: Timer;
     inputManager: InputManager;
     wrapperRef: Game<TGlobals>;
-    statsRef: {
-        begin: () => void;
-        end: () => void;
-        showPanel: (panel: number) => void;
-        dom: HTMLElement;
-    } | null;
     defaultCamera: ZylemCamera | null;
     container: HTMLElement | null;
     canvas: HTMLCanvasElement | null;
@@ -338,6 +332,7 @@ declare class ZylemGame<TGlobals extends BaseGlobals> {
     gameCanvas: GameCanvas | null;
     private animationFrameId;
     private isDisposed;
+    private debugDelegate;
     static FRAME_LIMIT: number;
     static FRAME_DURATION: number;
     static MAX_DELTA_SECONDS: number;

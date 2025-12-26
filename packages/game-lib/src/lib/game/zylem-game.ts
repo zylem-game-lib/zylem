@@ -12,8 +12,7 @@ import { BaseGlobals, ZylemGameConfig } from './game-interfaces';
 import { GameConfig, resolveGameConfig } from './game-config';
 import { AspectRatioDelegate } from '../device/aspect-ratio';
 import { GameCanvas } from './game-canvas';
-import { subscribe } from 'valtio/vanilla';
-import Stats from 'stats.js';
+import { GameDebugDelegate } from './game-debug-delegate';
 import { ZylemStage } from '../core';
 
 type ZylemGameOptions<TGlobals extends BaseGlobals> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>
@@ -37,7 +36,6 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	inputManager: InputManager;
 
 	wrapperRef: Game<TGlobals>;
-	statsRef: { begin: () => void, end: () => void, showPanel: (panel: number) => void, dom: HTMLElement } | null = null;
 	defaultCamera: ZylemCamera | null = null;
 	container: HTMLElement | null = null;
 	canvas: HTMLCanvasElement | null = null;
@@ -46,6 +44,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	gameCanvas: GameCanvas | null = null;
 	private animationFrameId: number | null = null;
 	private isDisposed = false;
+	private debugDelegate: GameDebugDelegate | null = null;
 
 	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
@@ -83,18 +82,13 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	}
 
 	loadDebugOptions(options: ZylemGameOptions<TGlobals>) {
-		debugState.enabled = Boolean(options.debug);
-
-		if (options.debug) {
-			this.statsRef = new Stats();
-			this.statsRef.showPanel(0);
-			this.statsRef.dom.style.position = 'absolute'
-			this.statsRef.dom.style.bottom = '0';
-			this.statsRef.dom.style.right = '0';
-			this.statsRef.dom.style.top = 'auto';
-			this.statsRef.dom.style.left = 'auto';
-			document.body.appendChild(this.statsRef.dom);
+		// Initialize debugState from config if provided
+		if (options.debug !== undefined) {
+			debugState.enabled = Boolean(options.debug);
 		}
+
+		// Create debug delegate for Stats panel and runtime toggle
+		this.debugDelegate = new GameDebugDelegate();
 	}
 
 	async loadStage(stage: Stage) {
@@ -177,7 +171,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	}
 
 	loop(timestamp: number) {
-		this.statsRef && this.statsRef.begin();
+		this.debugDelegate?.begin();
 		if (!isPaused()) {
 			this.timer.update(timestamp);
 			const stage = this.currentStage();
@@ -194,7 +188,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			state.time = this.totalTime;
 			this.previousTimeStamp = timestamp;
 		}
-		this.statsRef && this.statsRef.end();
+		this.debugDelegate?.end();
 		this.outOfLoop();
 		if (!this.isDisposed) {
 			this.animationFrameId = requestAnimationFrame(this.loop.bind(this));
@@ -210,12 +204,14 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 		this.unloadCurrentStage();
 
-		if (this.statsRef && this.statsRef.dom && this.statsRef.dom.parentNode) {
-			this.statsRef.dom.parentNode.removeChild(this.statsRef.dom);
+		// Cleanup debug delegate
+		if (this.debugDelegate) {
+			this.debugDelegate.dispose();
+			this.debugDelegate = null;
 		}
 
 		this.timer.dispose();
-		
+
 		if (this.customDestroy) {
 			this.customDestroy({
 				me: this,

@@ -1220,7 +1220,7 @@ var init_actor = __esm({
         return new ZylemActor(options);
       }
     };
-    ACTOR_TYPE = Symbol("Actor");
+    ACTOR_TYPE = /* @__PURE__ */ Symbol("Actor");
     ZylemActor = class extends GameEntity {
       static type = ACTOR_TYPE;
       _object = null;
@@ -1597,7 +1597,7 @@ var init_zylem_scene = __esm({
 
 // src/lib/stage/stage-state.ts
 import { Color as Color5, Vector3 as Vector35 } from "three";
-import { proxy as proxy3, subscribe as subscribe2 } from "valtio/vanilla";
+import { proxy as proxy3, subscribe as subscribe3 } from "valtio/vanilla";
 function getOrCreateVariableProxy(target) {
   let store = variableProxyStore.get(target);
   if (!store) {
@@ -1627,7 +1627,7 @@ function getVariable(target, path) {
 function onVariableChange(target, path, callback) {
   const store = getOrCreateVariableProxy(target);
   let previous = getByPath(store, path);
-  return subscribe2(store, () => {
+  return subscribe3(store, () => {
     const current = getByPath(store, path);
     if (current !== previous) {
       previous = current;
@@ -1638,7 +1638,7 @@ function onVariableChange(target, path, callback) {
 function onVariableChanges(target, paths, callback) {
   const store = getOrCreateVariableProxy(target);
   let previousValues = paths.map((p) => getByPath(store, p));
-  return subscribe2(store, () => {
+  return subscribe3(store, () => {
     const currentValues = paths.map((p) => getByPath(store, p));
     const hasChange = currentValues.some((val, i) => val !== previousValues[i]);
     if (hasChange) {
@@ -2533,6 +2533,7 @@ var init_stage_debug_delegate = __esm({
 // src/lib/stage/zylem-stage.ts
 import { addComponent, addEntity, createWorld as createECS, removeEntity } from "bitecs";
 import { Color as Color8, Vector3 as Vector312, Vector2 as Vector26 } from "three";
+import { subscribe as subscribe4 } from "valtio/vanilla";
 import { nanoid as nanoid2 } from "nanoid";
 var STAGE_TYPE, ZylemStage;
 var init_zylem_stage = __esm({
@@ -2583,6 +2584,7 @@ var init_zylem_stage = __esm({
       transformSystem = null;
       debugDelegate = null;
       cameraDebugDelegate = null;
+      debugStateUnsubscribe = null;
       uuid;
       wrapperRef = null;
       camera;
@@ -2720,8 +2722,17 @@ var init_zylem_stage = __esm({
           this.logMissingEntities();
           return;
         }
-        if (debugState.enabled) {
+        this.updateDebugDelegate();
+        this.debugStateUnsubscribe = subscribe4(debugState, () => {
+          this.updateDebugDelegate();
+        });
+      }
+      updateDebugDelegate() {
+        if (debugState.enabled && !this.debugDelegate && this.scene && this.world) {
           this.debugDelegate = new StageDebugDelegate(this);
+        } else if (!debugState.enabled && this.debugDelegate) {
+          this.debugDelegate.dispose();
+          this.debugDelegate = null;
         }
       }
       _update(params) {
@@ -2765,7 +2776,12 @@ var init_zylem_stage = __esm({
         this._debugMap.clear();
         this.world?.destroy();
         this.scene?.destroy();
+        if (this.debugStateUnsubscribe) {
+          this.debugStateUnsubscribe();
+          this.debugStateUnsubscribe = null;
+        }
         this.debugDelegate?.dispose();
+        this.debugDelegate = null;
         this.cameraRef?.setDebugDelegate(null);
         this.cameraDebugDelegate = null;
         this.isLoaded = false;
@@ -3909,8 +3925,61 @@ var GameCanvas = class {
   }
 };
 
-// src/lib/game/zylem-game.ts
+// src/lib/game/game-debug-delegate.ts
+init_debug_state();
 import Stats from "stats.js";
+import { subscribe as subscribe2 } from "valtio/vanilla";
+var GameDebugDelegate = class {
+  statsRef = null;
+  unsubscribe = null;
+  constructor() {
+    this.updateDebugUI();
+    this.unsubscribe = subscribe2(debugState, () => {
+      this.updateDebugUI();
+    });
+  }
+  /**
+   * Called every frame - wraps stats.begin()
+   */
+  begin() {
+    this.statsRef?.begin();
+  }
+  /**
+   * Called every frame - wraps stats.end()
+   */
+  end() {
+    this.statsRef?.end();
+  }
+  updateDebugUI() {
+    if (debugState.enabled && !this.statsRef) {
+      this.statsRef = new Stats();
+      this.statsRef.showPanel(0);
+      this.statsRef.dom.style.position = "absolute";
+      this.statsRef.dom.style.bottom = "0";
+      this.statsRef.dom.style.right = "0";
+      this.statsRef.dom.style.top = "auto";
+      this.statsRef.dom.style.left = "auto";
+      document.body.appendChild(this.statsRef.dom);
+    } else if (!debugState.enabled && this.statsRef) {
+      if (this.statsRef.dom.parentNode) {
+        this.statsRef.dom.parentNode.removeChild(this.statsRef.dom);
+      }
+      this.statsRef = null;
+    }
+  }
+  dispose() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+    if (this.statsRef?.dom?.parentNode) {
+      this.statsRef.dom.parentNode.removeChild(this.statsRef.dom);
+    }
+    this.statsRef = null;
+  }
+};
+
+// src/lib/game/zylem-game.ts
 var ZylemGame = class _ZylemGame {
   id;
   initialGlobals = {};
@@ -3925,7 +3994,6 @@ var ZylemGame = class _ZylemGame {
   timer;
   inputManager;
   wrapperRef;
-  statsRef = null;
   defaultCamera = null;
   container = null;
   canvas = null;
@@ -3934,6 +4002,7 @@ var ZylemGame = class _ZylemGame {
   gameCanvas = null;
   animationFrameId = null;
   isDisposed = false;
+  debugDelegate = null;
   static FRAME_LIMIT = 120;
   static FRAME_DURATION = 1e3 / _ZylemGame.FRAME_LIMIT;
   static MAX_DELTA_SECONDS = 1 / 30;
@@ -3967,17 +4036,10 @@ var ZylemGame = class _ZylemGame {
     this.gameCanvas.centerIfFullscreen();
   }
   loadDebugOptions(options) {
-    debugState.enabled = Boolean(options.debug);
-    if (options.debug) {
-      this.statsRef = new Stats();
-      this.statsRef.showPanel(0);
-      this.statsRef.dom.style.position = "absolute";
-      this.statsRef.dom.style.bottom = "0";
-      this.statsRef.dom.style.right = "0";
-      this.statsRef.dom.style.top = "auto";
-      this.statsRef.dom.style.left = "auto";
-      document.body.appendChild(this.statsRef.dom);
+    if (options.debug !== void 0) {
+      debugState.enabled = Boolean(options.debug);
     }
+    this.debugDelegate = new GameDebugDelegate();
   }
   async loadStage(stage) {
     this.unloadCurrentStage();
@@ -4051,7 +4113,7 @@ var ZylemGame = class _ZylemGame {
     this.loop(0);
   }
   loop(timestamp) {
-    this.statsRef && this.statsRef.begin();
+    this.debugDelegate?.begin();
     if (!isPaused()) {
       this.timer.update(timestamp);
       const stage = this.currentStage();
@@ -4068,7 +4130,7 @@ var ZylemGame = class _ZylemGame {
       state.time = this.totalTime;
       this.previousTimeStamp = timestamp;
     }
-    this.statsRef && this.statsRef.end();
+    this.debugDelegate?.end();
     this.outOfLoop();
     if (!this.isDisposed) {
       this.animationFrameId = requestAnimationFrame(this.loop.bind(this));
@@ -4081,8 +4143,9 @@ var ZylemGame = class _ZylemGame {
       this.animationFrameId = null;
     }
     this.unloadCurrentStage();
-    if (this.statsRef && this.statsRef.dom && this.statsRef.dom.parentNode) {
-      this.statsRef.dom.parentNode.removeChild(this.statsRef.dom);
+    if (this.debugDelegate) {
+      this.debugDelegate.dispose();
+      this.debugDelegate = null;
     }
     this.timer.dispose();
     if (this.customDestroy) {
@@ -4349,7 +4412,7 @@ var TextBuilder = class extends EntityBuilder {
     return new ZylemText(options);
   }
 };
-var TEXT_TYPE = Symbol("Text");
+var TEXT_TYPE = /* @__PURE__ */ Symbol("Text");
 var ZylemText = class _ZylemText extends GameEntity {
   static type = TEXT_TYPE;
   _sprite = null;
@@ -4582,7 +4645,7 @@ var SpriteBuilder = class extends EntityBuilder {
     return new ZylemSprite(options);
   }
 };
-var SPRITE_TYPE = Symbol("Sprite");
+var SPRITE_TYPE = /* @__PURE__ */ Symbol("Sprite");
 var ZylemSprite = class _ZylemSprite extends GameEntity {
   static type = SPRITE_TYPE;
   sprites = [];
@@ -4919,7 +4982,7 @@ function entitySpawner(factory) {
 
 // src/lib/core/vessel.ts
 init_base_node();
-var VESSEL_TYPE = Symbol("vessel");
+var VESSEL_TYPE = /* @__PURE__ */ Symbol("vessel");
 var Vessel = class extends BaseNode {
   static type = VESSEL_TYPE;
   _setup(_params) {
@@ -4985,7 +5048,7 @@ var BoxBuilder = class extends EntityBuilder {
     return new ZylemBox(options);
   }
 };
-var BOX_TYPE = Symbol("Box");
+var BOX_TYPE = /* @__PURE__ */ Symbol("Box");
 var ZylemBox = class _ZylemBox extends GameEntity {
   static type = BOX_TYPE;
   constructor(options) {
@@ -5053,7 +5116,7 @@ var SphereBuilder = class extends EntityBuilder {
     return new ZylemSphere(options);
   }
 };
-var SPHERE_TYPE = Symbol("Sphere");
+var SPHERE_TYPE = /* @__PURE__ */ Symbol("Sphere");
 var ZylemSphere = class _ZylemSphere extends GameEntity {
   static type = SPHERE_TYPE;
   constructor(options) {
@@ -5230,7 +5293,7 @@ var PlaneBuilder = class extends EntityBuilder {
     return new ZylemPlane(options);
   }
 };
-var PLANE_TYPE = Symbol("Plane");
+var PLANE_TYPE = /* @__PURE__ */ Symbol("Plane");
 var ZylemPlane = class extends GameEntity {
   static type = PLANE_TYPE;
   constructor(options) {
@@ -5283,7 +5346,7 @@ var ZoneBuilder = class extends EntityBuilder {
     return new ZylemZone(options);
   }
 };
-var ZONE_TYPE = Symbol("Zone");
+var ZONE_TYPE = /* @__PURE__ */ Symbol("Zone");
 var ZylemZone = class extends GameEntity {
   static type = ZONE_TYPE;
   _enteredZone = /* @__PURE__ */ new Map();
@@ -5400,7 +5463,7 @@ var RectBuilder = class extends EntityBuilder {
     return new ZylemRect(options);
   }
 };
-var RECT_TYPE = Symbol("Rect");
+var RECT_TYPE = /* @__PURE__ */ Symbol("Rect");
 var ZylemRect = class _ZylemRect extends GameEntity {
   static type = RECT_TYPE;
   _sprite = null;
@@ -6515,10 +6578,13 @@ function variableChanges(keys, callback) {
 // src/api/main.ts
 init_game_state();
 init_stage_state();
+init_debug_state();
 
 // src/web-components/zylem-game.ts
+init_debug_state();
 var ZylemGameElement = class extends HTMLElement {
   _game = null;
+  _state = {};
   container;
   constructor() {
     super();
@@ -6536,6 +6602,22 @@ var ZylemGameElement = class extends HTMLElement {
   }
   get game() {
     return this._game;
+  }
+  set state(value) {
+    this._state = value;
+    this.syncDebugState();
+  }
+  get state() {
+    return this._state;
+  }
+  /**
+   * Sync the web component's state with the game-lib's internal debug state
+   */
+  syncDebugState() {
+    const debugFlag = this._state.gameState?.debugFlag;
+    if (debugFlag !== void 0) {
+      debugState.enabled = debugFlag;
+    }
   }
   disconnectedCallback() {
     if (this._game) {
@@ -6561,6 +6643,7 @@ export {
   createGlobal,
   createStage,
   createVariable,
+  debugState,
   destroy,
   entitySpawner,
   gameConfig,

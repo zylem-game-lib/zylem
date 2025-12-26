@@ -144,6 +144,41 @@ declare class EditorEventBus {
 declare const editorEvents: EditorEventBus;
 
 /**
+ * Editor Events Module
+ *
+ * Dispatch window CustomEvents from the editor to communicate with consuming applications.
+ * This enables bidirectional communication between @zylem/editor and apps like examples.
+ */
+/**
+ * Payload structure for editor-update events.
+ * Matches the nested state structure expected by consumers.
+ */
+interface EditorUpdatePayload {
+    gameState?: {
+        debugFlag?: boolean;
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
+}
+/**
+ * Event name constant for consistency
+ */
+declare const EDITOR_UPDATE_EVENT = "editor-update";
+/**
+ * Dispatch an editor-update CustomEvent on the window.
+ * Consumers can listen for this event to sync state with the editor.
+ *
+ * @param payload - The state update payload
+ *
+ * @example
+ * ```ts
+ * // From GameSection when debug checkbox changes
+ * dispatchEditorUpdate({ gameState: { debugFlag: true } });
+ * ```
+ */
+declare function dispatchEditorUpdate(payload: EditorUpdatePayload): void;
+
+/**
  * Entities state for the entities section.
  * Manages debug state and entity selection/hover.
  */
@@ -234,4 +269,4 @@ declare const debugStore: {
     dropTargetIndex: number | null;
 };
 
-export { type EditorEvent, type EditorEventType, Icon, type ZylemEditorConfig, ZylemEditorElement, debugState, debugStore, editorEvents, gameState, registerZylemEditor, stageState };
+export { EDITOR_UPDATE_EVENT, type EditorEvent, type EditorEventType, type EditorUpdatePayload, Icon, type ZylemEditorConfig, ZylemEditorElement, debugState, debugStore, dispatchEditorUpdate, editorEvents, gameState, registerZylemEditor, stageState };
