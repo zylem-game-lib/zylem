@@ -11,7 +11,7 @@ import { insert as _$insert8 } from "solid-js/web";
 import { createComponent as _$createComponent15 } from "solid-js/web";
 import { setStyleProperty as _$setStyleProperty5 } from "solid-js/web";
 import { render } from "solid-js/web";
-import { createSignal as createSignal8, For as For2, Show as Show5 } from "solid-js";
+import { createSignal as createSignal7, For as For2, Show as Show5 } from "solid-js";
 
 // src/components/editor-panel/Menu.tsx
 import { template as _$template8 } from "solid-js/web";
@@ -64,22 +64,9 @@ var EditorEventBus = class {
 };
 var editorEvents = new EditorEventBus();
 
-// src/components/editor-events.ts
-var EDITOR_UPDATE_EVENT = "editor-update";
-function dispatchEditorUpdate(payload) {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent(EDITOR_UPDATE_EVENT, {
-      detail: payload,
-      bubbles: true
-    })
-  );
-}
-
 // src/components/entities/entities-state.ts
 import { proxy } from "valtio";
 var debugState = proxy({
-  enabled: false,
   paused: false,
   tool: "none",
   selectedEntityId: null,
@@ -100,12 +87,164 @@ function resetHoveredEntity() {
 }
 editorEvents.on("debug", (event) => {
   const payload = event.payload;
-  if (payload.enabled !== void 0) debugState.enabled = payload.enabled;
   if (payload.paused !== void 0) debugState.paused = payload.paused;
   if (payload.tool !== void 0) debugState.tool = payload.tool;
   if (payload.selectedEntityId !== void 0) debugState.selectedEntityId = payload.selectedEntityId;
   if (payload.hoveredEntityId !== void 0) debugState.hoveredEntityId = payload.hoveredEntityId;
 });
+
+// src/components/editor-store.ts
+import { createStore } from "solid-js/store";
+import { subscribe } from "valtio/vanilla";
+var STORAGE_KEY = "zylem-editor-state";
+var DEFAULT_PANEL_ORDER = ["game-config", "stage-config", "entities", "console"];
+var loadPersistedState = () => {
+  if (typeof window === "undefined") return {};
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn("Failed to load editor state from localStorage:", e);
+  }
+  return {};
+};
+var savePersistedState = (state) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn("Failed to save editor state to localStorage:", e);
+  }
+};
+var persisted = loadPersistedState();
+var [debugStore, setDebugStore] = createStore({
+  debug: false,
+  tool: "none",
+  paused: false,
+  hovered: null,
+  selected: [],
+  panelPosition: persisted.panelPosition ?? null,
+  toggleButtonPosition: persisted.toggleButtonPosition ?? { x: 0, y: 0 },
+  // Detachable panel state
+  panelOrder: persisted.panelOrder ?? [...DEFAULT_PANEL_ORDER],
+  detachedPanels: persisted.detachedPanels ?? {},
+  openSections: persisted.openSections ?? ["console"],
+  // Z-index ordering (last item = on top)
+  panelZOrder: persisted.panelZOrder ?? [],
+  // Drag-to-reattach state (not persisted)
+  draggingPanelId: null,
+  dropTargetIndex: null
+});
+var persistState = () => {
+  savePersistedState({
+    panelPosition: debugStore.panelPosition,
+    toggleButtonPosition: debugStore.toggleButtonPosition,
+    panelOrder: debugStore.panelOrder,
+    detachedPanels: debugStore.detachedPanels,
+    openSections: debugStore.openSections,
+    panelZOrder: debugStore.panelZOrder
+  });
+};
+var setPanelPosition = (pos) => {
+  setDebugStore("panelPosition", pos);
+  persistState();
+};
+var setToggleButtonPosition = (pos) => {
+  setDebugStore("toggleButtonPosition", pos);
+  persistState();
+};
+var detachPanel = (panelId, position) => {
+  setDebugStore("detachedPanels", panelId, {
+    position,
+    size: { width: 350, height: 300 }
+  });
+  setDebugStore("openSections", (sections) => sections.filter((s) => s !== panelId));
+  setDebugStore("panelZOrder", [...debugStore.panelZOrder.filter((id) => id !== panelId), panelId]);
+  persistState();
+};
+var reattachPanel = (panelId, insertIndex) => {
+  setDebugStore("detachedPanels", panelId, void 0);
+  setDebugStore("panelZOrder", debugStore.panelZOrder.filter((id) => id !== panelId));
+  const currentOrder = debugStore.panelOrder;
+  if (!currentOrder.includes(panelId)) {
+    if (insertIndex !== void 0) {
+      setDebugStore("panelOrder", [...currentOrder.slice(0, insertIndex), panelId, ...currentOrder.slice(insertIndex)]);
+    } else {
+      setDebugStore("panelOrder", [...currentOrder, panelId]);
+    }
+  }
+  persistState();
+};
+var bringPanelToFront = (panelId) => {
+  setDebugStore("panelZOrder", [...debugStore.panelZOrder.filter((id) => id !== panelId), panelId]);
+  persistState();
+};
+var updateDetachedPanelPosition = (panelId, position) => {
+  setDebugStore("detachedPanels", panelId, "position", position);
+  persistState();
+};
+var updateDetachedPanelSize = (panelId, size) => {
+  setDebugStore("detachedPanels", panelId, "size", size);
+  persistState();
+};
+var reorderPanels = (newOrder) => {
+  setDebugStore("panelOrder", newOrder);
+  persistState();
+};
+var setOpenSections = (sections) => {
+  setDebugStore("openSections", sections);
+  persistState();
+};
+var setDraggingPanel = (panelId) => {
+  setDebugStore("draggingPanelId", panelId);
+};
+var setDropTargetIndex = (index) => {
+  setDebugStore("dropTargetIndex", index);
+};
+var clearDragState = () => {
+  setDebugStore("draggingPanelId", null);
+  setDebugStore("dropTargetIndex", null);
+};
+subscribe(debugState, () => {
+  setDebugStore("tool", debugState.tool);
+  setDebugStore("paused", debugState.paused);
+  setDebugStore("hovered", debugState.hoveredEntityId);
+  setDebugStore("selected", debugState.selectedEntityId ? [debugState.selectedEntityId] : []);
+});
+
+// src/components/editor-events.ts
+var EDITOR_STATE_DISPATCH = "editor-state-dispatch";
+var EDITOR_STATE_RECEIVE = "editor-state-receive";
+var EDITOR_UPDATE_EVENT = EDITOR_STATE_DISPATCH;
+function dispatchEditorUpdate(payload) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(EDITOR_STATE_DISPATCH, {
+      detail: payload,
+      bubbles: true
+    })
+  );
+}
+function handleExternalUpdate(event) {
+  const payload = event.detail;
+  if (payload.gameState?.debugFlag !== void 0) {
+    setDebugStore("debug", payload.gameState.debugFlag);
+  }
+  if (payload.toolbarState?.tool !== void 0) {
+    debugState.tool = payload.toolbarState.tool;
+  }
+  if (payload.toolbarState?.paused !== void 0) {
+    debugState.paused = payload.toolbarState.paused;
+  }
+}
+if (typeof window !== "undefined") {
+  window.addEventListener(
+    EDITOR_STATE_RECEIVE,
+    handleExternalUpdate
+  );
+}
 
 // src/components/game/game-state.ts
 import { proxy as proxy2 } from "valtio";
@@ -180,87 +319,6 @@ editorEvents.on("entities", (event) => {
   stageState.entities = event.payload;
 });
 
-// src/components/editor-store.ts
-import { createStore } from "solid-js/store";
-import { subscribe } from "valtio/vanilla";
-var DEFAULT_PANEL_ORDER = ["game-config", "stage-config", "entities", "console"];
-var [debugStore, setDebugStore] = createStore({
-  debug: false,
-  tool: "none",
-  paused: false,
-  hovered: null,
-  selected: [],
-  panelPosition: null,
-  toggleButtonPosition: { x: 0, y: 0 },
-  // Detachable panel state
-  panelOrder: [...DEFAULT_PANEL_ORDER],
-  detachedPanels: {},
-  openSections: ["console"],
-  // Z-index ordering (last item = on top)
-  panelZOrder: [],
-  // Drag-to-reattach state
-  draggingPanelId: null,
-  dropTargetIndex: null
-});
-var setPanelPosition = (pos) => {
-  setDebugStore("panelPosition", pos);
-};
-var setToggleButtonPosition = (pos) => {
-  setDebugStore("toggleButtonPosition", pos);
-};
-var detachPanel = (panelId, position) => {
-  setDebugStore("detachedPanels", panelId, {
-    position,
-    size: { width: 350, height: 300 }
-  });
-  setDebugStore("openSections", (sections) => sections.filter((s) => s !== panelId));
-  setDebugStore("panelZOrder", [...debugStore.panelZOrder.filter((id) => id !== panelId), panelId]);
-};
-var reattachPanel = (panelId, insertIndex) => {
-  setDebugStore("detachedPanels", panelId, void 0);
-  setDebugStore("panelZOrder", debugStore.panelZOrder.filter((id) => id !== panelId));
-  const currentOrder = debugStore.panelOrder;
-  if (!currentOrder.includes(panelId)) {
-    if (insertIndex !== void 0) {
-      setDebugStore("panelOrder", [...currentOrder.slice(0, insertIndex), panelId, ...currentOrder.slice(insertIndex)]);
-    } else {
-      setDebugStore("panelOrder", [...currentOrder, panelId]);
-    }
-  }
-};
-var bringPanelToFront = (panelId) => {
-  setDebugStore("panelZOrder", [...debugStore.panelZOrder.filter((id) => id !== panelId), panelId]);
-};
-var updateDetachedPanelPosition = (panelId, position) => {
-  setDebugStore("detachedPanels", panelId, "position", position);
-};
-var updateDetachedPanelSize = (panelId, size) => {
-  setDebugStore("detachedPanels", panelId, "size", size);
-};
-var reorderPanels = (newOrder) => {
-  setDebugStore("panelOrder", newOrder);
-};
-var setOpenSections = (sections) => {
-  setDebugStore("openSections", sections);
-};
-var setDraggingPanel = (panelId) => {
-  setDebugStore("draggingPanelId", panelId);
-};
-var setDropTargetIndex = (index) => {
-  setDebugStore("dropTargetIndex", index);
-};
-var clearDragState = () => {
-  setDebugStore("draggingPanelId", null);
-  setDebugStore("dropTargetIndex", null);
-};
-subscribe(debugState, () => {
-  setDebugStore("debug", debugState.enabled);
-  setDebugStore("tool", debugState.tool);
-  setDebugStore("paused", debugState.paused);
-  setDebugStore("hovered", debugState.hoveredEntityId);
-  setDebugStore("selected", debugState.selectedEntityId ? [debugState.selectedEntityId] : []);
-});
-
 // src/components/EditorContext.tsx
 import { createComponent as _$createComponent } from "solid-js/web";
 import { createContext, useContext, onCleanup } from "solid-js";
@@ -279,7 +337,6 @@ function EditorProvider(props) {
   });
   const unsubDebug = subscribe2(debugState, () => {
     setDebug(reconcile({
-      enabled: debugState.enabled,
       paused: debugState.paused,
       tool: debugState.tool,
       selectedEntityId: debugState.selectedEntityId,
@@ -521,14 +578,12 @@ import { template as _$template2 } from "solid-js/web";
 import { delegateEvents as _$delegateEvents } from "solid-js/web";
 import { insert as _$insert2 } from "solid-js/web";
 import { createComponent as _$createComponent8 } from "solid-js/web";
-import { createSignal } from "solid-js";
 import { Checkbox } from "@kobalte/core";
 import Check from "lucide-solid/icons/check";
 var _tmpl$2 = /* @__PURE__ */ _$template2(`<div class=panel-content><section class=zylem-toolbar></section><section class=zylem-toolbar><button class="zylem-toolbar-btn zylem-button">Print Global State</button><button class="zylem-toolbar-btn zylem-button">Print All`);
 var GameSection = () => {
-  const [debugFlag, setDebugFlag] = createSignal(debugStore.debug);
   const handleDebugToggle = (checked) => {
-    setDebugFlag(checked);
+    setDebugStore("debug", checked);
     dispatchEditorUpdate({
       gameState: {
         debugFlag: checked
@@ -540,7 +595,7 @@ var GameSection = () => {
     _$insert2(_el$2, _$createComponent8(Checkbox.Root, {
       "class": "zylem-checkbox-root",
       get checked() {
-        return debugFlag();
+        return debugStore.debug;
       },
       onChange: handleDebugToggle,
       get children() {
@@ -602,7 +657,7 @@ import { effect as _$effect } from "solid-js/web";
 import { createComponent as _$createComponent9 } from "solid-js/web";
 import { insert as _$insert3 } from "solid-js/web";
 import { memo as _$memo2 } from "solid-js/web";
-import { For, createSignal as createSignal2, onCleanup as onCleanup2, onMount } from "solid-js";
+import { For, createSignal, onCleanup as onCleanup2, onMount } from "solid-js";
 import { subscribe as subscribe3 } from "valtio/vanilla";
 import Info from "lucide-solid/icons/info";
 var _tmpl$4 = /* @__PURE__ */ _$template4(`<div><h4></h4><div class=entity-details></div><button class="zylem-toolbar-btn zylem-button">`);
@@ -624,7 +679,7 @@ var EntityRow = (props) => {
   })();
 };
 var EntitiesSection = () => {
-  const [hoveredUuid, setHoveredUuid] = createSignal2(getHoveredEntityId());
+  const [hoveredUuid, setHoveredUuid] = createSignal(getHoveredEntityId());
   onMount(() => {
     const unsub = subscribe3(debugState, () => {
       setHoveredUuid(debugState.hoveredEntityId);
@@ -659,11 +714,11 @@ import { delegateEvents as _$delegateEvents4 } from "solid-js/web";
 import { addEventListener as _$addEventListener } from "solid-js/web";
 import { setAttribute as _$setAttribute } from "solid-js/web";
 import { effect as _$effect2 } from "solid-js/web";
-import { createSignal as createSignal3, onCleanup as onCleanup3 } from "solid-js";
+import { createSignal as createSignal2, onCleanup as onCleanup3 } from "solid-js";
 import { subscribe as subscribe4 } from "valtio/vanilla";
 var _tmpl$5 = /* @__PURE__ */ _$template5(`<div class=zylem-console-container><div class=zylem-console-wrapper><textarea class=zylem-console></textarea><button class="zylem-console-clear zylem-button">Clear`);
 var Console = () => {
-  const [consoleContent, setConsoleContent] = createSignal3(consoleState.messages.join("\n"));
+  const [consoleContent, setConsoleContent] = createSignal2(consoleState.messages.join("\n"));
   const unsubscribe = subscribe4(consoleState, () => {
     setConsoleContent(consoleState.messages.join("\n"));
   });
@@ -723,7 +778,7 @@ import { insert as _$insert4 } from "solid-js/web";
 import { setStyleProperty as _$setStyleProperty } from "solid-js/web";
 import { createComponent as _$createComponent11 } from "solid-js/web";
 import { Accordion } from "@kobalte/core";
-import { createSignal as createSignal4, onCleanup as onCleanup4, onMount as onMount2, Show } from "solid-js";
+import { createSignal as createSignal3, onCleanup as onCleanup4, onMount as onMount2, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 var _tmpl$6 = /* @__PURE__ */ _$template6(`<div class=accordion-drag-ghost style="z-index:9999;pointer-events:none;align-items:center;justify-content:space-between;border-radius:12px;font-family:'Exo 2', sans-serif;backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px #E64534"><span class="accordion-trigger zylem-exo-2"style="font-family:'Exo 2', sans-serif;font-weight:400">`);
 var DRAG_THRESHOLD = 5;
@@ -731,12 +786,12 @@ var DraggableAccordionItem = (props) => {
   let itemRef;
   let headerRef;
   let menuPanelRef = null;
-  const [isDragging, setIsDragging] = createSignal4(false);
-  const [ghostPos, setGhostPos] = createSignal4({
+  const [isDragging, setIsDragging] = createSignal3(false);
+  const [ghostPos, setGhostPos] = createSignal3({
     x: 0,
     y: 0
   });
-  const [headerSize, setHeaderSize] = createSignal4({
+  const [headerSize, setHeaderSize] = createSignal3({
     width: 0,
     height: 0
   });
@@ -996,13 +1051,13 @@ import { template as _$template9 } from "solid-js/web";
 import { delegateEvents as _$delegateEvents5 } from "solid-js/web";
 import { effect as _$effect4 } from "solid-js/web";
 import { setStyleProperty as _$setStyleProperty2 } from "solid-js/web";
-import { createSignal as createSignal5, onCleanup as onCleanup5, onMount as onMount3 } from "solid-js";
+import { createSignal as createSignal4, onCleanup as onCleanup5, onMount as onMount3 } from "solid-js";
 var _tmpl$9 = /* @__PURE__ */ _$template9(`<div style=z-index:1001><button id=zylem-editor-toggle type=button>`);
 var SNAP_THRESHOLD = 50;
 var DRAG_THRESHOLD2 = 5;
 var BUTTON_SIZE = 96;
 var EditorToggleButton = (props) => {
-  const [position, setPosition] = createSignal5({
+  const [position, setPosition] = createSignal4({
     x: 0,
     y: 0
   });
@@ -1129,7 +1184,7 @@ import { effect as _$effect5 } from "solid-js/web";
 import { insert as _$insert6 } from "solid-js/web";
 import { memo as _$memo4 } from "solid-js/web";
 import { setStyleProperty as _$setStyleProperty3 } from "solid-js/web";
-import { createSignal as createSignal6, onCleanup as onCleanup6, onMount as onMount4, Show as Show4 } from "solid-js";
+import { createSignal as createSignal5, onCleanup as onCleanup6, onMount as onMount4, Show as Show4 } from "solid-js";
 import PanelBottomOpen from "lucide-solid/icons/panel-bottom-open";
 import PanelBottomClose from "lucide-solid/icons/panel-bottom-close";
 import X from "lucide-solid/icons/x";
@@ -1141,15 +1196,15 @@ var FloatingPanel = (props) => {
     width: 300,
     height: 200
   };
-  const [position, setPosition] = createSignal6(props.initialPosition ?? {
+  const [position, setPosition] = createSignal5(props.initialPosition ?? {
     x: 50,
     y: 50
   });
-  const [size, setSize] = createSignal6(props.initialSize ?? {
+  const [size, setSize] = createSignal5(props.initialSize ?? {
     width: 460,
     height: 600
   });
-  const [isCollapsed, setIsCollapsed] = createSignal6(false);
+  const [isCollapsed, setIsCollapsed] = createSignal5(false);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed());
   let isDragging = false;
   let isResizing = false;
@@ -1414,7 +1469,7 @@ import { setStyleProperty as _$setStyleProperty4 } from "solid-js/web";
 import { effect as _$effect6 } from "solid-js/web";
 import { addEventListener as _$addEventListener3 } from "solid-js/web";
 import { insert as _$insert7 } from "solid-js/web";
-import { createSignal as createSignal7, onCleanup as onCleanup7, onMount as onMount5 } from "solid-js";
+import { createSignal as createSignal6, onCleanup as onCleanup7, onMount as onMount5 } from "solid-js";
 var _tmpl$11 = /* @__PURE__ */ _$template11(`<div class="detached-panel floating-panel"><div class="detached-panel-titlebar floating-panel-titlebar"><span class=floating-panel-title></span><button class="floating-panel-button zylem-button"type=button title="Dock back to panel">\u2715</button></div><div class="detached-panel-content floating-panel-content"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div>`);
 var DRAG_THRESHOLD4 = 3;
 var MIN_WIDTH = 250;
@@ -1425,11 +1480,11 @@ var DetachedPanel = (props) => {
     const index = debugStore.panelZOrder.indexOf(props.panelId);
     return 1003 + index;
   };
-  const [position, setPosition] = createSignal7(panelState()?.position ?? {
+  const [position, setPosition] = createSignal6(panelState()?.position ?? {
     x: 100,
     y: 100
   });
-  const [size, setSize] = createSignal7(panelState()?.size ?? {
+  const [size, setSize] = createSignal6(panelState()?.size ?? {
     width: 350,
     height: 300
   });
@@ -1721,7 +1776,7 @@ var getInitialPanelPosition = () => {
   };
 };
 function Editor() {
-  const [isOpen, setIsOpen] = createSignal8(false);
+  const [isOpen, setIsOpen] = createSignal7(false);
   const toggleMenu = () => {
     setIsOpen(!isOpen());
   };
@@ -1898,6 +1953,8 @@ var Icon = (props) => {
   }, others));
 };
 export {
+  EDITOR_STATE_DISPATCH,
+  EDITOR_STATE_RECEIVE,
   EDITOR_UPDATE_EVENT,
   Icon,
   ZylemEditorElement,

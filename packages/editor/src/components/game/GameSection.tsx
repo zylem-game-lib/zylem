@@ -1,16 +1,16 @@
-import { createSignal, type Component } from 'solid-js';
+import type { Component } from 'solid-js';
 import { Checkbox } from '@kobalte/core';
 import Check from 'lucide-solid/icons/check';
 import { getGlobalState, state } from './game-state';
 import { printToConsole } from '..';
 import { dispatchEditorUpdate } from '../editor-events';
-import { debugStore } from '../editor-store';
+import { debugStore, setDebugStore } from '../editor-store';
 
 export const GameSection: Component = () => {
-    const [debugFlag, setDebugFlag] = createSignal(debugStore.debug);
-
     const handleDebugToggle = (checked: boolean) => {
-        setDebugFlag(checked);
+        // Update local store state
+        setDebugStore('debug', checked);
+        // Dispatch event for external consumers
         dispatchEditorUpdate({ gameState: { debugFlag: checked } });
     };
 
@@ -19,7 +19,7 @@ export const GameSection: Component = () => {
             <section class="zylem-toolbar">
                 <Checkbox.Root
                     class="zylem-checkbox-root"
-                    checked={debugFlag()}
+                    checked={debugStore.debug}
                     onChange={handleDebugToggle}
                 >
                     <Checkbox.Input class="zylem-checkbox-input" />

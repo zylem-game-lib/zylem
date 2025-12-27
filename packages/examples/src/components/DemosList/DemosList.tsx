@@ -1,5 +1,6 @@
 import { Component, For, createMemo } from 'solid-js';
 import { appStore, setActiveExample, getFilteredExamples } from '../../store/appStore';
+import { resetEditorState } from '../../store/editorStateStore';
 import DemoListItem from '../DemoListItem/DemoListItem';
 import styles from './DemosList.module.css';
 import { ExampleConfig } from '../../examples-config';
@@ -12,6 +13,7 @@ const DemosList: Component = () => {
     };
 
     const handleExampleClick = (example: ExampleConfig) => {
+        resetEditorState();
         setActiveExample(null);
         setActiveExample(example);
     };

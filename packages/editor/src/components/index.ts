@@ -9,6 +9,8 @@ export { editorEvents, type EditorEvent, type EditorEventType } from './events';
 export {
 	dispatchEditorUpdate,
 	EDITOR_UPDATE_EVENT,
+	EDITOR_STATE_DISPATCH,
+	EDITOR_STATE_RECEIVE,
 	type EditorUpdatePayload,
 } from './editor-events';
 

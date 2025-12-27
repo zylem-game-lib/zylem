@@ -36,7 +36,6 @@ export function EditorProvider(props: EditorProviderProps) {
 	// Sync valtio → SolidJS
 	const unsubDebug = subscribe(debugState, () => {
 		setDebug(reconcile({
-			enabled: debugState.enabled,
 			paused: debugState.paused,
 			tool: debugState.tool,
 			selectedEntityId: debugState.selectedEntityId,

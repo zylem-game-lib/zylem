@@ -6,6 +6,8 @@ export type { EditorEvent, EditorEventType } from './components/events';
 export {
     dispatchEditorUpdate,
     EDITOR_UPDATE_EVENT,
+    EDITOR_STATE_DISPATCH,
+    EDITOR_STATE_RECEIVE,
     type EditorUpdatePayload,
 } from './components/editor-events';
 export {

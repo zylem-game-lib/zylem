@@ -4,8 +4,7 @@
  * Loads the editor module when debug state becomes enabled.
  */
 
-import { subscribe } from 'valtio/vanilla';
-import { debugState } from './components/entities/entities-state';
+import { debugStore } from './components/editor-store';
 
 let editorModuleLoaded = false;
 
@@ -24,12 +23,8 @@ async function loadEditorModule(): Promise<void> {
 	}
 }
 
-subscribe(debugState, async () => {
-	if (debugState.enabled && !editorModuleLoaded) {
-		await loadEditorModule();
-	}
-});
-
-if (debugState.enabled && !editorModuleLoaded) {
+// Check on initial load
+if (debugStore.debug && !editorModuleLoaded) {
 	loadEditorModule();
 }
+

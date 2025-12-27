@@ -9,7 +9,6 @@ import { editorEvents } from '../events';
 export type DebugTools = 'select' | 'translate' | 'rotate' | 'scale' | 'delete' | 'none';
 
 export interface DebugState {
-    enabled: boolean;
     paused: boolean;
     tool: DebugTools;
     selectedEntityId: string | null;
@@ -18,7 +17,6 @@ export interface DebugState {
 }
 
 export const debugState = proxy<DebugState>({
-    enabled: false,
     paused: false,
     tool: 'none',
     selectedEntityId: null,
@@ -74,7 +72,6 @@ export function setSelectedEntityId(id: string | null): void {
 // Subscribe to external events
 editorEvents.on<Partial<DebugState>>('debug', (event) => {
     const payload = event.payload;
-    if (payload.enabled !== undefined) debugState.enabled = payload.enabled;
     if (payload.paused !== undefined) debugState.paused = payload.paused;
     if (payload.tool !== undefined) debugState.tool = payload.tool;
     if (payload.selectedEntityId !== undefined) debugState.selectedEntityId = payload.selectedEntityId;

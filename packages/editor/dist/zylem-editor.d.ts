@@ -146,12 +146,14 @@ declare const editorEvents: EditorEventBus;
 /**
  * Editor Events Module
  *
- * Dispatch window CustomEvents from the editor to communicate with consuming applications.
- * This enables bidirectional communication between @zylem/editor and apps like examples.
+ * Bidirectional window CustomEvents for communication between @zylem/editor and consuming apps.
+ *
+ * EDITOR_STATE_DISPATCH: Editor sends state changes → external apps listen
+ * EDITOR_STATE_RECEIVE: External apps send updates → editor listens
  */
 /**
- * Payload structure for editor-update events.
- * Matches the nested state structure expected by consumers.
+ * Payload structure for editor state events.
+ * Matches the nested state structure for both directions.
  */
 interface EditorUpdatePayload {
     gameState?: {
@@ -165,12 +167,13 @@ interface EditorUpdatePayload {
     [key: string]: unknown;
 }
 /**
- * Event name constant for consistency
+ * Event name constants
  */
-declare const EDITOR_UPDATE_EVENT = "editor-update";
+declare const EDITOR_STATE_DISPATCH = "editor-state-dispatch";
+declare const EDITOR_STATE_RECEIVE = "editor-state-receive";
+declare const EDITOR_UPDATE_EVENT = "editor-state-dispatch";
 /**
- * Dispatch an editor-update CustomEvent on the window.
- * Consumers can listen for this event to sync state with the editor.
+ * Dispatch state changes from the editor to external consumers.
  *
  * @param payload - The state update payload
  *
@@ -188,7 +191,6 @@ declare function dispatchEditorUpdate(payload: EditorUpdatePayload): void;
  */
 type DebugTools = 'select' | 'translate' | 'rotate' | 'scale' | 'delete' | 'none';
 interface DebugState {
-    enabled: boolean;
     paused: boolean;
     tool: DebugTools;
     selectedEntityId: string | null;
@@ -273,4 +275,4 @@ declare const debugStore: {
     dropTargetIndex: number | null;
 };
 
-export { EDITOR_UPDATE_EVENT, type EditorEvent, type EditorEventType, type EditorUpdatePayload, Icon, type ZylemEditorConfig, ZylemEditorElement, debugState, debugStore, dispatchEditorUpdate, editorEvents, gameState, registerZylemEditor, stageState };
+export { EDITOR_STATE_DISPATCH, EDITOR_STATE_RECEIVE, EDITOR_UPDATE_EVENT, type EditorEvent, type EditorEventType, type EditorUpdatePayload, Icon, type ZylemEditorConfig, ZylemEditorElement, debugState, debugStore, dispatchEditorUpdate, editorEvents, gameState, registerZylemEditor, stageState };
