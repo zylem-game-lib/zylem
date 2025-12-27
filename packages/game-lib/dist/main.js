@@ -112,6 +112,9 @@ function setPaused(paused) {
 function getDebugTool() {
   return debugState.tool;
 }
+function setDebugTool(tool) {
+  debugState.tool = tool;
+}
 function setSelectedEntity(entity) {
   debugState.selectedEntity = entity;
 }
@@ -6606,6 +6609,7 @@ var ZylemGameElement = class extends HTMLElement {
   set state(value) {
     this._state = value;
     this.syncDebugState();
+    this.syncToolbarState();
   }
   get state() {
     return this._state;
@@ -6617,6 +6621,18 @@ var ZylemGameElement = class extends HTMLElement {
     const debugFlag = this._state.gameState?.debugFlag;
     if (debugFlag !== void 0) {
       debugState.enabled = debugFlag;
+    }
+  }
+  /**
+   * Sync toolbar state with game-lib's debug state
+   */
+  syncToolbarState() {
+    const { tool, paused } = this._state.toolbarState ?? {};
+    if (tool !== void 0) {
+      setDebugTool(tool);
+    }
+    if (paused !== void 0) {
+      setPaused(paused);
     }
   }
   disconnectedCallback() {
@@ -6671,7 +6687,9 @@ export {
   ricochetSound,
   rotatable,
   rotateInDirection,
+  setDebugTool,
   setGlobal,
+  setPaused,
   setVariable,
   sphere,
   sprite,

@@ -1,5 +1,5 @@
 import { Game } from '../lib/game/game';
-import { debugState } from '../lib/debug/debug-state';
+import { debugState, setDebugTool, setPaused, type DebugTools } from '../lib/debug/debug-state';
 
 /**
  * State interface for editor-to-game communication
@@ -8,6 +8,10 @@ export interface ZylemGameState {
   gameState?: {
     debugFlag?: boolean;
     [key: string]: unknown;
+  };
+  toolbarState?: {
+    tool?: DebugTools;
+    paused?: boolean;
   };
   [key: string]: unknown;
 }
@@ -40,6 +44,7 @@ export class ZylemGameElement extends HTMLElement {
   set state(value: ZylemGameState) {
     this._state = value;
     this.syncDebugState();
+    this.syncToolbarState();
   }
 
   get state(): ZylemGameState {
@@ -53,6 +58,19 @@ export class ZylemGameElement extends HTMLElement {
     const debugFlag = this._state.gameState?.debugFlag;
     if (debugFlag !== undefined) {
       debugState.enabled = debugFlag;
+    }
+  }
+
+  /**
+   * Sync toolbar state with game-lib's debug state
+   */
+  private syncToolbarState(): void {
+    const { tool, paused } = this._state.toolbarState ?? {};
+    if (tool !== undefined) {
+      setDebugTool(tool);
+    }
+    if (paused !== undefined) {
+      setPaused(paused);
     }
   }
 

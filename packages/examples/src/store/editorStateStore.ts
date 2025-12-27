@@ -7,29 +7,47 @@
 
 import { createStore } from 'solid-js/store';
 import { EDITOR_UPDATE_EVENT, type EditorUpdatePayload } from '@zylem/editor';
-import { debugState } from '@zylem/game-lib';
+import { debugState, setDebugTool, setPaused, type DebugTools } from '@zylem/game-lib';
 
 export interface GameState {
     debugFlag: boolean;
 }
 
+export interface ToolbarState {
+    tool: DebugTools;
+    paused: boolean;
+}
+
 export interface EditorStateStore {
     gameState: GameState;
-    // Future sections like stageState, entityState, etc.
+    toolbarState: ToolbarState;
 }
 
 export const [editorStateStore, setEditorStateStore] = createStore<EditorStateStore>({
     gameState: {
         debugFlag: false,
     },
+    toolbarState: {
+        tool: 'none',
+        paused: false,
+    },
 });
 
 // Actions
 export const setDebugFlag = (value: boolean) => {
     setEditorStateStore('gameState', 'debugFlag', value);
-
     // Directly mutate game-lib's debugState (no re-render)
     debugState.enabled = value;
+};
+
+export const setTool = (value: DebugTools) => {
+    setEditorStateStore('toolbarState', 'tool', value);
+    setDebugTool(value);
+};
+
+export const setPausedState = (value: boolean) => {
+    setEditorStateStore('toolbarState', 'paused', value);
+    setPaused(value);
 };
 
 // Listen for editor-update events from @zylem/editor
@@ -38,6 +56,12 @@ if (typeof window !== 'undefined') {
         const payload = event.detail;
         if (payload.gameState?.debugFlag !== undefined) {
             setDebugFlag(payload.gameState.debugFlag);
+        }
+        if (payload.toolbarState?.tool !== undefined) {
+            setTool(payload.toolbarState.tool);
+        }
+        if (payload.toolbarState?.paused !== undefined) {
+            setPausedState(payload.toolbarState.paused);
         }
     }) as EventListener);
 }

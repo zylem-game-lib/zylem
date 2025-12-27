@@ -17,7 +17,6 @@ import {
     clearDragState,
     reorderPanels,
 } from '../editor-store';
-import { PANEL_CONFIGS } from './panel-config';
 
 // Minimum drag distance before showing ghost
 const DRAG_THRESHOLD = 5;

@@ -158,6 +158,10 @@ interface EditorUpdatePayload {
         debugFlag?: boolean;
         [key: string]: unknown;
     };
+    toolbarState?: {
+        tool?: 'select' | 'translate' | 'rotate' | 'scale' | 'delete' | 'none';
+        paused?: boolean;
+    };
     [key: string]: unknown;
 }
 /**

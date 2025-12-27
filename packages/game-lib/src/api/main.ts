@@ -66,7 +66,7 @@ export { setGlobal, getGlobal, createGlobal, onGlobalChange, onGlobalChanges, ge
 export { setVariable, getVariable, createVariable, onVariableChange, onVariableChanges } from '../lib/stage/stage-state';
 
 // Debug state - exposed for direct mutation by editor integration
-export { debugState } from '../lib/debug/debug-state';
+export { debugState, setDebugTool, setPaused, type DebugTools } from '../lib/debug/debug-state';
 
 // Web Components
 export { ZylemGameElement, type ZylemGameState } from '../web-components/zylem-game';

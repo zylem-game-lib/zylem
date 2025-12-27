@@ -133,6 +133,8 @@ interface DebugState {
     flags: Set<string>;
 }
 declare const debugState: DebugState;
+declare function setPaused(paused: boolean): void;
+declare function setDebugTool(tool: DebugTools): void;
 
 /**
  * State interface for editor-to-game communication
@@ -141,6 +143,10 @@ interface ZylemGameState {
     gameState?: {
         debugFlag?: boolean;
         [key: string]: unknown;
+    };
+    toolbarState?: {
+        tool?: DebugTools;
+        paused?: boolean;
     };
     [key: string]: unknown;
 }
@@ -157,7 +163,11 @@ declare class ZylemGameElement extends HTMLElement {
      * Sync the web component's state with the game-lib's internal debug state
      */
     private syncDebugState;
+    /**
+     * Sync toolbar state with game-lib's debug state
+     */
+    private syncToolbarState;
     disconnectedCallback(): void;
 }
 
-export { Game, UpdateContext, ZylemGameElement, type ZylemGameState, createGlobal, createVariable, debugState, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setGlobal, setVariable };
+export { type DebugTools, Game, UpdateContext, ZylemGameElement, type ZylemGameState, createGlobal, createVariable, debugState, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setDebugTool, setGlobal, setPaused, setVariable };

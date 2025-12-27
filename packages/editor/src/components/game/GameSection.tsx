@@ -1,10 +1,13 @@
 import { createSignal, type Component } from 'solid-js';
+import { Checkbox } from '@kobalte/core';
+import Check from 'lucide-solid/icons/check';
 import { getGlobalState, state } from './game-state';
 import { printToConsole } from '..';
 import { dispatchEditorUpdate } from '../editor-events';
+import { debugStore } from '../editor-store';
 
 export const GameSection: Component = () => {
-    const [debugFlag, setDebugFlag] = createSignal(false);
+    const [debugFlag, setDebugFlag] = createSignal(debugStore.debug);
 
     const handleDebugToggle = (checked: boolean) => {
         setDebugFlag(checked);
@@ -14,15 +17,19 @@ export const GameSection: Component = () => {
     return (
         <div class="panel-content">
             <section class="zylem-toolbar">
-                <label class="zylem-checkbox-label">
-                    <input
-                        type="checkbox"
-                        class="zylem-checkbox"
-                        checked={debugFlag()}
-                        onChange={(e) => handleDebugToggle(e.currentTarget.checked)}
-                    />
-                    Debug Mode
-                </label>
+                <Checkbox.Root
+                    class="zylem-checkbox-root"
+                    checked={debugFlag()}
+                    onChange={handleDebugToggle}
+                >
+                    <Checkbox.Input class="zylem-checkbox-input" />
+                    <Checkbox.Control class="zylem-checkbox-control">
+                        <Checkbox.Indicator>
+                            <Check class="zylem-checkbox-icon" />
+                        </Checkbox.Indicator>
+                    </Checkbox.Control>
+                    <Checkbox.Label class="zylem-checkbox-label">Debug Mode</Checkbox.Label>
+                </Checkbox.Root>
             </section>
             <section class="zylem-toolbar">
                 <button

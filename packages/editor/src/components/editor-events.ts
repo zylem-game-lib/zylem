@@ -14,6 +14,10 @@ export interface EditorUpdatePayload {
         debugFlag?: boolean;
         [key: string]: unknown;
     };
+    toolbarState?: {
+        tool?: 'select' | 'translate' | 'rotate' | 'scale' | 'delete' | 'none';
+        paused?: boolean;
+    };
     // Extensible for future sections like stageState, entityState, etc.
     [key: string]: unknown;
 }
