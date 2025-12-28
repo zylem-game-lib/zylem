@@ -31,47 +31,54 @@ export const scale = defineComponent({
 	z: Types.f32
 });
 
+// Reusable quaternion to avoid allocations per frame
+const _tempQuaternion = new Quaternion();
+
 export default function createTransformSystem(stage: StageSystem) {
 	const transformQuery = defineQuery([position, rotation]);
 	const stageEntities = stage._childrenMap;
+
 	return defineSystem((world) => {
 		const entities = transformQuery(world);
 		if (stageEntities === undefined) {
 			return world;
-		};
-		for (const [key, value] of stageEntities) {
-			const id = entities[key];
-			const stageEntity = value;
-			if (stageEntity === undefined || !stageEntity?.body || stageEntity.markedForRemoval) {
+		}
+
+		for (const [key, stageEntity] of stageEntities) {
+			// Early bailout - combine conditions
+			if (!stageEntity?.body || stageEntity.markedForRemoval) {
 				continue;
 			}
-			const { x, y, z } = stageEntity.body.translation();
-			position.x[id] = x;
-			position.y[id] = y;
-			position.z[id] = z;
-			if (stageEntity.group) {
-				stageEntity.group.position.set(position.x[id], position.y[id], position.z[id]);
-			} else if (stageEntity.mesh) {
-				stageEntity.mesh.position.set(position.x[id], position.y[id], position.z[id]);
+
+			const id = entities[key];
+			const body = stageEntity.body;
+			const target = stageEntity.group ?? stageEntity.mesh;
+
+			// Position sync
+			const translation = body.translation();
+			position.x[id] = translation.x;
+			position.y[id] = translation.y;
+			position.z[id] = translation.z;
+
+			if (target) {
+				target.position.set(translation.x, translation.y, translation.z);
 			}
+
+			// Skip rotation if controlled externally
 			if (stageEntity.controlledRotation) {
 				continue;
 			}
-			const { x: rx, y: ry, z: rz, w: rw } = stageEntity.body.rotation();
-			rotation.x[id] = rx;
-			rotation.y[id] = ry;
-			rotation.z[id] = rz;
-			rotation.w[id] = rw;
-			const newRotation = new Quaternion(
-				rotation.x[id],
-				rotation.y[id],
-				rotation.z[id],
-				rotation.w[id]
-			);
-			if (stageEntity.group) {
-				stageEntity.group.setRotationFromQuaternion(newRotation);
-			} else if (stageEntity.mesh) {
-				stageEntity.mesh.setRotationFromQuaternion(newRotation);
+
+			// Rotation sync - reuse quaternion
+			const rot = body.rotation();
+			rotation.x[id] = rot.x;
+			rotation.y[id] = rot.y;
+			rotation.z[id] = rot.z;
+			rotation.w[id] = rot.w;
+
+			if (target) {
+				_tempQuaternion.set(rot.x, rot.y, rot.z, rot.w);
+				target.setRotationFromQuaternion(_tempQuaternion);
 			}
 		}
 

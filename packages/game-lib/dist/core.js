@@ -217,46 +217,37 @@ function createTransformSystem(stage) {
     if (stageEntities === void 0) {
       return world;
     }
-    ;
-    for (const [key, value] of stageEntities) {
-      const id = entities[key];
-      const stageEntity = value;
-      if (stageEntity === void 0 || !stageEntity?.body || stageEntity.markedForRemoval) {
+    for (const [key, stageEntity] of stageEntities) {
+      if (!stageEntity?.body || stageEntity.markedForRemoval) {
         continue;
       }
-      const { x, y, z } = stageEntity.body.translation();
-      position.x[id] = x;
-      position.y[id] = y;
-      position.z[id] = z;
-      if (stageEntity.group) {
-        stageEntity.group.position.set(position.x[id], position.y[id], position.z[id]);
-      } else if (stageEntity.mesh) {
-        stageEntity.mesh.position.set(position.x[id], position.y[id], position.z[id]);
+      const id = entities[key];
+      const body = stageEntity.body;
+      const target = stageEntity.group ?? stageEntity.mesh;
+      const translation = body.translation();
+      position.x[id] = translation.x;
+      position.y[id] = translation.y;
+      position.z[id] = translation.z;
+      if (target) {
+        target.position.set(translation.x, translation.y, translation.z);
       }
       if (stageEntity.controlledRotation) {
         continue;
       }
-      const { x: rx, y: ry, z: rz, w: rw } = stageEntity.body.rotation();
-      rotation.x[id] = rx;
-      rotation.y[id] = ry;
-      rotation.z[id] = rz;
-      rotation.w[id] = rw;
-      const newRotation = new Quaternion(
-        rotation.x[id],
-        rotation.y[id],
-        rotation.z[id],
-        rotation.w[id]
-      );
-      if (stageEntity.group) {
-        stageEntity.group.setRotationFromQuaternion(newRotation);
-      } else if (stageEntity.mesh) {
-        stageEntity.mesh.setRotationFromQuaternion(newRotation);
+      const rot = body.rotation();
+      rotation.x[id] = rot.x;
+      rotation.y[id] = rot.y;
+      rotation.z[id] = rot.z;
+      rotation.w[id] = rot.w;
+      if (target) {
+        _tempQuaternion.set(rot.x, rot.y, rot.z, rot.w);
+        target.setRotationFromQuaternion(_tempQuaternion);
       }
     }
     return world;
   });
 }
-var position, rotation, scale;
+var position, rotation, scale, _tempQuaternion;
 var init_transformable_system = __esm({
   "src/lib/systems/transformable.system.ts"() {
     "use strict";
@@ -276,6 +267,7 @@ var init_transformable_system = __esm({
       y: Types.f32,
       z: Types.f32
     });
+    _tempQuaternion = new Quaternion();
   }
 });
 

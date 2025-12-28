@@ -30,6 +30,7 @@ var scale = defineComponent({
   y: Types.f32,
   z: Types.f32
 });
+var _tempQuaternion = new Quaternion();
 
 // src/lib/core/flags.ts
 var DEBUG_FLAG = import.meta.env.VITE_DEBUG_FLAG === "true";
