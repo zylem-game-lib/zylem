@@ -286,10 +286,22 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		if (debugState.enabled && !this.debugDelegate && this.scene && this.world) {
 			// Create debug delegate when debug is enabled
 			this.debugDelegate = new StageDebugDelegate(this);
+			
+			// Create and attach camera debug delegate for orbit controls
+			if (this.cameraRef && !this.cameraDebugDelegate) {
+				this.cameraDebugDelegate = new StageCameraDebugDelegate(this);
+				this.cameraRef.setDebugDelegate(this.cameraDebugDelegate);
+			}
 		} else if (!debugState.enabled && this.debugDelegate) {
 			// Dispose debug delegate when debug is disabled
 			this.debugDelegate.dispose();
 			this.debugDelegate = null;
+			
+			// Detach camera debug delegate
+			if (this.cameraRef) {
+				this.cameraRef.setDebugDelegate(null);
+			}
+			this.cameraDebugDelegate = null;
 		}
 	}
 

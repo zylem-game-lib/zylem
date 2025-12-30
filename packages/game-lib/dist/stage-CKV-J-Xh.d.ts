@@ -2,7 +2,7 @@ import { G as GameEntity, U as UpdateContext, b as SetupFunction, c as UpdateFun
 import * as bitecs from 'bitecs';
 import { Vector3, Scene, Color, Object3D, Group } from 'three';
 import RAPIER__default, { World, RigidBody, Collider } from '@dimforge/rapier3d-compat';
-import { E as Entity, Z as ZylemCamera, L as LifecycleFunction, C as CameraDebugDelegate, b as CameraDebugState, d as CameraWrapper } from './camera-BLcG7KL-.js';
+import { E as Entity, Z as ZylemCamera, L as LifecycleFunction, C as CameraDebugDelegate, b as CameraDebugState, d as CameraWrapper } from './camera-CAIZ9fdW.js';
 
 declare class ZylemWorld implements Entity<ZylemWorld> {
     type: string;

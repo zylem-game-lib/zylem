@@ -1,5 +1,4 @@
-export { P as PerspectiveType, a as Perspectives, c as camera } from './camera-BLcG7KL-.js';
+export { P as PerspectiveType, a as Perspectives, c as camera } from './camera-CAIZ9fdW.js';
 import 'three';
-import 'three/addons/controls/OrbitControls.js';
 import 'three/examples/jsm/postprocessing/EffectComposer.js';
 import '@dimforge/rapier3d-compat';

@@ -1575,7 +1575,11 @@ var init_zylem_scene = __esm({
        * Setup camera with the scene
        */
       setupCamera(scene, camera2) {
-        scene.add(camera2.cameraRig);
+        if (camera2.cameraRig) {
+          scene.add(camera2.cameraRig);
+        } else {
+          scene.add(camera2.camera);
+        }
         camera2.setup(scene);
       }
       /**
@@ -1981,9 +1985,175 @@ var init_render_pass = __esm({
   }
 });
 
-// src/lib/camera/zylem-camera.ts
-import { PerspectiveCamera, Vector3 as Vector38, Object3D as Object3D4, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
+// src/lib/camera/camera-debug-delegate.ts
+import { Vector3 as Vector38 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+var CameraOrbitController;
+var init_camera_debug_delegate = __esm({
+  "src/lib/camera/camera-debug-delegate.ts"() {
+    "use strict";
+    CameraOrbitController = class {
+      camera;
+      domElement;
+      orbitControls = null;
+      orbitTarget = null;
+      orbitTargetWorldPos = new Vector38();
+      debugDelegate = null;
+      debugUnsubscribe = null;
+      debugStateSnapshot = { enabled: false, selected: [] };
+      // Saved camera state for restoration when exiting debug mode
+      savedCameraPosition = null;
+      savedCameraQuaternion = null;
+      constructor(camera2, domElement) {
+        this.camera = camera2;
+        this.domElement = domElement;
+      }
+      /**
+       * Check if debug mode is currently active (orbit controls enabled).
+       */
+      get isActive() {
+        return this.debugStateSnapshot.enabled;
+      }
+      /**
+       * Update orbit controls each frame.
+       * Should be called from the camera's update loop.
+       */
+      update() {
+        if (this.orbitControls && this.orbitTarget) {
+          this.orbitTarget.getWorldPosition(this.orbitTargetWorldPos);
+          this.orbitControls.target.copy(this.orbitTargetWorldPos);
+        }
+        this.orbitControls?.update();
+      }
+      /**
+       * Attach a delegate to react to debug state changes.
+       */
+      setDebugDelegate(delegate) {
+        if (this.debugDelegate === delegate) {
+          return;
+        }
+        this.detachDebugDelegate();
+        this.debugDelegate = delegate;
+        if (!delegate) {
+          this.applyDebugState({ enabled: false, selected: [] });
+          return;
+        }
+        const unsubscribe = delegate.subscribe((state2) => {
+          this.applyDebugState(state2);
+        });
+        this.debugUnsubscribe = () => {
+          unsubscribe?.();
+        };
+      }
+      /**
+       * Clean up resources.
+       */
+      dispose() {
+        this.disableOrbitControls();
+        this.detachDebugDelegate();
+      }
+      /**
+       * Get the current debug state snapshot.
+       */
+      get debugState() {
+        return this.debugStateSnapshot;
+      }
+      applyDebugState(state2) {
+        const wasEnabled = this.debugStateSnapshot.enabled;
+        this.debugStateSnapshot = {
+          enabled: state2.enabled,
+          selected: [...state2.selected]
+        };
+        if (state2.enabled && !wasEnabled) {
+          this.saveCameraState();
+          this.enableOrbitControls();
+          this.updateOrbitTargetFromSelection(state2.selected);
+        } else if (!state2.enabled && wasEnabled) {
+          this.orbitTarget = null;
+          this.disableOrbitControls();
+          this.restoreCameraState();
+        } else if (state2.enabled) {
+          this.updateOrbitTargetFromSelection(state2.selected);
+        }
+      }
+      enableOrbitControls() {
+        if (this.orbitControls) {
+          return;
+        }
+        this.orbitControls = new OrbitControls(this.camera, this.domElement);
+        this.orbitControls.enableDamping = true;
+        this.orbitControls.dampingFactor = 0.05;
+        this.orbitControls.screenSpacePanning = false;
+        this.orbitControls.minDistance = 1;
+        this.orbitControls.maxDistance = 500;
+        this.orbitControls.maxPolarAngle = Math.PI / 2;
+        this.orbitControls.target.set(0, 0, 0);
+      }
+      disableOrbitControls() {
+        if (!this.orbitControls) {
+          return;
+        }
+        this.orbitControls.dispose();
+        this.orbitControls = null;
+      }
+      updateOrbitTargetFromSelection(selected) {
+        if (!this.debugDelegate || selected.length === 0) {
+          this.orbitTarget = null;
+          if (this.orbitControls) {
+            this.orbitControls.target.set(0, 0, 0);
+          }
+          return;
+        }
+        for (let i = selected.length - 1; i >= 0; i -= 1) {
+          const uuid = selected[i];
+          const targetObject = this.debugDelegate.resolveTarget(uuid);
+          if (targetObject) {
+            this.orbitTarget = targetObject;
+            if (this.orbitControls) {
+              targetObject.getWorldPosition(this.orbitTargetWorldPos);
+              this.orbitControls.target.copy(this.orbitTargetWorldPos);
+            }
+            return;
+          }
+        }
+        this.orbitTarget = null;
+      }
+      detachDebugDelegate() {
+        if (this.debugUnsubscribe) {
+          try {
+            this.debugUnsubscribe();
+          } catch {
+          }
+        }
+        this.debugUnsubscribe = null;
+        this.debugDelegate = null;
+      }
+      /**
+       * Save camera position and rotation before entering debug mode.
+       */
+      saveCameraState() {
+        this.savedCameraPosition = this.camera.position.clone();
+        this.savedCameraQuaternion = this.camera.quaternion.clone();
+      }
+      /**
+       * Restore camera position and rotation when exiting debug mode.
+       */
+      restoreCameraState() {
+        if (this.savedCameraPosition) {
+          this.camera.position.copy(this.savedCameraPosition);
+          this.savedCameraPosition = null;
+        }
+        if (this.savedCameraQuaternion) {
+          this.camera.quaternion.copy(this.savedCameraQuaternion);
+          this.savedCameraQuaternion = null;
+        }
+      }
+    };
+  }
+});
+
+// src/lib/camera/zylem-camera.ts
+import { PerspectiveCamera, Vector3 as Vector39, Object3D as Object3D5, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 var ZylemCamera;
 var init_zylem_camera = __esm({
@@ -1993,24 +2163,21 @@ var init_zylem_camera = __esm({
     init_third_person();
     init_fixed_2d();
     init_render_pass();
+    init_camera_debug_delegate();
     ZylemCamera = class {
-      cameraRig;
+      cameraRig = null;
       camera;
       screenResolution;
       renderer;
       composer;
       _perspective;
-      orbitControls = null;
       target = null;
       sceneRef = null;
       frustumSize = 10;
       // Perspective controller delegation
       perspectiveController = null;
-      debugDelegate = null;
-      debugUnsubscribe = null;
-      debugStateSnapshot = { enabled: false, selected: [] };
-      orbitTarget = null;
-      orbitTargetWorldPos = new Vector38();
+      // Debug/orbit controls delegation
+      orbitController = null;
       constructor(perspective, screenResolution, frustumSize = 10) {
         this._perspective = perspective;
         this.screenResolution = screenResolution;
@@ -2021,26 +2188,23 @@ var init_zylem_camera = __esm({
         this.composer = new EffectComposer(this.renderer);
         const aspectRatio = screenResolution.x / screenResolution.y;
         this.camera = this.createCameraForPerspective(aspectRatio);
-        this.cameraRig = new Object3D4();
-        this.cameraRig.position.set(0, 3, 10);
-        this.cameraRig.add(this.camera);
-        this.camera.lookAt(new Vector38(0, 2, 0));
+        if (this.needsRig()) {
+          this.cameraRig = new Object3D5();
+          this.cameraRig.position.set(0, 3, 10);
+          this.cameraRig.add(this.camera);
+          this.camera.lookAt(new Vector39(0, 2, 0));
+        } else {
+          this.camera.position.set(0, 0, 10);
+          this.camera.lookAt(new Vector39(0, 0, 0));
+        }
         this.initializePerspectiveController();
+        this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement);
       }
       /**
        * Setup the camera with a scene
        */
       async setup(scene) {
         this.sceneRef = scene;
-        if (this.orbitControls === null) {
-          this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
-          this.orbitControls.enableDamping = true;
-          this.orbitControls.dampingFactor = 0.05;
-          this.orbitControls.screenSpacePanning = false;
-          this.orbitControls.minDistance = 1;
-          this.orbitControls.maxDistance = 500;
-          this.orbitControls.maxPolarAngle = Math.PI / 2;
-        }
         let renderResolution = this.screenResolution.clone().divideScalar(2);
         renderResolution.x |= 0;
         renderResolution.y |= 0;
@@ -2062,15 +2226,17 @@ var init_zylem_camera = __esm({
        * Update camera and render
        */
       update(delta) {
-        if (this.orbitControls && this.orbitTarget) {
-          this.orbitTarget.getWorldPosition(this.orbitTargetWorldPos);
-          this.orbitControls.target.copy(this.orbitTargetWorldPos);
-        }
-        this.orbitControls?.update();
-        if (this.perspectiveController) {
+        this.orbitController?.update();
+        if (this.perspectiveController && !this.isDebugModeActive()) {
           this.perspectiveController.update(delta);
         }
         this.composer.render(delta);
+      }
+      /**
+       * Check if debug mode is active (orbit controls taking over camera)
+       */
+      isDebugModeActive() {
+        return this.orbitController?.isActive ?? false;
       }
       /**
        * Dispose renderer, composer, controls, and detach from scene
@@ -2081,7 +2247,7 @@ var init_zylem_camera = __esm({
         } catch {
         }
         try {
-          this.disableOrbitControls();
+          this.orbitController?.dispose();
         } catch {
         }
         try {
@@ -2093,28 +2259,13 @@ var init_zylem_camera = __esm({
           this.renderer.dispose();
         } catch {
         }
-        this.detachDebugDelegate();
         this.sceneRef = null;
       }
       /**
        * Attach a delegate to react to debug state changes.
        */
       setDebugDelegate(delegate) {
-        if (this.debugDelegate === delegate) {
-          return;
-        }
-        this.detachDebugDelegate();
-        this.debugDelegate = delegate;
-        if (!delegate) {
-          this.applyDebugState({ enabled: false, selected: [] });
-          return;
-        }
-        const unsubscribe = delegate.subscribe((state2) => {
-          this.applyDebugState(state2);
-        });
-        this.debugUnsubscribe = () => {
-          unsubscribe?.();
-        };
+        this.orbitController?.setDebugDelegate(delegate);
       }
       /**
        * Resize camera and renderer
@@ -2206,15 +2357,31 @@ var init_zylem_camera = __esm({
         if (this._perspective === Perspectives.Flat2D || this._perspective === Perspectives.Fixed2D) {
           this.frustumSize = position2.z;
         }
-        this.cameraRig.position.set(position2.x, position2.y, position2.z);
+        if (this.cameraRig) {
+          this.cameraRig.position.set(position2.x, position2.y, position2.z);
+        } else {
+          this.camera.position.set(position2.x, position2.y, position2.z);
+        }
       }
       move(position2) {
         this.moveCamera(position2);
       }
       rotate(pitch, yaw, roll) {
-        this.cameraRig.rotateX(pitch);
-        this.cameraRig.rotateY(yaw);
-        this.cameraRig.rotateZ(roll);
+        if (this.cameraRig) {
+          this.cameraRig.rotateX(pitch);
+          this.cameraRig.rotateY(yaw);
+          this.cameraRig.rotateZ(roll);
+        } else {
+          this.camera.rotateX(pitch);
+          this.camera.rotateY(yaw);
+          this.camera.rotateZ(roll);
+        }
+      }
+      /**
+       * Check if this perspective type needs a camera rig
+       */
+      needsRig() {
+        return this._perspective === Perspectives.ThirdPerson;
       }
       /**
        * Get the DOM element for the renderer
@@ -2222,73 +2389,12 @@ var init_zylem_camera = __esm({
       getDomElement() {
         return this.renderer.domElement;
       }
-      applyDebugState(state2) {
-        this.debugStateSnapshot = {
-          enabled: state2.enabled,
-          selected: [...state2.selected]
-        };
-        if (state2.enabled) {
-          this.enableOrbitControls();
-          this.updateOrbitTargetFromSelection(state2.selected);
-        } else {
-          this.orbitTarget = null;
-          this.disableOrbitControls();
-        }
-      }
-      enableOrbitControls() {
-        if (this.orbitControls) {
-          return;
-        }
-        this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.orbitControls.enableDamping = true;
-        this.orbitControls.dampingFactor = 0.05;
-        this.orbitControls.screenSpacePanning = false;
-        this.orbitControls.minDistance = 1;
-        this.orbitControls.maxDistance = 500;
-        this.orbitControls.maxPolarAngle = Math.PI / 2;
-      }
-      disableOrbitControls() {
-        if (!this.orbitControls) {
-          return;
-        }
-        this.orbitControls.dispose();
-        this.orbitControls = null;
-      }
-      updateOrbitTargetFromSelection(selected) {
-        if (!this.debugDelegate || selected.length === 0) {
-          this.orbitTarget = null;
-          return;
-        }
-        for (let i = selected.length - 1; i >= 0; i -= 1) {
-          const uuid = selected[i];
-          const targetObject = this.debugDelegate.resolveTarget(uuid);
-          if (targetObject) {
-            this.orbitTarget = targetObject;
-            if (this.orbitControls) {
-              targetObject.getWorldPosition(this.orbitTargetWorldPos);
-              this.orbitControls.target.copy(this.orbitTargetWorldPos);
-            }
-            return;
-          }
-        }
-        this.orbitTarget = null;
-      }
-      detachDebugDelegate() {
-        if (this.debugUnsubscribe) {
-          try {
-            this.debugUnsubscribe();
-          } catch {
-          }
-        }
-        this.debugUnsubscribe = null;
-        this.debugDelegate = null;
-      }
     };
   }
 });
 
 // src/lib/camera/camera.ts
-import { Vector2 as Vector24, Vector3 as Vector39 } from "three";
+import { Vector2 as Vector24, Vector3 as Vector310 } from "three";
 function camera(options) {
   const screenResolution = options.screenResolution || new Vector24(window.innerWidth, window.innerHeight);
   let frustumSize = 10;
@@ -2296,8 +2402,8 @@ function camera(options) {
     frustumSize = options.zoom || 10;
   }
   const zylemCamera = new ZylemCamera(options.perspective || "third-person", screenResolution, frustumSize);
-  zylemCamera.move(options.position || new Vector39(0, 0, 0));
-  zylemCamera.camera.lookAt(options.target || new Vector39(0, 0, 0));
+  zylemCamera.move(options.position || new Vector310(0, 0, 0));
+  zylemCamera.camera.lookAt(options.target || new Vector310(0, 0, 0));
   return new CameraWrapper(zylemCamera);
 }
 var CameraWrapper;
@@ -2325,7 +2431,7 @@ import {
   LineSegments,
   Mesh as Mesh4,
   MeshBasicMaterial,
-  Vector3 as Vector310
+  Vector3 as Vector311
 } from "three";
 var DebugEntityCursor;
 var init_debug_entity_cursor = __esm({
@@ -2338,8 +2444,8 @@ var init_debug_entity_cursor = __esm({
       edgeLines;
       currentColor = new Color7(65280);
       bbox = new Box3();
-      size = new Vector310();
-      center = new Vector310();
+      size = new Vector311();
+      center = new Vector311();
       constructor(scene) {
         this.scene = scene;
         const initialGeometry = new BoxGeometry(1, 1, 1);
@@ -2569,10 +2675,42 @@ var init_stage_debug_delegate = __esm({
   }
 });
 
+// src/lib/stage/stage-camera-debug-delegate.ts
+import { subscribe as subscribe4 } from "valtio/vanilla";
+var StageCameraDebugDelegate;
+var init_stage_camera_debug_delegate = __esm({
+  "src/lib/stage/stage-camera-debug-delegate.ts"() {
+    "use strict";
+    init_debug_state();
+    StageCameraDebugDelegate = class {
+      stage;
+      constructor(stage) {
+        this.stage = stage;
+      }
+      subscribe(listener) {
+        const notify = () => listener(this.snapshot());
+        notify();
+        return subscribe4(debugState, notify);
+      }
+      resolveTarget(uuid) {
+        const entity = this.stage._debugMap.get(uuid) || this.stage.world?.collisionMap.get(uuid) || null;
+        const target = entity?.group ?? entity?.mesh ?? null;
+        return target ?? null;
+      }
+      snapshot() {
+        return {
+          enabled: debugState.enabled,
+          selected: debugState.selectedEntity ? [debugState.selectedEntity.uuid] : []
+        };
+      }
+    };
+  }
+});
+
 // src/lib/stage/zylem-stage.ts
 import { addComponent, addEntity, createWorld as createECS, removeEntity } from "bitecs";
-import { Color as Color8, Vector3 as Vector312, Vector2 as Vector26 } from "three";
-import { subscribe as subscribe4 } from "valtio/vanilla";
+import { Color as Color8, Vector3 as Vector313, Vector2 as Vector26 } from "three";
+import { subscribe as subscribe5 } from "valtio/vanilla";
 import { nanoid as nanoid2 } from "nanoid";
 var STAGE_TYPE, ZylemStage;
 var init_zylem_stage = __esm({
@@ -2590,6 +2728,7 @@ var init_zylem_stage = __esm({
     init_perspective();
     init_camera();
     init_stage_debug_delegate();
+    init_stage_camera_debug_delegate();
     init_entity();
     init_zylem_camera();
     STAGE_TYPE = "Stage";
@@ -2602,7 +2741,7 @@ var init_zylem_stage = __esm({
           p1: ["gamepad-1", "keyboard"],
           p2: ["gamepad-2", "keyboard"]
         },
-        gravity: new Vector312(0, 0, 0),
+        gravity: new Vector313(0, 0, 0),
         variables: {},
         entities: []
       };
@@ -2642,7 +2781,7 @@ var init_zylem_stage = __esm({
         this.children = entities;
         this.pendingEntities = asyncEntities;
         this.saveState({ ...this.state, ...config, entities: [] });
-        this.gravity = config.gravity ?? new Vector312(0, 0, 0);
+        this.gravity = config.gravity ?? new Vector313(0, 0, 0);
       }
       parseOptions(options) {
         let config = {};
@@ -2715,7 +2854,7 @@ var init_zylem_stage = __esm({
         const zylemCamera = camera2 || (this.camera ? this.camera.cameraRef : this.createDefaultCamera());
         this.cameraRef = zylemCamera;
         this.scene = new ZylemScene(id, zylemCamera, this.state);
-        const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector312(0, 0, 0));
+        const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector313(0, 0, 0));
         this.world = new ZylemWorld(physicsWorld);
         this.scene.setup();
         this.emitLoading({ type: "start", message: "Loading stage...", progress: 0 });
@@ -2762,16 +2901,24 @@ var init_zylem_stage = __esm({
           return;
         }
         this.updateDebugDelegate();
-        this.debugStateUnsubscribe = subscribe4(debugState, () => {
+        this.debugStateUnsubscribe = subscribe5(debugState, () => {
           this.updateDebugDelegate();
         });
       }
       updateDebugDelegate() {
         if (debugState.enabled && !this.debugDelegate && this.scene && this.world) {
           this.debugDelegate = new StageDebugDelegate(this);
+          if (this.cameraRef && !this.cameraDebugDelegate) {
+            this.cameraDebugDelegate = new StageCameraDebugDelegate(this);
+            this.cameraRef.setDebugDelegate(this.cameraDebugDelegate);
+          }
         } else if (!debugState.enabled && this.debugDelegate) {
           this.debugDelegate.dispose();
           this.debugDelegate = null;
+          if (this.cameraRef) {
+            this.cameraRef.setDebugDelegate(null);
+          }
+          this.cameraDebugDelegate = null;
         }
       }
       _update(params) {
@@ -2998,7 +3145,7 @@ var init_zylem_stage = __esm({
 
 // src/lib/stage/stage-default.ts
 import { proxy as proxy4 } from "valtio/vanilla";
-import { Vector3 as Vector313 } from "three";
+import { Vector3 as Vector314 } from "three";
 function getStageOptions(options) {
   const defaults = getStageDefaultConfig();
   let originalConfig = {};
@@ -3029,7 +3176,7 @@ var init_stage_default = __esm({
         p1: ["gamepad-1", "keyboard"],
         p2: ["gamepad-2", "keyboard"]
       },
-      gravity: new Vector313(0, 0, 0),
+      gravity: new Vector314(0, 0, 0),
       variables: {}
     };
     stageDefaultsState = proxy4({
@@ -4685,15 +4832,15 @@ init_builder();
 init_builder();
 init_create();
 import { ColliderDesc as ColliderDesc3 } from "@dimforge/rapier3d-compat";
-import { Color as Color10, Euler, Group as Group6, Quaternion as Quaternion2, Vector3 as Vector314 } from "three";
+import { Color as Color10, Euler, Group as Group6, Quaternion as Quaternion3, Vector3 as Vector315 } from "three";
 import {
   TextureLoader as TextureLoader3,
   SpriteMaterial as SpriteMaterial2,
   Sprite as ThreeSprite2
 } from "three";
 var spriteDefaults = {
-  size: new Vector314(1, 1, 1),
-  position: new Vector314(0, 0, 0),
+  size: new Vector315(1, 1, 1),
+  position: new Vector315(0, 0, 0),
   collision: {
     static: false
   },
@@ -4706,7 +4853,7 @@ var spriteDefaults = {
 };
 var SpriteCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
-    const size = options.collisionSize || options.size || new Vector314(1, 1, 1);
+    const size = options.collisionSize || options.size || new Vector315(1, 1, 1);
     const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
     let colliderDesc = ColliderDesc3.cuboid(half.x, half.y, half.z);
     return colliderDesc;
@@ -4804,7 +4951,7 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
       if (_sprite.material) {
         const q = this.body?.rotation();
         if (q) {
-          const quat = new Quaternion2(q.x, q.y, q.z, q.w);
+          const quat = new Quaternion3(q.x, q.y, q.z, q.w);
           const euler = new Euler().setFromQuaternion(quat, "XYZ");
           _sprite.material.rotation = euler.z;
         }
@@ -5036,7 +5183,7 @@ function createGame(...options) {
 init_stage();
 
 // src/lib/stage/entity-spawner.ts
-import { Euler as Euler2, Quaternion as Quaternion3, Vector2 as Vector28 } from "three";
+import { Euler as Euler2, Quaternion as Quaternion4, Vector2 as Vector28 } from "three";
 function entitySpawner(factory) {
   return {
     spawn: async (stage, x, y) => {
@@ -5053,7 +5200,7 @@ function entitySpawner(factory) {
       let rz = source._rotation2DAngle ?? 0;
       try {
         const r = source.body.rotation();
-        const q = new Quaternion3(r.x, r.y, r.z, r.w);
+        const q = new Quaternion4(r.x, r.y, r.z, r.w);
         const e = new Euler2().setFromQuaternion(q, "XYZ");
         rz = e.z;
       } catch {
@@ -5103,11 +5250,11 @@ init_builder();
 init_builder();
 import { ColliderDesc as ColliderDesc4 } from "@dimforge/rapier3d-compat";
 import { BoxGeometry as BoxGeometry2, Color as Color11 } from "three";
-import { Vector3 as Vector315 } from "three";
+import { Vector3 as Vector316 } from "three";
 init_create();
 var boxDefaults = {
-  size: new Vector315(1, 1, 1),
-  position: new Vector315(0, 0, 0),
+  size: new Vector316(1, 1, 1),
+  position: new Vector316(0, 0, 0),
   collision: {
     static: false
   },
@@ -5118,7 +5265,7 @@ var boxDefaults = {
 };
 var BoxCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
-    const size = options.size || new Vector315(1, 1, 1);
+    const size = options.size || new Vector316(1, 1, 1);
     const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
     let colliderDesc = ColliderDesc4.cuboid(half.x, half.y, half.z);
     return colliderDesc;
@@ -5126,7 +5273,7 @@ var BoxCollisionBuilder = class extends EntityCollisionBuilder {
 };
 var BoxMeshBuilder = class extends EntityMeshBuilder {
   build(options) {
-    const size = options.size ?? new Vector315(1, 1, 1);
+    const size = options.size ?? new Vector316(1, 1, 1);
     return new BoxGeometry2(size.x, size.y, size.z);
   }
 };
@@ -5172,11 +5319,11 @@ init_builder();
 init_builder();
 import { ColliderDesc as ColliderDesc5 } from "@dimforge/rapier3d-compat";
 import { Color as Color12, SphereGeometry } from "three";
-import { Vector3 as Vector316 } from "three";
+import { Vector3 as Vector317 } from "three";
 init_create();
 var sphereDefaults = {
   radius: 1,
-  position: new Vector316(0, 0, 0),
+  position: new Vector317(0, 0, 0),
   collision: {
     static: false
   },
@@ -5239,7 +5386,7 @@ init_builder();
 init_builder();
 init_builder();
 import { ColliderDesc as ColliderDesc6 } from "@dimforge/rapier3d-compat";
-import { Color as Color13, PlaneGeometry, Vector2 as Vector29, Vector3 as Vector317 } from "three";
+import { Color as Color13, PlaneGeometry, Vector2 as Vector29, Vector3 as Vector318 } from "three";
 
 // src/lib/graphics/geometries/XZPlaneGeometry.ts
 import { BufferGeometry as BufferGeometry5, Float32BufferAttribute } from "three";
@@ -5306,7 +5453,7 @@ var DEFAULT_SUBDIVISIONS = 4;
 var planeDefaults = {
   tile: new Vector29(10, 10),
   repeat: new Vector29(1, 1),
-  position: new Vector317(0, 0, 0),
+  position: new Vector318(0, 0, 0),
   collision: {
     static: true
   },
@@ -5320,9 +5467,9 @@ var PlaneCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
     const tile = options.tile ?? new Vector29(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
-    const size = new Vector317(tile.x, 1, tile.y);
+    const size = new Vector318(tile.x, 1, tile.y);
     const heightData = options._builders?.meshBuilder?.heightData;
-    const scale2 = new Vector317(size.x, 1, size.z);
+    const scale2 = new Vector318(size.x, 1, size.z);
     let colliderDesc = ColliderDesc6.heightfield(
       subdivisions,
       subdivisions,
@@ -5338,7 +5485,7 @@ var PlaneMeshBuilder = class extends EntityMeshBuilder {
   build(options) {
     const tile = options.tile ?? new Vector29(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
-    const size = new Vector317(tile.x, 1, tile.y);
+    const size = new Vector318(tile.x, 1, tile.y);
     const geometry = new XZPlaneGeometry(size.x, size.z, subdivisions, subdivisions);
     const vertexGeometry = new PlaneGeometry(size.x, size.z, subdivisions, subdivisions);
     const dx = size.x / subdivisions;
@@ -5407,10 +5554,10 @@ init_builder();
 init_create();
 init_game_state();
 import { ActiveCollisionTypes as ActiveCollisionTypes3, ColliderDesc as ColliderDesc7 } from "@dimforge/rapier3d-compat";
-import { Vector3 as Vector318 } from "three";
+import { Vector3 as Vector319 } from "three";
 var zoneDefaults = {
-  size: new Vector318(1, 1, 1),
-  position: new Vector318(0, 0, 0),
+  size: new Vector319(1, 1, 1),
+  position: new Vector319(0, 0, 0),
   collision: {
     static: true
   },
@@ -5420,7 +5567,7 @@ var zoneDefaults = {
 };
 var ZoneCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
-    const size = options.size || new Vector318(1, 1, 1);
+    const size = options.size || new Vector319(1, 1, 1);
     const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
     let colliderDesc = ColliderDesc7.cuboid(half.x, half.y, half.z);
     colliderDesc.setSensor(true);
@@ -5530,7 +5677,7 @@ init_actor();
 init_entity();
 init_builder();
 init_create();
-import { Color as Color14, Group as Group7, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector210, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial4, Mesh as Mesh5, PlaneGeometry as PlaneGeometry2, Vector3 as Vector319 } from "three";
+import { Color as Color14, Group as Group7, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector210, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial4, Mesh as Mesh5, PlaneGeometry as PlaneGeometry2, Vector3 as Vector320 } from "three";
 var rectDefaults = {
   position: void 0,
   width: 120,
@@ -5767,8 +5914,8 @@ var ZylemRect = class _ZylemRect extends GameEntity {
     }
     if (bounds.world) {
       const { left, right, top, bottom, z = 0 } = bounds.world;
-      const tl = this.worldToScreen(new Vector319(left, top, z));
-      const br = this.worldToScreen(new Vector319(right, bottom, z));
+      const tl = this.worldToScreen(new Vector320(left, top, z));
+      const br = this.worldToScreen(new Vector320(right, bottom, z));
       const x = Math.min(tl.x, br.x);
       const y = Math.min(tl.y, br.y);
       const width = Math.abs(br.x - tl.x);
@@ -6237,41 +6384,41 @@ function movementSequence2D(opts, onStep) {
 }
 
 // src/lib/actions/capabilities/moveable.ts
-import { Vector3 as Vector320 } from "three";
+import { Vector3 as Vector321 } from "three";
 function moveX(entity, delta) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector320(delta, currentVelocity.y, currentVelocity.z);
+  const newVelocity = new Vector321(delta, currentVelocity.y, currentVelocity.z);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveY(entity, delta) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector320(currentVelocity.x, delta, currentVelocity.z);
+  const newVelocity = new Vector321(currentVelocity.x, delta, currentVelocity.z);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveZ(entity, delta) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector320(currentVelocity.x, currentVelocity.y, delta);
+  const newVelocity = new Vector321(currentVelocity.x, currentVelocity.y, delta);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveXY(entity, deltaX, deltaY) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector320(deltaX, deltaY, currentVelocity.z);
+  const newVelocity = new Vector321(deltaX, deltaY, currentVelocity.z);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveXZ(entity, deltaX, deltaZ) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector320(deltaX, currentVelocity.y, deltaZ);
+  const newVelocity = new Vector321(deltaX, currentVelocity.y, deltaZ);
   entity.body.setLinvel(newVelocity, true);
 }
 function move(entity, vector) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector320(
+  const newVelocity = new Vector321(
     currentVelocity.x + vector.x,
     currentVelocity.y + vector.y,
     currentVelocity.z + vector.z
@@ -6280,7 +6427,7 @@ function move(entity, vector) {
 }
 function resetVelocity(entity) {
   if (!entity.body) return;
-  entity.body.setLinvel(new Vector320(0, 0, 0), true);
+  entity.body.setLinvel(new Vector321(0, 0, 0), true);
   entity.body.setLinearDamping(5);
 }
 function moveForwardXY(entity, delta, rotation2DAngle) {
@@ -6410,14 +6557,14 @@ function makeMoveable(entity) {
 }
 
 // src/lib/actions/capabilities/rotatable.ts
-import { Euler as Euler3, Vector3 as Vector321, MathUtils, Quaternion as Quaternion4 } from "three";
+import { Euler as Euler3, Vector3 as Vector322, MathUtils, Quaternion as Quaternion5 } from "three";
 function rotateInDirection(entity, moveVector) {
   if (!entity.body) return;
   const rotate = Math.atan2(-moveVector.x, moveVector.z);
   rotateYEuler(entity, rotate);
 }
 function rotateYEuler(entity, amount) {
-  rotateEuler(entity, new Vector321(0, -amount, 0));
+  rotateEuler(entity, new Vector322(0, -amount, 0));
 }
 function rotateEuler(entity, rotation2) {
   if (!entity.group) return;
@@ -6465,7 +6612,7 @@ function setRotationDegreesZ(entity, z) {
 }
 function setRotation(entity, x, y, z) {
   if (!entity.body) return;
-  const quat = new Quaternion4().setFromEuler(new Euler3(x, y, z));
+  const quat = new Quaternion5().setFromEuler(new Euler3(x, y, z));
   entity.body.setRotation({ w: quat.w, x: quat.x, y: quat.y, z: quat.z }, true);
 }
 function setRotationDegrees(entity, x, y, z) {

@@ -1,5 +1,4 @@
 import { Group, Mesh, Object3D, Camera, Vector2, WebGLRenderer, Scene, Vector3 } from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RigidBody, Collider, KinematicCharacterController } from '@dimforge/rapier3d-compat';
 
@@ -36,6 +35,15 @@ interface StageEntity extends Entity {
     markedForRemoval: boolean;
 }
 
+interface CameraDebugState {
+    enabled: boolean;
+    selected: string[];
+}
+interface CameraDebugDelegate {
+    subscribe(listener: (state: CameraDebugState) => void): () => void;
+    resolveTarget(uuid: string): Object3D | null;
+}
+
 /**
  * Interface for perspective-specific camera controllers
  */
@@ -49,31 +57,18 @@ interface PerspectiveController {
     update(delta: number): void;
     resize(width: number, height: number): void;
 }
-interface CameraDebugState {
-    enabled: boolean;
-    selected: string[];
-}
-interface CameraDebugDelegate {
-    subscribe(listener: (state: CameraDebugState) => void): () => void;
-    resolveTarget(uuid: string): Object3D | null;
-}
 declare class ZylemCamera {
-    cameraRig: Object3D;
+    cameraRig: Object3D | null;
     camera: Camera;
     screenResolution: Vector2;
     renderer: WebGLRenderer;
     composer: EffectComposer;
     _perspective: PerspectiveType;
-    orbitControls: OrbitControls | null;
     target: StageEntity | null;
     sceneRef: Scene | null;
     frustumSize: number;
     perspectiveController: PerspectiveController | null;
-    debugDelegate: CameraDebugDelegate | null;
-    private debugUnsubscribe;
-    private debugStateSnapshot;
-    private orbitTarget;
-    private orbitTargetWorldPos;
+    private orbitController;
     constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize?: number);
     /**
      * Setup the camera with a scene
@@ -83,6 +78,10 @@ declare class ZylemCamera {
      * Update camera and render
      */
     update(delta: number): void;
+    /**
+     * Check if debug mode is active (orbit controls taking over camera)
+     */
+    isDebugModeActive(): boolean;
     /**
      * Dispose renderer, composer, controls, and detach from scene
      */
@@ -116,14 +115,13 @@ declare class ZylemCamera {
     move(position: Vector3): void;
     rotate(pitch: number, yaw: number, roll: number): void;
     /**
+     * Check if this perspective type needs a camera rig
+     */
+    private needsRig;
+    /**
      * Get the DOM element for the renderer
      */
     getDomElement(): HTMLCanvasElement;
-    private applyDebugState;
-    private enableOrbitControls;
-    private disableOrbitControls;
-    private updateOrbitTargetFromSelection;
-    private detachDebugDelegate;
 }
 
 interface CameraOptions {

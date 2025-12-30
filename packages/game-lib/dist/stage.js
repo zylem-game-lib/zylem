@@ -1,6 +1,6 @@
 // src/lib/stage/zylem-stage.ts
 import { addComponent, addEntity, createWorld as createECS, removeEntity } from "bitecs";
-import { Color as Color6, Vector3 as Vector310, Vector2 as Vector25 } from "three";
+import { Color as Color6, Vector3 as Vector311, Vector2 as Vector25 } from "three";
 
 // src/lib/collision/world.ts
 import RAPIER from "@dimforge/rapier3d-compat";
@@ -863,7 +863,11 @@ var ZylemScene = class {
    * Setup camera with the scene
    */
   setupCamera(scene, camera) {
-    scene.add(camera.cameraRig);
+    if (camera.cameraRig) {
+      scene.add(camera.cameraRig);
+    } else {
+      scene.add(camera.camera);
+    }
     camera.setup(scene);
   }
   /**
@@ -959,7 +963,7 @@ var Vec0 = new Vector34(0, 0, 0);
 var Vec1 = new Vector34(1, 1, 1);
 
 // src/lib/stage/zylem-stage.ts
-import { subscribe as subscribe3 } from "valtio/vanilla";
+import { subscribe as subscribe4 } from "valtio/vanilla";
 
 // src/lib/core/lifecycle-base.ts
 var LifeCycleBase = class {
@@ -1008,11 +1012,10 @@ var Perspectives = {
 };
 
 // src/lib/camera/camera.ts
-import { Vector2 as Vector23, Vector3 as Vector37 } from "three";
+import { Vector2 as Vector23, Vector3 as Vector38 } from "three";
 
 // src/lib/camera/zylem-camera.ts
-import { PerspectiveCamera, Vector3 as Vector36, Object3D as Object3D4, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { PerspectiveCamera, Vector3 as Vector37, Object3D as Object3D5, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
 
 // src/lib/camera/third-person.ts
 import { Vector3 as Vector35 } from "three";
@@ -1185,25 +1188,182 @@ var RenderPass = class extends Pass {
   }
 };
 
+// src/lib/camera/camera-debug-delegate.ts
+import { Vector3 as Vector36 } from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+var CameraOrbitController = class {
+  camera;
+  domElement;
+  orbitControls = null;
+  orbitTarget = null;
+  orbitTargetWorldPos = new Vector36();
+  debugDelegate = null;
+  debugUnsubscribe = null;
+  debugStateSnapshot = { enabled: false, selected: [] };
+  // Saved camera state for restoration when exiting debug mode
+  savedCameraPosition = null;
+  savedCameraQuaternion = null;
+  constructor(camera, domElement) {
+    this.camera = camera;
+    this.domElement = domElement;
+  }
+  /**
+   * Check if debug mode is currently active (orbit controls enabled).
+   */
+  get isActive() {
+    return this.debugStateSnapshot.enabled;
+  }
+  /**
+   * Update orbit controls each frame.
+   * Should be called from the camera's update loop.
+   */
+  update() {
+    if (this.orbitControls && this.orbitTarget) {
+      this.orbitTarget.getWorldPosition(this.orbitTargetWorldPos);
+      this.orbitControls.target.copy(this.orbitTargetWorldPos);
+    }
+    this.orbitControls?.update();
+  }
+  /**
+   * Attach a delegate to react to debug state changes.
+   */
+  setDebugDelegate(delegate) {
+    if (this.debugDelegate === delegate) {
+      return;
+    }
+    this.detachDebugDelegate();
+    this.debugDelegate = delegate;
+    if (!delegate) {
+      this.applyDebugState({ enabled: false, selected: [] });
+      return;
+    }
+    const unsubscribe = delegate.subscribe((state2) => {
+      this.applyDebugState(state2);
+    });
+    this.debugUnsubscribe = () => {
+      unsubscribe?.();
+    };
+  }
+  /**
+   * Clean up resources.
+   */
+  dispose() {
+    this.disableOrbitControls();
+    this.detachDebugDelegate();
+  }
+  /**
+   * Get the current debug state snapshot.
+   */
+  get debugState() {
+    return this.debugStateSnapshot;
+  }
+  applyDebugState(state2) {
+    const wasEnabled = this.debugStateSnapshot.enabled;
+    this.debugStateSnapshot = {
+      enabled: state2.enabled,
+      selected: [...state2.selected]
+    };
+    if (state2.enabled && !wasEnabled) {
+      this.saveCameraState();
+      this.enableOrbitControls();
+      this.updateOrbitTargetFromSelection(state2.selected);
+    } else if (!state2.enabled && wasEnabled) {
+      this.orbitTarget = null;
+      this.disableOrbitControls();
+      this.restoreCameraState();
+    } else if (state2.enabled) {
+      this.updateOrbitTargetFromSelection(state2.selected);
+    }
+  }
+  enableOrbitControls() {
+    if (this.orbitControls) {
+      return;
+    }
+    this.orbitControls = new OrbitControls(this.camera, this.domElement);
+    this.orbitControls.enableDamping = true;
+    this.orbitControls.dampingFactor = 0.05;
+    this.orbitControls.screenSpacePanning = false;
+    this.orbitControls.minDistance = 1;
+    this.orbitControls.maxDistance = 500;
+    this.orbitControls.maxPolarAngle = Math.PI / 2;
+    this.orbitControls.target.set(0, 0, 0);
+  }
+  disableOrbitControls() {
+    if (!this.orbitControls) {
+      return;
+    }
+    this.orbitControls.dispose();
+    this.orbitControls = null;
+  }
+  updateOrbitTargetFromSelection(selected) {
+    if (!this.debugDelegate || selected.length === 0) {
+      this.orbitTarget = null;
+      if (this.orbitControls) {
+        this.orbitControls.target.set(0, 0, 0);
+      }
+      return;
+    }
+    for (let i = selected.length - 1; i >= 0; i -= 1) {
+      const uuid = selected[i];
+      const targetObject = this.debugDelegate.resolveTarget(uuid);
+      if (targetObject) {
+        this.orbitTarget = targetObject;
+        if (this.orbitControls) {
+          targetObject.getWorldPosition(this.orbitTargetWorldPos);
+          this.orbitControls.target.copy(this.orbitTargetWorldPos);
+        }
+        return;
+      }
+    }
+    this.orbitTarget = null;
+  }
+  detachDebugDelegate() {
+    if (this.debugUnsubscribe) {
+      try {
+        this.debugUnsubscribe();
+      } catch {
+      }
+    }
+    this.debugUnsubscribe = null;
+    this.debugDelegate = null;
+  }
+  /**
+   * Save camera position and rotation before entering debug mode.
+   */
+  saveCameraState() {
+    this.savedCameraPosition = this.camera.position.clone();
+    this.savedCameraQuaternion = this.camera.quaternion.clone();
+  }
+  /**
+   * Restore camera position and rotation when exiting debug mode.
+   */
+  restoreCameraState() {
+    if (this.savedCameraPosition) {
+      this.camera.position.copy(this.savedCameraPosition);
+      this.savedCameraPosition = null;
+    }
+    if (this.savedCameraQuaternion) {
+      this.camera.quaternion.copy(this.savedCameraQuaternion);
+      this.savedCameraQuaternion = null;
+    }
+  }
+};
+
 // src/lib/camera/zylem-camera.ts
 var ZylemCamera = class {
-  cameraRig;
+  cameraRig = null;
   camera;
   screenResolution;
   renderer;
   composer;
   _perspective;
-  orbitControls = null;
   target = null;
   sceneRef = null;
   frustumSize = 10;
   // Perspective controller delegation
   perspectiveController = null;
-  debugDelegate = null;
-  debugUnsubscribe = null;
-  debugStateSnapshot = { enabled: false, selected: [] };
-  orbitTarget = null;
-  orbitTargetWorldPos = new Vector36();
+  // Debug/orbit controls delegation
+  orbitController = null;
   constructor(perspective, screenResolution, frustumSize = 10) {
     this._perspective = perspective;
     this.screenResolution = screenResolution;
@@ -1214,26 +1374,23 @@ var ZylemCamera = class {
     this.composer = new EffectComposer(this.renderer);
     const aspectRatio = screenResolution.x / screenResolution.y;
     this.camera = this.createCameraForPerspective(aspectRatio);
-    this.cameraRig = new Object3D4();
-    this.cameraRig.position.set(0, 3, 10);
-    this.cameraRig.add(this.camera);
-    this.camera.lookAt(new Vector36(0, 2, 0));
+    if (this.needsRig()) {
+      this.cameraRig = new Object3D5();
+      this.cameraRig.position.set(0, 3, 10);
+      this.cameraRig.add(this.camera);
+      this.camera.lookAt(new Vector37(0, 2, 0));
+    } else {
+      this.camera.position.set(0, 0, 10);
+      this.camera.lookAt(new Vector37(0, 0, 0));
+    }
     this.initializePerspectiveController();
+    this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement);
   }
   /**
    * Setup the camera with a scene
    */
   async setup(scene) {
     this.sceneRef = scene;
-    if (this.orbitControls === null) {
-      this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
-      this.orbitControls.enableDamping = true;
-      this.orbitControls.dampingFactor = 0.05;
-      this.orbitControls.screenSpacePanning = false;
-      this.orbitControls.minDistance = 1;
-      this.orbitControls.maxDistance = 500;
-      this.orbitControls.maxPolarAngle = Math.PI / 2;
-    }
     let renderResolution = this.screenResolution.clone().divideScalar(2);
     renderResolution.x |= 0;
     renderResolution.y |= 0;
@@ -1255,15 +1412,17 @@ var ZylemCamera = class {
    * Update camera and render
    */
   update(delta) {
-    if (this.orbitControls && this.orbitTarget) {
-      this.orbitTarget.getWorldPosition(this.orbitTargetWorldPos);
-      this.orbitControls.target.copy(this.orbitTargetWorldPos);
-    }
-    this.orbitControls?.update();
-    if (this.perspectiveController) {
+    this.orbitController?.update();
+    if (this.perspectiveController && !this.isDebugModeActive()) {
       this.perspectiveController.update(delta);
     }
     this.composer.render(delta);
+  }
+  /**
+   * Check if debug mode is active (orbit controls taking over camera)
+   */
+  isDebugModeActive() {
+    return this.orbitController?.isActive ?? false;
   }
   /**
    * Dispose renderer, composer, controls, and detach from scene
@@ -1274,7 +1433,7 @@ var ZylemCamera = class {
     } catch {
     }
     try {
-      this.disableOrbitControls();
+      this.orbitController?.dispose();
     } catch {
     }
     try {
@@ -1286,28 +1445,13 @@ var ZylemCamera = class {
       this.renderer.dispose();
     } catch {
     }
-    this.detachDebugDelegate();
     this.sceneRef = null;
   }
   /**
    * Attach a delegate to react to debug state changes.
    */
   setDebugDelegate(delegate) {
-    if (this.debugDelegate === delegate) {
-      return;
-    }
-    this.detachDebugDelegate();
-    this.debugDelegate = delegate;
-    if (!delegate) {
-      this.applyDebugState({ enabled: false, selected: [] });
-      return;
-    }
-    const unsubscribe = delegate.subscribe((state2) => {
-      this.applyDebugState(state2);
-    });
-    this.debugUnsubscribe = () => {
-      unsubscribe?.();
-    };
+    this.orbitController?.setDebugDelegate(delegate);
   }
   /**
    * Resize camera and renderer
@@ -1399,82 +1543,37 @@ var ZylemCamera = class {
     if (this._perspective === Perspectives.Flat2D || this._perspective === Perspectives.Fixed2D) {
       this.frustumSize = position2.z;
     }
-    this.cameraRig.position.set(position2.x, position2.y, position2.z);
+    if (this.cameraRig) {
+      this.cameraRig.position.set(position2.x, position2.y, position2.z);
+    } else {
+      this.camera.position.set(position2.x, position2.y, position2.z);
+    }
   }
   move(position2) {
     this.moveCamera(position2);
   }
   rotate(pitch, yaw, roll) {
-    this.cameraRig.rotateX(pitch);
-    this.cameraRig.rotateY(yaw);
-    this.cameraRig.rotateZ(roll);
+    if (this.cameraRig) {
+      this.cameraRig.rotateX(pitch);
+      this.cameraRig.rotateY(yaw);
+      this.cameraRig.rotateZ(roll);
+    } else {
+      this.camera.rotateX(pitch);
+      this.camera.rotateY(yaw);
+      this.camera.rotateZ(roll);
+    }
+  }
+  /**
+   * Check if this perspective type needs a camera rig
+   */
+  needsRig() {
+    return this._perspective === Perspectives.ThirdPerson;
   }
   /**
    * Get the DOM element for the renderer
    */
   getDomElement() {
     return this.renderer.domElement;
-  }
-  applyDebugState(state2) {
-    this.debugStateSnapshot = {
-      enabled: state2.enabled,
-      selected: [...state2.selected]
-    };
-    if (state2.enabled) {
-      this.enableOrbitControls();
-      this.updateOrbitTargetFromSelection(state2.selected);
-    } else {
-      this.orbitTarget = null;
-      this.disableOrbitControls();
-    }
-  }
-  enableOrbitControls() {
-    if (this.orbitControls) {
-      return;
-    }
-    this.orbitControls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.orbitControls.enableDamping = true;
-    this.orbitControls.dampingFactor = 0.05;
-    this.orbitControls.screenSpacePanning = false;
-    this.orbitControls.minDistance = 1;
-    this.orbitControls.maxDistance = 500;
-    this.orbitControls.maxPolarAngle = Math.PI / 2;
-  }
-  disableOrbitControls() {
-    if (!this.orbitControls) {
-      return;
-    }
-    this.orbitControls.dispose();
-    this.orbitControls = null;
-  }
-  updateOrbitTargetFromSelection(selected) {
-    if (!this.debugDelegate || selected.length === 0) {
-      this.orbitTarget = null;
-      return;
-    }
-    for (let i = selected.length - 1; i >= 0; i -= 1) {
-      const uuid = selected[i];
-      const targetObject = this.debugDelegate.resolveTarget(uuid);
-      if (targetObject) {
-        this.orbitTarget = targetObject;
-        if (this.orbitControls) {
-          targetObject.getWorldPosition(this.orbitTargetWorldPos);
-          this.orbitControls.target.copy(this.orbitTargetWorldPos);
-        }
-        return;
-      }
-    }
-    this.orbitTarget = null;
-  }
-  detachDebugDelegate() {
-    if (this.debugUnsubscribe) {
-      try {
-        this.debugUnsubscribe();
-      } catch {
-      }
-    }
-    this.debugUnsubscribe = null;
-    this.debugDelegate = null;
   }
 };
 
@@ -1501,7 +1600,7 @@ import {
   LineSegments,
   Mesh as Mesh2,
   MeshBasicMaterial,
-  Vector3 as Vector38
+  Vector3 as Vector39
 } from "three";
 var DebugEntityCursor = class {
   scene;
@@ -1510,8 +1609,8 @@ var DebugEntityCursor = class {
   edgeLines;
   currentColor = new Color5(65280);
   bbox = new Box3();
-  size = new Vector38();
-  center = new Vector38();
+  size = new Vector39();
+  center = new Vector39();
   constructor(scene) {
     this.scene = scene;
     const initialGeometry = new BoxGeometry(1, 1, 1);
@@ -1729,6 +1828,31 @@ var StageDebugDelegate = class {
   }
 };
 
+// src/lib/stage/stage-camera-debug-delegate.ts
+import { subscribe as subscribe3 } from "valtio/vanilla";
+var StageCameraDebugDelegate = class {
+  stage;
+  constructor(stage) {
+    this.stage = stage;
+  }
+  subscribe(listener) {
+    const notify = () => listener(this.snapshot());
+    notify();
+    return subscribe3(debugState, notify);
+  }
+  resolveTarget(uuid) {
+    const entity = this.stage._debugMap.get(uuid) || this.stage.world?.collisionMap.get(uuid) || null;
+    const target = entity?.group ?? entity?.mesh ?? null;
+    return target ?? null;
+  }
+  snapshot() {
+    return {
+      enabled: debugState.enabled,
+      selected: debugState.selectedEntity ? [debugState.selectedEntity.uuid] : []
+    };
+  }
+};
+
 // src/lib/stage/zylem-stage.ts
 var STAGE_TYPE = "Stage";
 var ZylemStage = class extends LifeCycleBase {
@@ -1740,7 +1864,7 @@ var ZylemStage = class extends LifeCycleBase {
       p1: ["gamepad-1", "keyboard"],
       p2: ["gamepad-2", "keyboard"]
     },
-    gravity: new Vector310(0, 0, 0),
+    gravity: new Vector311(0, 0, 0),
     variables: {},
     entities: []
   };
@@ -1780,7 +1904,7 @@ var ZylemStage = class extends LifeCycleBase {
     this.children = entities;
     this.pendingEntities = asyncEntities;
     this.saveState({ ...this.state, ...config, entities: [] });
-    this.gravity = config.gravity ?? new Vector310(0, 0, 0);
+    this.gravity = config.gravity ?? new Vector311(0, 0, 0);
   }
   parseOptions(options) {
     let config = {};
@@ -1853,7 +1977,7 @@ var ZylemStage = class extends LifeCycleBase {
     const zylemCamera = camera || (this.camera ? this.camera.cameraRef : this.createDefaultCamera());
     this.cameraRef = zylemCamera;
     this.scene = new ZylemScene(id, zylemCamera, this.state);
-    const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector310(0, 0, 0));
+    const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector311(0, 0, 0));
     this.world = new ZylemWorld(physicsWorld);
     this.scene.setup();
     this.emitLoading({ type: "start", message: "Loading stage...", progress: 0 });
@@ -1900,16 +2024,24 @@ var ZylemStage = class extends LifeCycleBase {
       return;
     }
     this.updateDebugDelegate();
-    this.debugStateUnsubscribe = subscribe3(debugState, () => {
+    this.debugStateUnsubscribe = subscribe4(debugState, () => {
       this.updateDebugDelegate();
     });
   }
   updateDebugDelegate() {
     if (debugState.enabled && !this.debugDelegate && this.scene && this.world) {
       this.debugDelegate = new StageDebugDelegate(this);
+      if (this.cameraRef && !this.cameraDebugDelegate) {
+        this.cameraDebugDelegate = new StageCameraDebugDelegate(this);
+        this.cameraRef.setDebugDelegate(this.cameraDebugDelegate);
+      }
     } else if (!debugState.enabled && this.debugDelegate) {
       this.debugDelegate.dispose();
       this.debugDelegate = null;
+      if (this.cameraRef) {
+        this.cameraRef.setDebugDelegate(null);
+      }
+      this.cameraDebugDelegate = null;
     }
   }
   _update(params) {
@@ -2134,7 +2266,7 @@ var ZylemStage = class extends LifeCycleBase {
 
 // src/lib/stage/stage-default.ts
 import { proxy as proxy4 } from "valtio/vanilla";
-import { Vector3 as Vector311 } from "three";
+import { Vector3 as Vector312 } from "three";
 var initialDefaults = {
   backgroundColor: ZylemBlueColor,
   backgroundImage: null,
@@ -2142,7 +2274,7 @@ var initialDefaults = {
     p1: ["gamepad-1", "keyboard"],
     p2: ["gamepad-2", "keyboard"]
   },
-  gravity: new Vector311(0, 0, 0),
+  gravity: new Vector312(0, 0, 0),
   variables: {}
 };
 var stageDefaultsState = proxy4({
@@ -2283,7 +2415,7 @@ function createStage(...options) {
 }
 
 // src/lib/stage/entity-spawner.ts
-import { Euler, Quaternion as Quaternion2, Vector2 as Vector26 } from "three";
+import { Euler, Quaternion as Quaternion3, Vector2 as Vector26 } from "three";
 function entitySpawner(factory) {
   return {
     spawn: async (stage, x, y) => {
@@ -2300,7 +2432,7 @@ function entitySpawner(factory) {
       let rz = source._rotation2DAngle ?? 0;
       try {
         const r = source.body.rotation();
-        const q = new Quaternion2(r.x, r.y, r.z, r.w);
+        const q = new Quaternion3(r.x, r.y, r.z, r.w);
         const e = new Euler().setFromQuaternion(q, "XYZ");
         rz = e.z;
       } catch {

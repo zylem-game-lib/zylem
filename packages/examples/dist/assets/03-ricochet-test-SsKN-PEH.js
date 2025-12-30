@@ -1,1 +1,0 @@
-import{c as t,m as r,s,C as e,d as c,e as d,f as i}from"./index-eIRJ-qNs.js";const o=r(await s({color:new e(e.NAMES.red)}));o.addBehavior(c({boundaries:{top:6,bottom:-6,left:-12,right:12}},()=>{i()})).onSetup(({me:a})=>{a.move(new d(3,4,0))});const m=t({id:"ricochet-test"},o);export{m as default};

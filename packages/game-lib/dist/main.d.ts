@@ -1,8 +1,8 @@
-import { G as Game } from './core-KxutpbQf.js';
-export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-KxutpbQf.js';
-export { S as StageOptions, c as createStage } from './stage-BdyqquDY.js';
-export { e as entitySpawner } from './entity-spawner-BS9zl8E_.js';
-export { P as PerspectiveType, a as Perspectives, S as StageEntity, c as camera } from './camera-BLcG7KL-.js';
+import { G as Game } from './core-CiWyNCCq.js';
+export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-CiWyNCCq.js';
+export { S as StageOptions, c as createStage } from './stage-CKV-J-Xh.js';
+export { e as entitySpawner } from './entity-spawner-DYpGwvtU.js';
+export { P as PerspectiveType, a as Perspectives, S as StageEntity, c as camera } from './camera-CAIZ9fdW.js';
 export { ZylemBox, actor, box, plane, rect, sphere, sprite, text, zone } from './entities.js';
 import { U as UpdateContext, B as BehaviorCallbackType, G as GameEntity } from './entity-ByNgyo1y.js';
 export { a as Behavior, L as LoadingEvent, S as SetupContext } from './entity-ByNgyo1y.js';
@@ -16,7 +16,6 @@ export { three as THREE };
 import * as RAPIER from '@dimforge/rapier3d-compat';
 export { RAPIER };
 import 'bitecs';
-import 'three/addons/controls/OrbitControls.js';
 import 'three/examples/jsm/postprocessing/EffectComposer.js';
 
 interface MovementSequence2DStep {

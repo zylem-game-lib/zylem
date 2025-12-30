@@ -83,7 +83,12 @@ export class ZylemScene implements Entity<ZylemScene> {
 	 * Setup camera with the scene
 	 */
 	setupCamera(scene: Scene, camera: ZylemCamera) {
-		scene.add(camera.cameraRig);
+		// Add camera rig or camera directly to scene
+		if (camera.cameraRig) {
+			scene.add(camera.cameraRig);
+		} else {
+			scene.add(camera.camera as Object3D);
+		}
 		// Camera handles its own setup now
 		camera.setup(scene);
 	}
