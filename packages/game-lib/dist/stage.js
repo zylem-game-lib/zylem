@@ -100,21 +100,76 @@ var BaseNode = class _BaseNode {
   uuid = "";
   name = "";
   markedForRemoval = false;
-  setup = () => {
-  };
-  loaded = () => {
-  };
-  update = () => {
-  };
-  destroy = () => {
-  };
-  cleanup = () => {
+  /**
+   * Lifecycle callback arrays - use onSetup(), onUpdate(), etc. to add callbacks
+   */
+  lifecycleCallbacks = {
+    setup: [],
+    loaded: [],
+    update: [],
+    destroy: [],
+    cleanup: []
   };
   constructor(args = []) {
     const options = args.filter((arg) => !(arg instanceof _BaseNode)).reduce((acc, opt) => ({ ...acc, ...opt }), {});
     this.options = options;
     this.uuid = nanoid();
   }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Fluent API for adding lifecycle callbacks
+  // ─────────────────────────────────────────────────────────────────────────────
+  /**
+   * Add setup callbacks to be executed in order during nodeSetup
+   */
+  onSetup(...callbacks) {
+    this.lifecycleCallbacks.setup.push(...callbacks);
+    return this;
+  }
+  /**
+   * Add loaded callbacks to be executed in order during nodeLoaded
+   */
+  onLoaded(...callbacks) {
+    this.lifecycleCallbacks.loaded.push(...callbacks);
+    return this;
+  }
+  /**
+   * Add update callbacks to be executed in order during nodeUpdate
+   */
+  onUpdate(...callbacks) {
+    this.lifecycleCallbacks.update.push(...callbacks);
+    return this;
+  }
+  /**
+   * Add destroy callbacks to be executed in order during nodeDestroy
+   */
+  onDestroy(...callbacks) {
+    this.lifecycleCallbacks.destroy.push(...callbacks);
+    return this;
+  }
+  /**
+   * Add cleanup callbacks to be executed in order during nodeCleanup
+   */
+  onCleanup(...callbacks) {
+    this.lifecycleCallbacks.cleanup.push(...callbacks);
+    return this;
+  }
+  /**
+   * Prepend setup callbacks (run before existing ones)
+   */
+  prependSetup(...callbacks) {
+    this.lifecycleCallbacks.setup.unshift(...callbacks);
+    return this;
+  }
+  /**
+   * Prepend update callbacks (run before existing ones)
+   */
+  prependUpdate(...callbacks) {
+    this.lifecycleCallbacks.update.unshift(...callbacks);
+    return this;
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Tree structure
+  // ─────────────────────────────────────────────────────────────────────────────
   setParent(parent) {
     this.parent = parent;
   }
@@ -138,6 +193,9 @@ var BaseNode = class _BaseNode {
   isComposite() {
     return this.children.length > 0;
   }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Node lifecycle execution - runs internal + callback arrays
+  // ─────────────────────────────────────────────────────────────────────────────
   nodeSetup(params) {
     if (DEBUG_FLAG) {
     }
@@ -145,8 +203,8 @@ var BaseNode = class _BaseNode {
     if (typeof this._setup === "function") {
       this._setup(params);
     }
-    if (this.setup) {
-      this.setup(params);
+    for (const callback of this.lifecycleCallbacks.setup) {
+      callback(params);
     }
     this.children.forEach((child) => child.nodeSetup(params));
   }
@@ -157,21 +215,40 @@ var BaseNode = class _BaseNode {
     if (typeof this._update === "function") {
       this._update(params);
     }
-    if (this.update) {
-      this.update(params);
+    for (const callback of this.lifecycleCallbacks.update) {
+      callback(params);
     }
     this.children.forEach((child) => child.nodeUpdate(params));
   }
   nodeDestroy(params) {
     this.children.forEach((child) => child.nodeDestroy(params));
-    if (this.destroy) {
-      this.destroy(params);
+    for (const callback of this.lifecycleCallbacks.destroy) {
+      callback(params);
     }
     if (typeof this._destroy === "function") {
       this._destroy(params);
     }
     this.markedForRemoval = true;
   }
+  async nodeLoaded(params) {
+    if (typeof this._loaded === "function") {
+      await this._loaded(params);
+    }
+    for (const callback of this.lifecycleCallbacks.loaded) {
+      callback(params);
+    }
+  }
+  async nodeCleanup(params) {
+    for (const callback of this.lifecycleCallbacks.cleanup) {
+      callback(params);
+    }
+    if (typeof this._cleanup === "function") {
+      await this._cleanup(params);
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Options
+  // ─────────────────────────────────────────────────────────────────────────────
   getOptions() {
     return this.options;
   }
@@ -193,11 +270,6 @@ var GameEntity = class extends BaseNode {
   custom = {};
   debugInfo = {};
   debugMaterial;
-  lifeCycleDelegate = {
-    setup: [],
-    update: [],
-    destroy: []
-  };
   collisionDelegate = {
     collision: []
   };
@@ -222,67 +294,40 @@ var GameEntity = class extends BaseNode {
     this.name = this.options.name || "";
     return this;
   }
-  onSetup(...callbacks) {
-    const combineCallbacks = [...this.lifeCycleDelegate.setup ?? [], ...callbacks];
-    this.lifeCycleDelegate = {
-      ...this.lifeCycleDelegate,
-      setup: combineCallbacks
-    };
-    return this;
-  }
-  onUpdate(...callbacks) {
-    const combineCallbacks = [...this.lifeCycleDelegate.update ?? [], ...callbacks];
-    this.lifeCycleDelegate = {
-      ...this.lifeCycleDelegate,
-      update: combineCallbacks
-    };
-    return this;
-  }
-  onDestroy(...callbacks) {
-    this.lifeCycleDelegate = {
-      ...this.lifeCycleDelegate,
-      destroy: callbacks.length > 0 ? callbacks : void 0
-    };
-    return this;
-  }
+  /**
+   * Add collision callbacks
+   */
   onCollision(...callbacks) {
-    this.collisionDelegate = {
-      collision: callbacks.length > 0 ? callbacks : void 0
-    };
+    const existing = this.collisionDelegate.collision ?? [];
+    this.collisionDelegate.collision = [...existing, ...callbacks];
     return this;
   }
+  /**
+   * Entity-specific setup - runs behavior callbacks
+   * (User callbacks are handled by BaseNode's lifecycleCallbacks.setup)
+   */
   _setup(params) {
     this.behaviorCallbackMap.setup.forEach((callback) => {
       callback({ ...params, me: this });
     });
-    if (this.lifeCycleDelegate.setup?.length) {
-      const callbacks = this.lifeCycleDelegate.setup;
-      callbacks.forEach((callback) => {
-        callback({ ...params, me: this });
-      });
-    }
   }
   async _loaded(_params) {
   }
+  /**
+   * Entity-specific update - updates materials and runs behavior callbacks
+   * (User callbacks are handled by BaseNode's lifecycleCallbacks.update)
+   */
   _update(params) {
     this.updateMaterials(params);
-    if (this.lifeCycleDelegate.update?.length) {
-      const callbacks = this.lifeCycleDelegate.update;
-      callbacks.forEach((callback) => {
-        callback({ ...params, me: this });
-      });
-    }
     this.behaviorCallbackMap.update.forEach((callback) => {
       callback({ ...params, me: this });
     });
   }
+  /**
+   * Entity-specific destroy - runs behavior callbacks
+   * (User callbacks are handled by BaseNode's lifecycleCallbacks.destroy)
+   */
   _destroy(params) {
-    if (this.lifeCycleDelegate.destroy?.length) {
-      const callbacks = this.lifeCycleDelegate.destroy;
-      callbacks.forEach((callback) => {
-        callback({ ...params, me: this });
-      });
-    }
     this.behaviorCallbackMap.destroy.forEach((callback) => {
       callback({ ...params, me: this });
     });
@@ -509,9 +554,8 @@ var ZylemActor = class extends GameEntity {
   constructor(options) {
     super();
     this.options = { ...actorDefaults, ...options };
-    this.lifeCycleDelegate = {
-      update: [this.actorUpdate.bind(this)]
-    };
+    this.prependUpdate(this.actorUpdate.bind(this));
+    debugger;
     this.controlledRotation = true;
   }
   async load() {
@@ -2127,13 +2171,10 @@ function getStageDefaultConfig() {
 var Stage = class {
   wrappedStage;
   options = [];
-  // TODO: these shouldn't be here maybe more like nextFrame(stageInstance, () => {})
-  update = () => {
-  };
-  setup = () => {
-  };
-  destroy = () => {
-  };
+  // Lifecycle callback arrays
+  setupCallbacks = [];
+  updateCallbacks = [];
+  destroyCallbacks = [];
   constructor(options) {
     this.options = options;
     this.wrappedStage = null;
@@ -2148,6 +2189,28 @@ var Stage = class {
       const next = this.wrappedStage.buildEntityState(child);
       stageState.entities = [...stageState.entities, next];
     }, { replayExisting: true });
+    this.applyLifecycleCallbacks();
+  }
+  applyLifecycleCallbacks() {
+    if (!this.wrappedStage) return;
+    if (this.setupCallbacks.length > 0) {
+      this.wrappedStage.setup = (params) => {
+        const extended = { ...params, stage: this };
+        this.setupCallbacks.forEach((cb) => cb(extended));
+      };
+    }
+    if (this.updateCallbacks.length > 0) {
+      this.wrappedStage.update = (params) => {
+        const extended = { ...params, stage: this };
+        this.updateCallbacks.forEach((cb) => cb(extended));
+      };
+    }
+    if (this.destroyCallbacks.length > 0) {
+      this.wrappedStage.destroy = (params) => {
+        const extended = { ...params, stage: this };
+        this.destroyCallbacks.forEach((cb) => cb(extended));
+      };
+    }
   }
   async addEntities(entities) {
     this.options.push(...entities);
@@ -2175,20 +2238,36 @@ var Stage = class {
   start(params) {
     this.wrappedStage?.nodeSetup(params);
   }
+  // Fluent API for adding lifecycle callbacks
   onUpdate(...callbacks) {
-    if (!this.wrappedStage) {
-      return;
+    this.updateCallbacks.push(...callbacks);
+    if (this.wrappedStage) {
+      this.wrappedStage.update = (params) => {
+        const extended = { ...params, stage: this };
+        this.updateCallbacks.forEach((cb) => cb(extended));
+      };
     }
-    this.wrappedStage.update = (params) => {
-      const extended = { ...params, stage: this };
-      callbacks.forEach((cb) => cb(extended));
-    };
+    return this;
   }
-  onSetup(callback) {
-    this.wrappedStage.setup = callback;
+  onSetup(...callbacks) {
+    this.setupCallbacks.push(...callbacks);
+    if (this.wrappedStage) {
+      this.wrappedStage.setup = (params) => {
+        const extended = { ...params, stage: this };
+        this.setupCallbacks.forEach((cb) => cb(extended));
+      };
+    }
+    return this;
   }
-  onDestroy(callback) {
-    this.wrappedStage.destroy = callback;
+  onDestroy(...callbacks) {
+    this.destroyCallbacks.push(...callbacks);
+    if (this.wrappedStage) {
+      this.wrappedStage.destroy = (params) => {
+        const extended = { ...params, stage: this };
+        this.destroyCallbacks.forEach((cb) => cb(extended));
+      };
+    }
+    return this;
   }
   onLoading(callback) {
     if (!this.wrappedStage) {

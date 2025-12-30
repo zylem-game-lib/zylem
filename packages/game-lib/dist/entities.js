@@ -45,21 +45,76 @@ var BaseNode = class _BaseNode {
   uuid = "";
   name = "";
   markedForRemoval = false;
-  setup = () => {
-  };
-  loaded = () => {
-  };
-  update = () => {
-  };
-  destroy = () => {
-  };
-  cleanup = () => {
+  /**
+   * Lifecycle callback arrays - use onSetup(), onUpdate(), etc. to add callbacks
+   */
+  lifecycleCallbacks = {
+    setup: [],
+    loaded: [],
+    update: [],
+    destroy: [],
+    cleanup: []
   };
   constructor(args = []) {
     const options = args.filter((arg) => !(arg instanceof _BaseNode)).reduce((acc, opt) => ({ ...acc, ...opt }), {});
     this.options = options;
     this.uuid = nanoid();
   }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Fluent API for adding lifecycle callbacks
+  // ─────────────────────────────────────────────────────────────────────────────
+  /**
+   * Add setup callbacks to be executed in order during nodeSetup
+   */
+  onSetup(...callbacks) {
+    this.lifecycleCallbacks.setup.push(...callbacks);
+    return this;
+  }
+  /**
+   * Add loaded callbacks to be executed in order during nodeLoaded
+   */
+  onLoaded(...callbacks) {
+    this.lifecycleCallbacks.loaded.push(...callbacks);
+    return this;
+  }
+  /**
+   * Add update callbacks to be executed in order during nodeUpdate
+   */
+  onUpdate(...callbacks) {
+    this.lifecycleCallbacks.update.push(...callbacks);
+    return this;
+  }
+  /**
+   * Add destroy callbacks to be executed in order during nodeDestroy
+   */
+  onDestroy(...callbacks) {
+    this.lifecycleCallbacks.destroy.push(...callbacks);
+    return this;
+  }
+  /**
+   * Add cleanup callbacks to be executed in order during nodeCleanup
+   */
+  onCleanup(...callbacks) {
+    this.lifecycleCallbacks.cleanup.push(...callbacks);
+    return this;
+  }
+  /**
+   * Prepend setup callbacks (run before existing ones)
+   */
+  prependSetup(...callbacks) {
+    this.lifecycleCallbacks.setup.unshift(...callbacks);
+    return this;
+  }
+  /**
+   * Prepend update callbacks (run before existing ones)
+   */
+  prependUpdate(...callbacks) {
+    this.lifecycleCallbacks.update.unshift(...callbacks);
+    return this;
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Tree structure
+  // ─────────────────────────────────────────────────────────────────────────────
   setParent(parent) {
     this.parent = parent;
   }
@@ -83,6 +138,9 @@ var BaseNode = class _BaseNode {
   isComposite() {
     return this.children.length > 0;
   }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Node lifecycle execution - runs internal + callback arrays
+  // ─────────────────────────────────────────────────────────────────────────────
   nodeSetup(params) {
     if (DEBUG_FLAG) {
     }
@@ -90,8 +148,8 @@ var BaseNode = class _BaseNode {
     if (typeof this._setup === "function") {
       this._setup(params);
     }
-    if (this.setup) {
-      this.setup(params);
+    for (const callback of this.lifecycleCallbacks.setup) {
+      callback(params);
     }
     this.children.forEach((child) => child.nodeSetup(params));
   }
@@ -102,21 +160,40 @@ var BaseNode = class _BaseNode {
     if (typeof this._update === "function") {
       this._update(params);
     }
-    if (this.update) {
-      this.update(params);
+    for (const callback of this.lifecycleCallbacks.update) {
+      callback(params);
     }
     this.children.forEach((child) => child.nodeUpdate(params));
   }
   nodeDestroy(params) {
     this.children.forEach((child) => child.nodeDestroy(params));
-    if (this.destroy) {
-      this.destroy(params);
+    for (const callback of this.lifecycleCallbacks.destroy) {
+      callback(params);
     }
     if (typeof this._destroy === "function") {
       this._destroy(params);
     }
     this.markedForRemoval = true;
   }
+  async nodeLoaded(params) {
+    if (typeof this._loaded === "function") {
+      await this._loaded(params);
+    }
+    for (const callback of this.lifecycleCallbacks.loaded) {
+      callback(params);
+    }
+  }
+  async nodeCleanup(params) {
+    for (const callback of this.lifecycleCallbacks.cleanup) {
+      callback(params);
+    }
+    if (typeof this._cleanup === "function") {
+      await this._cleanup(params);
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Options
+  // ─────────────────────────────────────────────────────────────────────────────
   getOptions() {
     return this.options;
   }
@@ -138,11 +215,6 @@ var GameEntity = class extends BaseNode {
   custom = {};
   debugInfo = {};
   debugMaterial;
-  lifeCycleDelegate = {
-    setup: [],
-    update: [],
-    destroy: []
-  };
   collisionDelegate = {
     collision: []
   };
@@ -167,67 +239,40 @@ var GameEntity = class extends BaseNode {
     this.name = this.options.name || "";
     return this;
   }
-  onSetup(...callbacks) {
-    const combineCallbacks = [...this.lifeCycleDelegate.setup ?? [], ...callbacks];
-    this.lifeCycleDelegate = {
-      ...this.lifeCycleDelegate,
-      setup: combineCallbacks
-    };
-    return this;
-  }
-  onUpdate(...callbacks) {
-    const combineCallbacks = [...this.lifeCycleDelegate.update ?? [], ...callbacks];
-    this.lifeCycleDelegate = {
-      ...this.lifeCycleDelegate,
-      update: combineCallbacks
-    };
-    return this;
-  }
-  onDestroy(...callbacks) {
-    this.lifeCycleDelegate = {
-      ...this.lifeCycleDelegate,
-      destroy: callbacks.length > 0 ? callbacks : void 0
-    };
-    return this;
-  }
+  /**
+   * Add collision callbacks
+   */
   onCollision(...callbacks) {
-    this.collisionDelegate = {
-      collision: callbacks.length > 0 ? callbacks : void 0
-    };
+    const existing = this.collisionDelegate.collision ?? [];
+    this.collisionDelegate.collision = [...existing, ...callbacks];
     return this;
   }
+  /**
+   * Entity-specific setup - runs behavior callbacks
+   * (User callbacks are handled by BaseNode's lifecycleCallbacks.setup)
+   */
   _setup(params) {
     this.behaviorCallbackMap.setup.forEach((callback) => {
       callback({ ...params, me: this });
     });
-    if (this.lifeCycleDelegate.setup?.length) {
-      const callbacks = this.lifeCycleDelegate.setup;
-      callbacks.forEach((callback) => {
-        callback({ ...params, me: this });
-      });
-    }
   }
   async _loaded(_params) {
   }
+  /**
+   * Entity-specific update - updates materials and runs behavior callbacks
+   * (User callbacks are handled by BaseNode's lifecycleCallbacks.update)
+   */
   _update(params) {
     this.updateMaterials(params);
-    if (this.lifeCycleDelegate.update?.length) {
-      const callbacks = this.lifeCycleDelegate.update;
-      callbacks.forEach((callback) => {
-        callback({ ...params, me: this });
-      });
-    }
     this.behaviorCallbackMap.update.forEach((callback) => {
       callback({ ...params, me: this });
     });
   }
+  /**
+   * Entity-specific destroy - runs behavior callbacks
+   * (User callbacks are handled by BaseNode's lifecycleCallbacks.destroy)
+   */
   _destroy(params) {
-    if (this.lifeCycleDelegate.destroy?.length) {
-      const callbacks = this.lifeCycleDelegate.destroy;
-      callbacks.forEach((callback) => {
-        callback({ ...params, me: this });
-      });
-    }
     this.behaviorCallbackMap.destroy.forEach((callback) => {
       callback({ ...params, me: this });
     });
@@ -962,10 +1007,8 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
     this.options = { ...spriteDefaults, ...options };
     this.createSpritesFromImages(options?.images || []);
     this.createAnimations(options?.animations || []);
-    this.lifeCycleDelegate = {
-      update: [this.spriteUpdate.bind(this)],
-      destroy: [this.spriteDestroy.bind(this)]
-    };
+    this.prependUpdate(this.spriteUpdate.bind(this));
+    this.onDestroy(this.spriteDestroy.bind(this));
   }
   createSpritesFromImages(images) {
     const textureLoader = new TextureLoader2();
@@ -1569,9 +1612,8 @@ var ZylemActor = class extends GameEntity {
   constructor(options) {
     super();
     this.options = { ...actorDefaults, ...options };
-    this.lifeCycleDelegate = {
-      update: [this.actorUpdate.bind(this)]
-    };
+    this.prependUpdate(this.actorUpdate.bind(this));
+    debugger;
     this.controlledRotation = true;
   }
   async load() {
@@ -1692,10 +1734,8 @@ var ZylemText = class _ZylemText extends GameEntity {
     this.options = { ...textDefaults, ...options };
     this.group = new Group5();
     this.createSprite();
-    this.lifeCycleDelegate = {
-      setup: [this.textSetup.bind(this)],
-      update: [this.textUpdate.bind(this)]
-    };
+    this.prependSetup(this.textSetup.bind(this));
+    this.prependUpdate(this.textUpdate.bind(this));
   }
   createSprite() {
     this._canvas = document.createElement("canvas");
@@ -1909,10 +1949,8 @@ var ZylemRect = class _ZylemRect extends GameEntity {
     this.options = { ...rectDefaults, ...options };
     this.group = new Group6();
     this.createSprite();
-    this.lifeCycleDelegate = {
-      setup: [this.rectSetup.bind(this)],
-      update: [this.rectUpdate.bind(this)]
-    };
+    this.prependSetup(this.rectSetup.bind(this));
+    this.prependUpdate(this.rectUpdate.bind(this));
   }
   createSprite() {
     this._canvas = document.createElement("canvas");

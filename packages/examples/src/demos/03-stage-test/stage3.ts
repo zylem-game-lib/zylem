@@ -16,17 +16,15 @@ const myBox = await box({
 
 let counter = 0;
 
-myBox.update = ({ delta }) => {
+myBox.onUpdate(({ delta }) => {
 	counter += delta;
 	// console.log('counter', counter);
 	if (counter > 3) {
 		// destroy(myBox);
 	}
-};
-
-myBox.destroy = () => {
+}).onDestroy(() => {
 	console.log('box has been destroyed');
-};
+});
 
 const myPlane = await plane({
 	tile: new Vector2(200, 200),

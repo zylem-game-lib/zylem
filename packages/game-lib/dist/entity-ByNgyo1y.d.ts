@@ -140,6 +140,17 @@ interface NodeInterface {
 }
 
 type BaseNodeOptions<T = any> = BaseNode | Partial<T>;
+/**
+ * Lifecycle callback arrays - each lifecycle event can have multiple callbacks
+ * that execute in order.
+ */
+interface LifecycleCallbacks<T> {
+    setup: Array<SetupFunction<T>>;
+    loaded: Array<LoadedFunction<T>>;
+    update: Array<UpdateFunction<T>>;
+    destroy: Array<DestroyFunction<T>>;
+    cleanup: Array<CleanupFunction<T>>;
+}
 declare abstract class BaseNode<Options = any, T = any> implements NodeInterface {
     protected parent: NodeInterface | null;
     protected children: NodeInterface[];
@@ -148,12 +159,39 @@ declare abstract class BaseNode<Options = any, T = any> implements NodeInterface
     uuid: string;
     name: string;
     markedForRemoval: boolean;
-    setup: SetupFunction<this>;
-    loaded: LoadedFunction<this>;
-    update: UpdateFunction<this>;
-    destroy: DestroyFunction<this>;
-    cleanup: CleanupFunction<this>;
+    /**
+     * Lifecycle callback arrays - use onSetup(), onUpdate(), etc. to add callbacks
+     */
+    protected lifecycleCallbacks: LifecycleCallbacks<this>;
     constructor(args?: BaseNodeOptions[]);
+    /**
+     * Add setup callbacks to be executed in order during nodeSetup
+     */
+    onSetup(...callbacks: Array<SetupFunction<this>>): this;
+    /**
+     * Add loaded callbacks to be executed in order during nodeLoaded
+     */
+    onLoaded(...callbacks: Array<LoadedFunction<this>>): this;
+    /**
+     * Add update callbacks to be executed in order during nodeUpdate
+     */
+    onUpdate(...callbacks: Array<UpdateFunction<this>>): this;
+    /**
+     * Add destroy callbacks to be executed in order during nodeDestroy
+     */
+    onDestroy(...callbacks: Array<DestroyFunction<this>>): this;
+    /**
+     * Add cleanup callbacks to be executed in order during nodeCleanup
+     */
+    onCleanup(...callbacks: Array<CleanupFunction<this>>): this;
+    /**
+     * Prepend setup callbacks (run before existing ones)
+     */
+    prependSetup(...callbacks: Array<SetupFunction<this>>): this;
+    /**
+     * Prepend update callbacks (run before existing ones)
+     */
+    prependUpdate(...callbacks: Array<UpdateFunction<this>>): this;
     setParent(parent: NodeInterface | null): void;
     getParent(): NodeInterface | null;
     add(baseNode: NodeInterface): void;
@@ -169,6 +207,8 @@ declare abstract class BaseNode<Options = any, T = any> implements NodeInterface
     nodeSetup(params: SetupContext<this>): void;
     nodeUpdate(params: UpdateContext<this>): void;
     nodeDestroy(params: DestroyContext<this>): void;
+    nodeLoaded(params: LoadedContext<this>): Promise<void>;
+    nodeCleanup(params: CleanupContext<this>): Promise<void>;
     getOptions(): Options;
     setOptions(options: Partial<Options>): void;
 }
@@ -255,11 +295,6 @@ interface Behavior {
     values: any;
 }
 
-interface LifeCycleDelegate<U> {
-    setup?: ((params: SetupContext<U>) => void)[];
-    update?: ((params: UpdateContext<U>) => void)[];
-    destroy?: ((params: DestroyContext<U>) => void)[];
-}
 interface CollisionContext<T, O extends GameEntityOptions, TGlobals extends Record<string, unknown> = any> {
     entity: T;
     other: GameEntity<O>;
@@ -316,19 +351,30 @@ declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implem
     custom: Record<string, any>;
     debugInfo: Record<string, any>;
     debugMaterial: ShaderMaterial | undefined;
-    lifeCycleDelegate: LifeCycleDelegate<O>;
     collisionDelegate: CollisionDelegate<this, O>;
     collisionType?: string;
     behaviorCallbackMap: Record<BehaviorCallbackType, BehaviorCallback<this, O>[]>;
     constructor();
     create(): this;
-    onSetup(...callbacks: ((params: SetupContext<this>) => void)[]): this;
-    onUpdate(...callbacks: ((params: UpdateContext<this>) => void)[]): this;
-    onDestroy(...callbacks: ((params: DestroyContext<this>) => void)[]): this;
+    /**
+     * Add collision callbacks
+     */
     onCollision(...callbacks: ((params: CollisionContext<this, O>) => void)[]): this;
+    /**
+     * Entity-specific setup - runs behavior callbacks
+     * (User callbacks are handled by BaseNode's lifecycleCallbacks.setup)
+     */
     _setup(params: SetupContext<this>): void;
     protected _loaded(_params: LoadedContext<this>): Promise<void>;
+    /**
+     * Entity-specific update - updates materials and runs behavior callbacks
+     * (User callbacks are handled by BaseNode's lifecycleCallbacks.update)
+     */
     _update(params: UpdateContext<this>): void;
+    /**
+     * Entity-specific destroy - runs behavior callbacks
+     * (User callbacks are handled by BaseNode's lifecycleCallbacks.destroy)
+     */
     _destroy(params: DestroyContext<this>): void;
     protected _cleanup(_params: CleanupContext<this>): Promise<void>;
     _collision(other: GameEntity<O>, globals?: any): void;
