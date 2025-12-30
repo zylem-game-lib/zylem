@@ -4,17 +4,17 @@ import { Vector2 } from 'three';
 
 createGlobal('vesselCounter', 0);
 
-const testVessel = vessel();
-testVessel.setup = (params: any) => {
-	const vesselCounter = getGlobal('vesselCounter') as number;
-	vesselTextSetup.updateText(`Vessel was setup ${Math.ceil(vesselCounter)}`);
-}
-testVessel.update = (params: any) => {
-	let vesselCounter = getGlobal('vesselCounter') as number;
-	vesselCounter += params.delta;
-	setGlobal('vesselCounter', vesselCounter);
-	vesselTextUpdate.updateText(`Vessel was updated ${Math.ceil(vesselCounter)}`);
-}
+const testVessel = vessel()
+	.onSetup((params: any) => {
+		const vesselCounter = getGlobal('vesselCounter') as number;
+		vesselTextSetup.updateText(`Vessel was setup ${Math.ceil(vesselCounter)}`);
+	})
+	.onUpdate((params: any) => {
+		let vesselCounter = getGlobal('vesselCounter') as number;
+		vesselCounter += params.delta;
+		setGlobal('vesselCounter', vesselCounter);
+		vesselTextUpdate.updateText(`Vessel was updated ${Math.ceil(vesselCounter)}`);
+	});
 
 const vesselTextSetup = await text({
 	text: '',

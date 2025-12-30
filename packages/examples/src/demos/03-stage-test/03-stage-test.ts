@@ -16,9 +16,7 @@ const game = createGame(
 	stage1,
 	stage2,
 	stage3,
-);
-
-game.update = ({ me, inputs }) => {
+).onUpdate(({ me, inputs }) => {
 	const { p1 } = inputs;
 
 	if (p1.buttons.A.pressed) {
@@ -30,7 +28,7 @@ game.update = ({ me, inputs }) => {
 	if (p1.buttons.Start.pressed) {
 		game.reset();
 	}
-}
+});
 
 // TODO: stage transitions
 export default game;

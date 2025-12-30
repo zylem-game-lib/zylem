@@ -9,12 +9,6 @@ import { DestroyContext, SetupContext, UpdateContext, LoadedContext, CleanupCont
 import type { EntityMeshBuilder, EntityCollisionBuilder } from "./builder";
 import { Behavior } from "../actions/behaviors/behavior";
 
-export interface LifeCycleDelegate<U> {
-	setup?: ((params: SetupContext<U>) => void)[];
-	update?: ((params: UpdateContext<U>) => void)[];
-	destroy?: ((params: DestroyContext<U>) => void)[];
-}
-
 export interface CollisionContext<T, O extends GameEntityOptions, TGlobals extends Record<string, unknown> = any> {
 	entity: T;
 	other: GameEntity<O>;
@@ -86,11 +80,6 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 	public debugInfo: Record<string, any> = {};
 	public debugMaterial: ShaderMaterial | undefined;
 
-	public lifeCycleDelegate: LifeCycleDelegate<O> = {
-		setup: [],
-		update: [],
-		destroy: [],
-	};
 	public collisionDelegate: CollisionDelegate<this, O> = {
 		collision: [],
 	};
@@ -119,73 +108,43 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 		return this;
 	}
 
-	public onSetup(...callbacks: ((params: SetupContext<this>) => void)[]): this {
-		const combineCallbacks = [...(this.lifeCycleDelegate.setup ?? []), ...callbacks];
-		this.lifeCycleDelegate = {
-			...this.lifeCycleDelegate,
-			setup: combineCallbacks as unknown as ((params: SetupContext<O>) => void)[]
-		};
-		return this;
-	}
-
-	public onUpdate(...callbacks: ((params: UpdateContext<this>) => void)[]): this {
-		const combineCallbacks = [...(this.lifeCycleDelegate.update ?? []), ...callbacks];
-		this.lifeCycleDelegate = {
-			...this.lifeCycleDelegate,
-			update: combineCallbacks as unknown as ((params: UpdateContext<O>) => void)[]
-		};
-		return this;
-	}
-
-	public onDestroy(...callbacks: ((params: DestroyContext<this>) => void)[]): this {
-		this.lifeCycleDelegate = {
-			...this.lifeCycleDelegate,
-			destroy: callbacks.length > 0 ? callbacks as unknown as ((params: DestroyContext<O>) => void)[] : undefined
-		};
-		return this;
-	}
-
+	/**
+	 * Add collision callbacks
+	 */
 	public onCollision(...callbacks: ((params: CollisionContext<this, O>) => void)[]): this {
-		this.collisionDelegate = {
-			collision: callbacks.length > 0 ? callbacks : undefined
-		};
+		const existing = this.collisionDelegate.collision ?? [];
+		this.collisionDelegate.collision = [...existing, ...callbacks];
 		return this;
 	}
 
+	/**
+	 * Entity-specific setup - runs behavior callbacks
+	 * (User callbacks are handled by BaseNode's lifecycleCallbacks.setup)
+	 */
 	public _setup(params: SetupContext<this>): void {
 		this.behaviorCallbackMap.setup.forEach(callback => {
 			callback({ ...params, me: this });
 		});
-		if (this.lifeCycleDelegate.setup?.length) {
-			const callbacks = this.lifeCycleDelegate.setup;
-			callbacks.forEach(callback => {
-				callback({ ...params, me: this as unknown as O });
-			});
-		}
 	}
 
 	protected async _loaded(_params: LoadedContext<this>): Promise<void> { }
 
+	/**
+	 * Entity-specific update - updates materials and runs behavior callbacks
+	 * (User callbacks are handled by BaseNode's lifecycleCallbacks.update)
+	 */
 	public _update(params: UpdateContext<this>): void {
 		this.updateMaterials(params);
-		if (this.lifeCycleDelegate.update?.length) {
-			const callbacks = this.lifeCycleDelegate.update;
-			callbacks.forEach(callback => {
-				callback({ ...params, me: this as unknown as O });
-			});
-		}
 		this.behaviorCallbackMap.update.forEach(callback => {
 			callback({ ...params, me: this });
 		});
 	}
 
+	/**
+	 * Entity-specific destroy - runs behavior callbacks
+	 * (User callbacks are handled by BaseNode's lifecycleCallbacks.destroy)
+	 */
 	public _destroy(params: DestroyContext<this>): void {
-		if (this.lifeCycleDelegate.destroy?.length) {
-			const callbacks = this.lifeCycleDelegate.destroy;
-			callbacks.forEach(callback => {
-				callback({ ...params, me: this as unknown as O });
-			});
-		}
 		this.behaviorCallbackMap.destroy.forEach(callback => {
 			callback({ ...params, me: this });
 		});
@@ -248,3 +207,4 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 		return info;
 	}
 }
+

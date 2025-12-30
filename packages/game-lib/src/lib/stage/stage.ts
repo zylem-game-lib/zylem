@@ -14,10 +14,10 @@ export class Stage {
 	wrappedStage: ZylemStage | null;
 	options: StageOptionItem[] = [];
 
-	// TODO: these shouldn't be here maybe more like nextFrame(stageInstance, () => {})
-	update: UpdateFunction<ZylemStage> = () => { };
-	setup: SetupFunction<ZylemStage> = () => { };
-	destroy: DestroyFunction<ZylemStage> = () => { };
+	// Lifecycle callback arrays
+	private setupCallbacks: Array<SetupFunction<ZylemStage>> = [];
+	private updateCallbacks: Array<UpdateFunction<ZylemStage>> = [];
+	private destroyCallbacks: Array<DestroyFunction<ZylemStage>> = [];
 
 	constructor(options: StageOptions) {
 		this.options = options;
@@ -36,6 +36,37 @@ export class Stage {
 			const next = this.wrappedStage!.buildEntityState(child);
 			stageState.entities = [...stageState.entities, next];
 		}, { replayExisting: true });
+
+		// Apply lifecycle callbacks to wrapped stage
+		this.applyLifecycleCallbacks();
+	}
+
+	private applyLifecycleCallbacks() {
+		if (!this.wrappedStage) return;
+
+		// Compose setup callbacks into a single function
+		if (this.setupCallbacks.length > 0) {
+			this.wrappedStage.setup = (params) => {
+				const extended = { ...params, stage: this } as any;
+				this.setupCallbacks.forEach(cb => cb(extended));
+			};
+		}
+
+		// Compose update callbacks into a single function
+		if (this.updateCallbacks.length > 0) {
+			this.wrappedStage.update = (params) => {
+				const extended = { ...params, stage: this } as any;
+				this.updateCallbacks.forEach(cb => cb(extended));
+			};
+		}
+
+		// Compose destroy callbacks into a single function
+		if (this.destroyCallbacks.length > 0) {
+			this.wrappedStage.destroy = (params) => {
+				const extended = { ...params, stage: this } as any;
+				this.destroyCallbacks.forEach(cb => cb(extended));
+			};
+		}
 	}
 
 	async addEntities(entities: BaseNode[]) {
@@ -64,21 +95,41 @@ export class Stage {
 		this.wrappedStage?.nodeSetup(params);
 	}
 
-	onUpdate(...callbacks: UpdateFunction<ZylemStage>[]) {
-		// TODO: this check is unnecessary
-		if (!this.wrappedStage) { return; }
-		this.wrappedStage!.update = (params) => {
-			const extended = { ...params, stage: this } as any;
-			callbacks.forEach((cb) => cb(extended));
-		};
+	// Fluent API for adding lifecycle callbacks
+	onUpdate(...callbacks: UpdateFunction<ZylemStage>[]): this {
+		this.updateCallbacks.push(...callbacks);
+		// If already loaded, recompose the update callback
+		if (this.wrappedStage) {
+			this.wrappedStage.update = (params) => {
+				const extended = { ...params, stage: this } as any;
+				this.updateCallbacks.forEach(cb => cb(extended));
+			};
+		}
+		return this;
 	}
 
-	onSetup(callback: SetupFunction<ZylemStage>) {
-		this.wrappedStage!.setup = callback;
+	onSetup(...callbacks: SetupFunction<ZylemStage>[]): this {
+		this.setupCallbacks.push(...callbacks);
+		// If already loaded, recompose the setup callback
+		if (this.wrappedStage) {
+			this.wrappedStage.setup = (params) => {
+				const extended = { ...params, stage: this } as any;
+				this.setupCallbacks.forEach(cb => cb(extended));
+			};
+		}
+		return this;
 	}
 
-	onDestroy(callback: DestroyFunction<ZylemStage>) {
-		this.wrappedStage!.destroy = callback;
+	onDestroy(...callbacks: DestroyFunction<ZylemStage>[]): this {
+		this.destroyCallbacks.push(...callbacks);
+		// If already loaded, recompose the destroy callback
+		if (this.wrappedStage) {
+			this.wrappedStage.destroy = (params) => {
+				const extended = { ...params, stage: this } as any;
+				this.destroyCallbacks.forEach(cb => cb(extended));
+			};
+		}
+		return this;
 	}
 
 	onLoading(callback: (event: LoadingEvent) => void) {

@@ -18,15 +18,14 @@ const inputText = await text({
 
 stage1.add(inputText);
 
+// output should look like 01.30 or 09.89
+const formatNumber = (num: number) => num.toFixed(2);
+
 const myGame = createGame(
 	stage1,
-);
-
-myGame.setup = ({ game }) => {
+).onSetup(({ game }) => {
 	console.log(game);
-};
-
-myGame.update = ({ inputs }) => {
+}).onUpdate(({ inputs }) => {
 	const { p1 } = inputs;
 	for (const [name, button] of Object.entries(p1.buttons)) {
 		if (button.pressed) {
@@ -36,7 +35,7 @@ myGame.update = ({ inputs }) => {
 			inputText.updateText(`${name} just released`);
 		}
 		if (button.held > 0) {
-			inputText.updateText(`${name} held for ${button.held} seconds`);
+			inputText.updateText(`${name} held for ${formatNumber(button.held)} seconds`);
 		}
 	}
 	for (const [name, direction] of Object.entries(p1.directions)) {
@@ -47,7 +46,7 @@ myGame.update = ({ inputs }) => {
 			inputText.updateText(`${name} just released`);
 		}
 		if (direction.held > 0) {
-			inputText.updateText(`${name} held for ${direction.held} seconds`);
+			inputText.updateText(`${name} held for ${formatNumber(direction.held)} seconds`);
 		}
 	}
 	for (const [name, shoulder] of Object.entries(p1.shoulders)) {
@@ -58,17 +57,17 @@ myGame.update = ({ inputs }) => {
 			inputText.updateText(`${name} just released`);
 		}
 		if (shoulder.held > 0) {
-			inputText.updateText(`${name} held for ${shoulder.held} seconds`);
+			inputText.updateText(`${name} held for ${formatNumber(shoulder.held)} seconds`);
 		}
 	}
 	for (const [name, axis] of Object.entries(p1.axes)) {
 		if (axis.value >= 0.5) {
-			inputText.updateText(`${name} held for ${axis.held} seconds`);
+			inputText.updateText(`${name} held for ${formatNumber(axis.held)} seconds`);
 		}
 		if (axis.value <= -0.5) {
-			inputText.updateText(`${name} held for ${axis.held} seconds`);
+			inputText.updateText(`${name} held for ${formatNumber(axis.held)} seconds`);
 		}
 	}
-}
+});
 
 export default myGame;

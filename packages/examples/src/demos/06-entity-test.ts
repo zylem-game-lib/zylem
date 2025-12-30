@@ -7,12 +7,11 @@ import woodPath from '@zylem/assets/3d/textures/wood-box.jpg';
 import marsSurfacePath from '@zylem/assets/3d/textures/mars-surface.jpg';
 import rainManPath from '@zylem/assets/2d/rain-man.png';
 
-const stage1 = createStage({ gravity: new Vector3(0, -9.82, 0) });
-
-stage1.setup = ({ camera }: any) => {
-	(camera as any)?.camera.position.set(0, 10, 40);
-	(camera as any)?.camera.lookAt(0, 0, 0);
-};
+const stage1 = createStage({ gravity: new Vector3(0, -9.82, 0) })
+	.onSetup(({ camera }: any) => {
+		(camera as any)?.camera.position.set(0, 10, 40);
+		(camera as any)?.camera.lookAt(0, 0, 0);
+	});
 
 const myBox = await box({
 	size: new Vector3(4, 2, 1),
@@ -20,20 +19,6 @@ const myBox = await box({
 	collision: { static: false },
 	material: { path: woodPath, repeat: new Vector2(2, 2) },
 });
-
-let counter = 0;
-
-myBox.update = ({ delta }: any) => {
-	counter += delta;
-	// console.log('counter', counter);
-	if (counter > 3) {
-		// destroy(myBox);
-	}
-};
-
-myBox.destroy = () => {
-	console.log('box has been destroyed');
-};
 
 const myPlane = await plane({
 	tile: new Vector2(200, 200),

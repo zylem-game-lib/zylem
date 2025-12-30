@@ -65,13 +65,11 @@ let jumping = false;
 let jumpStart = 5;
 const maxJumpHeight = 12;
 
-testGame.setup = ({ camera }: SetupContext<any>) => {
+testGame.onSetup(({ camera }: SetupContext<any>) => {
 	if (player.group && camera && !(camera as any).target) {
 		(camera as any).target = player as unknown as StageEntity;
 	}
-}
-
-testGame.update = ({ inputs, delta }: UpdateContext<any>) => {
+}).onUpdate(({ inputs, delta }: UpdateContext<any>) => {
 	const { p1 } = inputs;
 
 	if (!rapierRay) {
@@ -190,6 +188,6 @@ testGame.update = ({ inputs, delta }: UpdateContext<any>) => {
 	// resetRotation(player);
 	// @ts-ignore
 	rotateInDirection(player, lastMovement);
-};
+});
 
 export default testGame;

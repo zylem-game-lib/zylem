@@ -65,10 +65,9 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
 		this.options = { ...rectDefaults, ...options } as ZylemRectOptions;
 		this.group = new Group();
 		this.createSprite();
-		this.lifeCycleDelegate = {
-			setup: [this.rectSetup.bind(this) as any],
-			update: [this.rectUpdate.bind(this) as any],
-		};
+		// Add rect-specific lifecycle callbacks
+		this.prependSetup(this.rectSetup.bind(this) as any);
+		this.prependUpdate(this.rectUpdate.bind(this) as any);
 	}
 
 	private createSprite() {

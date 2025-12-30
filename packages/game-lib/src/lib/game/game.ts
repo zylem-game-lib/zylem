@@ -15,9 +15,10 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 
 	options: GameOptions<TGlobals>;
 
-	update: UpdateFunction<ZylemGame<TGlobals>, TGlobals> = () => { };
-	setup: SetupFunction<ZylemGame<TGlobals>, TGlobals> = () => { };
-	destroy: DestroyFunction<ZylemGame<TGlobals>, TGlobals> = () => { };
+	// Lifecycle callback arrays
+	private setupCallbacks: Array<SetupFunction<ZylemGame<TGlobals>, TGlobals>> = [];
+	private updateCallbacks: Array<UpdateFunction<ZylemGame<TGlobals>, TGlobals>> = [];
+	private destroyCallbacks: Array<DestroyFunction<ZylemGame<TGlobals>, TGlobals>> = [];
 
 	refErrorMessage = 'lost reference to game';
 
@@ -31,6 +32,22 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		if (globals) {
 			initGlobals(globals as Record<string, unknown>);
 		}
+	}
+
+	// Fluent API for adding lifecycle callbacks
+	onSetup(...callbacks: Array<SetupFunction<ZylemGame<TGlobals>, TGlobals>>): this {
+		this.setupCallbacks.push(...callbacks);
+		return this;
+	}
+
+	onUpdate(...callbacks: Array<UpdateFunction<ZylemGame<TGlobals>, TGlobals>>): this {
+		this.updateCallbacks.push(...callbacks);
+		return this;
+	}
+
+	onDestroy(...callbacks: Array<DestroyFunction<ZylemGame<TGlobals>, TGlobals>>): this {
+		this.destroyCallbacks.push(...callbacks);
+		return this;
 	}
 
 	async start(): Promise<this> {
@@ -57,9 +74,16 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 			console.error(this.refErrorMessage);
 			return;
 		}
-		this.wrappedGame.customSetup = this.setup;
-		this.wrappedGame.customUpdate = this.update;
-		this.wrappedGame.customDestroy = this.destroy;
+		// Pass callback arrays to wrapped game
+		this.wrappedGame.customSetup = (params) => {
+			this.setupCallbacks.forEach(cb => cb(params));
+		};
+		this.wrappedGame.customUpdate = (params) => {
+			this.updateCallbacks.forEach(cb => cb(params));
+		};
+		this.wrappedGame.customDestroy = (params) => {
+			this.destroyCallbacks.forEach(cb => cb(params));
+		};
 	}
 
 	async pause() {

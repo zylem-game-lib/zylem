@@ -1,11 +1,11 @@
-import { G as Game } from './core-DhF4RQW7.js';
-export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-DhF4RQW7.js';
-export { S as StageOptions, c as createStage } from './stage-C4R0b-pH.js';
-export { e as entitySpawner } from './entity-spawner-BHfM97nF.js';
+import { G as Game } from './core-KxutpbQf.js';
+export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-KxutpbQf.js';
+export { S as StageOptions, c as createStage } from './stage-BdyqquDY.js';
+export { e as entitySpawner } from './entity-spawner-BS9zl8E_.js';
 export { P as PerspectiveType, a as Perspectives, S as StageEntity, c as camera } from './camera-BLcG7KL-.js';
 export { ZylemBox, actor, box, plane, rect, sphere, sprite, text, zone } from './entities.js';
-import { U as UpdateContext, B as BehaviorCallbackType, G as GameEntity } from './entity-CY24uyzB.js';
-export { a as Behavior, L as LoadingEvent, S as SetupContext } from './entity-CY24uyzB.js';
+import { U as UpdateContext, B as BehaviorCallbackType, G as GameEntity } from './entity-ByNgyo1y.js';
+export { a as Behavior, L as LoadingEvent, S as SetupContext } from './entity-ByNgyo1y.js';
 export { boundary2d, ricochet2DCollision, ricochet2DInBounds } from './behaviors.js';
 import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
 export { m as makeMoveable, b as move, a as moveable, r as resetVelocity } from './moveable-B_vyA6cw.js';

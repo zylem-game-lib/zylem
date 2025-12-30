@@ -1,4 +1,4 @@
-import { G as GameEntity, U as UpdateContext, b as SetupFunction, c as UpdateFunction, D as DestroyFunction, S as SetupContext, d as DestroyContext, e as BaseNode, L as LoadingEvent } from './entity-CY24uyzB.js';
+import { G as GameEntity, U as UpdateContext, b as SetupFunction, c as UpdateFunction, D as DestroyFunction, S as SetupContext, d as DestroyContext, e as BaseNode, L as LoadingEvent } from './entity-ByNgyo1y.js';
 import * as bitecs from 'bitecs';
 import { Vector3, Scene, Color, Object3D, Group } from 'three';
 import RAPIER__default, { World, RigidBody, Collider } from '@dimforge/rapier3d-compat';
@@ -266,19 +266,20 @@ type EntityInput = AnyNode | (() => AnyNode) | (() => Promise<any>);
 declare class Stage {
     wrappedStage: ZylemStage | null;
     options: StageOptionItem[];
-    update: UpdateFunction<ZylemStage>;
-    setup: SetupFunction<ZylemStage>;
-    destroy: DestroyFunction<ZylemStage>;
+    private setupCallbacks;
+    private updateCallbacks;
+    private destroyCallbacks;
     constructor(options: StageOptions);
     load(id: string, camera?: ZylemCamera | CameraWrapper | null): Promise<void>;
+    private applyLifecycleCallbacks;
     addEntities(entities: BaseNode[]): Promise<void>;
     add(...inputs: Array<EntityInput>): void;
     private addToBlueprints;
     private addToStage;
     start(params: SetupContext<ZylemStage>): void;
-    onUpdate(...callbacks: UpdateFunction<ZylemStage>[]): void;
-    onSetup(callback: SetupFunction<ZylemStage>): void;
-    onDestroy(callback: DestroyFunction<ZylemStage>): void;
+    onUpdate(...callbacks: UpdateFunction<ZylemStage>[]): this;
+    onSetup(...callbacks: SetupFunction<ZylemStage>[]): this;
+    onDestroy(...callbacks: DestroyFunction<ZylemStage>[]): this;
     onLoading(callback: (event: LoadingEvent) => void): () => void;
 }
 /**

@@ -1,6 +1,6 @@
-import { I as InputGamepad, c as UpdateFunction, f as InputPlayerNumber, g as Inputs, h as ButtonState, A as AnalogState, S as SetupContext, U as UpdateContext, d as DestroyContext, i as GameEntityLifeCycle, e as BaseNode, j as IGame, b as SetupFunction, D as DestroyFunction, L as LoadingEvent, k as LoadedContext, C as CleanupContext } from './entity-CY24uyzB.js';
+import { I as InputGamepad, c as UpdateFunction, f as InputPlayerNumber, g as Inputs, h as ButtonState, A as AnalogState, S as SetupContext, U as UpdateContext, d as DestroyContext, i as GameEntityLifeCycle, e as BaseNode, j as IGame, b as SetupFunction, D as DestroyFunction, L as LoadingEvent, k as LoadedContext, C as CleanupContext } from './entity-ByNgyo1y.js';
 import { Z as ZylemCamera } from './camera-BLcG7KL-.js';
-import { B as BaseEntityInterface, a as Stage } from './stage-C4R0b-pH.js';
+import { B as BaseEntityInterface, a as Stage } from './stage-BdyqquDY.js';
 import { Color, Vector3 } from 'three';
 import { Vector3 as Vector3$1 } from '@dimforge/rapier3d-compat';
 
@@ -356,11 +356,14 @@ type GameOptions<TGlobals extends BaseGlobals> = Array<ZylemGameConfig<Stage, an
 declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
     private wrappedGame;
     options: GameOptions<TGlobals>;
-    update: UpdateFunction<ZylemGame<TGlobals>, TGlobals>;
-    setup: SetupFunction<ZylemGame<TGlobals>, TGlobals>;
-    destroy: DestroyFunction<ZylemGame<TGlobals>, TGlobals>;
+    private setupCallbacks;
+    private updateCallbacks;
+    private destroyCallbacks;
     refErrorMessage: string;
     constructor(options: GameOptions<TGlobals>);
+    onSetup(...callbacks: Array<SetupFunction<ZylemGame<TGlobals>, TGlobals>>): this;
+    onUpdate(...callbacks: Array<UpdateFunction<ZylemGame<TGlobals>, TGlobals>>): this;
+    onDestroy(...callbacks: Array<DestroyFunction<ZylemGame<TGlobals>, TGlobals>>): this;
     start(): Promise<this>;
     private load;
     setOverrides(): void;
