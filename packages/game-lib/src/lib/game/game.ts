@@ -1,4 +1,4 @@
-import { ZylemGame } from './zylem-game';
+import { ZylemGame, GameLoadingEvent } from './zylem-game';
 import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 import { IGame, LoadingEvent } from '../core/interfaces';
 import { setPaused } from '../debug/debug-state';
@@ -19,6 +19,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private setupCallbacks: Array<SetupFunction<ZylemGame<TGlobals>, TGlobals>> = [];
 	private updateCallbacks: Array<UpdateFunction<ZylemGame<TGlobals>, TGlobals>> = [];
 	private destroyCallbacks: Array<DestroyFunction<ZylemGame<TGlobals>, TGlobals>> = [];
+	private pendingLoadingCallbacks: Array<(event: GameLoadingEvent) => void> = [];
 
 	refErrorMessage = 'lost reference to game';
 
@@ -65,6 +66,12 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 			...options as any,
 			...resolved as any,
 		} as any, this);
+		
+		// Apply pending loading callbacks BEFORE loadStage so events are captured
+		for (const callback of this.pendingLoadingCallbacks) {
+			game.onLoading(callback);
+		}
+		
 		await game.loadStage(options.stages[0]);
 		return game;
 	}
@@ -106,19 +113,19 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		await this.wrappedGame.loadStage(this.wrappedGame.stages[0]);
 	}
 
-	async previousStage() {
+	previousStage() {
 		if (!this.wrappedGame) {
 			console.error(this.refErrorMessage);
 			return;
 		}
 		const currentStageId = this.wrappedGame.currentStageId;
-		const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage!.uuid === currentStageId);
+		const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage?.uuid === currentStageId);
 		const previousStage = this.wrappedGame.stages[currentIndex - 1];
 		if (!previousStage) {
 			console.error('previous stage called on first stage');
 			return;
 		}
-		await this.wrappedGame.loadStage(previousStage);
+		this.wrappedGame.loadStage(previousStage);
 	}
 
 	async loadStageFromId(stageId: string) {
@@ -138,7 +145,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		}
 	}
 
-	async nextStage() {
+	nextStage() {
 		if (!this.wrappedGame) {
 			console.error(this.refErrorMessage);
 			return;
@@ -147,24 +154,25 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		// Try to use StageManager first if we have a next stage in state
 		if (stageState.next) {
 			const nextId = stageState.next.id;
-			await StageManager.transitionForward(nextId);
+			StageManager.transitionForward(nextId);
 			// After transition, current is the new stage
 			if (stageState.current) {
-				const stage = await StageFactory.createFromBlueprint(stageState.current);
-				await this.wrappedGame.loadStage(stage);
+				StageFactory.createFromBlueprint(stageState.current).then((stage) => {
+					this.wrappedGame?.loadStage(stage);
+				});
 				return;
 			}
 		}
 
 		// Fallback to legacy array-based navigation
 		const currentStageId = this.wrappedGame.currentStageId;
-		const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage!.uuid === currentStageId);
+		const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage?.uuid === currentStageId);
 		const nextStage = this.wrappedGame.stages[currentIndex + 1];
 		if (!nextStage) {
 			console.error('next stage called on last stage');
 			return;
 		}
-		await this.wrappedGame.loadStage(nextStage);
+		this.wrappedGame.loadStage(nextStage);
 	}
 
 	async goToStage() { }
@@ -177,8 +185,25 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		}
 	}
 
-	onLoading(callback: (event: LoadingEvent) => void) {
-		
+	/**
+	 * Subscribe to loading events from the game.
+	 * Events include stage context (stageName, stageIndex).
+	 * @param callback Invoked for each loading event
+	 * @returns Unsubscribe function
+	 */
+	onLoading(callback: (event: GameLoadingEvent) => void): () => void {
+		if (this.wrappedGame) {
+			return this.wrappedGame.onLoading(callback);
+		}
+		// Store callback to be applied when game is created
+		this.pendingLoadingCallbacks.push(callback);
+		return () => {
+			this.pendingLoadingCallbacks = this.pendingLoadingCallbacks.filter(c => c !== callback);
+			if (this.wrappedGame) {
+				// If already started, also unsubscribe from wrapped game
+				// Note: this won't perfectly track existing subscriptions, but prevents future calls
+			}
+		};
 	}
 }
 

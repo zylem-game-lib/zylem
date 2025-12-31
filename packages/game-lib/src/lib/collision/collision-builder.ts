@@ -1,6 +1,17 @@
 import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType, Vector3 } from "@dimforge/rapier3d-compat";
 import { Vec3 } from "../core/vector";
-import { CollisionOptions } from "./collision";
+
+/**
+ * Options for configuring entity collision behavior.
+ */
+export interface CollisionOptions {
+	static?: boolean;
+	sensor?: boolean;
+	size?: Vector3;
+	position?: Vector3;
+	collisionType?: string;
+	collisionFilter?: string[];
+}
 
 const typeToGroup = new Map<string, number>();
 let nextGroupId = 0;

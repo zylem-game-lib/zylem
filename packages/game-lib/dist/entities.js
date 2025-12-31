@@ -11,7 +11,8 @@ import {
   defineSystem,
   defineQuery,
   defineComponent,
-  Types
+  Types,
+  removeQuery
 } from "bitecs";
 import { Quaternion } from "three";
 var position = defineComponent({
@@ -1543,6 +1544,23 @@ var AnimationDelegate = class {
     this._currentAction = action;
     this._currentKey = key;
   }
+  /**
+   * Dispose of all animation resources
+   */
+  dispose() {
+    Object.values(this._actions).forEach((action) => {
+      action.stop();
+    });
+    if (this._mixer) {
+      this._mixer.stopAllAction();
+      this._mixer.uncacheRoot(this.target);
+      this._mixer = null;
+    }
+    this._actions = {};
+    this._animations = [];
+    this._currentAction = null;
+    this._currentKey = "";
+  }
   get currentAnimationKey() {
     return this._currentKey;
   }
@@ -1613,7 +1631,6 @@ var ZylemActor = class extends GameEntity {
     super();
     this.options = { ...actorDefaults, ...options };
     this.prependUpdate(this.actorUpdate.bind(this));
-    debugger;
     this.controlledRotation = true;
   }
   async load() {
@@ -1632,6 +1649,34 @@ var ZylemActor = class extends GameEntity {
   }
   async actorUpdate(params) {
     this._animationDelegate?.update(params.delta);
+  }
+  /**
+   * Clean up actor resources including animations, models, and groups
+   */
+  actorDestroy() {
+    if (this._animationDelegate) {
+      this._animationDelegate.dispose();
+      this._animationDelegate = null;
+    }
+    if (this._object) {
+      this._object.traverse((child) => {
+        if (child.isMesh) {
+          const mesh = child;
+          mesh.geometry?.dispose();
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((m) => m.dispose());
+          } else if (mesh.material) {
+            mesh.material.dispose();
+          }
+        }
+      });
+      this._object = null;
+    }
+    if (this.group) {
+      this.group.clear();
+      this.group = null;
+    }
+    this._modelFileNames = [];
   }
   async loadModels() {
     if (this._modelFileNames.length === 0) return;

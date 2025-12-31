@@ -13,11 +13,14 @@ type EntityInput = AnyNode | (() => AnyNode) | (() => Promise<any>);
 export class Stage {
 	wrappedStage: ZylemStage | null;
 	options: StageOptionItem[] = [];
+	// Entities added after construction, consumed on each load
+	private _pendingEntities: BaseNode[] = [];
 
 	// Lifecycle callback arrays
 	private setupCallbacks: Array<SetupFunction<ZylemStage>> = [];
 	private updateCallbacks: Array<UpdateFunction<ZylemStage>> = [];
 	private destroyCallbacks: Array<DestroyFunction<ZylemStage>> = [];
+	private pendingLoadingCallbacks: Array<(event: LoadingEvent) => void> = [];
 
 	constructor(options: StageOptions) {
 		this.options = options;
@@ -26,8 +29,18 @@ export class Stage {
 
 	async load(id: string, camera?: ZylemCamera | CameraWrapper | null) {
 		stageState.entities = [];
-		this.wrappedStage = new ZylemStage(this.options as StageOptions);
+		// Combine original options with pending entities, then clear pending
+		const loadOptions = [...this.options, ...this._pendingEntities] as StageOptions;
+		this._pendingEntities = [];
+		
+		this.wrappedStage = new ZylemStage(loadOptions);
 		this.wrappedStage.wrapperRef = this;
+
+		// Flush pending loading callbacks BEFORE load so we catch start/progress events
+		this.pendingLoadingCallbacks.forEach(cb => {
+			this.wrappedStage!.onLoading(cb);
+		});
+		this.pendingLoadingCallbacks = [];
 
 		const zylemCamera = camera instanceof CameraWrapper ? camera.cameraRef : camera;
 		await this.wrappedStage!.load(id, zylemCamera);
@@ -39,6 +52,7 @@ export class Stage {
 
 		// Apply lifecycle callbacks to wrapped stage
 		this.applyLifecycleCallbacks();
+
 	}
 
 	private applyLifecycleCallbacks() {
@@ -52,7 +66,7 @@ export class Stage {
 			};
 		}
 
-		// Compose update callbacks into a single function
+		// Compose update callbacks
 		if (this.updateCallbacks.length > 0) {
 			this.wrappedStage.update = (params) => {
 				const extended = { ...params, stage: this } as any;
@@ -60,7 +74,7 @@ export class Stage {
 			};
 		}
 
-		// Compose destroy callbacks into a single function
+		// Compose destroy callbacks
 		if (this.destroyCallbacks.length > 0) {
 			this.wrappedStage.destroy = (params) => {
 				const extended = { ...params, stage: this } as any;
@@ -70,8 +84,8 @@ export class Stage {
 	}
 
 	async addEntities(entities: BaseNode[]) {
-		this.options.push(...(entities as unknown as StageOptionItem[]));
-		// TODO: this check is unnecessary
+		// Store in pending, don't mutate options
+		this._pendingEntities.push(...entities);
 		if (!this.wrappedStage) { return; }
 		this.wrappedStage!.enqueue(...entities);
 	}
@@ -83,7 +97,8 @@ export class Stage {
 
 	private addToBlueprints(...inputs: Array<EntityInput>) {
 		if (this.wrappedStage) { return; }
-		this.options.push(...(inputs as unknown as StageOptionItem[]));
+		// Store in pending instead of mutating options
+		this._pendingEntities.push(...(inputs as unknown as BaseNode[]));
 	}
 
 	private addToStage(...inputs: Array<EntityInput>) {
@@ -133,7 +148,12 @@ export class Stage {
 	}
 
 	onLoading(callback: (event: LoadingEvent) => void) {
-		if (!this.wrappedStage) { return () => { }; }
+		if (!this.wrappedStage) { 
+			this.pendingLoadingCallbacks.push(callback);
+			return () => {
+				this.pendingLoadingCallbacks = this.pendingLoadingCallbacks.filter(c => c !== callback);
+			};
+		}
 		return this.wrappedStage.onLoading(callback);
 	}
 }

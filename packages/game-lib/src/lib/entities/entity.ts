@@ -3,7 +3,7 @@ import { Collider, ColliderDesc, RigidBody, RigidBodyDesc } from "@dimforge/rapi
 import { position, rotation, scale } from "../systems/transformable.system";
 import { Vec3 } from "../core/vector";
 import { MaterialBuilder, MaterialOptions } from "../graphics/material";
-import { CollisionOptions } from "../collision/collision";
+import { CollisionOptions } from "../collision/collision-builder";
 import { BaseNode } from "../core/base-node";
 import { DestroyContext, SetupContext, UpdateContext, LoadedContext, CleanupContext } from "../core/base-node-life-cycle";
 import type { EntityMeshBuilder, EntityCollisionBuilder } from "./builder";

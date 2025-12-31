@@ -2,6 +2,7 @@ import {
     Component,
     createSignal,
     createEffect,
+    onMount,
     onCleanup,
     Show,
 } from 'solid-js';
@@ -50,24 +51,43 @@ const ExampleRunner: Component = () => {
     const [progress, setProgress] = createSignal(0);
     const [message, setMessage] = createSignal('');
 
+    // Listen for game loading events via window (crosses web component boundary)
+    const handleLoadingEvent = (e: Event) => {
+        const event = (e as CustomEvent).detail as { type: string; progress: number; message: string };
+        setProgress(event.progress);
+        setMessage(event.message);
+        if (event.type === 'start') {
+            setLoading(true);
+        } else if (event.type === 'complete') {
+            setLoading(false);
+        }
+    };
+
+    onMount(() => {
+        window.addEventListener('GAME_LOADING_EVENT', handleLoadingEvent);
+    });
+
+    onCleanup(() => {
+        window.removeEventListener('GAME_LOADING_EVENT', handleLoadingEvent);
+        editorEvents.emit({ type: 'debug', payload: { enabled: false } });
+    });
+
     createEffect(() => {
         const activeExample = appStore.activeExample;
         if (!activeExample) return;
 
         setLoading(true);
+        setProgress(0);
+        setMessage('Loading...');
         setExample(null);
+        
         activeExample.load().then((gameModule) => {
-            setExample(gameModule.default);
-            setLoading(false);
+            const game = gameModule.default;
+            setExample(game);
 
             // Enable debug mode for the editor when game loads
             editorEvents.emit({ type: 'debug', payload: { enabled: true } });
         });
-    });
-
-    // Cleanup when unmounting
-    onCleanup(() => {
-        editorEvents.emit({ type: 'debug', payload: { enabled: false } });
     });
 
     // Note: debug state sync happens directly in editorStateStore via valtio mutation

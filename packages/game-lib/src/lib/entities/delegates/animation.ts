@@ -116,6 +116,29 @@ export class AnimationDelegate {
 		this._currentKey = key;
 	}
 
+	/**
+	 * Dispose of all animation resources
+	 */
+	dispose(): void {
+		// Stop all actions
+		Object.values(this._actions).forEach(action => {
+			action.stop();
+		});
+
+		// Stop and uncache mixer
+		if (this._mixer) {
+			this._mixer.stopAllAction();
+			this._mixer.uncacheRoot(this.target);
+			this._mixer = null;
+		}
+
+		// Clear references
+		this._actions = {};
+		this._animations = [];
+		this._currentAction = null;
+		this._currentKey = '';
+	}
+
 	get currentAnimationKey() { return this._currentKey; }
 	get animations() { return this._animations; }
 }

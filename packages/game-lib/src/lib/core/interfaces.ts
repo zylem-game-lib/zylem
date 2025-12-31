@@ -11,8 +11,8 @@ export type LoadingEvent = {
 
 export interface IGame<TGlobals extends Record<string, unknown> = any> {
     start: () => Promise<this>;
-    nextStage: () => Promise<void>;
-    previousStage: () => Promise<void>;
+    nextStage: () => void;
+    previousStage: () => void;
     reset: () => Promise<void>;
     pause: () => Promise<void>;
     resume: () => Promise<void>;

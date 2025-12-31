@@ -1,25 +1,46 @@
-export { S as StageOptions, c as createStage } from './stage-CKV-J-Xh.js';
-export { e as entitySpawner } from './entity-spawner-DYpGwvtU.js';
-import * as _sinclair_typebox from '@sinclair/typebox';
-import { Static } from '@sinclair/typebox';
-import './entity-ByNgyo1y.js';
+import { S as StageStateInterface } from './stage-types-B0JZx4WP.js';
+export { a as StageOptions, c as createStage } from './stage-types-B0JZx4WP.js';
+export { S as StageBlueprint, e as entitySpawner } from './blueprints-BHRR8cwh.js';
+import './entity-COvRtFNG.js';
 import 'three';
 import '@dimforge/rapier3d-compat';
 import 'bitecs';
-import './camera-CAIZ9fdW.js';
+import './world-Dgf6R0_c.js';
+import './entity-Bq_eNEDI.js';
+import './camera-CpbDr4-V.js';
 import 'three/examples/jsm/postprocessing/EffectComposer.js';
+import '@sinclair/typebox';
 
-declare const StageSchema: _sinclair_typebox.TObject<{
-    id: _sinclair_typebox.TString;
-    name: _sinclair_typebox.TOptional<_sinclair_typebox.TString>;
-    entities: _sinclair_typebox.TArray<_sinclair_typebox.TObject<{
-        id: _sinclair_typebox.TString;
-        type: _sinclair_typebox.TString;
-        position: _sinclair_typebox.TOptional<_sinclair_typebox.TTuple<[_sinclair_typebox.TNumber, _sinclair_typebox.TNumber]>>;
-        data: _sinclair_typebox.TOptional<_sinclair_typebox.TRecord<_sinclair_typebox.TString, _sinclair_typebox.TAny>>;
-    }>>;
-    assets: _sinclair_typebox.TOptional<_sinclair_typebox.TArray<_sinclair_typebox.TString>>;
-}>;
-type StageBlueprint = Static<typeof StageSchema>;
+/**
+ * Event name for stage state changes.
+ * Dispatched when the stage state proxy is updated.
+ */
+declare const STAGE_STATE_CHANGE = "STAGE_STATE_CHANGE";
+/**
+ * Event detail payload for STAGE_STATE_CHANGE events.
+ */
+interface StageStateChangeEvent {
+    entities: StageStateInterface['entities'];
+    variables: StageStateInterface['variables'];
+}
+/**
+ * Initialize the stage state dispatcher.
+ * Subscribes to stageState changes and dispatches STAGE_STATE_CHANGE events to the window.
+ *
+ * @returns Unsubscribe function to stop dispatching events.
+ *
+ * @example
+ * // Start dispatching stage state changes
+ * const unsubscribe = initStageStateDispatcher();
+ *
+ * // Later, stop dispatching
+ * unsubscribe();
+ */
+declare function initStageStateDispatcher(): () => void;
+/**
+ * Manually dispatch the current stage state.
+ * Useful for initial sync when a listener is added.
+ */
+declare function dispatchStageState(): void;
 
-export type { StageBlueprint };
+export { STAGE_STATE_CHANGE, type StageStateChangeEvent, dispatchStageState, initStageStateDispatcher };

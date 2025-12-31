@@ -1,7 +1,9 @@
-import { e as BaseNode, l as GameEntityOptions, V as Vec3, M as MaterialOptions, G as GameEntity, U as UpdateContext, T as TexturePath, d as DestroyContext } from './entity-ByNgyo1y.js';
+import { e as BaseNode, l as GameEntityOptions, V as Vec3, M as MaterialOptions, G as GameEntity, U as UpdateContext, T as TexturePath, d as DestroyContext } from './entity-COvRtFNG.js';
 import { Object3D, Vector2, Vector3, Sprite, Color } from 'three';
+import { C as CollisionHandlerDelegate } from './world-Dgf6R0_c.js';
 import '@dimforge/rapier3d-compat';
 import 'bitecs';
+import './entity-Bq_eNEDI.js';
 
 interface EntityLoaderDelegate {
     load(): Promise<void>;
@@ -45,6 +47,10 @@ declare class ZylemActor extends GameEntity<ZylemActorOptions> implements Entity
     load(): Promise<void>;
     data(): Promise<any>;
     actorUpdate(params: UpdateContext<ZylemActorOptions>): Promise<void>;
+    /**
+     * Clean up actor resources including animations, models, and groups
+     */
+    actorDestroy(): void;
     private loadModels;
     playAnimation(animationOptions: AnimationOptions): void;
     get object(): Object3D | null;
@@ -127,11 +133,6 @@ declare class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 }
 type SpriteOptions = BaseNode | Partial<ZylemSpriteOptions>;
 declare function sprite(...args: Array<SpriteOptions>): Promise<ZylemSprite>;
-
-interface CollisionHandlerDelegate {
-    handlePostCollision(params: any): boolean;
-    handleIntersectionEvent(params: any): void;
-}
 
 type OnHeldParams = {
     delta: number;

@@ -3,6 +3,8 @@ import {
 	defineQuery,
 	defineComponent,
 	Types,
+	removeQuery,
+	type IWorld,
 } from 'bitecs';
 import { Quaternion } from 'three';
 import { StageEntity } from '../interfaces/entity';
@@ -34,11 +36,17 @@ export const scale = defineComponent({
 // Reusable quaternion to avoid allocations per frame
 const _tempQuaternion = new Quaternion();
 
-export default function createTransformSystem(stage: StageSystem) {
-	const transformQuery = defineQuery([position, rotation]);
+export type TransformSystemResult = {
+	system: ReturnType<typeof defineSystem>;
+	destroy: (world: IWorld) => void;
+};
+
+export default function createTransformSystem(stage: StageSystem): TransformSystemResult {
+	const queryTerms = [position, rotation];
+	const transformQuery = defineQuery(queryTerms);
 	const stageEntities = stage._childrenMap;
 
-	return defineSystem((world) => {
+	const system = defineSystem((world) => {
 		const entities = transformQuery(world);
 		if (stageEntities === undefined) {
 			return world;
@@ -84,4 +92,11 @@ export default function createTransformSystem(stage: StageSystem) {
 
 		return world;
 	});
+
+	const destroy = (world: IWorld) => {
+		// Remove the query from bitecs world tracking
+		removeQuery(world, transformQuery);
+	};
+
+	return { system, destroy };
 }

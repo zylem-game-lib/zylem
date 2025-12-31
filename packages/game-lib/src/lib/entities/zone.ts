@@ -5,7 +5,7 @@ import { GameEntityOptions, GameEntity } from './entity';
 import { EntityBuilder } from './builder';
 import { EntityCollisionBuilder } from './builder';
 import { createEntity } from './create';
-import { CollisionHandlerDelegate } from '../collision/collision-delegate';
+import { CollisionHandlerDelegate } from '../collision/world';
 import { state } from '../game/game-state';
 
 export type OnHeldParams = {

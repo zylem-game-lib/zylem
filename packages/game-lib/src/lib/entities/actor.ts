@@ -102,7 +102,6 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		this.options = { ...actorDefaults, ...options };
 		// Add actor-specific update to the lifecycle callbacks
 		this.prependUpdate(this.actorUpdate.bind(this) as UpdateFunction<this>);
-		debugger;
 		this.controlledRotation = true;
 	}
 
@@ -124,6 +123,42 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 
 	async actorUpdate(params: UpdateContext<ZylemActorOptions>): Promise<void> {
 		this._animationDelegate?.update(params.delta);
+	}
+
+	/**
+	 * Clean up actor resources including animations, models, and groups
+	 */
+	actorDestroy(): void {
+		// Stop and dispose animation delegate
+		if (this._animationDelegate) {
+			this._animationDelegate.dispose();
+			this._animationDelegate = null;
+		}
+
+		// Dispose geometries and materials from loaded object
+		if (this._object) {
+			this._object.traverse((child) => {
+				if ((child as any).isMesh) {
+					const mesh = child as SkinnedMesh;
+					mesh.geometry?.dispose();
+					if (Array.isArray(mesh.material)) {
+						mesh.material.forEach(m => m.dispose());
+					} else if (mesh.material) {
+						mesh.material.dispose();
+					}
+				}
+			});
+			this._object = null;
+		}
+
+		// Clear group reference
+		if (this.group) {
+			this.group.clear();
+			this.group = null as any;
+		}
+
+		// Clear file name references
+		this._modelFileNames = [];
 	}
 
 	private async loadModels(): Promise<void> {

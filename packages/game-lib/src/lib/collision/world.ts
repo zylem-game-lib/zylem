@@ -5,8 +5,22 @@ import { Entity } from '../interfaces/entity';
 import { state } from '../game/game-state';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { ZylemActor } from '../entities/actor';
-import { isCollisionHandlerDelegate } from './collision-delegate';
 import { GameEntity } from '../entities/entity';
+
+/**
+ * Interface for entities that handle collision events.
+ */
+export interface CollisionHandlerDelegate {
+	handlePostCollision(params: any): boolean;
+	handleIntersectionEvent(params: any): void;
+}
+
+/**
+ * Type guard to check if an object implements CollisionHandlerDelegate.
+ */
+export function isCollisionHandlerDelegate(obj: any): obj is CollisionHandlerDelegate {
+	return typeof obj?.handlePostCollision === "function" && typeof obj?.handleIntersectionEvent === "function";
+}
 
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';

@@ -6,6 +6,8 @@ export { gameConfig } from '../lib/game/game-config';
 export { createStage } from '../lib/stage/stage';
 export { entitySpawner } from '../lib/stage/entity-spawner';
 export type { StageOptions, LoadingEvent } from '../lib/stage/zylem-stage';
+export type { StageBlueprint } from '../lib/core/blueprints';
+export { StageManager, stageState } from '../lib/stage/stage-manager';
 
 export { vessel } from '../lib/core/vessel';
 

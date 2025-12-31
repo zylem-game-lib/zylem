@@ -1,2 +1,2 @@
-export * from './StagesSection';
+export * from './StageSection';
 export * from './stage-state';

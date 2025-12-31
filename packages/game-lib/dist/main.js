@@ -142,6 +142,54 @@ var init_debug_state = __esm({
   }
 });
 
+// src/lib/game/game-event-bus.ts
+var GameEventBus, gameEventBus;
+var init_game_event_bus = __esm({
+  "src/lib/game/game-event-bus.ts"() {
+    "use strict";
+    GameEventBus = class {
+      listeners = /* @__PURE__ */ new Map();
+      /**
+       * Subscribe to an event type.
+       */
+      on(event, callback) {
+        if (!this.listeners.has(event)) {
+          this.listeners.set(event, /* @__PURE__ */ new Set());
+        }
+        this.listeners.get(event).add(callback);
+        return () => this.off(event, callback);
+      }
+      /**
+       * Unsubscribe from an event type.
+       */
+      off(event, callback) {
+        this.listeners.get(event)?.delete(callback);
+      }
+      /**
+       * Emit an event to all subscribers.
+       */
+      emit(event, payload) {
+        const callbacks = this.listeners.get(event);
+        if (!callbacks) return;
+        for (const cb of callbacks) {
+          try {
+            cb(payload);
+          } catch (e) {
+            console.error(`Error in event handler for ${event}`, e);
+          }
+        }
+      }
+      /**
+       * Clear all listeners.
+       */
+      dispose() {
+        this.listeners.clear();
+      }
+    };
+    gameEventBus = new GameEventBus();
+  }
+});
+
 // src/lib/core/flags.ts
 var DEBUG_FLAG;
 var init_flags = __esm({
@@ -330,13 +378,15 @@ import {
   defineSystem,
   defineQuery,
   defineComponent,
-  Types
+  Types,
+  removeQuery
 } from "bitecs";
 import { Quaternion } from "three";
 function createTransformSystem(stage) {
-  const transformQuery = defineQuery([position, rotation]);
+  const queryTerms = [position, rotation];
+  const transformQuery = defineQuery(queryTerms);
   const stageEntities = stage._childrenMap;
-  return defineSystem((world) => {
+  const system = defineSystem((world) => {
     const entities = transformQuery(world);
     if (stageEntities === void 0) {
       return world;
@@ -370,6 +420,10 @@ function createTransformSystem(stage) {
     }
     return world;
   });
+  const destroy2 = (world) => {
+    removeQuery(world, transformQuery);
+  };
+  return { system, destroy: destroy2 };
 }
 var position, rotation, scale, _tempQuaternion;
 var init_transformable_system = __esm({
@@ -761,6 +815,23 @@ var init_animation = __esm({
         action.reset().play();
         this._currentAction = action;
         this._currentKey = key;
+      }
+      /**
+       * Dispose of all animation resources
+       */
+      dispose() {
+        Object.values(this._actions).forEach((action) => {
+          action.stop();
+        });
+        if (this._mixer) {
+          this._mixer.stopAllAction();
+          this._mixer.uncacheRoot(this.target);
+          this._mixer = null;
+        }
+        this._actions = {};
+        this._animations = [];
+        this._currentAction = null;
+        this._currentKey = "";
       }
       get currentAnimationKey() {
         return this._currentKey;
@@ -1272,7 +1343,6 @@ var init_actor = __esm({
         super();
         this.options = { ...actorDefaults, ...options };
         this.prependUpdate(this.actorUpdate.bind(this));
-        debugger;
         this.controlledRotation = true;
       }
       async load() {
@@ -1291,6 +1361,34 @@ var init_actor = __esm({
       }
       async actorUpdate(params) {
         this._animationDelegate?.update(params.delta);
+      }
+      /**
+       * Clean up actor resources including animations, models, and groups
+       */
+      actorDestroy() {
+        if (this._animationDelegate) {
+          this._animationDelegate.dispose();
+          this._animationDelegate = null;
+        }
+        if (this._object) {
+          this._object.traverse((child) => {
+            if (child.isMesh) {
+              const mesh = child;
+              mesh.geometry?.dispose();
+              if (Array.isArray(mesh.material)) {
+                mesh.material.forEach((m) => m.dispose());
+              } else if (mesh.material) {
+                mesh.material.dispose();
+              }
+            }
+          });
+          this._object = null;
+        }
+        if (this.group) {
+          this.group.clear();
+          this.group = null;
+        }
+        this._modelFileNames = [];
       }
       async loadModels() {
         if (this._modelFileNames.length === 0) return;
@@ -1351,25 +1449,17 @@ var init_actor = __esm({
   }
 });
 
-// src/lib/collision/collision-delegate.ts
+// src/lib/collision/world.ts
+import RAPIER from "@dimforge/rapier3d-compat";
 function isCollisionHandlerDelegate(obj) {
   return typeof obj?.handlePostCollision === "function" && typeof obj?.handleIntersectionEvent === "function";
 }
-var init_collision_delegate = __esm({
-  "src/lib/collision/collision-delegate.ts"() {
-    "use strict";
-  }
-});
-
-// src/lib/collision/world.ts
-import RAPIER from "@dimforge/rapier3d-compat";
 var ZylemWorld;
 var init_world = __esm({
   "src/lib/collision/world.ts"() {
     "use strict";
     init_game_state();
     init_actor();
-    init_collision_delegate();
     ZylemWorld = class {
       type = "World";
       world;
@@ -1778,6 +1868,293 @@ var init_lifecycle_base = __esm({
   }
 });
 
+// src/lib/stage/debug-entity-cursor.ts
+import {
+  Box3,
+  BoxGeometry,
+  Color as Color7,
+  EdgesGeometry,
+  Group as Group4,
+  LineBasicMaterial,
+  LineSegments,
+  Mesh as Mesh4,
+  MeshBasicMaterial,
+  Vector3 as Vector37
+} from "three";
+var DebugEntityCursor;
+var init_debug_entity_cursor = __esm({
+  "src/lib/stage/debug-entity-cursor.ts"() {
+    "use strict";
+    DebugEntityCursor = class {
+      scene;
+      container;
+      fillMesh;
+      edgeLines;
+      currentColor = new Color7(65280);
+      bbox = new Box3();
+      size = new Vector37();
+      center = new Vector37();
+      constructor(scene) {
+        this.scene = scene;
+        const initialGeometry = new BoxGeometry(1, 1, 1);
+        this.fillMesh = new Mesh4(
+          initialGeometry,
+          new MeshBasicMaterial({
+            color: this.currentColor,
+            transparent: true,
+            opacity: 0.12,
+            depthWrite: false
+          })
+        );
+        const edges = new EdgesGeometry(initialGeometry);
+        this.edgeLines = new LineSegments(
+          edges,
+          new LineBasicMaterial({ color: this.currentColor, linewidth: 1 })
+        );
+        this.container = new Group4();
+        this.container.name = "DebugEntityCursor";
+        this.container.add(this.fillMesh);
+        this.container.add(this.edgeLines);
+        this.container.visible = false;
+        this.scene.add(this.container);
+      }
+      setColor(color) {
+        this.currentColor.set(color);
+        this.fillMesh.material.color.set(this.currentColor);
+        this.edgeLines.material.color.set(this.currentColor);
+      }
+      /**
+       * Update the cursor to enclose the provided Object3D using a world-space AABB.
+       */
+      updateFromObject(object) {
+        if (!object) {
+          this.hide();
+          return;
+        }
+        this.bbox.setFromObject(object);
+        if (!isFinite(this.bbox.min.x) || !isFinite(this.bbox.max.x)) {
+          this.hide();
+          return;
+        }
+        this.bbox.getSize(this.size);
+        this.bbox.getCenter(this.center);
+        const newGeom = new BoxGeometry(
+          Math.max(this.size.x, 1e-6),
+          Math.max(this.size.y, 1e-6),
+          Math.max(this.size.z, 1e-6)
+        );
+        this.fillMesh.geometry.dispose();
+        this.fillMesh.geometry = newGeom;
+        const newEdges = new EdgesGeometry(newGeom);
+        this.edgeLines.geometry.dispose();
+        this.edgeLines.geometry = newEdges;
+        this.container.position.copy(this.center);
+        this.container.visible = true;
+      }
+      hide() {
+        this.container.visible = false;
+      }
+      dispose() {
+        this.scene.remove(this.container);
+        this.fillMesh.geometry.dispose();
+        this.fillMesh.material.dispose();
+        this.edgeLines.geometry.dispose();
+        this.edgeLines.material.dispose();
+      }
+    };
+  }
+});
+
+// src/lib/stage/stage-debug-delegate.ts
+import { Ray } from "@dimforge/rapier3d-compat";
+import { BufferAttribute, BufferGeometry as BufferGeometry4, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 as Vector22 } from "three";
+var SELECT_TOOL_COLOR, DELETE_TOOL_COLOR, StageDebugDelegate;
+var init_stage_debug_delegate = __esm({
+  "src/lib/stage/stage-debug-delegate.ts"() {
+    "use strict";
+    init_debug_state();
+    init_debug_entity_cursor();
+    SELECT_TOOL_COLOR = 2293538;
+    DELETE_TOOL_COLOR = 16724787;
+    StageDebugDelegate = class {
+      stage;
+      options;
+      mouseNdc = new Vector22(-2, -2);
+      raycaster = new Raycaster();
+      isMouseDown = false;
+      disposeFns = [];
+      debugCursor = null;
+      debugLines = null;
+      constructor(stage, options) {
+        this.stage = stage;
+        this.options = {
+          maxRayDistance: options?.maxRayDistance ?? 5e3,
+          addEntityFactory: options?.addEntityFactory ?? null
+        };
+        if (this.stage.scene) {
+          this.debugLines = new LineSegments2(
+            new BufferGeometry4(),
+            new LineBasicMaterial2({ vertexColors: true })
+          );
+          this.stage.scene.scene.add(this.debugLines);
+          this.debugLines.visible = true;
+          this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
+        }
+        this.attachDomListeners();
+      }
+      update() {
+        if (!debugState.enabled) return;
+        if (!this.stage.scene || !this.stage.world || !this.stage.cameraRef) return;
+        const { world, cameraRef } = this.stage;
+        if (this.debugLines) {
+          const { vertices, colors } = world.world.debugRender();
+          this.debugLines.geometry.setAttribute("position", new BufferAttribute(vertices, 3));
+          this.debugLines.geometry.setAttribute("color", new BufferAttribute(colors, 4));
+        }
+        const tool = getDebugTool();
+        const isCursorTool = tool === "select" || tool === "delete";
+        this.raycaster.setFromCamera(this.mouseNdc, cameraRef.camera);
+        const origin = this.raycaster.ray.origin.clone();
+        const direction = this.raycaster.ray.direction.clone().normalize();
+        const rapierRay = new Ray(
+          { x: origin.x, y: origin.y, z: origin.z },
+          { x: direction.x, y: direction.y, z: direction.z }
+        );
+        const hit = world.world.castRay(rapierRay, this.options.maxRayDistance, true);
+        if (hit && isCursorTool) {
+          const rigidBody = hit.collider?._parent;
+          const hoveredUuid2 = rigidBody?.userData?.uuid;
+          if (hoveredUuid2) {
+            const entity = this.stage._debugMap.get(hoveredUuid2);
+            if (entity) setHoveredEntity(entity);
+          } else {
+            resetHoveredEntity();
+          }
+          if (this.isMouseDown) {
+            this.handleActionOnHit(hoveredUuid2 ?? null, origin, direction, hit.toi);
+          }
+        }
+        this.isMouseDown = false;
+        const hoveredUuid = getHoveredEntity();
+        if (!hoveredUuid) {
+          this.debugCursor?.hide();
+          return;
+        }
+        const hoveredEntity = this.stage._debugMap.get(`${hoveredUuid}`);
+        const targetObject = hoveredEntity?.group ?? hoveredEntity?.mesh ?? null;
+        if (!targetObject) {
+          this.debugCursor?.hide();
+          return;
+        }
+        switch (tool) {
+          case "select":
+            this.debugCursor?.setColor(SELECT_TOOL_COLOR);
+            break;
+          case "delete":
+            this.debugCursor?.setColor(DELETE_TOOL_COLOR);
+            break;
+          default:
+            this.debugCursor?.setColor(16777215);
+            break;
+        }
+        this.debugCursor?.updateFromObject(targetObject);
+      }
+      dispose() {
+        this.disposeFns.forEach((fn) => fn());
+        this.disposeFns = [];
+        this.debugCursor?.dispose();
+        if (this.debugLines && this.stage.scene) {
+          this.stage.scene.scene.remove(this.debugLines);
+          this.debugLines.geometry.dispose();
+          this.debugLines.material.dispose();
+          this.debugLines = null;
+        }
+      }
+      handleActionOnHit(hoveredUuid, origin, direction, toi) {
+        const tool = getDebugTool();
+        switch (tool) {
+          case "select": {
+            if (hoveredUuid) {
+              const entity = this.stage._debugMap.get(hoveredUuid);
+              if (entity) setSelectedEntity(entity);
+            }
+            break;
+          }
+          case "delete": {
+            if (hoveredUuid) {
+              this.stage.removeEntityByUuid(hoveredUuid);
+            }
+            break;
+          }
+          case "scale": {
+            if (!this.options.addEntityFactory) break;
+            const hitPosition = origin.clone().add(direction.clone().multiplyScalar(toi));
+            const newNode = this.options.addEntityFactory({ position: hitPosition });
+            if (newNode) {
+              Promise.resolve(newNode).then((node) => {
+                if (node) this.stage.spawnEntity(node);
+              }).catch(() => {
+              });
+            }
+            break;
+          }
+          default:
+            break;
+        }
+      }
+      attachDomListeners() {
+        const canvas = this.stage.cameraRef?.renderer.domElement ?? this.stage.scene?.zylemCamera.renderer.domElement;
+        if (!canvas) return;
+        const onMouseMove = (e) => {
+          const rect2 = canvas.getBoundingClientRect();
+          const x = (e.clientX - rect2.left) / rect2.width * 2 - 1;
+          const y = -((e.clientY - rect2.top) / rect2.height * 2 - 1);
+          this.mouseNdc.set(x, y);
+        };
+        const onMouseDown = (e) => {
+          this.isMouseDown = true;
+        };
+        canvas.addEventListener("mousemove", onMouseMove);
+        canvas.addEventListener("mousedown", onMouseDown);
+        this.disposeFns.push(() => canvas.removeEventListener("mousemove", onMouseMove));
+        this.disposeFns.push(() => canvas.removeEventListener("mousedown", onMouseDown));
+      }
+    };
+  }
+});
+
+// src/lib/stage/stage-camera-debug-delegate.ts
+import { subscribe as subscribe4 } from "valtio/vanilla";
+var StageCameraDebugDelegate;
+var init_stage_camera_debug_delegate = __esm({
+  "src/lib/stage/stage-camera-debug-delegate.ts"() {
+    "use strict";
+    init_debug_state();
+    StageCameraDebugDelegate = class {
+      stage;
+      constructor(stage) {
+        this.stage = stage;
+      }
+      subscribe(listener) {
+        const notify = () => listener(this.snapshot());
+        notify();
+        return subscribe4(debugState, notify);
+      }
+      resolveTarget(uuid) {
+        const entity = this.stage._debugMap.get(uuid) || this.stage.world?.collisionMap.get(uuid) || null;
+        const target = entity?.group ?? entity?.mesh ?? null;
+        return target ?? null;
+      }
+      snapshot() {
+        return {
+          enabled: debugState.enabled,
+          selected: debugState.selectedEntity ? [debugState.selectedEntity.uuid] : []
+        };
+      }
+    };
+  }
+});
+
 // src/lib/camera/perspective.ts
 var Perspectives;
 var init_perspective = __esm({
@@ -1794,7 +2171,7 @@ var init_perspective = __esm({
 });
 
 // src/lib/camera/third-person.ts
-import { Vector3 as Vector37 } from "three";
+import { Vector3 as Vector39 } from "three";
 var ThirdPersonCamera;
 var init_third_person = __esm({
   "src/lib/camera/third-person.ts"() {
@@ -1806,7 +2183,7 @@ var init_third_person = __esm({
       scene = null;
       cameraRef = null;
       constructor() {
-        this.distance = new Vector37(0, 5, 8);
+        this.distance = new Vector39(0, 5, 8);
       }
       /**
        * Setup the third person camera controller
@@ -1986,7 +2363,7 @@ var init_render_pass = __esm({
 });
 
 // src/lib/camera/camera-debug-delegate.ts
-import { Vector3 as Vector38 } from "three";
+import { Vector3 as Vector310 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 var CameraOrbitController;
 var init_camera_debug_delegate = __esm({
@@ -1997,7 +2374,7 @@ var init_camera_debug_delegate = __esm({
       domElement;
       orbitControls = null;
       orbitTarget = null;
-      orbitTargetWorldPos = new Vector38();
+      orbitTargetWorldPos = new Vector310();
       debugDelegate = null;
       debugUnsubscribe = null;
       debugStateSnapshot = { enabled: false, selected: [] };
@@ -2153,7 +2530,7 @@ var init_camera_debug_delegate = __esm({
 });
 
 // src/lib/camera/zylem-camera.ts
-import { PerspectiveCamera, Vector3 as Vector39, Object3D as Object3D5, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
+import { PerspectiveCamera, Vector3 as Vector311, Object3D as Object3D6, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 var ZylemCamera;
 var init_zylem_camera = __esm({
@@ -2189,13 +2566,13 @@ var init_zylem_camera = __esm({
         const aspectRatio = screenResolution.x / screenResolution.y;
         this.camera = this.createCameraForPerspective(aspectRatio);
         if (this.needsRig()) {
-          this.cameraRig = new Object3D5();
+          this.cameraRig = new Object3D6();
           this.cameraRig.position.set(0, 3, 10);
           this.cameraRig.add(this.camera);
-          this.camera.lookAt(new Vector39(0, 2, 0));
+          this.camera.lookAt(new Vector311(0, 2, 0));
         } else {
           this.camera.position.set(0, 0, 10);
-          this.camera.lookAt(new Vector39(0, 0, 0));
+          this.camera.lookAt(new Vector311(0, 0, 0));
         }
         this.initializePerspectiveController();
         this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement);
@@ -2393,315 +2770,217 @@ var init_zylem_camera = __esm({
   }
 });
 
-// src/lib/camera/camera.ts
-import { Vector2 as Vector24, Vector3 as Vector310 } from "three";
-function camera(options) {
-  const screenResolution = options.screenResolution || new Vector24(window.innerWidth, window.innerHeight);
-  let frustumSize = 10;
-  if (options.perspective === "fixed-2d") {
-    frustumSize = options.zoom || 10;
-  }
-  const zylemCamera = new ZylemCamera(options.perspective || "third-person", screenResolution, frustumSize);
-  zylemCamera.move(options.position || new Vector310(0, 0, 0));
-  zylemCamera.camera.lookAt(options.target || new Vector310(0, 0, 0));
-  return new CameraWrapper(zylemCamera);
-}
-var CameraWrapper;
-var init_camera = __esm({
-  "src/lib/camera/camera.ts"() {
+// src/lib/stage/stage-camera-delegate.ts
+import { Vector2 as Vector25 } from "three";
+var StageCameraDelegate;
+var init_stage_camera_delegate = __esm({
+  "src/lib/stage/stage-camera-delegate.ts"() {
     "use strict";
     init_zylem_camera();
-    CameraWrapper = class {
-      cameraRef;
-      constructor(camera2) {
-        this.cameraRef = camera2;
-      }
-    };
-  }
-});
-
-// src/lib/stage/debug-entity-cursor.ts
-import {
-  Box3,
-  BoxGeometry,
-  Color as Color7,
-  EdgesGeometry,
-  Group as Group4,
-  LineBasicMaterial,
-  LineSegments,
-  Mesh as Mesh4,
-  MeshBasicMaterial,
-  Vector3 as Vector311
-} from "three";
-var DebugEntityCursor;
-var init_debug_entity_cursor = __esm({
-  "src/lib/stage/debug-entity-cursor.ts"() {
-    "use strict";
-    DebugEntityCursor = class {
-      scene;
-      container;
-      fillMesh;
-      edgeLines;
-      currentColor = new Color7(65280);
-      bbox = new Box3();
-      size = new Vector311();
-      center = new Vector311();
-      constructor(scene) {
-        this.scene = scene;
-        const initialGeometry = new BoxGeometry(1, 1, 1);
-        this.fillMesh = new Mesh4(
-          initialGeometry,
-          new MeshBasicMaterial({
-            color: this.currentColor,
-            transparent: true,
-            opacity: 0.12,
-            depthWrite: false
-          })
-        );
-        const edges = new EdgesGeometry(initialGeometry);
-        this.edgeLines = new LineSegments(
-          edges,
-          new LineBasicMaterial({ color: this.currentColor, linewidth: 1 })
-        );
-        this.container = new Group4();
-        this.container.name = "DebugEntityCursor";
-        this.container.add(this.fillMesh);
-        this.container.add(this.edgeLines);
-        this.container.visible = false;
-        this.scene.add(this.container);
-      }
-      setColor(color) {
-        this.currentColor.set(color);
-        this.fillMesh.material.color.set(this.currentColor);
-        this.edgeLines.material.color.set(this.currentColor);
-      }
-      /**
-       * Update the cursor to enclose the provided Object3D using a world-space AABB.
-       */
-      updateFromObject(object) {
-        if (!object) {
-          this.hide();
-          return;
-        }
-        this.bbox.setFromObject(object);
-        if (!isFinite(this.bbox.min.x) || !isFinite(this.bbox.max.x)) {
-          this.hide();
-          return;
-        }
-        this.bbox.getSize(this.size);
-        this.bbox.getCenter(this.center);
-        const newGeom = new BoxGeometry(
-          Math.max(this.size.x, 1e-6),
-          Math.max(this.size.y, 1e-6),
-          Math.max(this.size.z, 1e-6)
-        );
-        this.fillMesh.geometry.dispose();
-        this.fillMesh.geometry = newGeom;
-        const newEdges = new EdgesGeometry(newGeom);
-        this.edgeLines.geometry.dispose();
-        this.edgeLines.geometry = newEdges;
-        this.container.position.copy(this.center);
-        this.container.visible = true;
-      }
-      hide() {
-        this.container.visible = false;
-      }
-      dispose() {
-        this.scene.remove(this.container);
-        this.fillMesh.geometry.dispose();
-        this.fillMesh.material.dispose();
-        this.edgeLines.geometry.dispose();
-        this.edgeLines.material.dispose();
-      }
-    };
-  }
-});
-
-// src/lib/stage/stage-debug-delegate.ts
-import { Ray } from "@dimforge/rapier3d-compat";
-import { BufferAttribute, BufferGeometry as BufferGeometry4, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 as Vector25 } from "three";
-var SELECT_TOOL_COLOR, DELETE_TOOL_COLOR, StageDebugDelegate;
-var init_stage_debug_delegate = __esm({
-  "src/lib/stage/stage-debug-delegate.ts"() {
-    "use strict";
-    init_debug_state();
-    init_debug_entity_cursor();
-    SELECT_TOOL_COLOR = 2293538;
-    DELETE_TOOL_COLOR = 16724787;
-    StageDebugDelegate = class {
-      stage;
-      options;
-      mouseNdc = new Vector25(-2, -2);
-      raycaster = new Raycaster();
-      isMouseDown = false;
-      disposeFns = [];
-      debugCursor = null;
-      debugLines = null;
-      constructor(stage, options) {
-        this.stage = stage;
-        this.options = {
-          maxRayDistance: options?.maxRayDistance ?? 5e3,
-          addEntityFactory: options?.addEntityFactory ?? null
-        };
-        if (this.stage.scene) {
-          this.debugLines = new LineSegments2(
-            new BufferGeometry4(),
-            new LineBasicMaterial2({ vertexColors: true })
-          );
-          this.stage.scene.scene.add(this.debugLines);
-          this.debugLines.visible = true;
-          this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
-        }
-        this.attachDomListeners();
-      }
-      update() {
-        if (!debugState.enabled) return;
-        if (!this.stage.scene || !this.stage.world || !this.stage.cameraRef) return;
-        const { world, cameraRef } = this.stage;
-        if (this.debugLines) {
-          const { vertices, colors } = world.world.debugRender();
-          this.debugLines.geometry.setAttribute("position", new BufferAttribute(vertices, 3));
-          this.debugLines.geometry.setAttribute("color", new BufferAttribute(colors, 4));
-        }
-        const tool = getDebugTool();
-        const isCursorTool = tool === "select" || tool === "delete";
-        this.raycaster.setFromCamera(this.mouseNdc, cameraRef.camera);
-        const origin = this.raycaster.ray.origin.clone();
-        const direction = this.raycaster.ray.direction.clone().normalize();
-        const rapierRay = new Ray(
-          { x: origin.x, y: origin.y, z: origin.z },
-          { x: direction.x, y: direction.y, z: direction.z }
-        );
-        const hit = world.world.castRay(rapierRay, this.options.maxRayDistance, true);
-        if (hit && isCursorTool) {
-          const rigidBody = hit.collider?._parent;
-          const hoveredUuid2 = rigidBody?.userData?.uuid;
-          if (hoveredUuid2) {
-            const entity = this.stage._debugMap.get(hoveredUuid2);
-            if (entity) setHoveredEntity(entity);
-          } else {
-            resetHoveredEntity();
-          }
-          if (this.isMouseDown) {
-            this.handleActionOnHit(hoveredUuid2 ?? null, origin, direction, hit.toi);
-          }
-        }
-        this.isMouseDown = false;
-        const hoveredUuid = getHoveredEntity();
-        if (!hoveredUuid) {
-          this.debugCursor?.hide();
-          return;
-        }
-        const hoveredEntity = this.stage._debugMap.get(`${hoveredUuid}`);
-        const targetObject = hoveredEntity?.group ?? hoveredEntity?.mesh ?? null;
-        if (!targetObject) {
-          this.debugCursor?.hide();
-          return;
-        }
-        switch (tool) {
-          case "select":
-            this.debugCursor?.setColor(SELECT_TOOL_COLOR);
-            break;
-          case "delete":
-            this.debugCursor?.setColor(DELETE_TOOL_COLOR);
-            break;
-          default:
-            this.debugCursor?.setColor(16777215);
-            break;
-        }
-        this.debugCursor?.updateFromObject(targetObject);
-      }
-      dispose() {
-        this.disposeFns.forEach((fn) => fn());
-        this.disposeFns = [];
-        this.debugCursor?.dispose();
-        if (this.debugLines && this.stage.scene) {
-          this.stage.scene.scene.remove(this.debugLines);
-          this.debugLines.geometry.dispose();
-          this.debugLines.material.dispose();
-          this.debugLines = null;
-        }
-      }
-      handleActionOnHit(hoveredUuid, origin, direction, toi) {
-        const tool = getDebugTool();
-        switch (tool) {
-          case "select": {
-            if (hoveredUuid) {
-              const entity = this.stage._debugMap.get(hoveredUuid);
-              if (entity) setSelectedEntity(entity);
-            }
-            break;
-          }
-          case "delete": {
-            if (hoveredUuid) {
-              this.stage.removeEntityByUuid(hoveredUuid);
-            }
-            break;
-          }
-          case "scale": {
-            if (!this.options.addEntityFactory) break;
-            const hitPosition = origin.clone().add(direction.clone().multiplyScalar(toi));
-            const newNode = this.options.addEntityFactory({ position: hitPosition });
-            if (newNode) {
-              Promise.resolve(newNode).then((node) => {
-                if (node) this.stage.spawnEntity(node);
-              }).catch(() => {
-              });
-            }
-            break;
-          }
-          default:
-            break;
-        }
-      }
-      attachDomListeners() {
-        const canvas = this.stage.cameraRef?.renderer.domElement ?? this.stage.scene?.zylemCamera.renderer.domElement;
-        if (!canvas) return;
-        const onMouseMove = (e) => {
-          const rect2 = canvas.getBoundingClientRect();
-          const x = (e.clientX - rect2.left) / rect2.width * 2 - 1;
-          const y = -((e.clientY - rect2.top) / rect2.height * 2 - 1);
-          this.mouseNdc.set(x, y);
-        };
-        const onMouseDown = (e) => {
-          this.isMouseDown = true;
-        };
-        canvas.addEventListener("mousemove", onMouseMove);
-        canvas.addEventListener("mousedown", onMouseDown);
-        this.disposeFns.push(() => canvas.removeEventListener("mousemove", onMouseMove));
-        this.disposeFns.push(() => canvas.removeEventListener("mousedown", onMouseDown));
-      }
-    };
-  }
-});
-
-// src/lib/stage/stage-camera-debug-delegate.ts
-import { subscribe as subscribe4 } from "valtio/vanilla";
-var StageCameraDebugDelegate;
-var init_stage_camera_debug_delegate = __esm({
-  "src/lib/stage/stage-camera-debug-delegate.ts"() {
-    "use strict";
-    init_debug_state();
-    StageCameraDebugDelegate = class {
+    init_perspective();
+    StageCameraDelegate = class {
       stage;
       constructor(stage) {
         this.stage = stage;
       }
-      subscribe(listener) {
-        const notify = () => listener(this.snapshot());
-        notify();
-        return subscribe4(debugState, notify);
+      /**
+       * Create a default third-person camera based on window size.
+       */
+      createDefaultCamera() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const screenResolution = new Vector25(width, height);
+        return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
       }
-      resolveTarget(uuid) {
-        const entity = this.stage._debugMap.get(uuid) || this.stage.world?.collisionMap.get(uuid) || null;
-        const target = entity?.group ?? entity?.mesh ?? null;
-        return target ?? null;
+      /**
+       * Resolve the camera to use for the stage.
+       * Uses the provided camera, stage camera wrapper, or creates a default.
+       * 
+       * @param cameraOverride Optional camera override
+       * @param cameraWrapper Optional camera wrapper from stage options
+       * @returns The resolved ZylemCamera instance
+       */
+      resolveCamera(cameraOverride, cameraWrapper) {
+        if (cameraOverride) {
+          return cameraOverride;
+        }
+        if (cameraWrapper) {
+          return cameraWrapper.cameraRef;
+        }
+        return this.createDefaultCamera();
       }
-      snapshot() {
-        return {
-          enabled: debugState.enabled,
-          selected: debugState.selectedEntity ? [debugState.selectedEntity.uuid] : []
+    };
+  }
+});
+
+// src/lib/stage/stage-loading-delegate.ts
+var StageLoadingDelegate;
+var init_stage_loading_delegate = __esm({
+  "src/lib/stage/stage-loading-delegate.ts"() {
+    "use strict";
+    init_game_event_bus();
+    StageLoadingDelegate = class {
+      loadingHandlers = [];
+      stageName;
+      stageIndex;
+      /**
+       * Set stage context for event bus emissions.
+       */
+      setStageContext(stageName, stageIndex) {
+        this.stageName = stageName;
+        this.stageIndex = stageIndex;
+      }
+      /**
+       * Subscribe to loading events.
+       * 
+       * @param callback Invoked for each loading event (start, progress, complete)
+       * @returns Unsubscribe function
+       */
+      onLoading(callback) {
+        this.loadingHandlers.push(callback);
+        return () => {
+          this.loadingHandlers = this.loadingHandlers.filter((h) => h !== callback);
         };
+      }
+      /**
+       * Emit a loading event to all subscribers and to the game event bus.
+       * 
+       * @param event The loading event to broadcast
+       */
+      emit(event) {
+        for (const handler of this.loadingHandlers) {
+          try {
+            handler(event);
+          } catch (e) {
+            console.error("Loading handler failed", e);
+          }
+        }
+        const payload = {
+          ...event,
+          stageName: this.stageName,
+          stageIndex: this.stageIndex
+        };
+        if (event.type === "start") {
+          gameEventBus.emit("stage:loading:start", payload);
+        } else if (event.type === "progress") {
+          gameEventBus.emit("stage:loading:progress", payload);
+        } else if (event.type === "complete") {
+          gameEventBus.emit("stage:loading:complete", payload);
+        }
+      }
+      /**
+       * Emit a start loading event.
+       */
+      emitStart(message = "Loading stage...") {
+        this.emit({ type: "start", message, progress: 0 });
+      }
+      /**
+       * Emit a progress loading event.
+       */
+      emitProgress(message, current, total) {
+        const progress = total > 0 ? current / total : 0;
+        this.emit({ type: "progress", message, progress, current, total });
+      }
+      /**
+       * Emit a complete loading event.
+       */
+      emitComplete(message = "Stage loaded") {
+        this.emit({ type: "complete", message, progress: 1 });
+      }
+      /**
+       * Clear all loading handlers.
+       */
+      dispose() {
+        this.loadingHandlers = [];
+      }
+    };
+  }
+});
+
+// src/lib/core/utility/options-parser.ts
+function isBaseNode(item) {
+  return !!item && typeof item === "object" && typeof item.create === "function";
+}
+function isThenable(item) {
+  return !!item && typeof item.then === "function";
+}
+function isCameraWrapper(item) {
+  return !!item && typeof item === "object" && item.constructor?.name === "CameraWrapper";
+}
+function isConfigObject(item) {
+  if (!item || typeof item !== "object") return false;
+  if (isBaseNode(item)) return false;
+  if (isCameraWrapper(item)) return false;
+  if (isThenable(item)) return false;
+  if (typeof item.then === "function") return false;
+  return item.constructor === Object || item.constructor?.name === "Object";
+}
+function isEntityInput(item) {
+  if (!item) return false;
+  if (isBaseNode(item)) return true;
+  if (typeof item === "function") return true;
+  if (isThenable(item)) return true;
+  return false;
+}
+var init_options_parser = __esm({
+  "src/lib/core/utility/options-parser.ts"() {
+    "use strict";
+  }
+});
+
+// src/lib/stage/stage-config.ts
+import { Vector3 as Vector312 } from "three";
+function createDefaultStageConfig() {
+  return new StageConfig(
+    {
+      p1: ["gamepad-1", "keyboard-1"],
+      p2: ["gamepad-2", "keyboard-2"]
+    },
+    ZylemBlueColor,
+    null,
+    new Vector312(0, 0, 0),
+    {}
+  );
+}
+function parseStageOptions(options = []) {
+  const defaults = createDefaultStageConfig();
+  let config = {};
+  const entities = [];
+  const asyncEntities = [];
+  let camera2;
+  for (const item of options) {
+    if (isCameraWrapper(item)) {
+      camera2 = item;
+    } else if (isBaseNode(item)) {
+      entities.push(item);
+    } else if (isEntityInput(item) && !isBaseNode(item)) {
+      asyncEntities.push(item);
+    } else if (isConfigObject(item)) {
+      config = { ...config, ...item };
+    }
+  }
+  const resolvedConfig = new StageConfig(
+    config.inputs ?? defaults.inputs,
+    config.backgroundColor ?? defaults.backgroundColor,
+    config.backgroundImage ?? defaults.backgroundImage,
+    config.gravity ?? defaults.gravity,
+    config.variables ?? defaults.variables
+  );
+  return { config: resolvedConfig, entities, asyncEntities, camera: camera2 };
+}
+var StageConfig;
+var init_stage_config = __esm({
+  "src/lib/stage/stage-config.ts"() {
+    "use strict";
+    init_options_parser();
+    init_vector();
+    StageConfig = class {
+      constructor(inputs, backgroundColor, backgroundImage, gravity, variables) {
+        this.inputs = inputs;
+        this.backgroundColor = backgroundColor;
+        this.backgroundImage = backgroundImage;
+        this.gravity = gravity;
+        this.variables = variables;
       }
     };
   }
@@ -2709,7 +2988,7 @@ var init_stage_camera_debug_delegate = __esm({
 
 // src/lib/stage/zylem-stage.ts
 import { addComponent, addEntity, createWorld as createECS, removeEntity } from "bitecs";
-import { Color as Color8, Vector3 as Vector313, Vector2 as Vector26 } from "three";
+import { Color as Color9, Vector3 as Vector313 } from "three";
 import { subscribe as subscribe5 } from "valtio/vanilla";
 import { nanoid as nanoid2 } from "nanoid";
 var STAGE_TYPE, ZylemStage;
@@ -2724,13 +3003,13 @@ var init_zylem_stage = __esm({
     init_game_state();
     init_lifecycle_base();
     init_transformable_system();
-    init_base_node();
-    init_perspective();
-    init_camera();
     init_stage_debug_delegate();
     init_stage_camera_debug_delegate();
+    init_stage_camera_delegate();
+    init_stage_loading_delegate();
     init_entity();
-    init_zylem_camera();
+    init_stage_config();
+    init_options_parser();
     STAGE_TYPE = "Stage";
     ZylemStage = class extends LifeCycleBase {
       type = STAGE_TYPE;
@@ -2756,7 +3035,6 @@ var init_zylem_stage = __esm({
       isLoaded = false;
       _debugMap = /* @__PURE__ */ new Map();
       entityAddedHandlers = [];
-      loadingHandlers = [];
       ecs = createECS();
       testSystem = null;
       transformSystem = null;
@@ -2767,6 +3045,9 @@ var init_zylem_stage = __esm({
       wrapperRef = null;
       camera;
       cameraRef = null;
+      // Delegates
+      cameraDelegate;
+      loadingDelegate;
       /**
        * Create a new stage.
        * @param options Stage options: partial config, camera, and initial entities or factories
@@ -2776,49 +3057,22 @@ var init_zylem_stage = __esm({
         this.world = null;
         this.scene = null;
         this.uuid = nanoid2();
-        const { config, entities, asyncEntities, camera: camera2 } = this.parseOptions(options);
-        this.camera = camera2;
-        this.children = entities;
-        this.pendingEntities = asyncEntities;
-        this.saveState({ ...this.state, ...config, entities: [] });
-        this.gravity = config.gravity ?? new Vector313(0, 0, 0);
-      }
-      parseOptions(options) {
-        let config = {};
-        const entities = [];
-        const asyncEntities = [];
-        let camera2;
-        for (const item of options) {
-          if (this.isCameraWrapper(item)) {
-            camera2 = item;
-          } else if (this.isBaseNode(item)) {
-            entities.push(item);
-          } else if (this.isEntityInput(item)) {
-            asyncEntities.push(item);
-          } else if (this.isZylemStageConfig(item)) {
-            config = { ...config, ...item };
-          }
-        }
-        return { config, entities, asyncEntities, camera: camera2 };
-      }
-      isZylemStageConfig(item) {
-        return item && typeof item === "object" && !(item instanceof BaseNode) && !(item instanceof CameraWrapper);
-      }
-      isBaseNode(item) {
-        return item && typeof item === "object" && typeof item.create === "function";
-      }
-      isCameraWrapper(item) {
-        return item && typeof item === "object" && item.constructor.name === "CameraWrapper";
-      }
-      isEntityInput(item) {
-        if (!item) return false;
-        if (this.isBaseNode(item)) return true;
-        if (typeof item === "function") return true;
-        if (typeof item === "object" && typeof item.then === "function") return true;
-        return false;
-      }
-      isThenable(value) {
-        return !!value && typeof value.then === "function";
+        this.cameraDelegate = new StageCameraDelegate(this);
+        this.loadingDelegate = new StageLoadingDelegate();
+        const parsed = parseStageOptions(options);
+        this.camera = parsed.camera;
+        this.children = parsed.entities;
+        this.pendingEntities = parsed.asyncEntities;
+        this.saveState({
+          ...this.state,
+          inputs: parsed.config.inputs,
+          backgroundColor: parsed.config.backgroundColor,
+          backgroundImage: parsed.config.backgroundImage,
+          gravity: parsed.config.gravity,
+          variables: parsed.config.variables,
+          entities: []
+        });
+        this.gravity = parsed.config.gravity ?? new Vector313(0, 0, 0);
       }
       handleEntityImmediatelyOrQueue(entity) {
         if (this.isLoaded) {
@@ -2839,42 +3093,47 @@ var init_zylem_stage = __esm({
       }
       setState() {
         const { backgroundColor, backgroundImage } = this.state;
-        const color = backgroundColor instanceof Color8 ? backgroundColor : new Color8(backgroundColor);
+        const color = backgroundColor instanceof Color9 ? backgroundColor : new Color9(backgroundColor);
         setStageBackgroundColor(color);
         setStageBackgroundImage(backgroundImage);
         setStageVariables(this.state.variables ?? {});
       }
       /**
        * Load and initialize the stage's scene and world.
+       * Uses generator pattern to yield control to event loop for real-time progress.
        * @param id DOM element id for the renderer container
        * @param camera Optional camera override
        */
       async load(id, camera2) {
         this.setState();
-        const zylemCamera = camera2 || (this.camera ? this.camera.cameraRef : this.createDefaultCamera());
+        const zylemCamera = this.cameraDelegate.resolveCamera(camera2, this.camera);
         this.cameraRef = zylemCamera;
         this.scene = new ZylemScene(id, zylemCamera, this.state);
         const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector313(0, 0, 0));
         this.world = new ZylemWorld(physicsWorld);
         this.scene.setup();
-        this.emitLoading({ type: "start", message: "Loading stage...", progress: 0 });
+        this.loadingDelegate.emitStart();
+        await this.runEntityLoadGenerator();
+        this.transformSystem = createTransformSystem(this);
+        this.isLoaded = true;
+        this.loadingDelegate.emitComplete();
+      }
+      /**
+       * Generator that yields between entity loads for real-time progress updates.
+       */
+      *entityLoadGenerator() {
         const total = this.children.length + this.pendingEntities.length + this.pendingPromises.length;
         let current = 0;
-        for (let child of this.children) {
+        for (const child of this.children) {
           this.spawnEntity(child);
           current++;
-          this.emitLoading({
-            type: "progress",
-            message: `Loaded entity ${child.name || "unknown"}`,
-            progress: current / total,
-            current,
-            total
-          });
+          yield { current, total, name: child.name || "unknown" };
         }
         if (this.pendingEntities.length) {
           this.enqueue(...this.pendingEntities);
           current += this.pendingEntities.length;
           this.pendingEntities = [];
+          yield { current, total, name: "pending entities" };
         }
         if (this.pendingPromises.length) {
           for (const promise of this.pendingPromises) {
@@ -2884,16 +3143,19 @@ var init_zylem_stage = __esm({
           }
           current += this.pendingPromises.length;
           this.pendingPromises = [];
+          yield { current, total, name: "async entities" };
         }
-        this.transformSystem = createTransformSystem(this);
-        this.isLoaded = true;
-        this.emitLoading({ type: "complete", message: "Stage loaded", progress: 1 });
       }
-      createDefaultCamera() {
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        const screenResolution = new Vector26(width, height);
-        return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
+      /**
+       * Runs the entity load generator, yielding to the event loop between loads.
+       * This allows the browser to process events and update the UI in real-time.
+       */
+      async runEntityLoadGenerator() {
+        const gen = this.entityLoadGenerator();
+        for (const progress of gen) {
+          this.loadingDelegate.emitProgress(`Loaded ${progress.name}`, progress.current, progress.total);
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
       }
       _setup(params) {
         if (!this.scene || !this.world) {
@@ -2928,7 +3190,7 @@ var init_zylem_stage = __esm({
           return;
         }
         this.world.update(params);
-        this.transformSystem(this.ecs);
+        this.transformSystem?.system(this.ecs);
         this._childrenMap.forEach((child, eid) => {
           child.nodeUpdate({
             ...params,
@@ -2974,6 +3236,8 @@ var init_zylem_stage = __esm({
         this.world = null;
         this.scene = null;
         this.cameraRef = null;
+        this.transformSystem?.destroy(this.ecs);
+        this.transformSystem = null;
         resetStageVariables();
         clearVariables(this);
       }
@@ -3054,13 +3318,7 @@ var init_zylem_stage = __esm({
         };
       }
       onLoading(callback) {
-        this.loadingHandlers.push(callback);
-        return () => {
-          this.loadingHandlers = this.loadingHandlers.filter((h) => h !== callback);
-        };
-      }
-      emitLoading(event) {
-        this.loadingHandlers.forEach((h) => h(event));
+        return this.loadingDelegate.onLoading(callback);
       }
       /**
        * Remove an entity and its resources by its UUID.
@@ -3117,16 +3375,16 @@ var init_zylem_stage = __esm({
       enqueue(...items) {
         for (const item of items) {
           if (!item) continue;
-          if (this.isBaseNode(item)) {
+          if (isBaseNode(item)) {
             this.handleEntityImmediatelyOrQueue(item);
             continue;
           }
           if (typeof item === "function") {
             try {
               const result = item();
-              if (this.isBaseNode(result)) {
+              if (isBaseNode(result)) {
                 this.handleEntityImmediatelyOrQueue(result);
-              } else if (this.isThenable(result)) {
+              } else if (isThenable(result)) {
                 this.handlePromiseWithSpawnOnResolve(result);
               }
             } catch (error) {
@@ -3134,7 +3392,7 @@ var init_zylem_stage = __esm({
             }
             continue;
           }
-          if (this.isThenable(item)) {
+          if (isThenable(item)) {
             this.handlePromiseWithSpawnOnResolve(item);
           }
         }
@@ -3143,9 +3401,36 @@ var init_zylem_stage = __esm({
   }
 });
 
+// src/lib/camera/camera.ts
+import { Vector2 as Vector27, Vector3 as Vector314 } from "three";
+function camera(options) {
+  const screenResolution = options.screenResolution || new Vector27(window.innerWidth, window.innerHeight);
+  let frustumSize = 10;
+  if (options.perspective === "fixed-2d") {
+    frustumSize = options.zoom || 10;
+  }
+  const zylemCamera = new ZylemCamera(options.perspective || "third-person", screenResolution, frustumSize);
+  zylemCamera.move(options.position || new Vector314(0, 0, 0));
+  zylemCamera.camera.lookAt(options.target || new Vector314(0, 0, 0));
+  return new CameraWrapper(zylemCamera);
+}
+var CameraWrapper;
+var init_camera = __esm({
+  "src/lib/camera/camera.ts"() {
+    "use strict";
+    init_zylem_camera();
+    CameraWrapper = class {
+      cameraRef;
+      constructor(camera2) {
+        this.cameraRef = camera2;
+      }
+    };
+  }
+});
+
 // src/lib/stage/stage-default.ts
 import { proxy as proxy4 } from "valtio/vanilla";
-import { Vector3 as Vector314 } from "three";
+import { Vector3 as Vector315 } from "three";
 function getStageOptions(options) {
   const defaults = getStageDefaultConfig();
   let originalConfig = {};
@@ -3176,7 +3461,7 @@ var init_stage_default = __esm({
         p1: ["gamepad-1", "keyboard"],
         p2: ["gamepad-2", "keyboard"]
       },
-      gravity: new Vector314(0, 0, 0),
+      gravity: new Vector315(0, 0, 0),
       variables: {}
     };
     stageDefaultsState = proxy4({
@@ -3201,18 +3486,27 @@ var init_stage = __esm({
     Stage = class {
       wrappedStage;
       options = [];
+      // Entities added after construction, consumed on each load
+      _pendingEntities = [];
       // Lifecycle callback arrays
       setupCallbacks = [];
       updateCallbacks = [];
       destroyCallbacks = [];
+      pendingLoadingCallbacks = [];
       constructor(options) {
         this.options = options;
         this.wrappedStage = null;
       }
       async load(id, camera2) {
         stageState.entities = [];
-        this.wrappedStage = new ZylemStage(this.options);
+        const loadOptions = [...this.options, ...this._pendingEntities];
+        this._pendingEntities = [];
+        this.wrappedStage = new ZylemStage(loadOptions);
         this.wrappedStage.wrapperRef = this;
+        this.pendingLoadingCallbacks.forEach((cb) => {
+          this.wrappedStage.onLoading(cb);
+        });
+        this.pendingLoadingCallbacks = [];
         const zylemCamera = camera2 instanceof CameraWrapper ? camera2.cameraRef : camera2;
         await this.wrappedStage.load(id, zylemCamera);
         this.wrappedStage.onEntityAdded((child) => {
@@ -3243,7 +3537,7 @@ var init_stage = __esm({
         }
       }
       async addEntities(entities) {
-        this.options.push(...entities);
+        this._pendingEntities.push(...entities);
         if (!this.wrappedStage) {
           return;
         }
@@ -3257,7 +3551,7 @@ var init_stage = __esm({
         if (this.wrappedStage) {
           return;
         }
-        this.options.push(...inputs);
+        this._pendingEntities.push(...inputs);
       }
       addToStage(...inputs) {
         if (!this.wrappedStage) {
@@ -3301,7 +3595,9 @@ var init_stage = __esm({
       }
       onLoading(callback) {
         if (!this.wrappedStage) {
+          this.pendingLoadingCallbacks.push(callback);
           return () => {
+            this.pendingLoadingCallbacks = this.pendingLoadingCallbacks.filter((c) => c !== callback);
           };
         }
         return this.wrappedStage.onLoading(callback);
@@ -4200,6 +4496,146 @@ var GameDebugDelegate = class {
   }
 };
 
+// src/lib/game/game-loading-delegate.ts
+var GAME_LOADING_EVENT = "GAME_LOADING_EVENT";
+var GameLoadingDelegate = class {
+  loadingHandlers = [];
+  stageLoadingUnsubscribes = [];
+  /**
+   * Subscribe to loading events from the game.
+   * Events include stage context (stageName, stageIndex).
+   * 
+   * @param callback Invoked for each loading event
+   * @returns Unsubscribe function
+   */
+  onLoading(callback) {
+    this.loadingHandlers.push(callback);
+    return () => {
+      this.loadingHandlers = this.loadingHandlers.filter((h) => h !== callback);
+    };
+  }
+  /**
+   * Emit a loading event to all subscribers and dispatch to window.
+   */
+  emit(event) {
+    for (const handler of this.loadingHandlers) {
+      console.log("Game loading event", event);
+      try {
+        handler(event);
+      } catch (e) {
+        console.error("Game loading handler failed", e);
+      }
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
+    }
+  }
+  /**
+   * Wire up a stage's loading events to this delegate.
+   * 
+   * @param stage The stage to wire up
+   * @param stageIndex The index of the stage
+   */
+  wireStageLoading(stage, stageIndex) {
+    const unsub = stage.onLoading((event) => {
+      this.emit({
+        type: event.type,
+        message: event.message ?? "",
+        progress: event.progress ?? 0,
+        current: event.current,
+        total: event.total,
+        stageName: stage.uuid ?? `Stage ${stageIndex}`,
+        stageIndex
+      });
+    });
+    if (typeof unsub === "function") {
+      this.stageLoadingUnsubscribes.push(unsub);
+    }
+  }
+  /**
+   * Unsubscribe from all stage loading events.
+   */
+  unwireAllStages() {
+    for (const unsub of this.stageLoadingUnsubscribes) {
+      try {
+        unsub();
+      } catch {
+      }
+    }
+    this.stageLoadingUnsubscribes = [];
+  }
+  /**
+   * Clean up all handlers.
+   */
+  dispose() {
+    this.unwireAllStages();
+    this.loadingHandlers = [];
+  }
+};
+
+// src/lib/game/zylem-game.ts
+init_game_event_bus();
+
+// src/lib/game/game-renderer-observer.ts
+var GameRendererObserver = class {
+  container = null;
+  camera = null;
+  gameCanvas = null;
+  config = null;
+  mounted = false;
+  setGameCanvas(canvas) {
+    this.gameCanvas = canvas;
+    this.tryMount();
+  }
+  setConfig(config) {
+    this.config = config;
+    this.tryMount();
+  }
+  setContainer(container) {
+    this.container = container;
+    this.tryMount();
+  }
+  setCamera(camera2) {
+    this.camera = camera2;
+    this.tryMount();
+  }
+  /**
+   * Attempt to mount renderer if all dependencies are available.
+   */
+  tryMount() {
+    if (this.mounted) return;
+    if (!this.container || !this.camera || !this.gameCanvas) return;
+    const dom = this.camera.getDomElement();
+    const internal = this.config?.internalResolution;
+    this.gameCanvas.mountRenderer(dom, (cssW, cssH) => {
+      if (!this.camera) return;
+      if (internal) {
+        this.camera.setPixelRatio(1);
+        this.camera.resize(internal.width, internal.height);
+      } else {
+        const dpr = window.devicePixelRatio || 1;
+        this.camera.setPixelRatio(dpr);
+        this.camera.resize(cssW, cssH);
+      }
+    });
+    this.mounted = true;
+  }
+  /**
+   * Reset state for stage transitions.
+   */
+  reset() {
+    this.camera = null;
+    this.mounted = false;
+  }
+  dispose() {
+    this.container = null;
+    this.camera = null;
+    this.gameCanvas = null;
+    this.config = null;
+    this.mounted = false;
+  }
+};
+
 // src/lib/game/zylem-game.ts
 var ZylemGame = class _ZylemGame {
   id;
@@ -4224,6 +4660,9 @@ var ZylemGame = class _ZylemGame {
   animationFrameId = null;
   isDisposed = false;
   debugDelegate = null;
+  loadingDelegate = new GameLoadingDelegate();
+  rendererObserver = new GameRendererObserver();
+  eventBusUnsubscribes = [];
   static FRAME_LIMIT = 120;
   static FRAME_DURATION = 1e3 / _ZylemGame.FRAME_LIMIT;
   static MAX_DELTA_SECONDS = 1 / 30;
@@ -4255,6 +4694,14 @@ var ZylemGame = class _ZylemGame {
     this.gameCanvas.applyBodyBackground();
     this.gameCanvas.mountCanvas();
     this.gameCanvas.centerIfFullscreen();
+    this.rendererObserver.setGameCanvas(this.gameCanvas);
+    if (this.resolvedConfig) {
+      this.rendererObserver.setConfig(this.resolvedConfig);
+    }
+    if (this.container) {
+      this.rendererObserver.setContainer(this.container);
+    }
+    this.subscribeToEventBus();
   }
   loadDebugOptions(options) {
     if (options.debug !== void 0) {
@@ -4262,28 +4709,18 @@ var ZylemGame = class _ZylemGame {
     }
     this.debugDelegate = new GameDebugDelegate();
   }
-  async loadStage(stage) {
+  loadStage(stage, stageIndex = 0) {
     this.unloadCurrentStage();
     const config = stage.options[0];
-    await stage.load(this.id, config?.camera);
-    this.stageMap.set(stage.wrappedStage.uuid, stage);
-    this.currentStageId = stage.wrappedStage.uuid;
-    this.defaultCamera = stage.wrappedStage.cameraRef;
-    if (this.container && this.defaultCamera) {
-      const dom = this.defaultCamera.getDomElement();
-      const internal = this.resolvedConfig?.internalResolution;
-      this.gameCanvas?.mountRenderer(dom, (cssW, cssH) => {
-        if (!this.defaultCamera) return;
-        if (internal) {
-          this.defaultCamera.setPixelRatio(1);
-          this.defaultCamera.resize(internal.width, internal.height);
-        } else {
-          const dpr = window.devicePixelRatio || 1;
-          this.defaultCamera.setPixelRatio(dpr);
-          this.defaultCamera.resize(cssW, cssH);
-        }
-      });
-    }
+    this.loadingDelegate.wireStageLoading(stage, stageIndex);
+    return stage.load(this.id, config?.camera).then(() => {
+      this.stageMap.set(stage.wrappedStage.uuid, stage);
+      this.currentStageId = stage.wrappedStage.uuid;
+      this.defaultCamera = stage.wrappedStage.cameraRef;
+      if (this.defaultCamera) {
+        this.rendererObserver.setCamera(this.defaultCamera);
+      }
+    });
   }
   unloadCurrentStage() {
     if (!this.currentStageId) return;
@@ -4298,8 +4735,12 @@ var ZylemGame = class _ZylemGame {
       } catch (e) {
         console.error("Failed to destroy previous stage", e);
       }
+      current.wrappedStage = null;
     }
     this.stageMap.delete(this.currentStageId);
+    this.currentStageId = "";
+    this.defaultCamera = null;
+    this.rendererObserver.reset();
   }
   setGlobals(options) {
     this.initialGlobals = { ...options.globals };
@@ -4344,7 +4785,7 @@ var ZylemGame = class _ZylemGame {
       if (this.customUpdate) {
         this.customUpdate(clampedParams);
       }
-      if (stage) {
+      if (stage && stage.wrappedStage) {
         stage.wrappedStage.nodeUpdate({ ...clampedParams, me: stage.wrappedStage });
       }
       this.totalTime += clampedParams.delta;
@@ -4368,6 +4809,9 @@ var ZylemGame = class _ZylemGame {
       this.debugDelegate.dispose();
       this.debugDelegate = null;
     }
+    this.eventBusUnsubscribes.forEach((unsub) => unsub());
+    this.eventBusUnsubscribes = [];
+    this.rendererObserver.dispose();
     this.timer.dispose();
     if (this.customDestroy) {
       this.customDestroy({
@@ -4387,6 +4831,40 @@ var ZylemGame = class _ZylemGame {
   }
   currentStage() {
     return this.getStage(this.currentStageId);
+  }
+  /**
+   * Subscribe to loading events from the game.
+   * Events include stage context (stageName, stageIndex).
+   * @param callback Invoked for each loading event
+   * @returns Unsubscribe function
+   */
+  onLoading(callback) {
+    return this.loadingDelegate.onLoading(callback);
+  }
+  /**
+   * Subscribe to the game event bus for stage loading events.
+   * Emits window events for cross-application communication.
+   */
+  subscribeToEventBus() {
+    const emitWindowEvent = (payload) => {
+      if (typeof window !== "undefined") {
+        const event = {
+          type: payload.type,
+          message: payload.message ?? "",
+          progress: payload.progress ?? 0,
+          current: payload.current,
+          total: payload.total,
+          stageName: payload.stageName,
+          stageIndex: payload.stageIndex
+        };
+        window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
+      }
+    };
+    this.eventBusUnsubscribes.push(
+      gameEventBus.on("stage:loading:start", emitWindowEvent),
+      gameEventBus.on("stage:loading:progress", emitWindowEvent),
+      gameEventBus.on("stage:loading:complete", emitWindowEvent)
+    );
   }
 };
 
@@ -4518,7 +4996,7 @@ init_stage();
 init_entity();
 init_builder();
 init_create();
-import { Color as Color9, Group as Group5, Sprite as ThreeSprite, SpriteMaterial, CanvasTexture, LinearFilter, Vector2 as Vector27, ClampToEdgeWrapping } from "three";
+import { Color as Color10, Group as Group5, Sprite as ThreeSprite, SpriteMaterial, CanvasTexture, LinearFilter, Vector2 as Vector28, ClampToEdgeWrapping } from "three";
 
 // src/lib/entities/delegates/debug.ts
 import { MeshStandardMaterial as MeshStandardMaterial2, MeshBasicMaterial as MeshBasicMaterial2, MeshPhongMaterial as MeshPhongMaterial2 } from "three";
@@ -4625,7 +5103,7 @@ var textDefaults = {
   backgroundColor: null,
   padding: 4,
   stickToViewport: true,
-  screenPosition: new Vector27(24, 24),
+  screenPosition: new Vector28(24, 24),
   zDistance: 1
 };
 var TextBuilder = class extends EntityBuilder {
@@ -4727,7 +5205,7 @@ var ZylemText = class _ZylemText extends GameEntity {
   }
   toCssColor(color) {
     if (typeof color === "string") return color;
-    const c = color instanceof Color9 ? color : new Color9(color);
+    const c = color instanceof Color10 ? color : new Color10(color);
     return `#${c.getHexString()}`;
   }
   textSetup(params) {
@@ -4787,7 +5265,7 @@ var ZylemText = class _ZylemText extends GameEntity {
     if (!this._sprite || !this._cameraRef) return;
     const camera2 = this._cameraRef.camera;
     const { width, height } = this.getResolution();
-    const sp = this.options.screenPosition ?? new Vector27(24, 24);
+    const sp = this.options.screenPosition ?? new Vector28(24, 24);
     const { px, py } = this.getScreenPixels(sp, width, height);
     const zDist = Math.max(1e-3, this.options.zDistance ?? 1);
     const { worldHalfW, worldHalfH } = this.computeWorldExtents(camera2, zDist);
@@ -4832,20 +5310,20 @@ init_builder();
 init_builder();
 init_create();
 import { ColliderDesc as ColliderDesc3 } from "@dimforge/rapier3d-compat";
-import { Color as Color10, Euler, Group as Group6, Quaternion as Quaternion3, Vector3 as Vector315 } from "three";
+import { Color as Color11, Euler, Group as Group6, Quaternion as Quaternion3, Vector3 as Vector316 } from "three";
 import {
   TextureLoader as TextureLoader3,
   SpriteMaterial as SpriteMaterial2,
   Sprite as ThreeSprite2
 } from "three";
 var spriteDefaults = {
-  size: new Vector315(1, 1, 1),
-  position: new Vector315(0, 0, 0),
+  size: new Vector316(1, 1, 1),
+  position: new Vector316(0, 0, 0),
   collision: {
     static: false
   },
   material: {
-    color: new Color10("#ffffff"),
+    color: new Color11("#ffffff"),
     shader: "standard"
   },
   images: [],
@@ -4853,7 +5331,7 @@ var spriteDefaults = {
 };
 var SpriteCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
-    const size = options.collisionSize || options.size || new Vector315(1, 1, 1);
+    const size = options.collisionSize || options.size || new Vector316(1, 1, 1);
     const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
     let colliderDesc = ColliderDesc3.cuboid(half.x, half.y, half.z);
     return colliderDesc;
@@ -5039,6 +5517,7 @@ var Game = class {
   setupCallbacks = [];
   updateCallbacks = [];
   destroyCallbacks = [];
+  pendingLoadingCallbacks = [];
   refErrorMessage = "lost reference to game";
   constructor(options) {
     this.options = options;
@@ -5077,6 +5556,9 @@ var Game = class {
       ...options,
       ...resolved
     }, this);
+    for (const callback of this.pendingLoadingCallbacks) {
+      game.onLoading(callback);
+    }
     await game.loadStage(options.stages[0]);
     return game;
   }
@@ -5112,19 +5594,19 @@ var Game = class {
     }
     await this.wrappedGame.loadStage(this.wrappedGame.stages[0]);
   }
-  async previousStage() {
+  previousStage() {
     if (!this.wrappedGame) {
       console.error(this.refErrorMessage);
       return;
     }
     const currentStageId = this.wrappedGame.currentStageId;
-    const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage.uuid === currentStageId);
+    const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage?.uuid === currentStageId);
     const previousStage = this.wrappedGame.stages[currentIndex - 1];
     if (!previousStage) {
       console.error("previous stage called on first stage");
       return;
     }
-    await this.wrappedGame.loadStage(previousStage);
+    this.wrappedGame.loadStage(previousStage);
   }
   async loadStageFromId(stageId) {
     if (!this.wrappedGame) {
@@ -5140,28 +5622,29 @@ var Game = class {
       console.error(`Failed to load stage ${stageId}`, e);
     }
   }
-  async nextStage() {
+  nextStage() {
     if (!this.wrappedGame) {
       console.error(this.refErrorMessage);
       return;
     }
     if (stageState2.next) {
       const nextId = stageState2.next.id;
-      await StageManager.transitionForward(nextId);
+      StageManager.transitionForward(nextId);
       if (stageState2.current) {
-        const stage = await StageFactory.createFromBlueprint(stageState2.current);
-        await this.wrappedGame.loadStage(stage);
+        StageFactory.createFromBlueprint(stageState2.current).then((stage) => {
+          this.wrappedGame?.loadStage(stage);
+        });
         return;
       }
     }
     const currentStageId = this.wrappedGame.currentStageId;
-    const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage.uuid === currentStageId);
+    const currentIndex = this.wrappedGame.stages.findIndex((s) => s.wrappedStage?.uuid === currentStageId);
     const nextStage = this.wrappedGame.stages[currentIndex + 1];
     if (!nextStage) {
       console.error("next stage called on last stage");
       return;
     }
-    await this.wrappedGame.loadStage(nextStage);
+    this.wrappedGame.loadStage(nextStage);
   }
   async goToStage() {
   }
@@ -5172,7 +5655,22 @@ var Game = class {
       this.wrappedGame.dispose();
     }
   }
+  /**
+   * Subscribe to loading events from the game.
+   * Events include stage context (stageName, stageIndex).
+   * @param callback Invoked for each loading event
+   * @returns Unsubscribe function
+   */
   onLoading(callback) {
+    if (this.wrappedGame) {
+      return this.wrappedGame.onLoading(callback);
+    }
+    this.pendingLoadingCallbacks.push(callback);
+    return () => {
+      this.pendingLoadingCallbacks = this.pendingLoadingCallbacks.filter((c) => c !== callback);
+      if (this.wrappedGame) {
+      }
+    };
   }
 };
 function createGame(...options) {
@@ -5183,7 +5681,7 @@ function createGame(...options) {
 init_stage();
 
 // src/lib/stage/entity-spawner.ts
-import { Euler as Euler2, Quaternion as Quaternion4, Vector2 as Vector28 } from "three";
+import { Euler as Euler2, Quaternion as Quaternion4, Vector2 as Vector29 } from "three";
 function entitySpawner(factory) {
   return {
     spawn: async (stage, x, y) => {
@@ -5191,7 +5689,7 @@ function entitySpawner(factory) {
       stage.add(instance);
       return instance;
     },
-    spawnRelative: async (source, stage, offset = new Vector28(0, 1)) => {
+    spawnRelative: async (source, stage, offset = new Vector29(0, 1)) => {
       if (!source.body) {
         console.warn("body missing for entity during spawnRelative");
         return void 0;
@@ -5249,23 +5747,23 @@ init_builder();
 init_builder();
 init_builder();
 import { ColliderDesc as ColliderDesc4 } from "@dimforge/rapier3d-compat";
-import { BoxGeometry as BoxGeometry2, Color as Color11 } from "three";
-import { Vector3 as Vector316 } from "three";
+import { BoxGeometry as BoxGeometry2, Color as Color12 } from "three";
+import { Vector3 as Vector317 } from "three";
 init_create();
 var boxDefaults = {
-  size: new Vector316(1, 1, 1),
-  position: new Vector316(0, 0, 0),
+  size: new Vector317(1, 1, 1),
+  position: new Vector317(0, 0, 0),
   collision: {
     static: false
   },
   material: {
-    color: new Color11("#ffffff"),
+    color: new Color12("#ffffff"),
     shader: "standard"
   }
 };
 var BoxCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
-    const size = options.size || new Vector316(1, 1, 1);
+    const size = options.size || new Vector317(1, 1, 1);
     const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
     let colliderDesc = ColliderDesc4.cuboid(half.x, half.y, half.z);
     return colliderDesc;
@@ -5273,7 +5771,7 @@ var BoxCollisionBuilder = class extends EntityCollisionBuilder {
 };
 var BoxMeshBuilder = class extends EntityMeshBuilder {
   build(options) {
-    const size = options.size ?? new Vector316(1, 1, 1);
+    const size = options.size ?? new Vector317(1, 1, 1);
     return new BoxGeometry2(size.x, size.y, size.z);
   }
 };
@@ -5318,17 +5816,17 @@ init_builder();
 init_builder();
 init_builder();
 import { ColliderDesc as ColliderDesc5 } from "@dimforge/rapier3d-compat";
-import { Color as Color12, SphereGeometry } from "three";
-import { Vector3 as Vector317 } from "three";
+import { Color as Color13, SphereGeometry } from "three";
+import { Vector3 as Vector318 } from "three";
 init_create();
 var sphereDefaults = {
   radius: 1,
-  position: new Vector317(0, 0, 0),
+  position: new Vector318(0, 0, 0),
   collision: {
     static: false
   },
   material: {
-    color: new Color12("#ffffff"),
+    color: new Color13("#ffffff"),
     shader: "standard"
   }
 };
@@ -5386,7 +5884,7 @@ init_builder();
 init_builder();
 init_builder();
 import { ColliderDesc as ColliderDesc6 } from "@dimforge/rapier3d-compat";
-import { Color as Color13, PlaneGeometry, Vector2 as Vector29, Vector3 as Vector318 } from "three";
+import { Color as Color14, PlaneGeometry, Vector2 as Vector210, Vector3 as Vector319 } from "three";
 
 // src/lib/graphics/geometries/XZPlaneGeometry.ts
 import { BufferGeometry as BufferGeometry5, Float32BufferAttribute } from "three";
@@ -5451,25 +5949,25 @@ var XZPlaneGeometry = class _XZPlaneGeometry extends BufferGeometry5 {
 init_create();
 var DEFAULT_SUBDIVISIONS = 4;
 var planeDefaults = {
-  tile: new Vector29(10, 10),
-  repeat: new Vector29(1, 1),
-  position: new Vector318(0, 0, 0),
+  tile: new Vector210(10, 10),
+  repeat: new Vector210(1, 1),
+  position: new Vector319(0, 0, 0),
   collision: {
     static: true
   },
   material: {
-    color: new Color13("#ffffff"),
+    color: new Color14("#ffffff"),
     shader: "standard"
   },
   subdivisions: DEFAULT_SUBDIVISIONS
 };
 var PlaneCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
-    const tile = options.tile ?? new Vector29(1, 1);
+    const tile = options.tile ?? new Vector210(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
-    const size = new Vector318(tile.x, 1, tile.y);
+    const size = new Vector319(tile.x, 1, tile.y);
     const heightData = options._builders?.meshBuilder?.heightData;
-    const scale2 = new Vector318(size.x, 1, size.z);
+    const scale2 = new Vector319(size.x, 1, size.z);
     let colliderDesc = ColliderDesc6.heightfield(
       subdivisions,
       subdivisions,
@@ -5483,9 +5981,9 @@ var PlaneMeshBuilder = class extends EntityMeshBuilder {
   heightData = new Float32Array();
   columnsRows = /* @__PURE__ */ new Map();
   build(options) {
-    const tile = options.tile ?? new Vector29(1, 1);
+    const tile = options.tile ?? new Vector210(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
-    const size = new Vector318(tile.x, 1, tile.y);
+    const size = new Vector319(tile.x, 1, tile.y);
     const geometry = new XZPlaneGeometry(size.x, size.z, subdivisions, subdivisions);
     const vertexGeometry = new PlaneGeometry(size.x, size.z, subdivisions, subdivisions);
     const dx = size.x / subdivisions;
@@ -5554,10 +6052,10 @@ init_builder();
 init_create();
 init_game_state();
 import { ActiveCollisionTypes as ActiveCollisionTypes3, ColliderDesc as ColliderDesc7 } from "@dimforge/rapier3d-compat";
-import { Vector3 as Vector319 } from "three";
+import { Vector3 as Vector320 } from "three";
 var zoneDefaults = {
-  size: new Vector319(1, 1, 1),
-  position: new Vector319(0, 0, 0),
+  size: new Vector320(1, 1, 1),
+  position: new Vector320(0, 0, 0),
   collision: {
     static: true
   },
@@ -5567,7 +6065,7 @@ var zoneDefaults = {
 };
 var ZoneCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
-    const size = options.size || new Vector319(1, 1, 1);
+    const size = options.size || new Vector320(1, 1, 1);
     const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
     let colliderDesc = ColliderDesc7.cuboid(half.x, half.y, half.z);
     colliderDesc.setSensor(true);
@@ -5677,7 +6175,7 @@ init_actor();
 init_entity();
 init_builder();
 init_create();
-import { Color as Color14, Group as Group7, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector210, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial4, Mesh as Mesh5, PlaneGeometry as PlaneGeometry2, Vector3 as Vector320 } from "three";
+import { Color as Color15, Group as Group7, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector211, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial4, Mesh as Mesh5, PlaneGeometry as PlaneGeometry2, Vector3 as Vector321 } from "three";
 var rectDefaults = {
   position: void 0,
   width: 120,
@@ -5688,9 +6186,9 @@ var rectDefaults = {
   radius: 0,
   padding: 0,
   stickToViewport: true,
-  screenPosition: new Vector210(24, 24),
+  screenPosition: new Vector211(24, 24),
   zDistance: 1,
-  anchor: new Vector210(0, 0)
+  anchor: new Vector211(0, 0)
 };
 var RectBuilder = class extends EntityBuilder {
   createEntity(options) {
@@ -5805,7 +6303,7 @@ var ZylemRect = class _ZylemRect extends GameEntity {
   }
   toCssColor(color) {
     if (typeof color === "string") return color;
-    const c = color instanceof Color14 ? color : new Color14(color);
+    const c = color instanceof Color15 ? color : new Color15(color);
     return `#${c.getHexString()}`;
   }
   rectSetup(params) {
@@ -5839,10 +6337,10 @@ var ZylemRect = class _ZylemRect extends GameEntity {
         const desiredW = Math.max(2, Math.floor(width));
         const desiredH = Math.max(2, Math.floor(height));
         const changed = desiredW !== (this.options.width ?? 0) || desiredH !== (this.options.height ?? 0);
-        this.options.screenPosition = new Vector210(Math.floor(x), Math.floor(y));
+        this.options.screenPosition = new Vector211(Math.floor(x), Math.floor(y));
         this.options.width = desiredW;
         this.options.height = desiredH;
-        this.options.anchor = new Vector210(0, 0);
+        this.options.anchor = new Vector211(0, 0);
         if (changed) {
           this.redrawRect();
         }
@@ -5858,8 +6356,8 @@ var ZylemRect = class _ZylemRect extends GameEntity {
     const dom = this._cameraRef.renderer.domElement;
     const width = dom.clientWidth;
     const height = dom.clientHeight;
-    const px = (this.options.screenPosition ?? new Vector210(24, 24)).x;
-    const py = (this.options.screenPosition ?? new Vector210(24, 24)).y;
+    const px = (this.options.screenPosition ?? new Vector211(24, 24)).x;
+    const py = (this.options.screenPosition ?? new Vector211(24, 24)).y;
     const zDist = Math.max(1e-3, this.options.zDistance ?? 1);
     let worldHalfW = 1;
     let worldHalfH = 1;
@@ -5890,7 +6388,7 @@ var ZylemRect = class _ZylemRect extends GameEntity {
       this._sprite.scale.set(scaleX, scaleY, 1);
       if (this._mesh) this._mesh.scale.set(scaleX, scaleY, 1);
     }
-    const anchor = this.options.anchor ?? new Vector210(0, 0);
+    const anchor = this.options.anchor ?? new Vector211(0, 0);
     const ax = Math.min(100, Math.max(0, anchor.x)) / 100;
     const ay = Math.min(100, Math.max(0, anchor.y)) / 100;
     const offsetX = (0.5 - ax) * scaleX;
@@ -5914,8 +6412,8 @@ var ZylemRect = class _ZylemRect extends GameEntity {
     }
     if (bounds.world) {
       const { left, right, top, bottom, z = 0 } = bounds.world;
-      const tl = this.worldToScreen(new Vector320(left, top, z));
-      const br = this.worldToScreen(new Vector320(right, bottom, z));
+      const tl = this.worldToScreen(new Vector321(left, top, z));
+      const br = this.worldToScreen(new Vector321(right, bottom, z));
       const x = Math.min(tl.x, br.x);
       const y = Math.min(tl.y, br.y);
       const width = Math.abs(br.x - tl.x);
@@ -6384,41 +6882,41 @@ function movementSequence2D(opts, onStep) {
 }
 
 // src/lib/actions/capabilities/moveable.ts
-import { Vector3 as Vector321 } from "three";
+import { Vector3 as Vector322 } from "three";
 function moveX(entity, delta) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector321(delta, currentVelocity.y, currentVelocity.z);
+  const newVelocity = new Vector322(delta, currentVelocity.y, currentVelocity.z);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveY(entity, delta) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector321(currentVelocity.x, delta, currentVelocity.z);
+  const newVelocity = new Vector322(currentVelocity.x, delta, currentVelocity.z);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveZ(entity, delta) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector321(currentVelocity.x, currentVelocity.y, delta);
+  const newVelocity = new Vector322(currentVelocity.x, currentVelocity.y, delta);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveXY(entity, deltaX, deltaY) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector321(deltaX, deltaY, currentVelocity.z);
+  const newVelocity = new Vector322(deltaX, deltaY, currentVelocity.z);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveXZ(entity, deltaX, deltaZ) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector321(deltaX, currentVelocity.y, deltaZ);
+  const newVelocity = new Vector322(deltaX, currentVelocity.y, deltaZ);
   entity.body.setLinvel(newVelocity, true);
 }
 function move(entity, vector) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector321(
+  const newVelocity = new Vector322(
     currentVelocity.x + vector.x,
     currentVelocity.y + vector.y,
     currentVelocity.z + vector.z
@@ -6427,7 +6925,7 @@ function move(entity, vector) {
 }
 function resetVelocity(entity) {
   if (!entity.body) return;
-  entity.body.setLinvel(new Vector321(0, 0, 0), true);
+  entity.body.setLinvel(new Vector322(0, 0, 0), true);
   entity.body.setLinearDamping(5);
 }
 function moveForwardXY(entity, delta, rotation2DAngle) {
@@ -6557,14 +7055,14 @@ function makeMoveable(entity) {
 }
 
 // src/lib/actions/capabilities/rotatable.ts
-import { Euler as Euler3, Vector3 as Vector322, MathUtils, Quaternion as Quaternion5 } from "three";
+import { Euler as Euler3, Vector3 as Vector323, MathUtils, Quaternion as Quaternion5 } from "three";
 function rotateInDirection(entity, moveVector) {
   if (!entity.body) return;
   const rotate = Math.atan2(-moveVector.x, moveVector.z);
   rotateYEuler(entity, rotate);
 }
 function rotateYEuler(entity, amount) {
-  rotateEuler(entity, new Vector322(0, -amount, 0));
+  rotateEuler(entity, new Vector323(0, -amount, 0));
 }
 function rotateEuler(entity, rotation2) {
   if (!entity.group) return;
@@ -6828,6 +7326,9 @@ var ZylemGameElement = class extends HTMLElement {
     this.shadowRoot.appendChild(this.container);
   }
   set game(game) {
+    if (this._game) {
+      this._game.dispose();
+    }
     this._game = game;
     game.options.push({ container: this.container });
     game.start();
@@ -6877,6 +7378,7 @@ export {
   Howl,
   Perspectives,
   RAPIER2 as RAPIER,
+  StageManager,
   THREE2 as THREE,
   ZylemBox,
   ZylemGameElement,
@@ -6922,6 +7424,7 @@ export {
   setVariable,
   sphere,
   sprite,
+  stageState2 as stageState,
   text,
   variableChange,
   variableChanges,

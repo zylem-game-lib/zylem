@@ -1,22 +1,22 @@
 // src/web-components/zylem-editor.tsx
-import { createComponent as _$createComponent17 } from "solid-js/web";
+import { createComponent as _$createComponent18 } from "solid-js/web";
 import { render as render2 } from "solid-js/web";
 
 // src/App.tsx
-import { createComponent as _$createComponent16 } from "solid-js/web";
+import { createComponent as _$createComponent17 } from "solid-js/web";
 
 // src/components/Editor.tsx
 import { template as _$template12 } from "solid-js/web";
-import { insert as _$insert8 } from "solid-js/web";
-import { createComponent as _$createComponent15 } from "solid-js/web";
+import { insert as _$insert9 } from "solid-js/web";
+import { createComponent as _$createComponent16 } from "solid-js/web";
 import { setStyleProperty as _$setStyleProperty5 } from "solid-js/web";
 import { render } from "solid-js/web";
-import { createSignal as createSignal7, For as For2, Show as Show5 } from "solid-js";
+import { createSignal as createSignal8, For as For3, Show as Show5 } from "solid-js";
 
 // src/components/editor-panel/Menu.tsx
 import { template as _$template8 } from "solid-js/web";
-import { insert as _$insert5 } from "solid-js/web";
-import { createComponent as _$createComponent13 } from "solid-js/web";
+import { insert as _$insert6 } from "solid-js/web";
+import { createComponent as _$createComponent14 } from "solid-js/web";
 import { Show as Show3 } from "solid-js";
 
 // src/components/toolbar/Toolbar.tsx
@@ -565,13 +565,13 @@ var Toolbar = () => {
 
 // src/components/editor-panel/AccordionMenu.tsx
 import { template as _$template7 } from "solid-js/web";
-import { createComponent as _$createComponent12 } from "solid-js/web";
+import { createComponent as _$createComponent13 } from "solid-js/web";
 import { memo as _$memo3 } from "solid-js/web";
 import { Accordion as Accordion2 } from "@kobalte/core";
 import { Index, Show as Show2 } from "solid-js";
 
 // src/components/editor-panel/panel-config.tsx
-import { createComponent as _$createComponent10 } from "solid-js/web";
+import { createComponent as _$createComponent11 } from "solid-js/web";
 
 // src/components/game/GameSection.tsx
 import { template as _$template2 } from "solid-js/web";
@@ -631,22 +631,48 @@ var GameSection = () => {
 };
 _$delegateEvents(["click"]);
 
-// src/components/stages/StagesSection.tsx
+// src/components/stages/StageSection.tsx
 import { template as _$template3 } from "solid-js/web";
 import { delegateEvents as _$delegateEvents2 } from "solid-js/web";
-var _tmpl$3 = /* @__PURE__ */ _$template3(`<div class=panel-content><section class=zylem-toolbar><button class="zylem-toolbar-btn zylem-button">Print Stage State</button><button class="zylem-toolbar-btn zylem-button">Print All Stage`);
-var StagesSection = () => (() => {
-  var _el$ = _tmpl$3(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling;
-  _el$3.$$click = () => {
-    const currentStageState = stageState;
-    printToConsole(`Stage State: ${stageStateToString(currentStageState)}`);
-  };
-  _el$4.$$click = () => {
-    const allStageState = stageState;
-    printToConsole(`All Stage State: ${stageStateToString(allStageState)}`);
-  };
-  return _el$;
-})();
+import { createComponent as _$createComponent9 } from "solid-js/web";
+import { insert as _$insert3 } from "solid-js/web";
+import { For, createSignal, onMount, onCleanup as onCleanup2 } from "solid-js";
+var _tmpl$3 = /* @__PURE__ */ _$template3(`<div class=panel-content><section class=zylem-toolbar><button class="zylem-toolbar-btn zylem-button">Print Stage State</button></section><section class=zylem-section><h4 class=zylem-section-title>Entities (<!>)</h4><ul class=zylem-list>`);
+var _tmpl$22 = /* @__PURE__ */ _$template3(`<li class=zylem-list-item><span class=zylem-entity-name>`);
+var STAGE_STATE_CHANGE = "STAGE_STATE_CHANGE";
+var StageSection = () => {
+  const [entities, setEntities] = createSignal([]);
+  onMount(() => {
+    const handleStageStateChange = (event) => {
+      const customEvent = event;
+      if (customEvent.detail?.entities) {
+        setEntities(customEvent.detail.entities);
+      }
+    };
+    window.addEventListener(STAGE_STATE_CHANGE, handleStageStateChange);
+    onCleanup2(() => {
+      window.removeEventListener(STAGE_STATE_CHANGE, handleStageStateChange);
+    });
+  });
+  return (() => {
+    var _el$ = _tmpl$3(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$2.nextSibling, _el$5 = _el$4.firstChild, _el$6 = _el$5.firstChild, _el$8 = _el$6.nextSibling, _el$7 = _el$8.nextSibling, _el$9 = _el$5.nextSibling;
+    _el$3.$$click = () => {
+      printToConsole(`Stage State: ${stageStateToString(stageState)}`);
+    };
+    _$insert3(_el$5, () => entities().length, _el$8);
+    _$insert3(_el$9, _$createComponent9(For, {
+      get each() {
+        return entities();
+      },
+      children: (entity) => (() => {
+        var _el$0 = _tmpl$22(), _el$1 = _el$0.firstChild;
+        _$insert3(_el$1, () => entity.name);
+        return _el$0;
+      })()
+    }));
+    return _el$;
+  })();
+};
 _$delegateEvents2(["click"]);
 
 // src/components/entities/EntitiesSection.tsx
@@ -654,24 +680,24 @@ import { template as _$template4 } from "solid-js/web";
 import { delegateEvents as _$delegateEvents3 } from "solid-js/web";
 import { className as _$className } from "solid-js/web";
 import { effect as _$effect } from "solid-js/web";
-import { createComponent as _$createComponent9 } from "solid-js/web";
-import { insert as _$insert3 } from "solid-js/web";
+import { createComponent as _$createComponent10 } from "solid-js/web";
+import { insert as _$insert4 } from "solid-js/web";
 import { memo as _$memo2 } from "solid-js/web";
-import { For, createSignal, onCleanup as onCleanup2, onMount } from "solid-js";
+import { For as For2, createSignal as createSignal2, onCleanup as onCleanup3, onMount as onMount2 } from "solid-js";
 import { subscribe as subscribe3 } from "valtio/vanilla";
 import Info from "lucide-solid/icons/info";
 var _tmpl$4 = /* @__PURE__ */ _$template4(`<div><h4></h4><div class=entity-details></div><button class="zylem-toolbar-btn zylem-button">`);
-var _tmpl$22 = /* @__PURE__ */ _$template4(`<div class=panel-content><div class=entities-list>`);
+var _tmpl$23 = /* @__PURE__ */ _$template4(`<div class=panel-content><div class=entities-list>`);
 var EntityRow = (props) => {
   return (() => {
     var _el$ = _tmpl$4(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.nextSibling;
     _el$.addEventListener("mouseenter", () => {
     });
-    _$insert3(_el$2, () => props.entity.name || `Entity ${props.entity.uuid}`);
+    _$insert4(_el$2, () => props.entity.name || `Entity ${props.entity.uuid}`);
     _el$4.$$click = () => {
       printToConsole(`Entity: ${JSON.stringify(props.entity, null, 2)}`);
     };
-    _$insert3(_el$4, _$createComponent9(Info, {
+    _$insert4(_el$4, _$createComponent10(Info, {
       "class": "zylem-icon"
     }));
     _$effect(() => _$className(_el$, `entity-item ${props.hoveredUuid === props.entity.uuid ? "hovered" : ""}`));
@@ -679,21 +705,21 @@ var EntityRow = (props) => {
   })();
 };
 var EntitiesSection = () => {
-  const [hoveredUuid, setHoveredUuid] = createSignal(getHoveredEntityId());
-  onMount(() => {
+  const [hoveredUuid, setHoveredUuid] = createSignal2(getHoveredEntityId());
+  onMount2(() => {
     const unsub = subscribe3(debugState, () => {
       setHoveredUuid(debugState.hoveredEntityId);
     });
-    onCleanup2(() => unsub());
+    onCleanup3(() => unsub());
   });
   return (() => {
-    var _el$5 = _tmpl$22(), _el$6 = _el$5.firstChild;
+    var _el$5 = _tmpl$23(), _el$6 = _el$5.firstChild;
     _el$5.addEventListener("mouseenter", () => resetHoveredEntity());
-    _$insert3(_el$6, _$createComponent9(For, {
+    _$insert4(_el$6, _$createComponent10(For2, {
       get each() {
         return stageState.entities;
       },
-      children: (entity, index) => _$createComponent9(EntityRow, {
+      children: (entity, index) => _$createComponent10(EntityRow, {
         entity,
         get index() {
           return index();
@@ -714,15 +740,15 @@ import { delegateEvents as _$delegateEvents4 } from "solid-js/web";
 import { addEventListener as _$addEventListener } from "solid-js/web";
 import { setAttribute as _$setAttribute } from "solid-js/web";
 import { effect as _$effect2 } from "solid-js/web";
-import { createSignal as createSignal2, onCleanup as onCleanup3 } from "solid-js";
+import { createSignal as createSignal3, onCleanup as onCleanup4 } from "solid-js";
 import { subscribe as subscribe4 } from "valtio/vanilla";
 var _tmpl$5 = /* @__PURE__ */ _$template5(`<div class=zylem-console-container><div class=zylem-console-wrapper><textarea class=zylem-console></textarea><button class="zylem-console-clear zylem-button">Clear`);
 var Console = () => {
-  const [consoleContent, setConsoleContent] = createSignal2(consoleState.messages.join("\n"));
+  const [consoleContent, setConsoleContent] = createSignal3(consoleState.messages.join("\n"));
   const unsubscribe = subscribe4(consoleState, () => {
     setConsoleContent(consoleState.messages.join("\n"));
   });
-  onCleanup3(() => {
+  onCleanup4(() => {
     unsubscribe();
   });
   const handleInput = (event) => {
@@ -747,8 +773,8 @@ var PANEL_CONFIGS = [{
   component: GameSection
 }, {
   id: "stage-config",
-  title: "Stages",
-  component: StagesSection
+  title: "Stage",
+  component: StageSection
 }, {
   id: "entities",
   title: "Entities",
@@ -768,17 +794,17 @@ var renderPanelContent = (id) => {
   const config = getPanelConfig(id);
   if (!config) return null;
   const PanelComponent = config.component;
-  return _$createComponent10(PanelComponent, {});
+  return _$createComponent11(PanelComponent, {});
 };
 
 // src/components/editor-panel/DraggableAccordionItem.tsx
 import { template as _$template6 } from "solid-js/web";
 import { effect as _$effect3 } from "solid-js/web";
-import { insert as _$insert4 } from "solid-js/web";
+import { insert as _$insert5 } from "solid-js/web";
 import { setStyleProperty as _$setStyleProperty } from "solid-js/web";
-import { createComponent as _$createComponent11 } from "solid-js/web";
+import { createComponent as _$createComponent12 } from "solid-js/web";
 import { Accordion } from "@kobalte/core";
-import { createSignal as createSignal3, onCleanup as onCleanup4, onMount as onMount2, Show } from "solid-js";
+import { createSignal as createSignal4, onCleanup as onCleanup5, onMount as onMount3, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 var _tmpl$6 = /* @__PURE__ */ _$template6(`<div class=accordion-drag-ghost style="z-index:9999;pointer-events:none;align-items:center;justify-content:space-between;border-radius:12px;font-family:'Exo 2', sans-serif;backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px #E64534"><span class="accordion-trigger zylem-exo-2"style="font-family:'Exo 2', sans-serif;font-weight:400">`);
 var DRAG_THRESHOLD = 5;
@@ -786,12 +812,12 @@ var DraggableAccordionItem = (props) => {
   let itemRef;
   let headerRef;
   let menuPanelRef = null;
-  const [isDragging, setIsDragging] = createSignal3(false);
-  const [ghostPos, setGhostPos] = createSignal3({
+  const [isDragging, setIsDragging] = createSignal4(false);
+  const [ghostPos, setGhostPos] = createSignal4({
     x: 0,
     y: 0
   });
-  const [headerSize, setHeaderSize] = createSignal3({
+  const [headerSize, setHeaderSize] = createSignal4({
     width: 0,
     height: 0
   });
@@ -900,15 +926,15 @@ var DraggableAccordionItem = (props) => {
     }
     clearDragState();
   };
-  onMount2(() => {
+  onMount3(() => {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   });
-  onCleanup4(() => {
+  onCleanup5(() => {
     window.removeEventListener("mousemove", handleMouseMove);
     window.removeEventListener("mouseup", handleMouseUp);
   });
-  return [_$createComponent11(Accordion.Item, {
+  return [_$createComponent12(Accordion.Item, {
     ref(r$) {
       var _ref$ = itemRef;
       typeof _ref$ === "function" ? _ref$(r$) : itemRef = r$;
@@ -920,7 +946,7 @@ var DraggableAccordionItem = (props) => {
       return `accordion-item ${isDragging() ? "accordion-item--dragging" : ""}`;
     },
     get children() {
-      return [_$createComponent11(Accordion.Header, {
+      return [_$createComponent12(Accordion.Header, {
         ref(r$) {
           var _ref$2 = headerRef;
           typeof _ref$2 === "function" ? _ref$2(r$) : headerRef = r$;
@@ -928,26 +954,26 @@ var DraggableAccordionItem = (props) => {
         "class": "accordion-header",
         onMouseDown: handleMouseDown,
         get children() {
-          return _$createComponent11(Accordion.Trigger, {
+          return _$createComponent12(Accordion.Trigger, {
             "class": "accordion-trigger zylem-exo-2",
             get children() {
               return props.title;
             }
           });
         }
-      }), _$createComponent11(Accordion.Content, {
+      }), _$createComponent12(Accordion.Content, {
         "class": "accordion-content scrollable-y scroll-thin",
         get children() {
           return props.children;
         }
       })];
     }
-  }), _$createComponent11(Show, {
+  }), _$createComponent12(Show, {
     get when() {
       return isDragging();
     },
     get children() {
-      return _$createComponent11(Portal, {
+      return _$createComponent12(Portal, {
         get children() {
           var _el$ = _tmpl$6(), _el$2 = _el$.firstChild;
           _$setStyleProperty(_el$, "position", "fixed");
@@ -956,7 +982,7 @@ var DraggableAccordionItem = (props) => {
           _$setStyleProperty(_el$, "border", "2px dotted #E64534");
           _$setStyleProperty(_el$, "color", "#61A6E8");
           _$setStyleProperty(_el$2, "padding", "8px 12px");
-          _$insert4(_el$2, () => props.title);
+          _$insert5(_el$2, () => props.title);
           _$effect3((_p$) => {
             var _v$ = `${ghostPos().x}px`, _v$2 = `${ghostPos().y}px`, _v$3 = `${headerSize().width}px`, _v$4 = `${headerSize().height}px`;
             _v$ !== _p$.e && _$setStyleProperty(_el$, "left", _p$.e = _v$);
@@ -986,7 +1012,7 @@ var AccordionMenu = () => {
   };
   const isDraggingToReattach = () => debugStore.draggingPanelId !== null;
   const dropTargetIndex = () => debugStore.dropTargetIndex;
-  return _$createComponent12(Accordion2.Root, {
+  return _$createComponent13(Accordion2.Root, {
     multiple: true,
     "class": "zylem-accordion",
     get value() {
@@ -994,18 +1020,18 @@ var AccordionMenu = () => {
     },
     onChange: setOpenSections,
     get children() {
-      return [_$createComponent12(Show2, {
+      return [_$createComponent13(Show2, {
         get when() {
           return _$memo3(() => !!isDraggingToReattach())() && dropTargetIndex() === 0;
         },
         get children() {
           return _tmpl$7();
         }
-      }), _$createComponent12(Index, {
+      }), _$createComponent13(Index, {
         get each() {
           return getDockedPanels();
         },
-        children: (panel, index) => [_$createComponent12(DraggableAccordionItem, {
+        children: (panel, index) => [_$createComponent13(DraggableAccordionItem, {
           get value() {
             return panel().id;
           },
@@ -1015,7 +1041,7 @@ var AccordionMenu = () => {
           get children() {
             return renderPanelContent(panel().id);
           }
-        }), _$createComponent12(Show2, {
+        }), _$createComponent13(Show2, {
           get when() {
             return _$memo3(() => !!isDraggingToReattach())() && dropTargetIndex() === index + 1;
           },
@@ -1033,13 +1059,13 @@ var _tmpl$8 = /* @__PURE__ */ _$template8(`<div class=zylem-menu>`);
 var Menu = (props) => {
   return (() => {
     var _el$ = _tmpl$8();
-    _$insert5(_el$, _$createComponent13(Toolbar, {}), null);
-    _$insert5(_el$, _$createComponent13(Show3, {
+    _$insert6(_el$, _$createComponent14(Toolbar, {}), null);
+    _$insert6(_el$, _$createComponent14(Show3, {
       get when() {
         return !props.isCollapsed();
       },
       get children() {
-        return _$createComponent13(AccordionMenu, {});
+        return _$createComponent14(AccordionMenu, {});
       }
     }), null);
     return _el$;
@@ -1051,13 +1077,13 @@ import { template as _$template9 } from "solid-js/web";
 import { delegateEvents as _$delegateEvents5 } from "solid-js/web";
 import { effect as _$effect4 } from "solid-js/web";
 import { setStyleProperty as _$setStyleProperty2 } from "solid-js/web";
-import { createSignal as createSignal4, onCleanup as onCleanup5, onMount as onMount3 } from "solid-js";
+import { createSignal as createSignal5, onCleanup as onCleanup6, onMount as onMount4 } from "solid-js";
 var _tmpl$9 = /* @__PURE__ */ _$template9(`<div style=z-index:1001><button id=zylem-editor-toggle type=button>`);
 var SNAP_THRESHOLD = 50;
 var DRAG_THRESHOLD2 = 5;
 var BUTTON_SIZE = 96;
 var EditorToggleButton = (props) => {
-  const [position, setPosition] = createSignal4({
+  const [position, setPosition] = createSignal5({
     x: 0,
     y: 0
   });
@@ -1137,7 +1163,7 @@ var EditorToggleButton = (props) => {
       hasMoved = false;
     }
   };
-  onMount3(() => {
+  onMount4(() => {
     const initialX = window.innerWidth - BUTTON_SIZE - 20;
     const initialY = 20;
     const initialPos = {
@@ -1149,7 +1175,7 @@ var EditorToggleButton = (props) => {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   });
-  onCleanup5(() => {
+  onCleanup6(() => {
     window.removeEventListener("mousemove", handleMouseMove);
     window.removeEventListener("mouseup", handleMouseUp);
   });
@@ -1178,33 +1204,33 @@ import { template as _$template10 } from "solid-js/web";
 import { delegateEvents as _$delegateEvents6 } from "solid-js/web";
 import { style as _$style } from "solid-js/web";
 import { addEventListener as _$addEventListener2 } from "solid-js/web";
-import { createComponent as _$createComponent14 } from "solid-js/web";
+import { createComponent as _$createComponent15 } from "solid-js/web";
 import { setAttribute as _$setAttribute2 } from "solid-js/web";
 import { effect as _$effect5 } from "solid-js/web";
-import { insert as _$insert6 } from "solid-js/web";
+import { insert as _$insert7 } from "solid-js/web";
 import { memo as _$memo4 } from "solid-js/web";
 import { setStyleProperty as _$setStyleProperty3 } from "solid-js/web";
-import { createSignal as createSignal5, onCleanup as onCleanup6, onMount as onMount4, Show as Show4 } from "solid-js";
+import { createSignal as createSignal6, onCleanup as onCleanup7, onMount as onMount5, Show as Show4 } from "solid-js";
 import PanelBottomOpen from "lucide-solid/icons/panel-bottom-open";
 import PanelBottomClose from "lucide-solid/icons/panel-bottom-close";
 import X from "lucide-solid/icons/x";
 var _tmpl$10 = /* @__PURE__ */ _$template10(`<button class=floating-panel-button type=button>`);
-var _tmpl$23 = /* @__PURE__ */ _$template10(`<div class=floating-panel style=z-index:1002;flex-direction:column><div class=floating-panel-titlebar style=align-items:center;justify-content:space-between;user-select:none><span class=floating-panel-title></span><div class=floating-panel-controls></div></div><div class=floating-panel-content style=flex-direction:column></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div>`);
+var _tmpl$24 = /* @__PURE__ */ _$template10(`<div class=floating-panel style=z-index:1002;flex-direction:column><div class=floating-panel-titlebar style=align-items:center;justify-content:space-between;user-select:none><span class=floating-panel-title></span><div class=floating-panel-controls></div></div><div class=floating-panel-content style=flex-direction:column></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div>`);
 var DRAG_THRESHOLD3 = 3;
 var FloatingPanel = (props) => {
   const minSize = props.minSize ?? {
     width: 300,
     height: 200
   };
-  const [position, setPosition] = createSignal5(props.initialPosition ?? {
+  const [position, setPosition] = createSignal6(props.initialPosition ?? {
     x: 50,
     y: 50
   });
-  const [size, setSize] = createSignal5(props.initialSize ?? {
+  const [size, setSize] = createSignal6(props.initialSize ?? {
     width: 460,
     height: 600
   });
-  const [isCollapsed, setIsCollapsed] = createSignal5(false);
+  const [isCollapsed, setIsCollapsed] = createSignal6(false);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed());
   let isDragging = false;
   let isResizing = false;
@@ -1311,11 +1337,11 @@ var FloatingPanel = (props) => {
     resizeDirection = null;
     hasMoved = false;
   };
-  onMount4(() => {
+  onMount5(() => {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   });
-  onCleanup6(() => {
+  onCleanup7(() => {
     window.removeEventListener("mousemove", handleMouseMove);
     window.removeEventListener("mouseup", handleMouseUp);
   });
@@ -1325,25 +1351,25 @@ var FloatingPanel = (props) => {
     cursor
   });
   return (() => {
-    var _el$ = _tmpl$23(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$7 = _el$2.nextSibling, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.nextSibling, _el$11 = _el$10.nextSibling, _el$12 = _el$11.nextSibling, _el$13 = _el$12.nextSibling;
+    var _el$ = _tmpl$24(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$7 = _el$2.nextSibling, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.nextSibling, _el$11 = _el$10.nextSibling, _el$12 = _el$11.nextSibling, _el$13 = _el$12.nextSibling;
     _$setStyleProperty3(_el$, "position", "fixed");
     _$setStyleProperty3(_el$, "display", "flex");
     _el$2.$$mousedown = handleTitleBarMouseDown;
     _$setStyleProperty3(_el$2, "cursor", "grab");
     _$setStyleProperty3(_el$2, "display", "flex");
-    _$insert6(_el$3, () => props.title ?? "Panel");
-    _$insert6(_el$4, _$createComponent14(Show4, {
+    _$insert7(_el$3, () => props.title ?? "Panel");
+    _$insert7(_el$4, _$createComponent15(Show4, {
       get when() {
         return props.collapsible;
       },
       get children() {
         var _el$5 = _tmpl$10();
         _el$5.$$click = toggleCollapse;
-        _$insert6(_el$5, (() => {
+        _$insert7(_el$5, (() => {
           var _c$ = _$memo4(() => !!isCollapsed());
-          return () => _c$() ? _$createComponent14(PanelBottomOpen, {
+          return () => _c$() ? _$createComponent15(PanelBottomOpen, {
             size: 12
-          }) : _$createComponent14(PanelBottomClose, {
+          }) : _$createComponent15(PanelBottomClose, {
             size: 12
           });
         })());
@@ -1351,14 +1377,14 @@ var FloatingPanel = (props) => {
         return _el$5;
       }
     }), null);
-    _$insert6(_el$4, _$createComponent14(Show4, {
+    _$insert7(_el$4, _$createComponent15(Show4, {
       get when() {
         return props.onClose;
       },
       get children() {
         var _el$6 = _tmpl$10();
         _$addEventListener2(_el$6, "click", props.onClose, true);
-        _$insert6(_el$6, _$createComponent14(X, {
+        _$insert7(_el$6, _$createComponent15(X, {
           size: 12
         }));
         return _el$6;
@@ -1367,7 +1393,7 @@ var FloatingPanel = (props) => {
     _$setStyleProperty3(_el$7, "flex", "1");
     _$setStyleProperty3(_el$7, "overflow", "hidden");
     _$setStyleProperty3(_el$7, "display", "flex");
-    _$insert6(_el$7, (() => {
+    _$insert7(_el$7, (() => {
       var _c$2 = _$memo4(() => typeof props.children === "function");
       return () => _c$2() ? props.children(isCollapsed) : props.children;
     })());
@@ -1468,8 +1494,8 @@ import { style as _$style2 } from "solid-js/web";
 import { setStyleProperty as _$setStyleProperty4 } from "solid-js/web";
 import { effect as _$effect6 } from "solid-js/web";
 import { addEventListener as _$addEventListener3 } from "solid-js/web";
-import { insert as _$insert7 } from "solid-js/web";
-import { createSignal as createSignal6, onCleanup as onCleanup7, onMount as onMount5 } from "solid-js";
+import { insert as _$insert8 } from "solid-js/web";
+import { createSignal as createSignal7, onCleanup as onCleanup8, onMount as onMount6 } from "solid-js";
 var _tmpl$11 = /* @__PURE__ */ _$template11(`<div class="detached-panel floating-panel"><div class="detached-panel-titlebar floating-panel-titlebar"><span class=floating-panel-title></span><button class="floating-panel-button zylem-button"type=button title="Dock back to panel">\u2715</button></div><div class="detached-panel-content floating-panel-content"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div>`);
 var DRAG_THRESHOLD4 = 3;
 var MIN_WIDTH = 250;
@@ -1480,11 +1506,11 @@ var DetachedPanel = (props) => {
     const index = debugStore.panelZOrder.indexOf(props.panelId);
     return 1003 + index;
   };
-  const [position, setPosition] = createSignal6(panelState()?.position ?? {
+  const [position, setPosition] = createSignal7(panelState()?.position ?? {
     x: 100,
     y: 100
   });
-  const [size, setSize] = createSignal6(panelState()?.size ?? {
+  const [size, setSize] = createSignal7(panelState()?.size ?? {
     width: 350,
     height: 300
   });
@@ -1632,11 +1658,11 @@ var DetachedPanel = (props) => {
   const handleClose = () => {
     reattachPanel(props.panelId);
   };
-  onMount5(() => {
+  onMount6(() => {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
   });
-  onCleanup7(() => {
+  onCleanup8(() => {
     window.removeEventListener("mousemove", handleMouseMove);
     window.removeEventListener("mouseup", handleMouseUp);
   });
@@ -1649,9 +1675,9 @@ var DetachedPanel = (props) => {
     var _el$ = _tmpl$11(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$5 = _el$2.nextSibling, _el$6 = _el$5.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.nextSibling, _el$11 = _el$10.nextSibling;
     _el$.$$mousedown = handlePanelMouseDown;
     _el$2.$$mousedown = handleTitleBarMouseDown;
-    _$insert7(_el$3, () => getPanelTitle(props.panelId));
+    _$insert8(_el$3, () => getPanelTitle(props.panelId));
     _el$4.$$click = handleClose;
-    _$insert7(_el$5, () => renderPanelContent(props.panelId));
+    _$insert8(_el$5, () => renderPanelContent(props.panelId));
     _$addEventListener3(_el$6, "mousedown", handleResizeMouseDown("n"), true);
     _$addEventListener3(_el$7, "mousedown", handleResizeMouseDown("s"), true);
     _$addEventListener3(_el$8, "mousedown", handleResizeMouseDown("w"), true);
@@ -1776,7 +1802,7 @@ var getInitialPanelPosition = () => {
   };
 };
 function Editor() {
-  const [isOpen, setIsOpen] = createSignal7(false);
+  const [isOpen, setIsOpen] = createSignal8(false);
   const toggleMenu = () => {
     setIsOpen(!isOpen());
   };
@@ -1790,15 +1816,15 @@ function Editor() {
     _$setStyleProperty5(_el$, "display", "flex");
     _$setStyleProperty5(_el$, "height", "100vh");
     _$setStyleProperty5(_el$, "width", "100vw");
-    _$insert8(_el$, _$createComponent15(EditorToggleButton, {
+    _$insert9(_el$, _$createComponent16(EditorToggleButton, {
       onToggle: toggleMenu
     }), _el$2);
-    _$insert8(_el$, _$createComponent15(Show5, {
+    _$insert9(_el$, _$createComponent16(Show5, {
       get when() {
         return isOpen();
       },
       get children() {
-        return _$createComponent15(FloatingPanel, {
+        return _$createComponent16(FloatingPanel, {
           title: "Zylem Editor",
           get initialPosition() {
             return getInitialPanelPosition();
@@ -1814,17 +1840,17 @@ function Editor() {
           collapsible: true,
           onClose: closeMenu,
           onMove: handlePanelMove,
-          children: (isCollapsed) => _$createComponent15(Menu, {
+          children: (isCollapsed) => _$createComponent16(Menu, {
             isCollapsed
           })
         });
       }
     }), _el$2);
-    _$insert8(_el$, _$createComponent15(For2, {
+    _$insert9(_el$, _$createComponent16(For3, {
       get each() {
         return getDetachedPanelIds();
       },
-      children: (panelId) => _$createComponent15(DetachedPanel, {
+      children: (panelId) => _$createComponent16(DetachedPanel, {
         panelId
       })
     }), _el$2);
@@ -1835,13 +1861,13 @@ function Editor() {
 if (typeof window !== "undefined" && !import.meta.env.VITEST) {
   const container = document.getElementById("zylem-editor-container");
   if (container) {
-    render(() => _$createComponent15(Editor, {}), container);
+    render(() => _$createComponent16(Editor, {}), container);
   }
 }
 
 // src/App.tsx
 var App = () => {
-  return _$createComponent16(Editor, {});
+  return _$createComponent17(Editor, {});
 };
 var App_default = App;
 
@@ -1898,9 +1924,9 @@ var ZylemEditorElement = class extends HTMLElement {
     div.style.width = "100%";
     div.style.height = "100%";
     this.shadowRoot.appendChild(div);
-    this.dispose = render2(() => _$createComponent17(EditorProvider, {
+    this.dispose = render2(() => _$createComponent18(EditorProvider, {
       get children() {
-        return _$createComponent17(App_default, {});
+        return _$createComponent18(App_default, {});
       }
     }), div);
   }
@@ -1937,13 +1963,13 @@ if (typeof window !== "undefined" && !customElements.get("zylem-editor")) {
 }
 
 // src/components/common/Icon.tsx
-import { createComponent as _$createComponent18 } from "solid-js/web";
+import { createComponent as _$createComponent19 } from "solid-js/web";
 import { mergeProps as _$mergeProps } from "solid-js/web";
 import { splitProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
 var Icon = (props) => {
   const [local, others] = splitProps(props, ["icon", "class"]);
-  return _$createComponent18(Dynamic, _$mergeProps({
+  return _$createComponent19(Dynamic, _$mergeProps({
     get component() {
       return local.icon;
     },

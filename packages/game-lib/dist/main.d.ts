@@ -1,11 +1,12 @@
-import { G as Game } from './core-CiWyNCCq.js';
-export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-CiWyNCCq.js';
-export { S as StageOptions, c as createStage } from './stage-CKV-J-Xh.js';
-export { e as entitySpawner } from './entity-spawner-DYpGwvtU.js';
-export { P as PerspectiveType, a as Perspectives, S as StageEntity, c as camera } from './camera-CAIZ9fdW.js';
+import { G as Game } from './core-COzxjhi8.js';
+export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-COzxjhi8.js';
+export { a as StageOptions, c as createStage } from './stage-types-B0JZx4WP.js';
+import { S as StageBlueprint } from './blueprints-BHRR8cwh.js';
+export { e as entitySpawner } from './blueprints-BHRR8cwh.js';
+export { P as PerspectiveType, a as Perspectives, c as camera } from './camera-CpbDr4-V.js';
 export { ZylemBox, actor, box, plane, rect, sphere, sprite, text, zone } from './entities.js';
-import { U as UpdateContext, B as BehaviorCallbackType, G as GameEntity } from './entity-ByNgyo1y.js';
-export { a as Behavior, L as LoadingEvent, S as SetupContext } from './entity-ByNgyo1y.js';
+import { U as UpdateContext, B as BehaviorCallbackType, G as GameEntity } from './entity-COvRtFNG.js';
+export { a as Behavior, L as LoadingEvent, S as SetupContext } from './entity-COvRtFNG.js';
 export { boundary2d, ricochet2DCollision, ricochet2DInBounds } from './behaviors.js';
 import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
 export { m as makeMoveable, b as move, a as moveable, r as resetVelocity } from './moveable-B_vyA6cw.js';
@@ -15,8 +16,40 @@ import * as three from 'three';
 export { three as THREE };
 import * as RAPIER from '@dimforge/rapier3d-compat';
 export { RAPIER };
+export { S as StageEntity } from './entity-Bq_eNEDI.js';
 import 'bitecs';
+import './world-Dgf6R0_c.js';
+import '@sinclair/typebox';
 import 'three/examples/jsm/postprocessing/EffectComposer.js';
+
+declare const stageState: {
+    previous: StageBlueprint | null;
+    current: StageBlueprint | null;
+    next: StageBlueprint | null;
+    isLoading: boolean;
+};
+declare const StageManager: {
+    staticRegistry: Map<string, {
+        name?: string | undefined;
+        assets?: string[] | undefined;
+        id: string;
+        entities: {
+            position?: [number, number] | undefined;
+            data?: {
+                [x: string]: any;
+            } | undefined;
+            id: string;
+            type: string;
+        }[];
+    }>;
+    registerStaticStage(id: string, blueprint: StageBlueprint): void;
+    loadStageData(stageId: string): Promise<StageBlueprint>;
+    transitionForward(nextStageId: string, loadStaticStage?: (id: string) => Promise<StageBlueprint>): Promise<void>;
+    /**
+     * Manually set the next stage to pre-load it.
+     */
+    preloadNext(stageId: string, loadStaticStage?: (id: string) => Promise<StageBlueprint>): Promise<void>;
+};
 
 interface MovementSequence2DStep {
     name: string;
@@ -169,4 +202,4 @@ declare class ZylemGameElement extends HTMLElement {
     disconnectedCallback(): void;
 }
 
-export { type DebugTools, Game, UpdateContext, ZylemGameElement, type ZylemGameState, createGlobal, createVariable, debugState, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setDebugTool, setGlobal, setPaused, setVariable };
+export { type DebugTools, Game, StageBlueprint, StageManager, UpdateContext, ZylemGameElement, type ZylemGameState, createGlobal, createVariable, debugState, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setDebugTool, setGlobal, setPaused, setVariable, stageState };

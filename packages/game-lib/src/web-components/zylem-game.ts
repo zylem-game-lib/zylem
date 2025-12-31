@@ -32,6 +32,11 @@ export class ZylemGameElement extends HTMLElement {
   }
 
   set game(game: Game<any>) {
+    // Dispose previous game if one exists
+    if (this._game) {
+      this._game.dispose();
+    }
+    
     this._game = game;
     game.options.push({ container: this.container });
     game.start();

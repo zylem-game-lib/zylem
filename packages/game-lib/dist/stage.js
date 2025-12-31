@@ -1,6 +1,6 @@
 // src/lib/stage/zylem-stage.ts
 import { addComponent, addEntity, createWorld as createECS, removeEntity } from "bitecs";
-import { Color as Color6, Vector3 as Vector311, Vector2 as Vector25 } from "three";
+import { Color as Color7, Vector3 as Vector311 } from "three";
 
 // src/lib/collision/world.ts
 import RAPIER from "@dimforge/rapier3d-compat";
@@ -28,7 +28,8 @@ import {
   defineSystem,
   defineQuery,
   defineComponent,
-  Types
+  Types,
+  removeQuery
 } from "bitecs";
 import { Quaternion } from "three";
 var position = defineComponent({
@@ -49,9 +50,10 @@ var scale = defineComponent({
 });
 var _tempQuaternion = new Quaternion();
 function createTransformSystem(stage) {
-  const transformQuery = defineQuery([position, rotation]);
+  const queryTerms = [position, rotation];
+  const transformQuery = defineQuery(queryTerms);
   const stageEntities = stage._childrenMap;
-  return defineSystem((world) => {
+  const system = defineSystem((world) => {
     const entities = transformQuery(world);
     if (stageEntities === void 0) {
       return world;
@@ -85,6 +87,10 @@ function createTransformSystem(stage) {
     }
     return world;
   });
+  const destroy = (world) => {
+    removeQuery(world, transformQuery);
+  };
+  return { system, destroy };
 }
 
 // src/lib/core/flags.ts
@@ -518,6 +524,23 @@ var AnimationDelegate = class {
     this._currentAction = action;
     this._currentKey = key;
   }
+  /**
+   * Dispose of all animation resources
+   */
+  dispose() {
+    Object.values(this._actions).forEach((action) => {
+      action.stop();
+    });
+    if (this._mixer) {
+      this._mixer.stopAllAction();
+      this._mixer.uncacheRoot(this.target);
+      this._mixer = null;
+    }
+    this._actions = {};
+    this._animations = [];
+    this._currentAction = null;
+    this._currentKey = "";
+  }
   get currentAnimationKey() {
     return this._currentKey;
   }
@@ -555,7 +578,6 @@ var ZylemActor = class extends GameEntity {
     super();
     this.options = { ...actorDefaults, ...options };
     this.prependUpdate(this.actorUpdate.bind(this));
-    debugger;
     this.controlledRotation = true;
   }
   async load() {
@@ -574,6 +596,34 @@ var ZylemActor = class extends GameEntity {
   }
   async actorUpdate(params) {
     this._animationDelegate?.update(params.delta);
+  }
+  /**
+   * Clean up actor resources including animations, models, and groups
+   */
+  actorDestroy() {
+    if (this._animationDelegate) {
+      this._animationDelegate.dispose();
+      this._animationDelegate = null;
+    }
+    if (this._object) {
+      this._object.traverse((child) => {
+        if (child.isMesh) {
+          const mesh = child;
+          mesh.geometry?.dispose();
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((m) => m.dispose());
+          } else if (mesh.material) {
+            mesh.material.dispose();
+          }
+        }
+      });
+      this._object = null;
+    }
+    if (this.group) {
+      this.group.clear();
+      this.group = null;
+    }
+    this._modelFileNames = [];
   }
   async loadModels() {
     if (this._modelFileNames.length === 0) return;
@@ -632,12 +682,10 @@ var ZylemActor = class extends GameEntity {
   }
 };
 
-// src/lib/collision/collision-delegate.ts
+// src/lib/collision/world.ts
 function isCollisionHandlerDelegate(obj) {
   return typeof obj?.handlePostCollision === "function" && typeof obj?.handleIntersectionEvent === "function";
 }
-
-// src/lib/collision/world.ts
 var ZylemWorld = class {
   type = "World";
   world;
@@ -1002,6 +1050,280 @@ var LifeCycleBase = class {
 // src/lib/stage/zylem-stage.ts
 import { nanoid as nanoid2 } from "nanoid";
 
+// src/lib/stage/stage-debug-delegate.ts
+import { Ray } from "@dimforge/rapier3d-compat";
+import { BufferAttribute, BufferGeometry as BufferGeometry2, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 } from "three";
+
+// src/lib/stage/debug-entity-cursor.ts
+import {
+  Box3,
+  BoxGeometry,
+  Color as Color5,
+  EdgesGeometry,
+  Group as Group3,
+  LineBasicMaterial,
+  LineSegments,
+  Mesh as Mesh2,
+  MeshBasicMaterial,
+  Vector3 as Vector35
+} from "three";
+var DebugEntityCursor = class {
+  scene;
+  container;
+  fillMesh;
+  edgeLines;
+  currentColor = new Color5(65280);
+  bbox = new Box3();
+  size = new Vector35();
+  center = new Vector35();
+  constructor(scene) {
+    this.scene = scene;
+    const initialGeometry = new BoxGeometry(1, 1, 1);
+    this.fillMesh = new Mesh2(
+      initialGeometry,
+      new MeshBasicMaterial({
+        color: this.currentColor,
+        transparent: true,
+        opacity: 0.12,
+        depthWrite: false
+      })
+    );
+    const edges = new EdgesGeometry(initialGeometry);
+    this.edgeLines = new LineSegments(
+      edges,
+      new LineBasicMaterial({ color: this.currentColor, linewidth: 1 })
+    );
+    this.container = new Group3();
+    this.container.name = "DebugEntityCursor";
+    this.container.add(this.fillMesh);
+    this.container.add(this.edgeLines);
+    this.container.visible = false;
+    this.scene.add(this.container);
+  }
+  setColor(color) {
+    this.currentColor.set(color);
+    this.fillMesh.material.color.set(this.currentColor);
+    this.edgeLines.material.color.set(this.currentColor);
+  }
+  /**
+   * Update the cursor to enclose the provided Object3D using a world-space AABB.
+   */
+  updateFromObject(object) {
+    if (!object) {
+      this.hide();
+      return;
+    }
+    this.bbox.setFromObject(object);
+    if (!isFinite(this.bbox.min.x) || !isFinite(this.bbox.max.x)) {
+      this.hide();
+      return;
+    }
+    this.bbox.getSize(this.size);
+    this.bbox.getCenter(this.center);
+    const newGeom = new BoxGeometry(
+      Math.max(this.size.x, 1e-6),
+      Math.max(this.size.y, 1e-6),
+      Math.max(this.size.z, 1e-6)
+    );
+    this.fillMesh.geometry.dispose();
+    this.fillMesh.geometry = newGeom;
+    const newEdges = new EdgesGeometry(newGeom);
+    this.edgeLines.geometry.dispose();
+    this.edgeLines.geometry = newEdges;
+    this.container.position.copy(this.center);
+    this.container.visible = true;
+  }
+  hide() {
+    this.container.visible = false;
+  }
+  dispose() {
+    this.scene.remove(this.container);
+    this.fillMesh.geometry.dispose();
+    this.fillMesh.material.dispose();
+    this.edgeLines.geometry.dispose();
+    this.edgeLines.material.dispose();
+  }
+};
+
+// src/lib/stage/stage-debug-delegate.ts
+var SELECT_TOOL_COLOR = 2293538;
+var DELETE_TOOL_COLOR = 16724787;
+var StageDebugDelegate = class {
+  stage;
+  options;
+  mouseNdc = new Vector2(-2, -2);
+  raycaster = new Raycaster();
+  isMouseDown = false;
+  disposeFns = [];
+  debugCursor = null;
+  debugLines = null;
+  constructor(stage, options) {
+    this.stage = stage;
+    this.options = {
+      maxRayDistance: options?.maxRayDistance ?? 5e3,
+      addEntityFactory: options?.addEntityFactory ?? null
+    };
+    if (this.stage.scene) {
+      this.debugLines = new LineSegments2(
+        new BufferGeometry2(),
+        new LineBasicMaterial2({ vertexColors: true })
+      );
+      this.stage.scene.scene.add(this.debugLines);
+      this.debugLines.visible = true;
+      this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
+    }
+    this.attachDomListeners();
+  }
+  update() {
+    if (!debugState.enabled) return;
+    if (!this.stage.scene || !this.stage.world || !this.stage.cameraRef) return;
+    const { world, cameraRef } = this.stage;
+    if (this.debugLines) {
+      const { vertices, colors } = world.world.debugRender();
+      this.debugLines.geometry.setAttribute("position", new BufferAttribute(vertices, 3));
+      this.debugLines.geometry.setAttribute("color", new BufferAttribute(colors, 4));
+    }
+    const tool = getDebugTool();
+    const isCursorTool = tool === "select" || tool === "delete";
+    this.raycaster.setFromCamera(this.mouseNdc, cameraRef.camera);
+    const origin = this.raycaster.ray.origin.clone();
+    const direction = this.raycaster.ray.direction.clone().normalize();
+    const rapierRay = new Ray(
+      { x: origin.x, y: origin.y, z: origin.z },
+      { x: direction.x, y: direction.y, z: direction.z }
+    );
+    const hit = world.world.castRay(rapierRay, this.options.maxRayDistance, true);
+    if (hit && isCursorTool) {
+      const rigidBody = hit.collider?._parent;
+      const hoveredUuid2 = rigidBody?.userData?.uuid;
+      if (hoveredUuid2) {
+        const entity = this.stage._debugMap.get(hoveredUuid2);
+        if (entity) setHoveredEntity(entity);
+      } else {
+        resetHoveredEntity();
+      }
+      if (this.isMouseDown) {
+        this.handleActionOnHit(hoveredUuid2 ?? null, origin, direction, hit.toi);
+      }
+    }
+    this.isMouseDown = false;
+    const hoveredUuid = getHoveredEntity();
+    if (!hoveredUuid) {
+      this.debugCursor?.hide();
+      return;
+    }
+    const hoveredEntity = this.stage._debugMap.get(`${hoveredUuid}`);
+    const targetObject = hoveredEntity?.group ?? hoveredEntity?.mesh ?? null;
+    if (!targetObject) {
+      this.debugCursor?.hide();
+      return;
+    }
+    switch (tool) {
+      case "select":
+        this.debugCursor?.setColor(SELECT_TOOL_COLOR);
+        break;
+      case "delete":
+        this.debugCursor?.setColor(DELETE_TOOL_COLOR);
+        break;
+      default:
+        this.debugCursor?.setColor(16777215);
+        break;
+    }
+    this.debugCursor?.updateFromObject(targetObject);
+  }
+  dispose() {
+    this.disposeFns.forEach((fn) => fn());
+    this.disposeFns = [];
+    this.debugCursor?.dispose();
+    if (this.debugLines && this.stage.scene) {
+      this.stage.scene.scene.remove(this.debugLines);
+      this.debugLines.geometry.dispose();
+      this.debugLines.material.dispose();
+      this.debugLines = null;
+    }
+  }
+  handleActionOnHit(hoveredUuid, origin, direction, toi) {
+    const tool = getDebugTool();
+    switch (tool) {
+      case "select": {
+        if (hoveredUuid) {
+          const entity = this.stage._debugMap.get(hoveredUuid);
+          if (entity) setSelectedEntity(entity);
+        }
+        break;
+      }
+      case "delete": {
+        if (hoveredUuid) {
+          this.stage.removeEntityByUuid(hoveredUuid);
+        }
+        break;
+      }
+      case "scale": {
+        if (!this.options.addEntityFactory) break;
+        const hitPosition = origin.clone().add(direction.clone().multiplyScalar(toi));
+        const newNode = this.options.addEntityFactory({ position: hitPosition });
+        if (newNode) {
+          Promise.resolve(newNode).then((node) => {
+            if (node) this.stage.spawnEntity(node);
+          }).catch(() => {
+          });
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  attachDomListeners() {
+    const canvas = this.stage.cameraRef?.renderer.domElement ?? this.stage.scene?.zylemCamera.renderer.domElement;
+    if (!canvas) return;
+    const onMouseMove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width * 2 - 1;
+      const y = -((e.clientY - rect.top) / rect.height * 2 - 1);
+      this.mouseNdc.set(x, y);
+    };
+    const onMouseDown = (e) => {
+      this.isMouseDown = true;
+    };
+    canvas.addEventListener("mousemove", onMouseMove);
+    canvas.addEventListener("mousedown", onMouseDown);
+    this.disposeFns.push(() => canvas.removeEventListener("mousemove", onMouseMove));
+    this.disposeFns.push(() => canvas.removeEventListener("mousedown", onMouseDown));
+  }
+};
+
+// src/lib/stage/stage-camera-debug-delegate.ts
+import { subscribe as subscribe3 } from "valtio/vanilla";
+var StageCameraDebugDelegate = class {
+  stage;
+  constructor(stage) {
+    this.stage = stage;
+  }
+  subscribe(listener) {
+    const notify = () => listener(this.snapshot());
+    notify();
+    return subscribe3(debugState, notify);
+  }
+  resolveTarget(uuid) {
+    const entity = this.stage._debugMap.get(uuid) || this.stage.world?.collisionMap.get(uuid) || null;
+    const target = entity?.group ?? entity?.mesh ?? null;
+    return target ?? null;
+  }
+  snapshot() {
+    return {
+      enabled: debugState.enabled,
+      selected: debugState.selectedEntity ? [debugState.selectedEntity.uuid] : []
+    };
+  }
+};
+
+// src/lib/stage/stage-camera-delegate.ts
+import { Vector2 as Vector24 } from "three";
+
+// src/lib/camera/zylem-camera.ts
+import { PerspectiveCamera, Vector3 as Vector39, Object3D as Object3D6, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
+
 // src/lib/camera/perspective.ts
 var Perspectives = {
   FirstPerson: "first-person",
@@ -1011,14 +1333,8 @@ var Perspectives = {
   Fixed2D: "fixed-2d"
 };
 
-// src/lib/camera/camera.ts
-import { Vector2 as Vector23, Vector3 as Vector38 } from "three";
-
-// src/lib/camera/zylem-camera.ts
-import { PerspectiveCamera, Vector3 as Vector37, Object3D as Object3D5, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
-
 // src/lib/camera/third-person.ts
-import { Vector3 as Vector35 } from "three";
+import { Vector3 as Vector37 } from "three";
 var ThirdPersonCamera = class {
   distance;
   screenResolution = null;
@@ -1026,7 +1342,7 @@ var ThirdPersonCamera = class {
   scene = null;
   cameraRef = null;
   constructor() {
-    this.distance = new Vector35(0, 5, 8);
+    this.distance = new Vector37(0, 5, 8);
   }
   /**
    * Setup the third person camera controller
@@ -1189,14 +1505,14 @@ var RenderPass = class extends Pass {
 };
 
 // src/lib/camera/camera-debug-delegate.ts
-import { Vector3 as Vector36 } from "three";
+import { Vector3 as Vector38 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 var CameraOrbitController = class {
   camera;
   domElement;
   orbitControls = null;
   orbitTarget = null;
-  orbitTargetWorldPos = new Vector36();
+  orbitTargetWorldPos = new Vector38();
   debugDelegate = null;
   debugUnsubscribe = null;
   debugStateSnapshot = { enabled: false, selected: [] };
@@ -1375,13 +1691,13 @@ var ZylemCamera = class {
     const aspectRatio = screenResolution.x / screenResolution.y;
     this.camera = this.createCameraForPerspective(aspectRatio);
     if (this.needsRig()) {
-      this.cameraRig = new Object3D5();
+      this.cameraRig = new Object3D6();
       this.cameraRig.position.set(0, 3, 10);
       this.cameraRig.add(this.camera);
-      this.camera.lookAt(new Vector37(0, 2, 0));
+      this.camera.lookAt(new Vector39(0, 2, 0));
     } else {
       this.camera.position.set(0, 0, 10);
-      this.camera.lookAt(new Vector37(0, 0, 0));
+      this.camera.lookAt(new Vector39(0, 0, 0));
     }
     this.initializePerspectiveController();
     this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement);
@@ -1577,281 +1893,236 @@ var ZylemCamera = class {
   }
 };
 
-// src/lib/camera/camera.ts
-var CameraWrapper = class {
-  cameraRef;
-  constructor(camera) {
-    this.cameraRef = camera;
-  }
-};
-
-// src/lib/stage/stage-debug-delegate.ts
-import { Ray } from "@dimforge/rapier3d-compat";
-import { BufferAttribute, BufferGeometry as BufferGeometry2, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 as Vector24 } from "three";
-
-// src/lib/stage/debug-entity-cursor.ts
-import {
-  Box3,
-  BoxGeometry,
-  Color as Color5,
-  EdgesGeometry,
-  Group as Group3,
-  LineBasicMaterial,
-  LineSegments,
-  Mesh as Mesh2,
-  MeshBasicMaterial,
-  Vector3 as Vector39
-} from "three";
-var DebugEntityCursor = class {
-  scene;
-  container;
-  fillMesh;
-  edgeLines;
-  currentColor = new Color5(65280);
-  bbox = new Box3();
-  size = new Vector39();
-  center = new Vector39();
-  constructor(scene) {
-    this.scene = scene;
-    const initialGeometry = new BoxGeometry(1, 1, 1);
-    this.fillMesh = new Mesh2(
-      initialGeometry,
-      new MeshBasicMaterial({
-        color: this.currentColor,
-        transparent: true,
-        opacity: 0.12,
-        depthWrite: false
-      })
-    );
-    const edges = new EdgesGeometry(initialGeometry);
-    this.edgeLines = new LineSegments(
-      edges,
-      new LineBasicMaterial({ color: this.currentColor, linewidth: 1 })
-    );
-    this.container = new Group3();
-    this.container.name = "DebugEntityCursor";
-    this.container.add(this.fillMesh);
-    this.container.add(this.edgeLines);
-    this.container.visible = false;
-    this.scene.add(this.container);
-  }
-  setColor(color) {
-    this.currentColor.set(color);
-    this.fillMesh.material.color.set(this.currentColor);
-    this.edgeLines.material.color.set(this.currentColor);
-  }
-  /**
-   * Update the cursor to enclose the provided Object3D using a world-space AABB.
-   */
-  updateFromObject(object) {
-    if (!object) {
-      this.hide();
-      return;
-    }
-    this.bbox.setFromObject(object);
-    if (!isFinite(this.bbox.min.x) || !isFinite(this.bbox.max.x)) {
-      this.hide();
-      return;
-    }
-    this.bbox.getSize(this.size);
-    this.bbox.getCenter(this.center);
-    const newGeom = new BoxGeometry(
-      Math.max(this.size.x, 1e-6),
-      Math.max(this.size.y, 1e-6),
-      Math.max(this.size.z, 1e-6)
-    );
-    this.fillMesh.geometry.dispose();
-    this.fillMesh.geometry = newGeom;
-    const newEdges = new EdgesGeometry(newGeom);
-    this.edgeLines.geometry.dispose();
-    this.edgeLines.geometry = newEdges;
-    this.container.position.copy(this.center);
-    this.container.visible = true;
-  }
-  hide() {
-    this.container.visible = false;
-  }
-  dispose() {
-    this.scene.remove(this.container);
-    this.fillMesh.geometry.dispose();
-    this.fillMesh.material.dispose();
-    this.edgeLines.geometry.dispose();
-    this.edgeLines.material.dispose();
-  }
-};
-
-// src/lib/stage/stage-debug-delegate.ts
-var SELECT_TOOL_COLOR = 2293538;
-var DELETE_TOOL_COLOR = 16724787;
-var StageDebugDelegate = class {
-  stage;
-  options;
-  mouseNdc = new Vector24(-2, -2);
-  raycaster = new Raycaster();
-  isMouseDown = false;
-  disposeFns = [];
-  debugCursor = null;
-  debugLines = null;
-  constructor(stage, options) {
-    this.stage = stage;
-    this.options = {
-      maxRayDistance: options?.maxRayDistance ?? 5e3,
-      addEntityFactory: options?.addEntityFactory ?? null
-    };
-    if (this.stage.scene) {
-      this.debugLines = new LineSegments2(
-        new BufferGeometry2(),
-        new LineBasicMaterial2({ vertexColors: true })
-      );
-      this.stage.scene.scene.add(this.debugLines);
-      this.debugLines.visible = true;
-      this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
-    }
-    this.attachDomListeners();
-  }
-  update() {
-    if (!debugState.enabled) return;
-    if (!this.stage.scene || !this.stage.world || !this.stage.cameraRef) return;
-    const { world, cameraRef } = this.stage;
-    if (this.debugLines) {
-      const { vertices, colors } = world.world.debugRender();
-      this.debugLines.geometry.setAttribute("position", new BufferAttribute(vertices, 3));
-      this.debugLines.geometry.setAttribute("color", new BufferAttribute(colors, 4));
-    }
-    const tool = getDebugTool();
-    const isCursorTool = tool === "select" || tool === "delete";
-    this.raycaster.setFromCamera(this.mouseNdc, cameraRef.camera);
-    const origin = this.raycaster.ray.origin.clone();
-    const direction = this.raycaster.ray.direction.clone().normalize();
-    const rapierRay = new Ray(
-      { x: origin.x, y: origin.y, z: origin.z },
-      { x: direction.x, y: direction.y, z: direction.z }
-    );
-    const hit = world.world.castRay(rapierRay, this.options.maxRayDistance, true);
-    if (hit && isCursorTool) {
-      const rigidBody = hit.collider?._parent;
-      const hoveredUuid2 = rigidBody?.userData?.uuid;
-      if (hoveredUuid2) {
-        const entity = this.stage._debugMap.get(hoveredUuid2);
-        if (entity) setHoveredEntity(entity);
-      } else {
-        resetHoveredEntity();
-      }
-      if (this.isMouseDown) {
-        this.handleActionOnHit(hoveredUuid2 ?? null, origin, direction, hit.toi);
-      }
-    }
-    this.isMouseDown = false;
-    const hoveredUuid = getHoveredEntity();
-    if (!hoveredUuid) {
-      this.debugCursor?.hide();
-      return;
-    }
-    const hoveredEntity = this.stage._debugMap.get(`${hoveredUuid}`);
-    const targetObject = hoveredEntity?.group ?? hoveredEntity?.mesh ?? null;
-    if (!targetObject) {
-      this.debugCursor?.hide();
-      return;
-    }
-    switch (tool) {
-      case "select":
-        this.debugCursor?.setColor(SELECT_TOOL_COLOR);
-        break;
-      case "delete":
-        this.debugCursor?.setColor(DELETE_TOOL_COLOR);
-        break;
-      default:
-        this.debugCursor?.setColor(16777215);
-        break;
-    }
-    this.debugCursor?.updateFromObject(targetObject);
-  }
-  dispose() {
-    this.disposeFns.forEach((fn) => fn());
-    this.disposeFns = [];
-    this.debugCursor?.dispose();
-    if (this.debugLines && this.stage.scene) {
-      this.stage.scene.scene.remove(this.debugLines);
-      this.debugLines.geometry.dispose();
-      this.debugLines.material.dispose();
-      this.debugLines = null;
-    }
-  }
-  handleActionOnHit(hoveredUuid, origin, direction, toi) {
-    const tool = getDebugTool();
-    switch (tool) {
-      case "select": {
-        if (hoveredUuid) {
-          const entity = this.stage._debugMap.get(hoveredUuid);
-          if (entity) setSelectedEntity(entity);
-        }
-        break;
-      }
-      case "delete": {
-        if (hoveredUuid) {
-          this.stage.removeEntityByUuid(hoveredUuid);
-        }
-        break;
-      }
-      case "scale": {
-        if (!this.options.addEntityFactory) break;
-        const hitPosition = origin.clone().add(direction.clone().multiplyScalar(toi));
-        const newNode = this.options.addEntityFactory({ position: hitPosition });
-        if (newNode) {
-          Promise.resolve(newNode).then((node) => {
-            if (node) this.stage.spawnEntity(node);
-          }).catch(() => {
-          });
-        }
-        break;
-      }
-      default:
-        break;
-    }
-  }
-  attachDomListeners() {
-    const canvas = this.stage.cameraRef?.renderer.domElement ?? this.stage.scene?.zylemCamera.renderer.domElement;
-    if (!canvas) return;
-    const onMouseMove = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width * 2 - 1;
-      const y = -((e.clientY - rect.top) / rect.height * 2 - 1);
-      this.mouseNdc.set(x, y);
-    };
-    const onMouseDown = (e) => {
-      this.isMouseDown = true;
-    };
-    canvas.addEventListener("mousemove", onMouseMove);
-    canvas.addEventListener("mousedown", onMouseDown);
-    this.disposeFns.push(() => canvas.removeEventListener("mousemove", onMouseMove));
-    this.disposeFns.push(() => canvas.removeEventListener("mousedown", onMouseDown));
-  }
-};
-
-// src/lib/stage/stage-camera-debug-delegate.ts
-import { subscribe as subscribe3 } from "valtio/vanilla";
-var StageCameraDebugDelegate = class {
+// src/lib/stage/stage-camera-delegate.ts
+var StageCameraDelegate = class {
   stage;
   constructor(stage) {
     this.stage = stage;
   }
-  subscribe(listener) {
-    const notify = () => listener(this.snapshot());
-    notify();
-    return subscribe3(debugState, notify);
+  /**
+   * Create a default third-person camera based on window size.
+   */
+  createDefaultCamera() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const screenResolution = new Vector24(width, height);
+    return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
   }
-  resolveTarget(uuid) {
-    const entity = this.stage._debugMap.get(uuid) || this.stage.world?.collisionMap.get(uuid) || null;
-    const target = entity?.group ?? entity?.mesh ?? null;
-    return target ?? null;
-  }
-  snapshot() {
-    return {
-      enabled: debugState.enabled,
-      selected: debugState.selectedEntity ? [debugState.selectedEntity.uuid] : []
-    };
+  /**
+   * Resolve the camera to use for the stage.
+   * Uses the provided camera, stage camera wrapper, or creates a default.
+   * 
+   * @param cameraOverride Optional camera override
+   * @param cameraWrapper Optional camera wrapper from stage options
+   * @returns The resolved ZylemCamera instance
+   */
+  resolveCamera(cameraOverride, cameraWrapper) {
+    if (cameraOverride) {
+      return cameraOverride;
+    }
+    if (cameraWrapper) {
+      return cameraWrapper.cameraRef;
+    }
+    return this.createDefaultCamera();
   }
 };
+
+// src/lib/game/game-event-bus.ts
+var GameEventBus = class {
+  listeners = /* @__PURE__ */ new Map();
+  /**
+   * Subscribe to an event type.
+   */
+  on(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, /* @__PURE__ */ new Set());
+    }
+    this.listeners.get(event).add(callback);
+    return () => this.off(event, callback);
+  }
+  /**
+   * Unsubscribe from an event type.
+   */
+  off(event, callback) {
+    this.listeners.get(event)?.delete(callback);
+  }
+  /**
+   * Emit an event to all subscribers.
+   */
+  emit(event, payload) {
+    const callbacks = this.listeners.get(event);
+    if (!callbacks) return;
+    for (const cb of callbacks) {
+      try {
+        cb(payload);
+      } catch (e) {
+        console.error(`Error in event handler for ${event}`, e);
+      }
+    }
+  }
+  /**
+   * Clear all listeners.
+   */
+  dispose() {
+    this.listeners.clear();
+  }
+};
+var gameEventBus = new GameEventBus();
+
+// src/lib/stage/stage-loading-delegate.ts
+var StageLoadingDelegate = class {
+  loadingHandlers = [];
+  stageName;
+  stageIndex;
+  /**
+   * Set stage context for event bus emissions.
+   */
+  setStageContext(stageName, stageIndex) {
+    this.stageName = stageName;
+    this.stageIndex = stageIndex;
+  }
+  /**
+   * Subscribe to loading events.
+   * 
+   * @param callback Invoked for each loading event (start, progress, complete)
+   * @returns Unsubscribe function
+   */
+  onLoading(callback) {
+    this.loadingHandlers.push(callback);
+    return () => {
+      this.loadingHandlers = this.loadingHandlers.filter((h) => h !== callback);
+    };
+  }
+  /**
+   * Emit a loading event to all subscribers and to the game event bus.
+   * 
+   * @param event The loading event to broadcast
+   */
+  emit(event) {
+    for (const handler of this.loadingHandlers) {
+      try {
+        handler(event);
+      } catch (e) {
+        console.error("Loading handler failed", e);
+      }
+    }
+    const payload = {
+      ...event,
+      stageName: this.stageName,
+      stageIndex: this.stageIndex
+    };
+    if (event.type === "start") {
+      gameEventBus.emit("stage:loading:start", payload);
+    } else if (event.type === "progress") {
+      gameEventBus.emit("stage:loading:progress", payload);
+    } else if (event.type === "complete") {
+      gameEventBus.emit("stage:loading:complete", payload);
+    }
+  }
+  /**
+   * Emit a start loading event.
+   */
+  emitStart(message = "Loading stage...") {
+    this.emit({ type: "start", message, progress: 0 });
+  }
+  /**
+   * Emit a progress loading event.
+   */
+  emitProgress(message, current, total) {
+    const progress = total > 0 ? current / total : 0;
+    this.emit({ type: "progress", message, progress, current, total });
+  }
+  /**
+   * Emit a complete loading event.
+   */
+  emitComplete(message = "Stage loaded") {
+    this.emit({ type: "complete", message, progress: 1 });
+  }
+  /**
+   * Clear all loading handlers.
+   */
+  dispose() {
+    this.loadingHandlers = [];
+  }
+};
+
+// src/lib/stage/stage-config.ts
+import { Vector3 as Vector310 } from "three";
+
+// src/lib/core/utility/options-parser.ts
+function isBaseNode(item) {
+  return !!item && typeof item === "object" && typeof item.create === "function";
+}
+function isThenable(item) {
+  return !!item && typeof item.then === "function";
+}
+function isCameraWrapper(item) {
+  return !!item && typeof item === "object" && item.constructor?.name === "CameraWrapper";
+}
+function isConfigObject(item) {
+  if (!item || typeof item !== "object") return false;
+  if (isBaseNode(item)) return false;
+  if (isCameraWrapper(item)) return false;
+  if (isThenable(item)) return false;
+  if (typeof item.then === "function") return false;
+  return item.constructor === Object || item.constructor?.name === "Object";
+}
+function isEntityInput(item) {
+  if (!item) return false;
+  if (isBaseNode(item)) return true;
+  if (typeof item === "function") return true;
+  if (isThenable(item)) return true;
+  return false;
+}
+
+// src/lib/stage/stage-config.ts
+var StageConfig = class {
+  constructor(inputs, backgroundColor, backgroundImage, gravity, variables) {
+    this.inputs = inputs;
+    this.backgroundColor = backgroundColor;
+    this.backgroundImage = backgroundImage;
+    this.gravity = gravity;
+    this.variables = variables;
+  }
+};
+function createDefaultStageConfig() {
+  return new StageConfig(
+    {
+      p1: ["gamepad-1", "keyboard-1"],
+      p2: ["gamepad-2", "keyboard-2"]
+    },
+    ZylemBlueColor,
+    null,
+    new Vector310(0, 0, 0),
+    {}
+  );
+}
+function parseStageOptions(options = []) {
+  const defaults = createDefaultStageConfig();
+  let config = {};
+  const entities = [];
+  const asyncEntities = [];
+  let camera;
+  for (const item of options) {
+    if (isCameraWrapper(item)) {
+      camera = item;
+    } else if (isBaseNode(item)) {
+      entities.push(item);
+    } else if (isEntityInput(item) && !isBaseNode(item)) {
+      asyncEntities.push(item);
+    } else if (isConfigObject(item)) {
+      config = { ...config, ...item };
+    }
+  }
+  const resolvedConfig = new StageConfig(
+    config.inputs ?? defaults.inputs,
+    config.backgroundColor ?? defaults.backgroundColor,
+    config.backgroundImage ?? defaults.backgroundImage,
+    config.gravity ?? defaults.gravity,
+    config.variables ?? defaults.variables
+  );
+  return { config: resolvedConfig, entities, asyncEntities, camera };
+}
 
 // src/lib/stage/zylem-stage.ts
 var STAGE_TYPE = "Stage";
@@ -1879,7 +2150,6 @@ var ZylemStage = class extends LifeCycleBase {
   isLoaded = false;
   _debugMap = /* @__PURE__ */ new Map();
   entityAddedHandlers = [];
-  loadingHandlers = [];
   ecs = createECS();
   testSystem = null;
   transformSystem = null;
@@ -1890,6 +2160,9 @@ var ZylemStage = class extends LifeCycleBase {
   wrapperRef = null;
   camera;
   cameraRef = null;
+  // Delegates
+  cameraDelegate;
+  loadingDelegate;
   /**
    * Create a new stage.
    * @param options Stage options: partial config, camera, and initial entities or factories
@@ -1899,49 +2172,22 @@ var ZylemStage = class extends LifeCycleBase {
     this.world = null;
     this.scene = null;
     this.uuid = nanoid2();
-    const { config, entities, asyncEntities, camera } = this.parseOptions(options);
-    this.camera = camera;
-    this.children = entities;
-    this.pendingEntities = asyncEntities;
-    this.saveState({ ...this.state, ...config, entities: [] });
-    this.gravity = config.gravity ?? new Vector311(0, 0, 0);
-  }
-  parseOptions(options) {
-    let config = {};
-    const entities = [];
-    const asyncEntities = [];
-    let camera;
-    for (const item of options) {
-      if (this.isCameraWrapper(item)) {
-        camera = item;
-      } else if (this.isBaseNode(item)) {
-        entities.push(item);
-      } else if (this.isEntityInput(item)) {
-        asyncEntities.push(item);
-      } else if (this.isZylemStageConfig(item)) {
-        config = { ...config, ...item };
-      }
-    }
-    return { config, entities, asyncEntities, camera };
-  }
-  isZylemStageConfig(item) {
-    return item && typeof item === "object" && !(item instanceof BaseNode) && !(item instanceof CameraWrapper);
-  }
-  isBaseNode(item) {
-    return item && typeof item === "object" && typeof item.create === "function";
-  }
-  isCameraWrapper(item) {
-    return item && typeof item === "object" && item.constructor.name === "CameraWrapper";
-  }
-  isEntityInput(item) {
-    if (!item) return false;
-    if (this.isBaseNode(item)) return true;
-    if (typeof item === "function") return true;
-    if (typeof item === "object" && typeof item.then === "function") return true;
-    return false;
-  }
-  isThenable(value) {
-    return !!value && typeof value.then === "function";
+    this.cameraDelegate = new StageCameraDelegate(this);
+    this.loadingDelegate = new StageLoadingDelegate();
+    const parsed = parseStageOptions(options);
+    this.camera = parsed.camera;
+    this.children = parsed.entities;
+    this.pendingEntities = parsed.asyncEntities;
+    this.saveState({
+      ...this.state,
+      inputs: parsed.config.inputs,
+      backgroundColor: parsed.config.backgroundColor,
+      backgroundImage: parsed.config.backgroundImage,
+      gravity: parsed.config.gravity,
+      variables: parsed.config.variables,
+      entities: []
+    });
+    this.gravity = parsed.config.gravity ?? new Vector311(0, 0, 0);
   }
   handleEntityImmediatelyOrQueue(entity) {
     if (this.isLoaded) {
@@ -1962,42 +2208,47 @@ var ZylemStage = class extends LifeCycleBase {
   }
   setState() {
     const { backgroundColor, backgroundImage } = this.state;
-    const color = backgroundColor instanceof Color6 ? backgroundColor : new Color6(backgroundColor);
+    const color = backgroundColor instanceof Color7 ? backgroundColor : new Color7(backgroundColor);
     setStageBackgroundColor(color);
     setStageBackgroundImage(backgroundImage);
     setStageVariables(this.state.variables ?? {});
   }
   /**
    * Load and initialize the stage's scene and world.
+   * Uses generator pattern to yield control to event loop for real-time progress.
    * @param id DOM element id for the renderer container
    * @param camera Optional camera override
    */
   async load(id, camera) {
     this.setState();
-    const zylemCamera = camera || (this.camera ? this.camera.cameraRef : this.createDefaultCamera());
+    const zylemCamera = this.cameraDelegate.resolveCamera(camera, this.camera);
     this.cameraRef = zylemCamera;
     this.scene = new ZylemScene(id, zylemCamera, this.state);
     const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector311(0, 0, 0));
     this.world = new ZylemWorld(physicsWorld);
     this.scene.setup();
-    this.emitLoading({ type: "start", message: "Loading stage...", progress: 0 });
+    this.loadingDelegate.emitStart();
+    await this.runEntityLoadGenerator();
+    this.transformSystem = createTransformSystem(this);
+    this.isLoaded = true;
+    this.loadingDelegate.emitComplete();
+  }
+  /**
+   * Generator that yields between entity loads for real-time progress updates.
+   */
+  *entityLoadGenerator() {
     const total = this.children.length + this.pendingEntities.length + this.pendingPromises.length;
     let current = 0;
-    for (let child of this.children) {
+    for (const child of this.children) {
       this.spawnEntity(child);
       current++;
-      this.emitLoading({
-        type: "progress",
-        message: `Loaded entity ${child.name || "unknown"}`,
-        progress: current / total,
-        current,
-        total
-      });
+      yield { current, total, name: child.name || "unknown" };
     }
     if (this.pendingEntities.length) {
       this.enqueue(...this.pendingEntities);
       current += this.pendingEntities.length;
       this.pendingEntities = [];
+      yield { current, total, name: "pending entities" };
     }
     if (this.pendingPromises.length) {
       for (const promise of this.pendingPromises) {
@@ -2007,16 +2258,19 @@ var ZylemStage = class extends LifeCycleBase {
       }
       current += this.pendingPromises.length;
       this.pendingPromises = [];
+      yield { current, total, name: "async entities" };
     }
-    this.transformSystem = createTransformSystem(this);
-    this.isLoaded = true;
-    this.emitLoading({ type: "complete", message: "Stage loaded", progress: 1 });
   }
-  createDefaultCamera() {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const screenResolution = new Vector25(width, height);
-    return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
+  /**
+   * Runs the entity load generator, yielding to the event loop between loads.
+   * This allows the browser to process events and update the UI in real-time.
+   */
+  async runEntityLoadGenerator() {
+    const gen = this.entityLoadGenerator();
+    for (const progress of gen) {
+      this.loadingDelegate.emitProgress(`Loaded ${progress.name}`, progress.current, progress.total);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
   }
   _setup(params) {
     if (!this.scene || !this.world) {
@@ -2051,7 +2305,7 @@ var ZylemStage = class extends LifeCycleBase {
       return;
     }
     this.world.update(params);
-    this.transformSystem(this.ecs);
+    this.transformSystem?.system(this.ecs);
     this._childrenMap.forEach((child, eid) => {
       child.nodeUpdate({
         ...params,
@@ -2097,6 +2351,8 @@ var ZylemStage = class extends LifeCycleBase {
     this.world = null;
     this.scene = null;
     this.cameraRef = null;
+    this.transformSystem?.destroy(this.ecs);
+    this.transformSystem = null;
     resetStageVariables();
     clearVariables(this);
   }
@@ -2177,13 +2433,7 @@ var ZylemStage = class extends LifeCycleBase {
     };
   }
   onLoading(callback) {
-    this.loadingHandlers.push(callback);
-    return () => {
-      this.loadingHandlers = this.loadingHandlers.filter((h) => h !== callback);
-    };
-  }
-  emitLoading(event) {
-    this.loadingHandlers.forEach((h) => h(event));
+    return this.loadingDelegate.onLoading(callback);
   }
   /**
    * Remove an entity and its resources by its UUID.
@@ -2240,16 +2490,16 @@ var ZylemStage = class extends LifeCycleBase {
   enqueue(...items) {
     for (const item of items) {
       if (!item) continue;
-      if (this.isBaseNode(item)) {
+      if (isBaseNode(item)) {
         this.handleEntityImmediatelyOrQueue(item);
         continue;
       }
       if (typeof item === "function") {
         try {
           const result = item();
-          if (this.isBaseNode(result)) {
+          if (isBaseNode(result)) {
             this.handleEntityImmediatelyOrQueue(result);
-          } else if (this.isThenable(result)) {
+          } else if (isThenable(result)) {
             this.handlePromiseWithSpawnOnResolve(result);
           }
         } catch (error) {
@@ -2257,16 +2507,25 @@ var ZylemStage = class extends LifeCycleBase {
         }
         continue;
       }
-      if (this.isThenable(item)) {
+      if (isThenable(item)) {
         this.handlePromiseWithSpawnOnResolve(item);
       }
     }
   }
 };
 
+// src/lib/camera/camera.ts
+import { Vector2 as Vector26, Vector3 as Vector312 } from "three";
+var CameraWrapper = class {
+  cameraRef;
+  constructor(camera) {
+    this.cameraRef = camera;
+  }
+};
+
 // src/lib/stage/stage-default.ts
 import { proxy as proxy4 } from "valtio/vanilla";
-import { Vector3 as Vector312 } from "three";
+import { Vector3 as Vector313 } from "three";
 var initialDefaults = {
   backgroundColor: ZylemBlueColor,
   backgroundImage: null,
@@ -2274,7 +2533,7 @@ var initialDefaults = {
     p1: ["gamepad-1", "keyboard"],
     p2: ["gamepad-2", "keyboard"]
   },
-  gravity: new Vector312(0, 0, 0),
+  gravity: new Vector313(0, 0, 0),
   variables: {}
 };
 var stageDefaultsState = proxy4({
@@ -2303,18 +2562,27 @@ function getStageDefaultConfig() {
 var Stage = class {
   wrappedStage;
   options = [];
+  // Entities added after construction, consumed on each load
+  _pendingEntities = [];
   // Lifecycle callback arrays
   setupCallbacks = [];
   updateCallbacks = [];
   destroyCallbacks = [];
+  pendingLoadingCallbacks = [];
   constructor(options) {
     this.options = options;
     this.wrappedStage = null;
   }
   async load(id, camera) {
     stageState.entities = [];
-    this.wrappedStage = new ZylemStage(this.options);
+    const loadOptions = [...this.options, ...this._pendingEntities];
+    this._pendingEntities = [];
+    this.wrappedStage = new ZylemStage(loadOptions);
     this.wrappedStage.wrapperRef = this;
+    this.pendingLoadingCallbacks.forEach((cb) => {
+      this.wrappedStage.onLoading(cb);
+    });
+    this.pendingLoadingCallbacks = [];
     const zylemCamera = camera instanceof CameraWrapper ? camera.cameraRef : camera;
     await this.wrappedStage.load(id, zylemCamera);
     this.wrappedStage.onEntityAdded((child) => {
@@ -2345,7 +2613,7 @@ var Stage = class {
     }
   }
   async addEntities(entities) {
-    this.options.push(...entities);
+    this._pendingEntities.push(...entities);
     if (!this.wrappedStage) {
       return;
     }
@@ -2359,7 +2627,7 @@ var Stage = class {
     if (this.wrappedStage) {
       return;
     }
-    this.options.push(...inputs);
+    this._pendingEntities.push(...inputs);
   }
   addToStage(...inputs) {
     if (!this.wrappedStage) {
@@ -2403,7 +2671,9 @@ var Stage = class {
   }
   onLoading(callback) {
     if (!this.wrappedStage) {
+      this.pendingLoadingCallbacks.push(callback);
       return () => {
+        this.pendingLoadingCallbacks = this.pendingLoadingCallbacks.filter((c) => c !== callback);
       };
     }
     return this.wrappedStage.onLoading(callback);
@@ -2415,7 +2685,7 @@ function createStage(...options) {
 }
 
 // src/lib/stage/entity-spawner.ts
-import { Euler, Quaternion as Quaternion3, Vector2 as Vector26 } from "three";
+import { Euler, Quaternion as Quaternion3, Vector2 as Vector27 } from "three";
 function entitySpawner(factory) {
   return {
     spawn: async (stage, x, y) => {
@@ -2423,7 +2693,7 @@ function entitySpawner(factory) {
       stage.add(instance);
       return instance;
     },
-    spawnRelative: async (source, stage, offset = new Vector26(0, 1)) => {
+    spawnRelative: async (source, stage, offset = new Vector27(0, 1)) => {
       if (!source.body) {
         console.warn("body missing for entity during spawnRelative");
         return void 0;
@@ -2445,8 +2715,31 @@ function entitySpawner(factory) {
     }
   };
 }
+
+// src/lib/stage/stage-events.ts
+import { subscribe as subscribe5 } from "valtio/vanilla";
+var STAGE_STATE_CHANGE = "STAGE_STATE_CHANGE";
+function initStageStateDispatcher() {
+  return subscribe5(stageState, () => {
+    const detail = {
+      entities: stageState.entities,
+      variables: stageState.variables
+    };
+    window.dispatchEvent(new CustomEvent(STAGE_STATE_CHANGE, { detail }));
+  });
+}
+function dispatchStageState() {
+  const detail = {
+    entities: stageState.entities,
+    variables: stageState.variables
+  };
+  window.dispatchEvent(new CustomEvent(STAGE_STATE_CHANGE, { detail }));
+}
 export {
+  STAGE_STATE_CHANGE,
   createStage,
-  entitySpawner
+  dispatchStageState,
+  entitySpawner,
+  initStageStateDispatcher
 };
 //# sourceMappingURL=stage.js.map

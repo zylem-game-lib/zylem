@@ -13,7 +13,12 @@ import { GameConfig, resolveGameConfig } from './game-config';
 import { AspectRatioDelegate } from '../device/aspect-ratio';
 import { GameCanvas } from './game-canvas';
 import { GameDebugDelegate } from './game-debug-delegate';
+import { GameLoadingDelegate, GameLoadingEvent, GAME_LOADING_EVENT } from './game-loading-delegate';
+import { gameEventBus, StageLoadingPayload } from './game-event-bus';
+import { GameRendererObserver } from './game-renderer-observer';
 import { ZylemStage } from '../core';
+
+export type { GameLoadingEvent };
 
 type ZylemGameOptions<TGlobals extends BaseGlobals> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>
 
@@ -45,6 +50,9 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	private animationFrameId: number | null = null;
 	private isDisposed = false;
 	private debugDelegate: GameDebugDelegate | null = null;
+	private loadingDelegate: GameLoadingDelegate = new GameLoadingDelegate();
+	private rendererObserver: GameRendererObserver = new GameRendererObserver();
+	private eventBusUnsubscribes: (() => void)[] = [];
 
 	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
@@ -79,49 +87,52 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.gameCanvas.applyBodyBackground();
 		this.gameCanvas.mountCanvas();
 		this.gameCanvas.centerIfFullscreen();
+		
+		// Setup renderer observer
+		this.rendererObserver.setGameCanvas(this.gameCanvas);
+		if (this.resolvedConfig) {
+			this.rendererObserver.setConfig(this.resolvedConfig);
+		}
+		if (this.container) {
+			this.rendererObserver.setContainer(this.container);
+		}
+		
+		// Subscribe to event bus for stage loading events
+		this.subscribeToEventBus();
 	}
 
 	loadDebugOptions(options: ZylemGameOptions<TGlobals>) {
-		// Initialize debugState from config if provided
 		if (options.debug !== undefined) {
 			debugState.enabled = Boolean(options.debug);
 		}
-
-		// Create debug delegate for Stats panel and runtime toggle
 		this.debugDelegate = new GameDebugDelegate();
 	}
 
-	async loadStage(stage: Stage) {
+	loadStage(stage: Stage, stageIndex: number = 0): Promise<void> {
 		this.unloadCurrentStage();
 		const config = stage.options[0] as any;
+		
+		// Subscribe to stage loading events via delegate
+		this.loadingDelegate.wireStageLoading(stage, stageIndex);
 
-		await stage.load(this.id, config?.camera as ZylemCamera | null);
-
-		this.stageMap.set(stage.wrappedStage!.uuid, stage);
-		this.currentStageId = stage.wrappedStage!.uuid;
-		this.defaultCamera = stage.wrappedStage!.cameraRef!;
-
-		if (this.container && this.defaultCamera) {
-			const dom = this.defaultCamera.getDomElement();
-			const internal = this.resolvedConfig?.internalResolution;
-			this.gameCanvas?.mountRenderer(dom, (cssW, cssH) => {
-				if (!this.defaultCamera) return;
-				if (internal) {
-					this.defaultCamera.setPixelRatio(1);
-					this.defaultCamera.resize(internal.width, internal.height);
-				} else {
-					const dpr = (window.devicePixelRatio || 1);
-					this.defaultCamera.setPixelRatio(dpr);
-					this.defaultCamera.resize(cssW, cssH);
-				}
-			});
-		}
+		// Start stage loading and return promise for backward compatibility
+		return stage.load(this.id, config?.camera as ZylemCamera | null).then(() => {
+			this.stageMap.set(stage.wrappedStage!.uuid, stage);
+			this.currentStageId = stage.wrappedStage!.uuid;
+			this.defaultCamera = stage.wrappedStage!.cameraRef!;
+			
+			// Trigger renderer observer with new camera
+			if (this.defaultCamera) {
+				this.rendererObserver.setCamera(this.defaultCamera);
+			}
+		});
 	}
 
 	unloadCurrentStage() {
 		if (!this.currentStageId) return;
 		const current = this.getStage(this.currentStageId);
 		if (!current) return;
+		
 		if (current?.wrappedStage) {
 			try {
 				current.wrappedStage.nodeDestroy({
@@ -131,8 +142,19 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			} catch (e) {
 				console.error('Failed to destroy previous stage', e);
 			}
+			// Clear the Stage wrapper's reference to the destroyed stage
+			current.wrappedStage = null;
 		}
+		
+		// Remove from stage map
 		this.stageMap.delete(this.currentStageId);
+		
+		// Reset game state
+		this.currentStageId = '';
+		this.defaultCamera = null;
+		
+		// Reset renderer observer for stage transitions
+		this.rendererObserver.reset();
 	}
 
 	setGlobals(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>) {
@@ -181,7 +203,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			if (this.customUpdate) {
 				this.customUpdate(clampedParams);
 			}
-			if (stage) {
+			if (stage && stage.wrappedStage) {
 				stage.wrappedStage!.nodeUpdate({ ...clampedParams, me: stage!.wrappedStage as ZylemStage });
 			}
 			this.totalTime += clampedParams.delta;
@@ -210,6 +232,13 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			this.debugDelegate = null;
 		}
 
+		// Cleanup event bus subscriptions
+		this.eventBusUnsubscribes.forEach(unsub => unsub());
+		this.eventBusUnsubscribes = [];
+
+		// Cleanup renderer observer
+		this.rendererObserver.dispose();
+
 		this.timer.dispose();
 
 		if (this.customDestroy) {
@@ -237,5 +266,41 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		return this.getStage(this.currentStageId);
 	}
 
+	/**
+	 * Subscribe to loading events from the game.
+	 * Events include stage context (stageName, stageIndex).
+	 * @param callback Invoked for each loading event
+	 * @returns Unsubscribe function
+	 */
+	onLoading(callback: (event: GameLoadingEvent) => void): () => void {
+		return this.loadingDelegate.onLoading(callback);
+	}
+
+	/**
+	 * Subscribe to the game event bus for stage loading events.
+	 * Emits window events for cross-application communication.
+	 */
+	private subscribeToEventBus(): void {
+		const emitWindowEvent = (payload: StageLoadingPayload) => {
+			if (typeof window !== 'undefined') {
+				const event: GameLoadingEvent = {
+					type: payload.type,
+					message: payload.message ?? '',
+					progress: payload.progress ?? 0,
+					current: payload.current,
+					total: payload.total,
+					stageName: payload.stageName,
+					stageIndex: payload.stageIndex,
+				};
+				window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
+			}
+		};
+
+		this.eventBusUnsubscribes.push(
+			gameEventBus.on('stage:loading:start', emitWindowEvent),
+			gameEventBus.on('stage:loading:progress', emitWindowEvent),
+			gameEventBus.on('stage:loading:complete', emitWindowEvent),
+		);
+	}
 }
 

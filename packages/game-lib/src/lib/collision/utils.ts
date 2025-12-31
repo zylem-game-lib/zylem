@@ -1,6 +1,10 @@
 import type { GameEntity } from "../entities/entity";
-import type { CollisionMask } from "./collision-mask";
 import { getOrCreateCollisionGroupId } from "./collision-builder";
+
+/**
+ * A branded bitmask representing a set of collision types.
+ */
+export type CollisionMask = number & { readonly __brand: "CollisionMask" };
 
 export type NameSelector = string | string[] | RegExp;
 
@@ -39,5 +43,3 @@ export function matchesCollisionSelector(other: GameEntity<any>, selector?: Coll
 	}
 	return true;
 }
-
-

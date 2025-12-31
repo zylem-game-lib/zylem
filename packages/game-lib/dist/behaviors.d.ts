@@ -1,4 +1,4 @@
-import { G as GameEntity, m as CollisionContext, U as UpdateContext, B as BehaviorCallbackType } from './entity-ByNgyo1y.js';
+import { G as GameEntity, m as CollisionContext, U as UpdateContext, B as BehaviorCallbackType } from './entity-COvRtFNG.js';
 import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
 import { Vector } from '@dimforge/rapier3d-compat';
 import 'three';
@@ -6,12 +6,10 @@ import 'bitecs';
 
 /**
  * A branded bitmask representing a set of collision types.
- * Construct with {@link buildCollisionMask}.
  */
 type CollisionMask = number & {
     readonly __brand: "CollisionMask";
 };
-
 type NameSelector = string | string[] | RegExp;
 type CollisionSelector = {
     name: NameSelector;

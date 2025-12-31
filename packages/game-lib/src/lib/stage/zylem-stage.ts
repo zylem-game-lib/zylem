@@ -17,14 +17,17 @@ import createTransformSystem, { StageSystem } from '../systems/transformable.sys
 import { BaseNode } from '../core/base-node';
 import { nanoid } from 'nanoid';
 import { Stage } from './stage';
-import { Perspectives } from '../camera/perspective';
 import { CameraWrapper } from '../camera/camera';
 import { StageDebugDelegate } from './stage-debug-delegate';
 import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
+import { StageCameraDelegate } from './stage-camera-delegate';
+import { StageLoadingDelegate } from './stage-loading-delegate';
 import { GameEntity } from '../entities/entity';
 import { BaseEntityInterface } from '../types/entity-types';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { LoadingEvent } from '../core/interfaces';
+import { parseStageOptions } from './stage-config';
+import { isBaseNode, isThenable } from '../core/utility/options-parser';
 export type { LoadingEvent };
 
 export interface ZylemStageConfig {
@@ -85,12 +88,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	_debugMap: Map<string, BaseNode> = new Map();
 
 	private entityAddedHandlers: Array<(entity: BaseNode) => void> = [];
-	private loadingHandlers: Array<(event: LoadingEvent) => void> = [];
-
 
 	ecs = createECS();
 	testSystem: any = null;
-	transformSystem: any = null;
+	transformSystem: ReturnType<typeof createTransformSystem> | null = null;
 	debugDelegate: StageDebugDelegate | null = null;
 	cameraDebugDelegate: StageCameraDebugDelegate | null = null;
 	private debugStateUnsubscribe: (() => void) | null = null;
@@ -99,6 +100,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	wrapperRef: Stage | null = null;
 	camera?: CameraWrapper;
 	cameraRef?: ZylemCamera | null = null;
+
+	// Delegates
+	private cameraDelegate: StageCameraDelegate;
+	private loadingDelegate: StageLoadingDelegate;
 
 	/**
 	 * Create a new stage.
@@ -110,64 +115,28 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.scene = null;
 		this.uuid = nanoid();
 
-		// Parse the options array to extract different types of items
-		const { config, entities, asyncEntities, camera } = this.parseOptions(options);
-		this.camera = camera;
-		this.children = entities;
-		this.pendingEntities = asyncEntities;
-		this.saveState({ ...this.state, ...config, entities: [] });
+		// Initialize delegates
+		this.cameraDelegate = new StageCameraDelegate(this);
+		this.loadingDelegate = new StageLoadingDelegate();
 
-		this.gravity = config.gravity ?? new Vector3(0, 0, 0);
+		// Parse the options array using the stage-config module
+		const parsed = parseStageOptions(options);
+		this.camera = parsed.camera;
+		this.children = parsed.entities;
+		this.pendingEntities = parsed.asyncEntities;
+		
+		// Update state with resolved config
+		this.saveState({
+			...this.state,
+			inputs: parsed.config.inputs,
+			backgroundColor: parsed.config.backgroundColor,
+			backgroundImage: parsed.config.backgroundImage,
+			gravity: parsed.config.gravity,
+			variables: parsed.config.variables,
+			entities: [],
+		});
 
-	}
-
-	private parseOptions(options: StageOptions): {
-		config: Partial<ZylemStageConfig>;
-		entities: BaseNode[];
-		asyncEntities: StageEntityInput[];
-		camera?: CameraWrapper;
-	} {
-		let config: Partial<ZylemStageConfig> = {};
-		const entities: BaseNode[] = [];
-		const asyncEntities: StageEntityInput[] = [];
-		let camera: CameraWrapper | undefined;
-		for (const item of options) {
-			if (this.isCameraWrapper(item)) {
-				camera = item;
-			} else if (this.isBaseNode(item)) {
-				entities.push(item);
-			} else if (this.isEntityInput(item)) {
-				asyncEntities.push(item as StageEntityInput);
-			} else if (this.isZylemStageConfig(item)) {
-				config = { ...config, ...item };
-			}
-		}
-
-		return { config, entities, asyncEntities, camera };
-	}
-
-	private isZylemStageConfig(item: any): item is ZylemStageConfig {
-		return item && typeof item === 'object' && !(item instanceof BaseNode) && !(item instanceof CameraWrapper);
-	}
-
-	private isBaseNode(item: any): item is BaseNode {
-		return item && typeof item === 'object' && typeof item.create === 'function';
-	}
-
-	private isCameraWrapper(item: any): item is CameraWrapper {
-		return item && typeof item === 'object' && item.constructor.name === 'CameraWrapper';
-	}
-
-	private isEntityInput(item: any): item is StageEntityInput {
-		if (!item) return false;
-		if (this.isBaseNode(item)) return true;
-		if (typeof item === 'function') return true;
-		if (typeof item === 'object' && typeof (item as any).then === 'function') return true;
-		return false;
-	}
-
-	private isThenable(value: any): value is Promise<any> {
-		return !!value && typeof (value as any).then === 'function';
+		this.gravity = parsed.config.gravity ?? new Vector3(0, 0, 0);
 	}
 
 	private handleEntityImmediatelyOrQueue(entity: BaseNode): void {
@@ -203,13 +172,15 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	/**
 	 * Load and initialize the stage's scene and world.
+	 * Uses generator pattern to yield control to event loop for real-time progress.
 	 * @param id DOM element id for the renderer container
 	 * @param camera Optional camera override
 	 */
 	async load(id: string, camera?: ZylemCamera | null) {
 		this.setState();
 
-		const zylemCamera = camera || (this.camera ? this.camera.cameraRef : this.createDefaultCamera());
+		// Use camera delegate to resolve camera
+		const zylemCamera = this.cameraDelegate.resolveCamera(camera, this.camera);
 		this.cameraRef = zylemCamera;
 		this.scene = new ZylemScene(id, zylemCamera, this.state);
 
@@ -218,55 +189,62 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 		this.scene.setup();
 
-		this.emitLoading({ type: 'start', message: 'Loading stage...', progress: 0 });
+		this.loadingDelegate.emitStart();
 
+		// Run entity loading with generator pattern for real-time progress
+		await this.runEntityLoadGenerator();
+
+		this.transformSystem = createTransformSystem(this as unknown as StageSystem);
+		this.isLoaded = true;
+		this.loadingDelegate.emitComplete();
+	}
+
+	/**
+	 * Generator that yields between entity loads for real-time progress updates.
+	 */
+	private *entityLoadGenerator(): Generator<{ current: number; total: number; name: string }> {
 		const total = this.children.length + this.pendingEntities.length + this.pendingPromises.length;
 		let current = 0;
 
-		for (let child of this.children) {
+		for (const child of this.children) {
 			this.spawnEntity(child);
 			current++;
-			this.emitLoading({
-				type: 'progress',
-				message: `Loaded entity ${child.name || 'unknown'}`,
-				progress: current / total,
-				current,
-				total
-			});
+			yield { current, total, name: child.name || 'unknown' };
 		}
+
 		if (this.pendingEntities.length) {
 			this.enqueue(...this.pendingEntities);
-			// enqueue handles spawning, but we might want to track progress here if we could
-			// For now, let's just assume they are processed
 			current += this.pendingEntities.length;
 			this.pendingEntities = [];
+			yield { current, total, name: 'pending entities' };
 		}
+
 		if (this.pendingPromises.length) {
 			for (const promise of this.pendingPromises) {
 				promise.then((entity) => {
 					this.spawnEntity(entity);
-					// Note: this progress update might happen after 'complete' if we don't await, 
-					// but load is async so we should probably await if we want accurate progress?
-					// The original code didn't await.
 				}).catch((e) => console.error('Failed to resolve pending stage entity', e));
 			}
-			// We are not awaiting promises here in original code, so we can't accurately track their completion for "progress" 
-			// in a linear synchronous way. 
-			// For now, let's just increment current count as if they are "scheduled"
 			current += this.pendingPromises.length;
 			this.pendingPromises = [];
+			yield { current, total, name: 'async entities' };
 		}
-		this.transformSystem = createTransformSystem(this as unknown as StageSystem);
-		this.isLoaded = true;
-		this.emitLoading({ type: 'complete', message: 'Stage loaded', progress: 1 });
 	}
 
-	private createDefaultCamera(): ZylemCamera {
-		const width = window.innerWidth;
-		const height = window.innerHeight;
-		const screenResolution = new Vector2(width, height);
-		return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
+	/**
+	 * Runs the entity load generator, yielding to the event loop between loads.
+	 * This allows the browser to process events and update the UI in real-time.
+	 */
+	private async runEntityLoadGenerator(): Promise<void> {
+		const gen = this.entityLoadGenerator();
+		for (const progress of gen) {
+			this.loadingDelegate.emitProgress(`Loaded ${progress.name}`, progress.current, progress.total);
+			// Yield to event loop so browser can process events and update UI
+			// Use setTimeout(0) for more reliable async behavior than RAF
+			await new Promise<void>(resolve => setTimeout(resolve, 0));
+		}
 	}
+
 
 	protected _setup(params: SetupContext<ZylemStage>): void {
 		if (!this.scene || !this.world) {
@@ -312,7 +290,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			return;
 		}
 		this.world.update(params);
-		this.transformSystem(this.ecs);
+		this.transformSystem?.system(this.ecs);
 		this._childrenMap.forEach((child, eid) => {
 			child.nodeUpdate({
 				...params,
@@ -363,6 +341,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.world = null as any;
 		this.scene = null as any;
 		this.cameraRef = null;
+		// Cleanup transform system
+		this.transformSystem?.destroy(this.ecs);
+		this.transformSystem = null;
+
 		// Clear reactive stage variables on unload
 		resetStageVariables();
 		// Clear object-scoped variables for this stage
@@ -449,14 +431,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	}
 
 	onLoading(callback: (event: LoadingEvent) => void) {
-		this.loadingHandlers.push(callback);
-		return () => {
-			this.loadingHandlers = this.loadingHandlers.filter((h) => h !== callback);
-		};
-	}
-
-	private emitLoading(event: LoadingEvent) {
-		this.loadingHandlers.forEach((h) => h(event));
+		return this.loadingDelegate.onLoading(callback);
 	}
 
 	/**
@@ -524,16 +499,16 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	enqueue(...items: StageEntityInput[]) {
 		for (const item of items) {
 			if (!item) continue;
-			if (this.isBaseNode(item)) {
+			if (isBaseNode(item)) {
 				this.handleEntityImmediatelyOrQueue(item);
 				continue;
 			}
 			if (typeof item === 'function') {
 				try {
 					const result = (item as (() => BaseNode | Promise<any>))();
-					if (this.isBaseNode(result)) {
+					if (isBaseNode(result)) {
 						this.handleEntityImmediatelyOrQueue(result);
-					} else if (this.isThenable(result)) {
+					} else if (isThenable(result)) {
 						this.handlePromiseWithSpawnOnResolve(result as Promise<any>);
 					}
 				} catch (error) {
@@ -541,7 +516,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 				}
 				continue;
 			}
-			if (this.isThenable(item)) {
+			if (isThenable(item)) {
 				this.handlePromiseWithSpawnOnResolve(item as Promise<any>);
 			}
 		}
