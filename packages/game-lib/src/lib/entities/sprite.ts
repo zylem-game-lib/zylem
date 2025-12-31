@@ -74,11 +74,28 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 	constructor(options?: ZylemSpriteOptions) {
 		super();
 		this.options = { ...spriteDefaults, ...options };
-		this.createSpritesFromImages(options?.images || []);
-		this.createAnimations(options?.animations || []);
-		// Add sprite-specific lifecycle callbacks
+		// Add sprite-specific lifecycle callbacks (only registered once)
 		this.prependUpdate(this.spriteUpdate.bind(this) as any);
 		this.onDestroy(this.spriteDestroy.bind(this) as any);
+	}
+
+	public create(): this {
+		// Clear previous state to prevent accumulation on reload
+		this.sprites = [];
+		this.spriteMap.clear();
+		this.animations.clear();
+		this.currentAnimation = null;
+		this.currentAnimationFrame = '';
+		this.currentAnimationIndex = 0;
+		this.currentAnimationTime = 0;
+		this.group = undefined;
+		
+		// Recreate sprites and animations
+		this.createSpritesFromImages(this.options?.images || []);
+		this.createAnimations(this.options?.animations || []);
+		
+		// Call parent create
+		return super.create();
 	}
 
 	protected createSpritesFromImages(images: SpriteImage[]) {

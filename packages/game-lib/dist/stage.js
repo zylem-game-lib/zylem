@@ -2627,7 +2627,7 @@ var Stage = class {
     if (this.wrappedStage) {
       return;
     }
-    this._pendingEntities.push(...inputs);
+    this.options.push(...inputs);
   }
   addToStage(...inputs) {
     if (!this.wrappedStage) {

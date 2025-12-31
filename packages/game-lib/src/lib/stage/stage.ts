@@ -97,8 +97,8 @@ export class Stage {
 
 	private addToBlueprints(...inputs: Array<EntityInput>) {
 		if (this.wrappedStage) { return; }
-		// Store in pending instead of mutating options
-		this._pendingEntities.push(...(inputs as unknown as BaseNode[]));
+		// Add to options (persistent) so they're available on reload
+		this.options.push(...(inputs as unknown as StageOptionItem[]));
 	}
 
 	private addToStage(...inputs: Array<EntityInput>) {

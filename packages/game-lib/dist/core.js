@@ -3359,7 +3359,7 @@ var init_stage = __esm({
         if (this.wrappedStage) {
           return;
         }
-        this._pendingEntities.push(...inputs);
+        this.options.push(...inputs);
       }
       addToStage(...inputs) {
         if (!this.wrappedStage) {
@@ -4929,10 +4929,19 @@ var ZylemText = class _ZylemText extends GameEntity {
   constructor(options) {
     super();
     this.options = { ...textDefaults, ...options };
-    this.group = new Group5();
-    this.createSprite();
     this.prependSetup(this.textSetup.bind(this));
     this.prependUpdate(this.textUpdate.bind(this));
+  }
+  create() {
+    this._sprite = null;
+    this._texture = null;
+    this._canvas = null;
+    this._ctx = null;
+    this._lastCanvasW = 0;
+    this._lastCanvasH = 0;
+    this.group = new Group5();
+    this.createSprite();
+    return super.create();
   }
   createSprite() {
     this._canvas = document.createElement("canvas");
@@ -5161,10 +5170,21 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
   constructor(options) {
     super();
     this.options = { ...spriteDefaults, ...options };
-    this.createSpritesFromImages(options?.images || []);
-    this.createAnimations(options?.animations || []);
     this.prependUpdate(this.spriteUpdate.bind(this));
     this.onDestroy(this.spriteDestroy.bind(this));
+  }
+  create() {
+    this.sprites = [];
+    this.spriteMap.clear();
+    this.animations.clear();
+    this.currentAnimation = null;
+    this.currentAnimationFrame = "";
+    this.currentAnimationIndex = 0;
+    this.currentAnimationTime = 0;
+    this.group = void 0;
+    this.createSpritesFromImages(this.options?.images || []);
+    this.createAnimations(this.options?.animations || []);
+    return super.create();
   }
   createSpritesFromImages(images) {
     const textureLoader = new TextureLoader3();

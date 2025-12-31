@@ -123,6 +123,7 @@ declare class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
     protected currentAnimationIndex: number;
     protected currentAnimationTime: number;
     constructor(options?: ZylemSpriteOptions);
+    create(): this;
     protected createSpritesFromImages(images: SpriteImage[]): void;
     protected createAnimations(animations: SpriteAnimation[]): void;
     setSprite(key: string): void;
@@ -194,6 +195,7 @@ declare class ZylemText extends GameEntity<ZylemTextOptions> {
     private _lastCanvasW;
     private _lastCanvasH;
     constructor(options?: ZylemTextOptions);
+    create(): this;
     private createSprite;
     private measureAndResizeCanvas;
     private drawCenteredText;

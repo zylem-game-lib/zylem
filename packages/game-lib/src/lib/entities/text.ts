@@ -54,11 +54,26 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 	constructor(options?: ZylemTextOptions) {
 		super();
 		this.options = { ...textDefaults, ...options } as ZylemTextOptions;
-		this.group = new Group();
-		this.createSprite();
 		// Add text-specific lifecycle callbacks
 		this.prependSetup(this.textSetup.bind(this) as any);
 		this.prependUpdate(this.textUpdate.bind(this) as any);
+	}
+
+	public create(): this {
+		// Clear previous state to prevent issues on reload
+		this._sprite = null;
+		this._texture = null;
+		this._canvas = null;
+		this._ctx = null;
+		this._lastCanvasW = 0;
+		this._lastCanvasH = 0;
+		this.group = new Group();
+		
+		// Recreate the sprite
+		this.createSprite();
+		
+		// Call parent create
+		return super.create();
 	}
 
 	private createSprite() {
