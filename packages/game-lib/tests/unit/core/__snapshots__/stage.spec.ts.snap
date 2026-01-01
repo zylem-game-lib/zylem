@@ -1,8 +1,9 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`create a basic stage > default configuration 1`] = `
-h {
-  "destroy": [Function],
+Stage {
+  "_pendingEntities": [],
+  "destroyCallbacks": [],
   "options": [
     {
       "backgroundColor": 209900,
@@ -25,8 +26,9 @@ h {
       "variables": {},
     },
   ],
-  "setup": [Function],
-  "update": [Function],
+  "pendingLoadingCallbacks": [],
+  "setupCallbacks": [],
+  "updateCallbacks": [],
   "wrappedStage": null,
 }
 `;

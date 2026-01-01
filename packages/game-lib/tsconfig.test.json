@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"]
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["src/lib/ui/**/*.tsx", "src/lib/debug/**/*.tsx", "src/lib/debug/**/console-store.ts", "src/lib/debug/state-based-debug-loader.ts"]
+}

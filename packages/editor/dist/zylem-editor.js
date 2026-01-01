@@ -1223,7 +1223,8 @@ import PanelBottomOpen from "lucide-solid/icons/panel-bottom-open";
 import PanelBottomClose from "lucide-solid/icons/panel-bottom-close";
 import X from "lucide-solid/icons/x";
 var _tmpl$10 = /* @__PURE__ */ _$template10(`<button class=floating-panel-button type=button>`);
-var _tmpl$24 = /* @__PURE__ */ _$template10(`<div class=floating-panel style=z-index:1002;flex-direction:column><div class=floating-panel-titlebar style=align-items:center;justify-content:space-between;user-select:none><span class=floating-panel-title></span><div class=floating-panel-controls></div></div><div class=floating-panel-content style=flex-direction:column></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div>`);
+var _tmpl$24 = /* @__PURE__ */ _$template10(`<button class=floating-panel-button type=button aria-label="Close panel"title="Close panel"data-testid=floating-panel-close>`);
+var _tmpl$32 = /* @__PURE__ */ _$template10(`<div class=floating-panel style=z-index:1002;flex-direction:column><div class=floating-panel-titlebar style=align-items:center;justify-content:space-between;user-select:none><span class=floating-panel-title></span><div class=floating-panel-controls></div></div><div class=floating-panel-content style=flex-direction:column></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div>`);
 var DRAG_THRESHOLD3 = 3;
 var FloatingPanel = (props) => {
   const minSize = props.minSize ?? {
@@ -1359,7 +1360,7 @@ var FloatingPanel = (props) => {
     cursor
   });
   return (() => {
-    var _el$ = _tmpl$24(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$7 = _el$2.nextSibling, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.nextSibling, _el$11 = _el$10.nextSibling, _el$12 = _el$11.nextSibling, _el$13 = _el$12.nextSibling;
+    var _el$ = _tmpl$32(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$7 = _el$2.nextSibling, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.nextSibling, _el$11 = _el$10.nextSibling, _el$12 = _el$11.nextSibling, _el$13 = _el$12.nextSibling;
     _$setStyleProperty3(_el$, "position", "fixed");
     _$setStyleProperty3(_el$, "display", "flex");
     _el$2.$$mousedown = handleTitleBarMouseDown;
@@ -1390,7 +1391,7 @@ var FloatingPanel = (props) => {
         return props.onClose;
       },
       get children() {
-        var _el$6 = _tmpl$10();
+        var _el$6 = _tmpl$24();
         _$addEventListener2(_el$6, "click", props.onClose, true);
         _$insert7(_el$6, _$createComponent15(X, {
           size: 12

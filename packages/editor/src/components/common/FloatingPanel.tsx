@@ -206,6 +206,9 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                             class="floating-panel-button"
                             onClick={props.onClose}
                             type="button"
+                            aria-label="Close panel"
+                            title="Close panel"
+                            data-testid="floating-panel-close"
                         >
                             <X size={12} />
                         </button>

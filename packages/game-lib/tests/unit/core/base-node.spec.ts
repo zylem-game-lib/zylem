@@ -89,37 +89,40 @@ describe('BaseNode', () => {
     });
 
     describe('Lifecycle', () => {
-        it('should call _setup and setup on nodeSetup', () => {
+        it('should call _setup and run setup callbacks on nodeSetup', () => {
             const setupSpy = vi.spyOn(node as any, '_setup');
-            const publicSetupSpy = vi.spyOn(node as any, 'setup');
+            const callbackSpy = vi.fn();
+            node.onSetup(callbackSpy);
             const params = {} as any;
 
             node.nodeSetup(params);
 
             expect(setupSpy).toHaveBeenCalledWith(params);
-            expect(publicSetupSpy).toHaveBeenCalledWith(params);
+            expect(callbackSpy).toHaveBeenCalledWith(params);
         });
 
-        it('should call _update and update on nodeUpdate', () => {
+        it('should call _update and run update callbacks on nodeUpdate', () => {
             const updateSpy = vi.spyOn(node as any, '_update');
-            const publicUpdateSpy = vi.spyOn(node as any, 'update');
+            const callbackSpy = vi.fn();
+            node.onUpdate(callbackSpy);
             const params = {} as any;
 
             node.nodeUpdate(params);
 
             expect(updateSpy).toHaveBeenCalledWith(params);
-            expect(publicUpdateSpy).toHaveBeenCalledWith(params);
+            expect(callbackSpy).toHaveBeenCalledWith(params);
         });
 
-        it('should call _destroy and destroy on nodeDestroy', () => {
+        it('should call _destroy and run destroy callbacks on nodeDestroy', () => {
             const destroySpy = vi.spyOn(node as any, '_destroy');
-            const publicDestroySpy = vi.spyOn(node as any, 'destroy');
+            const callbackSpy = vi.fn();
+            node.onDestroy(callbackSpy);
             const params = {} as any;
 
             node.nodeDestroy(params);
 
             expect(destroySpy).toHaveBeenCalledWith(params);
-            expect(publicDestroySpy).toHaveBeenCalledWith(params);
+            expect(callbackSpy).toHaveBeenCalledWith(params);
             expect(node.markedForRemoval).toBe(true);
         });
 

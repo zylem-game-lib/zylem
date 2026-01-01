@@ -18,6 +18,7 @@
     "dev:editor": "pnpm --filter @zylem/editor dev",
     "dev:examples": "pnpm --filter @zylem/examples dev",
     "dev:server": "pnpm --filter @zylem/spacetime-server dev",
+    "dev:lib": "pnpm --filter @zylem/game-lib dev",
     "build:lib": "pnpm --filter @zylem/game-lib build",
     "build:editor": "pnpm --filter @zylem/editor build",
     "build:examples": "pnpm --filter @zylem/examples build",
@@ -34,12 +35,17 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.7",
+    "@solidjs/testing-library": "^0.8.10",
     "esbuild-plugin-solid": "^0.6.0",
     "tsup": "^8.5.1",
-    "typescript": "5.8.2"
+    "typescript": "5.8.2",
+    "vite": "7.0.4",
+    "vite-plugin-glsl": "^1.5.4",
+    "vite-plugin-solid": "^2.11.8"
   },
   "packageManager": "pnpm@10.18.3",
   "dependencies": {
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.2",
+    "multithreading": "^0.3.45"
   }
 }

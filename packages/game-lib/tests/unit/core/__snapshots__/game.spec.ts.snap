@@ -1,11 +1,15 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`create a basic game > default configuration 1`] = `
-w {
-  "destroy": [Function],
+Game {
+  "activeGlobalSubscriptions": [],
+  "destroyCallbacks": [],
+  "globalChangeCallbacks": [],
+  "globalChangesCallbacks": [],
   "options": [
-    h {
-      "destroy": [Function],
+    Stage {
+      "_pendingEntities": [],
+      "destroyCallbacks": [],
       "options": [
         {
           "backgroundColor": 209900,
@@ -28,15 +32,16 @@ w {
           "variables": {},
         },
       ],
-      "setup": [Function],
-      "update": [Function],
+      "pendingLoadingCallbacks": [],
+      "setupCallbacks": [],
+      "updateCallbacks": [],
       "wrappedStage": null,
     },
   ],
-  "pendingGlobalChangeHandlers": [],
+  "pendingLoadingCallbacks": [],
   "refErrorMessage": "lost reference to game",
-  "setup": [Function],
-  "update": [Function],
+  "setupCallbacks": [],
+  "updateCallbacks": [],
   "wrappedGame": null,
 }
 `;

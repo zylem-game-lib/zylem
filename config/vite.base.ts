@@ -10,13 +10,14 @@ const configDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(configDir, '..');
 
 export async function createBaseConfig(_env: ConfigEnv): Promise<UserConfig> {
+	const gameLibRoot = path.resolve(projectRoot, 'packages/game-lib');
 	const aliases: AliasOptions = {
-		'@lib/debug': path.resolve(projectRoot, './src/lib/debug'),
-		'@lib/game': path.resolve(projectRoot, './src/lib/game'),
-		'@lib/ui': path.resolve(projectRoot, './src/lib/ui'),
-		'@lib': path.resolve(projectRoot, './src/lib'),
-		'@src': path.resolve(projectRoot, './src'),
-		'@zylem/game-lib': path.resolve(projectRoot, './src/api/main.ts')
+		'@lib/debug': path.resolve(gameLibRoot, './src/lib/debug'),
+		'@lib/game': path.resolve(gameLibRoot, './src/lib/game'),
+		'@lib/ui': path.resolve(gameLibRoot, './src/lib/ui'),
+		'@lib': path.resolve(gameLibRoot, './src/lib'),
+		'@src': path.resolve(gameLibRoot, './src'),
+		'@zylem/game-lib': path.resolve(gameLibRoot, './src/api/main.ts')
 	};
 
 	return {
