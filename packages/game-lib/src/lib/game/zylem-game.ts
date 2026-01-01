@@ -14,11 +14,22 @@ import { AspectRatioDelegate } from '../device/aspect-ratio';
 import { GameCanvas } from './game-canvas';
 import { GameDebugDelegate } from './game-debug-delegate';
 import { GameLoadingDelegate, GameLoadingEvent, GAME_LOADING_EVENT } from './game-loading-delegate';
-import { gameEventBus, StageLoadingPayload } from './game-event-bus';
+import { gameEventBus, StageLoadingPayload, GameStateUpdatedPayload } from './game-event-bus';
 import { GameRendererObserver } from './game-renderer-observer';
 import { ZylemStage } from '../core';
 
 export type { GameLoadingEvent };
+
+/** Window event name for state dispatch events. */
+export const ZYLEM_STATE_DISPATCH = 'zylem:state:dispatch';
+
+/** State dispatch event detail structure. */
+export interface StateDispatchEvent {
+	scope: 'game' | 'stage' | 'entity';
+	path: string;
+	value: unknown;
+	previousValue?: unknown;
+}
 
 type ZylemGameOptions<TGlobals extends BaseGlobals> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>
 
@@ -277,11 +288,11 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	}
 
 	/**
-	 * Subscribe to the game event bus for stage loading events.
+	 * Subscribe to the game event bus for stage loading and state events.
 	 * Emits window events for cross-application communication.
 	 */
 	private subscribeToEventBus(): void {
-		const emitWindowEvent = (payload: StageLoadingPayload) => {
+		const emitLoadingWindowEvent = (payload: StageLoadingPayload) => {
 			if (typeof window !== 'undefined') {
 				const event: GameLoadingEvent = {
 					type: payload.type,
@@ -296,10 +307,23 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			}
 		};
 
+		const emitStateDispatchEvent = (payload: GameStateUpdatedPayload) => {
+			if (typeof window !== 'undefined') {
+				const detail: StateDispatchEvent = {
+					scope: 'game',
+					path: payload.path,
+					value: payload.value,
+					previousValue: payload.previousValue,
+				};
+				window.dispatchEvent(new CustomEvent(ZYLEM_STATE_DISPATCH, { detail }));
+			}
+		};
+
 		this.eventBusUnsubscribes.push(
-			gameEventBus.on('stage:loading:start', emitWindowEvent),
-			gameEventBus.on('stage:loading:progress', emitWindowEvent),
-			gameEventBus.on('stage:loading:complete', emitWindowEvent),
+			gameEventBus.on('stage:loading:start', emitLoadingWindowEvent),
+			gameEventBus.on('stage:loading:progress', emitLoadingWindowEvent),
+			gameEventBus.on('stage:loading:complete', emitLoadingWindowEvent),
+			gameEventBus.on('game:state:updated', emitStateDispatchEvent),
 		);
 	}
 }

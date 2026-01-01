@@ -7,6 +7,50 @@ import RAPIER from "@dimforge/rapier3d-compat";
 
 // src/lib/game/game-state.ts
 import { proxy, subscribe } from "valtio/vanilla";
+
+// src/lib/game/game-event-bus.ts
+var GameEventBus = class {
+  listeners = /* @__PURE__ */ new Map();
+  /**
+   * Subscribe to an event type.
+   */
+  on(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, /* @__PURE__ */ new Set());
+    }
+    this.listeners.get(event).add(callback);
+    return () => this.off(event, callback);
+  }
+  /**
+   * Unsubscribe from an event type.
+   */
+  off(event, callback) {
+    this.listeners.get(event)?.delete(callback);
+  }
+  /**
+   * Emit an event to all subscribers.
+   */
+  emit(event, payload) {
+    const callbacks = this.listeners.get(event);
+    if (!callbacks) return;
+    for (const cb of callbacks) {
+      try {
+        cb(payload);
+      } catch (e) {
+        console.error(`Error in event handler for ${event}`, e);
+      }
+    }
+  }
+  /**
+   * Clear all listeners.
+   */
+  dispose() {
+    this.listeners.clear();
+  }
+};
+var gameEventBus = new GameEventBus();
+
+// src/lib/game/game-state.ts
 var state = proxy({
   id: "",
   globals: {},
@@ -1519,6 +1563,7 @@ var CameraOrbitController = class {
   // Saved camera state for restoration when exiting debug mode
   savedCameraPosition = null;
   savedCameraQuaternion = null;
+  savedCameraZoom = null;
   constructor(camera, domElement) {
     this.camera = camera;
     this.domElement = domElement;
@@ -1644,14 +1689,17 @@ var CameraOrbitController = class {
     this.debugDelegate = null;
   }
   /**
-   * Save camera position and rotation before entering debug mode.
+   * Save camera position, rotation, and zoom before entering debug mode.
    */
   saveCameraState() {
     this.savedCameraPosition = this.camera.position.clone();
     this.savedCameraQuaternion = this.camera.quaternion.clone();
+    if ("zoom" in this.camera) {
+      this.savedCameraZoom = this.camera.zoom;
+    }
   }
   /**
-   * Restore camera position and rotation when exiting debug mode.
+   * Restore camera position, rotation, and zoom when exiting debug mode.
    */
   restoreCameraState() {
     if (this.savedCameraPosition) {
@@ -1661,6 +1709,11 @@ var CameraOrbitController = class {
     if (this.savedCameraQuaternion) {
       this.camera.quaternion.copy(this.savedCameraQuaternion);
       this.savedCameraQuaternion = null;
+    }
+    if (this.savedCameraZoom !== null && "zoom" in this.camera) {
+      this.camera.zoom = this.savedCameraZoom;
+      this.camera.updateProjectionMatrix?.();
+      this.savedCameraZoom = null;
     }
   }
 };
@@ -1926,48 +1979,6 @@ var StageCameraDelegate = class {
     return this.createDefaultCamera();
   }
 };
-
-// src/lib/game/game-event-bus.ts
-var GameEventBus = class {
-  listeners = /* @__PURE__ */ new Map();
-  /**
-   * Subscribe to an event type.
-   */
-  on(event, callback) {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, /* @__PURE__ */ new Set());
-    }
-    this.listeners.get(event).add(callback);
-    return () => this.off(event, callback);
-  }
-  /**
-   * Unsubscribe from an event type.
-   */
-  off(event, callback) {
-    this.listeners.get(event)?.delete(callback);
-  }
-  /**
-   * Emit an event to all subscribers.
-   */
-  emit(event, payload) {
-    const callbacks = this.listeners.get(event);
-    if (!callbacks) return;
-    for (const cb of callbacks) {
-      try {
-        cb(payload);
-      } catch (e) {
-        console.error(`Error in event handler for ${event}`, e);
-      }
-    }
-  }
-  /**
-   * Clear all listeners.
-   */
-  dispose() {
-    this.listeners.clear();
-  }
-};
-var gameEventBus = new GameEventBus();
 
 // src/lib/stage/stage-loading-delegate.ts
 var StageLoadingDelegate = class {
@@ -2677,6 +2688,17 @@ var Stage = class {
       };
     }
     return this.wrappedStage.onLoading(callback);
+  }
+  /**
+   * Find an entity by name on the current stage.
+   * @param name The name of the entity to find
+   * @param type Optional type symbol for type inference (e.g., TEXT_TYPE, SPRITE_TYPE)
+   * @returns The entity if found, or undefined
+   * @example stage.getEntityByName('scoreText', TEXT_TYPE)
+   */
+  getEntityByName(name, type) {
+    const entity = this.wrappedStage?.children.find((c) => c.name === name);
+    return entity;
   }
 };
 function createStage(...options) {

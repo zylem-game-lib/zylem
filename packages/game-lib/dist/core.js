@@ -9,6 +9,18 @@ var __export = (target, all) => {
 };
 
 // src/lib/core/utility/path-utils.ts
+function getByPath(obj, path) {
+  if (!path) return void 0;
+  const keys = path.split(".");
+  let current = obj;
+  for (const key of keys) {
+    if (current == null || typeof current !== "object") {
+      return void 0;
+    }
+    current = current[key];
+  }
+  return current;
+}
 function setByPath(obj, path, value) {
   if (!path) return;
   const keys = path.split(".");
@@ -25,73 +37,6 @@ function setByPath(obj, path, value) {
 var init_path_utils = __esm({
   "src/lib/core/utility/path-utils.ts"() {
     "use strict";
-  }
-});
-
-// src/lib/game/game-state.ts
-import { proxy, subscribe } from "valtio/vanilla";
-function setGlobal(path, value) {
-  setByPath(state.globals, path, value);
-}
-function getGlobals() {
-  return state.globals;
-}
-function initGlobals(globals) {
-  for (const [key, value] of Object.entries(globals)) {
-    setByPath(state.globals, key, value);
-  }
-}
-function resetGlobals() {
-  state.globals = {};
-}
-var state;
-var init_game_state = __esm({
-  "src/lib/game/game-state.ts"() {
-    "use strict";
-    init_path_utils();
-    state = proxy({
-      id: "",
-      globals: {},
-      time: 0
-    });
-  }
-});
-
-// src/lib/debug/debug-state.ts
-import { proxy as proxy2 } from "valtio";
-function isPaused() {
-  return debugState.paused;
-}
-function setPaused(paused) {
-  debugState.paused = paused;
-}
-function getDebugTool() {
-  return debugState.tool;
-}
-function setSelectedEntity(entity) {
-  debugState.selectedEntity = entity;
-}
-function getHoveredEntity() {
-  return debugState.hoveredEntity;
-}
-function setHoveredEntity(entity) {
-  debugState.hoveredEntity = entity;
-}
-function resetHoveredEntity() {
-  debugState.hoveredEntity = null;
-}
-var debugState;
-var init_debug_state = __esm({
-  "src/lib/debug/debug-state.ts"() {
-    "use strict";
-    debugState = proxy2({
-      enabled: false,
-      paused: false,
-      tool: "none",
-      selectedEntity: null,
-      hoveredEntity: null,
-      flags: /* @__PURE__ */ new Set()
-    });
   }
 });
 
@@ -140,6 +85,118 @@ var init_game_event_bus = __esm({
       }
     };
     gameEventBus = new GameEventBus();
+  }
+});
+
+// src/lib/game/game-state.ts
+import { proxy, subscribe } from "valtio/vanilla";
+function setGlobal(path, value) {
+  const previousValue = getByPath(state.globals, path);
+  setByPath(state.globals, path, value);
+  gameEventBus.emit("game:state:updated", {
+    path,
+    value,
+    previousValue
+  });
+}
+function onGlobalChange(path, callback) {
+  let previous = getByPath(state.globals, path);
+  const unsub = subscribe(state.globals, () => {
+    const current = getByPath(state.globals, path);
+    if (current !== previous) {
+      previous = current;
+      callback(current);
+    }
+  });
+  activeSubscriptions.add(unsub);
+  return () => {
+    unsub();
+    activeSubscriptions.delete(unsub);
+  };
+}
+function onGlobalChanges(paths, callback) {
+  let previousValues = paths.map((p) => getByPath(state.globals, p));
+  const unsub = subscribe(state.globals, () => {
+    const currentValues = paths.map((p) => getByPath(state.globals, p));
+    const hasChange = currentValues.some((val, i) => val !== previousValues[i]);
+    if (hasChange) {
+      previousValues = currentValues;
+      callback(currentValues);
+    }
+  });
+  activeSubscriptions.add(unsub);
+  return () => {
+    unsub();
+    activeSubscriptions.delete(unsub);
+  };
+}
+function getGlobals() {
+  return state.globals;
+}
+function initGlobals(globals) {
+  for (const [key, value] of Object.entries(globals)) {
+    setByPath(state.globals, key, value);
+  }
+}
+function resetGlobals() {
+  state.globals = {};
+}
+function clearGlobalSubscriptions() {
+  for (const unsub of activeSubscriptions) {
+    unsub();
+  }
+  activeSubscriptions.clear();
+}
+var state, activeSubscriptions;
+var init_game_state = __esm({
+  "src/lib/game/game-state.ts"() {
+    "use strict";
+    init_path_utils();
+    init_game_event_bus();
+    state = proxy({
+      id: "",
+      globals: {},
+      time: 0
+    });
+    activeSubscriptions = /* @__PURE__ */ new Set();
+  }
+});
+
+// src/lib/debug/debug-state.ts
+import { proxy as proxy2 } from "valtio";
+function isPaused() {
+  return debugState.paused;
+}
+function setPaused(paused) {
+  debugState.paused = paused;
+}
+function getDebugTool() {
+  return debugState.tool;
+}
+function setSelectedEntity(entity) {
+  debugState.selectedEntity = entity;
+}
+function getHoveredEntity() {
+  return debugState.hoveredEntity;
+}
+function setHoveredEntity(entity) {
+  debugState.hoveredEntity = entity;
+}
+function resetHoveredEntity() {
+  debugState.hoveredEntity = null;
+}
+var debugState;
+var init_debug_state = __esm({
+  "src/lib/debug/debug-state.ts"() {
+    "use strict";
+    debugState = proxy2({
+      enabled: false,
+      paused: false,
+      tool: "none",
+      selectedEntity: null,
+      hoveredEntity: null,
+      flags: /* @__PURE__ */ new Set()
+    });
   }
 });
 
@@ -2201,6 +2258,7 @@ var init_camera_debug_delegate = __esm({
       // Saved camera state for restoration when exiting debug mode
       savedCameraPosition = null;
       savedCameraQuaternion = null;
+      savedCameraZoom = null;
       constructor(camera, domElement) {
         this.camera = camera;
         this.domElement = domElement;
@@ -2326,14 +2384,17 @@ var init_camera_debug_delegate = __esm({
         this.debugDelegate = null;
       }
       /**
-       * Save camera position and rotation before entering debug mode.
+       * Save camera position, rotation, and zoom before entering debug mode.
        */
       saveCameraState() {
         this.savedCameraPosition = this.camera.position.clone();
         this.savedCameraQuaternion = this.camera.quaternion.clone();
+        if ("zoom" in this.camera) {
+          this.savedCameraZoom = this.camera.zoom;
+        }
       }
       /**
-       * Restore camera position and rotation when exiting debug mode.
+       * Restore camera position, rotation, and zoom when exiting debug mode.
        */
       restoreCameraState() {
         if (this.savedCameraPosition) {
@@ -2343,6 +2404,11 @@ var init_camera_debug_delegate = __esm({
         if (this.savedCameraQuaternion) {
           this.camera.quaternion.copy(this.savedCameraQuaternion);
           this.savedCameraQuaternion = null;
+        }
+        if (this.savedCameraZoom !== null && "zoom" in this.camera) {
+          this.camera.zoom = this.savedCameraZoom;
+          this.camera.updateProjectionMatrix?.();
+          this.savedCameraZoom = null;
         }
       }
     };
@@ -3410,6 +3476,17 @@ var init_stage = __esm({
         }
         return this.wrappedStage.onLoading(callback);
       }
+      /**
+       * Find an entity by name on the current stage.
+       * @param name The name of the entity to find
+       * @param type Optional type symbol for type inference (e.g., TEXT_TYPE, SPRITE_TYPE)
+       * @returns The entity if found, or undefined
+       * @example stage.getEntityByName('scoreText', TEXT_TYPE)
+       */
+      getEntityByName(name, type) {
+        const entity = this.wrappedStage?.children.find((c) => c.name === name);
+        return entity;
+      }
     };
   }
 });
@@ -4442,6 +4519,7 @@ var GameRendererObserver = class {
 };
 
 // src/lib/game/zylem-game.ts
+var ZYLEM_STATE_DISPATCH = "zylem:state:dispatch";
 var ZylemGame = class _ZylemGame {
   id;
   initialGlobals = {};
@@ -4647,11 +4725,11 @@ var ZylemGame = class _ZylemGame {
     return this.loadingDelegate.onLoading(callback);
   }
   /**
-   * Subscribe to the game event bus for stage loading events.
+   * Subscribe to the game event bus for stage loading and state events.
    * Emits window events for cross-application communication.
    */
   subscribeToEventBus() {
-    const emitWindowEvent = (payload) => {
+    const emitLoadingWindowEvent = (payload) => {
       if (typeof window !== "undefined") {
         const event = {
           type: payload.type,
@@ -4665,10 +4743,22 @@ var ZylemGame = class _ZylemGame {
         window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
       }
     };
+    const emitStateDispatchEvent = (payload) => {
+      if (typeof window !== "undefined") {
+        const detail = {
+          scope: "game",
+          path: payload.path,
+          value: payload.value,
+          previousValue: payload.previousValue
+        };
+        window.dispatchEvent(new CustomEvent(ZYLEM_STATE_DISPATCH, { detail }));
+      }
+    };
     this.eventBusUnsubscribes.push(
-      gameEventBus.on("stage:loading:start", emitWindowEvent),
-      gameEventBus.on("stage:loading:progress", emitWindowEvent),
-      gameEventBus.on("stage:loading:complete", emitWindowEvent)
+      gameEventBus.on("stage:loading:start", emitLoadingWindowEvent),
+      gameEventBus.on("stage:loading:progress", emitLoadingWindowEvent),
+      gameEventBus.on("stage:loading:complete", emitLoadingWindowEvent),
+      gameEventBus.on("game:state:updated", emitStateDispatchEvent)
     );
   }
 };
@@ -4931,6 +5021,7 @@ var ZylemText = class _ZylemText extends GameEntity {
     this.options = { ...textDefaults, ...options };
     this.prependSetup(this.textSetup.bind(this));
     this.prependUpdate(this.textUpdate.bind(this));
+    this.onDestroy(this.textDestroy.bind(this));
   }
   create() {
     this._sprite = null;
@@ -5106,6 +5197,24 @@ var ZylemText = class _ZylemText extends GameEntity {
       text: this.options.text ?? "",
       sticky: this.options.stickToViewport
     };
+  }
+  /**
+   * Dispose of Three.js resources when the entity is destroyed.
+   */
+  async textDestroy() {
+    this._texture?.dispose();
+    if (this._sprite?.material) {
+      this._sprite.material.dispose();
+    }
+    if (this._sprite) {
+      this._sprite.removeFromParent();
+    }
+    this.group?.removeFromParent();
+    this._sprite = null;
+    this._texture = null;
+    this._canvas = null;
+    this._ctx = null;
+    this._cameraRef = null;
   }
 };
 async function text(...args) {
@@ -5343,6 +5452,10 @@ var Game = class {
   updateCallbacks = [];
   destroyCallbacks = [];
   pendingLoadingCallbacks = [];
+  // Game-scoped global change subscriptions
+  globalChangeCallbacks = [];
+  globalChangesCallbacks = [];
+  activeGlobalSubscriptions = [];
   refErrorMessage = "lost reference to game";
   constructor(options) {
     this.options = options;
@@ -5368,9 +5481,15 @@ var Game = class {
     return this;
   }
   async start() {
+    resetGlobals();
+    const globals = extractGlobalsFromOptions(this.options);
+    if (globals) {
+      initGlobals(globals);
+    }
     const game = await this.load();
     this.wrappedGame = game;
     this.setOverrides();
+    this.registerGlobalSubscriptions();
     game.start();
     return this;
   }
@@ -5401,6 +5520,50 @@ var Game = class {
     this.wrappedGame.customDestroy = (params) => {
       this.destroyCallbacks.forEach((cb) => cb(params));
     };
+  }
+  /**
+   * Subscribe to changes on a global value. Subscriptions are registered
+   * when the game starts and cleaned up when disposed.
+   * The callback receives the value and the current stage.
+   * @example game.onGlobalChange('score', (val, stage) => console.log(val));
+   */
+  onGlobalChange(path, callback) {
+    this.globalChangeCallbacks.push({ path, callback });
+    return this;
+  }
+  /**
+   * Subscribe to changes on multiple global paths. Subscriptions are registered
+   * when the game starts and cleaned up when disposed.
+   * The callback receives the values and the current stage.
+   * @example game.onGlobalChanges(['score', 'lives'], ([score, lives], stage) => console.log(score, lives));
+   */
+  onGlobalChanges(paths, callback) {
+    this.globalChangesCallbacks.push({ paths, callback });
+    return this;
+  }
+  /**
+   * Register all stored global change callbacks.
+   * Called internally during start().
+   */
+  registerGlobalSubscriptions() {
+    for (const { path, callback } of this.globalChangeCallbacks) {
+      const unsub = onGlobalChange(path, (value) => {
+        callback(value, this.getCurrentStage());
+      });
+      this.activeGlobalSubscriptions.push(unsub);
+    }
+    for (const { paths, callback } of this.globalChangesCallbacks) {
+      const unsub = onGlobalChanges(paths, (values) => {
+        callback(values, this.getCurrentStage());
+      });
+      this.activeGlobalSubscriptions.push(unsub);
+    }
+  }
+  /**
+   * Get the current stage wrapper.
+   */
+  getCurrentStage() {
+    return this.wrappedGame?.currentStage() ?? null;
   }
   async pause() {
     setPaused(true);
@@ -5476,9 +5639,15 @@ var Game = class {
   async end() {
   }
   dispose() {
+    for (const unsub of this.activeGlobalSubscriptions) {
+      unsub();
+    }
+    this.activeGlobalSubscriptions = [];
     if (this.wrappedGame) {
       this.wrappedGame.dispose();
     }
+    clearGlobalSubscriptions();
+    resetGlobals();
   }
   /**
    * Subscribe to loading events from the game.

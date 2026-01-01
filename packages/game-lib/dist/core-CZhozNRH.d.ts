@@ -1,6 +1,6 @@
 import { I as InputGamepad, c as UpdateFunction, f as InputPlayerNumber, g as Inputs, h as ButtonState, A as AnalogState, S as SetupContext, U as UpdateContext, d as DestroyContext, i as GameEntityLifeCycle, e as BaseNode, j as IGame, b as SetupFunction, D as DestroyFunction, k as LoadedContext, C as CleanupContext } from './entity-COvRtFNG.js';
 import { Z as ZylemCamera } from './camera-CpbDr4-V.js';
-import { d as StageInterface, b as Stage } from './stage-types-B0JZx4WP.js';
+import { d as StageInterface, b as Stage } from './stage-types-CD21XoIU.js';
 import { Vector3 } from 'three';
 import { Vector3 as Vector3$1 } from '@dimforge/rapier3d-compat';
 
@@ -349,7 +349,7 @@ declare class ZylemGame<TGlobals extends BaseGlobals> {
      */
     onLoading(callback: (event: GameLoadingEvent) => void): () => void;
     /**
-     * Subscribe to the game event bus for stage loading events.
+     * Subscribe to the game event bus for stage loading and state events.
      * Emits window events for cross-application communication.
      */
     private subscribeToEventBus;
@@ -364,6 +364,9 @@ declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
     private updateCallbacks;
     private destroyCallbacks;
     private pendingLoadingCallbacks;
+    private globalChangeCallbacks;
+    private globalChangesCallbacks;
+    private activeGlobalSubscriptions;
     refErrorMessage: string;
     constructor(options: GameOptions<TGlobals>);
     onSetup(...callbacks: Array<SetupFunction<ZylemGame<TGlobals>, TGlobals>>): this;
@@ -371,7 +374,30 @@ declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
     onDestroy(...callbacks: Array<DestroyFunction<ZylemGame<TGlobals>, TGlobals>>): this;
     start(): Promise<this>;
     private load;
-    setOverrides(): void;
+    private setOverrides;
+    /**
+     * Subscribe to changes on a global value. Subscriptions are registered
+     * when the game starts and cleaned up when disposed.
+     * The callback receives the value and the current stage.
+     * @example game.onGlobalChange('score', (val, stage) => console.log(val));
+     */
+    onGlobalChange<T = unknown>(path: string, callback: (value: T, stage: Stage | null) => void): this;
+    /**
+     * Subscribe to changes on multiple global paths. Subscriptions are registered
+     * when the game starts and cleaned up when disposed.
+     * The callback receives the values and the current stage.
+     * @example game.onGlobalChanges(['score', 'lives'], ([score, lives], stage) => console.log(score, lives));
+     */
+    onGlobalChanges<T extends unknown[] = unknown[]>(paths: string[], callback: (values: T, stage: Stage | null) => void): this;
+    /**
+     * Register all stored global change callbacks.
+     * Called internally during start().
+     */
+    private registerGlobalSubscriptions;
+    /**
+     * Get the current stage wrapper.
+     */
+    getCurrentStage(): Stage | null;
     pause(): Promise<void>;
     resume(): Promise<void>;
     reset(): Promise<void>;

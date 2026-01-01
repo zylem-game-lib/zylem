@@ -5,6 +5,7 @@ import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 import { stageState } from './stage-state';
 import { getStageOptions } from './stage-default';
+import { EntityTypeMap } from '../types/entity-type-map';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
@@ -155,6 +156,21 @@ export class Stage {
 			};
 		}
 		return this.wrappedStage.onLoading(callback);
+	}
+
+	/**
+	 * Find an entity by name on the current stage.
+	 * @param name The name of the entity to find
+	 * @param type Optional type symbol for type inference (e.g., TEXT_TYPE, SPRITE_TYPE)
+	 * @returns The entity if found, or undefined
+	 * @example stage.getEntityByName('scoreText', TEXT_TYPE)
+	 */
+	getEntityByName<T extends symbol | void = void>(
+		name: string,
+		type?: T
+	): T extends keyof EntityTypeMap ? EntityTypeMap[T] | undefined : BaseNode | undefined {
+		const entity = this.wrappedStage?.children.find(c => c.name === name);
+		return entity as any;
 	}
 }
 

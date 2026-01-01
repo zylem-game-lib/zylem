@@ -1790,6 +1790,7 @@ var ZylemText = class _ZylemText extends GameEntity {
     this.options = { ...textDefaults, ...options };
     this.prependSetup(this.textSetup.bind(this));
     this.prependUpdate(this.textUpdate.bind(this));
+    this.onDestroy(this.textDestroy.bind(this));
   }
   create() {
     this._sprite = null;
@@ -1965,6 +1966,24 @@ var ZylemText = class _ZylemText extends GameEntity {
       text: this.options.text ?? "",
       sticky: this.options.stickToViewport
     };
+  }
+  /**
+   * Dispose of Three.js resources when the entity is destroyed.
+   */
+  async textDestroy() {
+    this._texture?.dispose();
+    if (this._sprite?.material) {
+      this._sprite.material.dispose();
+    }
+    if (this._sprite) {
+      this._sprite.removeFromParent();
+    }
+    this.group?.removeFromParent();
+    this._sprite = null;
+    this._texture = null;
+    this._canvas = null;
+    this._ctx = null;
+    this._cameraRef = null;
   }
 };
 async function text(...args) {

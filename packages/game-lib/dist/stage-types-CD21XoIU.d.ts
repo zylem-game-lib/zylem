@@ -2,7 +2,7 @@ import { b as SetupFunction, G as GameEntity, c as UpdateFunction, D as DestroyF
 import * as bitecs from 'bitecs';
 import { defineSystem, IWorld } from 'bitecs';
 import { Scene, Color, Object3D, Vector3, Group } from 'three';
-import { Z as ZylemWorld } from './world-Dgf6R0_c.js';
+import { f as ZylemWorld, S as SPRITE_TYPE, g as ZylemSprite, d as SPHERE_TYPE, h as ZylemSphere, R as RECT_TYPE, i as ZylemRect, T as TEXT_TYPE, j as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, k as ZylemPlane, e as ZONE_TYPE, l as ZylemZone, A as ACTOR_TYPE, m as ZylemActor } from './entities-BAxfJOkk.js';
 import { E as Entity, L as LifecycleFunction, S as StageEntity } from './entity-Bq_eNEDI.js';
 import { Z as ZylemCamera, C as CameraDebugDelegate, b as CameraDebugState, d as CameraWrapper } from './camera-CpbDr4-V.js';
 import RAPIER__default, { RigidBody, Collider } from '@dimforge/rapier3d-compat';
@@ -257,6 +257,21 @@ declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     enqueue(...items: StageEntityInput[]): void;
 }
 
+/**
+ * Maps entity type symbols to their class types.
+ * Used by getEntityByName to infer return types.
+ */
+interface EntityTypeMap {
+    [SPRITE_TYPE]: ZylemSprite;
+    [SPHERE_TYPE]: ZylemSphere;
+    [RECT_TYPE]: ZylemRect;
+    [TEXT_TYPE]: ZylemText;
+    [BOX_TYPE]: ZylemBox;
+    [PLANE_TYPE]: ZylemPlane;
+    [ZONE_TYPE]: ZylemZone;
+    [ACTOR_TYPE]: ZylemActor;
+}
+
 type NodeLike = {
     create: Function;
 };
@@ -282,6 +297,14 @@ declare class Stage {
     onSetup(...callbacks: SetupFunction<ZylemStage>[]): this;
     onDestroy(...callbacks: DestroyFunction<ZylemStage>[]): this;
     onLoading(callback: (event: LoadingEvent) => void): () => void;
+    /**
+     * Find an entity by name on the current stage.
+     * @param name The name of the entity to find
+     * @param type Optional type symbol for type inference (e.g., TEXT_TYPE, SPRITE_TYPE)
+     * @returns The entity if found, or undefined
+     * @example stage.getEntityByName('scoreText', TEXT_TYPE)
+     */
+    getEntityByName<T extends symbol | void = void>(name: string, type?: T): T extends keyof EntityTypeMap ? EntityTypeMap[T] | undefined : BaseNode | undefined;
 }
 /**
  * Create a stage with optional camera

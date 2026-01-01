@@ -1,5 +1,6 @@
 import { proxy, subscribe } from 'valtio/vanilla';
 import { getByPath, setByPath } from '../core/utility/path-utils';
+import { gameEventBus } from './game-event-bus';
 
 /**
  * Internal game state store using valtio proxy for reactivity.
@@ -11,12 +12,25 @@ const state = proxy({
 });
 
 /**
+ * Track active subscriptions for cleanup on game dispose.
+ */
+const activeSubscriptions: Set<() => void> = new Set();
+
+/**
  * Set a global value by path.
+ * Emits a 'game:state:updated' event when the value changes.
  * @example setGlobal('score', 100)
  * @example setGlobal('player.health', 50)
  */
 export function setGlobal(path: string, value: unknown): void {
+	const previousValue = getByPath(state.globals, path);
 	setByPath(state.globals, path, value);
+
+	gameEventBus.emit('game:state:updated', {
+		path,
+		value,
+		previousValue,
+	});
 }
 
 /**
@@ -46,7 +60,8 @@ export function getGlobal<T = unknown>(path: string): T | undefined {
 
 /**
  * Subscribe to changes on a global value at a specific path.
- * Returns an unsubscribe function.
+ * Returns an unsubscribe function. Subscriptions are automatically
+ * cleaned up when the game is disposed.
  * @example const unsub = onGlobalChange('score', (val) => console.log(val));
  */
 export function onGlobalChange<T = unknown>(
@@ -54,19 +69,24 @@ export function onGlobalChange<T = unknown>(
 	callback: (value: T) => void
 ): () => void {
 	let previous = getByPath<T>(state.globals, path);
-	return subscribe(state.globals, () => {
+	const unsub = subscribe(state.globals, () => {
 		const current = getByPath<T>(state.globals, path);
 		if (current !== previous) {
 			previous = current;
 			callback(current as T);
 		}
 	});
+	activeSubscriptions.add(unsub);
+	return () => {
+		unsub();
+		activeSubscriptions.delete(unsub);
+	};
 }
 
 /**
  * Subscribe to changes on multiple global paths.
  * Callback fires when any of the paths change, receiving all current values.
- * Returns an unsubscribe function.
+ * Subscriptions are automatically cleaned up when the game is disposed.
  * @example const unsub = onGlobalChanges(['score', 'lives'], ([score, lives]) => console.log(score, lives));
  */
 export function onGlobalChanges<T extends unknown[] = unknown[]>(
@@ -74,7 +94,7 @@ export function onGlobalChanges<T extends unknown[] = unknown[]>(
 	callback: (values: T) => void
 ): () => void {
 	let previousValues = paths.map(p => getByPath(state.globals, p));
-	return subscribe(state.globals, () => {
+	const unsub = subscribe(state.globals, () => {
 		const currentValues = paths.map(p => getByPath(state.globals, p));
 		const hasChange = currentValues.some((val, i) => val !== previousValues[i]);
 		if (hasChange) {
@@ -82,6 +102,11 @@ export function onGlobalChanges<T extends unknown[] = unknown[]>(
 			callback(currentValues as T);
 		}
 	});
+	activeSubscriptions.add(unsub);
+	return () => {
+		unsub();
+		activeSubscriptions.delete(unsub);
+	};
 }
 
 /**
@@ -105,6 +130,17 @@ export function initGlobals(globals: Record<string, unknown>): void {
  */
 export function resetGlobals(): void {
 	state.globals = {};
+}
+
+/**
+ * Unsubscribe all active global subscriptions.
+ * Used internally on game dispose to prevent old callbacks from firing.
+ */
+export function clearGlobalSubscriptions(): void {
+	for (const unsub of activeSubscriptions) {
+		unsub();
+	}
+	activeSubscriptions.clear();
 }
 
 export { state };

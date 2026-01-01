@@ -5,10 +5,10 @@ import { setPaused } from '../debug/debug-state';
 import { BaseGlobals } from './game-interfaces';
 import { convertNodes, GameOptions, hasStages, extractGlobalsFromOptions } from '../core/utility/nodes';
 import { resolveGameConfig } from './game-config';
-import { createStage } from '../stage/stage';
+import { createStage, Stage } from '../stage/stage';
 import { StageManager, stageState } from '../stage/stage-manager';
 import { StageFactory } from '../stage/stage-factory';
-import { initGlobals } from './game-state';
+import { initGlobals, clearGlobalSubscriptions, resetGlobals, onGlobalChange as onGlobalChangeInternal, onGlobalChanges as onGlobalChangesInternal } from './game-state';
 
 export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private wrappedGame: ZylemGame<TGlobals> | null = null;
@@ -20,6 +20,11 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private updateCallbacks: Array<UpdateFunction<ZylemGame<TGlobals>, TGlobals>> = [];
 	private destroyCallbacks: Array<DestroyFunction<ZylemGame<TGlobals>, TGlobals>> = [];
 	private pendingLoadingCallbacks: Array<(event: GameLoadingEvent) => void> = [];
+
+	// Game-scoped global change subscriptions
+	private globalChangeCallbacks: Array<{ path: string; callback: (value: unknown, stage: Stage | null) => void }> = [];
+	private globalChangesCallbacks: Array<{ paths: string[]; callback: (values: unknown[], stage: Stage | null) => void }> = [];
+	private activeGlobalSubscriptions: Array<() => void> = [];
 
 	refErrorMessage = 'lost reference to game';
 
@@ -52,9 +57,17 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	}
 
 	async start(): Promise<this> {
+		// Re-initialize globals for this game
+		resetGlobals();
+		const globals = extractGlobalsFromOptions(this.options);
+		if (globals) {
+			initGlobals(globals as Record<string, unknown>);
+		}
+		
 		const game = await this.load();
 		this.wrappedGame = game;
 		this.setOverrides();
+		this.registerGlobalSubscriptions();
 		game.start();
 		return this;
 	}
@@ -76,7 +89,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		return game;
 	}
 
-	setOverrides() {
+	private setOverrides() {
 		if (!this.wrappedGame) {
 			console.error(this.refErrorMessage);
 			return;
@@ -91,6 +104,54 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		this.wrappedGame.customDestroy = (params) => {
 			this.destroyCallbacks.forEach(cb => cb(params));
 		};
+	}
+
+	/**
+	 * Subscribe to changes on a global value. Subscriptions are registered
+	 * when the game starts and cleaned up when disposed.
+	 * The callback receives the value and the current stage.
+	 * @example game.onGlobalChange('score', (val, stage) => console.log(val));
+	 */
+	onGlobalChange<T = unknown>(path: string, callback: (value: T, stage: Stage | null) => void): this {
+		this.globalChangeCallbacks.push({ path, callback: callback as (value: unknown, stage: Stage | null) => void });
+		return this;
+	}
+
+	/**
+	 * Subscribe to changes on multiple global paths. Subscriptions are registered
+	 * when the game starts and cleaned up when disposed.
+	 * The callback receives the values and the current stage.
+	 * @example game.onGlobalChanges(['score', 'lives'], ([score, lives], stage) => console.log(score, lives));
+	 */
+	onGlobalChanges<T extends unknown[] = unknown[]>(paths: string[], callback: (values: T, stage: Stage | null) => void): this {
+		this.globalChangesCallbacks.push({ paths, callback: callback as (values: unknown[], stage: Stage | null) => void });
+		return this;
+	}
+
+	/**
+	 * Register all stored global change callbacks.
+	 * Called internally during start().
+	 */
+	private registerGlobalSubscriptions() {
+		for (const { path, callback } of this.globalChangeCallbacks) {
+			const unsub = onGlobalChangeInternal(path, (value) => {
+				callback(value, this.getCurrentStage());
+			});
+			this.activeGlobalSubscriptions.push(unsub);
+		}
+		for (const { paths, callback } of this.globalChangesCallbacks) {
+			const unsub = onGlobalChangesInternal(paths, (values) => {
+				callback(values, this.getCurrentStage());
+			});
+			this.activeGlobalSubscriptions.push(unsub);
+		}
+	}
+
+	/**
+	 * Get the current stage wrapper.
+	 */
+	getCurrentStage(): Stage | null {
+		return this.wrappedGame?.currentStage() ?? null;
 	}
 
 	async pause() {
@@ -180,9 +241,18 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	async end() { }
 
 	dispose() {
+		// Clear game-specific subscriptions
+		for (const unsub of this.activeGlobalSubscriptions) {
+			unsub();
+		}
+		this.activeGlobalSubscriptions = [];
+		
 		if (this.wrappedGame) {
 			this.wrappedGame.dispose();
 		}
+		// Clear all remaining global subscriptions and reset globals
+		clearGlobalSubscriptions();
+		resetGlobals();
 	}
 
 	/**

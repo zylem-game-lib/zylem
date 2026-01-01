@@ -54,9 +54,10 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 	constructor(options?: ZylemTextOptions) {
 		super();
 		this.options = { ...textDefaults, ...options } as ZylemTextOptions;
-		// Add text-specific lifecycle callbacks
+		// Add text-specific lifecycle callbacks (only registered once)
 		this.prependSetup(this.textSetup.bind(this) as any);
 		this.prependUpdate(this.textUpdate.bind(this) as any);
+		this.onDestroy(this.textDestroy.bind(this) as any);
 	}
 
 	public create(): this {
@@ -257,6 +258,34 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 			text: this.options.text ?? '',
 			sticky: this.options.stickToViewport,
 		};
+	}
+
+	/**
+	 * Dispose of Three.js resources when the entity is destroyed.
+	 */
+	private async textDestroy(): Promise<void> {
+		// Dispose texture
+		this._texture?.dispose();
+		
+		// Dispose sprite material
+		if (this._sprite?.material) {
+			(this._sprite.material as SpriteMaterial).dispose();
+		}
+		
+		// Remove sprite from group
+		if (this._sprite) {
+			this._sprite.removeFromParent();
+		}
+		
+		// Remove group from parent (camera or scene)
+		this.group?.removeFromParent();
+		
+		// Clear references
+		this._sprite = null;
+		this._texture = null;
+		this._canvas = null;
+		this._ctx = null;
+		this._cameraRef = null;
 	}
 }
 

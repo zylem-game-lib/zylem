@@ -85,7 +85,7 @@ class ActorBuilder extends EntityBuilder<ZylemActor, ZylemActorOptions> {
 	}
 }
 
-const ACTOR_TYPE = Symbol('Actor');
+export const ACTOR_TYPE = Symbol('Actor');
 
 export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityLoaderDelegate, DebugInfoProvider {
 	static type = ACTOR_TYPE;

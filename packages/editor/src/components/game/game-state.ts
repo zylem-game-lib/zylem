@@ -6,6 +6,14 @@
 import { proxy } from 'valtio';
 import { editorEvents } from '../events';
 
+/** State dispatch event detail from game-lib */
+interface StateDispatchEvent {
+    scope: 'game' | 'stage' | 'entity';
+    path: string;
+    value: unknown;
+    previousValue?: unknown;
+}
+
 export interface GameState {
     id: string;
     globals: Record<string, unknown>;
@@ -39,7 +47,7 @@ export function setGlobal(key: string, value: unknown): void {
     gameState.globals[key] = value;
 }
 
-// Subscribe to external events
+// Subscribe to external events from legacy event bus
 editorEvents.on<Partial<GameState>>('game', (event) => {
     const payload = event.payload;
     if (payload.id !== undefined) gameState.id = payload.id;
@@ -50,5 +58,18 @@ editorEvents.on<Partial<GameState>>('game', (event) => {
     }
 });
 
+// Listen for state dispatch events from game-lib
+if (typeof window !== 'undefined') {
+    window.addEventListener('zylem:state:dispatch', ((event: CustomEvent<StateDispatchEvent>) => {
+        const { scope, path, value } = event.detail;
+        if (scope === 'game') {
+            // Update the local globals state
+            gameState.globals[path] = value;
+        }
+        // TODO: Handle 'stage' and 'entity' scopes when needed
+    }) as EventListener);
+}
+
 // Backwards compatibility alias
 export { gameState as state };
+

@@ -64,7 +64,7 @@ export * as RAPIER from '@dimforge/rapier3d-compat';
 export { globalChange, globalChanges, variableChange, variableChanges } from '../lib/actions/global-change';
 
 // State management - standalone functions
-export { setGlobal, getGlobal, createGlobal, onGlobalChange, onGlobalChanges, getGlobals } from '../lib/game/game-state';
+export { setGlobal, getGlobal, createGlobal, onGlobalChange, onGlobalChanges, getGlobals, clearGlobalSubscriptions } from '../lib/game/game-state';
 export { setVariable, getVariable, createVariable, onVariableChange, onVariableChanges } from '../lib/stage/stage-state';
 
 // Debug state - exposed for direct mutation by editor integration
@@ -78,3 +78,9 @@ export type { SetupContext, UpdateContext } from '../lib/core/base-node-life-cyc
 
 // Interfaces
 export type { StageEntity } from '../lib/interfaces/entity';
+
+// Entity type symbols for getEntityByName type inference
+export { 
+	TEXT_TYPE, SPRITE_TYPE, BOX_TYPE, SPHERE_TYPE, 
+	RECT_TYPE, PLANE_TYPE, ZONE_TYPE, ACTOR_TYPE 
+} from '../lib/types/entity-type-map';

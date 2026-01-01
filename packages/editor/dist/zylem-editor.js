@@ -264,6 +264,14 @@ editorEvents.on("game", (event) => {
     Object.assign(gameState.globals, payload.globals);
   }
 });
+if (typeof window !== "undefined") {
+  window.addEventListener("zylem:state:dispatch", ((event) => {
+    const { scope, path, value } = event.detail;
+    if (scope === "game") {
+      gameState.globals[path] = value;
+    }
+  }));
+}
 
 // src/components/stages/stage-state.ts
 import { proxy as proxy3 } from "valtio";

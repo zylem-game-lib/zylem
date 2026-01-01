@@ -1,5 +1,5 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { camera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, createStage, text, onGlobalChange, setGlobal } from '@zylem/game-lib';
+import { camera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, createStage, text, setGlobal, TEXT_TYPE } from '@zylem/game-lib';
 import { boundary2d } from '@zylem/game-lib';
 import { movementSequence2D } from '@zylem/game-lib';
 import { makeTransformable } from '@zylem/game-lib';
@@ -129,15 +129,12 @@ const game = createGame({
 	},
 	// preset: 'SNES',
 	// resolution: '512x448',
-}, stage1, livesText, scoreText);
-
-
-onGlobalChange<number>('score', (score) => {
-	scoreText.updateText(`Score: ${score}`);
-});
-
-onGlobalChange<number>('lives', (lives) => {
-	livesText.updateText(`Lives: ${lives}`);
+}, stage1, livesText, scoreText)
+.onGlobalChange<number>('score', (score, stage) => {
+	stage?.getEntityByName('scoreText', TEXT_TYPE)?.updateText(`Score: ${score}`);
+})
+.onGlobalChange<number>('lives', (lives, stage) => {
+	stage?.getEntityByName('livesText', TEXT_TYPE)?.updateText(`Lives: ${lives}`);
 });
 
 export default game;

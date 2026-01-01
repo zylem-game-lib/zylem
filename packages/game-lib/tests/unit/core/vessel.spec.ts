@@ -4,8 +4,8 @@ import { vessel } from '../../../src/lib/core/vessel';
 describe('Base vessel functionality', () => {
 	it('Initialize a base vessel', () => {
 		const test = vessel();
-		expect(test.setup).toBeDefined();
-		expect(test.update).toBeDefined();
-		expect(test.destroy).toBeDefined();
+		expect(test.onSetup).toBeDefined();
+		expect(test.onUpdate).toBeDefined();
+		expect(test.onDestroy).toBeDefined();
 	});
 });

@@ -30,6 +30,7 @@ export class CameraOrbitController {
 	// Saved camera state for restoration when exiting debug mode
 	private savedCameraPosition: Vector3 | null = null;
 	private savedCameraQuaternion: Quaternion | null = null;
+	private savedCameraZoom: number | null = null;
 
 	constructor(camera: Camera, domElement: HTMLElement) {
 		this.camera = camera;
@@ -172,15 +173,19 @@ export class CameraOrbitController {
 	}
 
 	/**
-	 * Save camera position and rotation before entering debug mode.
+	 * Save camera position, rotation, and zoom before entering debug mode.
 	 */
 	private saveCameraState() {
 		this.savedCameraPosition = this.camera.position.clone();
 		this.savedCameraQuaternion = this.camera.quaternion.clone();
+		// Save zoom for orthographic/perspective cameras
+		if ('zoom' in this.camera) {
+			this.savedCameraZoom = (this.camera as any).zoom as number;
+		}
 	}
 
 	/**
-	 * Restore camera position and rotation when exiting debug mode.
+	 * Restore camera position, rotation, and zoom when exiting debug mode.
 	 */
 	private restoreCameraState() {
 		if (this.savedCameraPosition) {
@@ -190,6 +195,11 @@ export class CameraOrbitController {
 		if (this.savedCameraQuaternion) {
 			this.camera.quaternion.copy(this.savedCameraQuaternion);
 			this.savedCameraQuaternion = null;
+		}
+		if (this.savedCameraZoom !== null && 'zoom' in this.camera) {
+			this.camera.zoom = this.savedCameraZoom;
+			(this.camera as any).updateProjectionMatrix?.();
+			this.savedCameraZoom = null;
 		}
 	}
 }

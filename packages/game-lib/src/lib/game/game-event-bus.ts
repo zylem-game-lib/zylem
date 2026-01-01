@@ -6,7 +6,8 @@ import { LoadingEvent } from '../core/interfaces';
 export type GameEventType = 
 	| 'stage:loading:start'
 	| 'stage:loading:progress'
-	| 'stage:loading:complete';
+	| 'stage:loading:complete'
+	| 'game:state:updated';
 
 /**
  * Payload for stage loading events.
@@ -17,12 +18,22 @@ export interface StageLoadingPayload extends LoadingEvent {
 }
 
 /**
+ * Payload for game state update events.
+ */
+export interface GameStateUpdatedPayload {
+	path: string;
+	value: unknown;
+	previousValue?: unknown;
+}
+
+/**
  * Event map for typed event handling.
  */
 export interface GameEventMap {
 	'stage:loading:start': StageLoadingPayload;
 	'stage:loading:progress': StageLoadingPayload;
 	'stage:loading:complete': StageLoadingPayload;
+	'game:state:updated': GameStateUpdatedPayload;
 }
 
 type EventCallback<T> = (payload: T) => void;

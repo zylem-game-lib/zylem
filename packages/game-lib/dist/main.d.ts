@@ -1,10 +1,10 @@
-import { G as Game } from './core-COzxjhi8.js';
-export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-COzxjhi8.js';
-export { a as StageOptions, c as createStage } from './stage-types-B0JZx4WP.js';
-import { S as StageBlueprint } from './blueprints-BHRR8cwh.js';
-export { e as entitySpawner } from './blueprints-BHRR8cwh.js';
+import { G as Game } from './core-CZhozNRH.js';
+export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-CZhozNRH.js';
+export { a as StageOptions, c as createStage } from './stage-types-CD21XoIU.js';
+import { S as StageBlueprint } from './blueprints-BOCc3Wve.js';
+export { e as entitySpawner } from './blueprints-BOCc3Wve.js';
 export { P as PerspectiveType, a as Perspectives, c as camera } from './camera-CpbDr4-V.js';
-export { ZylemBox, actor, box, plane, rect, sphere, sprite, text, zone } from './entities.js';
+export { A as ACTOR_TYPE, B as BOX_TYPE, P as PLANE_TYPE, R as RECT_TYPE, d as SPHERE_TYPE, S as SPRITE_TYPE, T as TEXT_TYPE, e as ZONE_TYPE, Z as ZylemBox, c as actor, b as box, p as plane, r as rect, s as sphere, a as sprite, t as text, z as zone } from './entities-BAxfJOkk.js';
 import { U as UpdateContext, B as BehaviorCallbackType, G as GameEntity } from './entity-COvRtFNG.js';
 export { a as Behavior, L as LoadingEvent, S as SetupContext } from './entity-COvRtFNG.js';
 export { boundary2d, ricochet2DCollision, ricochet2DInBounds } from './behaviors.js';
@@ -18,7 +18,6 @@ import * as RAPIER from '@dimforge/rapier3d-compat';
 export { RAPIER };
 export { S as StageEntity } from './entity-Bq_eNEDI.js';
 import 'bitecs';
-import './world-Dgf6R0_c.js';
 import '@sinclair/typebox';
 import 'three/examples/jsm/postprocessing/EffectComposer.js';
 
@@ -86,6 +85,7 @@ declare function pingPongBeep(frequency?: number, duration?: number): void;
 
 /**
  * Set a global value by path.
+ * Emits a 'game:state:updated' event when the value changes.
  * @example setGlobal('score', 100)
  * @example setGlobal('player.health', 50)
  */
@@ -106,14 +106,15 @@ declare function createGlobal<T>(path: string, defaultValue: T): T;
 declare function getGlobal<T = unknown>(path: string): T | undefined;
 /**
  * Subscribe to changes on a global value at a specific path.
- * Returns an unsubscribe function.
+ * Returns an unsubscribe function. Subscriptions are automatically
+ * cleaned up when the game is disposed.
  * @example const unsub = onGlobalChange('score', (val) => console.log(val));
  */
 declare function onGlobalChange<T = unknown>(path: string, callback: (value: T) => void): () => void;
 /**
  * Subscribe to changes on multiple global paths.
  * Callback fires when any of the paths change, receiving all current values.
- * Returns an unsubscribe function.
+ * Subscriptions are automatically cleaned up when the game is disposed.
  * @example const unsub = onGlobalChanges(['score', 'lives'], ([score, lives]) => console.log(score, lives));
  */
 declare function onGlobalChanges<T extends unknown[] = unknown[]>(paths: string[], callback: (values: T) => void): () => void;
@@ -121,6 +122,11 @@ declare function onGlobalChanges<T extends unknown[] = unknown[]>(paths: string[
  * Get the entire globals object (read-only snapshot).
  */
 declare function getGlobals<T = Record<string, unknown>>(): T;
+/**
+ * Unsubscribe all active global subscriptions.
+ * Used internally on game dispose to prevent old callbacks from firing.
+ */
+declare function clearGlobalSubscriptions(): void;
 
 /**
  * Set a variable on an object by path.
@@ -202,4 +208,4 @@ declare class ZylemGameElement extends HTMLElement {
     disconnectedCallback(): void;
 }
 
-export { type DebugTools, Game, StageBlueprint, StageManager, UpdateContext, ZylemGameElement, type ZylemGameState, createGlobal, createVariable, debugState, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setDebugTool, setGlobal, setPaused, setVariable, stageState };
+export { type DebugTools, Game, StageBlueprint, StageManager, UpdateContext, ZylemGameElement, type ZylemGameState, clearGlobalSubscriptions, createGlobal, createVariable, debugState, destroy, getGlobal, getGlobals, getVariable, movementSequence2D, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setDebugTool, setGlobal, setPaused, setVariable, stageState };
