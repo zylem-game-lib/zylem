@@ -31,7 +31,8 @@
     "lint:fix": "biome check --write .",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r exec rm -rf dist node_modules",
-    "install:all": "pnpm install"
+    "install:all": "pnpm install",
+    "publish:lib": "pnpm build:lib && pnpm --filter @zylem/game-lib publish --access public"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.7",
