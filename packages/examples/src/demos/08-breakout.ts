@@ -69,8 +69,13 @@ const failZone = await zone({
 failZone.onEnter(({ visitor, globals }) => {
 	if (visitor.uuid === moveableBall.uuid) {
 		if (globals.lives > 0) globals.lives = globals.lives - 1;
-		moveableBall.setPosition(0, -7, 0);
-		moveableBall.moveXY(0, 8);
+		if (globals.lives !== 0) {
+			moveableBall.setPosition(0, -7, 0);
+			moveableBall.moveXY(0, 8);
+		} else {
+			moveableBall.setPosition(0, -2, 0);
+			moveableBall.moveXY(0, 0);
+		}
 	}
 });
 
@@ -148,22 +153,22 @@ const game = createGame({
 	},
 }, stage1, paddle, moveableBall, failZone, scoreText, livesText, statusText, ...bricks);
 
-onGlobalChanges<[number, number]>(['bricksRemaining', 'lives'], ([remaining, lives]) => {
+game.onGlobalChanges<[number, number]>(['bricksRemaining', 'lives'], ([remaining, lives]) => {
 	if (remaining <= 0) setGlobal('status', 'win');
 	if (lives <= 0) setGlobal('status', 'lose');
 });
 
-onGlobalChange<string>('status', (value) => {
+game.onGlobalChange<string>('status', (value) => {
 	if (value === 'win') statusText.updateText('You Win!');
 	else if (value === 'lose') statusText.updateText('Game Over');
 	else statusText.updateText('');
 });
 
-onGlobalChange<number>('score', (value) => {
+game.onGlobalChange<number>('score', (value) => {
 	scoreText.updateText(`Score: ${value}`);
 });
 
-onGlobalChange<number>('lives', (value) => {
+game.onGlobalChange<number>('lives', (value) => {
 	livesText.updateText(`Lives: ${value}`);
 });
 
