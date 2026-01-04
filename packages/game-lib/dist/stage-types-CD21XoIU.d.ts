@@ -1,8 +1,8 @@
-import { f as SetupFunction, G as GameEntity, g as UpdateFunction, D as DestroyFunction, S as SetupContext, U as UpdateContext, h as DestroyContext, i as BaseNode, L as LoadingEvent, c as StageEvents } from './entity-8oZ_UEe1.js';
+import { b as SetupFunction, G as GameEntity, c as UpdateFunction, D as DestroyFunction, S as SetupContext, U as UpdateContext, d as DestroyContext, e as BaseNode, L as LoadingEvent } from './entity-COvRtFNG.js';
 import * as bitecs from 'bitecs';
 import { defineSystem, IWorld } from 'bitecs';
 import { Scene, Color, Object3D, Vector3, Group } from 'three';
-import { f as ZylemWorld, S as SPRITE_TYPE, g as ZylemSprite, d as SPHERE_TYPE, h as ZylemSphere, R as RECT_TYPE, i as ZylemRect, T as TEXT_TYPE, j as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, k as ZylemPlane, e as ZONE_TYPE, l as ZylemZone, A as ACTOR_TYPE, m as ZylemActor } from './entities-BbViib2x.js';
+import { f as ZylemWorld, S as SPRITE_TYPE, g as ZylemSprite, d as SPHERE_TYPE, h as ZylemSphere, R as RECT_TYPE, i as ZylemRect, T as TEXT_TYPE, j as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, k as ZylemPlane, e as ZONE_TYPE, l as ZylemZone, A as ACTOR_TYPE, m as ZylemActor } from './entities-BAxfJOkk.js';
 import { E as Entity, L as LifecycleFunction, S as StageEntity } from './entity-Bq_eNEDI.js';
 import { Z as ZylemCamera, C as CameraDebugDelegate, b as CameraDebugState, d as CameraWrapper } from './camera-CpbDr4-V.js';
 import RAPIER__default, { RigidBody, Collider } from '@dimforge/rapier3d-compat';
@@ -285,7 +285,6 @@ declare class Stage {
     private updateCallbacks;
     private destroyCallbacks;
     private pendingLoadingCallbacks;
-    private eventDelegate;
     constructor(options: StageOptions);
     load(id: string, camera?: ZylemCamera | CameraWrapper | null): Promise<void>;
     private applyLifecycleCallbacks;
@@ -306,20 +305,6 @@ declare class Stage {
      * @example stage.getEntityByName('scoreText', TEXT_TYPE)
      */
     getEntityByName<T extends symbol | void = void>(name: string, type?: T): T extends keyof EntityTypeMap ? EntityTypeMap[T] | undefined : BaseNode | undefined;
-    /**
-     * Dispatch an event from the stage.
-     * Events are emitted both locally and to the global event bus.
-     */
-    dispatch<K extends keyof StageEvents>(event: K, payload: StageEvents[K]): void;
-    /**
-     * Listen for events on this stage instance.
-     * @returns Unsubscribe function
-     */
-    listen<K extends keyof StageEvents>(event: K, handler: (payload: StageEvents[K]) => void): () => void;
-    /**
-     * Clean up stage resources including event subscriptions.
-     */
-    dispose(): void;
 }
 /**
  * Create a stage with optional camera

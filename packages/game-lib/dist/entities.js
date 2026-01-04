@@ -203,68 +203,6 @@ var BaseNode = class _BaseNode {
   }
 };
 
-// ../../node_modules/.pnpm/mitt@3.0.1/node_modules/mitt/dist/mitt.mjs
-function mitt_default(n) {
-  return { all: n = n || /* @__PURE__ */ new Map(), on: function(t, e) {
-    var i = n.get(t);
-    i ? i.push(e) : n.set(t, [e]);
-  }, off: function(t, e) {
-    var i = n.get(t);
-    i && (e ? i.splice(i.indexOf(e) >>> 0, 1) : n.set(t, []));
-  }, emit: function(t, e) {
-    var i = n.get(t);
-    i && i.slice().map(function(n2) {
-      n2(e);
-    }), (i = n.get("*")) && i.slice().map(function(n2) {
-      n2(t, e);
-    });
-  } };
-}
-
-// src/lib/events/event-emitter-delegate.ts
-var EventEmitterDelegate = class {
-  emitter;
-  unsubscribes = [];
-  constructor() {
-    this.emitter = mitt_default();
-  }
-  /**
-   * Dispatch an event to all listeners.
-   */
-  dispatch(event, payload) {
-    this.emitter.emit(event, payload);
-  }
-  /**
-   * Subscribe to an event. Returns an unsubscribe function.
-   */
-  listen(event, handler) {
-    this.emitter.on(event, handler);
-    const unsub = () => this.emitter.off(event, handler);
-    this.unsubscribes.push(unsub);
-    return unsub;
-  }
-  /**
-   * Subscribe to all events.
-   */
-  listenAll(handler) {
-    this.emitter.on("*", handler);
-    const unsub = () => this.emitter.off("*", handler);
-    this.unsubscribes.push(unsub);
-    return unsub;
-  }
-  /**
-   * Clean up all subscriptions.
-   */
-  dispose() {
-    this.unsubscribes.forEach((fn) => fn());
-    this.unsubscribes = [];
-    this.emitter.all.clear();
-  }
-};
-
-// src/lib/events/zylem-events.ts
-var zylemEventBus = mitt_default();
-
 // src/lib/entities/entity.ts
 var GameEntity = class extends BaseNode {
   behaviors = [];
@@ -288,8 +226,6 @@ var GameEntity = class extends BaseNode {
     destroy: [],
     collision: []
   };
-  // Event delegate for dispatch/listen API
-  eventDelegate = new EventEmitterDelegate();
   constructor() {
     super();
   }
@@ -389,30 +325,6 @@ var GameEntity = class extends BaseNode {
     info.uuid = this.uuid;
     info.eid = this.eid.toString();
     return info;
-  }
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Events API
-  // ─────────────────────────────────────────────────────────────────────────────
-  /**
-   * Dispatch an event from this entity.
-   * Events are emitted both locally and to the global event bus.
-   */
-  dispatch(event, payload) {
-    this.eventDelegate.dispatch(event, payload);
-    zylemEventBus.emit(event, payload);
-  }
-  /**
-   * Listen for events on this entity instance.
-   * @returns Unsubscribe function
-   */
-  listen(event, handler) {
-    return this.eventDelegate.listen(event, handler);
-  }
-  /**
-   * Clean up entity event subscriptions.
-   */
-  disposeEvents() {
-    this.eventDelegate.dispose();
   }
 };
 
@@ -1738,10 +1650,6 @@ var ZylemActor = class extends GameEntity {
     if (this._object) {
       this._animationDelegate = new AnimationDelegate(this._object);
       await this._animationDelegate.loadAnimations(this.options.animations || []);
-      this.dispatch("entity:animation:loaded", {
-        entityId: this.uuid,
-        animationCount: this.options.animations?.length || 0
-      });
     }
   }
   async data() {
@@ -1783,20 +1691,12 @@ var ZylemActor = class extends GameEntity {
   }
   async loadModels() {
     if (this._modelFileNames.length === 0) return;
-    this.dispatch("entity:model:loading", {
-      entityId: this.uuid,
-      files: this._modelFileNames
-    });
     const promises = this._modelFileNames.map((file) => this._assetLoader.loadFile(file));
     const results = await Promise.all(promises);
     if (results[0]?.object) {
       this._object = results[0].object;
     }
-    let meshCount = 0;
     if (this._object) {
-      this._object.traverse((child) => {
-        if (child.isMesh) meshCount++;
-      });
       this.group = new Group4();
       this.group.attach(this._object);
       this.group.scale.set(
@@ -1805,11 +1705,6 @@ var ZylemActor = class extends GameEntity {
         this.options.scale?.z || 1
       );
     }
-    this.dispatch("entity:model:loaded", {
-      entityId: this.uuid,
-      success: !!this._object,
-      meshCount
-    });
   }
   playAnimation(animationOptions) {
     this._animationDelegate?.playAnimation(animationOptions);

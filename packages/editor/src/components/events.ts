@@ -1,12 +1,9 @@
 /**
  * Editor Event Bus
  * 
- * Wraps the shared zylemEventBus to provide backward-compatible API
- * for the editor package. This allows external code to dispatch state
- * updates to the editor using the familiar editorEvents API.
+ * Allows external code (e.g., game-lib) to dispatch state updates to the editor.
+ * The editor subscribes to these events and updates its local state accordingly.
  */
-
-import { zylemEventBus, type ZylemEvents } from '@zylem/game-lib';
 
 export type EditorEventType = 'debug' | 'game' | 'stage' | 'entities';
 
@@ -15,41 +12,20 @@ export interface EditorEvent<T = unknown> {
 	payload: T;
 }
 
-// Map legacy editor event types to zylemEventBus event types
-const eventTypeMap: Record<EditorEventType, keyof ZylemEvents> = {
-	debug: 'debug',
-	game: 'loading:start', // or could be mapped differently based on needs
-	stage: 'stage:loaded',
-	entities: 'entity:spawned',
-};
-
 type EventHandler<T = unknown> = (event: EditorEvent<T>) => void;
 
-/**
- * Backward-compatible wrapper around zylemEventBus.
- * Maintains the existing editorEvents.emit({ type, payload }) API
- * while internally using the shared Mitt-based event bus.
- */
-class EditorEventBusWrapper {
-	private legacyListeners = new Map<EditorEventType, Set<EventHandler>>();
+class EditorEventBus {
+	private listeners = new Map<EditorEventType, Set<EventHandler>>();
 
 	/**
 	 * Emit an event to all registered listeners of that type.
-	 * Also emits to the global zylemEventBus for cross-package communication.
 	 */
 	emit<T>(event: EditorEvent<T>): void {
-		// Emit to legacy listeners (backward compatibility)
-		const handlers = this.legacyListeners.get(event.type);
+		const handlers = this.listeners.get(event.type);
 		if (handlers) {
 			for (const handler of handlers) {
 				handler(event);
 			}
-		}
-
-		// Also emit to zylemEventBus for cross-package communication
-		const mappedEvent = eventTypeMap[event.type];
-		if (mappedEvent) {
-			(zylemEventBus as any).emit(mappedEvent, event.payload);
 		}
 	}
 
@@ -58,13 +34,13 @@ class EditorEventBusWrapper {
 	 * Returns an unsubscribe function.
 	 */
 	on<T>(type: EditorEventType, handler: EventHandler<T>): () => void {
-		if (!this.legacyListeners.has(type)) {
-			this.legacyListeners.set(type, new Set());
+		if (!this.listeners.has(type)) {
+			this.listeners.set(type, new Set());
 		}
-		this.legacyListeners.get(type)!.add(handler as EventHandler);
+		this.listeners.get(type)!.add(handler as EventHandler);
 		
 		return () => {
-			this.legacyListeners.get(type)?.delete(handler as EventHandler);
+			this.listeners.get(type)?.delete(handler as EventHandler);
 		};
 	}
 
@@ -72,7 +48,7 @@ class EditorEventBusWrapper {
 	 * Remove all listeners (useful for cleanup).
 	 */
 	clear(): void {
-		this.legacyListeners.clear();
+		this.listeners.clear();
 	}
 }
 
@@ -90,9 +66,4 @@ class EditorEventBusWrapper {
  * editorEvents.on('debug', (e) => setDebugState(e.payload));
  * ```
  */
-export const editorEvents = new EditorEventBusWrapper();
-
-/**
- * Re-export zylemEventBus for direct access when needed.
- */
-export { zylemEventBus };
+export const editorEvents = new EditorEventBus();

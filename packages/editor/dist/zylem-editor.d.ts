@@ -102,27 +102,19 @@ declare const Icon: Component<IconProps>;
 /**
  * Editor Event Bus
  *
- * Wraps the shared zylemEventBus to provide backward-compatible API
- * for the editor package. This allows external code to dispatch state
- * updates to the editor using the familiar editorEvents API.
+ * Allows external code (e.g., game-lib) to dispatch state updates to the editor.
+ * The editor subscribes to these events and updates its local state accordingly.
  */
-
 type EditorEventType = 'debug' | 'game' | 'stage' | 'entities';
 interface EditorEvent<T = unknown> {
     type: EditorEventType;
     payload: T;
 }
 type EventHandler<T = unknown> = (event: EditorEvent<T>) => void;
-/**
- * Backward-compatible wrapper around zylemEventBus.
- * Maintains the existing editorEvents.emit({ type, payload }) API
- * while internally using the shared Mitt-based event bus.
- */
-declare class EditorEventBusWrapper {
-    private legacyListeners;
+declare class EditorEventBus {
+    private listeners;
     /**
      * Emit an event to all registered listeners of that type.
-     * Also emits to the global zylemEventBus for cross-package communication.
      */
     emit<T>(event: EditorEvent<T>): void;
     /**
@@ -149,7 +141,7 @@ declare class EditorEventBusWrapper {
  * editorEvents.on('debug', (e) => setDebugState(e.payload));
  * ```
  */
-declare const editorEvents: EditorEventBusWrapper;
+declare const editorEvents: EditorEventBus;
 
 /**
  * Editor Events Module

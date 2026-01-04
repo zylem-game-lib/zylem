@@ -9,7 +9,6 @@ import { createStage, Stage } from '../stage/stage';
 import { StageManager, stageState } from '../stage/stage-manager';
 import { StageFactory } from '../stage/stage-factory';
 import { initGlobals, clearGlobalSubscriptions, resetGlobals, onGlobalChange as onGlobalChangeInternal, onGlobalChanges as onGlobalChangesInternal } from './game-state';
-import { EventEmitterDelegate, zylemEventBus, type GameEvents } from '../events';
 
 export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private wrappedGame: ZylemGame<TGlobals> | null = null;
@@ -26,9 +25,6 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private globalChangeCallbacks: Array<{ path: string; callback: (value: unknown, stage: Stage | null) => void }> = [];
 	private globalChangesCallbacks: Array<{ paths: string[]; callback: (values: unknown[], stage: Stage | null) => void }> = [];
 	private activeGlobalSubscriptions: Array<() => void> = [];
-
-	// Event delegate for dispatch/listen API
-	private eventDelegate = new EventEmitterDelegate<GameEvents>();
 
 	refErrorMessage = 'lost reference to game';
 
@@ -245,9 +241,6 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	async end() { }
 
 	dispose() {
-		// Clear event delegate subscriptions
-		this.eventDelegate.dispose();
-
 		// Clear game-specific subscriptions
 		for (const unsub of this.activeGlobalSubscriptions) {
 			unsub();
@@ -260,28 +253,6 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		// Clear all remaining global subscriptions and reset globals
 		clearGlobalSubscriptions();
 		resetGlobals();
-	}
-
-	// ─────────────────────────────────────────────────────────────────────────────
-	// Events API
-	// ─────────────────────────────────────────────────────────────────────────────
-
-	/**
-	 * Dispatch an event from the game.
-	 * Events are emitted both locally and to the global event bus.
-	 */
-	dispatch<K extends keyof GameEvents>(event: K, payload: GameEvents[K]): void {
-		this.eventDelegate.dispatch(event, payload);
-		// Emit to global bus for cross-package communication
-		(zylemEventBus as any).emit(event, payload);
-	}
-
-	/**
-	 * Listen for events on this game instance.
-	 * @returns Unsubscribe function
-	 */
-	listen<K extends keyof GameEvents>(event: K, handler: (payload: GameEvents[K]) => void): () => void {
-		return this.eventDelegate.listen(event, handler);
 	}
 
 	/**

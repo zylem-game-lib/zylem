@@ -111,11 +111,6 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		if (this._object) {
 			this._animationDelegate = new AnimationDelegate(this._object);
 			await this._animationDelegate.loadAnimations(this.options.animations || []);
-			// Emit animation loaded event
-			this.dispatch('entity:animation:loaded', {
-				entityId: this.uuid,
-				animationCount: this.options.animations?.length || 0
-			});
 		}
 	}
 
@@ -168,25 +163,12 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 
 	private async loadModels(): Promise<void> {
 		if (this._modelFileNames.length === 0) return;
-
-		// Emit loading started event
-		this.dispatch('entity:model:loading', {
-			entityId: this.uuid,
-			files: this._modelFileNames
-		});
-
 		const promises = this._modelFileNames.map(file => this._assetLoader.loadFile(file));
 		const results = await Promise.all(promises);
 		if (results[0]?.object) {
 			this._object = results[0].object;
 		}
-
-		// Count meshes for the loaded event
-		let meshCount = 0;
 		if (this._object) {
-			this._object.traverse((child) => {
-				if ((child as any).isMesh) meshCount++;
-			});
 			this.group = new Group();
 			this.group.attach(this._object);
 			this.group.scale.set(
@@ -195,13 +177,6 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 				this.options.scale?.z || 1
 			);
 		}
-
-		// Emit model loaded event
-		this.dispatch('entity:model:loaded', {
-			entityId: this.uuid,
-			success: !!this._object,
-			meshCount
-		});
 	}
 
 	playAnimation(animationOptions: AnimationOptions) {
