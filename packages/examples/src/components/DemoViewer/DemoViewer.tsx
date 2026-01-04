@@ -6,7 +6,7 @@ import {
     onCleanup,
     Show,
 } from 'solid-js';
-import { ZylemGameElement } from '@zylem/game-lib';
+import { ZylemGameElement, zylemEventBus, type GameLoadingPayload } from '@zylem/game-lib';
 import { editorEvents } from '@zylem/editor';
 import { appStore } from '../../store/appStore';
 // editorStateStore is imported for side effects (sets up event listener)
@@ -51,11 +51,10 @@ const ExampleRunner: Component = () => {
     const [progress, setProgress] = createSignal(0);
     const [message, setMessage] = createSignal('');
 
-    // Listen for game loading events via window (crosses web component boundary)
-    const handleLoadingEvent = (e: Event) => {
-        const event = (e as CustomEvent).detail as { type: string; progress: number; message: string };
-        setProgress(event.progress);
-        setMessage(event.message);
+    // Listen for game loading events via zylemEventBus
+    const handleLoadingEvent = (event: GameLoadingPayload) => {
+        setProgress(event.progress ?? 0);
+        setMessage(event.message ?? '');
         if (event.type === 'start') {
             setLoading(true);
         } else if (event.type === 'complete') {
@@ -64,11 +63,16 @@ const ExampleRunner: Component = () => {
     };
 
     onMount(() => {
-        window.addEventListener('GAME_LOADING_EVENT', handleLoadingEvent);
+        // Subscribe to all loading event types
+        zylemEventBus.on('loading:start', handleLoadingEvent);
+        zylemEventBus.on('loading:progress', handleLoadingEvent);
+        zylemEventBus.on('loading:complete', handleLoadingEvent);
     });
 
     onCleanup(() => {
-        window.removeEventListener('GAME_LOADING_EVENT', handleLoadingEvent);
+        zylemEventBus.off('loading:start', handleLoadingEvent);
+        zylemEventBus.off('loading:progress', handleLoadingEvent);
+        zylemEventBus.off('loading:complete', handleLoadingEvent);
         editorEvents.emit({ type: 'debug', payload: { enabled: false } });
     });
 

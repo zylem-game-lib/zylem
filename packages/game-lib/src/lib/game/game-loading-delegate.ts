@@ -1,8 +1,10 @@
 import { LoadingEvent } from '../core/interfaces';
+import { zylemEventBus, type GameLoadingPayload } from '../events';
 
 /**
  * Event name for game loading events.
  * Dispatched via window for cross-application communication.
+ * @deprecated Use zylemEventBus instead
  */
 export const GAME_LOADING_EVENT = 'GAME_LOADING_EVENT';
 
@@ -22,7 +24,7 @@ export interface GameLoadingEvent {
 /**
  * Delegate for managing game-level loading events.
  * Aggregates loading events from stages and includes stage context.
- * Also dispatches window custom events for cross-application communication.
+ * Emits to zylemEventBus for cross-application communication.
  */
 export class GameLoadingDelegate {
 	private loadingHandlers: Array<(event: GameLoadingEvent) => void> = [];
@@ -43,12 +45,11 @@ export class GameLoadingDelegate {
 	}
 
 	/**
-	 * Emit a loading event to all subscribers and dispatch to window.
+	 * Emit a loading event to all subscribers and to zylemEventBus.
 	 */
 	emit(event: GameLoadingEvent): void {
 		// Dispatch to direct subscribers
 		for (const handler of this.loadingHandlers) {
-            console.log('Game loading event', event);
 			try {
 				handler(event);
 			} catch (e) {
@@ -56,7 +57,11 @@ export class GameLoadingDelegate {
 			}
 		}
 		
-		// Also dispatch as window event for cross-application communication
+		// Emit to zylemEventBus for cross-package communication
+		const eventName = `loading:${event.type}` as 'loading:start' | 'loading:progress' | 'loading:complete';
+		(zylemEventBus as any).emit(eventName, event as GameLoadingPayload);
+		
+		// Also dispatch as window event for backward compatibility
 		if (typeof window !== 'undefined') {
 			window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
 		}

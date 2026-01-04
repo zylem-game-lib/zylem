@@ -6,6 +6,7 @@ import { CameraWrapper } from '../camera/camera';
 import { stageState } from './stage-state';
 import { getStageOptions } from './stage-default';
 import { EntityTypeMap } from '../types/entity-type-map';
+import { EventEmitterDelegate, zylemEventBus, type StageEvents } from '../events';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
@@ -22,6 +23,9 @@ export class Stage {
 	private updateCallbacks: Array<UpdateFunction<ZylemStage>> = [];
 	private destroyCallbacks: Array<DestroyFunction<ZylemStage>> = [];
 	private pendingLoadingCallbacks: Array<(event: LoadingEvent) => void> = [];
+
+	// Event delegate for dispatch/listen API
+	private eventDelegate = new EventEmitterDelegate<StageEvents>();
 
 	constructor(options: StageOptions) {
 		this.options = options;
@@ -171,6 +175,34 @@ export class Stage {
 	): T extends keyof EntityTypeMap ? EntityTypeMap[T] | undefined : BaseNode | undefined {
 		const entity = this.wrappedStage?.children.find(c => c.name === name);
 		return entity as any;
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Events API
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Dispatch an event from the stage.
+	 * Events are emitted both locally and to the global event bus.
+	 */
+	dispatch<K extends keyof StageEvents>(event: K, payload: StageEvents[K]): void {
+		this.eventDelegate.dispatch(event, payload);
+		(zylemEventBus as any).emit(event, payload);
+	}
+
+	/**
+	 * Listen for events on this stage instance.
+	 * @returns Unsubscribe function
+	 */
+	listen<K extends keyof StageEvents>(event: K, handler: (payload: StageEvents[K]) => void): () => void {
+		return this.eventDelegate.listen(event, handler);
+	}
+
+	/**
+	 * Clean up stage resources including event subscriptions.
+	 */
+	dispose(): void {
+		this.eventDelegate.dispose();
 	}
 }
 

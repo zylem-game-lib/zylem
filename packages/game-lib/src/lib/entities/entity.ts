@@ -8,6 +8,7 @@ import { BaseNode } from "../core/base-node";
 import { DestroyContext, SetupContext, UpdateContext, LoadedContext, CleanupContext } from "../core/base-node-life-cycle";
 import type { EntityMeshBuilder, EntityCollisionBuilder } from "./builder";
 import { Behavior } from "../actions/behaviors/behavior";
+import { EventEmitterDelegate, zylemEventBus, type EntityEvents } from "../events";
 
 export interface CollisionContext<T, O extends GameEntityOptions, TGlobals extends Record<string, unknown> = any> {
 	entity: T;
@@ -91,6 +92,9 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 		destroy: [],
 		collision: [],
 	};
+
+	// Event delegate for dispatch/listen API
+	protected eventDelegate = new EventEmitterDelegate<EntityEvents>();
 
 	constructor() {
 		super();
@@ -205,6 +209,34 @@ export class GameEntity<O extends GameEntityOptions> extends BaseNode<O> impleme
 		info.uuid = this.uuid;
 		info.eid = this.eid.toString();
 		return info;
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Events API
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Dispatch an event from this entity.
+	 * Events are emitted both locally and to the global event bus.
+	 */
+	dispatch<K extends keyof EntityEvents>(event: K, payload: EntityEvents[K]): void {
+		this.eventDelegate.dispatch(event, payload);
+		(zylemEventBus as any).emit(event, payload);
+	}
+
+	/**
+	 * Listen for events on this entity instance.
+	 * @returns Unsubscribe function
+	 */
+	listen<K extends keyof EntityEvents>(event: K, handler: (payload: EntityEvents[K]) => void): () => void {
+		return this.eventDelegate.listen(event, handler);
+	}
+
+	/**
+	 * Clean up entity event subscriptions.
+	 */
+	disposeEvents(): void {
+		this.eventDelegate.dispose();
 	}
 }
 

@@ -1,8 +1,9 @@
-import { G as GameEntity, m as CollisionContext, U as UpdateContext, B as BehaviorCallbackType } from './entity-COvRtFNG.js';
+import { G as GameEntity, q as CollisionContext, U as UpdateContext, B as BehaviorCallbackType } from './entity-8oZ_UEe1.js';
 import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
 import { Vector } from '@dimforge/rapier3d-compat';
 import 'three';
 import 'bitecs';
+import 'mitt';
 
 /**
  * A branded bitmask representing a set of collision types.

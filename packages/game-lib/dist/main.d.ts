@@ -1,12 +1,12 @@
-import { G as Game } from './core-CZhozNRH.js';
-export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-CZhozNRH.js';
-export { a as StageOptions, c as createStage } from './stage-types-CD21XoIU.js';
-import { S as StageBlueprint } from './blueprints-BOCc3Wve.js';
-export { e as entitySpawner } from './blueprints-BOCc3Wve.js';
+import { G as Game } from './core-GxEktUDb.js';
+export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-GxEktUDb.js';
+export { a as StageOptions, c as createStage } from './stage-types-DgsxZxxF.js';
+import { S as StageBlueprint } from './blueprints-ZWa7JtyU.js';
+export { e as entitySpawner } from './blueprints-ZWa7JtyU.js';
 export { P as PerspectiveType, a as Perspectives, c as camera } from './camera-CpbDr4-V.js';
-export { A as ACTOR_TYPE, B as BOX_TYPE, P as PLANE_TYPE, R as RECT_TYPE, d as SPHERE_TYPE, S as SPRITE_TYPE, T as TEXT_TYPE, e as ZONE_TYPE, Z as ZylemBox, c as actor, b as box, p as plane, r as rect, s as sphere, a as sprite, t as text, z as zone } from './entities-BAxfJOkk.js';
-import { U as UpdateContext, B as BehaviorCallbackType, G as GameEntity } from './entity-COvRtFNG.js';
-export { a as Behavior, L as LoadingEvent, S as SetupContext } from './entity-COvRtFNG.js';
+export { A as ACTOR_TYPE, B as BOX_TYPE, P as PLANE_TYPE, R as RECT_TYPE, d as SPHERE_TYPE, S as SPRITE_TYPE, T as TEXT_TYPE, e as ZONE_TYPE, Z as ZylemBox, c as actor, b as box, p as plane, r as rect, s as sphere, a as sprite, t as text, z as zone } from './entities-BbViib2x.js';
+import { U as UpdateContext, B as BehaviorCallbackType, G as GameEntity } from './entity-8oZ_UEe1.js';
+export { a as Behavior, d as EntityEvents, E as EventEmitterDelegate, b as GameEvents, e as GameLoadingPayload, L as LoadingEvent, S as SetupContext, c as StageEvents, Z as ZylemEvents, z as zylemEventBus } from './entity-8oZ_UEe1.js';
 export { boundary2d, ricochet2DCollision, ricochet2DInBounds } from './behaviors.js';
 import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
 export { m as makeMoveable, b as move, a as moveable, r as resetVelocity } from './moveable-B_vyA6cw.js';
@@ -20,6 +20,7 @@ export { S as StageEntity } from './entity-Bq_eNEDI.js';
 import 'bitecs';
 import '@sinclair/typebox';
 import 'three/examples/jsm/postprocessing/EffectComposer.js';
+import 'mitt';
 
 declare const stageState: {
     previous: StageBlueprint | null;

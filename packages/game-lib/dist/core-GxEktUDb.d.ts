@@ -1,6 +1,6 @@
-import { I as InputGamepad, c as UpdateFunction, f as InputPlayerNumber, g as Inputs, h as ButtonState, A as AnalogState, S as SetupContext, U as UpdateContext, d as DestroyContext, i as GameEntityLifeCycle, e as BaseNode, j as IGame, b as SetupFunction, D as DestroyFunction, k as LoadedContext, C as CleanupContext } from './entity-COvRtFNG.js';
+import { I as InputGamepad, g as UpdateFunction, j as InputPlayerNumber, k as Inputs, l as ButtonState, A as AnalogState, S as SetupContext, U as UpdateContext, h as DestroyContext, m as GameEntityLifeCycle, i as BaseNode, n as IGame, f as SetupFunction, D as DestroyFunction, b as GameEvents, o as LoadedContext, C as CleanupContext } from './entity-8oZ_UEe1.js';
 import { Z as ZylemCamera } from './camera-CpbDr4-V.js';
-import { d as StageInterface, b as Stage } from './stage-types-CD21XoIU.js';
+import { d as StageInterface, b as Stage } from './stage-types-DgsxZxxF.js';
 import { Vector3 } from 'three';
 import { Vector3 as Vector3$1 } from '@dimforge/rapier3d-compat';
 
@@ -367,6 +367,7 @@ declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
     private globalChangeCallbacks;
     private globalChangesCallbacks;
     private activeGlobalSubscriptions;
+    private eventDelegate;
     refErrorMessage: string;
     constructor(options: GameOptions<TGlobals>);
     onSetup(...callbacks: Array<SetupFunction<ZylemGame<TGlobals>, TGlobals>>): this;
@@ -407,6 +408,16 @@ declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
     goToStage(): Promise<void>;
     end(): Promise<void>;
     dispose(): void;
+    /**
+     * Dispatch an event from the game.
+     * Events are emitted both locally and to the global event bus.
+     */
+    dispatch<K extends keyof GameEvents>(event: K, payload: GameEvents[K]): void;
+    /**
+     * Listen for events on this game instance.
+     * @returns Unsubscribe function
+     */
+    listen<K extends keyof GameEvents>(event: K, handler: (payload: GameEvents[K]) => void): () => void;
     /**
      * Subscribe to loading events from the game.
      * Events include stage context (stageName, stageIndex).
