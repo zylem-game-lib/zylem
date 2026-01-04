@@ -13,12 +13,51 @@ export interface GameLoadingPayload extends LoadingEvent {
 // Game Events
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Payload for stage configuration sent to editor. */
+export interface StageConfigPayload {
+	id: string;
+	backgroundColor: string;
+	backgroundImage: string | null;
+	gravity: { x: number; y: number; z: number };
+	inputs: Record<string, string[]>;
+	variables: Record<string, unknown>;
+}
+
+/** Payload for entity configuration sent to editor. */
+export interface EntityConfigPayload {
+	uuid: string;
+	name: string;
+	type: string;
+	position: { x: number; y: number; z: number };
+	rotation: { x: number; y: number; z: number };
+	scale: { x: number; y: number; z: number };
+}
+
+/** Payload for state dispatch events from game to editor. */
+export interface StateDispatchPayload {
+	scope: 'game' | 'stage' | 'entity';
+	path: string;
+	value: unknown;
+	previousValue?: unknown;
+	config?: {
+		id: string;
+		aspectRatio: number;
+		fullscreen: boolean;
+		bodyBackground: string | undefined;
+		internalResolution: { width: number; height: number } | undefined;
+		debug: boolean;
+	} | null;
+	stageConfig?: StageConfigPayload | null;
+	entities?: EntityConfigPayload[] | null;
+}
+
 export type GameEvents = {
 	'loading:start': GameLoadingPayload;
 	'loading:progress': GameLoadingPayload;
 	'loading:complete': GameLoadingPayload;
 	'paused': { paused: boolean };
 	'debug': { enabled: boolean };
+	'state:dispatch': StateDispatchPayload;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,43 +1,53 @@
 import type { Component } from 'solid-js';
-import { Checkbox } from '@kobalte/core';
-import Check from 'lucide-solid/icons/check';
-import { getGlobalState, state } from './game-state';
+import { Show } from 'solid-js';
+import { useEditor } from '../EditorContext';
 import { printToConsole } from '..';
-import { dispatchEditorUpdate } from '../editor-events';
-import { debugStore, setDebugStore } from '../editor-store';
 
 export const GameSection: Component = () => {
-    const handleDebugToggle = (checked: boolean) => {
-        // Update local store state
-        setDebugStore('debug', checked);
-        // Dispatch event for external consumers
-        dispatchEditorUpdate({ gameState: { debugFlag: checked } });
-    };
+    const { game } = useEditor();
 
     return (
         <div class="panel-content">
-            <section class="zylem-toolbar">
-                <Checkbox.Root
-                    class="zylem-checkbox-root"
-                    checked={debugStore.debug}
-                    onChange={handleDebugToggle}
-                >
-                    <Checkbox.Input class="zylem-checkbox-input" />
-                    <Checkbox.Control class="zylem-checkbox-control">
-                        <Checkbox.Indicator>
-                            <Check class="zylem-checkbox-icon" />
-                        </Checkbox.Indicator>
-                    </Checkbox.Control>
-                    <Checkbox.Label class="zylem-checkbox-label">Debug Mode</Checkbox.Label>
-                </Checkbox.Root>
-            </section>
+            <Show when={game.config}>
+                <section class="zylem-property-list">
+                    <div class="zylem-property-row">
+                        <span class="zylem-property-label">ID</span>
+                        <span class="zylem-property-value">{game.config?.id}</span>
+                    </div>
+                    <div class="zylem-property-row">
+                        <span class="zylem-property-label">Aspect Ratio</span>
+                        <span class="zylem-property-value">{game.config?.aspectRatio.toFixed(3)}</span>
+                    </div>
+                    <div class="zylem-property-row">
+                        <span class="zylem-property-label">Fullscreen</span>
+                        <span class="zylem-property-value">{game.config?.fullscreen ? 'Yes' : 'No'}</span>
+                    </div>
+                    <div class="zylem-property-row">
+                        <span class="zylem-property-label">Debug</span>
+                        <span class="zylem-property-value">{game.config?.debug ? 'Yes' : 'No'}</span>
+                    </div>
+                    <Show when={game.config?.internalResolution}>
+                        <div class="zylem-property-row">
+                            <span class="zylem-property-label">Resolution</span>
+                            <span class="zylem-property-value">
+                                {game.config?.internalResolution?.width}x{game.config?.internalResolution?.height}
+                            </span>
+                        </div>
+                    </Show>
+                    <Show when={game.config?.bodyBackground}>
+                        <div class="zylem-property-row">
+                            <span class="zylem-property-label">Background</span>
+                            <span class="zylem-property-value">{game.config?.bodyBackground}</span>
+                        </div>
+                    </Show>
+                </section>
+            </Show>
             <section class="zylem-toolbar">
                 <button
                     class="zylem-toolbar-btn zylem-button"
                     onClick={() => {
-                        const globalState = getGlobalState();
                         printToConsole(
-                            `Global State: ${JSON.stringify(globalState, null, 2)}`,
+                            `Global State: ${JSON.stringify(game.globals, null, 2)}`,
                         );
                     }}
                 >
@@ -46,8 +56,7 @@ export const GameSection: Component = () => {
                 <button
                     class="zylem-toolbar-btn zylem-button"
                     onClick={() => {
-                        const allState = state;
-                        printToConsole(`All State: ${JSON.stringify(allState, null, 2)}`);
+                        printToConsole(`All State: ${JSON.stringify(game, null, 2)}`);
                     }}
                 >
                     Print All

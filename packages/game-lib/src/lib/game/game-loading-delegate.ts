@@ -2,13 +2,6 @@ import { LoadingEvent } from '../core/interfaces';
 import { zylemEventBus, type GameLoadingPayload } from '../events';
 
 /**
- * Event name for game loading events.
- * Dispatched via window for cross-application communication.
- * @deprecated Use zylemEventBus instead
- */
-export const GAME_LOADING_EVENT = 'GAME_LOADING_EVENT';
-
-/**
  * Game-level loading event that includes stage context.
  */
 export interface GameLoadingEvent {
@@ -60,11 +53,6 @@ export class GameLoadingDelegate {
 		// Emit to zylemEventBus for cross-package communication
 		const eventName = `loading:${event.type}` as 'loading:start' | 'loading:progress' | 'loading:complete';
 		(zylemEventBus as any).emit(eventName, event as GameLoadingPayload);
-		
-		// Also dispatch as window event for backward compatibility
-		if (typeof window !== 'undefined') {
-			window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
-		}
 	}
 
 	/**

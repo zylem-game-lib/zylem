@@ -1,4 +1,4 @@
-import { G as GameEntity, U as UpdateContext, p as GameEntityOptions, h as DestroyContext, i as BaseNode, T as TexturePath, V as Vec3, M as MaterialOptions } from './entity-8oZ_UEe1.js';
+import { G as GameEntity, U as UpdateContext, s as GameEntityOptions, k as DestroyContext, l as BaseNode, T as TexturePath, V as Vec3, M as MaterialOptions } from './entity-BtSVUHY-.js';
 import { Vector3, Sprite, Color, Vector2, Object3D } from 'three';
 import RAPIER__default, { World } from '@dimforge/rapier3d-compat';
 import { E as Entity } from './entity-Bq_eNEDI.js';

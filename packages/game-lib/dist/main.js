@@ -2540,6 +2540,11 @@ var init_camera_debug_delegate = __esm({
       savedCameraPosition = null;
       savedCameraQuaternion = null;
       savedCameraZoom = null;
+      // Saved debug camera state for restoration when re-entering debug mode
+      savedDebugCameraPosition = null;
+      savedDebugCameraQuaternion = null;
+      savedDebugCameraZoom = null;
+      savedDebugOrbitTarget = null;
       constructor(camera2, domElement) {
         this.camera = camera2;
         this.domElement = domElement;
@@ -2603,8 +2608,10 @@ var init_camera_debug_delegate = __esm({
         if (state2.enabled && !wasEnabled) {
           this.saveCameraState();
           this.enableOrbitControls();
+          this.restoreDebugCameraState();
           this.updateOrbitTargetFromSelection(state2.selected);
         } else if (!state2.enabled && wasEnabled) {
+          this.saveDebugCameraState();
           this.orbitTarget = null;
           this.disableOrbitControls();
           this.restoreCameraState();
@@ -2690,6 +2697,37 @@ var init_camera_debug_delegate = __esm({
           this.camera.zoom = this.savedCameraZoom;
           this.camera.updateProjectionMatrix?.();
           this.savedCameraZoom = null;
+        }
+      }
+      /**
+       * Save debug camera state when exiting debug mode.
+       */
+      saveDebugCameraState() {
+        this.savedDebugCameraPosition = this.camera.position.clone();
+        this.savedDebugCameraQuaternion = this.camera.quaternion.clone();
+        if ("zoom" in this.camera) {
+          this.savedDebugCameraZoom = this.camera.zoom;
+        }
+        if (this.orbitControls) {
+          this.savedDebugOrbitTarget = this.orbitControls.target.clone();
+        }
+      }
+      /**
+       * Restore debug camera state when re-entering debug mode.
+       */
+      restoreDebugCameraState() {
+        if (this.savedDebugCameraPosition) {
+          this.camera.position.copy(this.savedDebugCameraPosition);
+        }
+        if (this.savedDebugCameraQuaternion) {
+          this.camera.quaternion.copy(this.savedDebugCameraQuaternion);
+        }
+        if (this.savedDebugCameraZoom !== null && "zoom" in this.camera) {
+          this.camera.zoom = this.savedDebugCameraZoom;
+          this.camera.updateProjectionMatrix?.();
+        }
+        if (this.savedDebugOrbitTarget && this.orbitControls) {
+          this.orbitControls.target.copy(this.savedDebugOrbitTarget);
         }
       }
     };
@@ -4703,7 +4741,6 @@ var GameDebugDelegate = class {
 
 // src/lib/game/game-loading-delegate.ts
 init_events();
-var GAME_LOADING_EVENT = "GAME_LOADING_EVENT";
 var GameLoadingDelegate = class {
   loadingHandlers = [];
   stageLoadingUnsubscribes = [];
@@ -4733,9 +4770,6 @@ var GameLoadingDelegate = class {
     }
     const eventName = `loading:${event.type}`;
     zylemEventBus.emit(eventName, event);
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
-    }
   }
   /**
    * Wire up a stage's loading events to this delegate.
@@ -4782,6 +4816,7 @@ var GameLoadingDelegate = class {
 
 // src/lib/game/zylem-game.ts
 init_game_event_bus();
+init_events();
 
 // src/lib/game/game-renderer-observer.ts
 var GameRendererObserver = class {
@@ -4844,7 +4879,6 @@ var GameRendererObserver = class {
 };
 
 // src/lib/game/zylem-game.ts
-var ZYLEM_STATE_DISPATCH = "zylem:state:dispatch";
 var ZylemGame = class _ZylemGame {
   id;
   initialGlobals = {};
@@ -4880,6 +4914,7 @@ var ZylemGame = class _ZylemGame {
     this.timer = new Timer();
     this.timer.connect(document);
     const config = resolveGameConfig(options);
+    console.log(config);
     this.id = config.id;
     this.stages = config.stages || [];
     this.container = config.container;
@@ -4928,6 +4963,7 @@ var ZylemGame = class _ZylemGame {
       if (this.defaultCamera) {
         this.rendererObserver.setCamera(this.defaultCamera);
       }
+      this.emitStateDispatch("@stage:loaded");
     });
   }
   unloadCurrentStage() {
@@ -5050,40 +5086,83 @@ var ZylemGame = class _ZylemGame {
     return this.loadingDelegate.onLoading(callback);
   }
   /**
+   * Build the stage config payload for the current stage.
+   */
+  buildStageConfigPayload() {
+    const stage = this.currentStage();
+    if (!stage?.wrappedStage) return null;
+    const state2 = stage.wrappedStage.state;
+    const bgColor = state2.backgroundColor;
+    const colorStr = typeof bgColor === "string" ? bgColor : `#${bgColor.getHexString()}`;
+    return {
+      id: stage.wrappedStage.uuid,
+      backgroundColor: colorStr,
+      backgroundImage: state2.backgroundImage,
+      gravity: {
+        x: state2.gravity.x,
+        y: state2.gravity.y,
+        z: state2.gravity.z
+      },
+      inputs: state2.inputs,
+      variables: state2.variables
+    };
+  }
+  /**
+   * Build the entities payload for the current stage.
+   */
+  buildEntitiesPayload() {
+    const stage = this.currentStage();
+    if (!stage?.wrappedStage) return null;
+    const entities = [];
+    stage.wrappedStage._childrenMap.forEach((child) => {
+      const entityType = child.constructor.type;
+      const typeStr = entityType ? String(entityType).replace("Symbol(", "").replace(")", "") : "Unknown";
+      const position2 = child.position ?? { x: 0, y: 0, z: 0 };
+      const rotation2 = child.rotation ?? { x: 0, y: 0, z: 0 };
+      const scale2 = child.scale ?? { x: 1, y: 1, z: 1 };
+      entities.push({
+        uuid: child.uuid,
+        name: child.name || "Unnamed",
+        type: typeStr,
+        position: { x: position2.x ?? 0, y: position2.y ?? 0, z: position2.z ?? 0 },
+        rotation: { x: rotation2.x ?? 0, y: rotation2.y ?? 0, z: rotation2.z ?? 0 },
+        scale: { x: scale2.x ?? 1, y: scale2.y ?? 1, z: scale2.z ?? 1 }
+      });
+    });
+    return entities;
+  }
+  /**
+   * Emit a state:dispatch event to the zylemEventBus.
+   * Called after stage load and on global state changes.
+   */
+  emitStateDispatch(path, value, previousValue) {
+    const statePayload = {
+      scope: "game",
+      path,
+      value,
+      previousValue,
+      config: this.resolvedConfig ? {
+        id: this.resolvedConfig.id,
+        aspectRatio: this.resolvedConfig.aspectRatio,
+        fullscreen: this.resolvedConfig.fullscreen,
+        bodyBackground: this.resolvedConfig.bodyBackground,
+        internalResolution: this.resolvedConfig.internalResolution,
+        debug: this.resolvedConfig.debug
+      } : null,
+      stageConfig: this.buildStageConfigPayload(),
+      entities: this.buildEntitiesPayload()
+    };
+    zylemEventBus.emit("state:dispatch", statePayload);
+  }
+  /**
    * Subscribe to the game event bus for stage loading and state events.
-   * Emits window events for cross-application communication.
+   * Emits events to zylemEventBus for cross-package communication.
    */
   subscribeToEventBus() {
-    const emitLoadingWindowEvent = (payload) => {
-      if (typeof window !== "undefined") {
-        const event = {
-          type: payload.type,
-          message: payload.message ?? "",
-          progress: payload.progress ?? 0,
-          current: payload.current,
-          total: payload.total,
-          stageName: payload.stageName,
-          stageIndex: payload.stageIndex
-        };
-        window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
-      }
-    };
-    const emitStateDispatchEvent = (payload) => {
-      if (typeof window !== "undefined") {
-        const detail = {
-          scope: "game",
-          path: payload.path,
-          value: payload.value,
-          previousValue: payload.previousValue
-        };
-        window.dispatchEvent(new CustomEvent(ZYLEM_STATE_DISPATCH, { detail }));
-      }
-    };
     this.eventBusUnsubscribes.push(
-      gameEventBus.on("stage:loading:start", emitLoadingWindowEvent),
-      gameEventBus.on("stage:loading:progress", emitLoadingWindowEvent),
-      gameEventBus.on("stage:loading:complete", emitLoadingWindowEvent),
-      gameEventBus.on("game:state:updated", emitStateDispatchEvent)
+      gameEventBus.on("game:state:updated", (payload) => {
+        this.emitStateDispatch(payload.path, payload.value, payload.previousValue);
+      })
     );
   }
 };
@@ -5944,6 +6023,7 @@ var Game = class {
       return;
     }
     if (stageState2.next) {
+      console.log("next stage called");
       const nextId = stageState2.next.id;
       StageManager.transitionForward(nextId);
       if (stageState2.current) {

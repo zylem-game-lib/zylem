@@ -49,11 +49,13 @@ export function EditorProvider(props: EditorProviderProps) {
 			id: gameState.id,
 			globals: { ...gameState.globals },
 			time: gameState.time,
+			config: gameState.config ? { ...gameState.config } : null,
 		}));
 	});
 
 	const unsubStage = subscribe(stageState, () => {
 		setStage(reconcile({
+			config: stageState.config ? { ...stageState.config } : null,
 			backgroundColor: stageState.backgroundColor,
 			backgroundImage: stageState.backgroundImage,
 			inputs: { ...stageState.inputs },

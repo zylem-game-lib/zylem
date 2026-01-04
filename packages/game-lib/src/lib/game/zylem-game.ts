@@ -13,23 +13,13 @@ import { GameConfig, resolveGameConfig } from './game-config';
 import { AspectRatioDelegate } from '../device/aspect-ratio';
 import { GameCanvas } from './game-canvas';
 import { GameDebugDelegate } from './game-debug-delegate';
-import { GameLoadingDelegate, GameLoadingEvent, GAME_LOADING_EVENT } from './game-loading-delegate';
-import { gameEventBus, StageLoadingPayload, GameStateUpdatedPayload } from './game-event-bus';
+import { GameLoadingDelegate, GameLoadingEvent } from './game-loading-delegate';
+import { gameEventBus, GameStateUpdatedPayload } from './game-event-bus';
+import { zylemEventBus, type StateDispatchPayload, type StageConfigPayload, type EntityConfigPayload } from '../events';
 import { GameRendererObserver } from './game-renderer-observer';
 import { ZylemStage } from '../core';
 
 export type { GameLoadingEvent };
-
-/** Window event name for state dispatch events. */
-export const ZYLEM_STATE_DISPATCH = 'zylem:state:dispatch';
-
-/** State dispatch event detail structure. */
-export interface StateDispatchEvent {
-	scope: 'game' | 'stage' | 'entity';
-	path: string;
-	value: unknown;
-	previousValue?: unknown;
-}
 
 type ZylemGameOptions<TGlobals extends BaseGlobals> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>
 
@@ -75,6 +65,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.timer = new Timer();
 		this.timer.connect(document);
 		const config = resolveGameConfig(options as any);
+		console.log(config);
 		this.id = config.id;
 		this.stages = (config.stages as any) || [];
 		this.container = config.container;
@@ -136,6 +127,9 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			if (this.defaultCamera) {
 				this.rendererObserver.setCamera(this.defaultCamera);
 			}
+
+			// Emit state dispatch after stage is loaded so editor receives initial config
+			this.emitStateDispatch('@stage:loaded');
 		});
 	}
 
@@ -237,17 +231,14 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 		this.unloadCurrentStage();
 
-		// Cleanup debug delegate
 		if (this.debugDelegate) {
 			this.debugDelegate.dispose();
 			this.debugDelegate = null;
 		}
 
-		// Cleanup event bus subscriptions
 		this.eventBusUnsubscribes.forEach(unsub => unsub());
 		this.eventBusUnsubscribes = [];
 
-		// Cleanup renderer observer
 		this.rendererObserver.dispose();
 
 		this.timer.dispose();
@@ -259,7 +250,6 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			});
 		}
 
-		// Clear global state
 		resetGlobals();
 	}
 
@@ -288,42 +278,94 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	}
 
 	/**
+	 * Build the stage config payload for the current stage.
+	 */
+	private buildStageConfigPayload(): StageConfigPayload | null {
+		const stage = this.currentStage();
+		if (!stage?.wrappedStage) return null;
+
+		const state = stage.wrappedStage.state;
+		const bgColor = state.backgroundColor;
+		const colorStr = typeof bgColor === 'string' ? bgColor : `#${bgColor.getHexString()}`;
+
+		return {
+			id: stage.wrappedStage.uuid,
+			backgroundColor: colorStr,
+			backgroundImage: state.backgroundImage,
+			gravity: {
+				x: state.gravity.x,
+				y: state.gravity.y,
+				z: state.gravity.z,
+			},
+			inputs: state.inputs,
+			variables: state.variables,
+		};
+	}
+
+	/**
+	 * Build the entities payload for the current stage.
+	 */
+	private buildEntitiesPayload(): EntityConfigPayload[] | null {
+		const stage = this.currentStage();
+		if (!stage?.wrappedStage) return null;
+
+		const entities: EntityConfigPayload[] = [];
+		stage.wrappedStage._childrenMap.forEach((child) => {
+			// Get type string from the entity's constructor
+			const entityType = (child.constructor as any).type;
+			const typeStr = entityType ? String(entityType).replace('Symbol(', '').replace(')', '') : 'Unknown';
+
+			// Get transform data
+			const position = (child as any).position ?? { x: 0, y: 0, z: 0 };
+			const rotation = (child as any).rotation ?? { x: 0, y: 0, z: 0 };
+			const scale = (child as any).scale ?? { x: 1, y: 1, z: 1 };
+
+			entities.push({
+				uuid: child.uuid,
+				name: child.name || 'Unnamed',
+				type: typeStr,
+				position: { x: position.x ?? 0, y: position.y ?? 0, z: position.z ?? 0 },
+				rotation: { x: rotation.x ?? 0, y: rotation.y ?? 0, z: rotation.z ?? 0 },
+				scale: { x: scale.x ?? 1, y: scale.y ?? 1, z: scale.z ?? 1 },
+			});
+		});
+
+		return entities;
+	}
+
+	/**
+	 * Emit a state:dispatch event to the zylemEventBus.
+	 * Called after stage load and on global state changes.
+	 */
+	private emitStateDispatch(path: string, value?: unknown, previousValue?: unknown): void {
+		const statePayload: StateDispatchPayload = {
+			scope: 'game',
+			path,
+			value,
+			previousValue,
+			config: this.resolvedConfig ? {
+				id: this.resolvedConfig.id,
+				aspectRatio: this.resolvedConfig.aspectRatio,
+				fullscreen: this.resolvedConfig.fullscreen,
+				bodyBackground: this.resolvedConfig.bodyBackground,
+				internalResolution: this.resolvedConfig.internalResolution,
+				debug: this.resolvedConfig.debug,
+			} : null,
+			stageConfig: this.buildStageConfigPayload(),
+			entities: this.buildEntitiesPayload(),
+		};
+		zylemEventBus.emit('state:dispatch', statePayload);
+	}
+
+	/**
 	 * Subscribe to the game event bus for stage loading and state events.
-	 * Emits window events for cross-application communication.
+	 * Emits events to zylemEventBus for cross-package communication.
 	 */
 	private subscribeToEventBus(): void {
-		const emitLoadingWindowEvent = (payload: StageLoadingPayload) => {
-			if (typeof window !== 'undefined') {
-				const event: GameLoadingEvent = {
-					type: payload.type,
-					message: payload.message ?? '',
-					progress: payload.progress ?? 0,
-					current: payload.current,
-					total: payload.total,
-					stageName: payload.stageName,
-					stageIndex: payload.stageIndex,
-				};
-				window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
-			}
-		};
-
-		const emitStateDispatchEvent = (payload: GameStateUpdatedPayload) => {
-			if (typeof window !== 'undefined') {
-				const detail: StateDispatchEvent = {
-					scope: 'game',
-					path: payload.path,
-					value: payload.value,
-					previousValue: payload.previousValue,
-				};
-				window.dispatchEvent(new CustomEvent(ZYLEM_STATE_DISPATCH, { detail }));
-			}
-		};
-
 		this.eventBusUnsubscribes.push(
-			gameEventBus.on('stage:loading:start', emitLoadingWindowEvent),
-			gameEventBus.on('stage:loading:progress', emitLoadingWindowEvent),
-			gameEventBus.on('stage:loading:complete', emitLoadingWindowEvent),
-			gameEventBus.on('game:state:updated', emitStateDispatchEvent),
+			gameEventBus.on('game:state:updated', (payload: GameStateUpdatedPayload) => {
+				this.emitStateDispatch(payload.path, payload.value, payload.previousValue);
+			}),
 		);
 	}
 }

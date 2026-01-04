@@ -21,24 +21,24 @@ button {
 /* Scrollbar styles */
 @layer utilities {
     ::-webkit-scrollbar {
-        width: 4px;
-        height: 4px;
+        width: 3px;
+        height: 3px;
     }
 
     ::-webkit-scrollbar-track {
-        background: var(--zylem-color-surface);
+        background: transparent;
     }
 
     ::-webkit-scrollbar-thumb {
-        background: var(--zylem-color-accent);
+        background: var(--zylem-color-primary);
         border-radius: var(--zylem-radius);
     }
 
     ::-webkit-scrollbar-thumb:hover {
-        background: var(--zylem-color-accent-hover);
+        background: var(--zylem-color-primary-active);
     }
 
     ::-webkit-scrollbar-thumb:active {
-        background: var(--zylem-color-accent-active);
+        background: var(--zylem-color-active);
     }
 }

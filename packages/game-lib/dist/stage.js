@@ -1669,6 +1669,11 @@ var CameraOrbitController = class {
   savedCameraPosition = null;
   savedCameraQuaternion = null;
   savedCameraZoom = null;
+  // Saved debug camera state for restoration when re-entering debug mode
+  savedDebugCameraPosition = null;
+  savedDebugCameraQuaternion = null;
+  savedDebugCameraZoom = null;
+  savedDebugOrbitTarget = null;
   constructor(camera, domElement) {
     this.camera = camera;
     this.domElement = domElement;
@@ -1732,8 +1737,10 @@ var CameraOrbitController = class {
     if (state2.enabled && !wasEnabled) {
       this.saveCameraState();
       this.enableOrbitControls();
+      this.restoreDebugCameraState();
       this.updateOrbitTargetFromSelection(state2.selected);
     } else if (!state2.enabled && wasEnabled) {
+      this.saveDebugCameraState();
       this.orbitTarget = null;
       this.disableOrbitControls();
       this.restoreCameraState();
@@ -1819,6 +1826,37 @@ var CameraOrbitController = class {
       this.camera.zoom = this.savedCameraZoom;
       this.camera.updateProjectionMatrix?.();
       this.savedCameraZoom = null;
+    }
+  }
+  /**
+   * Save debug camera state when exiting debug mode.
+   */
+  saveDebugCameraState() {
+    this.savedDebugCameraPosition = this.camera.position.clone();
+    this.savedDebugCameraQuaternion = this.camera.quaternion.clone();
+    if ("zoom" in this.camera) {
+      this.savedDebugCameraZoom = this.camera.zoom;
+    }
+    if (this.orbitControls) {
+      this.savedDebugOrbitTarget = this.orbitControls.target.clone();
+    }
+  }
+  /**
+   * Restore debug camera state when re-entering debug mode.
+   */
+  restoreDebugCameraState() {
+    if (this.savedDebugCameraPosition) {
+      this.camera.position.copy(this.savedDebugCameraPosition);
+    }
+    if (this.savedDebugCameraQuaternion) {
+      this.camera.quaternion.copy(this.savedDebugCameraQuaternion);
+    }
+    if (this.savedDebugCameraZoom !== null && "zoom" in this.camera) {
+      this.camera.zoom = this.savedDebugCameraZoom;
+      this.camera.updateProjectionMatrix?.();
+    }
+    if (this.savedDebugOrbitTarget && this.orbitControls) {
+      this.orbitControls.target.copy(this.savedDebugOrbitTarget);
     }
   }
 };
