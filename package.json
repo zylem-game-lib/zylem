@@ -47,6 +47,7 @@
   "packageManager": "pnpm@10.18.3",
   "dependencies": {
     "esbuild": "^0.27.2",
+    "mitt": "^3.0.1",
     "multithreading": "^0.3.45"
   }
 }
