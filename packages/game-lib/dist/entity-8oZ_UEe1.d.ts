@@ -1,6 +1,7 @@
 import { Vector3, Vector2, Color, Material, BufferGeometry, Mesh, Group, ShaderMaterial } from 'three';
 import { Vector3 as Vector3$1, RigidBodyDesc, ColliderDesc, RigidBody, Collider } from '@dimforge/rapier3d-compat';
 import { IComponent } from 'bitecs';
+import * as mitt from 'mitt';
 
 /** Input
  *
@@ -297,6 +298,117 @@ interface Behavior {
     values: any;
 }
 
+/**
+ * Reusable delegate for event emission and subscription.
+ * Use via composition in Game, Stage, and Entity classes.
+ *
+ * @example
+ * class Game {
+ *   private eventDelegate = new EventEmitterDelegate<GameEvents>();
+ *
+ *   dispatch<K extends keyof GameEvents>(event: K, payload: GameEvents[K]) {
+ *     this.eventDelegate.dispatch(event, payload);
+ *   }
+ * }
+ */
+declare class EventEmitterDelegate<TEvents extends Record<string, unknown>> {
+    private emitter;
+    private unsubscribes;
+    constructor();
+    /**
+     * Dispatch an event to all listeners.
+     */
+    dispatch<K extends keyof TEvents>(event: K, payload: TEvents[K]): void;
+    /**
+     * Subscribe to an event. Returns an unsubscribe function.
+     */
+    listen<K extends keyof TEvents>(event: K, handler: (payload: TEvents[K]) => void): () => void;
+    /**
+     * Subscribe to all events.
+     */
+    listenAll(handler: (type: keyof TEvents, payload: TEvents[keyof TEvents]) => void): () => void;
+    /**
+     * Clean up all subscriptions.
+     */
+    dispose(): void;
+}
+
+/**
+ * Payload for game loading events with stage context.
+ */
+interface GameLoadingPayload extends LoadingEvent {
+    stageName?: string;
+    stageIndex?: number;
+}
+type GameEvents = {
+    'loading:start': GameLoadingPayload;
+    'loading:progress': GameLoadingPayload;
+    'loading:complete': GameLoadingPayload;
+    'paused': {
+        paused: boolean;
+    };
+    'debug': {
+        enabled: boolean;
+    };
+};
+type StageEvents = {
+    'stage:loaded': {
+        stageId: string;
+    };
+    'stage:unloaded': {
+        stageId: string;
+    };
+    'stage:variable:changed': {
+        key: string;
+        value: unknown;
+    };
+};
+type EntityEvents = {
+    'entity:spawned': {
+        entityId: string;
+        name: string;
+    };
+    'entity:destroyed': {
+        entityId: string;
+    };
+    'entity:collision': {
+        entityId: string;
+        otherId: string;
+    };
+    'entity:model:loading': {
+        entityId: string;
+        files: string[];
+    };
+    'entity:model:loaded': {
+        entityId: string;
+        success: boolean;
+        meshCount?: number;
+    };
+    'entity:animation:loaded': {
+        entityId: string;
+        animationCount: number;
+    };
+};
+type ZylemEvents = GameEvents & StageEvents & EntityEvents;
+/**
+ * Global event bus for cross-package communication.
+ *
+ * Usage:
+ * ```ts
+ * import { zylemEventBus } from '@zylem/game-lib';
+ *
+ * // Subscribe
+ * const unsub = zylemEventBus.on('loading:progress', (e) => console.log(e));
+ *
+ * // Emit
+ * zylemEventBus.emit('loading:progress', { type: 'progress', progress: 0.5 });
+ *
+ * // Cleanup
+ * unsub();
+ * ```
+ */
+declare const zylemEventBus: mitt.Emitter<ZylemEvents>;
+
 interface CollisionContext<T, O extends GameEntityOptions, TGlobals extends Record<string, unknown> = any> {
     entity: T;
     other: GameEntity<O>;
@@ -356,6 +468,7 @@ declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implem
     collisionDelegate: CollisionDelegate<this, O>;
     collisionType?: string;
     behaviorCallbackMap: Record<BehaviorCallbackType, BehaviorCallback<this, O>[]>;
+    protected eventDelegate: EventEmitterDelegate<EntityEvents>;
     constructor();
     create(): this;
     /**
@@ -390,6 +503,20 @@ declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implem
     })[]): this;
     protected updateMaterials(params: any): void;
     buildInfo(): Record<string, string>;
+    /**
+     * Dispatch an event from this entity.
+     * Events are emitted both locally and to the global event bus.
+     */
+    dispatch<K extends keyof EntityEvents>(event: K, payload: EntityEvents[K]): void;
+    /**
+     * Listen for events on this entity instance.
+     * @returns Unsubscribe function
+     */
+    listen<K extends keyof EntityEvents>(event: K, handler: (payload: EntityEvents[K]) => void): () => void;
+    /**
+     * Clean up entity event subscriptions.
+     */
+    disposeEvents(): void;
 }
 
-export { type AnalogState as A, type BehaviorCallbackType as B, type CleanupContext as C, type DestroyFunction as D, GameEntity as G, type InputGamepad as I, type LoadingEvent as L, type MaterialOptions as M, type SetupContext as S, type TexturePath as T, type UpdateContext as U, type Vec3 as V, type Behavior as a, type SetupFunction as b, type UpdateFunction as c, type DestroyContext as d, BaseNode as e, type InputPlayerNumber as f, type Inputs as g, type ButtonState as h, GameEntityLifeCycle as i, type IGame as j, type LoadedContext as k, type GameEntityOptions as l, type CollisionContext as m };
+export { type AnalogState as A, type BehaviorCallbackType as B, type CleanupContext as C, type DestroyFunction as D, EventEmitterDelegate as E, GameEntity as G, type InputGamepad as I, type LoadingEvent as L, type MaterialOptions as M, type SetupContext as S, type TexturePath as T, type UpdateContext as U, type Vec3 as V, type ZylemEvents as Z, type Behavior as a, type GameEvents as b, type StageEvents as c, type EntityEvents as d, type GameLoadingPayload as e, type SetupFunction as f, type UpdateFunction as g, type DestroyContext as h, BaseNode as i, type InputPlayerNumber as j, type Inputs as k, type ButtonState as l, GameEntityLifeCycle as m, type IGame as n, type LoadedContext as o, type GameEntityOptions as p, type CollisionContext as q, zylemEventBus as z };
