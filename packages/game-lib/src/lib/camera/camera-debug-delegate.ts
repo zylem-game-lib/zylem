@@ -32,6 +32,12 @@ export class CameraOrbitController {
 	private savedCameraQuaternion: Quaternion | null = null;
 	private savedCameraZoom: number | null = null;
 
+	// Saved debug camera state for restoration when re-entering debug mode
+	private savedDebugCameraPosition: Vector3 | null = null;
+	private savedDebugCameraQuaternion: Quaternion | null = null;
+	private savedDebugCameraZoom: number | null = null;
+	private savedDebugOrbitTarget: Vector3 | null = null;
+
 	constructor(camera: Camera, domElement: HTMLElement) {
 		this.camera = camera;
 		this.domElement = domElement;
@@ -98,14 +104,15 @@ export class CameraOrbitController {
 			enabled: state.enabled,
 			selected: [...state.selected],
 		};
-		
 		if (state.enabled && !wasEnabled) {
-			// Entering debug mode: save camera state
+			// Entering debug mode: save game camera state, restore debug camera state if available
 			this.saveCameraState();
 			this.enableOrbitControls();
+			this.restoreDebugCameraState();
 			this.updateOrbitTargetFromSelection(state.selected);
 		} else if (!state.enabled && wasEnabled) {
-			// Exiting debug mode: restore camera state
+			// Exiting debug mode: save debug camera state, then restore game camera state
+			this.saveDebugCameraState();
 			this.orbitTarget = null;
 			this.disableOrbitControls();
 			this.restoreCameraState();
@@ -200,6 +207,39 @@ export class CameraOrbitController {
 			this.camera.zoom = this.savedCameraZoom;
 			(this.camera as any).updateProjectionMatrix?.();
 			this.savedCameraZoom = null;
+		}
+	}
+
+	/**
+	 * Save debug camera state when exiting debug mode.
+	 */
+	private saveDebugCameraState() {
+		this.savedDebugCameraPosition = this.camera.position.clone();
+		this.savedDebugCameraQuaternion = this.camera.quaternion.clone();
+		if ('zoom' in this.camera) {
+			this.savedDebugCameraZoom = (this.camera as any).zoom as number;
+		}
+		if (this.orbitControls) {
+			this.savedDebugOrbitTarget = this.orbitControls.target.clone();
+		}
+	}
+
+	/**
+	 * Restore debug camera state when re-entering debug mode.
+	 */
+	private restoreDebugCameraState() {
+		if (this.savedDebugCameraPosition) {
+			this.camera.position.copy(this.savedDebugCameraPosition);
+		}
+		if (this.savedDebugCameraQuaternion) {
+			this.camera.quaternion.copy(this.savedDebugCameraQuaternion);
+		}
+		if (this.savedDebugCameraZoom !== null && 'zoom' in this.camera) {
+			this.camera.zoom = this.savedDebugCameraZoom;
+			(this.camera as any).updateProjectionMatrix?.();
+		}
+		if (this.savedDebugOrbitTarget && this.orbitControls) {
+			this.orbitControls.target.copy(this.savedDebugOrbitTarget);
 		}
 	}
 }

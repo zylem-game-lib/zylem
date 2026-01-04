@@ -1,8 +1,8 @@
-import { f as SetupFunction, G as GameEntity, g as UpdateFunction, D as DestroyFunction, S as SetupContext, U as UpdateContext, h as DestroyContext, i as BaseNode, L as LoadingEvent, c as StageEvents } from './entity-8oZ_UEe1.js';
+import { i as SetupFunction, G as GameEntity, j as UpdateFunction, D as DestroyFunction, S as SetupContext, U as UpdateContext, k as DestroyContext, l as BaseNode, L as LoadingEvent, c as StageEvents } from './entity-BtSVUHY-.js';
 import * as bitecs from 'bitecs';
 import { defineSystem, IWorld } from 'bitecs';
 import { Scene, Color, Object3D, Vector3, Group } from 'three';
-import { f as ZylemWorld, S as SPRITE_TYPE, g as ZylemSprite, d as SPHERE_TYPE, h as ZylemSphere, R as RECT_TYPE, i as ZylemRect, T as TEXT_TYPE, j as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, k as ZylemPlane, e as ZONE_TYPE, l as ZylemZone, A as ACTOR_TYPE, m as ZylemActor } from './entities-BbViib2x.js';
+import { f as ZylemWorld, S as SPRITE_TYPE, g as ZylemSprite, d as SPHERE_TYPE, h as ZylemSphere, R as RECT_TYPE, i as ZylemRect, T as TEXT_TYPE, j as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, k as ZylemPlane, e as ZONE_TYPE, l as ZylemZone, A as ACTOR_TYPE, m as ZylemActor } from './entities-BR2vDiRh.js';
 import { E as Entity, L as LifecycleFunction, S as StageEntity } from './entity-Bq_eNEDI.js';
 import { Z as ZylemCamera, C as CameraDebugDelegate, b as CameraDebugState, d as CameraWrapper } from './camera-CpbDr4-V.js';
 import RAPIER__default, { RigidBody, Collider } from '@dimforge/rapier3d-compat';

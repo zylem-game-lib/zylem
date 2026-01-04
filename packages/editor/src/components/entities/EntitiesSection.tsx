@@ -1,68 +1,39 @@
-import { Component, For, createSignal, onCleanup, onMount } from 'solid-js';
-import { subscribe } from 'valtio/vanilla';
-import Info from 'lucide-solid/icons/info';
-import { debugState, resetHoveredEntity, getHoveredEntityId } from './entities-state';
-import { stageState } from '../stages/stage-state';
+import type { Component } from 'solid-js';
+import { For } from 'solid-js';
+import { useEditor } from '../EditorContext';
+import { EntityIcon } from './EntityIcon';
 import { printToConsole } from '..';
 import type { BaseEntityInterface } from '../../types';
 
-interface EntityRowProps {
-    entity: Partial<BaseEntityInterface>;
-    index: number;
-    hoveredUuid: string | null;
+/**
+ * Handle entity button click - logs entity debug info to console.
+ */
+function handleEntityClick(entity: Partial<BaseEntityInterface>): void {
+    printToConsole(`Entity: ${JSON.stringify(entity, null, 2)}`);
 }
 
-const EntityRow: Component<EntityRowProps> = (props) => {
-    return (
-        <div
-            class={`entity-item ${props.hoveredUuid === props.entity.uuid ? 'hovered' : ''
-                }`}
-            onMouseEnter={() => {
-                // Note: setHoveredEntity now expects a GameEntity, not a UUID
-                // This needs to be updated to pass the entity object
-                // For now, commenting out to prevent errors
-                // TODO: Update to pass entity object
-            }}
-        >
-            <h4>{props.entity.name || `Entity ${props.entity.uuid}`}</h4>
-            <div class="entity-details"></div>
-            <button
-                class="zylem-toolbar-btn zylem-button"
-                onClick={() => {
-                    printToConsole(`Entity: ${JSON.stringify(props.entity, null, 2)}`);
-                }}
-            >
-                <Info class="zylem-icon" />
-            </button>
-        </div>
-    );
-};
-
 export const EntitiesSection: Component = () => {
-    const [hoveredUuid, setHoveredUuid] = createSignal<string | null>(
-        getHoveredEntityId(),
-    );
-
-    onMount(() => {
-        const unsub = subscribe(debugState, () => {
-            setHoveredUuid(debugState.hoveredEntityId);
-        });
-        onCleanup(() => unsub());
-    });
+    const { stage } = useEditor();
 
     return (
-        <div class="panel-content" onMouseEnter={() => resetHoveredEntity()}>
-            <div class="entities-list">
-                <For each={stageState.entities}>
-                    {(entity, index) => (
-                        <EntityRow
-                            entity={entity}
-                            index={index()}
-                            hoveredUuid={hoveredUuid()}
-                        />
-                    )}
-                </For>
-            </div>
+        <div class="panel-content">
+            <section class="zylem-section">
+                <h4 class="zylem-section-title">Entities ({stage.entities.length})</h4>
+                <div class="entity-grid">
+                    <For each={stage.entities}>
+                        {(entity) => (
+                            <button
+                                class="entity-grid-item"
+                                title={entity.uuid}
+                                onClick={() => handleEntityClick(entity)}
+                            >
+                                <EntityIcon type={entity.type ?? 'Box'} />
+                            </button>
+                        )}
+                    </For>
+                </div>
+            </section>
         </div>
     );
 };
+

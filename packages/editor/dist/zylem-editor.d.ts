@@ -211,10 +211,23 @@ declare const debugState: DebugState;
  * Game state for the game section.
  * Manages global game variables and state.
  */
+/** Game config state from game-lib */
+interface GameConfigState {
+    id: string;
+    aspectRatio: number;
+    fullscreen: boolean;
+    bodyBackground: string | undefined;
+    internalResolution: {
+        width: number;
+        height: number;
+    } | undefined;
+    debug: boolean;
+}
 interface GameState {
     id: string;
     globals: Record<string, unknown>;
     time: number;
+    config: GameConfigState | null;
 }
 declare const gameState: GameState;
 
@@ -235,7 +248,16 @@ interface BaseEntityInterface {
     rotation?: Vector3Like;
     scale?: Vector3Like;
 }
+interface StageConfigState {
+    id: string;
+    backgroundColor: string;
+    backgroundImage: string | null;
+    gravity: Vector3Like;
+    inputs: Record<string, string[]>;
+    variables: Record<string, unknown>;
+}
 interface StageStateInterface {
+    config: StageConfigState | null;
     backgroundColor: any;
     backgroundImage: string | null;
     inputs: Record<string, string[]>;

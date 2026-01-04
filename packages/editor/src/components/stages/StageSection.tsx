@@ -1,35 +1,37 @@
-import { Component, For, createSignal, onMount, onCleanup } from 'solid-js';
-import { stageState, stageStateToString } from './stage-state';
+import type { Component } from 'solid-js';
+import { Show } from 'solid-js';
+import { useEditor } from '../EditorContext';
+import { stageStateToString, stageState } from './stage-state';
 import { printToConsole } from '..';
-
-// Event name constant - must match game-lib's STAGE_STATE_CHANGE
-const STAGE_STATE_CHANGE = 'STAGE_STATE_CHANGE';
-
-interface StageEntity {
-    uuid: string;
-    name: string;
-}
+import { PropertyRow } from '../common/PropertyRow';
 
 export const StageSection: Component = () => {
-    const [entities, setEntities] = createSignal<StageEntity[]>([]);
-
-    onMount(() => {
-        const handleStageStateChange = (event: Event) => {
-            const customEvent = event as CustomEvent<{ entities: StageEntity[] }>;
-            if (customEvent.detail?.entities) {
-                setEntities(customEvent.detail.entities);
-            }
-        };
-
-        window.addEventListener(STAGE_STATE_CHANGE, handleStageStateChange);
-
-        onCleanup(() => {
-            window.removeEventListener(STAGE_STATE_CHANGE, handleStageStateChange);
-        });
-    });
+    const { stage } = useEditor();
 
     return (
         <div class="panel-content">
+            <Show when={stage.config}>
+                <section class="zylem-property-list">
+                    <PropertyRow label="ID" value={stage.config?.id} />
+                    <PropertyRow label="Background" value={stage.config?.backgroundColor} />
+                    <Show when={stage.config?.backgroundImage}>
+                        <PropertyRow 
+                            label="Image" 
+                            value={stage.config?.backgroundImage ?? ''} 
+                            isPath={true}
+                        />
+                    </Show>
+                    <PropertyRow label="Gravity">
+                        X:{stage.config?.gravity.x.toFixed(2)} Y:{stage.config?.gravity.y.toFixed(2)} Z:{stage.config?.gravity.z.toFixed(2)}
+                    </PropertyRow>
+                    <Show when={Object.keys(stage.config?.variables ?? {}).length > 0}>
+                        <PropertyRow 
+                            label="Variables" 
+                            value={`${Object.keys(stage.config?.variables ?? {}).length} defined`} 
+                        />
+                    </Show>
+                </section>
+            </Show>
             <section class="zylem-toolbar">
                 <button
                     class="zylem-toolbar-btn zylem-button"
@@ -39,18 +41,6 @@ export const StageSection: Component = () => {
                 >
                     Print Stage State
                 </button>
-            </section>
-            <section class="zylem-section">
-                <h4 class="zylem-section-title">Entities ({entities().length})</h4>
-                <ul class="zylem-list">
-                    <For each={entities()}>
-                        {(entity) => (
-                            <li class="zylem-list-item">
-                                <span class="zylem-entity-name">{entity.name}</span>
-                            </li>
-                        )}
-                    </For>
-                </ul>
             </section>
         </div>
     );

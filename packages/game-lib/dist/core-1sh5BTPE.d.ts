@@ -1,6 +1,6 @@
-import { I as InputGamepad, g as UpdateFunction, j as InputPlayerNumber, k as Inputs, l as ButtonState, A as AnalogState, S as SetupContext, U as UpdateContext, h as DestroyContext, m as GameEntityLifeCycle, i as BaseNode, n as IGame, f as SetupFunction, D as DestroyFunction, b as GameEvents, o as LoadedContext, C as CleanupContext } from './entity-8oZ_UEe1.js';
+import { I as InputGamepad, j as UpdateFunction, m as InputPlayerNumber, n as Inputs, o as ButtonState, A as AnalogState, S as SetupContext, U as UpdateContext, k as DestroyContext, p as GameEntityLifeCycle, l as BaseNode, q as IGame, i as SetupFunction, D as DestroyFunction, b as GameEvents, r as LoadedContext, C as CleanupContext } from './entity-BtSVUHY-.js';
 import { Z as ZylemCamera } from './camera-CpbDr4-V.js';
-import { d as StageInterface, b as Stage } from './stage-types-DgsxZxxF.js';
+import { d as StageInterface, b as Stage } from './stage-types-1A6X01lU.js';
 import { Vector3 } from 'three';
 import { Vector3 as Vector3$1 } from '@dimforge/rapier3d-compat';
 
@@ -349,8 +349,21 @@ declare class ZylemGame<TGlobals extends BaseGlobals> {
      */
     onLoading(callback: (event: GameLoadingEvent) => void): () => void;
     /**
+     * Build the stage config payload for the current stage.
+     */
+    private buildStageConfigPayload;
+    /**
+     * Build the entities payload for the current stage.
+     */
+    private buildEntitiesPayload;
+    /**
+     * Emit a state:dispatch event to the zylemEventBus.
+     * Called after stage load and on global state changes.
+     */
+    private emitStateDispatch;
+    /**
      * Subscribe to the game event bus for stage loading and state events.
-     * Emits window events for cross-application communication.
+     * Emits events to zylemEventBus for cross-package communication.
      */
     private subscribeToEventBus;
 }

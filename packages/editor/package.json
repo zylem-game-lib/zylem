@@ -18,12 +18,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@zylem/styles": "workspace:*",
-    "solid-js": "^1.9.9",
+    "@kobalte/core": "^0.13.11",
     "@solidjs/router": "^0.14.0",
-    "valtio": "^2.1.7",
+    "@zylem/styles": "workspace:*",
     "lucide-solid": "^0.511.0",
-    "@kobalte/core": "^0.13.11"
+    "solid-js": "^1.9.9",
+    "valtio": "^2.1.7"
   },
   "peerDependencies": {
     "@zylem/game-lib": "workspace:*"

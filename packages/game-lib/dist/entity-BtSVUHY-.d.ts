@@ -340,6 +340,60 @@ interface GameLoadingPayload extends LoadingEvent {
     stageName?: string;
     stageIndex?: number;
 }
+/** Payload for stage configuration sent to editor. */
+interface StageConfigPayload {
+    id: string;
+    backgroundColor: string;
+    backgroundImage: string | null;
+    gravity: {
+        x: number;
+        y: number;
+        z: number;
+    };
+    inputs: Record<string, string[]>;
+    variables: Record<string, unknown>;
+}
+/** Payload for entity configuration sent to editor. */
+interface EntityConfigPayload {
+    uuid: string;
+    name: string;
+    type: string;
+    position: {
+        x: number;
+        y: number;
+        z: number;
+    };
+    rotation: {
+        x: number;
+        y: number;
+        z: number;
+    };
+    scale: {
+        x: number;
+        y: number;
+        z: number;
+    };
+}
+/** Payload for state dispatch events from game to editor. */
+interface StateDispatchPayload {
+    scope: 'game' | 'stage' | 'entity';
+    path: string;
+    value: unknown;
+    previousValue?: unknown;
+    config?: {
+        id: string;
+        aspectRatio: number;
+        fullscreen: boolean;
+        bodyBackground: string | undefined;
+        internalResolution: {
+            width: number;
+            height: number;
+        } | undefined;
+        debug: boolean;
+    } | null;
+    stageConfig?: StageConfigPayload | null;
+    entities?: EntityConfigPayload[] | null;
+}
 type GameEvents = {
     'loading:start': GameLoadingPayload;
     'loading:progress': GameLoadingPayload;
@@ -350,6 +404,7 @@ type GameEvents = {
     'debug': {
         enabled: boolean;
     };
+    'state:dispatch': StateDispatchPayload;
 };
 type StageEvents = {
     'stage:loaded': {
@@ -519,4 +574,4 @@ declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implem
     disposeEvents(): void;
 }
 
-export { type AnalogState as A, type BehaviorCallbackType as B, type CleanupContext as C, type DestroyFunction as D, EventEmitterDelegate as E, GameEntity as G, type InputGamepad as I, type LoadingEvent as L, type MaterialOptions as M, type SetupContext as S, type TexturePath as T, type UpdateContext as U, type Vec3 as V, type ZylemEvents as Z, type Behavior as a, type GameEvents as b, type StageEvents as c, type EntityEvents as d, type GameLoadingPayload as e, type SetupFunction as f, type UpdateFunction as g, type DestroyContext as h, BaseNode as i, type InputPlayerNumber as j, type Inputs as k, type ButtonState as l, GameEntityLifeCycle as m, type IGame as n, type LoadedContext as o, type GameEntityOptions as p, type CollisionContext as q, zylemEventBus as z };
+export { type AnalogState as A, type BehaviorCallbackType as B, type CleanupContext as C, type DestroyFunction as D, EventEmitterDelegate as E, GameEntity as G, type InputGamepad as I, type LoadingEvent as L, type MaterialOptions as M, type SetupContext as S, type TexturePath as T, type UpdateContext as U, type Vec3 as V, type ZylemEvents as Z, type Behavior as a, type GameEvents as b, type StageEvents as c, type EntityEvents as d, type GameLoadingPayload as e, type StateDispatchPayload as f, type StageConfigPayload as g, type EntityConfigPayload as h, type SetupFunction as i, type UpdateFunction as j, type DestroyContext as k, BaseNode as l, type InputPlayerNumber as m, type Inputs as n, type ButtonState as o, GameEntityLifeCycle as p, type IGame as q, type LoadedContext as r, type GameEntityOptions as s, type CollisionContext as t, zylemEventBus as z };

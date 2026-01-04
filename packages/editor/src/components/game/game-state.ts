@@ -5,25 +5,30 @@
 
 import { proxy } from 'valtio';
 import { editorEvents } from '../events';
+import { zylemEventBus, type StateDispatchPayload } from '@zylem/game-lib';
 
-/** State dispatch event detail from game-lib */
-interface StateDispatchEvent {
-    scope: 'game' | 'stage' | 'entity';
-    path: string;
-    value: unknown;
-    previousValue?: unknown;
+/** Game config state from game-lib */
+export interface GameConfigState {
+    id: string;
+    aspectRatio: number;
+    fullscreen: boolean;
+    bodyBackground: string | undefined;
+    internalResolution: { width: number; height: number } | undefined;
+    debug: boolean;
 }
 
 export interface GameState {
     id: string;
     globals: Record<string, unknown>;
     time: number;
+    config: GameConfigState | null;
 }
 
 export const gameState = proxy<GameState>({
     id: '',
     globals: {},
     time: 0,
+    config: null,
 });
 
 /**
@@ -47,7 +52,7 @@ export function setGlobal(key: string, value: unknown): void {
     gameState.globals[key] = value;
 }
 
-// Subscribe to external events from legacy event bus
+// Subscribe to local editor events (internal to editor package)
 editorEvents.on<Partial<GameState>>('game', (event) => {
     const payload = event.payload;
     if (payload.id !== undefined) gameState.id = payload.id;
@@ -58,18 +63,26 @@ editorEvents.on<Partial<GameState>>('game', (event) => {
     }
 });
 
-// Listen for state dispatch events from game-lib
-if (typeof window !== 'undefined') {
-    window.addEventListener('zylem:state:dispatch', ((event: CustomEvent<StateDispatchEvent>) => {
-        const { scope, path, value } = event.detail;
-        if (scope === 'game') {
-            // Update the local globals state
-            gameState.globals[path] = value;
-        }
-        // TODO: Handle 'stage' and 'entity' scopes when needed
-    }) as EventListener);
-}
+// Subscribe to state dispatch events from game-lib via zylemEventBus
+zylemEventBus.on('state:dispatch', (payload: StateDispatchPayload) => {
+    const { scope, path, value, config } = payload;
+    if (scope === 'game') {
+        // Update the local globals state
+        gameState.globals[path] = value;
+    }
+    // Capture config if present
+    if (config) {
+        gameState.config = {
+            id: config.id,
+            aspectRatio: config.aspectRatio,
+            fullscreen: config.fullscreen,
+            bodyBackground: config.bodyBackground,
+            internalResolution: config.internalResolution,
+            debug: config.debug,
+        };
+    }
+    // TODO: Handle 'stage' and 'entity' scopes when needed
+});
 
 // Backwards compatibility alias
 export { gameState as state };
-

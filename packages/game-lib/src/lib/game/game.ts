@@ -218,6 +218,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		
 		// Try to use StageManager first if we have a next stage in state
 		if (stageState.next) {
+			console.log('next stage called');
 			const nextId = stageState.next.id;
 			StageManager.transitionForward(nextId);
 			// After transition, current is the new stage

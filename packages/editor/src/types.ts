@@ -18,7 +18,17 @@ export interface BaseEntityInterface {
 	scale?: Vector3Like;
 }
 
+export interface StageConfigState {
+	id: string;
+	backgroundColor: string;
+	backgroundImage: string | null;
+	gravity: Vector3Like;
+	inputs: Record<string, string[]>;
+	variables: Record<string, unknown>;
+}
+
 export interface StageStateInterface {
+	config: StageConfigState | null;
 	backgroundColor: any; // Color type from three.js, kept as any for flexibility
 	backgroundImage: string | null;
 	inputs: Record<string, string[]>;
