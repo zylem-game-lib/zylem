@@ -214,96 +214,6 @@ var init_debug_state = __esm({
   }
 });
 
-// ../../node_modules/.pnpm/mitt@3.0.1/node_modules/mitt/dist/mitt.mjs
-function mitt_default(n) {
-  return { all: n = n || /* @__PURE__ */ new Map(), on: function(t, e) {
-    var i = n.get(t);
-    i ? i.push(e) : n.set(t, [e]);
-  }, off: function(t, e) {
-    var i = n.get(t);
-    i && (e ? i.splice(i.indexOf(e) >>> 0, 1) : n.set(t, []));
-  }, emit: function(t, e) {
-    var i = n.get(t);
-    i && i.slice().map(function(n2) {
-      n2(e);
-    }), (i = n.get("*")) && i.slice().map(function(n2) {
-      n2(t, e);
-    });
-  } };
-}
-var init_mitt = __esm({
-  "../../node_modules/.pnpm/mitt@3.0.1/node_modules/mitt/dist/mitt.mjs"() {
-    "use strict";
-  }
-});
-
-// src/lib/events/event-emitter-delegate.ts
-var EventEmitterDelegate;
-var init_event_emitter_delegate = __esm({
-  "src/lib/events/event-emitter-delegate.ts"() {
-    "use strict";
-    init_mitt();
-    EventEmitterDelegate = class {
-      emitter;
-      unsubscribes = [];
-      constructor() {
-        this.emitter = mitt_default();
-      }
-      /**
-       * Dispatch an event to all listeners.
-       */
-      dispatch(event, payload) {
-        this.emitter.emit(event, payload);
-      }
-      /**
-       * Subscribe to an event. Returns an unsubscribe function.
-       */
-      listen(event, handler) {
-        this.emitter.on(event, handler);
-        const unsub = () => this.emitter.off(event, handler);
-        this.unsubscribes.push(unsub);
-        return unsub;
-      }
-      /**
-       * Subscribe to all events.
-       */
-      listenAll(handler) {
-        this.emitter.on("*", handler);
-        const unsub = () => this.emitter.off("*", handler);
-        this.unsubscribes.push(unsub);
-        return unsub;
-      }
-      /**
-       * Clean up all subscriptions.
-       */
-      dispose() {
-        this.unsubscribes.forEach((fn) => fn());
-        this.unsubscribes = [];
-        this.emitter.all.clear();
-      }
-    };
-  }
-});
-
-// src/lib/events/zylem-events.ts
-var zylemEventBus;
-var init_zylem_events = __esm({
-  "src/lib/events/zylem-events.ts"() {
-    "use strict";
-    init_mitt();
-    zylemEventBus = mitt_default();
-  }
-});
-
-// src/lib/events/index.ts
-var init_events = __esm({
-  "src/lib/events/index.ts"() {
-    "use strict";
-    init_event_emitter_delegate();
-    init_zylem_events();
-  }
-});
-
 // src/lib/core/flags.ts
 var DEBUG_FLAG;
 var init_flags = __esm({
@@ -571,7 +481,6 @@ var init_entity = __esm({
     "use strict";
     init_transformable_system();
     init_base_node();
-    init_events();
     GameEntity = class extends BaseNode {
       behaviors = [];
       group;
@@ -594,8 +503,6 @@ var init_entity = __esm({
         destroy: [],
         collision: []
       };
-      // Event delegate for dispatch/listen API
-      eventDelegate = new EventEmitterDelegate();
       constructor() {
         super();
       }
@@ -695,30 +602,6 @@ var init_entity = __esm({
         info.uuid = this.uuid;
         info.eid = this.eid.toString();
         return info;
-      }
-      // ─────────────────────────────────────────────────────────────────────────────
-      // Events API
-      // ─────────────────────────────────────────────────────────────────────────────
-      /**
-       * Dispatch an event from this entity.
-       * Events are emitted both locally and to the global event bus.
-       */
-      dispatch(event, payload) {
-        this.eventDelegate.dispatch(event, payload);
-        zylemEventBus.emit(event, payload);
-      }
-      /**
-       * Listen for events on this entity instance.
-       * @returns Unsubscribe function
-       */
-      listen(event, handler) {
-        return this.eventDelegate.listen(event, handler);
-      }
-      /**
-       * Clean up entity event subscriptions.
-       */
-      disposeEvents() {
-        this.eventDelegate.dispose();
       }
     };
   }
@@ -1492,10 +1375,6 @@ var init_actor = __esm({
         if (this._object) {
           this._animationDelegate = new AnimationDelegate(this._object);
           await this._animationDelegate.loadAnimations(this.options.animations || []);
-          this.dispatch("entity:animation:loaded", {
-            entityId: this.uuid,
-            animationCount: this.options.animations?.length || 0
-          });
         }
       }
       async data() {
@@ -1537,20 +1416,12 @@ var init_actor = __esm({
       }
       async loadModels() {
         if (this._modelFileNames.length === 0) return;
-        this.dispatch("entity:model:loading", {
-          entityId: this.uuid,
-          files: this._modelFileNames
-        });
         const promises = this._modelFileNames.map((file) => this._assetLoader.loadFile(file));
         const results = await Promise.all(promises);
         if (results[0]?.object) {
           this._object = results[0].object;
         }
-        let meshCount = 0;
         if (this._object) {
-          this._object.traverse((child) => {
-            if (child.isMesh) meshCount++;
-          });
           this.group = new Group3();
           this.group.attach(this._object);
           this.group.scale.set(
@@ -1559,11 +1430,6 @@ var init_actor = __esm({
             this.options.scale?.z || 1
           );
         }
-        this.dispatch("entity:model:loaded", {
-          entityId: this.uuid,
-          success: !!this._object,
-          meshCount
-        });
       }
       playAnimation(animationOptions) {
         this._animationDelegate?.playAnimation(animationOptions);
@@ -3650,7 +3516,6 @@ var init_stage = __esm({
     init_camera();
     init_stage_state();
     init_stage_default();
-    init_events();
     Stage = class {
       wrappedStage;
       options = [];
@@ -3661,8 +3526,6 @@ var init_stage = __esm({
       updateCallbacks = [];
       destroyCallbacks = [];
       pendingLoadingCallbacks = [];
-      // Event delegate for dispatch/listen API
-      eventDelegate = new EventEmitterDelegate();
       constructor(options) {
         this.options = options;
         this.wrappedStage = null;
@@ -3782,30 +3645,6 @@ var init_stage = __esm({
       getEntityByName(name, type) {
         const entity = this.wrappedStage?.children.find((c) => c.name === name);
         return entity;
-      }
-      // ─────────────────────────────────────────────────────────────────────────────
-      // Events API
-      // ─────────────────────────────────────────────────────────────────────────────
-      /**
-       * Dispatch an event from the stage.
-       * Events are emitted both locally and to the global event bus.
-       */
-      dispatch(event, payload) {
-        this.eventDelegate.dispatch(event, payload);
-        zylemEventBus.emit(event, payload);
-      }
-      /**
-       * Listen for events on this stage instance.
-       * @returns Unsubscribe function
-       */
-      listen(event, handler) {
-        return this.eventDelegate.listen(event, handler);
-      }
-      /**
-       * Clean up stage resources including event subscriptions.
-       */
-      dispose() {
-        this.eventDelegate.dispose();
       }
     };
   }
@@ -4702,7 +4541,6 @@ var GameDebugDelegate = class {
 };
 
 // src/lib/game/game-loading-delegate.ts
-init_events();
 var GAME_LOADING_EVENT = "GAME_LOADING_EVENT";
 var GameLoadingDelegate = class {
   loadingHandlers = [];
@@ -4721,18 +4559,17 @@ var GameLoadingDelegate = class {
     };
   }
   /**
-   * Emit a loading event to all subscribers and to zylemEventBus.
+   * Emit a loading event to all subscribers and dispatch to window.
    */
   emit(event) {
     for (const handler of this.loadingHandlers) {
+      console.log("Game loading event", event);
       try {
         handler(event);
       } catch (e) {
         console.error("Game loading handler failed", e);
       }
     }
-    const eventName = `loading:${event.type}`;
-    zylemEventBus.emit(eventName, event);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent(GAME_LOADING_EVENT, { detail: event }));
     }
@@ -5769,7 +5606,6 @@ var StageFactory = {
 
 // src/lib/game/game.ts
 init_game_state();
-init_events();
 var Game = class {
   wrappedGame = null;
   options;
@@ -5782,8 +5618,6 @@ var Game = class {
   globalChangeCallbacks = [];
   globalChangesCallbacks = [];
   activeGlobalSubscriptions = [];
-  // Event delegate for dispatch/listen API
-  eventDelegate = new EventEmitterDelegate();
   refErrorMessage = "lost reference to game";
   constructor(options) {
     this.options = options;
@@ -5967,7 +5801,6 @@ var Game = class {
   async end() {
   }
   dispose() {
-    this.eventDelegate.dispose();
     for (const unsub of this.activeGlobalSubscriptions) {
       unsub();
     }
@@ -5977,24 +5810,6 @@ var Game = class {
     }
     clearGlobalSubscriptions();
     resetGlobals();
-  }
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Events API
-  // ─────────────────────────────────────────────────────────────────────────────
-  /**
-   * Dispatch an event from the game.
-   * Events are emitted both locally and to the global event bus.
-   */
-  dispatch(event, payload) {
-    this.eventDelegate.dispatch(event, payload);
-    zylemEventBus.emit(event, payload);
-  }
-  /**
-   * Listen for events on this game instance.
-   * @returns Unsubscribe function
-   */
-  listen(event, handler) {
-    return this.eventDelegate.listen(event, handler);
   }
   /**
    * Subscribe to loading events from the game.
@@ -7717,13 +7532,9 @@ customElements.define("zylem-game", ZylemGameElement);
 
 // src/lib/types/entity-type-map.ts
 init_actor();
-
-// src/api/main.ts
-init_events();
 export {
   ACTOR_TYPE,
   BOX_TYPE,
-  EventEmitterDelegate,
   Game,
   Howl,
   PLANE_TYPE,
@@ -7786,7 +7597,6 @@ export {
   variableChange,
   variableChanges,
   vessel,
-  zone,
-  zylemEventBus
+  zone
 };
 //# sourceMappingURL=main.js.map

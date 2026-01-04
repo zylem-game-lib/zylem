@@ -1,1 +1,0 @@
-import{c as r,s as m,C as a,m as c}from"./index-BoEI2Gie.js";const e=await m({color:new a(a.NAMES.aqua)});c(e).onUpdate(({me:o,inputs:l})=>{const{Horizontal:s,Vertical:t}=l.p1.axes;o.moveXY(s.value*5,-t.value*5)});const i=await r({debug:!0,id:"basic-ball",globals:{gameNumber:0}},e);export{i as default};

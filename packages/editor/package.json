@@ -25,9 +25,6 @@
     "lucide-solid": "^0.511.0",
     "@kobalte/core": "^0.13.11"
   },
-  "peerDependencies": {
-    "@zylem/game-lib": "workspace:*"
-  },
   "devDependencies": {
     "typescript": "5.8.2",
     "vite": "7.0.4",
