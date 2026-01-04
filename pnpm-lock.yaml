@@ -15,6 +15,9 @@ importers:
       esbuild:
         specifier: ^0.27.2
         version: 0.27.2
+      mitt:
+        specifier: ^3.0.1
+        version: 3.0.1
       multithreading:
         specifier: ^0.3.45
         version: 0.3.45
@@ -52,6 +55,9 @@ importers:
       '@solidjs/router':
         specifier: ^0.14.0
         version: 0.14.10(solid-js@1.9.9)
+      '@zylem/game-lib':
+        specifier: workspace:*
+        version: link:../game-lib
       '@zylem/styles':
         specifier: workspace:*
         version: link:../zylem-styles
@@ -1574,6 +1580,9 @@ packages:
   micromatch@4.0.8:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
+
+  mitt@3.0.1:
+    resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
 
   mlly@1.8.0:
     resolution: {integrity: sha512-l8D9ODSRWLe2KHJSifWGwBqpTZXIXTeo8mlKjY+E2HAakaTeNpqAyBZ8GSqLzHgw4XmHmC8whvpjJNMbFZN7/g==}
@@ -3363,6 +3372,8 @@ snapshots:
     dependencies:
       braces: 3.0.3
       picomatch: 2.3.1
+
+  mitt@3.0.1: {}
 
   mlly@1.8.0:
     dependencies:
