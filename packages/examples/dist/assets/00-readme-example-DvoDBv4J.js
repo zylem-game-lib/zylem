@@ -1,0 +1,1 @@
+import{c as d,m,s as n,b as p}from"./index-BoEI2Gie.js";const a=m(await n());a.onUpdate(({me:o,inputs:t,delta:s})=>{const{Horizontal:r,Vertical:l}=t.p1.axes,e=600*s;o.moveXY(r.value*e,-l.value*e)});a.addBehavior(p({boundaries:{top:3,bottom:-3,left:-6,right:6}}));const i=d(a);export{i as default};

@@ -84,3 +84,14 @@ export {
 	TEXT_TYPE, SPRITE_TYPE, BOX_TYPE, SPHERE_TYPE, 
 	RECT_TYPE, PLANE_TYPE, ZONE_TYPE, ACTOR_TYPE 
 } from '../lib/types/entity-type-map';
+
+// Events
+export {
+	EventEmitterDelegate,
+	zylemEventBus,
+	type ZylemEvents,
+	type GameEvents,
+	type StageEvents,
+	type EntityEvents,
+	type GameLoadingPayload,
+} from '../lib/events';

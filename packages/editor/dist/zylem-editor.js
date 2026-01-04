@@ -29,17 +29,30 @@ import { createComponent as _$createComponent3 } from "solid-js/web";
 import Trash2 from "lucide-solid/icons/trash-2";
 
 // src/components/events.ts
-var EditorEventBus = class {
-  listeners = /* @__PURE__ */ new Map();
+import { zylemEventBus } from "@zylem/game-lib";
+var eventTypeMap = {
+  debug: "debug",
+  game: "loading:start",
+  // or could be mapped differently based on needs
+  stage: "stage:loaded",
+  entities: "entity:spawned"
+};
+var EditorEventBusWrapper = class {
+  legacyListeners = /* @__PURE__ */ new Map();
   /**
    * Emit an event to all registered listeners of that type.
+   * Also emits to the global zylemEventBus for cross-package communication.
    */
   emit(event) {
-    const handlers = this.listeners.get(event.type);
+    const handlers = this.legacyListeners.get(event.type);
     if (handlers) {
       for (const handler of handlers) {
         handler(event);
       }
+    }
+    const mappedEvent = eventTypeMap[event.type];
+    if (mappedEvent) {
+      zylemEventBus.emit(mappedEvent, event.payload);
     }
   }
   /**
@@ -47,22 +60,22 @@ var EditorEventBus = class {
    * Returns an unsubscribe function.
    */
   on(type, handler) {
-    if (!this.listeners.has(type)) {
-      this.listeners.set(type, /* @__PURE__ */ new Set());
+    if (!this.legacyListeners.has(type)) {
+      this.legacyListeners.set(type, /* @__PURE__ */ new Set());
     }
-    this.listeners.get(type).add(handler);
+    this.legacyListeners.get(type).add(handler);
     return () => {
-      this.listeners.get(type)?.delete(handler);
+      this.legacyListeners.get(type)?.delete(handler);
     };
   }
   /**
    * Remove all listeners (useful for cleanup).
    */
   clear() {
-    this.listeners.clear();
+    this.legacyListeners.clear();
   }
 };
-var editorEvents = new EditorEventBus();
+var editorEvents = new EditorEventBusWrapper();
 
 // src/components/entities/entities-state.ts
 import { proxy } from "valtio";
