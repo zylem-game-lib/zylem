@@ -99,6 +99,8 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 	}
 
 	protected createSpritesFromImages(images: SpriteImage[]) {
+		// Use synchronous load() which returns a texture that updates when ready
+		// This maintains compatibility with the synchronous create() method
 		const textureLoader = new TextureLoader();
 		images.forEach((image, index) => {
 			const spriteMap = textureLoader.load(image.file);

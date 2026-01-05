@@ -520,63 +520,622 @@ var GameEntity = class extends BaseNode {
   }
 };
 
-// src/lib/core/entity-asset-loader.ts
-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-var FBXAssetLoader = class {
-  loader = new FBXLoader();
-  isSupported(file) {
-    return file.toLowerCase().endsWith("fbx" /* FBX */);
+// src/lib/core/asset-manager.ts
+import { LoadingManager, Cache } from "three";
+
+// src/lib/core/loaders/texture-loader.ts
+import { TextureLoader, RepeatWrapping } from "three";
+var TextureLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new TextureLoader();
   }
-  async load(file) {
-    return new Promise((resolve, reject) => {
-      this.loader.load(
-        file,
-        (object) => {
-          const animation = object.animations[0];
-          resolve({
-            object,
-            animation
-          });
-        },
-        void 0,
-        reject
-      );
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ["png", "jpg", "jpeg", "gif", "webp", "bmp", "tga"].includes(ext || "");
+  }
+  async load(url, options) {
+    const texture = await this.loader.loadAsync(url, (event) => {
+      if (options?.onProgress && event.lengthComputable) {
+        options.onProgress(event.loaded / event.total);
+      }
     });
+    if (options?.repeat) {
+      texture.repeat.copy(options.repeat);
+    }
+    texture.wrapS = options?.wrapS ?? RepeatWrapping;
+    texture.wrapT = options?.wrapT ?? RepeatWrapping;
+    return texture;
+  }
+  /**
+   * Clone a texture for independent usage
+   */
+  clone(texture) {
+    const cloned = texture.clone();
+    cloned.needsUpdate = true;
+    return cloned;
   }
 };
-var GLTFAssetLoader = class {
-  loader = new GLTFLoader();
-  isSupported(file) {
-    return file.toLowerCase().endsWith("gltf" /* GLTF */);
+
+// src/lib/core/loaders/gltf-loader.ts
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+var GLTFLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new GLTFLoader();
   }
-  async load(file) {
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ["gltf", "glb"].includes(ext || "");
+  }
+  async load(url, options) {
+    return this.loadMainThread(url, options);
+  }
+  async loadMainThread(url, options) {
     return new Promise((resolve, reject) => {
       this.loader.load(
-        file,
+        url,
         (gltf) => {
           resolve({
             object: gltf.scene,
+            animations: gltf.animations,
             gltf
           });
         },
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  }
+  /**
+   * Clone a loaded GLTF scene for reuse
+   */
+  clone(result) {
+    return {
+      object: result.object.clone(),
+      animations: result.animations?.map((anim) => anim.clone()),
+      gltf: result.gltf
+    };
+  }
+};
+
+// src/lib/core/loaders/fbx-loader.ts
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+var FBXLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new FBXLoader();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ext === "fbx";
+  }
+  async load(url, options) {
+    return new Promise((resolve, reject) => {
+      this.loader.load(
+        url,
+        (object) => {
+          resolve({
+            object,
+            animations: object.animations || []
+          });
+        },
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  }
+  /**
+   * Clone a loaded FBX object for reuse
+   */
+  clone(result) {
+    return {
+      object: result.object.clone(),
+      animations: result.animations?.map((anim) => anim.clone())
+    };
+  }
+};
+
+// src/lib/core/loaders/obj-loader.ts
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
+var OBJLoaderAdapter = class {
+  loader;
+  mtlLoader;
+  constructor() {
+    this.loader = new OBJLoader();
+    this.mtlLoader = new MTLLoader();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ext === "obj";
+  }
+  async load(url, options) {
+    if (options?.mtlPath) {
+      await this.loadMTL(options.mtlPath);
+    }
+    return new Promise((resolve, reject) => {
+      this.loader.load(
+        url,
+        (object) => {
+          resolve({
+            object,
+            animations: []
+          });
+        },
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  }
+  async loadMTL(url) {
+    return new Promise((resolve, reject) => {
+      this.mtlLoader.load(
+        url,
+        (materials) => {
+          materials.preload();
+          this.loader.setMaterials(materials);
+          resolve();
+        },
         void 0,
-        reject
+        (error) => reject(error)
+      );
+    });
+  }
+  /**
+   * Clone a loaded OBJ object for reuse
+   */
+  clone(result) {
+    return {
+      object: result.object.clone(),
+      animations: []
+    };
+  }
+};
+
+// src/lib/core/loaders/audio-loader.ts
+import { AudioLoader } from "three";
+var AudioLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new AudioLoader();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ["mp3", "ogg", "wav", "flac", "aac", "m4a"].includes(ext || "");
+  }
+  async load(url, options) {
+    return new Promise((resolve, reject) => {
+      this.loader.load(
+        url,
+        (buffer) => resolve(buffer),
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
       );
     });
   }
 };
-var EntityAssetLoader = class {
-  loaders = [
-    new FBXAssetLoader(),
-    new GLTFAssetLoader()
-  ];
-  async loadFile(file) {
-    const loader = this.loaders.find((l) => l.isSupported(file));
-    if (!loader) {
-      throw new Error(`Unsupported file type: ${file}`);
+
+// src/lib/core/loaders/file-loader.ts
+import { FileLoader } from "three";
+var FileLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new FileLoader();
+  }
+  isSupported(_url) {
+    return true;
+  }
+  async load(url, options) {
+    const responseType = options?.responseType ?? "text";
+    this.loader.setResponseType(responseType);
+    return new Promise((resolve, reject) => {
+      this.loader.load(
+        url,
+        (data) => resolve(data),
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  }
+};
+var JsonLoaderAdapter = class {
+  fileLoader;
+  constructor() {
+    this.fileLoader = new FileLoaderAdapter();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ext === "json";
+  }
+  async load(url, options) {
+    const data = await this.fileLoader.load(url, { ...options, responseType: "json" });
+    return data;
+  }
+};
+
+// src/lib/core/asset-manager.ts
+var AssetManager = class _AssetManager {
+  static instance = null;
+  // Caches for different asset types
+  textureCache = /* @__PURE__ */ new Map();
+  modelCache = /* @__PURE__ */ new Map();
+  audioCache = /* @__PURE__ */ new Map();
+  fileCache = /* @__PURE__ */ new Map();
+  jsonCache = /* @__PURE__ */ new Map();
+  // Loaders
+  textureLoader;
+  gltfLoader;
+  fbxLoader;
+  objLoader;
+  audioLoader;
+  fileLoader;
+  jsonLoader;
+  // Loading manager for progress tracking
+  loadingManager;
+  // Event emitter
+  events;
+  // Stats
+  stats = {
+    texturesLoaded: 0,
+    modelsLoaded: 0,
+    audioLoaded: 0,
+    filesLoaded: 0,
+    cacheHits: 0,
+    cacheMisses: 0
+  };
+  constructor() {
+    this.textureLoader = new TextureLoaderAdapter();
+    this.gltfLoader = new GLTFLoaderAdapter();
+    this.fbxLoader = new FBXLoaderAdapter();
+    this.objLoader = new OBJLoaderAdapter();
+    this.audioLoader = new AudioLoaderAdapter();
+    this.fileLoader = new FileLoaderAdapter();
+    this.jsonLoader = new JsonLoaderAdapter();
+    this.loadingManager = new LoadingManager();
+    this.loadingManager.onProgress = (url, loaded, total) => {
+      this.events.emit("batch:progress", { loaded, total });
+    };
+    this.events = mitt_default();
+    Cache.enabled = true;
+  }
+  /**
+   * Get the singleton instance
+   */
+  static getInstance() {
+    if (!_AssetManager.instance) {
+      _AssetManager.instance = new _AssetManager();
     }
-    return loader.load(file);
+    return _AssetManager.instance;
+  }
+  /**
+   * Reset the singleton (useful for testing)
+   */
+  static resetInstance() {
+    if (_AssetManager.instance) {
+      _AssetManager.instance.clearCache();
+      _AssetManager.instance = null;
+    }
+  }
+  // ==================== TEXTURE LOADING ====================
+  /**
+   * Load a texture with caching
+   */
+  async loadTexture(url, options) {
+    return this.loadWithCache(
+      url,
+      "texture" /* TEXTURE */,
+      this.textureCache,
+      () => this.textureLoader.load(url, options),
+      options,
+      (texture) => options?.clone ? this.textureLoader.clone(texture) : texture
+    );
+  }
+  // ==================== MODEL LOADING ====================
+  /**
+   * Load a GLTF/GLB model with caching
+   */
+  async loadGLTF(url, options) {
+    return this.loadWithCache(
+      url,
+      "gltf" /* GLTF */,
+      this.modelCache,
+      () => this.gltfLoader.load(url, options),
+      options,
+      (result) => options?.clone ? this.gltfLoader.clone(result) : result
+    );
+  }
+  /**
+   * Load an FBX model with caching
+   */
+  async loadFBX(url, options) {
+    return this.loadWithCache(
+      url,
+      "fbx" /* FBX */,
+      this.modelCache,
+      () => this.fbxLoader.load(url, options),
+      options,
+      (result) => options?.clone ? this.fbxLoader.clone(result) : result
+    );
+  }
+  /**
+   * Load an OBJ model with caching
+   */
+  async loadOBJ(url, options) {
+    const cacheKey = options?.mtlPath ? `${url}:${options.mtlPath}` : url;
+    return this.loadWithCache(
+      cacheKey,
+      "obj" /* OBJ */,
+      this.modelCache,
+      () => this.objLoader.load(url, options),
+      options,
+      (result) => options?.clone ? this.objLoader.clone(result) : result
+    );
+  }
+  /**
+   * Auto-detect model type and load
+   */
+  async loadModel(url, options) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    switch (ext) {
+      case "gltf":
+      case "glb":
+        return this.loadGLTF(url, options);
+      case "fbx":
+        return this.loadFBX(url, options);
+      case "obj":
+        return this.loadOBJ(url, options);
+      default:
+        throw new Error(`Unsupported model format: ${ext}`);
+    }
+  }
+  // ==================== AUDIO LOADING ====================
+  /**
+   * Load an audio buffer with caching
+   */
+  async loadAudio(url, options) {
+    return this.loadWithCache(
+      url,
+      "audio" /* AUDIO */,
+      this.audioCache,
+      () => this.audioLoader.load(url, options),
+      options
+    );
+  }
+  // ==================== FILE LOADING ====================
+  /**
+   * Load a raw file with caching
+   */
+  async loadFile(url, options) {
+    const cacheKey = options?.responseType ? `${url}:${options.responseType}` : url;
+    return this.loadWithCache(
+      cacheKey,
+      "file" /* FILE */,
+      this.fileCache,
+      () => this.fileLoader.load(url, options),
+      options
+    );
+  }
+  /**
+   * Load a JSON file with caching
+   */
+  async loadJSON(url, options) {
+    return this.loadWithCache(
+      url,
+      "json" /* JSON */,
+      this.jsonCache,
+      () => this.jsonLoader.load(url, options),
+      options
+    );
+  }
+  // ==================== BATCH LOADING ====================
+  /**
+   * Load multiple assets in parallel
+   */
+  async loadBatch(items) {
+    const results = /* @__PURE__ */ new Map();
+    const promises = items.map(async (item) => {
+      try {
+        let result;
+        switch (item.type) {
+          case "texture" /* TEXTURE */:
+            result = await this.loadTexture(item.url, item.options);
+            break;
+          case "gltf" /* GLTF */:
+            result = await this.loadGLTF(item.url, item.options);
+            break;
+          case "fbx" /* FBX */:
+            result = await this.loadFBX(item.url, item.options);
+            break;
+          case "obj" /* OBJ */:
+            result = await this.loadOBJ(item.url, item.options);
+            break;
+          case "audio" /* AUDIO */:
+            result = await this.loadAudio(item.url, item.options);
+            break;
+          case "file" /* FILE */:
+            result = await this.loadFile(item.url, item.options);
+            break;
+          case "json" /* JSON */:
+            result = await this.loadJSON(item.url, item.options);
+            break;
+          default:
+            throw new Error(`Unknown asset type: ${item.type}`);
+        }
+        results.set(item.url, result);
+      } catch (error) {
+        this.events.emit("asset:error", {
+          url: item.url,
+          type: item.type,
+          error
+        });
+        throw error;
+      }
+    });
+    await Promise.all(promises);
+    this.events.emit("batch:complete", { urls: items.map((i) => i.url) });
+    return results;
+  }
+  /**
+   * Preload assets without returning results
+   */
+  async preload(items) {
+    await this.loadBatch(items);
+  }
+  // ==================== CACHE MANAGEMENT ====================
+  /**
+   * Check if an asset is cached
+   */
+  isCached(url) {
+    return this.textureCache.has(url) || this.modelCache.has(url) || this.audioCache.has(url) || this.fileCache.has(url) || this.jsonCache.has(url);
+  }
+  /**
+   * Clear all caches or a specific URL
+   */
+  clearCache(url) {
+    if (url) {
+      this.textureCache.delete(url);
+      this.modelCache.delete(url);
+      this.audioCache.delete(url);
+      this.fileCache.delete(url);
+      this.jsonCache.delete(url);
+    } else {
+      this.textureCache.clear();
+      this.modelCache.clear();
+      this.audioCache.clear();
+      this.fileCache.clear();
+      this.jsonCache.clear();
+      Cache.clear();
+    }
+  }
+  /**
+   * Get cache statistics
+   */
+  getStats() {
+    return { ...this.stats };
+  }
+  // ==================== EVENTS ====================
+  /**
+   * Subscribe to asset manager events
+   */
+  on(event, handler) {
+    this.events.on(event, handler);
+  }
+  /**
+   * Unsubscribe from asset manager events
+   */
+  off(event, handler) {
+    this.events.off(event, handler);
+  }
+  // ==================== PRIVATE HELPERS ====================
+  /**
+   * Generic cache wrapper for loading assets
+   */
+  async loadWithCache(url, type, cache, loader, options, cloner) {
+    if (options?.forceReload) {
+      cache.delete(url);
+    }
+    const cached = cache.get(url);
+    if (cached) {
+      this.stats.cacheHits++;
+      this.events.emit("asset:loaded", { url, type, fromCache: true });
+      const result = await cached.promise;
+      return cloner ? cloner(result) : result;
+    }
+    this.stats.cacheMisses++;
+    this.events.emit("asset:loading", { url, type });
+    const promise = loader();
+    const entry = {
+      promise,
+      loadedAt: Date.now()
+    };
+    cache.set(url, entry);
+    try {
+      const result = await promise;
+      entry.result = result;
+      this.updateStats(type);
+      this.events.emit("asset:loaded", { url, type, fromCache: false });
+      return cloner ? cloner(result) : result;
+    } catch (error) {
+      cache.delete(url);
+      this.events.emit("asset:error", { url, type, error });
+      throw error;
+    }
+  }
+  updateStats(type) {
+    switch (type) {
+      case "texture" /* TEXTURE */:
+        this.stats.texturesLoaded++;
+        break;
+      case "gltf" /* GLTF */:
+      case "fbx" /* FBX */:
+      case "obj" /* OBJ */:
+        this.stats.modelsLoaded++;
+        break;
+      case "audio" /* AUDIO */:
+        this.stats.audioLoaded++;
+        break;
+      case "file" /* FILE */:
+      case "json" /* JSON */:
+        this.stats.filesLoaded++;
+        break;
+    }
+  }
+};
+var assetManager = AssetManager.getInstance();
+
+// src/lib/core/entity-asset-loader.ts
+var EntityAssetLoader = class {
+  /**
+   * Load a model file (FBX, GLTF, GLB, OBJ) using the asset manager
+   */
+  async loadFile(file) {
+    const ext = file.split(".").pop()?.toLowerCase();
+    switch (ext) {
+      case "fbx": {
+        const result = await assetManager.loadFBX(file);
+        return {
+          object: result.object,
+          animation: result.animations?.[0]
+        };
+      }
+      case "gltf":
+      case "glb": {
+        const result = await assetManager.loadGLTF(file);
+        return {
+          object: result.object,
+          gltf: result.gltf
+        };
+      }
+      case "obj": {
+        const result = await assetManager.loadOBJ(file);
+        return {
+          object: result.object
+        };
+      }
+      default:
+        throw new Error(`Unsupported file type: ${file}`);
+    }
   }
 };
 
@@ -971,7 +1530,6 @@ import {
   AmbientLight,
   DirectionalLight,
   Vector3 as Vector32,
-  TextureLoader,
   GridHelper
 } from "three";
 
@@ -1020,9 +1578,9 @@ var ZylemScene = class {
     const backgroundColor = isColor ? state2.backgroundColor : new Color2(state2.backgroundColor);
     scene.background = backgroundColor;
     if (state2.backgroundImage) {
-      const loader = new TextureLoader();
-      const texture = loader.load(state2.backgroundImage);
-      scene.background = texture;
+      assetManager.loadTexture(state2.backgroundImage).then((texture) => {
+        scene.background = texture;
+      });
     }
     this.scene = scene;
     this.zylemCamera = camera;
@@ -1201,7 +1759,7 @@ import { nanoid as nanoid2 } from "nanoid";
 
 // src/lib/stage/stage-debug-delegate.ts
 import { Ray } from "@dimforge/rapier3d-compat";
-import { BufferAttribute, BufferGeometry as BufferGeometry2, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 } from "three";
+import { BufferAttribute, BufferGeometry as BufferGeometry2, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 as Vector22 } from "three";
 
 // src/lib/stage/debug-entity-cursor.ts
 import {
@@ -1300,7 +1858,7 @@ var DELETE_TOOL_COLOR = 16724787;
 var StageDebugDelegate = class {
   stage;
   options;
-  mouseNdc = new Vector2(-2, -2);
+  mouseNdc = new Vector22(-2, -2);
   raycaster = new Raycaster();
   isMouseDown = false;
   disposeFns = [];
@@ -1468,10 +2026,10 @@ var StageCameraDebugDelegate = class {
 };
 
 // src/lib/stage/stage-camera-delegate.ts
-import { Vector2 as Vector24 } from "three";
+import { Vector2 as Vector25 } from "three";
 
 // src/lib/camera/zylem-camera.ts
-import { PerspectiveCamera, Vector3 as Vector39, Object3D as Object3D6, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
+import { PerspectiveCamera, Vector3 as Vector39, Object3D as Object3D7, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
 
 // src/lib/camera/perspective.ts
 var Perspectives = {
@@ -1887,7 +2445,7 @@ var ZylemCamera = class {
     const aspectRatio = screenResolution.x / screenResolution.y;
     this.camera = this.createCameraForPerspective(aspectRatio);
     if (this.needsRig()) {
-      this.cameraRig = new Object3D6();
+      this.cameraRig = new Object3D7();
       this.cameraRig.position.set(0, 3, 10);
       this.cameraRig.add(this.camera);
       this.camera.lookAt(new Vector39(0, 2, 0));
@@ -2101,7 +2659,7 @@ var StageCameraDelegate = class {
   createDefaultCamera() {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    const screenResolution = new Vector24(width, height);
+    const screenResolution = new Vector25(width, height);
     return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
   }
   /**
@@ -2669,7 +3227,7 @@ var ZylemStage = class extends LifeCycleBase {
 };
 
 // src/lib/camera/camera.ts
-import { Vector2 as Vector26, Vector3 as Vector312 } from "three";
+import { Vector2 as Vector27, Vector3 as Vector312 } from "three";
 var CameraWrapper = class {
   cameraRef;
   constructor(camera) {
@@ -2876,7 +3434,7 @@ function createStage(...options) {
 }
 
 // src/lib/stage/entity-spawner.ts
-import { Euler, Quaternion as Quaternion3, Vector2 as Vector27 } from "three";
+import { Euler, Quaternion as Quaternion3, Vector2 as Vector28 } from "three";
 function entitySpawner(factory) {
   return {
     spawn: async (stage, x, y) => {
@@ -2884,7 +3442,7 @@ function entitySpawner(factory) {
       stage.add(instance);
       return instance;
     },
-    spawnRelative: async (source, stage, offset = new Vector27(0, 1)) => {
+    spawnRelative: async (source, stage, offset = new Vector28(0, 1)) => {
       if (!source.body) {
         console.warn("body missing for entity during spawnRelative");
         return void 0;

@@ -5,12 +5,12 @@ import {
 	MeshStandardMaterial,
 	RepeatWrapping,
 	ShaderMaterial,
-	TextureLoader,
 	Vector2,
 	Vector3
 } from 'three';
 import { shortHash, sortedStringify } from '../core/utility/strings';
 import shaderMap, { ZylemShaderObject, ZylemShaderType } from '../core/preset-shader';
+import { assetManager } from '../core/asset-manager';
 
 export interface MaterialOptions {
 	path?: string;
@@ -79,9 +79,10 @@ export class MaterialBuilder {
 		if (!texturePath) {
 			return;
 		}
-		const loader = new TextureLoader();
-		const texture = await loader.loadAsync(texturePath as string);
-		texture.repeat = repeat;
+		const texture = await assetManager.loadTexture(texturePath as string, { 
+			clone: true,
+			repeat 
+		});
 		texture.wrapS = RepeatWrapping;
 		texture.wrapT = RepeatWrapping;
 		const material = new MeshPhongMaterial({

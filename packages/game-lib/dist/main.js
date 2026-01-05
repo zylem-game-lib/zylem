@@ -810,67 +810,682 @@ var init_create = __esm({
   }
 });
 
-// src/lib/core/entity-asset-loader.ts
-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-var FBXAssetLoader, GLTFAssetLoader, EntityAssetLoader;
-var init_entity_asset_loader = __esm({
-  "src/lib/core/entity-asset-loader.ts"() {
+// src/lib/core/loaders/texture-loader.ts
+import { TextureLoader, RepeatWrapping } from "three";
+var TextureLoaderAdapter;
+var init_texture_loader = __esm({
+  "src/lib/core/loaders/texture-loader.ts"() {
     "use strict";
-    FBXAssetLoader = class {
-      loader = new FBXLoader();
-      isSupported(file) {
-        return file.toLowerCase().endsWith("fbx" /* FBX */);
+    TextureLoaderAdapter = class {
+      loader;
+      constructor() {
+        this.loader = new TextureLoader();
       }
-      async load(file) {
-        return new Promise((resolve, reject) => {
-          this.loader.load(
-            file,
-            (object) => {
-              const animation = object.animations[0];
-              resolve({
-                object,
-                animation
-              });
-            },
-            void 0,
-            reject
-          );
+      isSupported(url) {
+        const ext = url.split(".").pop()?.toLowerCase();
+        return ["png", "jpg", "jpeg", "gif", "webp", "bmp", "tga"].includes(ext || "");
+      }
+      async load(url, options) {
+        const texture = await this.loader.loadAsync(url, (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
         });
+        if (options?.repeat) {
+          texture.repeat.copy(options.repeat);
+        }
+        texture.wrapS = options?.wrapS ?? RepeatWrapping;
+        texture.wrapT = options?.wrapT ?? RepeatWrapping;
+        return texture;
+      }
+      /**
+       * Clone a texture for independent usage
+       */
+      clone(texture) {
+        const cloned = texture.clone();
+        cloned.needsUpdate = true;
+        return cloned;
       }
     };
-    GLTFAssetLoader = class {
-      loader = new GLTFLoader();
-      isSupported(file) {
-        return file.toLowerCase().endsWith("gltf" /* GLTF */);
+  }
+});
+
+// src/lib/core/loaders/gltf-loader.ts
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+var GLTFLoaderAdapter;
+var init_gltf_loader = __esm({
+  "src/lib/core/loaders/gltf-loader.ts"() {
+    "use strict";
+    GLTFLoaderAdapter = class {
+      loader;
+      constructor() {
+        this.loader = new GLTFLoader();
       }
-      async load(file) {
+      isSupported(url) {
+        const ext = url.split(".").pop()?.toLowerCase();
+        return ["gltf", "glb"].includes(ext || "");
+      }
+      async load(url, options) {
+        return this.loadMainThread(url, options);
+      }
+      async loadMainThread(url, options) {
         return new Promise((resolve, reject) => {
           this.loader.load(
-            file,
+            url,
             (gltf) => {
               resolve({
                 object: gltf.scene,
+                animations: gltf.animations,
                 gltf
               });
             },
+            (event) => {
+              if (options?.onProgress && event.lengthComputable) {
+                options.onProgress(event.loaded / event.total);
+              }
+            },
+            (error) => reject(error)
+          );
+        });
+      }
+      /**
+       * Clone a loaded GLTF scene for reuse
+       */
+      clone(result) {
+        return {
+          object: result.object.clone(),
+          animations: result.animations?.map((anim) => anim.clone()),
+          gltf: result.gltf
+        };
+      }
+    };
+  }
+});
+
+// src/lib/core/loaders/fbx-loader.ts
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+var FBXLoaderAdapter;
+var init_fbx_loader = __esm({
+  "src/lib/core/loaders/fbx-loader.ts"() {
+    "use strict";
+    FBXLoaderAdapter = class {
+      loader;
+      constructor() {
+        this.loader = new FBXLoader();
+      }
+      isSupported(url) {
+        const ext = url.split(".").pop()?.toLowerCase();
+        return ext === "fbx";
+      }
+      async load(url, options) {
+        return new Promise((resolve, reject) => {
+          this.loader.load(
+            url,
+            (object) => {
+              resolve({
+                object,
+                animations: object.animations || []
+              });
+            },
+            (event) => {
+              if (options?.onProgress && event.lengthComputable) {
+                options.onProgress(event.loaded / event.total);
+              }
+            },
+            (error) => reject(error)
+          );
+        });
+      }
+      /**
+       * Clone a loaded FBX object for reuse
+       */
+      clone(result) {
+        return {
+          object: result.object.clone(),
+          animations: result.animations?.map((anim) => anim.clone())
+        };
+      }
+    };
+  }
+});
+
+// src/lib/core/loaders/obj-loader.ts
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
+var OBJLoaderAdapter;
+var init_obj_loader = __esm({
+  "src/lib/core/loaders/obj-loader.ts"() {
+    "use strict";
+    OBJLoaderAdapter = class {
+      loader;
+      mtlLoader;
+      constructor() {
+        this.loader = new OBJLoader();
+        this.mtlLoader = new MTLLoader();
+      }
+      isSupported(url) {
+        const ext = url.split(".").pop()?.toLowerCase();
+        return ext === "obj";
+      }
+      async load(url, options) {
+        if (options?.mtlPath) {
+          await this.loadMTL(options.mtlPath);
+        }
+        return new Promise((resolve, reject) => {
+          this.loader.load(
+            url,
+            (object) => {
+              resolve({
+                object,
+                animations: []
+              });
+            },
+            (event) => {
+              if (options?.onProgress && event.lengthComputable) {
+                options.onProgress(event.loaded / event.total);
+              }
+            },
+            (error) => reject(error)
+          );
+        });
+      }
+      async loadMTL(url) {
+        return new Promise((resolve, reject) => {
+          this.mtlLoader.load(
+            url,
+            (materials) => {
+              materials.preload();
+              this.loader.setMaterials(materials);
+              resolve();
+            },
             void 0,
-            reject
+            (error) => reject(error)
+          );
+        });
+      }
+      /**
+       * Clone a loaded OBJ object for reuse
+       */
+      clone(result) {
+        return {
+          object: result.object.clone(),
+          animations: []
+        };
+      }
+    };
+  }
+});
+
+// src/lib/core/loaders/audio-loader.ts
+import { AudioLoader } from "three";
+var AudioLoaderAdapter;
+var init_audio_loader = __esm({
+  "src/lib/core/loaders/audio-loader.ts"() {
+    "use strict";
+    AudioLoaderAdapter = class {
+      loader;
+      constructor() {
+        this.loader = new AudioLoader();
+      }
+      isSupported(url) {
+        const ext = url.split(".").pop()?.toLowerCase();
+        return ["mp3", "ogg", "wav", "flac", "aac", "m4a"].includes(ext || "");
+      }
+      async load(url, options) {
+        return new Promise((resolve, reject) => {
+          this.loader.load(
+            url,
+            (buffer) => resolve(buffer),
+            (event) => {
+              if (options?.onProgress && event.lengthComputable) {
+                options.onProgress(event.loaded / event.total);
+              }
+            },
+            (error) => reject(error)
           );
         });
       }
     };
-    EntityAssetLoader = class {
-      loaders = [
-        new FBXAssetLoader(),
-        new GLTFAssetLoader()
-      ];
-      async loadFile(file) {
-        const loader = this.loaders.find((l) => l.isSupported(file));
-        if (!loader) {
-          throw new Error(`Unsupported file type: ${file}`);
+  }
+});
+
+// src/lib/core/loaders/file-loader.ts
+import { FileLoader } from "three";
+var FileLoaderAdapter, JsonLoaderAdapter;
+var init_file_loader = __esm({
+  "src/lib/core/loaders/file-loader.ts"() {
+    "use strict";
+    FileLoaderAdapter = class {
+      loader;
+      constructor() {
+        this.loader = new FileLoader();
+      }
+      isSupported(_url) {
+        return true;
+      }
+      async load(url, options) {
+        const responseType = options?.responseType ?? "text";
+        this.loader.setResponseType(responseType);
+        return new Promise((resolve, reject) => {
+          this.loader.load(
+            url,
+            (data) => resolve(data),
+            (event) => {
+              if (options?.onProgress && event.lengthComputable) {
+                options.onProgress(event.loaded / event.total);
+              }
+            },
+            (error) => reject(error)
+          );
+        });
+      }
+    };
+    JsonLoaderAdapter = class {
+      fileLoader;
+      constructor() {
+        this.fileLoader = new FileLoaderAdapter();
+      }
+      isSupported(url) {
+        const ext = url.split(".").pop()?.toLowerCase();
+        return ext === "json";
+      }
+      async load(url, options) {
+        const data = await this.fileLoader.load(url, { ...options, responseType: "json" });
+        return data;
+      }
+    };
+  }
+});
+
+// src/lib/core/loaders/index.ts
+var init_loaders = __esm({
+  "src/lib/core/loaders/index.ts"() {
+    "use strict";
+    init_texture_loader();
+    init_gltf_loader();
+    init_fbx_loader();
+    init_obj_loader();
+    init_audio_loader();
+    init_file_loader();
+  }
+});
+
+// src/lib/core/asset-manager.ts
+import { LoadingManager, Cache } from "three";
+var AssetManager, assetManager;
+var init_asset_manager = __esm({
+  "src/lib/core/asset-manager.ts"() {
+    "use strict";
+    init_mitt();
+    init_loaders();
+    AssetManager = class _AssetManager {
+      static instance = null;
+      // Caches for different asset types
+      textureCache = /* @__PURE__ */ new Map();
+      modelCache = /* @__PURE__ */ new Map();
+      audioCache = /* @__PURE__ */ new Map();
+      fileCache = /* @__PURE__ */ new Map();
+      jsonCache = /* @__PURE__ */ new Map();
+      // Loaders
+      textureLoader;
+      gltfLoader;
+      fbxLoader;
+      objLoader;
+      audioLoader;
+      fileLoader;
+      jsonLoader;
+      // Loading manager for progress tracking
+      loadingManager;
+      // Event emitter
+      events;
+      // Stats
+      stats = {
+        texturesLoaded: 0,
+        modelsLoaded: 0,
+        audioLoaded: 0,
+        filesLoaded: 0,
+        cacheHits: 0,
+        cacheMisses: 0
+      };
+      constructor() {
+        this.textureLoader = new TextureLoaderAdapter();
+        this.gltfLoader = new GLTFLoaderAdapter();
+        this.fbxLoader = new FBXLoaderAdapter();
+        this.objLoader = new OBJLoaderAdapter();
+        this.audioLoader = new AudioLoaderAdapter();
+        this.fileLoader = new FileLoaderAdapter();
+        this.jsonLoader = new JsonLoaderAdapter();
+        this.loadingManager = new LoadingManager();
+        this.loadingManager.onProgress = (url, loaded, total) => {
+          this.events.emit("batch:progress", { loaded, total });
+        };
+        this.events = mitt_default();
+        Cache.enabled = true;
+      }
+      /**
+       * Get the singleton instance
+       */
+      static getInstance() {
+        if (!_AssetManager.instance) {
+          _AssetManager.instance = new _AssetManager();
         }
-        return loader.load(file);
+        return _AssetManager.instance;
+      }
+      /**
+       * Reset the singleton (useful for testing)
+       */
+      static resetInstance() {
+        if (_AssetManager.instance) {
+          _AssetManager.instance.clearCache();
+          _AssetManager.instance = null;
+        }
+      }
+      // ==================== TEXTURE LOADING ====================
+      /**
+       * Load a texture with caching
+       */
+      async loadTexture(url, options) {
+        return this.loadWithCache(
+          url,
+          "texture" /* TEXTURE */,
+          this.textureCache,
+          () => this.textureLoader.load(url, options),
+          options,
+          (texture) => options?.clone ? this.textureLoader.clone(texture) : texture
+        );
+      }
+      // ==================== MODEL LOADING ====================
+      /**
+       * Load a GLTF/GLB model with caching
+       */
+      async loadGLTF(url, options) {
+        return this.loadWithCache(
+          url,
+          "gltf" /* GLTF */,
+          this.modelCache,
+          () => this.gltfLoader.load(url, options),
+          options,
+          (result) => options?.clone ? this.gltfLoader.clone(result) : result
+        );
+      }
+      /**
+       * Load an FBX model with caching
+       */
+      async loadFBX(url, options) {
+        return this.loadWithCache(
+          url,
+          "fbx" /* FBX */,
+          this.modelCache,
+          () => this.fbxLoader.load(url, options),
+          options,
+          (result) => options?.clone ? this.fbxLoader.clone(result) : result
+        );
+      }
+      /**
+       * Load an OBJ model with caching
+       */
+      async loadOBJ(url, options) {
+        const cacheKey = options?.mtlPath ? `${url}:${options.mtlPath}` : url;
+        return this.loadWithCache(
+          cacheKey,
+          "obj" /* OBJ */,
+          this.modelCache,
+          () => this.objLoader.load(url, options),
+          options,
+          (result) => options?.clone ? this.objLoader.clone(result) : result
+        );
+      }
+      /**
+       * Auto-detect model type and load
+       */
+      async loadModel(url, options) {
+        const ext = url.split(".").pop()?.toLowerCase();
+        switch (ext) {
+          case "gltf":
+          case "glb":
+            return this.loadGLTF(url, options);
+          case "fbx":
+            return this.loadFBX(url, options);
+          case "obj":
+            return this.loadOBJ(url, options);
+          default:
+            throw new Error(`Unsupported model format: ${ext}`);
+        }
+      }
+      // ==================== AUDIO LOADING ====================
+      /**
+       * Load an audio buffer with caching
+       */
+      async loadAudio(url, options) {
+        return this.loadWithCache(
+          url,
+          "audio" /* AUDIO */,
+          this.audioCache,
+          () => this.audioLoader.load(url, options),
+          options
+        );
+      }
+      // ==================== FILE LOADING ====================
+      /**
+       * Load a raw file with caching
+       */
+      async loadFile(url, options) {
+        const cacheKey = options?.responseType ? `${url}:${options.responseType}` : url;
+        return this.loadWithCache(
+          cacheKey,
+          "file" /* FILE */,
+          this.fileCache,
+          () => this.fileLoader.load(url, options),
+          options
+        );
+      }
+      /**
+       * Load a JSON file with caching
+       */
+      async loadJSON(url, options) {
+        return this.loadWithCache(
+          url,
+          "json" /* JSON */,
+          this.jsonCache,
+          () => this.jsonLoader.load(url, options),
+          options
+        );
+      }
+      // ==================== BATCH LOADING ====================
+      /**
+       * Load multiple assets in parallel
+       */
+      async loadBatch(items) {
+        const results = /* @__PURE__ */ new Map();
+        const promises = items.map(async (item) => {
+          try {
+            let result;
+            switch (item.type) {
+              case "texture" /* TEXTURE */:
+                result = await this.loadTexture(item.url, item.options);
+                break;
+              case "gltf" /* GLTF */:
+                result = await this.loadGLTF(item.url, item.options);
+                break;
+              case "fbx" /* FBX */:
+                result = await this.loadFBX(item.url, item.options);
+                break;
+              case "obj" /* OBJ */:
+                result = await this.loadOBJ(item.url, item.options);
+                break;
+              case "audio" /* AUDIO */:
+                result = await this.loadAudio(item.url, item.options);
+                break;
+              case "file" /* FILE */:
+                result = await this.loadFile(item.url, item.options);
+                break;
+              case "json" /* JSON */:
+                result = await this.loadJSON(item.url, item.options);
+                break;
+              default:
+                throw new Error(`Unknown asset type: ${item.type}`);
+            }
+            results.set(item.url, result);
+          } catch (error) {
+            this.events.emit("asset:error", {
+              url: item.url,
+              type: item.type,
+              error
+            });
+            throw error;
+          }
+        });
+        await Promise.all(promises);
+        this.events.emit("batch:complete", { urls: items.map((i) => i.url) });
+        return results;
+      }
+      /**
+       * Preload assets without returning results
+       */
+      async preload(items) {
+        await this.loadBatch(items);
+      }
+      // ==================== CACHE MANAGEMENT ====================
+      /**
+       * Check if an asset is cached
+       */
+      isCached(url) {
+        return this.textureCache.has(url) || this.modelCache.has(url) || this.audioCache.has(url) || this.fileCache.has(url) || this.jsonCache.has(url);
+      }
+      /**
+       * Clear all caches or a specific URL
+       */
+      clearCache(url) {
+        if (url) {
+          this.textureCache.delete(url);
+          this.modelCache.delete(url);
+          this.audioCache.delete(url);
+          this.fileCache.delete(url);
+          this.jsonCache.delete(url);
+        } else {
+          this.textureCache.clear();
+          this.modelCache.clear();
+          this.audioCache.clear();
+          this.fileCache.clear();
+          this.jsonCache.clear();
+          Cache.clear();
+        }
+      }
+      /**
+       * Get cache statistics
+       */
+      getStats() {
+        return { ...this.stats };
+      }
+      // ==================== EVENTS ====================
+      /**
+       * Subscribe to asset manager events
+       */
+      on(event, handler) {
+        this.events.on(event, handler);
+      }
+      /**
+       * Unsubscribe from asset manager events
+       */
+      off(event, handler) {
+        this.events.off(event, handler);
+      }
+      // ==================== PRIVATE HELPERS ====================
+      /**
+       * Generic cache wrapper for loading assets
+       */
+      async loadWithCache(url, type, cache, loader, options, cloner) {
+        if (options?.forceReload) {
+          cache.delete(url);
+        }
+        const cached = cache.get(url);
+        if (cached) {
+          this.stats.cacheHits++;
+          this.events.emit("asset:loaded", { url, type, fromCache: true });
+          const result = await cached.promise;
+          return cloner ? cloner(result) : result;
+        }
+        this.stats.cacheMisses++;
+        this.events.emit("asset:loading", { url, type });
+        const promise = loader();
+        const entry = {
+          promise,
+          loadedAt: Date.now()
+        };
+        cache.set(url, entry);
+        try {
+          const result = await promise;
+          entry.result = result;
+          this.updateStats(type);
+          this.events.emit("asset:loaded", { url, type, fromCache: false });
+          return cloner ? cloner(result) : result;
+        } catch (error) {
+          cache.delete(url);
+          this.events.emit("asset:error", { url, type, error });
+          throw error;
+        }
+      }
+      updateStats(type) {
+        switch (type) {
+          case "texture" /* TEXTURE */:
+            this.stats.texturesLoaded++;
+            break;
+          case "gltf" /* GLTF */:
+          case "fbx" /* FBX */:
+          case "obj" /* OBJ */:
+            this.stats.modelsLoaded++;
+            break;
+          case "audio" /* AUDIO */:
+            this.stats.audioLoaded++;
+            break;
+          case "file" /* FILE */:
+          case "json" /* JSON */:
+            this.stats.filesLoaded++;
+            break;
+        }
+      }
+    };
+    assetManager = AssetManager.getInstance();
+  }
+});
+
+// src/lib/core/entity-asset-loader.ts
+var EntityAssetLoader;
+var init_entity_asset_loader = __esm({
+  "src/lib/core/entity-asset-loader.ts"() {
+    "use strict";
+    init_asset_manager();
+    EntityAssetLoader = class {
+      /**
+       * Load a model file (FBX, GLTF, GLB, OBJ) using the asset manager
+       */
+      async loadFile(file) {
+        const ext = file.split(".").pop()?.toLowerCase();
+        switch (ext) {
+          case "fbx": {
+            const result = await assetManager.loadFBX(file);
+            return {
+              object: result.object,
+              animation: result.animations?.[0]
+            };
+          }
+          case "gltf":
+          case "glb": {
+            const result = await assetManager.loadGLTF(file);
+            return {
+              object: result.object,
+              gltf: result.gltf
+            };
+          }
+          case "obj": {
+            const result = await assetManager.loadOBJ(file);
+            return {
+              object: result.object
+            };
+          }
+          default:
+            throw new Error(`Unsupported file type: ${file}`);
+        }
       }
     };
   }
@@ -1191,10 +1806,9 @@ import {
   Color as Color2,
   MeshPhongMaterial,
   MeshStandardMaterial,
-  RepeatWrapping,
+  RepeatWrapping as RepeatWrapping2,
   ShaderMaterial as ShaderMaterial2,
-  TextureLoader,
-  Vector2,
+  Vector2 as Vector22,
   Vector3 as Vector32
 } from "three";
 var MaterialBuilder;
@@ -1203,6 +1817,7 @@ var init_material = __esm({
     "use strict";
     init_strings();
     init_preset_shader();
+    init_asset_manager();
     MaterialBuilder = class _MaterialBuilder {
       static batchMaterialMap = /* @__PURE__ */ new Map();
       materials = [];
@@ -1244,15 +1859,16 @@ var init_material = __esm({
         this.setShader(shaderType);
         return this;
       }
-      async setTexture(texturePath = null, repeat = new Vector2(1, 1)) {
+      async setTexture(texturePath = null, repeat = new Vector22(1, 1)) {
         if (!texturePath) {
           return;
         }
-        const loader = new TextureLoader();
-        const texture = await loader.loadAsync(texturePath);
-        texture.repeat = repeat;
-        texture.wrapS = RepeatWrapping;
-        texture.wrapT = RepeatWrapping;
+        const texture = await assetManager.loadTexture(texturePath, {
+          clone: true,
+          repeat
+        });
+        texture.wrapS = RepeatWrapping2;
+        texture.wrapT = RepeatWrapping2;
         const material = new MeshPhongMaterial({
           map: texture
         });
@@ -1756,7 +2372,6 @@ import {
   AmbientLight,
   DirectionalLight,
   Vector3 as Vector34,
-  TextureLoader as TextureLoader2,
   GridHelper
 } from "three";
 var ZylemScene;
@@ -1765,6 +2380,7 @@ var init_zylem_scene = __esm({
     "use strict";
     init_debug_state();
     init_game_state();
+    init_asset_manager();
     ZylemScene = class {
       type = "Scene";
       _setup;
@@ -1783,9 +2399,9 @@ var init_zylem_scene = __esm({
         const backgroundColor = isColor ? state2.backgroundColor : new Color4(state2.backgroundColor);
         scene.background = backgroundColor;
         if (state2.backgroundImage) {
-          const loader = new TextureLoader2();
-          const texture = loader.load(state2.backgroundImage);
-          scene.background = texture;
+          assetManager.loadTexture(state2.backgroundImage).then((texture) => {
+            scene.background = texture;
+          });
         }
         this.scene = scene;
         this.zylemCamera = camera2;
@@ -2125,7 +2741,7 @@ var init_debug_entity_cursor = __esm({
 
 // src/lib/stage/stage-debug-delegate.ts
 import { Ray } from "@dimforge/rapier3d-compat";
-import { BufferAttribute, BufferGeometry as BufferGeometry4, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 as Vector22 } from "three";
+import { BufferAttribute, BufferGeometry as BufferGeometry4, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 as Vector23 } from "three";
 var SELECT_TOOL_COLOR, DELETE_TOOL_COLOR, StageDebugDelegate;
 var init_stage_debug_delegate = __esm({
   "src/lib/stage/stage-debug-delegate.ts"() {
@@ -2137,7 +2753,7 @@ var init_stage_debug_delegate = __esm({
     StageDebugDelegate = class {
       stage;
       options;
-      mouseNdc = new Vector22(-2, -2);
+      mouseNdc = new Vector23(-2, -2);
       raycaster = new Raycaster();
       isMouseDown = false;
       disposeFns = [];
@@ -2735,7 +3351,7 @@ var init_camera_debug_delegate = __esm({
 });
 
 // src/lib/camera/zylem-camera.ts
-import { PerspectiveCamera, Vector3 as Vector311, Object3D as Object3D6, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
+import { PerspectiveCamera, Vector3 as Vector311, Object3D as Object3D7, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 var ZylemCamera;
 var init_zylem_camera = __esm({
@@ -2771,7 +3387,7 @@ var init_zylem_camera = __esm({
         const aspectRatio = screenResolution.x / screenResolution.y;
         this.camera = this.createCameraForPerspective(aspectRatio);
         if (this.needsRig()) {
-          this.cameraRig = new Object3D6();
+          this.cameraRig = new Object3D7();
           this.cameraRig.position.set(0, 3, 10);
           this.cameraRig.add(this.camera);
           this.camera.lookAt(new Vector311(0, 2, 0));
@@ -2976,7 +3592,7 @@ var init_zylem_camera = __esm({
 });
 
 // src/lib/stage/stage-camera-delegate.ts
-import { Vector2 as Vector25 } from "three";
+import { Vector2 as Vector26 } from "three";
 var StageCameraDelegate;
 var init_stage_camera_delegate = __esm({
   "src/lib/stage/stage-camera-delegate.ts"() {
@@ -2994,7 +3610,7 @@ var init_stage_camera_delegate = __esm({
       createDefaultCamera() {
         const width = window.innerWidth;
         const height = window.innerHeight;
-        const screenResolution = new Vector25(width, height);
+        const screenResolution = new Vector26(width, height);
         return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
       }
       /**
@@ -3607,9 +4223,9 @@ var init_zylem_stage = __esm({
 });
 
 // src/lib/camera/camera.ts
-import { Vector2 as Vector27, Vector3 as Vector314 } from "three";
+import { Vector2 as Vector28, Vector3 as Vector314 } from "three";
 function camera(options) {
-  const screenResolution = options.screenResolution || new Vector27(window.innerWidth, window.innerHeight);
+  const screenResolution = options.screenResolution || new Vector28(window.innerWidth, window.innerHeight);
   let frustumSize = 10;
   if (options.perspective === "fixed-2d") {
     frustumSize = options.zoom || 10;
@@ -5295,7 +5911,7 @@ init_stage();
 init_entity();
 init_builder();
 init_create();
-import { Color as Color10, Group as Group5, Sprite as ThreeSprite, SpriteMaterial, CanvasTexture, LinearFilter, Vector2 as Vector28, ClampToEdgeWrapping } from "three";
+import { Color as Color10, Group as Group5, Sprite as ThreeSprite, SpriteMaterial, CanvasTexture, LinearFilter, Vector2 as Vector29, ClampToEdgeWrapping } from "three";
 
 // src/lib/entities/delegates/debug.ts
 import { MeshStandardMaterial as MeshStandardMaterial2, MeshBasicMaterial as MeshBasicMaterial2, MeshPhongMaterial as MeshPhongMaterial2 } from "three";
@@ -5402,7 +6018,7 @@ var textDefaults = {
   backgroundColor: null,
   padding: 4,
   stickToViewport: true,
-  screenPosition: new Vector28(24, 24),
+  screenPosition: new Vector29(24, 24),
   zDistance: 1
 };
 var TextBuilder = class extends EntityBuilder {
@@ -5574,7 +6190,7 @@ var ZylemText = class _ZylemText extends GameEntity {
     if (!this._sprite || !this._cameraRef) return;
     const camera2 = this._cameraRef.camera;
     const { width, height } = this.getResolution();
-    const sp = this.options.screenPosition ?? new Vector28(24, 24);
+    const sp = this.options.screenPosition ?? new Vector29(24, 24);
     const { px, py } = this.getScreenPixels(sp, width, height);
     const zDist = Math.max(1e-3, this.options.zDistance ?? 1);
     const { worldHalfW, worldHalfH } = this.computeWorldExtents(camera2, zDist);
@@ -5639,7 +6255,7 @@ init_create();
 import { ColliderDesc as ColliderDesc3 } from "@dimforge/rapier3d-compat";
 import { Color as Color11, Euler, Group as Group6, Quaternion as Quaternion3, Vector3 as Vector316 } from "three";
 import {
-  TextureLoader as TextureLoader3,
+  TextureLoader as TextureLoader2,
   SpriteMaterial as SpriteMaterial2,
   Sprite as ThreeSprite2
 } from "three";
@@ -5700,7 +6316,7 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
     return super.create();
   }
   createSpritesFromImages(images) {
-    const textureLoader = new TextureLoader3();
+    const textureLoader = new TextureLoader2();
     images.forEach((image, index) => {
       const spriteMap = textureLoader.load(image.file);
       const material = new SpriteMaterial2({
@@ -6102,7 +6718,7 @@ function createGame(...options) {
 init_stage();
 
 // src/lib/stage/entity-spawner.ts
-import { Euler as Euler2, Quaternion as Quaternion4, Vector2 as Vector29 } from "three";
+import { Euler as Euler2, Quaternion as Quaternion4, Vector2 as Vector210 } from "three";
 function entitySpawner(factory) {
   return {
     spawn: async (stage, x, y) => {
@@ -6110,7 +6726,7 @@ function entitySpawner(factory) {
       stage.add(instance);
       return instance;
     },
-    spawnRelative: async (source, stage, offset = new Vector29(0, 1)) => {
+    spawnRelative: async (source, stage, offset = new Vector210(0, 1)) => {
       if (!source.body) {
         console.warn("body missing for entity during spawnRelative");
         return void 0;
@@ -6305,7 +6921,7 @@ init_builder();
 init_builder();
 init_builder();
 import { ColliderDesc as ColliderDesc6 } from "@dimforge/rapier3d-compat";
-import { Color as Color14, PlaneGeometry, Vector2 as Vector210, Vector3 as Vector319 } from "three";
+import { Color as Color14, PlaneGeometry, Vector2 as Vector211, Vector3 as Vector319 } from "three";
 
 // src/lib/graphics/geometries/XZPlaneGeometry.ts
 import { BufferGeometry as BufferGeometry5, Float32BufferAttribute } from "three";
@@ -6370,8 +6986,8 @@ var XZPlaneGeometry = class _XZPlaneGeometry extends BufferGeometry5 {
 init_create();
 var DEFAULT_SUBDIVISIONS = 4;
 var planeDefaults = {
-  tile: new Vector210(10, 10),
-  repeat: new Vector210(1, 1),
+  tile: new Vector211(10, 10),
+  repeat: new Vector211(1, 1),
   position: new Vector319(0, 0, 0),
   collision: {
     static: true
@@ -6384,7 +7000,7 @@ var planeDefaults = {
 };
 var PlaneCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
-    const tile = options.tile ?? new Vector210(1, 1);
+    const tile = options.tile ?? new Vector211(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
     const size = new Vector319(tile.x, 1, tile.y);
     const heightData = options._builders?.meshBuilder?.heightData;
@@ -6402,7 +7018,7 @@ var PlaneMeshBuilder = class extends EntityMeshBuilder {
   heightData = new Float32Array();
   columnsRows = /* @__PURE__ */ new Map();
   build(options) {
-    const tile = options.tile ?? new Vector210(1, 1);
+    const tile = options.tile ?? new Vector211(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
     const size = new Vector319(tile.x, 1, tile.y);
     const geometry = new XZPlaneGeometry(size.x, size.z, subdivisions, subdivisions);
@@ -6596,7 +7212,7 @@ init_actor();
 init_entity();
 init_builder();
 init_create();
-import { Color as Color15, Group as Group7, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector211, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial4, Mesh as Mesh5, PlaneGeometry as PlaneGeometry2, Vector3 as Vector321 } from "three";
+import { Color as Color15, Group as Group7, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector212, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial4, Mesh as Mesh5, PlaneGeometry as PlaneGeometry2, Vector3 as Vector321 } from "three";
 var rectDefaults = {
   position: void 0,
   width: 120,
@@ -6607,9 +7223,9 @@ var rectDefaults = {
   radius: 0,
   padding: 0,
   stickToViewport: true,
-  screenPosition: new Vector211(24, 24),
+  screenPosition: new Vector212(24, 24),
   zDistance: 1,
-  anchor: new Vector211(0, 0)
+  anchor: new Vector212(0, 0)
 };
 var RectBuilder = class extends EntityBuilder {
   createEntity(options) {
@@ -6758,10 +7374,10 @@ var ZylemRect = class _ZylemRect extends GameEntity {
         const desiredW = Math.max(2, Math.floor(width));
         const desiredH = Math.max(2, Math.floor(height));
         const changed = desiredW !== (this.options.width ?? 0) || desiredH !== (this.options.height ?? 0);
-        this.options.screenPosition = new Vector211(Math.floor(x), Math.floor(y));
+        this.options.screenPosition = new Vector212(Math.floor(x), Math.floor(y));
         this.options.width = desiredW;
         this.options.height = desiredH;
-        this.options.anchor = new Vector211(0, 0);
+        this.options.anchor = new Vector212(0, 0);
         if (changed) {
           this.redrawRect();
         }
@@ -6777,8 +7393,8 @@ var ZylemRect = class _ZylemRect extends GameEntity {
     const dom = this._cameraRef.renderer.domElement;
     const width = dom.clientWidth;
     const height = dom.clientHeight;
-    const px = (this.options.screenPosition ?? new Vector211(24, 24)).x;
-    const py = (this.options.screenPosition ?? new Vector211(24, 24)).y;
+    const px = (this.options.screenPosition ?? new Vector212(24, 24)).x;
+    const py = (this.options.screenPosition ?? new Vector212(24, 24)).y;
     const zDist = Math.max(1e-3, this.options.zDistance ?? 1);
     let worldHalfW = 1;
     let worldHalfH = 1;
@@ -6809,7 +7425,7 @@ var ZylemRect = class _ZylemRect extends GameEntity {
       this._sprite.scale.set(scaleX, scaleY, 1);
       if (this._mesh) this._mesh.scale.set(scaleX, scaleY, 1);
     }
-    const anchor = this.options.anchor ?? new Vector211(0, 0);
+    const anchor = this.options.anchor ?? new Vector212(0, 0);
     const ax = Math.min(100, Math.max(0, anchor.x)) / 100;
     const ay = Math.min(100, Math.max(0, anchor.y)) / 100;
     const offsetX = (0.5 - ax) * scaleX;

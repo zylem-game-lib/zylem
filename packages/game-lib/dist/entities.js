@@ -503,10 +503,9 @@ import {
   Color as Color2,
   MeshPhongMaterial,
   MeshStandardMaterial,
-  RepeatWrapping,
+  RepeatWrapping as RepeatWrapping2,
   ShaderMaterial as ShaderMaterial2,
-  TextureLoader,
-  Vector2,
+  Vector2 as Vector22,
   Vector3 as Vector32
 } from "three";
 
@@ -568,6 +567,590 @@ shaderMap.set("star", starShader);
 shaderMap.set("debug", debugShader);
 var preset_shader_default = shaderMap;
 
+// src/lib/core/asset-manager.ts
+import { LoadingManager, Cache } from "three";
+
+// src/lib/core/loaders/texture-loader.ts
+import { TextureLoader, RepeatWrapping } from "three";
+var TextureLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new TextureLoader();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ["png", "jpg", "jpeg", "gif", "webp", "bmp", "tga"].includes(ext || "");
+  }
+  async load(url, options) {
+    const texture = await this.loader.loadAsync(url, (event) => {
+      if (options?.onProgress && event.lengthComputable) {
+        options.onProgress(event.loaded / event.total);
+      }
+    });
+    if (options?.repeat) {
+      texture.repeat.copy(options.repeat);
+    }
+    texture.wrapS = options?.wrapS ?? RepeatWrapping;
+    texture.wrapT = options?.wrapT ?? RepeatWrapping;
+    return texture;
+  }
+  /**
+   * Clone a texture for independent usage
+   */
+  clone(texture) {
+    const cloned = texture.clone();
+    cloned.needsUpdate = true;
+    return cloned;
+  }
+};
+
+// src/lib/core/loaders/gltf-loader.ts
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+var GLTFLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new GLTFLoader();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ["gltf", "glb"].includes(ext || "");
+  }
+  async load(url, options) {
+    return this.loadMainThread(url, options);
+  }
+  async loadMainThread(url, options) {
+    return new Promise((resolve, reject) => {
+      this.loader.load(
+        url,
+        (gltf) => {
+          resolve({
+            object: gltf.scene,
+            animations: gltf.animations,
+            gltf
+          });
+        },
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  }
+  /**
+   * Clone a loaded GLTF scene for reuse
+   */
+  clone(result) {
+    return {
+      object: result.object.clone(),
+      animations: result.animations?.map((anim) => anim.clone()),
+      gltf: result.gltf
+    };
+  }
+};
+
+// src/lib/core/loaders/fbx-loader.ts
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+var FBXLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new FBXLoader();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ext === "fbx";
+  }
+  async load(url, options) {
+    return new Promise((resolve, reject) => {
+      this.loader.load(
+        url,
+        (object) => {
+          resolve({
+            object,
+            animations: object.animations || []
+          });
+        },
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  }
+  /**
+   * Clone a loaded FBX object for reuse
+   */
+  clone(result) {
+    return {
+      object: result.object.clone(),
+      animations: result.animations?.map((anim) => anim.clone())
+    };
+  }
+};
+
+// src/lib/core/loaders/obj-loader.ts
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
+var OBJLoaderAdapter = class {
+  loader;
+  mtlLoader;
+  constructor() {
+    this.loader = new OBJLoader();
+    this.mtlLoader = new MTLLoader();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ext === "obj";
+  }
+  async load(url, options) {
+    if (options?.mtlPath) {
+      await this.loadMTL(options.mtlPath);
+    }
+    return new Promise((resolve, reject) => {
+      this.loader.load(
+        url,
+        (object) => {
+          resolve({
+            object,
+            animations: []
+          });
+        },
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  }
+  async loadMTL(url) {
+    return new Promise((resolve, reject) => {
+      this.mtlLoader.load(
+        url,
+        (materials) => {
+          materials.preload();
+          this.loader.setMaterials(materials);
+          resolve();
+        },
+        void 0,
+        (error) => reject(error)
+      );
+    });
+  }
+  /**
+   * Clone a loaded OBJ object for reuse
+   */
+  clone(result) {
+    return {
+      object: result.object.clone(),
+      animations: []
+    };
+  }
+};
+
+// src/lib/core/loaders/audio-loader.ts
+import { AudioLoader } from "three";
+var AudioLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new AudioLoader();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ["mp3", "ogg", "wav", "flac", "aac", "m4a"].includes(ext || "");
+  }
+  async load(url, options) {
+    return new Promise((resolve, reject) => {
+      this.loader.load(
+        url,
+        (buffer) => resolve(buffer),
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  }
+};
+
+// src/lib/core/loaders/file-loader.ts
+import { FileLoader } from "three";
+var FileLoaderAdapter = class {
+  loader;
+  constructor() {
+    this.loader = new FileLoader();
+  }
+  isSupported(_url) {
+    return true;
+  }
+  async load(url, options) {
+    const responseType = options?.responseType ?? "text";
+    this.loader.setResponseType(responseType);
+    return new Promise((resolve, reject) => {
+      this.loader.load(
+        url,
+        (data) => resolve(data),
+        (event) => {
+          if (options?.onProgress && event.lengthComputable) {
+            options.onProgress(event.loaded / event.total);
+          }
+        },
+        (error) => reject(error)
+      );
+    });
+  }
+};
+var JsonLoaderAdapter = class {
+  fileLoader;
+  constructor() {
+    this.fileLoader = new FileLoaderAdapter();
+  }
+  isSupported(url) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    return ext === "json";
+  }
+  async load(url, options) {
+    const data = await this.fileLoader.load(url, { ...options, responseType: "json" });
+    return data;
+  }
+};
+
+// src/lib/core/asset-manager.ts
+var AssetManager = class _AssetManager {
+  static instance = null;
+  // Caches for different asset types
+  textureCache = /* @__PURE__ */ new Map();
+  modelCache = /* @__PURE__ */ new Map();
+  audioCache = /* @__PURE__ */ new Map();
+  fileCache = /* @__PURE__ */ new Map();
+  jsonCache = /* @__PURE__ */ new Map();
+  // Loaders
+  textureLoader;
+  gltfLoader;
+  fbxLoader;
+  objLoader;
+  audioLoader;
+  fileLoader;
+  jsonLoader;
+  // Loading manager for progress tracking
+  loadingManager;
+  // Event emitter
+  events;
+  // Stats
+  stats = {
+    texturesLoaded: 0,
+    modelsLoaded: 0,
+    audioLoaded: 0,
+    filesLoaded: 0,
+    cacheHits: 0,
+    cacheMisses: 0
+  };
+  constructor() {
+    this.textureLoader = new TextureLoaderAdapter();
+    this.gltfLoader = new GLTFLoaderAdapter();
+    this.fbxLoader = new FBXLoaderAdapter();
+    this.objLoader = new OBJLoaderAdapter();
+    this.audioLoader = new AudioLoaderAdapter();
+    this.fileLoader = new FileLoaderAdapter();
+    this.jsonLoader = new JsonLoaderAdapter();
+    this.loadingManager = new LoadingManager();
+    this.loadingManager.onProgress = (url, loaded, total) => {
+      this.events.emit("batch:progress", { loaded, total });
+    };
+    this.events = mitt_default();
+    Cache.enabled = true;
+  }
+  /**
+   * Get the singleton instance
+   */
+  static getInstance() {
+    if (!_AssetManager.instance) {
+      _AssetManager.instance = new _AssetManager();
+    }
+    return _AssetManager.instance;
+  }
+  /**
+   * Reset the singleton (useful for testing)
+   */
+  static resetInstance() {
+    if (_AssetManager.instance) {
+      _AssetManager.instance.clearCache();
+      _AssetManager.instance = null;
+    }
+  }
+  // ==================== TEXTURE LOADING ====================
+  /**
+   * Load a texture with caching
+   */
+  async loadTexture(url, options) {
+    return this.loadWithCache(
+      url,
+      "texture" /* TEXTURE */,
+      this.textureCache,
+      () => this.textureLoader.load(url, options),
+      options,
+      (texture) => options?.clone ? this.textureLoader.clone(texture) : texture
+    );
+  }
+  // ==================== MODEL LOADING ====================
+  /**
+   * Load a GLTF/GLB model with caching
+   */
+  async loadGLTF(url, options) {
+    return this.loadWithCache(
+      url,
+      "gltf" /* GLTF */,
+      this.modelCache,
+      () => this.gltfLoader.load(url, options),
+      options,
+      (result) => options?.clone ? this.gltfLoader.clone(result) : result
+    );
+  }
+  /**
+   * Load an FBX model with caching
+   */
+  async loadFBX(url, options) {
+    return this.loadWithCache(
+      url,
+      "fbx" /* FBX */,
+      this.modelCache,
+      () => this.fbxLoader.load(url, options),
+      options,
+      (result) => options?.clone ? this.fbxLoader.clone(result) : result
+    );
+  }
+  /**
+   * Load an OBJ model with caching
+   */
+  async loadOBJ(url, options) {
+    const cacheKey = options?.mtlPath ? `${url}:${options.mtlPath}` : url;
+    return this.loadWithCache(
+      cacheKey,
+      "obj" /* OBJ */,
+      this.modelCache,
+      () => this.objLoader.load(url, options),
+      options,
+      (result) => options?.clone ? this.objLoader.clone(result) : result
+    );
+  }
+  /**
+   * Auto-detect model type and load
+   */
+  async loadModel(url, options) {
+    const ext = url.split(".").pop()?.toLowerCase();
+    switch (ext) {
+      case "gltf":
+      case "glb":
+        return this.loadGLTF(url, options);
+      case "fbx":
+        return this.loadFBX(url, options);
+      case "obj":
+        return this.loadOBJ(url, options);
+      default:
+        throw new Error(`Unsupported model format: ${ext}`);
+    }
+  }
+  // ==================== AUDIO LOADING ====================
+  /**
+   * Load an audio buffer with caching
+   */
+  async loadAudio(url, options) {
+    return this.loadWithCache(
+      url,
+      "audio" /* AUDIO */,
+      this.audioCache,
+      () => this.audioLoader.load(url, options),
+      options
+    );
+  }
+  // ==================== FILE LOADING ====================
+  /**
+   * Load a raw file with caching
+   */
+  async loadFile(url, options) {
+    const cacheKey = options?.responseType ? `${url}:${options.responseType}` : url;
+    return this.loadWithCache(
+      cacheKey,
+      "file" /* FILE */,
+      this.fileCache,
+      () => this.fileLoader.load(url, options),
+      options
+    );
+  }
+  /**
+   * Load a JSON file with caching
+   */
+  async loadJSON(url, options) {
+    return this.loadWithCache(
+      url,
+      "json" /* JSON */,
+      this.jsonCache,
+      () => this.jsonLoader.load(url, options),
+      options
+    );
+  }
+  // ==================== BATCH LOADING ====================
+  /**
+   * Load multiple assets in parallel
+   */
+  async loadBatch(items) {
+    const results = /* @__PURE__ */ new Map();
+    const promises = items.map(async (item) => {
+      try {
+        let result;
+        switch (item.type) {
+          case "texture" /* TEXTURE */:
+            result = await this.loadTexture(item.url, item.options);
+            break;
+          case "gltf" /* GLTF */:
+            result = await this.loadGLTF(item.url, item.options);
+            break;
+          case "fbx" /* FBX */:
+            result = await this.loadFBX(item.url, item.options);
+            break;
+          case "obj" /* OBJ */:
+            result = await this.loadOBJ(item.url, item.options);
+            break;
+          case "audio" /* AUDIO */:
+            result = await this.loadAudio(item.url, item.options);
+            break;
+          case "file" /* FILE */:
+            result = await this.loadFile(item.url, item.options);
+            break;
+          case "json" /* JSON */:
+            result = await this.loadJSON(item.url, item.options);
+            break;
+          default:
+            throw new Error(`Unknown asset type: ${item.type}`);
+        }
+        results.set(item.url, result);
+      } catch (error) {
+        this.events.emit("asset:error", {
+          url: item.url,
+          type: item.type,
+          error
+        });
+        throw error;
+      }
+    });
+    await Promise.all(promises);
+    this.events.emit("batch:complete", { urls: items.map((i) => i.url) });
+    return results;
+  }
+  /**
+   * Preload assets without returning results
+   */
+  async preload(items) {
+    await this.loadBatch(items);
+  }
+  // ==================== CACHE MANAGEMENT ====================
+  /**
+   * Check if an asset is cached
+   */
+  isCached(url) {
+    return this.textureCache.has(url) || this.modelCache.has(url) || this.audioCache.has(url) || this.fileCache.has(url) || this.jsonCache.has(url);
+  }
+  /**
+   * Clear all caches or a specific URL
+   */
+  clearCache(url) {
+    if (url) {
+      this.textureCache.delete(url);
+      this.modelCache.delete(url);
+      this.audioCache.delete(url);
+      this.fileCache.delete(url);
+      this.jsonCache.delete(url);
+    } else {
+      this.textureCache.clear();
+      this.modelCache.clear();
+      this.audioCache.clear();
+      this.fileCache.clear();
+      this.jsonCache.clear();
+      Cache.clear();
+    }
+  }
+  /**
+   * Get cache statistics
+   */
+  getStats() {
+    return { ...this.stats };
+  }
+  // ==================== EVENTS ====================
+  /**
+   * Subscribe to asset manager events
+   */
+  on(event, handler) {
+    this.events.on(event, handler);
+  }
+  /**
+   * Unsubscribe from asset manager events
+   */
+  off(event, handler) {
+    this.events.off(event, handler);
+  }
+  // ==================== PRIVATE HELPERS ====================
+  /**
+   * Generic cache wrapper for loading assets
+   */
+  async loadWithCache(url, type, cache, loader, options, cloner) {
+    if (options?.forceReload) {
+      cache.delete(url);
+    }
+    const cached = cache.get(url);
+    if (cached) {
+      this.stats.cacheHits++;
+      this.events.emit("asset:loaded", { url, type, fromCache: true });
+      const result = await cached.promise;
+      return cloner ? cloner(result) : result;
+    }
+    this.stats.cacheMisses++;
+    this.events.emit("asset:loading", { url, type });
+    const promise = loader();
+    const entry = {
+      promise,
+      loadedAt: Date.now()
+    };
+    cache.set(url, entry);
+    try {
+      const result = await promise;
+      entry.result = result;
+      this.updateStats(type);
+      this.events.emit("asset:loaded", { url, type, fromCache: false });
+      return cloner ? cloner(result) : result;
+    } catch (error) {
+      cache.delete(url);
+      this.events.emit("asset:error", { url, type, error });
+      throw error;
+    }
+  }
+  updateStats(type) {
+    switch (type) {
+      case "texture" /* TEXTURE */:
+        this.stats.texturesLoaded++;
+        break;
+      case "gltf" /* GLTF */:
+      case "fbx" /* FBX */:
+      case "obj" /* OBJ */:
+        this.stats.modelsLoaded++;
+        break;
+      case "audio" /* AUDIO */:
+        this.stats.audioLoaded++;
+        break;
+      case "file" /* FILE */:
+      case "json" /* JSON */:
+        this.stats.filesLoaded++;
+        break;
+    }
+  }
+};
+var assetManager = AssetManager.getInstance();
+
 // src/lib/graphics/material.ts
 var MaterialBuilder = class _MaterialBuilder {
   static batchMaterialMap = /* @__PURE__ */ new Map();
@@ -610,15 +1193,16 @@ var MaterialBuilder = class _MaterialBuilder {
     this.setShader(shaderType);
     return this;
   }
-  async setTexture(texturePath = null, repeat = new Vector2(1, 1)) {
+  async setTexture(texturePath = null, repeat = new Vector22(1, 1)) {
     if (!texturePath) {
       return;
     }
-    const loader = new TextureLoader();
-    const texture = await loader.loadAsync(texturePath);
-    texture.repeat = repeat;
-    texture.wrapS = RepeatWrapping;
-    texture.wrapT = RepeatWrapping;
+    const texture = await assetManager.loadTexture(texturePath, {
+      clone: true,
+      repeat
+    });
+    texture.wrapS = RepeatWrapping2;
+    texture.wrapT = RepeatWrapping2;
     const material = new MeshPhongMaterial({
       map: texture
     });
@@ -1215,7 +1799,7 @@ async function sprite(...args) {
 
 // src/lib/entities/plane.ts
 import { ColliderDesc as ColliderDesc5 } from "@dimforge/rapier3d-compat";
-import { Color as Color7, PlaneGeometry, Vector2 as Vector22, Vector3 as Vector36 } from "three";
+import { Color as Color7, PlaneGeometry, Vector2 as Vector23, Vector3 as Vector36 } from "three";
 
 // src/lib/graphics/geometries/XZPlaneGeometry.ts
 import { BufferGeometry as BufferGeometry3, Float32BufferAttribute } from "three";
@@ -1279,8 +1863,8 @@ var XZPlaneGeometry = class _XZPlaneGeometry extends BufferGeometry3 {
 // src/lib/entities/plane.ts
 var DEFAULT_SUBDIVISIONS = 4;
 var planeDefaults = {
-  tile: new Vector22(10, 10),
-  repeat: new Vector22(1, 1),
+  tile: new Vector23(10, 10),
+  repeat: new Vector23(1, 1),
   position: new Vector36(0, 0, 0),
   collision: {
     static: true
@@ -1293,7 +1877,7 @@ var planeDefaults = {
 };
 var PlaneCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
-    const tile = options.tile ?? new Vector22(1, 1);
+    const tile = options.tile ?? new Vector23(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
     const size = new Vector36(tile.x, 1, tile.y);
     const heightData = options._builders?.meshBuilder?.heightData;
@@ -1311,7 +1895,7 @@ var PlaneMeshBuilder = class extends EntityMeshBuilder {
   heightData = new Float32Array();
   columnsRows = /* @__PURE__ */ new Map();
   build(options) {
-    const tile = options.tile ?? new Vector22(1, 1);
+    const tile = options.tile ?? new Vector23(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
     const size = new Vector36(tile.x, 1, tile.y);
     const geometry = new XZPlaneGeometry(size.x, size.z, subdivisions, subdivisions);
@@ -1508,62 +2092,37 @@ import { ActiveCollisionTypes as ActiveCollisionTypes3, ColliderDesc as Collider
 import { SkinnedMesh, Group as Group4, Vector3 as Vector38 } from "three";
 
 // src/lib/core/entity-asset-loader.ts
-import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-var FBXAssetLoader = class {
-  loader = new FBXLoader();
-  isSupported(file) {
-    return file.toLowerCase().endsWith("fbx" /* FBX */);
-  }
-  async load(file) {
-    return new Promise((resolve, reject) => {
-      this.loader.load(
-        file,
-        (object) => {
-          const animation = object.animations[0];
-          resolve({
-            object,
-            animation
-          });
-        },
-        void 0,
-        reject
-      );
-    });
-  }
-};
-var GLTFAssetLoader = class {
-  loader = new GLTFLoader();
-  isSupported(file) {
-    return file.toLowerCase().endsWith("gltf" /* GLTF */);
-  }
-  async load(file) {
-    return new Promise((resolve, reject) => {
-      this.loader.load(
-        file,
-        (gltf) => {
-          resolve({
-            object: gltf.scene,
-            gltf
-          });
-        },
-        void 0,
-        reject
-      );
-    });
-  }
-};
 var EntityAssetLoader = class {
-  loaders = [
-    new FBXAssetLoader(),
-    new GLTFAssetLoader()
-  ];
+  /**
+   * Load a model file (FBX, GLTF, GLB, OBJ) using the asset manager
+   */
   async loadFile(file) {
-    const loader = this.loaders.find((l) => l.isSupported(file));
-    if (!loader) {
-      throw new Error(`Unsupported file type: ${file}`);
+    const ext = file.split(".").pop()?.toLowerCase();
+    switch (ext) {
+      case "fbx": {
+        const result = await assetManager.loadFBX(file);
+        return {
+          object: result.object,
+          animation: result.animations?.[0]
+        };
+      }
+      case "gltf":
+      case "glb": {
+        const result = await assetManager.loadGLTF(file);
+        return {
+          object: result.object,
+          gltf: result.gltf
+        };
+      }
+      case "obj": {
+        const result = await assetManager.loadOBJ(file);
+        return {
+          object: result.object
+        };
+      }
+      default:
+        throw new Error(`Unsupported file type: ${file}`);
     }
-    return loader.load(file);
   }
 };
 
@@ -1862,7 +2421,7 @@ async function actor(...args) {
 }
 
 // src/lib/entities/text.ts
-import { Color as Color8, Group as Group5, Sprite as ThreeSprite2, SpriteMaterial as SpriteMaterial2, CanvasTexture, LinearFilter, Vector2 as Vector23, ClampToEdgeWrapping } from "three";
+import { Color as Color8, Group as Group5, Sprite as ThreeSprite2, SpriteMaterial as SpriteMaterial2, CanvasTexture, LinearFilter, Vector2 as Vector24, ClampToEdgeWrapping } from "three";
 var textDefaults = {
   position: void 0,
   text: "",
@@ -1872,7 +2431,7 @@ var textDefaults = {
   backgroundColor: null,
   padding: 4,
   stickToViewport: true,
-  screenPosition: new Vector23(24, 24),
+  screenPosition: new Vector24(24, 24),
   zDistance: 1
 };
 var TextBuilder = class extends EntityBuilder {
@@ -2044,7 +2603,7 @@ var ZylemText = class _ZylemText extends GameEntity {
     if (!this._sprite || !this._cameraRef) return;
     const camera = this._cameraRef.camera;
     const { width, height } = this.getResolution();
-    const sp = this.options.screenPosition ?? new Vector23(24, 24);
+    const sp = this.options.screenPosition ?? new Vector24(24, 24);
     const { px, py } = this.getScreenPixels(sp, width, height);
     const zDist = Math.max(1e-3, this.options.zDistance ?? 1);
     const { worldHalfW, worldHalfH } = this.computeWorldExtents(camera, zDist);
@@ -2102,7 +2661,7 @@ async function text(...args) {
 }
 
 // src/lib/entities/rect.ts
-import { Color as Color9, Group as Group6, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector24, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial3, Mesh as Mesh4, PlaneGeometry as PlaneGeometry2, Vector3 as Vector39 } from "three";
+import { Color as Color9, Group as Group6, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector25, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial3, Mesh as Mesh4, PlaneGeometry as PlaneGeometry2, Vector3 as Vector39 } from "three";
 var rectDefaults = {
   position: void 0,
   width: 120,
@@ -2113,9 +2672,9 @@ var rectDefaults = {
   radius: 0,
   padding: 0,
   stickToViewport: true,
-  screenPosition: new Vector24(24, 24),
+  screenPosition: new Vector25(24, 24),
   zDistance: 1,
-  anchor: new Vector24(0, 0)
+  anchor: new Vector25(0, 0)
 };
 var RectBuilder = class extends EntityBuilder {
   createEntity(options) {
@@ -2264,10 +2823,10 @@ var ZylemRect = class _ZylemRect extends GameEntity {
         const desiredW = Math.max(2, Math.floor(width));
         const desiredH = Math.max(2, Math.floor(height));
         const changed = desiredW !== (this.options.width ?? 0) || desiredH !== (this.options.height ?? 0);
-        this.options.screenPosition = new Vector24(Math.floor(x), Math.floor(y));
+        this.options.screenPosition = new Vector25(Math.floor(x), Math.floor(y));
         this.options.width = desiredW;
         this.options.height = desiredH;
-        this.options.anchor = new Vector24(0, 0);
+        this.options.anchor = new Vector25(0, 0);
         if (changed) {
           this.redrawRect();
         }
@@ -2283,8 +2842,8 @@ var ZylemRect = class _ZylemRect extends GameEntity {
     const dom = this._cameraRef.renderer.domElement;
     const width = dom.clientWidth;
     const height = dom.clientHeight;
-    const px = (this.options.screenPosition ?? new Vector24(24, 24)).x;
-    const py = (this.options.screenPosition ?? new Vector24(24, 24)).y;
+    const px = (this.options.screenPosition ?? new Vector25(24, 24)).x;
+    const py = (this.options.screenPosition ?? new Vector25(24, 24)).y;
     const zDist = Math.max(1e-3, this.options.zDistance ?? 1);
     let worldHalfW = 1;
     let worldHalfH = 1;
@@ -2315,7 +2874,7 @@ var ZylemRect = class _ZylemRect extends GameEntity {
       this._sprite.scale.set(scaleX, scaleY, 1);
       if (this._mesh) this._mesh.scale.set(scaleX, scaleY, 1);
     }
-    const anchor = this.options.anchor ?? new Vector24(0, 0);
+    const anchor = this.options.anchor ?? new Vector25(0, 0);
     const ax = Math.min(100, Math.max(0, anchor.x)) / 100;
     const ay = Math.min(100, Math.max(0, anchor.y)) / 100;
     const offsetX = (0.5 - ax) * scaleX;

@@ -1,11 +1,13 @@
-import { AnimationClip, Object3D } from 'three';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+/**
+ * Entity Asset Loader - Refactored to use AssetManager
+ * 
+ * This module provides a compatibility layer for existing code that uses EntityAssetLoader.
+ * All loading now goes through the centralized AssetManager for caching.
+ */
 
-enum FileExtensionTypes {
-	FBX = 'fbx',
-	GLTF = 'gltf'
-}
+import { AnimationClip, Object3D } from 'three';
+import { GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import { assetManager } from './asset-manager';
 
 export interface AssetLoaderResult {
 	object?: Object3D;
@@ -13,73 +15,43 @@ export interface AssetLoaderResult {
 	gltf?: GLTF;
 }
 
-export interface IAssetLoader {
-	load(file: string): Promise<AssetLoaderResult>;
-	isSupported(file: string): boolean;
-}
-
-class FBXAssetLoader implements IAssetLoader {
-	private loader: FBXLoader = new FBXLoader();
-
-	isSupported(file: string): boolean {
-		return file.toLowerCase().endsWith(FileExtensionTypes.FBX);
-	}
-
-	async load(file: string): Promise<AssetLoaderResult> {
-		return new Promise((resolve, reject) => {
-			this.loader.load(
-				file,
-				(object: Object3D) => {
-					const animation = object.animations[0];
-					resolve({
-						object,
-						animation
-					});
-				},
-				undefined,
-				reject
-			);
-		});
-	}
-}
-
-class GLTFAssetLoader implements IAssetLoader {
-	private loader: GLTFLoader = new GLTFLoader();
-
-	isSupported(file: string): boolean {
-		return file.toLowerCase().endsWith(FileExtensionTypes.GLTF);
-	}
-
-	async load(file: string): Promise<AssetLoaderResult> {
-		return new Promise((resolve, reject) => {
-			this.loader.load(
-				file,
-				(gltf: GLTF) => {
-					resolve({
-						object: gltf.scene,
-						gltf
-					});
-				},
-				undefined,
-				reject
-			);
-		});
-	}
-}
-
+/**
+ * EntityAssetLoader - Uses AssetManager for all model loading
+ * 
+ * This class is now a thin wrapper around AssetManager, providing backward
+ * compatibility for existing code while benefiting from centralized caching.
+ */
 export class EntityAssetLoader {
-	private loaders: IAssetLoader[] = [
-		new FBXAssetLoader(),
-		new GLTFAssetLoader()
-	];
-
+	/**
+	 * Load a model file (FBX, GLTF, GLB, OBJ) using the asset manager
+	 */
 	async loadFile(file: string): Promise<AssetLoaderResult> {
-		const loader = this.loaders.find(l => l.isSupported(file));
+		const ext = file.split('.').pop()?.toLowerCase();
 
-		if (!loader) {
-			throw new Error(`Unsupported file type: ${file}`);
+		switch (ext) {
+			case 'fbx': {
+				const result = await assetManager.loadFBX(file);
+				return {
+					object: result.object,
+					animation: result.animations?.[0]
+				};
+			}
+			case 'gltf':
+			case 'glb': {
+				const result = await assetManager.loadGLTF(file);
+				return {
+					object: result.object,
+					gltf: result.gltf
+				};
+			}
+			case 'obj': {
+				const result = await assetManager.loadOBJ(file);
+				return {
+					object: result.object
+				};
+			}
+			default:
+				throw new Error(`Unsupported file type: ${file}`);
 		}
-
-		return loader.load(file);
 	}
 }

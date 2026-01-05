@@ -5,7 +5,6 @@ import {
 	DirectionalLight,
 	Object3D,
 	Vector3,
-	TextureLoader,
 	GridHelper
 } from 'three';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
@@ -14,6 +13,7 @@ import { ZylemCamera } from '../camera/zylem-camera';
 import { debugState } from '../debug/debug-state';
 import { SetupFunction } from '../core/base-node-life-cycle';
 import { getGlobals } from '../game/game-state';
+import { assetManager } from '../core/asset-manager';
 
 interface SceneState {
 	backgroundColor: Color | string;
@@ -39,9 +39,10 @@ export class ZylemScene implements Entity<ZylemScene> {
 		const backgroundColor = (isColor) ? state.backgroundColor : new Color(state.backgroundColor);
 		scene.background = backgroundColor as Color;
 		if (state.backgroundImage) {
-			const loader = new TextureLoader();
-			const texture = loader.load(state.backgroundImage);
-			scene.background = texture;
+			// Load background image asynchronously via asset manager
+			assetManager.loadTexture(state.backgroundImage).then(texture => {
+				scene.background = texture;
+			});
 		}
 
 		this.scene = scene;
