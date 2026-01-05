@@ -1,15 +1,18 @@
 /**
  * GLTF loader adapter for the Asset Manager
- * Supports both main-thread and worker-based loading
+ * Uses native fetch (already async/non-blocking in browsers) + parseAsync
  */
 
-import { Object3D, AnimationClip } from 'three';
 import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LoaderAdapter, AssetLoadOptions, ModelLoadResult } from '../asset-types';
 
 export interface GLTFLoadOptions extends AssetLoadOptions {
-	/** Use web worker for parsing (for large models) */
-	useWorker?: boolean;
+	/** 
+	 * Use async fetch + parseAsync pattern instead of loader.load()
+	 * Note: fetch() is already non-blocking in browsers, so this mainly
+	 * provides a cleaner async/await pattern rather than performance gains
+	 */
+	useAsyncFetch?: boolean;
 }
 
 export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
@@ -25,9 +28,37 @@ export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 	}
 
 	async load(url: string, options?: GLTFLoadOptions): Promise<ModelLoadResult> {
-		// For now, use main thread loading
-		// Worker support will be added in a future iteration
+		if (options?.useAsyncFetch) {
+			return this.loadWithAsyncFetch(url, options);
+		}
 		return this.loadMainThread(url, options);
+	}
+
+	/**
+	 * Load using native fetch + parseAsync
+	 * Both fetch and parsing are async, keeping the main thread responsive
+	 */
+	private async loadWithAsyncFetch(url: string, options?: GLTFLoadOptions): Promise<ModelLoadResult> {
+		try {
+			const response = await fetch(url);
+			if (!response.ok) {
+				throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+			}
+			const buffer = await response.arrayBuffer();
+
+			// Parse on main thread using GLTFLoader.parseAsync
+			// The url is passed as the path for resolving relative resources
+			const gltf = await this.loader.parseAsync(buffer, url);
+
+			return {
+				object: gltf.scene,
+				animations: gltf.animations,
+				gltf
+			};
+		} catch (error) {
+			console.error(`Async fetch GLTF load failed for ${url}, falling back to loader.load():`, error);
+			return this.loadMainThread(url, options);
+		}
 	}
 
 	private async loadMainThread(url: string, options?: GLTFLoadOptions): Promise<ModelLoadResult> {

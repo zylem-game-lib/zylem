@@ -7,7 +7,6 @@
 
 import { Texture, Object3D, LoadingManager, Cache } from 'three';
 import { GLTF } from 'three/addons/loaders/GLTFLoader.js';
-import { spawn, move } from 'multithreading';
 import mitt, { Emitter } from 'mitt';
 
 import {

@@ -616,7 +616,32 @@ var GLTFLoaderAdapter = class {
     return ["gltf", "glb"].includes(ext || "");
   }
   async load(url, options) {
+    if (options?.useAsyncFetch) {
+      return this.loadWithAsyncFetch(url, options);
+    }
     return this.loadMainThread(url, options);
+  }
+  /**
+   * Load using native fetch + parseAsync
+   * Both fetch and parsing are async, keeping the main thread responsive
+   */
+  async loadWithAsyncFetch(url, options) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+      }
+      const buffer = await response.arrayBuffer();
+      const gltf = await this.loader.parseAsync(buffer, url);
+      return {
+        object: gltf.scene,
+        animations: gltf.animations,
+        gltf
+      };
+    } catch (error) {
+      console.error(`Async fetch GLTF load failed for ${url}, falling back to loader.load():`, error);
+      return this.loadMainThread(url, options);
+    }
   }
   async loadMainThread(url, options) {
     return new Promise((resolve, reject) => {
@@ -662,6 +687,32 @@ var FBXLoaderAdapter = class {
     return ext === "fbx";
   }
   async load(url, options) {
+    if (options?.useAsyncFetch) {
+      return this.loadWithAsyncFetch(url, options);
+    }
+    return this.loadMainThread(url, options);
+  }
+  /**
+   * Load using native fetch + parse
+   */
+  async loadWithAsyncFetch(url, _options) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+      }
+      const buffer = await response.arrayBuffer();
+      const object = this.loader.parse(buffer, url);
+      return {
+        object,
+        animations: object.animations || []
+      };
+    } catch (error) {
+      console.error(`Async fetch FBX load failed for ${url}, falling back to loader.load():`, error);
+      return this.loadMainThread(url, _options);
+    }
+  }
+  async loadMainThread(url, options) {
     return new Promise((resolve, reject) => {
       this.loader.load(
         url,
