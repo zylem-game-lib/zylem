@@ -37,7 +37,7 @@ const purpleBedEntity = await actor({
 	models: [purpleBed],
 	collision: {
 		static: true,
-		size: new Vector3(6, 4, 6),
+		size: new Vector3(6, 1, 6),
 		position: new Vector3(0, 0, 0),
 	},
 	collisionShape: 'model',
