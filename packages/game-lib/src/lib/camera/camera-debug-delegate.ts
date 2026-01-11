@@ -1,4 +1,4 @@
-import { Object3D, Vector3, Quaternion, Camera } from 'three';
+import { Object3D, Vector3, Quaternion, Camera, Scene } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export interface CameraDebugState {
@@ -18,6 +18,8 @@ export interface CameraDebugDelegate {
 export class CameraOrbitController {
 	private camera: Camera;
 	private domElement: HTMLElement;
+	private cameraRig: Object3D | null = null;
+	private sceneRef: Scene | null = null;
 	
 	private orbitControls: OrbitControls | null = null;
 	private orbitTarget: Object3D | null = null;
@@ -31,6 +33,7 @@ export class CameraOrbitController {
 	private savedCameraPosition: Vector3 | null = null;
 	private savedCameraQuaternion: Quaternion | null = null;
 	private savedCameraZoom: number | null = null;
+	private savedCameraLocalPosition: Vector3 | null = null;
 
 	// Saved debug camera state for restoration when re-entering debug mode
 	private savedDebugCameraPosition: Vector3 | null = null;
@@ -38,9 +41,17 @@ export class CameraOrbitController {
 	private savedDebugCameraZoom: number | null = null;
 	private savedDebugOrbitTarget: Vector3 | null = null;
 
-	constructor(camera: Camera, domElement: HTMLElement) {
+	constructor(camera: Camera, domElement: HTMLElement, cameraRig?: Object3D | null) {
 		this.camera = camera;
 		this.domElement = domElement;
+		this.cameraRig = cameraRig ?? null;
+	}
+
+	/**
+	 * Set the scene reference for adding/removing camera when detaching from rig.
+	 */
+	setScene(scene: Scene | null): void {
+		this.sceneRef = scene;
 	}
 
 	/**
@@ -105,8 +116,9 @@ export class CameraOrbitController {
 			selected: [...state.selected],
 		};
 		if (state.enabled && !wasEnabled) {
-			// Entering debug mode: save game camera state, restore debug camera state if available
+			// Entering debug mode: save game camera state, detach from rig, restore debug camera state if available
 			this.saveCameraState();
+			this.detachCameraFromRig();
 			this.enableOrbitControls();
 			this.restoreDebugCameraState();
 			this.updateOrbitTargetFromSelection(state.selected);
@@ -115,6 +127,7 @@ export class CameraOrbitController {
 			this.saveDebugCameraState();
 			this.orbitTarget = null;
 			this.disableOrbitControls();
+			this.reattachCameraToRig();
 			this.restoreCameraState();
 		} else if (state.enabled) {
 			// Still in debug mode, just update target
@@ -240,6 +253,58 @@ export class CameraOrbitController {
 		}
 		if (this.savedDebugOrbitTarget && this.orbitControls) {
 			this.orbitControls.target.copy(this.savedDebugOrbitTarget);
+		}
+	}
+
+	/**
+	 * Detach camera from its rig to allow free orbit movement in debug mode.
+	 * Preserves the camera's world position.
+	 */
+	private detachCameraFromRig(): void {
+		if (!this.cameraRig || this.camera.parent !== this.cameraRig) {
+			return;
+		}
+
+		// Save the camera's local position for later restoration
+		this.savedCameraLocalPosition = this.camera.position.clone();
+
+		// Get camera's world position before detaching
+		const worldPos = new Vector3();
+		this.camera.getWorldPosition(worldPos);
+
+		// Remove camera from rig
+		this.cameraRig.remove(this.camera);
+
+		// Add camera directly to scene if scene ref is available
+		if (this.sceneRef) {
+			this.sceneRef.add(this.camera);
+		}
+
+		// Set camera's position to its previous world position
+		this.camera.position.copy(worldPos);
+	}
+
+	/**
+	 * Reattach camera to its rig when exiting debug mode.
+	 * Restores the camera's local position relative to the rig.
+	 */
+	private reattachCameraToRig(): void {
+		if (!this.cameraRig || this.camera.parent === this.cameraRig) {
+			return;
+		}
+
+		// Remove camera from scene if it's there
+		if (this.sceneRef && this.camera.parent === this.sceneRef) {
+			this.sceneRef.remove(this.camera);
+		}
+
+		// Add camera back to rig
+		this.cameraRig.add(this.camera);
+
+		// Restore camera's local position
+		if (this.savedCameraLocalPosition) {
+			this.camera.position.copy(this.savedCameraLocalPosition);
+			this.savedCameraLocalPosition = null;
 		}
 	}
 }

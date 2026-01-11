@@ -1,5 +1,5 @@
 import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
-import { BufferGeometry, Object3D, SkinnedMesh, Group, Vector3 } from 'three';
+import { BufferGeometry, Object3D, SkinnedMesh, Mesh, Group, Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
@@ -18,12 +18,15 @@ type AnimationObject = {
 	path: string;
 };
 
+export type CollisionShapeType = 'capsule' | 'model';
+
 type ZylemActorOptions = GameEntityOptions & {
 	static?: boolean;
 	animations?: AnimationObject[];
 	models?: string[];
 	scale?: Vec3;
 	material?: MaterialOptions;
+	collisionShape?: CollisionShapeType;
 };
 
 const actorDefaults: ZylemActorOptions = {
@@ -37,44 +40,96 @@ const actorDefaults: ZylemActorOptions = {
 		shader: 'standard',
 	},
 	animations: [],
-	models: []
+	models: [],
+	collisionShape: 'capsule',
 };
 
 class ActorCollisionBuilder extends EntityCollisionBuilder {
-	private height: number = 1;
 	private objectModel: Group | null = null;
+	private collisionShape: CollisionShapeType = 'capsule';
 
 	constructor(data: any) {
 		super();
 		this.objectModel = data.objectModel;
-	}
-
-	createColliderFromObjectModel(objectModel: Group | null): ColliderDesc {
-		if (!objectModel) return ColliderDesc.capsule(1, 1);
-
-		const skinnedMesh = objectModel.children.find(child => child instanceof SkinnedMesh) as SkinnedMesh;
-		const geometry = skinnedMesh.geometry as BufferGeometry;
-
-		if (geometry) {
-			geometry.computeBoundingBox();
-			if (geometry.boundingBox) {
-				const maxY = geometry.boundingBox.max.y;
-				const minY = geometry.boundingBox.min.y;
-				this.height = maxY - minY;
-			}
-		}
-		this.height = 1;
-		let colliderDesc = ColliderDesc.capsule(this.height / 2, 1);
-		colliderDesc.setSensor(false);
-		colliderDesc.setTranslation(0, this.height + 0.5, 0);
-		colliderDesc.activeCollisionTypes = ActiveCollisionTypes.DEFAULT;
-
-		return colliderDesc;
+		this.collisionShape = data.collisionShape ?? 'capsule';
 	}
 
 	collider(options: ZylemActorOptions): ColliderDesc {
-		let colliderDesc = this.createColliderFromObjectModel(this.objectModel);
+		if (this.collisionShape === 'model') {
+			return this.createColliderFromModel(this.objectModel, options);
+		}
+		return this.createCapsuleCollider(options);
+	}
 
+	/**
+	 * Create a capsule collider based on size options (character controller style).
+	 */
+	private createCapsuleCollider(options: ZylemActorOptions): ColliderDesc {
+		const size = options.collision?.size ?? options.size ?? { x: 0.5, y: 1, z: 0.5 };
+		const halfHeight = ((size as any).y || 1);
+		const radius = Math.max((size as any).x || 0.5, (size as any).z || 0.5);
+		let colliderDesc = ColliderDesc.capsule(halfHeight, radius);
+		colliderDesc.setSensor(false);
+		colliderDesc.setTranslation(0, halfHeight + radius, 0);
+		colliderDesc.activeCollisionTypes = ActiveCollisionTypes.DEFAULT;
+		return colliderDesc;
+	}
+
+	/**
+	 * Create a collider based on model geometry (works with Mesh and SkinnedMesh).
+	 * If collision.size and collision.position are provided, use those instead of computing from geometry.
+	 */
+	private createColliderFromModel(objectModel: Group | null, options: ZylemActorOptions): ColliderDesc {
+		const collisionSize = options.collision?.size;
+		const collisionPosition = options.collision?.position;
+
+		// If user provided explicit size, use that instead of computing from model
+		if (collisionSize) {
+			const halfWidth = (collisionSize as any).x / 2;
+			const halfHeight = (collisionSize as any).y / 2;
+			const halfDepth = (collisionSize as any).z / 2;
+
+			let colliderDesc = ColliderDesc.cuboid(halfWidth, halfHeight, halfDepth);
+			colliderDesc.setSensor(false);
+
+			// Use user-provided position or default to center
+			const posX = collisionPosition ? (collisionPosition as any).x : 0;
+			const posY = collisionPosition ? (collisionPosition as any).y : halfHeight;
+			const posZ = collisionPosition ? (collisionPosition as any).z : 0;
+			colliderDesc.setTranslation(posX, posY, posZ);
+			colliderDesc.activeCollisionTypes = ActiveCollisionTypes.DEFAULT;
+			return colliderDesc;
+		}
+
+		// Fall back to computing from model geometry
+		if (!objectModel) return this.createCapsuleCollider(options);
+
+		// Find first Mesh (SkinnedMesh or regular Mesh)
+		let foundGeometry: BufferGeometry | null = null;
+		objectModel.traverse((child) => {
+			if (!foundGeometry && (child as any).isMesh) {
+				foundGeometry = (child as Mesh).geometry as BufferGeometry;
+			}
+		});
+
+		if (!foundGeometry) return this.createCapsuleCollider(options);
+
+		const geometry: BufferGeometry = foundGeometry;
+		geometry.computeBoundingBox();
+		const box = geometry.boundingBox;
+		if (!box) return this.createCapsuleCollider(options);
+
+		const height = box.max.y - box.min.y;
+		const width = box.max.x - box.min.x;
+		const depth = box.max.z - box.min.z;
+
+		// Create box collider based on mesh bounds
+		let colliderDesc = ColliderDesc.cuboid(width / 2, height / 2, depth / 2);
+		colliderDesc.setSensor(false);
+		// Position collider at center of model
+		const centerY = (box.max.y + box.min.y) / 2;
+		colliderDesc.setTranslation(0, centerY, 0);
+		colliderDesc.activeCollisionTypes = ActiveCollisionTypes.DEFAULT;
 		return colliderDesc;
 	}
 }
@@ -123,6 +178,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		return {
 			animations: this._animationDelegate?.animations,
 			objectModel: this._object,
+			collisionShape: this.options.collisionShape,
 		};
 	}
 

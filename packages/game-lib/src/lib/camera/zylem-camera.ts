@@ -68,7 +68,7 @@ export class ZylemCamera {
 		this.initializePerspectiveController();
 
 		// Initialize orbit controller (handles debug mode orbit controls)
-		this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement);
+		this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement, this.cameraRig);
 	}
 
 	/**
@@ -93,6 +93,9 @@ export class ZylemCamera {
 				camera: this
 			});
 		}
+
+		// Set scene reference for orbit controller (needed for camera rig detachment)
+		this.orbitController?.setScene(scene);
 
 		// Start render loop
 		this.renderer.setAnimationLoop((delta) => {

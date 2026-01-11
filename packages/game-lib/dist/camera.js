@@ -28,11 +28,11 @@ var ThirdPersonCamera = class {
    * Setup the third person camera controller
    */
   setup(params) {
-    const { screenResolution, renderer, scene, camera: camera2 } = params;
+    const { screenResolution, renderer, scene, camera } = params;
     this.screenResolution = screenResolution;
     this.renderer = renderer;
     this.scene = scene;
-    this.cameraRef = camera2;
+    this.cameraRef = camera;
   }
   /**
    * Update the third person camera
@@ -73,11 +73,11 @@ var Fixed2DCamera = class {
    * Setup the fixed 2D camera controller
    */
   setup(params) {
-    const { screenResolution, renderer, scene, camera: camera2 } = params;
+    const { screenResolution, renderer, scene, camera } = params;
     this.screenResolution = screenResolution;
     this.renderer = renderer;
     this.scene = scene;
-    this.cameraRef = camera2;
+    this.cameraRef = camera;
     this.cameraRef.camera.position.set(0, 0, 10);
     this.cameraRef.camera.lookAt(0, 0, 0);
   }
@@ -120,12 +120,12 @@ var RenderPass = class extends Pass {
   rgbRenderTarget;
   normalRenderTarget;
   normalMaterial;
-  constructor(resolution, scene, camera2) {
+  constructor(resolution, scene, camera) {
     super();
     this.resolution = resolution;
     this.fsQuad = new FullScreenQuad(this.material());
     this.scene = scene;
-    this.camera = camera2;
+    this.camera = camera;
     this.rgbRenderTarget = new WebGLRenderTarget(resolution.x * 4, resolution.y * 4);
     this.normalRenderTarget = new WebGLRenderTarget(resolution.x * 4, resolution.y * 4);
     this.normalMaterial = new THREE.MeshNormalMaterial();
@@ -193,6 +193,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 var CameraOrbitController = class {
   camera;
   domElement;
+  cameraRig = null;
+  sceneRef = null;
   orbitControls = null;
   orbitTarget = null;
   orbitTargetWorldPos = new Vector32();
@@ -203,14 +205,22 @@ var CameraOrbitController = class {
   savedCameraPosition = null;
   savedCameraQuaternion = null;
   savedCameraZoom = null;
+  savedCameraLocalPosition = null;
   // Saved debug camera state for restoration when re-entering debug mode
   savedDebugCameraPosition = null;
   savedDebugCameraQuaternion = null;
   savedDebugCameraZoom = null;
   savedDebugOrbitTarget = null;
-  constructor(camera2, domElement) {
-    this.camera = camera2;
+  constructor(camera, domElement, cameraRig) {
+    this.camera = camera;
     this.domElement = domElement;
+    this.cameraRig = cameraRig ?? null;
+  }
+  /**
+   * Set the scene reference for adding/removing camera when detaching from rig.
+   */
+  setScene(scene) {
+    this.sceneRef = scene;
   }
   /**
    * Check if debug mode is currently active (orbit controls enabled).
@@ -270,6 +280,7 @@ var CameraOrbitController = class {
     };
     if (state.enabled && !wasEnabled) {
       this.saveCameraState();
+      this.detachCameraFromRig();
       this.enableOrbitControls();
       this.restoreDebugCameraState();
       this.updateOrbitTargetFromSelection(state.selected);
@@ -277,6 +288,7 @@ var CameraOrbitController = class {
       this.saveDebugCameraState();
       this.orbitTarget = null;
       this.disableOrbitControls();
+      this.reattachCameraToRig();
       this.restoreCameraState();
     } else if (state.enabled) {
       this.updateOrbitTargetFromSelection(state.selected);
@@ -393,6 +405,40 @@ var CameraOrbitController = class {
       this.orbitControls.target.copy(this.savedDebugOrbitTarget);
     }
   }
+  /**
+   * Detach camera from its rig to allow free orbit movement in debug mode.
+   * Preserves the camera's world position.
+   */
+  detachCameraFromRig() {
+    if (!this.cameraRig || this.camera.parent !== this.cameraRig) {
+      return;
+    }
+    this.savedCameraLocalPosition = this.camera.position.clone();
+    const worldPos = new Vector32();
+    this.camera.getWorldPosition(worldPos);
+    this.cameraRig.remove(this.camera);
+    if (this.sceneRef) {
+      this.sceneRef.add(this.camera);
+    }
+    this.camera.position.copy(worldPos);
+  }
+  /**
+   * Reattach camera to its rig when exiting debug mode.
+   * Restores the camera's local position relative to the rig.
+   */
+  reattachCameraToRig() {
+    if (!this.cameraRig || this.camera.parent === this.cameraRig) {
+      return;
+    }
+    if (this.sceneRef && this.camera.parent === this.sceneRef) {
+      this.sceneRef.remove(this.camera);
+    }
+    this.cameraRig.add(this.camera);
+    if (this.savedCameraLocalPosition) {
+      this.camera.position.copy(this.savedCameraLocalPosition);
+      this.savedCameraLocalPosition = null;
+    }
+  }
 };
 
 // src/lib/camera/zylem-camera.ts
@@ -430,7 +476,7 @@ var ZylemCamera = class {
       this.camera.lookAt(new Vector33(0, 0, 0));
     }
     this.initializePerspectiveController();
-    this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement);
+    this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement, this.cameraRig);
   }
   /**
    * Setup the camera with a scene
@@ -450,6 +496,7 @@ var ZylemCamera = class {
         camera: this
       });
     }
+    this.orbitController?.setScene(scene);
     this.renderer.setAnimationLoop((delta) => {
       this.update(delta || 0);
     });
@@ -626,11 +673,11 @@ var ZylemCamera = class {
 // src/lib/camera/camera.ts
 var CameraWrapper = class {
   cameraRef;
-  constructor(camera2) {
-    this.cameraRef = camera2;
+  constructor(camera) {
+    this.cameraRef = camera;
   }
 };
-function camera(options) {
+function createCamera(options) {
   const screenResolution = options.screenResolution || new Vector23(window.innerWidth, window.innerHeight);
   let frustumSize = 10;
   if (options.perspective === "fixed-2d") {
@@ -643,6 +690,6 @@ function camera(options) {
 }
 export {
   Perspectives,
-  camera
+  createCamera
 };
 //# sourceMappingURL=camera.js.map

@@ -14,6 +14,9 @@ type ZylemPlaneOptions = GameEntityOptions & {
 	repeat?: Vector2;
 	texture?: TexturePath;
 	subdivisions?: number;
+	randomizeHeight?: boolean;
+	heightMap?: number[];
+	heightScale?: number;
 };
 
 const DEFAULT_SUBDIVISIONS = 4;
@@ -29,7 +32,9 @@ const planeDefaults: ZylemPlaneOptions = {
 		color: new Color('#ffffff'),
 		shader: 'standard'
 	},
-	subdivisions: DEFAULT_SUBDIVISIONS
+	subdivisions: DEFAULT_SUBDIVISIONS,
+	randomizeHeight: false,
+	heightScale: 1,
 };
 
 export class PlaneCollisionBuilder extends EntityCollisionBuilder {
@@ -54,11 +59,14 @@ export class PlaneCollisionBuilder extends EntityCollisionBuilder {
 export class PlaneMeshBuilder extends EntityMeshBuilder {
 	heightData: Float32Array = new Float32Array();
 	columnsRows = new Map();
+	private subdivisions: number = DEFAULT_SUBDIVISIONS;
 
 	build(options: ZylemPlaneOptions): XZPlaneGeometry {
 		const tile = options.tile ?? new Vector2(1, 1);
 		const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
+		this.subdivisions = subdivisions;
 		const size = new Vector3(tile.x, 1, tile.y);
+		const heightScale = options.heightScale ?? 1;
 
 		const geometry = new XZPlaneGeometry(size.x, size.z, subdivisions, subdivisions);
 		const vertexGeometry = new PlaneGeometry(size.x, size.z, subdivisions, subdivisions);
@@ -67,16 +75,31 @@ export class PlaneMeshBuilder extends EntityMeshBuilder {
 		const originalVertices = geometry.attributes.position.array;
 		const vertices = vertexGeometry.attributes.position.array;
 		const columsRows = new Map();
+
+		// Get height data source
+		const heightMapData = options.heightMap;
+		const useRandomHeight = options.randomizeHeight ?? false;
+
 		for (let i = 0; i < vertices.length; i += 3) {
+			const vertexIndex = i / 3;
 			let row = Math.floor(Math.abs((vertices as any)[i] + (size.x / 2)) / dx);
 			let column = Math.floor(Math.abs((vertices as any)[i + 1] - (size.z / 2)) / dy);
-			const randomHeight = Math.random() * 4;
-			(vertices as any)[i + 2] = randomHeight;
-			originalVertices[i + 1] = randomHeight;
+
+			let height = 0;
+			if (heightMapData && heightMapData.length > 0) {
+				// Loop the height map data if it doesn't cover all vertices
+				const heightIndex = vertexIndex % heightMapData.length;
+				height = heightMapData[heightIndex] * heightScale;
+			} else if (useRandomHeight) {
+				height = Math.random() * 4 * heightScale;
+			}
+
+			(vertices as any)[i + 2] = height;
+			originalVertices[i + 1] = height;
 			if (!columsRows.get(column)) {
 				columsRows.set(column, new Map());
 			}
-			columsRows.get(column).set(row, randomHeight);
+			columsRows.get(column).set(row, height);
 		}
 		this.columnsRows = columsRows;
 		return geometry;
@@ -84,14 +107,15 @@ export class PlaneMeshBuilder extends EntityMeshBuilder {
 
 	postBuild(): void {
 		const heights = [];
-		for (let i = 0; i <= DEFAULT_SUBDIVISIONS; ++i) {
-			for (let j = 0; j <= DEFAULT_SUBDIVISIONS; ++j) {
+		for (let i = 0; i <= this.subdivisions; ++i) {
+			for (let j = 0; j <= this.subdivisions; ++j) {
 				const row = this.columnsRows.get(j);
 				if (!row) {
+					heights.push(0);
 					continue;
 				}
 				const data = row.get(i);
-				heights.push(data);
+				heights.push(data ?? 0);
 			}
 		}
 		this.heightData = new Float32Array(heights as unknown as number[]);

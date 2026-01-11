@@ -2069,7 +2069,7 @@ var init_builder = __esm({
 
 // src/lib/entities/actor.ts
 import { ActiveCollisionTypes as ActiveCollisionTypes2, ColliderDesc as ColliderDesc2 } from "@dimforge/rapier3d-compat";
-import { SkinnedMesh, Group as Group3, Vector3 as Vector33 } from "three";
+import { Group as Group3, Vector3 as Vector33 } from "three";
 async function actor(...args) {
   return await createEntity({
     args,
@@ -2101,36 +2101,60 @@ var init_actor = __esm({
         shader: "standard"
       },
       animations: [],
-      models: []
+      models: [],
+      collisionShape: "capsule"
     };
     ActorCollisionBuilder = class extends EntityCollisionBuilder {
-      height = 1;
       objectModel = null;
+      collisionShape = "capsule";
       constructor(data) {
         super();
         this.objectModel = data.objectModel;
+        this.collisionShape = data.collisionShape ?? "capsule";
       }
-      createColliderFromObjectModel(objectModel) {
-        if (!objectModel) return ColliderDesc2.capsule(1, 1);
-        const skinnedMesh = objectModel.children.find((child) => child instanceof SkinnedMesh);
-        const geometry = skinnedMesh.geometry;
-        if (geometry) {
-          geometry.computeBoundingBox();
-          if (geometry.boundingBox) {
-            const maxY = geometry.boundingBox.max.y;
-            const minY = geometry.boundingBox.min.y;
-            this.height = maxY - minY;
-          }
+      collider(options) {
+        if (this.collisionShape === "model") {
+          return this.createColliderFromModel(this.objectModel, options);
         }
-        this.height = 1;
-        let colliderDesc = ColliderDesc2.capsule(this.height / 2, 1);
+        return this.createCapsuleCollider(options);
+      }
+      /**
+       * Create a capsule collider based on size options (character controller style).
+       */
+      createCapsuleCollider(options) {
+        const size = options.collision?.size ?? options.size ?? { x: 0.5, y: 1, z: 0.5 };
+        const halfHeight = size.y || 1;
+        const radius = Math.max(size.x || 0.5, size.z || 0.5);
+        let colliderDesc = ColliderDesc2.capsule(halfHeight, radius);
         colliderDesc.setSensor(false);
-        colliderDesc.setTranslation(0, this.height + 0.5, 0);
+        colliderDesc.setTranslation(0, halfHeight + radius, 0);
         colliderDesc.activeCollisionTypes = ActiveCollisionTypes2.DEFAULT;
         return colliderDesc;
       }
-      collider(options) {
-        let colliderDesc = this.createColliderFromObjectModel(this.objectModel);
+      /**
+       * Create a collider based on model geometry (works with Mesh and SkinnedMesh).
+       */
+      createColliderFromModel(objectModel, options) {
+        if (!objectModel) return this.createCapsuleCollider(options);
+        let foundGeometry = null;
+        objectModel.traverse((child) => {
+          if (!foundGeometry && child.isMesh) {
+            foundGeometry = child.geometry;
+          }
+        });
+        if (!foundGeometry) return this.createCapsuleCollider(options);
+        const geometry = foundGeometry;
+        geometry.computeBoundingBox();
+        const box2 = geometry.boundingBox;
+        if (!box2) return this.createCapsuleCollider(options);
+        const height = box2.max.y - box2.min.y;
+        const width = box2.max.x - box2.min.x;
+        const depth = box2.max.z - box2.min.z;
+        let colliderDesc = ColliderDesc2.cuboid(width / 2, height / 2, depth / 2);
+        colliderDesc.setSensor(false);
+        const centerY = (box2.max.y + box2.min.y) / 2;
+        colliderDesc.setTranslation(0, centerY, 0);
+        colliderDesc.activeCollisionTypes = ActiveCollisionTypes2.DEFAULT;
         return colliderDesc;
       }
     };
@@ -2168,7 +2192,8 @@ var init_actor = __esm({
       async data() {
         return {
           animations: this._animationDelegate?.animations,
-          objectModel: this._object
+          objectModel: this._object,
+          collisionShape: this.options.collisionShape
         };
       }
       async actorUpdate(params) {
@@ -2444,7 +2469,7 @@ var init_zylem_scene = __esm({
       _destroy;
       name;
       tag;
-      constructor(id, camera2, state2) {
+      constructor(id, camera, state2) {
         const scene = new Scene();
         const isColor = state2.backgroundColor instanceof Color4;
         const backgroundColor = isColor ? state2.backgroundColor : new Color4(state2.backgroundColor);
@@ -2455,9 +2480,9 @@ var init_zylem_scene = __esm({
           });
         }
         this.scene = scene;
-        this.zylemCamera = camera2;
+        this.zylemCamera = camera;
         this.setupLighting(scene);
-        this.setupCamera(scene, camera2);
+        this.setupCamera(scene, camera);
         if (debugState.enabled) {
           this.debugScene();
         }
@@ -2489,13 +2514,13 @@ var init_zylem_scene = __esm({
       /**
        * Setup camera with the scene
        */
-      setupCamera(scene, camera2) {
-        if (camera2.cameraRig) {
-          scene.add(camera2.cameraRig);
+      setupCamera(scene, camera) {
+        if (camera.cameraRig) {
+          scene.add(camera.cameraRig);
         } else {
-          scene.add(camera2.camera);
+          scene.add(camera.camera);
         }
-        camera2.setup(scene);
+        camera.setup(scene);
       }
       /**
        * Setup scene lighting
@@ -2702,7 +2727,7 @@ import {
   Group as Group4,
   LineBasicMaterial,
   LineSegments,
-  Mesh as Mesh4,
+  Mesh as Mesh5,
   MeshBasicMaterial,
   Vector3 as Vector37
 } from "three";
@@ -2722,7 +2747,7 @@ var init_debug_entity_cursor = __esm({
       constructor(scene) {
         this.scene = scene;
         const initialGeometry = new BoxGeometry(1, 1, 1);
-        this.fillMesh = new Mesh4(
+        this.fillMesh = new Mesh5(
           initialGeometry,
           new MeshBasicMaterial({
             color: this.currentColor,
@@ -2816,20 +2841,39 @@ var init_stage_debug_delegate = __esm({
           maxRayDistance: options?.maxRayDistance ?? 5e3,
           addEntityFactory: options?.addEntityFactory ?? null
         };
-        if (this.stage.scene) {
-          this.debugLines = new LineSegments2(
-            new BufferGeometry4(),
-            new LineBasicMaterial2({ vertexColors: true })
-          );
-          this.stage.scene.scene.add(this.debugLines);
-          this.debugLines.visible = true;
-          this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
-        }
         this.attachDomListeners();
       }
+      initDebugVisuals() {
+        if (this.debugLines || !this.stage.scene) return;
+        this.debugLines = new LineSegments2(
+          new BufferGeometry4(),
+          new LineBasicMaterial2({ vertexColors: true })
+        );
+        this.stage.scene.scene.add(this.debugLines);
+        this.debugLines.visible = true;
+        this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
+      }
+      disposeDebugVisuals() {
+        if (this.debugLines && this.stage.scene) {
+          this.stage.scene.scene.remove(this.debugLines);
+          this.debugLines.geometry.dispose();
+          this.debugLines.material.dispose();
+          this.debugLines = null;
+        }
+        this.debugCursor?.dispose();
+        this.debugCursor = null;
+      }
       update() {
-        if (!debugState.enabled) return;
+        if (!debugState.enabled) {
+          if (this.debugLines) {
+            this.disposeDebugVisuals();
+          }
+          return;
+        }
         if (!this.stage.scene || !this.stage.world || !this.stage.cameraRef) return;
+        if (!this.debugLines) {
+          this.initDebugVisuals();
+        }
         const { world, cameraRef } = this.stage;
         if (this.debugLines) {
           const { vertices, colors } = world.world.debugRender();
@@ -2887,13 +2931,7 @@ var init_stage_debug_delegate = __esm({
       dispose() {
         this.disposeFns.forEach((fn) => fn());
         this.disposeFns = [];
-        this.debugCursor?.dispose();
-        if (this.debugLines && this.stage.scene) {
-          this.stage.scene.scene.remove(this.debugLines);
-          this.debugLines.geometry.dispose();
-          this.debugLines.material.dispose();
-          this.debugLines = null;
-        }
+        this.disposeDebugVisuals();
       }
       handleActionOnHit(hoveredUuid, origin, direction, toi) {
         const tool = getDebugTool();
@@ -3014,11 +3052,11 @@ var init_third_person = __esm({
        * Setup the third person camera controller
        */
       setup(params) {
-        const { screenResolution, renderer, scene, camera: camera2 } = params;
+        const { screenResolution, renderer, scene, camera } = params;
         this.screenResolution = screenResolution;
         this.renderer = renderer;
         this.scene = scene;
-        this.cameraRef = camera2;
+        this.cameraRef = camera;
       }
       /**
        * Update the third person camera
@@ -3065,11 +3103,11 @@ var init_fixed_2d = __esm({
        * Setup the fixed 2D camera controller
        */
       setup(params) {
-        const { screenResolution, renderer, scene, camera: camera2 } = params;
+        const { screenResolution, renderer, scene, camera } = params;
         this.screenResolution = screenResolution;
         this.renderer = renderer;
         this.scene = scene;
-        this.cameraRef = camera2;
+        this.cameraRef = camera;
         this.cameraRef.camera.position.set(0, 0, 10);
         this.cameraRef.camera.lookAt(0, 0, 0);
       }
@@ -3118,12 +3156,12 @@ var init_render_pass = __esm({
       rgbRenderTarget;
       normalRenderTarget;
       normalMaterial;
-      constructor(resolution, scene, camera2) {
+      constructor(resolution, scene, camera) {
         super();
         this.resolution = resolution;
         this.fsQuad = new FullScreenQuad(this.material());
         this.scene = scene;
-        this.camera = camera2;
+        this.camera = camera;
         this.rgbRenderTarget = new WebGLRenderTarget(resolution.x * 4, resolution.y * 4);
         this.normalRenderTarget = new WebGLRenderTarget(resolution.x * 4, resolution.y * 4);
         this.normalMaterial = new THREE.MeshNormalMaterial();
@@ -3197,6 +3235,8 @@ var init_camera_debug_delegate = __esm({
     CameraOrbitController = class {
       camera;
       domElement;
+      cameraRig = null;
+      sceneRef = null;
       orbitControls = null;
       orbitTarget = null;
       orbitTargetWorldPos = new Vector310();
@@ -3207,14 +3247,22 @@ var init_camera_debug_delegate = __esm({
       savedCameraPosition = null;
       savedCameraQuaternion = null;
       savedCameraZoom = null;
+      savedCameraLocalPosition = null;
       // Saved debug camera state for restoration when re-entering debug mode
       savedDebugCameraPosition = null;
       savedDebugCameraQuaternion = null;
       savedDebugCameraZoom = null;
       savedDebugOrbitTarget = null;
-      constructor(camera2, domElement) {
-        this.camera = camera2;
+      constructor(camera, domElement, cameraRig) {
+        this.camera = camera;
         this.domElement = domElement;
+        this.cameraRig = cameraRig ?? null;
+      }
+      /**
+       * Set the scene reference for adding/removing camera when detaching from rig.
+       */
+      setScene(scene) {
+        this.sceneRef = scene;
       }
       /**
        * Check if debug mode is currently active (orbit controls enabled).
@@ -3274,6 +3322,7 @@ var init_camera_debug_delegate = __esm({
         };
         if (state2.enabled && !wasEnabled) {
           this.saveCameraState();
+          this.detachCameraFromRig();
           this.enableOrbitControls();
           this.restoreDebugCameraState();
           this.updateOrbitTargetFromSelection(state2.selected);
@@ -3281,6 +3330,7 @@ var init_camera_debug_delegate = __esm({
           this.saveDebugCameraState();
           this.orbitTarget = null;
           this.disableOrbitControls();
+          this.reattachCameraToRig();
           this.restoreCameraState();
         } else if (state2.enabled) {
           this.updateOrbitTargetFromSelection(state2.selected);
@@ -3397,6 +3447,40 @@ var init_camera_debug_delegate = __esm({
           this.orbitControls.target.copy(this.savedDebugOrbitTarget);
         }
       }
+      /**
+       * Detach camera from its rig to allow free orbit movement in debug mode.
+       * Preserves the camera's world position.
+       */
+      detachCameraFromRig() {
+        if (!this.cameraRig || this.camera.parent !== this.cameraRig) {
+          return;
+        }
+        this.savedCameraLocalPosition = this.camera.position.clone();
+        const worldPos = new Vector310();
+        this.camera.getWorldPosition(worldPos);
+        this.cameraRig.remove(this.camera);
+        if (this.sceneRef) {
+          this.sceneRef.add(this.camera);
+        }
+        this.camera.position.copy(worldPos);
+      }
+      /**
+       * Reattach camera to its rig when exiting debug mode.
+       * Restores the camera's local position relative to the rig.
+       */
+      reattachCameraToRig() {
+        if (!this.cameraRig || this.camera.parent === this.cameraRig) {
+          return;
+        }
+        if (this.sceneRef && this.camera.parent === this.sceneRef) {
+          this.sceneRef.remove(this.camera);
+        }
+        this.cameraRig.add(this.camera);
+        if (this.savedCameraLocalPosition) {
+          this.camera.position.copy(this.savedCameraLocalPosition);
+          this.savedCameraLocalPosition = null;
+        }
+      }
     };
   }
 });
@@ -3447,7 +3531,7 @@ var init_zylem_camera = __esm({
           this.camera.lookAt(new Vector311(0, 0, 0));
         }
         this.initializePerspectiveController();
-        this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement);
+        this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement, this.cameraRig);
       }
       /**
        * Setup the camera with a scene
@@ -3467,6 +3551,7 @@ var init_zylem_camera = __esm({
             camera: this
           });
         }
+        this.orbitController?.setScene(scene);
         this.renderer.setAnimationLoop((delta) => {
           this.update(delta || 0);
         });
@@ -3819,10 +3904,10 @@ function parseStageOptions(options = []) {
   let config = {};
   const entities = [];
   const asyncEntities = [];
-  let camera2;
+  let camera;
   for (const item of options) {
     if (isCameraWrapper(item)) {
-      camera2 = item;
+      camera = item;
     } else if (isBaseNode(item)) {
       entities.push(item);
     } else if (isEntityInput(item) && !isBaseNode(item)) {
@@ -3838,7 +3923,7 @@ function parseStageOptions(options = []) {
     config.gravity ?? defaults.gravity,
     config.variables ?? defaults.variables
   );
-  return { config: resolvedConfig, entities, asyncEntities, camera: camera2 };
+  return { config: resolvedConfig, entities, asyncEntities, camera };
 }
 var StageConfig;
 var init_stage_config = __esm({
@@ -3976,9 +4061,9 @@ var init_zylem_stage = __esm({
        * @param id DOM element id for the renderer container
        * @param camera Optional camera override
        */
-      async load(id, camera2) {
+      async load(id, camera) {
         this.setState();
-        const zylemCamera = this.cameraDelegate.resolveCamera(camera2, this.camera);
+        const zylemCamera = this.cameraDelegate.resolveCamera(camera, this.camera);
         this.cameraRef = zylemCamera;
         this.scene = new ZylemScene(id, zylemCamera, this.state);
         const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector313(0, 0, 0));
@@ -4275,7 +4360,7 @@ var init_zylem_stage = __esm({
 
 // src/lib/camera/camera.ts
 import { Vector2 as Vector28, Vector3 as Vector314 } from "three";
-function camera(options) {
+function createCamera(options) {
   const screenResolution = options.screenResolution || new Vector28(window.innerWidth, window.innerHeight);
   let frustumSize = 10;
   if (options.perspective === "fixed-2d") {
@@ -4293,8 +4378,8 @@ var init_camera = __esm({
     init_zylem_camera();
     CameraWrapper = class {
       cameraRef;
-      constructor(camera2) {
-        this.cameraRef = camera2;
+      constructor(camera) {
+        this.cameraRef = camera;
       }
     };
   }
@@ -4372,7 +4457,7 @@ var init_stage = __esm({
         this.options = options;
         this.wrappedStage = null;
       }
-      async load(id, camera2) {
+      async load(id, camera) {
         stageState.entities = [];
         const loadOptions = [...this.options, ...this._pendingEntities];
         this._pendingEntities = [];
@@ -4382,7 +4467,7 @@ var init_stage = __esm({
           this.wrappedStage.onLoading(cb);
         });
         this.pendingLoadingCallbacks = [];
-        const zylemCamera = camera2 instanceof CameraWrapper ? camera2.cameraRef : camera2;
+        const zylemCamera = camera instanceof CameraWrapper ? camera.cameraRef : camera;
         await this.wrappedStage.load(id, zylemCamera);
         this.wrappedStage.onEntityAdded((child) => {
           const next = this.wrappedStage.buildEntityState(child);
@@ -5504,8 +5589,8 @@ var GameRendererObserver = class {
     this.container = container;
     this.tryMount();
   }
-  setCamera(camera2) {
-    this.camera = camera2;
+  setCamera(camera) {
+    this.camera = camera;
     this.tryMount();
   }
   /**
@@ -5667,13 +5752,13 @@ var ZylemGame = class _ZylemGame {
     const stage = this.currentStage();
     const delta = this.timer.getDelta();
     const inputs = this.inputManager.getInputs(delta);
-    const camera2 = stage?.wrappedStage?.cameraRef || this.defaultCamera;
+    const camera = stage?.wrappedStage?.cameraRef || this.defaultCamera;
     return {
       delta,
       inputs,
       globals: getGlobals(),
       me: this,
-      camera: camera2
+      camera
     };
   }
   start() {
@@ -6211,17 +6296,17 @@ var ZylemText = class _ZylemText extends GameEntity {
       py: isPercentY ? sp.y * height : sp.y
     };
   }
-  computeWorldExtents(camera2, zDist) {
+  computeWorldExtents(camera, zDist) {
     let worldHalfW = 1;
     let worldHalfH = 1;
-    if (camera2.isPerspectiveCamera) {
-      const pc = camera2;
+    if (camera.isPerspectiveCamera) {
+      const pc = camera;
       const halfH = Math.tan(pc.fov * Math.PI / 180 / 2) * zDist;
       const halfW = halfH * pc.aspect;
       worldHalfW = halfW;
       worldHalfH = halfH;
-    } else if (camera2.isOrthographicCamera) {
-      const oc = camera2;
+    } else if (camera.isOrthographicCamera) {
+      const oc = camera;
       worldHalfW = (oc.right - oc.left) / 2;
       worldHalfH = (oc.top - oc.bottom) / 2;
     }
@@ -6239,12 +6324,12 @@ var ZylemText = class _ZylemText extends GameEntity {
   }
   updateStickyTransform() {
     if (!this._sprite || !this._cameraRef) return;
-    const camera2 = this._cameraRef.camera;
+    const camera = this._cameraRef.camera;
     const { width, height } = this.getResolution();
     const sp = this.options.screenPosition ?? new Vector29(24, 24);
     const { px, py } = this.getScreenPixels(sp, width, height);
     const zDist = Math.max(1e-3, this.options.zDistance ?? 1);
-    const { worldHalfW, worldHalfH } = this.computeWorldExtents(camera2, zDist);
+    const { worldHalfW, worldHalfH } = this.computeWorldExtents(camera, zDist);
     const ndcX = px / width * 2 - 1;
     const ndcY = 1 - py / height * 2;
     const localX = ndcX * worldHalfW;
@@ -7047,7 +7132,9 @@ var planeDefaults = {
     color: new Color14("#ffffff"),
     shader: "standard"
   },
-  subdivisions: DEFAULT_SUBDIVISIONS
+  subdivisions: DEFAULT_SUBDIVISIONS,
+  randomizeHeight: false,
+  heightScale: 1
 };
 var PlaneCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
@@ -7068,10 +7155,13 @@ var PlaneCollisionBuilder = class extends EntityCollisionBuilder {
 var PlaneMeshBuilder = class extends EntityMeshBuilder {
   heightData = new Float32Array();
   columnsRows = /* @__PURE__ */ new Map();
+  subdivisions = DEFAULT_SUBDIVISIONS;
   build(options) {
     const tile = options.tile ?? new Vector211(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
+    this.subdivisions = subdivisions;
     const size = new Vector319(tile.x, 1, tile.y);
+    const heightScale = options.heightScale ?? 1;
     const geometry = new XZPlaneGeometry(size.x, size.z, subdivisions, subdivisions);
     const vertexGeometry = new PlaneGeometry(size.x, size.z, subdivisions, subdivisions);
     const dx = size.x / subdivisions;
@@ -7079,30 +7169,40 @@ var PlaneMeshBuilder = class extends EntityMeshBuilder {
     const originalVertices = geometry.attributes.position.array;
     const vertices = vertexGeometry.attributes.position.array;
     const columsRows = /* @__PURE__ */ new Map();
+    const heightMapData = options.heightMap;
+    const useRandomHeight = options.randomizeHeight ?? false;
     for (let i = 0; i < vertices.length; i += 3) {
+      const vertexIndex = i / 3;
       let row = Math.floor(Math.abs(vertices[i] + size.x / 2) / dx);
       let column = Math.floor(Math.abs(vertices[i + 1] - size.z / 2) / dy);
-      const randomHeight = Math.random() * 4;
-      vertices[i + 2] = randomHeight;
-      originalVertices[i + 1] = randomHeight;
+      let height = 0;
+      if (heightMapData && heightMapData.length > 0) {
+        const heightIndex = vertexIndex % heightMapData.length;
+        height = heightMapData[heightIndex] * heightScale;
+      } else if (useRandomHeight) {
+        height = Math.random() * 4 * heightScale;
+      }
+      vertices[i + 2] = height;
+      originalVertices[i + 1] = height;
       if (!columsRows.get(column)) {
         columsRows.set(column, /* @__PURE__ */ new Map());
       }
-      columsRows.get(column).set(row, randomHeight);
+      columsRows.get(column).set(row, height);
     }
     this.columnsRows = columsRows;
     return geometry;
   }
   postBuild() {
     const heights = [];
-    for (let i = 0; i <= DEFAULT_SUBDIVISIONS; ++i) {
-      for (let j = 0; j <= DEFAULT_SUBDIVISIONS; ++j) {
+    for (let i = 0; i <= this.subdivisions; ++i) {
+      for (let j = 0; j <= this.subdivisions; ++j) {
         const row = this.columnsRows.get(j);
         if (!row) {
+          heights.push(0);
           continue;
         }
         const data = row.get(i);
-        heights.push(data);
+        heights.push(data ?? 0);
       }
     }
     this.heightData = new Float32Array(heights);
@@ -7263,7 +7363,7 @@ init_actor();
 init_entity();
 init_builder();
 init_create();
-import { Color as Color15, Group as Group7, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector212, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial4, Mesh as Mesh5, PlaneGeometry as PlaneGeometry2, Vector3 as Vector321 } from "three";
+import { Color as Color15, Group as Group7, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector212, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial4, Mesh as Mesh6, PlaneGeometry as PlaneGeometry2, Vector3 as Vector321 } from "three";
 var rectDefaults = {
   position: void 0,
   width: 120,
@@ -7409,7 +7509,7 @@ var ZylemRect = class _ZylemRect extends GameEntity {
           if (mat.uniforms?.tDiffuse) mat.uniforms.tDiffuse.value = this._texture;
           if (mat.uniforms?.iResolution && this._canvas) mat.uniforms.iResolution.value.set(this._canvas.width, this._canvas.height, 1);
         }
-        this._mesh = new Mesh5(new PlaneGeometry2(1, 1), mat);
+        this._mesh = new Mesh6(new PlaneGeometry2(1, 1), mat);
         this.group?.add(this._mesh);
         this._sprite.visible = false;
       }
@@ -7440,7 +7540,7 @@ var ZylemRect = class _ZylemRect extends GameEntity {
   }
   updateStickyTransform() {
     if (!this._sprite || !this._cameraRef) return;
-    const camera2 = this._cameraRef.camera;
+    const camera = this._cameraRef.camera;
     const dom = this._cameraRef.renderer.domElement;
     const width = dom.clientWidth;
     const height = dom.clientHeight;
@@ -7449,14 +7549,14 @@ var ZylemRect = class _ZylemRect extends GameEntity {
     const zDist = Math.max(1e-3, this.options.zDistance ?? 1);
     let worldHalfW = 1;
     let worldHalfH = 1;
-    if (camera2.isPerspectiveCamera) {
-      const pc = camera2;
+    if (camera.isPerspectiveCamera) {
+      const pc = camera;
       const halfH = Math.tan(pc.fov * Math.PI / 180 / 2) * zDist;
       const halfW = halfH * pc.aspect;
       worldHalfW = halfW;
       worldHalfH = halfH;
-    } else if (camera2.isOrthographicCamera) {
-      const oc = camera2;
+    } else if (camera.isOrthographicCamera) {
+      const oc = camera;
       worldHalfW = (oc.right - oc.left) / 2;
       worldHalfH = (oc.top - oc.bottom) / 2;
     }
@@ -7485,9 +7585,9 @@ var ZylemRect = class _ZylemRect extends GameEntity {
   }
   worldToScreen(point) {
     if (!this._cameraRef) return { x: 0, y: 0 };
-    const camera2 = this._cameraRef.camera;
+    const camera = this._cameraRef.camera;
     const dom = this._cameraRef.renderer.domElement;
-    const v = point.clone().project(camera2);
+    const v = point.clone().project(camera);
     const x = (v.x + 1) / 2 * dom.clientWidth;
     const y = (1 - v.y) / 2 * dom.clientHeight;
     return { x, y };
@@ -8488,8 +8588,8 @@ export {
   actor,
   boundary2d,
   box,
-  camera,
   clearGlobalSubscriptions,
+  createCamera,
   createGame,
   createGlobal,
   createStage,

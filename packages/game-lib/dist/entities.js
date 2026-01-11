@@ -1924,7 +1924,9 @@ var planeDefaults = {
     color: new Color7("#ffffff"),
     shader: "standard"
   },
-  subdivisions: DEFAULT_SUBDIVISIONS
+  subdivisions: DEFAULT_SUBDIVISIONS,
+  randomizeHeight: false,
+  heightScale: 1
 };
 var PlaneCollisionBuilder = class extends EntityCollisionBuilder {
   collider(options) {
@@ -1945,10 +1947,13 @@ var PlaneCollisionBuilder = class extends EntityCollisionBuilder {
 var PlaneMeshBuilder = class extends EntityMeshBuilder {
   heightData = new Float32Array();
   columnsRows = /* @__PURE__ */ new Map();
+  subdivisions = DEFAULT_SUBDIVISIONS;
   build(options) {
     const tile = options.tile ?? new Vector23(1, 1);
     const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
+    this.subdivisions = subdivisions;
     const size = new Vector36(tile.x, 1, tile.y);
+    const heightScale = options.heightScale ?? 1;
     const geometry = new XZPlaneGeometry(size.x, size.z, subdivisions, subdivisions);
     const vertexGeometry = new PlaneGeometry(size.x, size.z, subdivisions, subdivisions);
     const dx = size.x / subdivisions;
@@ -1956,30 +1961,40 @@ var PlaneMeshBuilder = class extends EntityMeshBuilder {
     const originalVertices = geometry.attributes.position.array;
     const vertices = vertexGeometry.attributes.position.array;
     const columsRows = /* @__PURE__ */ new Map();
+    const heightMapData = options.heightMap;
+    const useRandomHeight = options.randomizeHeight ?? false;
     for (let i = 0; i < vertices.length; i += 3) {
+      const vertexIndex = i / 3;
       let row = Math.floor(Math.abs(vertices[i] + size.x / 2) / dx);
       let column = Math.floor(Math.abs(vertices[i + 1] - size.z / 2) / dy);
-      const randomHeight = Math.random() * 4;
-      vertices[i + 2] = randomHeight;
-      originalVertices[i + 1] = randomHeight;
+      let height = 0;
+      if (heightMapData && heightMapData.length > 0) {
+        const heightIndex = vertexIndex % heightMapData.length;
+        height = heightMapData[heightIndex] * heightScale;
+      } else if (useRandomHeight) {
+        height = Math.random() * 4 * heightScale;
+      }
+      vertices[i + 2] = height;
+      originalVertices[i + 1] = height;
       if (!columsRows.get(column)) {
         columsRows.set(column, /* @__PURE__ */ new Map());
       }
-      columsRows.get(column).set(row, randomHeight);
+      columsRows.get(column).set(row, height);
     }
     this.columnsRows = columsRows;
     return geometry;
   }
   postBuild() {
     const heights = [];
-    for (let i = 0; i <= DEFAULT_SUBDIVISIONS; ++i) {
-      for (let j = 0; j <= DEFAULT_SUBDIVISIONS; ++j) {
+    for (let i = 0; i <= this.subdivisions; ++i) {
+      for (let j = 0; j <= this.subdivisions; ++j) {
         const row = this.columnsRows.get(j);
         if (!row) {
+          heights.push(0);
           continue;
         }
         const data = row.get(i);
-        heights.push(data);
+        heights.push(data ?? 0);
       }
     }
     this.heightData = new Float32Array(heights);
@@ -2140,7 +2155,7 @@ async function zone(...args) {
 
 // src/lib/entities/actor.ts
 import { ActiveCollisionTypes as ActiveCollisionTypes3, ColliderDesc as ColliderDesc7 } from "@dimforge/rapier3d-compat";
-import { SkinnedMesh, Group as Group4, Vector3 as Vector38 } from "three";
+import { Group as Group4, Vector3 as Vector38 } from "three";
 
 // src/lib/core/entity-asset-loader.ts
 var EntityAssetLoader = class {
@@ -2290,36 +2305,60 @@ var actorDefaults = {
     shader: "standard"
   },
   animations: [],
-  models: []
+  models: [],
+  collisionShape: "capsule"
 };
 var ActorCollisionBuilder = class extends EntityCollisionBuilder {
-  height = 1;
   objectModel = null;
+  collisionShape = "capsule";
   constructor(data) {
     super();
     this.objectModel = data.objectModel;
+    this.collisionShape = data.collisionShape ?? "capsule";
   }
-  createColliderFromObjectModel(objectModel) {
-    if (!objectModel) return ColliderDesc7.capsule(1, 1);
-    const skinnedMesh = objectModel.children.find((child) => child instanceof SkinnedMesh);
-    const geometry = skinnedMesh.geometry;
-    if (geometry) {
-      geometry.computeBoundingBox();
-      if (geometry.boundingBox) {
-        const maxY = geometry.boundingBox.max.y;
-        const minY = geometry.boundingBox.min.y;
-        this.height = maxY - minY;
-      }
+  collider(options) {
+    if (this.collisionShape === "model") {
+      return this.createColliderFromModel(this.objectModel, options);
     }
-    this.height = 1;
-    let colliderDesc = ColliderDesc7.capsule(this.height / 2, 1);
+    return this.createCapsuleCollider(options);
+  }
+  /**
+   * Create a capsule collider based on size options (character controller style).
+   */
+  createCapsuleCollider(options) {
+    const size = options.collision?.size ?? options.size ?? { x: 0.5, y: 1, z: 0.5 };
+    const halfHeight = size.y || 1;
+    const radius = Math.max(size.x || 0.5, size.z || 0.5);
+    let colliderDesc = ColliderDesc7.capsule(halfHeight, radius);
     colliderDesc.setSensor(false);
-    colliderDesc.setTranslation(0, this.height + 0.5, 0);
+    colliderDesc.setTranslation(0, halfHeight + radius, 0);
     colliderDesc.activeCollisionTypes = ActiveCollisionTypes3.DEFAULT;
     return colliderDesc;
   }
-  collider(options) {
-    let colliderDesc = this.createColliderFromObjectModel(this.objectModel);
+  /**
+   * Create a collider based on model geometry (works with Mesh and SkinnedMesh).
+   */
+  createColliderFromModel(objectModel, options) {
+    if (!objectModel) return this.createCapsuleCollider(options);
+    let foundGeometry = null;
+    objectModel.traverse((child) => {
+      if (!foundGeometry && child.isMesh) {
+        foundGeometry = child.geometry;
+      }
+    });
+    if (!foundGeometry) return this.createCapsuleCollider(options);
+    const geometry = foundGeometry;
+    geometry.computeBoundingBox();
+    const box2 = geometry.boundingBox;
+    if (!box2) return this.createCapsuleCollider(options);
+    const height = box2.max.y - box2.min.y;
+    const width = box2.max.x - box2.min.x;
+    const depth = box2.max.z - box2.min.z;
+    let colliderDesc = ColliderDesc7.cuboid(width / 2, height / 2, depth / 2);
+    colliderDesc.setSensor(false);
+    const centerY = (box2.max.y + box2.min.y) / 2;
+    colliderDesc.setTranslation(0, centerY, 0);
+    colliderDesc.activeCollisionTypes = ActiveCollisionTypes3.DEFAULT;
     return colliderDesc;
   }
 };
@@ -2357,7 +2396,8 @@ var ZylemActor = class extends GameEntity {
   async data() {
     return {
       animations: this._animationDelegate?.animations,
-      objectModel: this._object
+      objectModel: this._object,
+      collisionShape: this.options.collisionShape
     };
   }
   async actorUpdate(params) {
@@ -2712,7 +2752,7 @@ async function text(...args) {
 }
 
 // src/lib/entities/rect.ts
-import { Color as Color9, Group as Group6, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector25, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial3, Mesh as Mesh4, PlaneGeometry as PlaneGeometry2, Vector3 as Vector39 } from "three";
+import { Color as Color9, Group as Group6, Sprite as ThreeSprite3, SpriteMaterial as SpriteMaterial3, CanvasTexture as CanvasTexture2, LinearFilter as LinearFilter2, Vector2 as Vector25, ClampToEdgeWrapping as ClampToEdgeWrapping2, ShaderMaterial as ShaderMaterial3, Mesh as Mesh5, PlaneGeometry as PlaneGeometry2, Vector3 as Vector39 } from "three";
 var rectDefaults = {
   position: void 0,
   width: 120,
@@ -2858,7 +2898,7 @@ var ZylemRect = class _ZylemRect extends GameEntity {
           if (mat.uniforms?.tDiffuse) mat.uniforms.tDiffuse.value = this._texture;
           if (mat.uniforms?.iResolution && this._canvas) mat.uniforms.iResolution.value.set(this._canvas.width, this._canvas.height, 1);
         }
-        this._mesh = new Mesh4(new PlaneGeometry2(1, 1), mat);
+        this._mesh = new Mesh5(new PlaneGeometry2(1, 1), mat);
         this.group?.add(this._mesh);
         this._sprite.visible = false;
       }

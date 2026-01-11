@@ -40,7 +40,8 @@ export const playgroundPlane: any = async (type: PlaygroundPlaneType, size: Vect
 		material: {
 			path: planeTypeToPath[type],
 			repeat: new Vector2(repeatX, repeatY)
-		}
+		},
+		randomizeHeight: true,
 	});
 }
 
@@ -76,7 +77,7 @@ const actorTypeToScale: Record<PlaygroundActorType, Vector3> = {
 };
 
 const actorTypeToCollision: Record<PlaygroundActorType, any> = {
-	player: { size: new Vector3(0.5, 0.5, 0.5), position: new Vector3(0, 0, 0), static: false },
+	player: { size: new Vector3(0.8, 0.8, 0.8), position: new Vector3(0, 0, 0), static: false },
 	mascot: { size: new Vector3(0.5, 0.5, 0.5), position: new Vector3(0, 0, 0), static: false }
 };
 
@@ -85,7 +86,7 @@ export const playgroundActor: any = async (type: PlaygroundActorType) => {
 		position: { x: 0, y: 10, z: 4 },
 		scale: actorTypeToScale[type],
 		models: [actorTypeToPath[type]],
-		animations: actorTypeToAnimations[type].map(animation => ({ key: animation, path: animationMap[type][animation] })),
+		animations: actorTypeToAnimations[type].map(animation => ({ key: animation, path: animationMap[type][animation]! })),
 		material: {
 			color: new Color(Color.NAMES.lightgreen),
 		},

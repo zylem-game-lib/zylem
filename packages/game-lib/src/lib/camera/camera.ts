@@ -18,7 +18,7 @@ export class CameraWrapper {
 	}
 }
 
-export function camera(options: CameraOptions): CameraWrapper {
+export function createCamera(options: CameraOptions): CameraWrapper {
 	const screenResolution = options.screenResolution || new Vector2(window.innerWidth, window.innerHeight);
 	let frustumSize = 10;
 	if (options.perspective === 'fixed-2d') {

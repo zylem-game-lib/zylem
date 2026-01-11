@@ -30,22 +30,47 @@ export class StageDebugDelegate {
 			maxRayDistance: options?.maxRayDistance ?? 5_000,
 			addEntityFactory: options?.addEntityFactory ?? null,
 		};
-		if (this.stage.scene) {
-			this.debugLines = new LineSegments(
-				new BufferGeometry(),
-				new LineBasicMaterial({ vertexColors: true })
-			);
-			this.stage.scene.scene.add(this.debugLines);
-			this.debugLines.visible = true;
-
-			this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
-		}
 		this.attachDomListeners();
 	}
 
+	private initDebugVisuals(): void {
+		if (this.debugLines || !this.stage.scene) return;
+
+		this.debugLines = new LineSegments(
+			new BufferGeometry(),
+			new LineBasicMaterial({ vertexColors: true })
+		);
+		this.stage.scene.scene.add(this.debugLines);
+		this.debugLines.visible = true;
+
+		this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
+	}
+
+	private disposeDebugVisuals(): void {
+		if (this.debugLines && this.stage.scene) {
+			this.stage.scene.scene.remove(this.debugLines);
+			this.debugLines.geometry.dispose();
+			(this.debugLines.material as LineBasicMaterial).dispose();
+			this.debugLines = null;
+		}
+		this.debugCursor?.dispose();
+		this.debugCursor = null;
+	}
+
 	update(): void {
-		if (!debugState.enabled) return;
+		if (!debugState.enabled) {
+			if (this.debugLines) {
+				this.disposeDebugVisuals();
+			}
+			return;
+		}
+
 		if (!this.stage.scene || !this.stage.world || !this.stage.cameraRef) return;
+
+		// Initialize visuals if not already created
+		if (!this.debugLines) {
+			this.initDebugVisuals();
+		}
 
 		const { world, cameraRef } = this.stage;
 
@@ -112,13 +137,7 @@ export class StageDebugDelegate {
 	dispose(): void {
 		this.disposeFns.forEach((fn) => fn());
 		this.disposeFns = [];
-		this.debugCursor?.dispose();
-		if (this.debugLines && this.stage.scene) {
-			this.stage.scene.scene.remove(this.debugLines);
-			this.debugLines.geometry.dispose();
-			(this.debugLines.material as LineBasicMaterial).dispose();
-			this.debugLines = null;
-		}
+		this.disposeDebugVisuals();
 	}
 
 	private handleActionOnHit(hoveredUuid: string | null, origin: Vector3, direction: Vector3, toi: number) {

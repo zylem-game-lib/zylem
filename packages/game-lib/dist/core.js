@@ -2021,7 +2021,7 @@ var init_builder = __esm({
 
 // src/lib/entities/actor.ts
 import { ActiveCollisionTypes as ActiveCollisionTypes2, ColliderDesc as ColliderDesc2 } from "@dimforge/rapier3d-compat";
-import { SkinnedMesh, Group as Group3, Vector3 as Vector33 } from "three";
+import { Group as Group3, Vector3 as Vector33 } from "three";
 var actorDefaults, ACTOR_TYPE, ZylemActor;
 var init_actor = __esm({
   "src/lib/entities/actor.ts"() {
@@ -2040,7 +2040,8 @@ var init_actor = __esm({
         shader: "standard"
       },
       animations: [],
-      models: []
+      models: [],
+      collisionShape: "capsule"
     };
     ACTOR_TYPE = /* @__PURE__ */ Symbol("Actor");
     ZylemActor = class extends GameEntity {
@@ -2071,7 +2072,8 @@ var init_actor = __esm({
       async data() {
         return {
           animations: this._animationDelegate?.animations,
-          objectModel: this._object
+          objectModel: this._object,
+          collisionShape: this.options.collisionShape
         };
       }
       async actorUpdate(params) {
@@ -2555,7 +2557,7 @@ import {
   Group as Group4,
   LineBasicMaterial,
   LineSegments,
-  Mesh as Mesh3,
+  Mesh as Mesh4,
   MeshBasicMaterial,
   Vector3 as Vector37
 } from "three";
@@ -2575,7 +2577,7 @@ var init_debug_entity_cursor = __esm({
       constructor(scene) {
         this.scene = scene;
         const initialGeometry = new BoxGeometry(1, 1, 1);
-        this.fillMesh = new Mesh3(
+        this.fillMesh = new Mesh4(
           initialGeometry,
           new MeshBasicMaterial({
             color: this.currentColor,
@@ -2669,20 +2671,39 @@ var init_stage_debug_delegate = __esm({
           maxRayDistance: options?.maxRayDistance ?? 5e3,
           addEntityFactory: options?.addEntityFactory ?? null
         };
-        if (this.stage.scene) {
-          this.debugLines = new LineSegments2(
-            new BufferGeometry3(),
-            new LineBasicMaterial2({ vertexColors: true })
-          );
-          this.stage.scene.scene.add(this.debugLines);
-          this.debugLines.visible = true;
-          this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
-        }
         this.attachDomListeners();
       }
+      initDebugVisuals() {
+        if (this.debugLines || !this.stage.scene) return;
+        this.debugLines = new LineSegments2(
+          new BufferGeometry3(),
+          new LineBasicMaterial2({ vertexColors: true })
+        );
+        this.stage.scene.scene.add(this.debugLines);
+        this.debugLines.visible = true;
+        this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
+      }
+      disposeDebugVisuals() {
+        if (this.debugLines && this.stage.scene) {
+          this.stage.scene.scene.remove(this.debugLines);
+          this.debugLines.geometry.dispose();
+          this.debugLines.material.dispose();
+          this.debugLines = null;
+        }
+        this.debugCursor?.dispose();
+        this.debugCursor = null;
+      }
       update() {
-        if (!debugState.enabled) return;
+        if (!debugState.enabled) {
+          if (this.debugLines) {
+            this.disposeDebugVisuals();
+          }
+          return;
+        }
         if (!this.stage.scene || !this.stage.world || !this.stage.cameraRef) return;
+        if (!this.debugLines) {
+          this.initDebugVisuals();
+        }
         const { world, cameraRef } = this.stage;
         if (this.debugLines) {
           const { vertices, colors } = world.world.debugRender();
@@ -2740,13 +2761,7 @@ var init_stage_debug_delegate = __esm({
       dispose() {
         this.disposeFns.forEach((fn) => fn());
         this.disposeFns = [];
-        this.debugCursor?.dispose();
-        if (this.debugLines && this.stage.scene) {
-          this.stage.scene.scene.remove(this.debugLines);
-          this.debugLines.geometry.dispose();
-          this.debugLines.material.dispose();
-          this.debugLines = null;
-        }
+        this.disposeDebugVisuals();
       }
       handleActionOnHit(hoveredUuid, origin, direction, toi) {
         const tool = getDebugTool();
@@ -3050,6 +3065,8 @@ var init_camera_debug_delegate = __esm({
     CameraOrbitController = class {
       camera;
       domElement;
+      cameraRig = null;
+      sceneRef = null;
       orbitControls = null;
       orbitTarget = null;
       orbitTargetWorldPos = new Vector310();
@@ -3060,14 +3077,22 @@ var init_camera_debug_delegate = __esm({
       savedCameraPosition = null;
       savedCameraQuaternion = null;
       savedCameraZoom = null;
+      savedCameraLocalPosition = null;
       // Saved debug camera state for restoration when re-entering debug mode
       savedDebugCameraPosition = null;
       savedDebugCameraQuaternion = null;
       savedDebugCameraZoom = null;
       savedDebugOrbitTarget = null;
-      constructor(camera, domElement) {
+      constructor(camera, domElement, cameraRig) {
         this.camera = camera;
         this.domElement = domElement;
+        this.cameraRig = cameraRig ?? null;
+      }
+      /**
+       * Set the scene reference for adding/removing camera when detaching from rig.
+       */
+      setScene(scene) {
+        this.sceneRef = scene;
       }
       /**
        * Check if debug mode is currently active (orbit controls enabled).
@@ -3127,6 +3152,7 @@ var init_camera_debug_delegate = __esm({
         };
         if (state2.enabled && !wasEnabled) {
           this.saveCameraState();
+          this.detachCameraFromRig();
           this.enableOrbitControls();
           this.restoreDebugCameraState();
           this.updateOrbitTargetFromSelection(state2.selected);
@@ -3134,6 +3160,7 @@ var init_camera_debug_delegate = __esm({
           this.saveDebugCameraState();
           this.orbitTarget = null;
           this.disableOrbitControls();
+          this.reattachCameraToRig();
           this.restoreCameraState();
         } else if (state2.enabled) {
           this.updateOrbitTargetFromSelection(state2.selected);
@@ -3250,6 +3277,40 @@ var init_camera_debug_delegate = __esm({
           this.orbitControls.target.copy(this.savedDebugOrbitTarget);
         }
       }
+      /**
+       * Detach camera from its rig to allow free orbit movement in debug mode.
+       * Preserves the camera's world position.
+       */
+      detachCameraFromRig() {
+        if (!this.cameraRig || this.camera.parent !== this.cameraRig) {
+          return;
+        }
+        this.savedCameraLocalPosition = this.camera.position.clone();
+        const worldPos = new Vector310();
+        this.camera.getWorldPosition(worldPos);
+        this.cameraRig.remove(this.camera);
+        if (this.sceneRef) {
+          this.sceneRef.add(this.camera);
+        }
+        this.camera.position.copy(worldPos);
+      }
+      /**
+       * Reattach camera to its rig when exiting debug mode.
+       * Restores the camera's local position relative to the rig.
+       */
+      reattachCameraToRig() {
+        if (!this.cameraRig || this.camera.parent === this.cameraRig) {
+          return;
+        }
+        if (this.sceneRef && this.camera.parent === this.sceneRef) {
+          this.sceneRef.remove(this.camera);
+        }
+        this.cameraRig.add(this.camera);
+        if (this.savedCameraLocalPosition) {
+          this.camera.position.copy(this.savedCameraLocalPosition);
+          this.savedCameraLocalPosition = null;
+        }
+      }
     };
   }
 });
@@ -3300,7 +3361,7 @@ var init_zylem_camera = __esm({
           this.camera.lookAt(new Vector311(0, 0, 0));
         }
         this.initializePerspectiveController();
-        this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement);
+        this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement, this.cameraRig);
       }
       /**
        * Setup the camera with a scene
@@ -3320,6 +3381,7 @@ var init_zylem_camera = __esm({
             camera: this
           });
         }
+        this.orbitController?.setScene(scene);
         this.renderer.setAnimationLoop((delta) => {
           this.update(delta || 0);
         });

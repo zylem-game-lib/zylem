@@ -62,7 +62,7 @@ function getGlobals() {
 
 // src/lib/entities/actor.ts
 import { ActiveCollisionTypes, ColliderDesc } from "@dimforge/rapier3d-compat";
-import { SkinnedMesh, Group as Group2, Vector3 } from "three";
+import { Group as Group2, Vector3 } from "three";
 
 // src/lib/entities/entity.ts
 import { ShaderMaterial } from "three";
@@ -1306,7 +1306,8 @@ var actorDefaults = {
     shader: "standard"
   },
   animations: [],
-  models: []
+  models: [],
+  collisionShape: "capsule"
 };
 var ACTOR_TYPE = /* @__PURE__ */ Symbol("Actor");
 var ZylemActor = class extends GameEntity {
@@ -1337,7 +1338,8 @@ var ZylemActor = class extends GameEntity {
   async data() {
     return {
       animations: this._animationDelegate?.animations,
-      objectModel: this._object
+      objectModel: this._object,
+      collisionShape: this.options.collisionShape
     };
   }
   async actorUpdate(params) {
@@ -1821,7 +1823,7 @@ import {
   Group as Group3,
   LineBasicMaterial,
   LineSegments,
-  Mesh as Mesh2,
+  Mesh as Mesh3,
   MeshBasicMaterial,
   Vector3 as Vector35
 } from "three";
@@ -1837,7 +1839,7 @@ var DebugEntityCursor = class {
   constructor(scene) {
     this.scene = scene;
     const initialGeometry = new BoxGeometry(1, 1, 1);
-    this.fillMesh = new Mesh2(
+    this.fillMesh = new Mesh3(
       initialGeometry,
       new MeshBasicMaterial({
         color: this.currentColor,
@@ -1921,20 +1923,39 @@ var StageDebugDelegate = class {
       maxRayDistance: options?.maxRayDistance ?? 5e3,
       addEntityFactory: options?.addEntityFactory ?? null
     };
-    if (this.stage.scene) {
-      this.debugLines = new LineSegments2(
-        new BufferGeometry2(),
-        new LineBasicMaterial2({ vertexColors: true })
-      );
-      this.stage.scene.scene.add(this.debugLines);
-      this.debugLines.visible = true;
-      this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
-    }
     this.attachDomListeners();
   }
+  initDebugVisuals() {
+    if (this.debugLines || !this.stage.scene) return;
+    this.debugLines = new LineSegments2(
+      new BufferGeometry2(),
+      new LineBasicMaterial2({ vertexColors: true })
+    );
+    this.stage.scene.scene.add(this.debugLines);
+    this.debugLines.visible = true;
+    this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
+  }
+  disposeDebugVisuals() {
+    if (this.debugLines && this.stage.scene) {
+      this.stage.scene.scene.remove(this.debugLines);
+      this.debugLines.geometry.dispose();
+      this.debugLines.material.dispose();
+      this.debugLines = null;
+    }
+    this.debugCursor?.dispose();
+    this.debugCursor = null;
+  }
   update() {
-    if (!debugState.enabled) return;
+    if (!debugState.enabled) {
+      if (this.debugLines) {
+        this.disposeDebugVisuals();
+      }
+      return;
+    }
     if (!this.stage.scene || !this.stage.world || !this.stage.cameraRef) return;
+    if (!this.debugLines) {
+      this.initDebugVisuals();
+    }
     const { world, cameraRef } = this.stage;
     if (this.debugLines) {
       const { vertices, colors } = world.world.debugRender();
@@ -1992,13 +2013,7 @@ var StageDebugDelegate = class {
   dispose() {
     this.disposeFns.forEach((fn) => fn());
     this.disposeFns = [];
-    this.debugCursor?.dispose();
-    if (this.debugLines && this.stage.scene) {
-      this.stage.scene.scene.remove(this.debugLines);
-      this.debugLines.geometry.dispose();
-      this.debugLines.material.dispose();
-      this.debugLines = null;
-    }
+    this.disposeDebugVisuals();
   }
   handleActionOnHit(hoveredUuid, origin, direction, toi) {
     const tool = getDebugTool();
@@ -2268,6 +2283,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 var CameraOrbitController = class {
   camera;
   domElement;
+  cameraRig = null;
+  sceneRef = null;
   orbitControls = null;
   orbitTarget = null;
   orbitTargetWorldPos = new Vector38();
@@ -2278,14 +2295,22 @@ var CameraOrbitController = class {
   savedCameraPosition = null;
   savedCameraQuaternion = null;
   savedCameraZoom = null;
+  savedCameraLocalPosition = null;
   // Saved debug camera state for restoration when re-entering debug mode
   savedDebugCameraPosition = null;
   savedDebugCameraQuaternion = null;
   savedDebugCameraZoom = null;
   savedDebugOrbitTarget = null;
-  constructor(camera, domElement) {
+  constructor(camera, domElement, cameraRig) {
     this.camera = camera;
     this.domElement = domElement;
+    this.cameraRig = cameraRig ?? null;
+  }
+  /**
+   * Set the scene reference for adding/removing camera when detaching from rig.
+   */
+  setScene(scene) {
+    this.sceneRef = scene;
   }
   /**
    * Check if debug mode is currently active (orbit controls enabled).
@@ -2345,6 +2370,7 @@ var CameraOrbitController = class {
     };
     if (state2.enabled && !wasEnabled) {
       this.saveCameraState();
+      this.detachCameraFromRig();
       this.enableOrbitControls();
       this.restoreDebugCameraState();
       this.updateOrbitTargetFromSelection(state2.selected);
@@ -2352,6 +2378,7 @@ var CameraOrbitController = class {
       this.saveDebugCameraState();
       this.orbitTarget = null;
       this.disableOrbitControls();
+      this.reattachCameraToRig();
       this.restoreCameraState();
     } else if (state2.enabled) {
       this.updateOrbitTargetFromSelection(state2.selected);
@@ -2468,6 +2495,40 @@ var CameraOrbitController = class {
       this.orbitControls.target.copy(this.savedDebugOrbitTarget);
     }
   }
+  /**
+   * Detach camera from its rig to allow free orbit movement in debug mode.
+   * Preserves the camera's world position.
+   */
+  detachCameraFromRig() {
+    if (!this.cameraRig || this.camera.parent !== this.cameraRig) {
+      return;
+    }
+    this.savedCameraLocalPosition = this.camera.position.clone();
+    const worldPos = new Vector38();
+    this.camera.getWorldPosition(worldPos);
+    this.cameraRig.remove(this.camera);
+    if (this.sceneRef) {
+      this.sceneRef.add(this.camera);
+    }
+    this.camera.position.copy(worldPos);
+  }
+  /**
+   * Reattach camera to its rig when exiting debug mode.
+   * Restores the camera's local position relative to the rig.
+   */
+  reattachCameraToRig() {
+    if (!this.cameraRig || this.camera.parent === this.cameraRig) {
+      return;
+    }
+    if (this.sceneRef && this.camera.parent === this.sceneRef) {
+      this.sceneRef.remove(this.camera);
+    }
+    this.cameraRig.add(this.camera);
+    if (this.savedCameraLocalPosition) {
+      this.camera.position.copy(this.savedCameraLocalPosition);
+      this.savedCameraLocalPosition = null;
+    }
+  }
 };
 
 // src/lib/camera/zylem-camera.ts
@@ -2505,7 +2566,7 @@ var ZylemCamera = class {
       this.camera.lookAt(new Vector39(0, 0, 0));
     }
     this.initializePerspectiveController();
-    this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement);
+    this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement, this.cameraRig);
   }
   /**
    * Setup the camera with a scene
@@ -2525,6 +2586,7 @@ var ZylemCamera = class {
         camera: this
       });
     }
+    this.orbitController?.setScene(scene);
     this.renderer.setAnimationLoop((delta) => {
       this.update(delta || 0);
     });
