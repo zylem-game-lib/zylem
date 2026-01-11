@@ -2133,8 +2133,24 @@ var init_actor = __esm({
       }
       /**
        * Create a collider based on model geometry (works with Mesh and SkinnedMesh).
+       * If collision.size and collision.position are provided, use those instead of computing from geometry.
        */
       createColliderFromModel(objectModel, options) {
+        const collisionSize = options.collision?.size;
+        const collisionPosition = options.collision?.position;
+        if (collisionSize) {
+          const halfWidth = collisionSize.x / 2;
+          const halfHeight = collisionSize.y / 2;
+          const halfDepth = collisionSize.z / 2;
+          let colliderDesc2 = ColliderDesc2.cuboid(halfWidth, halfHeight, halfDepth);
+          colliderDesc2.setSensor(false);
+          const posX = collisionPosition ? collisionPosition.x : 0;
+          const posY = collisionPosition ? collisionPosition.y : halfHeight;
+          const posZ = collisionPosition ? collisionPosition.z : 0;
+          colliderDesc2.setTranslation(posX, posY, posZ);
+          colliderDesc2.activeCollisionTypes = ActiveCollisionTypes2.DEFAULT;
+          return colliderDesc2;
+        }
         if (!objectModel) return this.createCapsuleCollider(options);
         let foundGeometry = null;
         objectModel.traverse((child) => {

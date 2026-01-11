@@ -37,7 +37,7 @@ const purpleBedEntity = await actor({
 	models: [purpleBed],
 	collision: {
 		static: true,
-		size: new Vector3(6, 1, 6),
+		size: new Vector3(3, 0.5, 3),
 		position: new Vector3(0, 0, 0),
 	},
 	collisionShape: 'model',
@@ -50,7 +50,7 @@ const cozyBedEntity = await actor({
 	scale: new Vector3(1, 1, 1),
 	models: [cozyBed],
 	collision: {
-		size: new Vector3(1, 1, 1),
+		size: new Vector3(1, 0.25, 1),
 		position: new Vector3(0, 0, 0),
 	},
 	collisionShape: 'model',
@@ -95,7 +95,7 @@ const redBoneEntity = await actor({
 	scale: new Vector3(0.4, 0.4, 0.4),
 	models: [redBone],
 	collisionShape: 'model',
-	position: { x: 4, y: 1, z: -2.5 },
+	position: { x: 1, y: 1, z: -1 },
 });
 
 const spikeyBallEntity = await actor({
