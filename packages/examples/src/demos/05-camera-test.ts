@@ -1,5 +1,5 @@
 import { Color, Vector3 } from 'three';
-import { box, Perspectives, createGame, createStage, camera } from '@zylem/game-lib';
+import { box, Perspectives, createGame, createStage, createCamera } from '@zylem/game-lib';
 
 const boxes = [
 	await box({
@@ -18,7 +18,7 @@ const boxes = [
 
 const myStage = createStage(
 	{ backgroundColor: new Color(Color.NAMES.gainsboro) },
-	camera({
+	createCamera({
 		position: new Vector3(0, 5, 10),
 		target: new Vector3(0, 0, 0),
 		zoom: 1,

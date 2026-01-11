@@ -1,5 +1,5 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { camera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, createStage, text, setGlobal, TEXT_TYPE } from '@zylem/game-lib';
+import { createCamera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, createStage, text, setGlobal, TEXT_TYPE } from '@zylem/game-lib';
 import { boundary2d } from '@zylem/game-lib';
 import { movementSequence2D } from '@zylem/game-lib';
 import { makeTransformable } from '@zylem/game-lib';
@@ -90,7 +90,7 @@ for (let i = 0; i < 10; i++) {
 	}
 }
 
-const camera1 = camera({
+const camera = createCamera({
 	position: new Vector3(0, 0, 10),
 	target: new Vector3(0, 0, 0),
 	zoom: 20,
@@ -99,7 +99,7 @@ const camera1 = camera({
 
 const stage1 = createStage({
 	backgroundColor: new Color(Color.NAMES.black),
-}, camera1, ...enemies, player);
+}, camera, ...enemies, player);
 
 const bulletSpawner = entitySpawner(createBullet);
 

@@ -4,7 +4,7 @@
 // TODO: need to create a material map for reused materials
 
 import { Color, Vector2, Vector3 } from 'three';
-import { createGame, createStage, box, sphere, camera } from '@zylem/game-lib';
+import { createGame, createStage, box, sphere, createCamera } from '@zylem/game-lib';
 import { plane } from '@zylem/game-lib';
 
 import rainManPath from '@zylem/assets/2d/rain-man.png';
@@ -86,7 +86,7 @@ const example = createGame(
 	{ id: 'stress-test', debug: true },
 	createStage(
 		{ gravity: new Vector3(0, -9.81, 0), backgroundImage: skybox },
-		camera({
+		createCamera({
 			position: new Vector3(0, 10, 25),
 		})
 	),

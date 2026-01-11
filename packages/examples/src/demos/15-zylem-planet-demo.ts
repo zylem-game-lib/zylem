@@ -1,5 +1,5 @@
 import { Color, Vector3 } from 'three';
-import { createGame, createStage, sphere, camera, Perspectives } from '@zylem/game-lib';
+import { createGame, createStage, sphere, createCamera, Perspectives } from '@zylem/game-lib';
 
 // TODO: custom shader and texture for planet
 const planet = await sphere({
@@ -10,7 +10,7 @@ const planet = await sphere({
 // TODO: ring entity for planet
 
 // TODO: more options for camera
-const camera1 = await camera({
+const camera = createCamera({
 	perspective: Perspectives.ThirdPerson,
 	position: new Vector3(0, 0, -60),
 	target: new Vector3(0, 0, 0),
@@ -19,7 +19,7 @@ const camera1 = await camera({
 // TODO: particle system for stage
 const stage1 = createStage({
 	backgroundColor: new Color(Color.NAMES.black),
-}, camera1);
+}, camera);
 
 stage1.add(planet);
 

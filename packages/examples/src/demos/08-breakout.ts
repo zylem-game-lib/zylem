@@ -1,5 +1,5 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { createGame, box, sphere, createStage, camera, zone, text, setGlobal, onGlobalChange, onGlobalChanges } from '@zylem/game-lib';
+import { createGame, box, sphere, createStage, createCamera, zone, text, setGlobal, onGlobalChange, onGlobalChanges } from '@zylem/game-lib';
 import { makeMoveable } from '@zylem/game-lib';
 import { ricochet2DCollision } from '@zylem/game-lib';
 import { ricochet2DInBounds } from '@zylem/game-lib';
@@ -101,7 +101,7 @@ for (let r = 0; r < brickRows; r++) {
 	}
 }
 
-const camera1 = camera({
+const camera1 = createCamera({
 	position: new Vector3(0, 0, 0),
 	perspective: 'fixed-2d',
 	zoom: 24,

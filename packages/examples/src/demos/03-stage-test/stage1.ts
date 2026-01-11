@@ -1,5 +1,5 @@
 import { Color, Vector3 } from "three";
-import { camera, createStage, sphere } from "@zylem/game-lib";
+import { createCamera, createStage, sphere } from "@zylem/game-lib";
 
 const planet = await sphere({
 	radius: 10,
@@ -8,6 +8,6 @@ const planet = await sphere({
 
 export const stage1 = createStage({
 	backgroundColor: new Color(Color.NAMES.skyblue),
-}, camera({
+}, createCamera({
 	position: new Vector3(0, 10, 25),
 }), planet);

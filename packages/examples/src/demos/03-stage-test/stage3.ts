@@ -1,4 +1,4 @@
-import { createStage, box, plane, sphere, sprite, zone, camera } from '@zylem/game-lib';
+import { createStage, box, plane, sphere, sprite, zone, createCamera } from '@zylem/game-lib';
 import { Vector3, Vector2, Color } from 'three';
 import { playgroundActor } from '../../utils';
 
@@ -64,6 +64,6 @@ const myZone = await zone({
 export const stage3 = createStage({
 	backgroundColor: new Color(Color.NAMES.green),
 	gravity: new Vector3(0, -9.82, 0),
-}, camera({
+}, createCamera({
 	position: new Vector3(0, 10, 30),
 }), myBox, myPlane, mySphere, mySprite, myActor, myZone);

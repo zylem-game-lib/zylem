@@ -1,6 +1,6 @@
 import { Color, Vector2, Vector3 } from 'three';
 import {
-	camera,
+	createCamera,
 	destroy,
 	entitySpawner,
 	createGame,
@@ -203,7 +203,7 @@ async function spawnAsteroid(x: number, y: number, size: AsteroidSize, angle: nu
 const bulletSpawner = entitySpawner(createBullet);
 
 // Camera setup
-const camera1 = camera({
+const camera1 = createCamera({
 	position: new Vector3(0, 0, 10),
 	target: new Vector3(0, 0, 0),
 	zoom: 22,

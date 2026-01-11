@@ -1,6 +1,6 @@
 import { Color, Vector3, Vector2 } from 'three';
 import { 
-    createGame, box, sphere, createStage, camera, zone, text,
+    createGame, box, sphere, createStage, createCamera, zone, text,
     makeMoveable, ricochet2DInBounds, ricochetSound, pingPongBeep, boundary2d, ricochet2DCollision,
     getGlobal, setGlobal, onGlobalChange, onGlobalChanges
 } from '@zylem/game-lib';
@@ -85,7 +85,7 @@ p2Goal.onEnter(({ visitor }) => {
 	}
 });
 
-const camera1 = camera({
+const camera = createCamera({
 	position: new Vector3(0, 0, 0),
 	perspective: 'fixed-2d',
 	zoom: 12,
@@ -112,7 +112,7 @@ const winnerText = await text({
 	screenPosition: new Vector2(0.5, 0.5),
 });
 
-const stage1 = createStage({}, camera1);
+const stage1 = createStage({}, camera);
 const game = createGame({
 	id: 'pong',
 	debug: true,
