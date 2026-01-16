@@ -138,8 +138,10 @@ const player = createActor({
 	position: { x: 0, y: 9, z: 0 },
 });
 
-player.playAnimation({
-	key: 'samba',
+player.onSetup(({ me }) => {
+	me.playAnimation({
+		key: 'samba',
+	});
 });
 
 const game = createGame(
