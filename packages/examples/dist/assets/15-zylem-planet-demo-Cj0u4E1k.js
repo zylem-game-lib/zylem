@@ -1,0 +1,1 @@
+import{c as t,e as o,g as s,C as e,P as c,i as a,a as n}from"./index-Cb3xPl2v.js";const i=n({radius:10,material:{color:new e(e.NAMES.blue)}}),l=s({perspective:c.ThirdPerson,position:new a(0,0,-60),target:new a(0,0,0)}),r=o({backgroundColor:new e(e.NAMES.black)},l);r.add(i);const m=t({id:"zylem-planet-demo",debug:!0},r);export{m as default};

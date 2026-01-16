@@ -324,7 +324,7 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
 
 type RectOptions = BaseNode | Partial<ZylemRectOptions>;
 
-export async function rect(...args: Array<RectOptions>): Promise<ZylemRect> {
+export function createRect(...args: Array<RectOptions>): ZylemRect {
 	return createEntity<ZylemRect, ZylemRectOptions>({
 		args,
 		defaultConfig: { ...rectDefaults },

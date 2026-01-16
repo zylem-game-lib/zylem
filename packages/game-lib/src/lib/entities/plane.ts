@@ -141,7 +141,7 @@ export class ZylemPlane extends GameEntity<ZylemPlaneOptions> {
 
 type PlaneOptions = BaseNode | Partial<ZylemPlaneOptions>;
 
-export async function plane(...args: Array<PlaneOptions>): Promise<ZylemPlane> {
+export function createPlane(...args: Array<PlaneOptions>): ZylemPlane {
 	return createEntity<ZylemPlane, ZylemPlaneOptions>({
 		args,
 		defaultConfig: planeDefaults,

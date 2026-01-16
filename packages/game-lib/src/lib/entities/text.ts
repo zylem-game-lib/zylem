@@ -263,7 +263,7 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 	/**
 	 * Dispose of Three.js resources when the entity is destroyed.
 	 */
-	private async textDestroy(): Promise<void> {
+	private textDestroy(): void {
 		// Dispose texture
 		this._texture?.dispose();
 		
@@ -291,7 +291,7 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 
 type TextOptions = BaseNode | Partial<ZylemTextOptions>;
 
-export async function text(...args: Array<TextOptions>): Promise<ZylemText> {
+export function createText(...args: Array<TextOptions>): ZylemText {
 	return createEntity<ZylemText, ZylemTextOptions>({
 		args,
 		defaultConfig: { ...textDefaults },

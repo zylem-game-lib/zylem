@@ -1,7 +1,7 @@
 /// <reference types="@zylem/assets" />
 // import type { CollisionOptions } from "@zylem/game-lib";
 import type { ZylemBox } from "@zylem/game-lib";
-import { actor, box, plane } from "@zylem/game-lib";
+import { createActor, createBox, createPlane } from "@zylem/game-lib";
 import { Color, Vector2, Vector3 } from "three";
 
 import grass from '@zylem/assets/3d/textures/grass.jpg';
@@ -30,11 +30,11 @@ const planeTypeToPath: Record<PlaygroundPlaneType, string> = {
 	steel: steel
 };
 
-export const playgroundPlane: any = async (type: PlaygroundPlaneType, size: Vector2 = new Vector2(100, 100)) => {
+export const playgroundPlane: any = (type: PlaygroundPlaneType, size: Vector2 = new Vector2(100, 100)) => {
 	const repeatX = size.x / 40;
 	const repeatY = size.y / 40;
 
-	return await plane({
+	return createPlane({
 		tile: size,
 		collision: { static: true },
 		material: {
@@ -81,8 +81,8 @@ const actorTypeToCollision: Record<PlaygroundActorType, any> = {
 	mascot: { size: new Vector3(0.5, 0.5, 0.5), position: new Vector3(0, 0, 0), static: false }
 };
 
-export const playgroundActor: any = async (type: PlaygroundActorType) => {
-	return await actor({
+export const playgroundActor: any = (type: PlaygroundActorType) => {
+	return createActor({
 		position: { x: 0, y: 10, z: 4 },
 		scale: actorTypeToScale[type],
 		models: [actorTypeToPath[type]],
@@ -94,11 +94,11 @@ export const playgroundActor: any = async (type: PlaygroundActorType) => {
 	});
 }
 
-export const playgroundPlatforms = async () => {
+export const playgroundPlatforms = () => {
 	const boxes: ZylemBox[] = [];
 
 	// Create a starting platform
-	const startPlatform = await box({
+	const startPlatform = createBox({
 		position: { x: 0, y: 1, z: 0 },
 		size: { x: 6, y: 0.5, z: 4 },
 		collision: { static: true },
@@ -131,7 +131,7 @@ export const playgroundPlatforms = async () => {
 
 	const jumpPlatforms: ZylemBox[] = [];
 	for (const config of platformConfigs) {
-		jumpPlatforms.push(await box({
+		jumpPlatforms.push(createBox({
 			position: { x: config.x, y: config.y, z: config.z },
 			size: { x: config.width, y: 0.5, z: config.depth },
 			collision: { static: true },
@@ -166,7 +166,7 @@ export const playgroundPlatforms = async () => {
 			const midX = (x + nextX) / 2;
 			const midZ = (z + nextZ) / 2;
 
-			loopPlatforms.push(await box({
+			loopPlatforms.push(createBox({
 				position: { x: midX, y: loopHeight, z: midZ - 6 },
 				size: { x: 2, y: 0.5, z: 2 },
 				collision: { static: true },
@@ -176,7 +176,7 @@ export const playgroundPlatforms = async () => {
 			}));
 		}
 
-		loopPlatforms.push(await box({
+		loopPlatforms.push(createBox({
 			position: { x: x, y: loopHeight, z: z - 6 },
 			size: { x: width, y: 0.5, z: depth },
 			collision: { static: true },

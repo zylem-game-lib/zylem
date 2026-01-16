@@ -20,14 +20,14 @@ export { Perspectives } from '../lib/camera/perspective';
 export type { Vect3 } from '../lib/core/utility/vector';
 
 // Entities
-export { box } from '../lib/entities/box';
-export { sphere } from '../lib/entities/sphere';
-export { sprite } from '../lib/entities/sprite';
-export { plane } from '../lib/entities/plane';
-export { zone } from '../lib/entities/zone';
-export { actor } from '../lib/entities/actor';
-export { text } from '../lib/entities/text';
-export { rect } from '../lib/entities/rect';
+export { createBox } from '../lib/entities/box';
+export { createSphere } from '../lib/entities/sphere';
+export { createSprite } from '../lib/entities/sprite';
+export { createPlane } from '../lib/entities/plane';
+export { createZone } from '../lib/entities/zone';
+export { createActor } from '../lib/entities/actor';
+export { createText } from '../lib/entities/text';
+export { createRect } from '../lib/entities/rect';
 export { ZylemBox } from '../lib/entities/box';
 
 // Behaviors

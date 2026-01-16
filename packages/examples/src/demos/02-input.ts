@@ -1,5 +1,5 @@
 import { Color, Vector2 } from 'three';
-import { createGame, createStage, text } from '@zylem/game-lib';
+import { createGame, createStage, createText } from '@zylem/game-lib';
 
 const stage1 = createStage({
 	inputs: {
@@ -9,7 +9,7 @@ const stage1 = createStage({
 	backgroundColor: new Color(Color.NAMES.mediumseagreen)
 });
 
-const inputText = await text({
+const inputText = createText({
 	name: 'inputText',
 	text: 'Use a gamepad or keyboard to control the game',
 	fontSize: 36,

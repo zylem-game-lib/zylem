@@ -1,7 +1,7 @@
 import { Color, Vector3 } from "three";
-import { createCamera, createStage, box } from "@zylem/game-lib";
+import { createCamera, createStage, createBox } from "@zylem/game-lib";
 
-const box1 = await box({
+const box1 = createBox({
 	size: new Vector3(10, 10, 10),
 	material: { color: new Color(Color.NAMES.red) },
 });

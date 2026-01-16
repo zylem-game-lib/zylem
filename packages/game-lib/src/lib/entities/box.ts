@@ -70,7 +70,7 @@ export class ZylemBox extends GameEntity<ZylemBoxOptions> {
 
 type BoxOptions = BaseNode | ZylemBoxOptions;
 
-export async function box(...args: Array<BoxOptions>): Promise<ZylemBox> {
+export function createBox(...args: Array<BoxOptions>): ZylemBox {
 	return createEntity<ZylemBox, ZylemBoxOptions>({
 		args,
 		defaultConfig: boxDefaults,

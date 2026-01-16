@@ -723,12 +723,12 @@ var init_loader = __esm({
       constructor(entity) {
         this.entityReference = entity;
       }
-      async load() {
+      load() {
         if (this.entityReference.load) {
-          await this.entityReference.load();
+          this.entityReference.load();
         }
       }
-      async data() {
+      data() {
         if (this.entityReference.data) {
           return this.entityReference.data();
         }
@@ -739,7 +739,7 @@ var init_loader = __esm({
 });
 
 // src/lib/entities/create.ts
-async function createEntity(params) {
+function createEntity(params) {
   const {
     args,
     defaultConfig,
@@ -767,8 +767,8 @@ async function createEntity(params) {
     try {
       if (isLoadable(entity)) {
         const loader = new EntityLoader(entity);
-        await loader.load();
-        entityData = await loader.data();
+        loader.load();
+        entityData = loader.data();
       }
     } catch (error) {
       console.error("Error creating entity with loader:", error);
@@ -780,13 +780,13 @@ async function createEntity(params) {
       CollisionBuilderClass ? new CollisionBuilderClass(entityData) : null
     );
     if (arg.material) {
-      await builder.withMaterial(arg.material, entityType);
+      builder.withMaterial(arg.material, entityType);
     }
   }
   if (!builder) {
     throw new Error(`missing options for ${String(entityType)}, builder is not initialized.`);
   }
-  return await builder.build();
+  return builder.build();
 }
 var init_create = __esm({
   "src/lib/entities/create.ts"() {
@@ -1853,11 +1853,11 @@ var init_material = __esm({
           );
         }
       }
-      async build(options, entityType) {
+      build(options, entityType) {
         const { path, repeat, color, shader } = options;
         if (shader) this.withShader(shader);
         if (color) this.withColor(color);
-        await this.setTexture(path ?? null, repeat);
+        this.setTexture(path ?? null, repeat);
         if (this.materials.length === 0) {
           this.setColor(new Color2("#ffffff"));
         }
@@ -1871,20 +1871,27 @@ var init_material = __esm({
         this.setShader(shaderType);
         return this;
       }
-      async setTexture(texturePath = null, repeat = new Vector22(1, 1)) {
+      /**
+       * Set texture - loads in background (deferred).
+       * Material is created immediately with null map, texture applies when loaded.
+       */
+      setTexture(texturePath = null, repeat = new Vector22(1, 1)) {
         if (!texturePath) {
           return;
         }
-        const texture = await assetManager.loadTexture(texturePath, {
-          clone: true,
-          repeat
-        });
-        texture.wrapS = RepeatWrapping2;
-        texture.wrapT = RepeatWrapping2;
         const material = new MeshPhongMaterial({
-          map: texture
+          map: null
         });
         this.materials.push(material);
+        assetManager.loadTexture(texturePath, {
+          clone: true,
+          repeat
+        }).then((texture) => {
+          texture.wrapS = RepeatWrapping2;
+          texture.wrapT = RepeatWrapping2;
+          material.map = texture;
+          material.needsUpdate = true;
+        });
       }
       setColor(color) {
         const material = new MeshStandardMaterial({
@@ -1947,9 +1954,9 @@ var init_builder = __esm({
         this.options.position = setupPosition;
         return this;
       }
-      async withMaterial(options, entityType) {
+      withMaterial(options, entityType) {
         if (this.materialBuilder) {
-          await this.materialBuilder.build(options, entityType);
+          this.materialBuilder.build(options, entityType);
         }
         return this;
       }
@@ -1964,7 +1971,7 @@ var init_builder = __esm({
           child.receiveShadow = true;
         });
       }
-      async build() {
+      build() {
         const entity = this.entity;
         if (this.materialBuilder) {
           entity.materials = this.materialBuilder.materials;
@@ -2021,7 +2028,7 @@ var init_builder = __esm({
 
 // src/lib/entities/actor.ts
 import { ActiveCollisionTypes as ActiveCollisionTypes2, ColliderDesc as ColliderDesc2 } from "@dimforge/rapier3d-compat";
-import { Group as Group3, Vector3 as Vector33 } from "three";
+import { MeshStandardMaterial as MeshStandardMaterial2, Group as Group3, Vector3 as Vector33 } from "three";
 var actorDefaults, ACTOR_TYPE, ZylemActor;
 var init_actor = __esm({
   "src/lib/entities/actor.ts"() {
@@ -2057,26 +2064,26 @@ var init_actor = __esm({
         this.prependUpdate(this.actorUpdate.bind(this));
         this.controlledRotation = true;
       }
-      async load() {
+      /**
+       * Initiates model and animation loading in background (deferred).
+       * Call returns immediately; assets will be ready on subsequent updates.
+       */
+      load() {
         this._modelFileNames = this.options.models || [];
-        await this.loadModels();
-        if (this._object) {
-          this._animationDelegate = new AnimationDelegate(this._object);
-          await this._animationDelegate.loadAnimations(this.options.animations || []);
-          this.dispatch("entity:animation:loaded", {
-            entityId: this.uuid,
-            animationCount: this.options.animations?.length || 0
-          });
-        }
+        this.loadModelsDeferred();
       }
-      async data() {
+      /**
+       * Returns current data synchronously.
+       * May return null values if loading is still in progress.
+       */
+      data() {
         return {
           animations: this._animationDelegate?.animations,
           objectModel: this._object,
           collisionShape: this.options.collisionShape
         };
       }
-      async actorUpdate(params) {
+      actorUpdate(params) {
         this._animationDelegate?.update(params.delta);
       }
       /**
@@ -2107,38 +2114,78 @@ var init_actor = __esm({
         }
         this._modelFileNames = [];
       }
-      async loadModels() {
+      /**
+       * Deferred loading - starts async load and updates entity when complete.
+       * Called by synchronous load() method.
+       */
+      loadModelsDeferred() {
         if (this._modelFileNames.length === 0) return;
         this.dispatch("entity:model:loading", {
           entityId: this.uuid,
           files: this._modelFileNames
         });
         const promises = this._modelFileNames.map((file) => this._assetLoader.loadFile(file));
-        const results = await Promise.all(promises);
-        if (results[0]?.object) {
-          this._object = results[0].object;
-        }
-        let meshCount = 0;
-        if (this._object) {
-          this._object.traverse((child) => {
-            if (child.isMesh) meshCount++;
+        Promise.all(promises).then((results) => {
+          if (results[0]?.object) {
+            this._object = results[0].object;
+          }
+          let meshCount = 0;
+          if (this._object) {
+            this._object.traverse((child) => {
+              if (child.isMesh) meshCount++;
+            });
+            this.group = new Group3();
+            this.group.attach(this._object);
+            this.group.scale.set(
+              this.options.scale?.x || 1,
+              this.options.scale?.y || 1,
+              this.options.scale?.z || 1
+            );
+            this.applyMaterialOverrides();
+            this._animationDelegate = new AnimationDelegate(this._object);
+            this._animationDelegate.loadAnimations(this.options.animations || []).then(() => {
+              this.dispatch("entity:animation:loaded", {
+                entityId: this.uuid,
+                animationCount: this.options.animations?.length || 0
+              });
+            });
+          }
+          this.dispatch("entity:model:loaded", {
+            entityId: this.uuid,
+            success: !!this._object,
+            meshCount
           });
-          this.group = new Group3();
-          this.group.attach(this._object);
-          this.group.scale.set(
-            this.options.scale?.x || 1,
-            this.options.scale?.y || 1,
-            this.options.scale?.z || 1
-          );
-        }
-        this.dispatch("entity:model:loaded", {
-          entityId: this.uuid,
-          success: !!this._object,
-          meshCount
         });
       }
       playAnimation(animationOptions) {
         this._animationDelegate?.playAnimation(animationOptions);
+      }
+      /**
+       * Apply material overrides from options to all meshes in the loaded model.
+       * Only applies if material options are explicitly specified (not just defaults).
+       */
+      applyMaterialOverrides() {
+        const materialOptions = this.options.material;
+        if (!materialOptions || !materialOptions.color && !materialOptions.path) {
+          return;
+        }
+        if (!this._object) return;
+        this._object.traverse((child) => {
+          if (child.isMesh) {
+            const mesh = child;
+            if (materialOptions.color) {
+              const newMaterial = new MeshStandardMaterial2({
+                color: materialOptions.color,
+                emissiveIntensity: 0.5,
+                lightMapIntensity: 0.5,
+                fog: true
+              });
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
+              mesh.material = newMaterial;
+            }
+          }
+        });
       }
       get object() {
         return this._object;
@@ -2446,6 +2493,22 @@ var init_zylem_scene = __esm({
         }
       }
       /**
+       * Add an entity's group or mesh to the scene (for late-loaded models).
+       * Uses entity's current body position if physics is active.
+       */
+      addEntityGroup(entity) {
+        const position2 = entity.body ? new Vector34(
+          entity.body.translation().x,
+          entity.body.translation().y,
+          entity.body.translation().z
+        ) : entity.options.position;
+        if (entity.group) {
+          this.add(entity.group, position2);
+        } else if (entity.mesh) {
+          this.add(entity.mesh, position2);
+        }
+      }
+      /**
        * Add debug helpers to scene
        */
       debugScene() {
@@ -2458,25 +2521,50 @@ var init_zylem_scene = __esm({
   }
 });
 
+// src/lib/core/utility/vector.ts
+import { Color as Color5 } from "three";
+import { Vector3 as Vector35 } from "@dimforge/rapier3d-compat";
+var ZylemBlueColor, Vec0, Vec1;
+var init_vector = __esm({
+  "src/lib/core/utility/vector.ts"() {
+    "use strict";
+    ZylemBlueColor = new Color5("#0333EC");
+    Vec0 = new Vector35(0, 0, 0);
+    Vec1 = new Vector35(1, 1, 1);
+  }
+});
+
 // src/lib/stage/stage-state.ts
-import { Color as Color5, Vector3 as Vector35 } from "three";
+import { Color as Color6, Vector3 as Vector36 } from "three";
 import { proxy as proxy3, subscribe as subscribe3 } from "valtio/vanilla";
 function clearVariables(target) {
   variableProxyStore.delete(target);
 }
-var stageState, setStageBackgroundColor, setStageBackgroundImage, setStageVariables, resetStageVariables, variableProxyStore;
+var initialStageState, stageState, setStageBackgroundColor, setStageBackgroundImage, setStageVariables, resetStageVariables, variableProxyStore;
 var init_stage_state = __esm({
   "src/lib/stage/stage-state.ts"() {
     "use strict";
+    init_vector();
+    initialStageState = {
+      backgroundColor: ZylemBlueColor,
+      backgroundImage: null,
+      inputs: {
+        p1: ["gamepad-1", "keyboard"],
+        p2: ["gamepad-2", "keyboard"]
+      },
+      gravity: new Vector36(0, 0, 0),
+      variables: {},
+      entities: []
+    };
     stageState = proxy3({
-      backgroundColor: new Color5(Color5.NAMES.cornflowerblue),
+      backgroundColor: new Color6(Color6.NAMES.cornflowerblue),
       backgroundImage: null,
       inputs: {
         p1: ["gamepad-1", "keyboard-1"],
         p2: ["gamepad-2", "keyboard-2"]
       },
       variables: {},
-      gravity: new Vector35(0, 0, 0),
+      gravity: new Vector36(0, 0, 0),
       entities: []
     });
     setStageBackgroundColor = (value) => {
@@ -2492,19 +2580,6 @@ var init_stage_state = __esm({
       stageState.variables = {};
     };
     variableProxyStore = /* @__PURE__ */ new Map();
-  }
-});
-
-// src/lib/core/utility/vector.ts
-import { Color as Color6 } from "three";
-import { Vector3 as Vector36 } from "@dimforge/rapier3d-compat";
-var ZylemBlueColor, Vec0, Vec1;
-var init_vector = __esm({
-  "src/lib/core/utility/vector.ts"() {
-    "use strict";
-    ZylemBlueColor = new Color6("#0333EC");
-    Vec0 = new Vector36(0, 0, 0);
-    Vec1 = new Vector36(1, 1, 1);
   }
 });
 
@@ -3684,6 +3759,66 @@ var init_stage_loading_delegate = __esm({
   }
 });
 
+// src/lib/stage/stage-entity-model-delegate.ts
+var StageEntityModelDelegate;
+var init_stage_entity_model_delegate = __esm({
+  "src/lib/stage/stage-entity-model-delegate.ts"() {
+    "use strict";
+    init_events();
+    StageEntityModelDelegate = class {
+      scene = null;
+      pendingEntities = /* @__PURE__ */ new Map();
+      modelLoadedHandler = null;
+      /**
+       * Initialize the delegate with the scene reference and start listening.
+       */
+      attach(scene) {
+        this.scene = scene;
+        this.modelLoadedHandler = (payload) => {
+          this.handleModelLoaded(payload.entityId, payload.success);
+        };
+        zylemEventBus.on("entity:model:loaded", this.modelLoadedHandler);
+      }
+      /**
+       * Register an entity for observation.
+       * When its model loads, the group will be added to the scene.
+       */
+      observe(entity) {
+        this.pendingEntities.set(entity.uuid, entity);
+      }
+      /**
+       * Unregister an entity (e.g., when removed before model loads).
+       */
+      unobserve(entityId) {
+        this.pendingEntities.delete(entityId);
+      }
+      /**
+       * Handle model loaded event - add group to scene if entity is pending.
+       */
+      handleModelLoaded(entityId, success) {
+        const entity = this.pendingEntities.get(entityId);
+        if (!entity || !success) {
+          this.pendingEntities.delete(entityId);
+          return;
+        }
+        this.scene?.addEntityGroup(entity);
+        this.pendingEntities.delete(entityId);
+      }
+      /**
+       * Cleanup all subscriptions and pending entities.
+       */
+      dispose() {
+        if (this.modelLoadedHandler) {
+          zylemEventBus.off("entity:model:loaded", this.modelLoadedHandler);
+          this.modelLoadedHandler = null;
+        }
+        this.pendingEntities.clear();
+        this.scene = null;
+      }
+    };
+  }
+});
+
 // src/lib/core/utility/options-parser.ts
 function isBaseNode(item) {
   return !!item && typeof item === "object" && typeof item.create === "function";
@@ -3785,7 +3920,6 @@ var init_zylem_stage = __esm({
     init_world();
     init_zylem_scene();
     init_stage_state();
-    init_vector();
     init_debug_state();
     init_game_state();
     init_lifecycle_base();
@@ -3794,23 +3928,14 @@ var init_zylem_stage = __esm({
     init_stage_camera_debug_delegate();
     init_stage_camera_delegate();
     init_stage_loading_delegate();
+    init_stage_entity_model_delegate();
     init_entity();
     init_stage_config();
     init_options_parser();
     STAGE_TYPE = "Stage";
     ZylemStage = class extends LifeCycleBase {
       type = STAGE_TYPE;
-      state = {
-        backgroundColor: ZylemBlueColor,
-        backgroundImage: null,
-        inputs: {
-          p1: ["gamepad-1", "keyboard"],
-          p2: ["gamepad-2", "keyboard"]
-        },
-        gravity: new Vector313(0, 0, 0),
-        variables: {},
-        entities: []
-      };
+      state = { ...initialStageState };
       gravity;
       world;
       scene;
@@ -3835,6 +3960,7 @@ var init_zylem_stage = __esm({
       // Delegates
       cameraDelegate;
       loadingDelegate;
+      entityModelDelegate;
       /**
        * Create a new stage.
        * @param options Stage options: partial config, camera, and initial entities or factories
@@ -3846,6 +3972,7 @@ var init_zylem_stage = __esm({
         this.uuid = nanoid2();
         this.cameraDelegate = new StageCameraDelegate(this);
         this.loadingDelegate = new StageLoadingDelegate();
+        this.entityModelDelegate = new StageEntityModelDelegate();
         const parsed = parseStageOptions(options);
         this.camera = parsed.camera;
         this.children = parsed.entities;
@@ -3899,6 +4026,7 @@ var init_zylem_stage = __esm({
         const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector313(0, 0, 0));
         this.world = new ZylemWorld(physicsWorld);
         this.scene.setup();
+        this.entityModelDelegate.attach(this.scene);
         this.loadingDelegate.emitStart();
         await this.runEntityLoadGenerator();
         this.transformSystem = createTransformSystem(this);
@@ -4019,6 +4147,7 @@ var init_zylem_stage = __esm({
         this.debugDelegate = null;
         this.cameraRef?.setDebugDelegate(null);
         this.cameraDebugDelegate = null;
+        this.entityModelDelegate.dispose();
         this.isLoaded = false;
         this.world = null;
         this.scene = null;
@@ -4058,6 +4187,7 @@ var init_zylem_stage = __esm({
           camera: this.scene.zylemCamera
         });
         this.addEntityToStage(entity);
+        this.entityModelDelegate.observe(entity);
       }
       buildEntityState(child) {
         if (child instanceof GameEntity) {
@@ -4116,6 +4246,7 @@ var init_zylem_stage = __esm({
         const mapEntity = this.world.collisionMap.get(uuid);
         const entity = mapEntity ?? this._debugMap.get(uuid);
         if (!entity) return false;
+        this.entityModelDelegate.unobserve(uuid);
         this.world.destroyEntity(entity);
         if (entity.group) {
           this.scene.scene.remove(entity.group);
@@ -5048,9 +5179,9 @@ function getPresetResolution(preset, key) {
   const normalized = key.toLowerCase().replace(/\s+/g, "").replace("\xD7", "x");
   return list.find((r) => r.key.toLowerCase() === normalized);
 }
-function parseResolution(text2) {
-  if (!text2) return null;
-  const normalized = String(text2).toLowerCase().trim().replace(/\s+/g, "").replace("\xD7", "x");
+function parseResolution(text) {
+  if (!text) return null;
+  const normalized = String(text).toLowerCase().trim().replace(/\s+/g, "").replace("\xD7", "x");
   const match = normalized.match(/^(\d+)x(\d+)$/);
   if (!match) return null;
   const width = parseInt(match[1], 10);
@@ -5865,7 +5996,7 @@ init_create();
 import { Color as Color10, Group as Group5, Sprite as ThreeSprite, SpriteMaterial, CanvasTexture, LinearFilter, Vector2 as Vector29, ClampToEdgeWrapping } from "three";
 
 // src/lib/entities/delegates/debug.ts
-import { MeshStandardMaterial as MeshStandardMaterial2, MeshBasicMaterial as MeshBasicMaterial2, MeshPhongMaterial as MeshPhongMaterial2 } from "three";
+import { MeshStandardMaterial as MeshStandardMaterial3, MeshBasicMaterial as MeshBasicMaterial2, MeshPhongMaterial as MeshPhongMaterial2 } from "three";
 function hasDebugInfo(obj) {
   return obj && typeof obj.getDebugInfo === "function";
 }
@@ -5909,7 +6040,7 @@ var DebugDelegate = class {
     const info = {
       type: material.type
     };
-    if (material instanceof MeshStandardMaterial2 || material instanceof MeshBasicMaterial2 || material instanceof MeshPhongMaterial2) {
+    if (material instanceof MeshStandardMaterial3 || material instanceof MeshBasicMaterial2 || material instanceof MeshPhongMaterial2) {
       info.color = `#${material.color.getHexString()}`;
       info.opacity = material.opacity;
       info.transparent = material.transparent;
@@ -6022,10 +6153,10 @@ var ZylemText = class _ZylemText extends GameEntity {
     this.group?.add(this._sprite);
     this.redrawText(this.options.text ?? "");
   }
-  measureAndResizeCanvas(text2, fontSize, fontFamily, padding) {
+  measureAndResizeCanvas(text, fontSize, fontFamily, padding) {
     if (!this._canvas || !this._ctx) return { sizeChanged: false };
     this._ctx.font = `${fontSize}px ${fontFamily}`;
-    const metrics = this._ctx.measureText(text2);
+    const metrics = this._ctx.measureText(text);
     const textWidth = Math.ceil(metrics.width);
     const textHeight = Math.ceil(fontSize * 1.4);
     const nextW = Math.max(2, textWidth + padding * 2);
@@ -6037,7 +6168,7 @@ var ZylemText = class _ZylemText extends GameEntity {
     this._lastCanvasH = nextH;
     return { sizeChanged };
   }
-  drawCenteredText(text2, fontSize, fontFamily) {
+  drawCenteredText(text, fontSize, fontFamily) {
     if (!this._canvas || !this._ctx) return;
     this._ctx.font = `${fontSize}px ${fontFamily}`;
     this._ctx.textAlign = "center";
@@ -6048,7 +6179,7 @@ var ZylemText = class _ZylemText extends GameEntity {
       this._ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
     }
     this._ctx.fillStyle = this.toCssColor(this.options.fontColor ?? "#FFFFFF");
-    this._ctx.fillText(text2, this._canvas.width / 2, this._canvas.height / 2);
+    this._ctx.fillText(text, this._canvas.width / 2, this._canvas.height / 2);
   }
   updateTexture(sizeChanged) {
     if (!this._texture || !this._canvas) return;
@@ -6172,7 +6303,7 @@ var ZylemText = class _ZylemText extends GameEntity {
   /**
    * Dispose of Three.js resources when the entity is destroyed.
    */
-  async textDestroy() {
+  textDestroy() {
     this._texture?.dispose();
     if (this._sprite?.material) {
       this._sprite.material.dispose();
@@ -6188,7 +6319,7 @@ var ZylemText = class _ZylemText extends GameEntity {
     this._cameraRef = null;
   }
 };
-async function text(...args) {
+function createText(...args) {
   return createEntity({
     args,
     defaultConfig: { ...textDefaults },
@@ -6329,7 +6460,7 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
       }
     }
   }
-  async spriteUpdate(params) {
+  spriteUpdate(params) {
     this.sprites.forEach((_sprite) => {
       if (_sprite.material) {
         const q = this.body?.rotation();
@@ -6342,7 +6473,7 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
       }
     });
   }
-  async spriteDestroy(params) {
+  spriteDestroy(params) {
     this.sprites.forEach((_sprite) => {
       _sprite.removeFromParent();
     });
@@ -6358,7 +6489,7 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
     };
   }
 };
-async function sprite(...args) {
+function createSprite(...args) {
   return createEntity({
     args,
     defaultConfig: spriteDefaults,
@@ -6375,7 +6506,7 @@ var EntityFactory = {
   register(type, creator) {
     this.registry.set(type, creator);
   },
-  async createFromBlueprint(blueprint) {
+  createFromBlueprint(blueprint) {
     const creator = this.registry.get(blueprint.type);
     if (!creator) {
       throw new Error(`Unknown entity type: ${blueprint.type}`);
@@ -6385,12 +6516,12 @@ var EntityFactory = {
       position: blueprint.position ? { x: blueprint.position[0], y: blueprint.position[1], z: 0 } : void 0,
       name: blueprint.id
     };
-    const entity = await creator(options);
+    const entity = creator(options);
     return entity;
   }
 };
-EntityFactory.register("text", async (opts) => await text(opts));
-EntityFactory.register("sprite", async (opts) => await sprite(opts));
+EntityFactory.register("text", (opts) => createText(opts));
+EntityFactory.register("sprite", (opts) => createSprite(opts));
 
 // src/lib/stage/stage-factory.ts
 var StageFactory = {

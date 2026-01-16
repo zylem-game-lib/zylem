@@ -1,5 +1,5 @@
 import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
-import { BufferGeometry, Object3D, SkinnedMesh, Mesh, Group, Vector3 } from 'three';
+import { BufferGeometry, Object3D, SkinnedMesh, Mesh, MeshStandardMaterial, Group, Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
@@ -160,21 +160,21 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		this.controlledRotation = true;
 	}
 
-	async load(): Promise<void> {
+	/**
+	 * Initiates model and animation loading in background (deferred).
+	 * Call returns immediately; assets will be ready on subsequent updates.
+	 */
+	load(): void {
 		this._modelFileNames = this.options.models || [];
-		await this.loadModels();
-		if (this._object) {
-			this._animationDelegate = new AnimationDelegate(this._object);
-			await this._animationDelegate.loadAnimations(this.options.animations || []);
-			// Emit animation loaded event
-			this.dispatch('entity:animation:loaded', {
-				entityId: this.uuid,
-				animationCount: this.options.animations?.length || 0
-			});
-		}
+		// Start async loading in background
+		this.loadModelsDeferred();
 	}
 
-	async data(): Promise<any> {
+	/**
+	 * Returns current data synchronously.
+	 * May return null values if loading is still in progress.
+	 */
+	data(): any {
 		return {
 			animations: this._animationDelegate?.animations,
 			objectModel: this._object,
@@ -182,7 +182,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		};
 	}
 
-	async actorUpdate(params: UpdateContext<ZylemActorOptions>): Promise<void> {
+	actorUpdate(params: UpdateContext<ZylemActorOptions>): void {
 		this._animationDelegate?.update(params.delta);
 	}
 
@@ -222,7 +222,11 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		this._modelFileNames = [];
 	}
 
-	private async loadModels(): Promise<void> {
+	/**
+	 * Deferred loading - starts async load and updates entity when complete.
+	 * Called by synchronous load() method.
+	 */
+	private loadModelsDeferred(): void {
 		if (this._modelFileNames.length === 0) return;
 
 		// Emit loading started event
@@ -232,36 +236,80 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		});
 
 		const promises = this._modelFileNames.map(file => this._assetLoader.loadFile(file));
-		const results = await Promise.all(promises);
-		if (results[0]?.object) {
-			this._object = results[0].object;
-		}
+		Promise.all(promises).then(results => {
+			if (results[0]?.object) {
+				this._object = results[0].object;
+			}
+			// Count meshes for the loaded event
+			let meshCount = 0;
+			if (this._object) {
+				this._object.traverse((child) => {
+					if ((child as any).isMesh) meshCount++;
+				});
+				this.group = new Group();
+				this.group.attach(this._object);
+				this.group.scale.set(
+					this.options.scale?.x || 1,
+					this.options.scale?.y || 1,
+					this.options.scale?.z || 1
+				);
 
-		// Count meshes for the loaded event
-		let meshCount = 0;
-		if (this._object) {
-			this._object.traverse((child) => {
-				if ((child as any).isMesh) meshCount++;
+				// Apply material overrides if specified
+				this.applyMaterialOverrides();
+
+				// Load animations after model is ready
+				this._animationDelegate = new AnimationDelegate(this._object);
+				this._animationDelegate.loadAnimations(this.options.animations || []).then(() => {
+					this.dispatch('entity:animation:loaded', {
+						entityId: this.uuid,
+						animationCount: this.options.animations?.length || 0
+					});
+				});
+			}
+
+			// Emit model loaded event
+			this.dispatch('entity:model:loaded', {
+				entityId: this.uuid,
+				success: !!this._object,
+				meshCount
 			});
-			this.group = new Group();
-			this.group.attach(this._object);
-			this.group.scale.set(
-				this.options.scale?.x || 1,
-				this.options.scale?.y || 1,
-				this.options.scale?.z || 1
-			);
-		}
-
-		// Emit model loaded event
-		this.dispatch('entity:model:loaded', {
-			entityId: this.uuid,
-			success: !!this._object,
-			meshCount
 		});
 	}
 
 	playAnimation(animationOptions: AnimationOptions) {
 		this._animationDelegate?.playAnimation(animationOptions);
+	}
+
+	/**
+	 * Apply material overrides from options to all meshes in the loaded model.
+	 * Only applies if material options are explicitly specified (not just defaults).
+	 */
+	private applyMaterialOverrides(): void {
+		const materialOptions = this.options.material;
+		// Only apply if user specified material options beyond defaults
+		if (!materialOptions || (!materialOptions.color && !materialOptions.path)) {
+			return;
+		}
+
+		if (!this._object) return;
+
+		this._object.traverse((child) => {
+			if ((child as any).isMesh) {
+				const mesh = child as Mesh;
+				if (materialOptions.color) {
+					// Create new material with the specified color
+					const newMaterial = new MeshStandardMaterial({
+						color: materialOptions.color,
+						emissiveIntensity: 0.5,
+						lightMapIntensity: 0.5,
+						fog: true,
+					});
+					mesh.castShadow = true;
+					mesh.receiveShadow = true;
+					mesh.material = newMaterial;
+				}
+			}
+		});
 	}
 
 	get object(): Object3D | null {
@@ -311,8 +359,8 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 
 type ActorOptions = BaseNode | ZylemActorOptions;
 
-export async function actor(...args: Array<ActorOptions>): Promise<ZylemActor> {
-	return await createEntity<ZylemActor, ZylemActorOptions>({
+export function createActor(...args: Array<ActorOptions>): ZylemActor {
+	return createEntity<ZylemActor, ZylemActorOptions>({
 		args,
 		defaultConfig: actorDefaults,
 		EntityClass: ZylemActor,

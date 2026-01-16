@@ -1,13 +1,13 @@
 import { Color, Vector3, Vector2 } from 'three';
 import { 
-    createGame, box, sphere, createStage, createCamera, zone, text,
+    createGame, createBox, createSphere, createStage, createCamera, createZone, createText,
     makeMoveable, ricochet2DInBounds, ricochetSound, pingPongBeep, boundary2d, ricochet2DCollision,
     getGlobal, setGlobal, onGlobalChange, onGlobalChanges
 } from '@zylem/game-lib';
 
 const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
 
-const ball = await sphere({
+const ball = createSphere({
 	name: 'ball',
 	position: new Vector3(0, 0, 0),
 	radius: 0.1,
@@ -29,7 +29,7 @@ const paddleSize = { x: 0.20, y: 1.5, z: 1 };
 const paddleMaterial = { color: new Color(Color.NAMES.lightblue) };
 const paddleSpeed = 5;
 
-const paddle1 = await box({
+const paddle1 = createBox({
 	name: 'paddle1',
 	position: { x: -10, y: 0, z: 0 },
 	size: paddleSize,
@@ -43,7 +43,7 @@ makeMoveable(paddle1).onUpdate(({ me, inputs }) => {
 });
 paddle1.addBehavior(boundary2d({ boundaries: gameBounds }));
 
-const paddle2 = await box({
+const paddle2 = createBox({
 	name: 'paddle2',
 	position: { x: 10, y: 0, z: 0 },
 	size: paddleSize,
@@ -57,7 +57,7 @@ makeMoveable(paddle2).onUpdate(({ me, inputs }) => {
 });
 paddle2.addBehavior(boundary2d({ boundaries: gameBounds }));
 
-const p1Goal = await zone({
+const p1Goal = createZone({
 	name: 'p1Goal',
 	position: { x: 12, y: 0, z: 0 },
 	size: new Vector3(2, 10, 1),
@@ -71,7 +71,7 @@ p1Goal.onEnter(({ visitor }) => {
 	}
 });
 
-const p2Goal = await zone({
+const p2Goal = createZone({
 	name: 'p2Goal',
 	position: { x: -12, y: 0, z: 0 },
 	size: new Vector3(2, 10, 1),
@@ -91,21 +91,21 @@ const camera = createCamera({
 	zoom: 12,
 });
 
-const p1Text = await text({
+const p1Text = createText({
 	name: 'p1Text',
 	text: '0',
 	fontSize: 24,
 	screenPosition: new Vector2(0.45, 0.05),
 });
 
-const p2Text = await text({
+const p2Text = createText({
 	name: 'p2Text',
 	text: '0',
 	fontSize: 24,
 	screenPosition: new Vector2(0.55, 0.05),
 });
 
-const winnerText = await text({
+const winnerText = createText({
 	name: 'winnerText',
 	text: '',
 	fontSize: 36,

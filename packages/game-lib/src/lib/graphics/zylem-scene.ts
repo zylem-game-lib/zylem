@@ -143,6 +143,26 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	/**
+	 * Add an entity's group or mesh to the scene (for late-loaded models).
+	 * Uses entity's current body position if physics is active.
+	 */
+	addEntityGroup(entity: GameEntity<any>): void {
+		const position = entity.body
+			? new Vector3(
+				entity.body.translation().x,
+				entity.body.translation().y,
+				entity.body.translation().z
+			  )
+			: entity.options.position;
+
+		if (entity.group) {
+			this.add(entity.group, position);
+		} else if (entity.mesh) {
+			this.add(entity.mesh, position);
+		}
+	}
+
+	/**
 	 * Add debug helpers to scene
 	 */
 	debugScene() {

@@ -1,7 +1,7 @@
 import { Color, Vector3 } from 'three';
-import { createGame, sphere, makeMoveable, ricochet2DInBounds, ricochetSound } from '@zylem/game-lib';
+import { createGame, createSphere, makeMoveable, ricochet2DInBounds, ricochetSound } from '@zylem/game-lib';
 
-const ball = makeMoveable(await sphere({ color: new Color(Color.NAMES.red) }));
+const ball = makeMoveable(createSphere({ color: new Color(Color.NAMES.red) }));
 ball.addBehavior(
 	ricochet2DInBounds(
 		{ boundaries: { top: 6, bottom: -6, left: -12, right: 12 } },

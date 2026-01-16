@@ -1,8 +1,8 @@
-import { i as SetupFunction, G as GameEntity, j as UpdateFunction, D as DestroyFunction, S as SetupContext, U as UpdateContext, k as DestroyContext, l as BaseNode, L as LoadingEvent, c as StageEvents } from './entity-BtSVUHY-.js';
+import { i as SetupFunction, G as GameEntity, j as UpdateFunction, D as DestroyFunction, S as SetupContext, U as UpdateContext, k as DestroyContext, l as BaseNode, L as LoadingEvent, c as StageEvents } from './entity-9AMNjC28.js';
 import * as bitecs from 'bitecs';
 import { defineSystem, IWorld } from 'bitecs';
 import { Scene, Color, Object3D, Vector3, Group } from 'three';
-import { f as ZylemWorld, S as SPRITE_TYPE, g as ZylemSprite, d as SPHERE_TYPE, h as ZylemSphere, R as RECT_TYPE, i as ZylemRect, T as TEXT_TYPE, j as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, k as ZylemPlane, e as ZONE_TYPE, l as ZylemZone, A as ACTOR_TYPE, m as ZylemActor } from './entities-D4U-6yRX.js';
+import { k as ZylemWorld, S as SPRITE_TYPE, l as ZylemSprite, i as SPHERE_TYPE, m as ZylemSphere, R as RECT_TYPE, n as ZylemRect, T as TEXT_TYPE, o as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, p as ZylemPlane, j as ZONE_TYPE, q as ZylemZone, A as ACTOR_TYPE, r as ZylemActor } from './entities-BIlTKaEP.js';
 import { E as Entity, L as LifecycleFunction, S as StageEntity } from './entity-Bq_eNEDI.js';
 import { Z as ZylemCamera, C as CameraDebugDelegate, b as CameraDebugState, d as CameraWrapper } from './camera-CTwQrI7i.js';
 import RAPIER__default, { RigidBody, Collider } from '@dimforge/rapier3d-compat';
@@ -45,6 +45,11 @@ declare class ZylemScene implements Entity<ZylemScene> {
      * Add game entity to scene
      */
     addEntity(entity: GameEntity<any>): void;
+    /**
+     * Add an entity's group or mesh to the scene (for late-loaded models).
+     * Uses entity's current body position if physics is active.
+     */
+    addEntityGroup(entity: GameEntity<any>): void;
     /**
      * Add debug helpers to scene
      */
@@ -189,6 +194,7 @@ declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     cameraRef?: ZylemCamera | null;
     private cameraDelegate;
     private loadingDelegate;
+    private entityModelDelegate;
     /**
      * Create a new stage.
      * @param options Stage options: partial config, camera, and initial entities or factories

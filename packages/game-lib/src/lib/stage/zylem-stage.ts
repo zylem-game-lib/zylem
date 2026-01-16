@@ -3,7 +3,7 @@ import { Color, Vector3, Vector2 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
-import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, setStageVariables, clearVariables } from './stage-state';
+import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, setStageVariables, clearVariables, initialStageState } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
 import { ZylemBlueColor } from '../core/utility/vector';
@@ -22,6 +22,7 @@ import { StageDebugDelegate } from './stage-debug-delegate';
 import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
 import { StageCameraDelegate } from './stage-camera-delegate';
 import { StageLoadingDelegate } from './stage-loading-delegate';
+import { StageEntityModelDelegate } from './stage-entity-model-delegate';
 import { GameEntity } from '../entities/entity';
 import { BaseEntityInterface } from '../types/entity-types';
 import { ZylemCamera } from '../camera/zylem-camera';
@@ -61,17 +62,7 @@ const STAGE_TYPE = 'Stage';
 export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	public type = STAGE_TYPE;
 
-	state: StageState = {
-		backgroundColor: ZylemBlueColor,
-		backgroundImage: null,
-		inputs: {
-			p1: ['gamepad-1', 'keyboard'],
-			p2: ['gamepad-2', 'keyboard'],
-		},
-		gravity: new Vector3(0, 0, 0),
-		variables: {},
-		entities: [],
-	};
+	state: StageState = { ...initialStageState };
 	gravity: Vector3;
 
 	world: ZylemWorld | null;
@@ -104,6 +95,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	// Delegates
 	private cameraDelegate: StageCameraDelegate;
 	private loadingDelegate: StageLoadingDelegate;
+	private entityModelDelegate: StageEntityModelDelegate;
 
 	/**
 	 * Create a new stage.
@@ -118,6 +110,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		// Initialize delegates
 		this.cameraDelegate = new StageCameraDelegate(this);
 		this.loadingDelegate = new StageLoadingDelegate();
+		this.entityModelDelegate = new StageEntityModelDelegate();
 
 		// Parse the options array using the stage-config module
 		const parsed = parseStageOptions(options);
@@ -188,6 +181,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.world = new ZylemWorld(physicsWorld);
 
 		this.scene.setup();
+		this.entityModelDelegate.attach(this.scene);
 
 		this.loadingDelegate.emitStart();
 
@@ -337,6 +331,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.cameraRef?.setDebugDelegate(null);
 		this.cameraDebugDelegate = null;
 
+		this.entityModelDelegate.dispose();
+
 		this.isLoaded = false;
 		this.world = null as any;
 		this.scene = null as any;
@@ -384,6 +380,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			camera: this.scene.zylemCamera,
 		});
 		this.addEntityToStage(entity);
+		this.entityModelDelegate.observe(entity);
 	}
 
 	buildEntityState(child: BaseNode): Partial<BaseEntityInterface> {
@@ -445,6 +442,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		const mapEntity = this.world.collisionMap.get(uuid) as any | undefined;
 		const entity: any = mapEntity ?? this._debugMap.get(uuid);
 		if (!entity) return false;
+
+		this.entityModelDelegate.unobserve(uuid);
 
 		this.world.destroyEntity(entity);
 

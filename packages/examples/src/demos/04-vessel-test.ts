@@ -1,4 +1,4 @@
-import { createGame, vessel, createStage, text, createGlobal, getGlobal, setGlobal } from '@zylem/game-lib';
+import { createGame, vessel, createStage, createText, createGlobal, getGlobal, setGlobal } from '@zylem/game-lib';
 import marsSurfacePath from '@zylem/assets/3d/textures/mars-surface.jpg';
 import { Vector2 } from 'three';
 
@@ -16,19 +16,19 @@ const testVessel = vessel()
 		vesselTextUpdate.updateText(`Vessel was updated ${Math.ceil(vesselCounter)}`);
 	});
 
-const vesselTextSetup = await text({
+const vesselTextSetup = createText({
 	text: '',
 	stickToViewport: true,
 	screenPosition: new Vector2(0.5, 0.25),
 });
 
-const vesselText = await text({
+const vesselText = createText({
 	text: 'Hello World',
 	stickToViewport: true,
 	screenPosition: new Vector2(0.5, 0.5),
 });
 
-const vesselTextUpdate = await text({
+const vesselTextUpdate = createText({
 	text: '',
 	stickToViewport: true,
 	screenPosition: new Vector2(0.5, 0.75),

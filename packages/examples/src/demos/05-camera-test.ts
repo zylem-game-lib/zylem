@@ -1,16 +1,16 @@
 import { Color, Vector3 } from 'three';
-import { box, Perspectives, createGame, createStage, createCamera } from '@zylem/game-lib';
+import { createBox, Perspectives, createGame, createStage, createCamera } from '@zylem/game-lib';
 
 const boxes = [
-	await box({
+	createBox({
 		position: { x: 0, y: 0, z: 0 },
 		material: { color: new Color(Color.NAMES.lightgreen) }
 	}),
-	await box({
+	createBox({
 		position: { x: 1, y: -1, z: 0 },
 		material: { color: new Color(Color.NAMES.red) }
 	}),
-	await box({
+	createBox({
 		position: { x: 0, y: -1, z: 1 },
 		material: { color: new Color(Color.NAMES.blue) }
 	}),

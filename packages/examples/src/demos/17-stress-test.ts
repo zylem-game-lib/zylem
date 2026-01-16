@@ -4,8 +4,7 @@
 // TODO: need to create a material map for reused materials
 
 import { Color, Vector2, Vector3 } from 'three';
-import { createGame, createStage, box, sphere, createCamera } from '@zylem/game-lib';
-import { plane } from '@zylem/game-lib';
+import { createGame, createStage, createBox, createSphere, createCamera, createPlane } from '@zylem/game-lib';
 
 import rainManPath from '@zylem/assets/2d/rain-man.png';
 import grassNormalPath from '@zylem/assets/3d/textures/grass-normal.png';
@@ -14,18 +13,18 @@ import skybox from '@zylem/assets/3d/skybox/default.png';
 const rainMan = rainManPath;
 const grassNormal = grassNormalPath;
 
-const testBox = await box(
+const testBox = createBox(
 	{ position: new Vector3(2, 3, 5), material: { path: rainMan } },
-	await box({ position: new Vector3(1, 1, 1), material: { path: rainMan } })
+	createBox({ position: new Vector3(1, 1, 1), material: { path: rainMan } })
 );
-const testBox1 = await box({ position: new Vector3(0, 5, 5), material: { path: rainMan } });
-const testBox2 = await box({ position: new Vector3(4, 5, 5), material: { path: rainMan } });
+const testBox1 = createBox({ position: new Vector3(0, 5, 5), material: { path: rainMan } });
+const testBox2 = createBox({ position: new Vector3(4, 5, 5), material: { path: rainMan } });
 
 let testBoxes: any[] = [];
 
 for (let i = 0; i < 20; i++) {
 	for (let j = 0; j < 5; j++) {
-		const nextBox = await box({
+		const nextBox = createBox({
 			size: new Vector3(1 + Math.random() * 1, 1 + Math.random() * 1, 1 + Math.random() * 1),
 			position: new Vector3(i - 10, j + 2, 5),
 			material: { shader: 'star' },
@@ -34,7 +33,7 @@ for (let i = 0; i < 20; i++) {
 			}
 		});
 		testBoxes.push(nextBox);
-		const nextBox2 = await sphere({
+		const nextBox2 = createSphere({
 			radius: 0.25 + Math.random() * 0.5,
 			position: new Vector3(i - 10, 10 + j, 3),
 			material: { shader: 'fire' }
@@ -43,7 +42,7 @@ for (let i = 0; i < 20; i++) {
 	}
 }
 
-const testground = await plane({
+const testground = createPlane({
 	collision: {
 		static: true,
 	},
@@ -52,7 +51,7 @@ const testground = await plane({
 	material: { path: grassNormal, repeat: new Vector2(50, 50) },
 });
 
-const testSphere = await sphere({
+const testSphere = createSphere({
 	position: new Vector3(0, 3, 10),
 	material: {
 		shader: 'star'
@@ -67,7 +66,7 @@ for (let k = 0; k < 6; k++) {
 		for (let i = 0; i < 6; i++) {
 			const useShader = Math.random() < 0.2;
 			const key = colorKeys.at(Math.floor(Math.random() * totalColors)) ?? '';
-			const s = await sphere({
+			const s = createSphere({
 				collision: { static: false },
 				material: {
 					color: useShader ? undefined : new Color(Color.NAMES[key as keyof typeof Color.NAMES]),

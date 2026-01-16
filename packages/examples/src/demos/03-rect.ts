@@ -1,7 +1,7 @@
-import { createGame, rect, createStage } from '@zylem/game-lib';
+import { createGame, createRect, createStage } from '@zylem/game-lib';
 import { Color, Vector2 } from 'three';
 
-const rect1 = await rect({
+const rect1 = createRect({
 	width: 300,
 	height: 30,
 	fillColor: 'red',

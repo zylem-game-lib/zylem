@@ -11,14 +11,14 @@ import { createFloor, createArenaLevel } from './01-fps/level';
 
 import skybox from '@zylem/assets/3d/skybox/default.png';
 
-const stage = await createStage({
+const stage = createStage({
 	gravity: new Vector3(0, -20, 0),
 	backgroundImage: skybox,
 });
 
 // Create game entities
-const floor = await createFloor();
-const walls = await createArenaLevel();
+const floor = createFloor();
+const walls = createArenaLevel();
 
 // Create game configuration
 const myGameConfig = gameConfig({
