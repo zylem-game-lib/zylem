@@ -237,10 +237,14 @@ declare class MaterialBuilder {
     static batchMaterialMap: Map<BatchKey, BatchMaterialMapObject>;
     materials: Material[];
     batchMaterial(options: Partial<MaterialOptions>, entityType: symbol): void;
-    build(options: Partial<MaterialOptions>, entityType: symbol): Promise<void>;
+    build(options: Partial<MaterialOptions>, entityType: symbol): void;
     withColor(color: Color): this;
     withShader(shaderType: ZylemShaderType): this;
-    setTexture(texturePath?: TexturePath, repeat?: Vector2): Promise<void>;
+    /**
+     * Set texture - loads in background (deferred).
+     * Material is created immediately with null map, texture applies when loaded.
+     */
+    setTexture(texturePath?: TexturePath, repeat?: Vector2): void;
     setColor(color: Color): void;
     setShader(customShader: ZylemShaderType): void;
 }

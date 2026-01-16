@@ -1,8 +1,25 @@
 import { Color, Vector3 } from 'three';
 import { proxy, subscribe } from 'valtio/vanilla';
-import { BaseEntityInterface } from '../types/entity-types';
+import { BaseEntityInterface, GameEntityInterface } from '../types/entity-types';
 import { StageStateInterface } from '../types/stage-types';
 import { getByPath, setByPath } from '../core/utility/path-utils';
+import { ZylemBlueColor } from '../core/utility/vector';
+
+/**
+ * Initial stage state with default values.
+ * Exported for use in ZylemStage construction.
+ */
+export const initialStageState = {
+	backgroundColor: ZylemBlueColor,
+	backgroundImage: null,
+	inputs: {
+		p1: ['gamepad-1', 'keyboard'],
+		p2: ['gamepad-2', 'keyboard'],
+	},
+	gravity: new Vector3(0, 0, 0),
+	variables: {},
+	entities: [] as GameEntityInterface[],
+};
 
 /**
  * Stage state proxy for reactive updates.

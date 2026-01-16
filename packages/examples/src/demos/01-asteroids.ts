@@ -6,9 +6,9 @@ import {
 	createGame,
 	makeTransformable,
 	Perspectives,
-	sprite,
+	createSprite,
 	createStage,
-	text,
+	createText,
 	setGlobal,
 	TEXT_TYPE,
 } from '@zylem/game-lib';
@@ -51,7 +51,7 @@ let bulletCount = 0;
 let invincibilityTimer = 0;
 
 // Create player ship
-const player = makeTransformable(await sprite({
+const player = makeTransformable(createSprite({
 	name: 'player',
 	images: [{ name: 'player', file: playerShipImg }],
 	position: new Vector3(0, 0, 0),
@@ -114,7 +114,7 @@ player.onCollision(({ entity, other, globals }) => {
 
 // Bullet factory
 async function createBullet(x: number, y: number, rotation: number) {
-	const bullet = makeTransformable(await sprite({
+	const bullet = makeTransformable(createSprite({
 		name: 'bullet',
 		images: [{ name: 'bullet', file: playerLaserImg }],
 		position: new Vector3(x, y, 0),
@@ -169,7 +169,7 @@ async function spawnAsteroid(x: number, y: number, size: AsteroidSize, angle: nu
 	const config = asteroidConfig[size];
 	const imageFile = config.images[Math.floor(Math.random() * config.images.length)] as string;
 
-	const asteroid = makeTransformable(await sprite({
+	const asteroid = makeTransformable(createSprite({
 		name: 'asteroid',
 		images: [{ name: 'asteroid', file: imageFile }],
 		position: new Vector3(x, y, 0),
@@ -211,7 +211,7 @@ const camera1 = createCamera({
 });
 
 // HUD Text
-const healthText = await text({
+const healthText = createText({
 	name: 'healthText',
 	text: 'Health: 3',
 	fontSize: 20,
@@ -219,7 +219,7 @@ const healthText = await text({
 	screenPosition: new Vector2(0.1, 0.05),
 });
 
-const scoreText = await text({
+const scoreText = createText({
 	name: 'scoreText',
 	text: 'Score: 0',
 	fontSize: 20,

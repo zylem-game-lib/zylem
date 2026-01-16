@@ -1,5 +1,5 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { createGame, box, sphere, createStage, createCamera, zone, text, setGlobal, onGlobalChange, onGlobalChanges } from '@zylem/game-lib';
+import { createGame, createBox, createSphere, createStage, createCamera, createZone, createText, setGlobal, onGlobalChange, onGlobalChanges } from '@zylem/game-lib';
 import { makeMoveable } from '@zylem/game-lib';
 import { ricochet2DCollision } from '@zylem/game-lib';
 import { ricochet2DInBounds } from '@zylem/game-lib';
@@ -11,7 +11,7 @@ const board = { top: 10, bottom: -10, left: -12, right: 12 };
 const paddleSize = new Vector3(4, 0.6, 1);
 const paddleSpeed = 12;
 
-const paddle = await box({
+const paddle = createBox({
 	name: 'paddle',
 	position: new Vector3(0, -9, 0),
 	size: paddleSize,
@@ -26,7 +26,7 @@ makeMoveable(paddle).onUpdate(({ me, inputs }) => {
 paddle.addBehavior(boundary2d({ boundaries: board }));
 
 const ballRadius = 0.25;
-const ball = await sphere({
+const ball = createSphere({
 	name: 'ball',
 	radius: ballRadius,
 	material: { color: new Color(Color.NAMES.lightgreen) },
@@ -61,7 +61,7 @@ const moveableBall = makeMoveable(ball)
 		),
 	]);
 
-const failZone = await zone({
+const failZone = createZone({
 	name: 'failZone',
 	position: new Vector3(0, board.bottom - 1, 0),
 	size: new Vector3(board.right - board.left + 10, 2, 1),
@@ -90,7 +90,7 @@ for (let r = 0; r < brickRows; r++) {
 		const x = board.left + 2 + c * (brickSize.x + brickGap);
 		const y = brickStartY - r * (brickSize.y + 0.6);
 		const color = new Color().setHSL(0.02 + r * 0.08, 0.8, 0.5);
-		const b = await box({
+		const b = createBox({
 			name: 'brick',
 			size: brickSize,
 			position: new Vector3(x, y, 0),
@@ -107,7 +107,7 @@ const camera1 = createCamera({
 	zoom: 24,
 });
 
-const scoreText = await text({
+const scoreText = createText({
 	name: 'scoreText',
 	text: 'Score: 0',
 	fontSize: 20,
@@ -115,7 +115,7 @@ const scoreText = await text({
 	screenPosition: new Vector2(0.1, 0.05),
 });
 
-const livesText = await text({
+const livesText = createText({
 	name: 'livesText',
 	text: 'Lives: 3',
 	fontSize: 20,
@@ -123,7 +123,7 @@ const livesText = await text({
 	screenPosition: new Vector2(0.9, 0.05),
 });
 
-const statusText = await text({
+const statusText = createText({
 	name: 'statusText',
 	text: '',
 	fontSize: 32,

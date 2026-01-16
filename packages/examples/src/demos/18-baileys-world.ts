@@ -1,4 +1,4 @@
-import { createGame, createStage, createCamera, actor, plane, box } from '@zylem/game-lib';
+import { createGame, createStage, createCamera, createActor, createPlane, createBox } from '@zylem/game-lib';
 import { Vector2, Vector3 } from 'three';
 import floor from './baileys-world/floor.png';
 import wall from './baileys-world/wall.png';
@@ -13,7 +13,7 @@ import spikeyBall from './baileys-world/spikey-ball.gltf';
 import starby from './baileys-world/starby.gltf';
 
 const camera = createCamera({
-	position: new Vector3(2, 2, 2.5),
+	position: new Vector3(2, 2, 1),
 	target: new Vector3(0, 0, 0),
 })
 
@@ -21,7 +21,7 @@ const stage = await createStage({
 	gravity: new Vector3(0, -20, 0),
 }, camera);
 
-const floorEntity = await plane({
+const floorEntity = createPlane({
 	tile: new Vector2(10, 10),
 	position: { x: 0, y: -1, z: 0 },
 	collision: { static: true },
@@ -31,7 +31,7 @@ const floorEntity = await plane({
 	},
 });
 
-const purpleBedEntity = await actor({
+const purpleBedEntity = createActor({
 	name: 'purple-bed',
 	scale: new Vector3(4, 4, 4),
 	models: [purpleBed],
@@ -45,7 +45,7 @@ const purpleBedEntity = await actor({
 });
 
 // Cozy bed placed next to the purple bed
-const cozyBedEntity = await actor({
+const cozyBedEntity = createActor({
 	name: 'cozy-bed',
 	scale: new Vector3(1, 1, 1),
 	models: [cozyBed],
@@ -58,7 +58,7 @@ const cozyBedEntity = await actor({
 });
 
 // Toys scattered on the floor
-const avocadoEntity = await actor({
+const avocadoEntity = createActor({
 	name: 'avocado',
 	scale: new Vector3(0.5, 0.5, 0.5),
 	models: [avocado],
@@ -66,7 +66,7 @@ const avocadoEntity = await actor({
 	position: { x: 2, y: 1, z: -2.5 },
 });
 
-const starbyEntity = await actor({
+const starbyEntity = createActor({
 	name: 'starby',
 	scale: new Vector3(0.5, 0.5, 0.5),
 	models: [starby],
@@ -74,7 +74,7 @@ const starbyEntity = await actor({
 	position: { x: 2.75, y: 1, z: -1.5 },
 });
 
-const bananaEntity = await actor({
+const bananaEntity = createActor({
 	name: 'banana',
 	scale: new Vector3(0.5, 0.5, 0.5),
 	models: [banana],
@@ -82,7 +82,7 @@ const bananaEntity = await actor({
 	position: { x: 3.5, y: 1, z: -1 },
 });
 
-const playRopeEntity = await actor({
+const playRopeEntity = createActor({
 	name: 'play-rope',
 	scale: new Vector3(0.6, 0.6, 0.6),
 	models: [playRope],
@@ -90,7 +90,7 @@ const playRopeEntity = await actor({
 	position: { x: 2.5, y: 4, z: -1 },
 });
 
-const redBoneEntity = await actor({
+const redBoneEntity = createActor({
 	name: 'red-bone',
 	scale: new Vector3(0.4, 0.4, 0.4),
 	models: [redBone],
@@ -98,7 +98,7 @@ const redBoneEntity = await actor({
 	position: { x: 1, y: 1, z: -1 },
 });
 
-const spikeyBallEntity = await actor({
+const spikeyBallEntity = createActor({
 	name: 'spikey-ball',
 	scale: new Vector3(0.5, 0.5, 0.5),
 	models: [spikeyBall],
@@ -106,7 +106,7 @@ const spikeyBallEntity = await actor({
 	position: { x: 3, y: 1, z: -0.5 },
 })
 
-const wallEntity = await box({
+const wallEntity = createBox({
 	position: { x: 0, y: 1.5, z: -3 },
 	size: new Vector3(10, 5, 1),
 	collision: { static: true },
@@ -115,7 +115,7 @@ const wallEntity = await box({
 		repeat: new Vector2(1, 1),
 	},
 });
-const wall2Entity = await box({
+const wall2Entity = createBox({
 	position: { x: -5, y: 1.5, z: 0 },
 	size: new Vector3(1, 5, 10),
 	collision: { static: true },
@@ -125,7 +125,7 @@ const wall2Entity = await box({
 	},
 });
 
-const player = await actor({
+const player = createActor({
 	name: 'player',
 	size: new Vector3(1, 1, 1),
 	models: [bailey],

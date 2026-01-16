@@ -1,9 +1,9 @@
 import { EntityBlueprint } from '../core/blueprints';
 import { GameEntity, GameEntityOptions } from './entity';
-import { text } from './text';
-import { sprite } from './sprite';
+import { createText } from './text';
+import { createSprite } from './sprite';
 
-type EntityCreator = (options: any) => Promise<GameEntity<any>>;
+type EntityCreator = (options: any) => GameEntity<any>;
 
 export const EntityFactory = {
   registry: new Map<string, EntityCreator>(),
@@ -12,7 +12,7 @@ export const EntityFactory = {
     this.registry.set(type, creator);
   },
 
-  async createFromBlueprint(blueprint: EntityBlueprint): Promise<GameEntity<any>> {
+  createFromBlueprint(blueprint: EntityBlueprint): GameEntity<any> {
     const creator = this.registry.get(blueprint.type);
     if (!creator) {
       throw new Error(`Unknown entity type: ${blueprint.type}`);
@@ -24,11 +24,11 @@ export const EntityFactory = {
       name: blueprint.id,
     };
 
-    const entity = await creator(options);
+    const entity = creator(options);
     
     return entity;
   }
 };
 
-EntityFactory.register('text', async (opts) => await text(opts) as unknown as GameEntity<any>);
-EntityFactory.register('sprite', async (opts) => await sprite(opts) as unknown as GameEntity<any>);
+EntityFactory.register('text', (opts) => createText(opts) as unknown as GameEntity<any>);
+EntityFactory.register('sprite', (opts) => createSprite(opts) as unknown as GameEntity<any>);

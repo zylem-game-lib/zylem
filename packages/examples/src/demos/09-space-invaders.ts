@@ -1,5 +1,5 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { createCamera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, sprite, createStage, text, setGlobal, TEXT_TYPE } from '@zylem/game-lib';
+import { createCamera, destroy, entitySpawner, createGame, makeMoveable, Perspectives, createSprite, createStage, createText, setGlobal, TEXT_TYPE } from '@zylem/game-lib';
 import { boundary2d } from '@zylem/game-lib';
 import { movementSequence2D } from '@zylem/game-lib';
 import { makeTransformable } from '@zylem/game-lib';
@@ -7,7 +7,7 @@ import playerShip from '@zylem/assets/2d/space/player-ship.png';
 import enemyShip from '@zylem/assets/2d/space/enemy-ship.png';
 import playerLaser from '@zylem/assets/2d/space/player-laser.png';
 
-const player = makeTransformable(await sprite({
+const player = makeTransformable(createSprite({
 	name: 'player',
 	images: [
 		{ name: 'player', file: playerShip },
@@ -16,7 +16,7 @@ const player = makeTransformable(await sprite({
 }));
 
 async function createBullet(x: number, y: number) {
-	const bullet = makeTransformable(await sprite({
+	const bullet = makeTransformable(createSprite({
 		name: 'bullet',
 		images: [
 			{ name: 'bullet', file: playerLaser },
@@ -66,7 +66,7 @@ const enemies: any[] = [];
 
 for (let i = 0; i < 10; i++) {
 	for (let j = 0; j < 4; j++) {
-		const enemy = makeMoveable(await sprite({
+		const enemy = makeMoveable(createSprite({
 			name: 'enemy',
 			images: [
 				{ name: 'enemy', file: enemyShip },
@@ -103,7 +103,7 @@ const stage1 = createStage({
 
 const bulletSpawner = entitySpawner(createBullet);
 
-const livesText = await text({
+const livesText = createText({
 	name: 'livesText',
 	text: 'Lives: 3',
 	fontSize: 20,
@@ -111,7 +111,7 @@ const livesText = await text({
 	screenPosition: new Vector2(0.1, 0.05),
 });
 
-const scoreText = await text({
+const scoreText = createText({
 	name: 'scoreText',
 	text: 'Score: 0',
 	fontSize: 20,

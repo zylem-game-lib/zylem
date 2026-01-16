@@ -6,7 +6,9 @@ export function isLoadable(obj: any): obj is EntityLoaderDelegate {
 }
 
 export interface EntityLoaderDelegate {
-	load(): Promise<void>;
+	/** Initiates loading (may be async internally, but call returns immediately) */
+	load(): void;
+	/** Returns data synchronously (may be null if still loading) */
 	data(): any;
 }
 
@@ -17,13 +19,13 @@ export class EntityLoader {
 		this.entityReference = entity;
 	}
 
-	async load() {
+	load(): void {
 		if (this.entityReference.load) {
-			await this.entityReference.load();
+			this.entityReference.load();
 		}
 	}
 
-	async data() {
+	data(): any {
 		if (this.entityReference.data) {
 			return this.entityReference.data();
 		}

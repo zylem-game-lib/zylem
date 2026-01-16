@@ -1,7 +1,7 @@
 /// <reference types="@zylem/assets" />
 
 import { ArrowHelper, Vector3 } from 'three';
-import { createGame, createStage, zone, rotateInDirection, move, resetVelocity } from '@zylem/game-lib';
+import { createGame, createStage, createZone, rotateInDirection, move, resetVelocity } from '@zylem/game-lib';
 import { Ray } from '@dimforge/rapier3d-compat';
 import { playgroundPlane, playgroundActor, playgroundPlatforms } from '../utils';
 import { StageEntity } from '@zylem/game-lib';
@@ -16,7 +16,7 @@ const stage1 = await createStage({
 const groundPlane = await playgroundPlane('dirt');
 const player = await playgroundActor('player');
 const platforms = await playgroundPlatforms();
-const startingZone = await zone({
+const startingZone = createZone({
 	position: { x: 0, y: 0, z: 0 },
 	size: new Vector3(10, 10, 10),
 	onEnter: ({ self, visitor, globals }) => {
@@ -27,7 +27,7 @@ const startingZone = await zone({
 	},
 });
 
-const endingZone = await zone({
+const endingZone = createZone({
 	position: { x: 0, y: 20, z: 0 },
 	size: new Vector3(10, 10, 10),
 	onEnter: ({ self, visitor, globals }) => {

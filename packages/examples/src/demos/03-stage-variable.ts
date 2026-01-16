@@ -1,11 +1,11 @@
 import { Color, Vector2 } from 'three';
-import { createGame, createStage, box, text, makeRotatable, setVariable, getVariable, createVariable, onVariableChange } from '@zylem/game-lib';
+import { createGame, createStage, createBox, createText, makeRotatable, setVariable, getVariable, createVariable, onVariableChange } from '@zylem/game-lib';
 
 const stage1 = createStage();
 
 createVariable(stage1, 'totalAngle', 0);
 
-const box1 = makeRotatable(await box({
+const box1 = makeRotatable(createBox({
 	name: 'box1',
 	material: {
 		color: new Color('red')
@@ -23,7 +23,7 @@ box1.onUpdate(({ me, delta }) => {
 	setVariable(stage1, 'totalAngle', nextTotal);
 });
 
-const rotationsText = await text({
+const rotationsText = createText({
 	name: 'rotationsText',
 	text: '0',
 	fontSize: 24,

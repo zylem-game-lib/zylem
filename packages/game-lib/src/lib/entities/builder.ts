@@ -51,9 +51,9 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends GameE
 		return this;
 	}
 
-	async withMaterial(options: Partial<MaterialOptions>, entityType: symbol): Promise<this> {
+	withMaterial(options: Partial<MaterialOptions>, entityType: symbol): this {
 		if (this.materialBuilder) {
-			await this.materialBuilder.build(options, entityType);
+			this.materialBuilder.build(options, entityType);
 		}
 		return this;
 	}
@@ -70,7 +70,7 @@ export abstract class EntityBuilder<T extends GameEntity<U> & P, U extends GameE
 		});
 	}
 
-	async build(): Promise<T> {
+	build(): T {
 		const entity = this.entity;
 		if (this.materialBuilder) {
 			entity.materials = this.materialBuilder.materials;

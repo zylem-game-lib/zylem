@@ -171,7 +171,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		}
 	}
 
-	async spriteUpdate(params: UpdateContext<ZylemSpriteOptions>): Promise<void> {
+	spriteUpdate(params: UpdateContext<ZylemSpriteOptions>): void {
 		this.sprites.forEach(_sprite => {
 			if (_sprite.material) {
 				const q = this.body?.rotation();
@@ -185,7 +185,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		});
 	}
 
-	async spriteDestroy(params: DestroyContext<ZylemSpriteOptions>): Promise<void> {
+	spriteDestroy(params: DestroyContext<ZylemSpriteOptions>): void {
 		this.sprites.forEach(_sprite => {
 			_sprite.removeFromParent();
 		});
@@ -205,7 +205,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 
 type SpriteOptions = BaseNode | Partial<ZylemSpriteOptions>;
 
-export async function sprite(...args: Array<SpriteOptions>): Promise<ZylemSprite> {
+export function createSprite(...args: Array<SpriteOptions>): ZylemSprite {
 	return createEntity<ZylemSprite, ZylemSpriteOptions>({
 		args,
 		defaultConfig: spriteDefaults,

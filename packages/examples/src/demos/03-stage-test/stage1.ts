@@ -1,7 +1,7 @@
 import { Color, Vector3 } from "three";
-import { createCamera, createStage, sphere } from "@zylem/game-lib";
+import { createCamera, createStage, createSphere } from "@zylem/game-lib";
 
-const planet = await sphere({
+const planet = createSphere({
 	radius: 10,
 	material: { color: new Color(Color.NAMES.blue) },
 });

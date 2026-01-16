@@ -1,7 +1,7 @@
 import { Color, Vector2 } from "three";
-import { createStage, text } from "@zylem/game-lib";
+import { createStage, createText } from "@zylem/game-lib";
 
-const startGameText = text({
+const startGameText = createText({
 	name: 'startGameText',
 	text: 'Press A ("z" on keyboard) to start the game',
 	fontSize: 20,

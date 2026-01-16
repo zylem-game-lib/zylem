@@ -1,7 +1,7 @@
-import { boundary2d, createGame, makeMoveable, sphere } from '@zylem/game-lib';
+import { boundary2d, createGame, makeMoveable, createSphere } from '@zylem/game-lib';
 
 // Creates a moveable sphere
-const ball = makeMoveable(await sphere());
+const ball = makeMoveable(createSphere());
 
 // when the ball is updated, move it based on the inputs
 ball.onUpdate(({ me, inputs, delta }) => {

@@ -54,11 +54,11 @@ export class MaterialBuilder {
 		}
 	}
 
-	async build(options: Partial<MaterialOptions>, entityType: symbol) {
+	build(options: Partial<MaterialOptions>, entityType: symbol): void {
 		const { path, repeat, color, shader } = options;
 		if (shader) this.withShader(shader);
 		if (color) this.withColor(color);
-		await this.setTexture(path ?? null, repeat);
+		this.setTexture(path ?? null, repeat);
 		if (this.materials.length === 0) {
 			this.setColor(new Color('#ffffff'));
 		}
@@ -75,20 +75,30 @@ export class MaterialBuilder {
 		return this;
 	}
 
-	async setTexture(texturePath: TexturePath = null, repeat: Vector2 = new Vector2(1, 1)) {
+	/**
+	 * Set texture - loads in background (deferred).
+	 * Material is created immediately with null map, texture applies when loaded.
+	 */
+	setTexture(texturePath: TexturePath = null, repeat: Vector2 = new Vector2(1, 1)): void {
 		if (!texturePath) {
 			return;
 		}
-		const texture = await assetManager.loadTexture(texturePath as string, { 
-			clone: true,
-			repeat 
-		});
-		texture.wrapS = RepeatWrapping;
-		texture.wrapT = RepeatWrapping;
+		// Create material immediately with null map
 		const material = new MeshPhongMaterial({
-			map: texture,
+			map: null,
 		});
 		this.materials.push(material);
+
+		// Load texture in background and apply when ready
+		assetManager.loadTexture(texturePath as string, { 
+			clone: true,
+			repeat 
+		}).then(texture => {
+			texture.wrapS = RepeatWrapping;
+			texture.wrapT = RepeatWrapping;
+			material.map = texture;
+			material.needsUpdate = true;
+		});
 	}
 
 	setColor(color: Color) {

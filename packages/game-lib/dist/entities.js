@@ -1226,11 +1226,11 @@ var MaterialBuilder = class _MaterialBuilder {
       );
     }
   }
-  async build(options, entityType) {
+  build(options, entityType) {
     const { path, repeat, color, shader } = options;
     if (shader) this.withShader(shader);
     if (color) this.withColor(color);
-    await this.setTexture(path ?? null, repeat);
+    this.setTexture(path ?? null, repeat);
     if (this.materials.length === 0) {
       this.setColor(new Color2("#ffffff"));
     }
@@ -1244,20 +1244,27 @@ var MaterialBuilder = class _MaterialBuilder {
     this.setShader(shaderType);
     return this;
   }
-  async setTexture(texturePath = null, repeat = new Vector22(1, 1)) {
+  /**
+   * Set texture - loads in background (deferred).
+   * Material is created immediately with null map, texture applies when loaded.
+   */
+  setTexture(texturePath = null, repeat = new Vector22(1, 1)) {
     if (!texturePath) {
       return;
     }
-    const texture = await assetManager.loadTexture(texturePath, {
-      clone: true,
-      repeat
-    });
-    texture.wrapS = RepeatWrapping2;
-    texture.wrapT = RepeatWrapping2;
     const material = new MeshPhongMaterial({
-      map: texture
+      map: null
     });
     this.materials.push(material);
+    assetManager.loadTexture(texturePath, {
+      clone: true,
+      repeat
+    }).then((texture) => {
+      texture.wrapS = RepeatWrapping2;
+      texture.wrapT = RepeatWrapping2;
+      material.map = texture;
+      material.needsUpdate = true;
+    });
   }
   setColor(color) {
     const material = new MeshStandardMaterial({
@@ -1319,9 +1326,9 @@ var EntityBuilder = class {
     this.options.position = setupPosition;
     return this;
   }
-  async withMaterial(options, entityType) {
+  withMaterial(options, entityType) {
     if (this.materialBuilder) {
-      await this.materialBuilder.build(options, entityType);
+      this.materialBuilder.build(options, entityType);
     }
     return this;
   }
@@ -1336,7 +1343,7 @@ var EntityBuilder = class {
       child.receiveShadow = true;
     });
   }
-  async build() {
+  build() {
     const entity = this.entity;
     if (this.materialBuilder) {
       entity.materials = this.materialBuilder.materials;
@@ -1493,12 +1500,12 @@ var EntityLoader = class {
   constructor(entity) {
     this.entityReference = entity;
   }
-  async load() {
+  load() {
     if (this.entityReference.load) {
-      await this.entityReference.load();
+      this.entityReference.load();
     }
   }
-  async data() {
+  data() {
     if (this.entityReference.data) {
       return this.entityReference.data();
     }
@@ -1507,7 +1514,7 @@ var EntityLoader = class {
 };
 
 // src/lib/entities/create.ts
-async function createEntity(params) {
+function createEntity(params) {
   const {
     args,
     defaultConfig,
@@ -1535,8 +1542,8 @@ async function createEntity(params) {
     try {
       if (isLoadable(entity)) {
         const loader = new EntityLoader(entity);
-        await loader.load();
-        entityData = await loader.data();
+        loader.load();
+        entityData = loader.data();
       }
     } catch (error) {
       console.error("Error creating entity with loader:", error);
@@ -1548,13 +1555,13 @@ async function createEntity(params) {
       CollisionBuilderClass ? new CollisionBuilderClass(entityData) : null
     );
     if (arg.material) {
-      await builder.withMaterial(arg.material, entityType);
+      builder.withMaterial(arg.material, entityType);
     }
   }
   if (!builder) {
     throw new Error(`missing options for ${String(entityType)}, builder is not initialized.`);
   }
-  return await builder.build();
+  return builder.build();
 }
 
 // src/lib/entities/box.ts
@@ -1606,7 +1613,7 @@ var ZylemBox = class _ZylemBox extends GameEntity {
     };
   }
 };
-async function box(...args) {
+function createBox(...args) {
   return createEntity({
     args,
     defaultConfig: boxDefaults,
@@ -1669,7 +1676,7 @@ var ZylemSphere = class _ZylemSphere extends GameEntity {
     };
   }
 };
-async function sphere(...args) {
+function createSphere(...args) {
   return createEntity({
     args,
     defaultConfig: sphereDefaults,
@@ -1808,7 +1815,7 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
       }
     }
   }
-  async spriteUpdate(params) {
+  spriteUpdate(params) {
     this.sprites.forEach((_sprite) => {
       if (_sprite.material) {
         const q = this.body?.rotation();
@@ -1821,7 +1828,7 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
       }
     });
   }
-  async spriteDestroy(params) {
+  spriteDestroy(params) {
     this.sprites.forEach((_sprite) => {
       _sprite.removeFromParent();
     });
@@ -1837,7 +1844,7 @@ var ZylemSprite = class _ZylemSprite extends GameEntity {
     };
   }
 };
-async function sprite(...args) {
+function createSprite(...args) {
   return createEntity({
     args,
     defaultConfig: spriteDefaults,
@@ -2013,7 +2020,7 @@ var ZylemPlane = class extends GameEntity {
     this.options = { ...planeDefaults, ...options };
   }
 };
-async function plane(...args) {
+function createPlane(...args) {
   return createEntity({
     args,
     defaultConfig: planeDefaults,
@@ -2142,7 +2149,7 @@ var ZylemZone = class extends GameEntity {
     }
   }
 };
-async function zone(...args) {
+function createZone(...args) {
   return createEntity({
     args,
     defaultConfig: zoneDefaults,
@@ -2155,7 +2162,7 @@ async function zone(...args) {
 
 // src/lib/entities/actor.ts
 import { ActiveCollisionTypes as ActiveCollisionTypes3, ColliderDesc as ColliderDesc7 } from "@dimforge/rapier3d-compat";
-import { Group as Group4, Vector3 as Vector38 } from "three";
+import { MeshStandardMaterial as MeshStandardMaterial3, Group as Group4, Vector3 as Vector38 } from "three";
 
 // src/lib/core/entity-asset-loader.ts
 var EntityAssetLoader = class {
@@ -2365,14 +2372,14 @@ var ActorCollisionBuilder = class extends EntityCollisionBuilder {
     if (!foundGeometry) return this.createCapsuleCollider(options);
     const geometry = foundGeometry;
     geometry.computeBoundingBox();
-    const box2 = geometry.boundingBox;
-    if (!box2) return this.createCapsuleCollider(options);
-    const height = box2.max.y - box2.min.y;
-    const width = box2.max.x - box2.min.x;
-    const depth = box2.max.z - box2.min.z;
+    const box = geometry.boundingBox;
+    if (!box) return this.createCapsuleCollider(options);
+    const height = box.max.y - box.min.y;
+    const width = box.max.x - box.min.x;
+    const depth = box.max.z - box.min.z;
     let colliderDesc = ColliderDesc7.cuboid(width / 2, height / 2, depth / 2);
     colliderDesc.setSensor(false);
-    const centerY = (box2.max.y + box2.min.y) / 2;
+    const centerY = (box.max.y + box.min.y) / 2;
     colliderDesc.setTranslation(0, centerY, 0);
     colliderDesc.activeCollisionTypes = ActiveCollisionTypes3.DEFAULT;
     return colliderDesc;
@@ -2397,26 +2404,26 @@ var ZylemActor = class extends GameEntity {
     this.prependUpdate(this.actorUpdate.bind(this));
     this.controlledRotation = true;
   }
-  async load() {
+  /**
+   * Initiates model and animation loading in background (deferred).
+   * Call returns immediately; assets will be ready on subsequent updates.
+   */
+  load() {
     this._modelFileNames = this.options.models || [];
-    await this.loadModels();
-    if (this._object) {
-      this._animationDelegate = new AnimationDelegate(this._object);
-      await this._animationDelegate.loadAnimations(this.options.animations || []);
-      this.dispatch("entity:animation:loaded", {
-        entityId: this.uuid,
-        animationCount: this.options.animations?.length || 0
-      });
-    }
+    this.loadModelsDeferred();
   }
-  async data() {
+  /**
+   * Returns current data synchronously.
+   * May return null values if loading is still in progress.
+   */
+  data() {
     return {
       animations: this._animationDelegate?.animations,
       objectModel: this._object,
       collisionShape: this.options.collisionShape
     };
   }
-  async actorUpdate(params) {
+  actorUpdate(params) {
     this._animationDelegate?.update(params.delta);
   }
   /**
@@ -2447,38 +2454,78 @@ var ZylemActor = class extends GameEntity {
     }
     this._modelFileNames = [];
   }
-  async loadModels() {
+  /**
+   * Deferred loading - starts async load and updates entity when complete.
+   * Called by synchronous load() method.
+   */
+  loadModelsDeferred() {
     if (this._modelFileNames.length === 0) return;
     this.dispatch("entity:model:loading", {
       entityId: this.uuid,
       files: this._modelFileNames
     });
     const promises = this._modelFileNames.map((file) => this._assetLoader.loadFile(file));
-    const results = await Promise.all(promises);
-    if (results[0]?.object) {
-      this._object = results[0].object;
-    }
-    let meshCount = 0;
-    if (this._object) {
-      this._object.traverse((child) => {
-        if (child.isMesh) meshCount++;
+    Promise.all(promises).then((results) => {
+      if (results[0]?.object) {
+        this._object = results[0].object;
+      }
+      let meshCount = 0;
+      if (this._object) {
+        this._object.traverse((child) => {
+          if (child.isMesh) meshCount++;
+        });
+        this.group = new Group4();
+        this.group.attach(this._object);
+        this.group.scale.set(
+          this.options.scale?.x || 1,
+          this.options.scale?.y || 1,
+          this.options.scale?.z || 1
+        );
+        this.applyMaterialOverrides();
+        this._animationDelegate = new AnimationDelegate(this._object);
+        this._animationDelegate.loadAnimations(this.options.animations || []).then(() => {
+          this.dispatch("entity:animation:loaded", {
+            entityId: this.uuid,
+            animationCount: this.options.animations?.length || 0
+          });
+        });
+      }
+      this.dispatch("entity:model:loaded", {
+        entityId: this.uuid,
+        success: !!this._object,
+        meshCount
       });
-      this.group = new Group4();
-      this.group.attach(this._object);
-      this.group.scale.set(
-        this.options.scale?.x || 1,
-        this.options.scale?.y || 1,
-        this.options.scale?.z || 1
-      );
-    }
-    this.dispatch("entity:model:loaded", {
-      entityId: this.uuid,
-      success: !!this._object,
-      meshCount
     });
   }
   playAnimation(animationOptions) {
     this._animationDelegate?.playAnimation(animationOptions);
+  }
+  /**
+   * Apply material overrides from options to all meshes in the loaded model.
+   * Only applies if material options are explicitly specified (not just defaults).
+   */
+  applyMaterialOverrides() {
+    const materialOptions = this.options.material;
+    if (!materialOptions || !materialOptions.color && !materialOptions.path) {
+      return;
+    }
+    if (!this._object) return;
+    this._object.traverse((child) => {
+      if (child.isMesh) {
+        const mesh = child;
+        if (materialOptions.color) {
+          const newMaterial = new MeshStandardMaterial3({
+            color: materialOptions.color,
+            emissiveIntensity: 0.5,
+            lightMapIntensity: 0.5,
+            fog: true
+          });
+          mesh.castShadow = true;
+          mesh.receiveShadow = true;
+          mesh.material = newMaterial;
+        }
+      }
+    });
   }
   get object() {
     return this._object;
@@ -2516,8 +2563,8 @@ var ZylemActor = class extends GameEntity {
     return debugInfo;
   }
 };
-async function actor(...args) {
-  return await createEntity({
+function createActor(...args) {
+  return createEntity({
     args,
     defaultConfig: actorDefaults,
     EntityClass: ZylemActor,
@@ -2591,10 +2638,10 @@ var ZylemText = class _ZylemText extends GameEntity {
     this.group?.add(this._sprite);
     this.redrawText(this.options.text ?? "");
   }
-  measureAndResizeCanvas(text2, fontSize, fontFamily, padding) {
+  measureAndResizeCanvas(text, fontSize, fontFamily, padding) {
     if (!this._canvas || !this._ctx) return { sizeChanged: false };
     this._ctx.font = `${fontSize}px ${fontFamily}`;
-    const metrics = this._ctx.measureText(text2);
+    const metrics = this._ctx.measureText(text);
     const textWidth = Math.ceil(metrics.width);
     const textHeight = Math.ceil(fontSize * 1.4);
     const nextW = Math.max(2, textWidth + padding * 2);
@@ -2606,7 +2653,7 @@ var ZylemText = class _ZylemText extends GameEntity {
     this._lastCanvasH = nextH;
     return { sizeChanged };
   }
-  drawCenteredText(text2, fontSize, fontFamily) {
+  drawCenteredText(text, fontSize, fontFamily) {
     if (!this._canvas || !this._ctx) return;
     this._ctx.font = `${fontSize}px ${fontFamily}`;
     this._ctx.textAlign = "center";
@@ -2617,7 +2664,7 @@ var ZylemText = class _ZylemText extends GameEntity {
       this._ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
     }
     this._ctx.fillStyle = this.toCssColor(this.options.fontColor ?? "#FFFFFF");
-    this._ctx.fillText(text2, this._canvas.width / 2, this._canvas.height / 2);
+    this._ctx.fillText(text, this._canvas.width / 2, this._canvas.height / 2);
   }
   updateTexture(sizeChanged) {
     if (!this._texture || !this._canvas) return;
@@ -2741,7 +2788,7 @@ var ZylemText = class _ZylemText extends GameEntity {
   /**
    * Dispose of Three.js resources when the entity is destroyed.
    */
-  async textDestroy() {
+  textDestroy() {
     this._texture?.dispose();
     if (this._sprite?.material) {
       this._sprite.material.dispose();
@@ -2757,7 +2804,7 @@ var ZylemText = class _ZylemText extends GameEntity {
     this._cameraRef = null;
   }
 };
-async function text(...args) {
+function createText(...args) {
   return createEntity({
     args,
     defaultConfig: { ...textDefaults },
@@ -3034,7 +3081,7 @@ var ZylemRect = class _ZylemRect extends GameEntity {
     };
   }
 };
-async function rect(...args) {
+function createRect(...args) {
   return createEntity({
     args,
     defaultConfig: { ...rectDefaults },
@@ -3045,13 +3092,13 @@ async function rect(...args) {
 }
 export {
   ZylemBox,
-  actor,
-  box,
-  plane,
-  rect,
-  sphere,
-  sprite,
-  text,
-  zone
+  createActor,
+  createBox,
+  createPlane,
+  createRect,
+  createSphere,
+  createSprite,
+  createText,
+  createZone
 };
 //# sourceMappingURL=entities.js.map

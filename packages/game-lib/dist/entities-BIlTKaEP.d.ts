@@ -1,4 +1,4 @@
-import { G as GameEntity, U as UpdateContext, s as GameEntityOptions, k as DestroyContext, l as BaseNode, T as TexturePath, V as Vec3, M as MaterialOptions } from './entity-BtSVUHY-.js';
+import { G as GameEntity, U as UpdateContext, s as GameEntityOptions, k as DestroyContext, l as BaseNode, T as TexturePath, V as Vec3, M as MaterialOptions } from './entity-9AMNjC28.js';
 import { Vector3, Sprite, Color, Vector2, Object3D } from 'three';
 import RAPIER__default, { World } from '@dimforge/rapier3d-compat';
 import { E as Entity } from './entity-Bq_eNEDI.js';
@@ -61,12 +61,12 @@ declare class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
     protected createAnimations(animations: SpriteAnimation[]): void;
     setSprite(key: string): void;
     setAnimation(name: string, delta: number): void;
-    spriteUpdate(params: UpdateContext<ZylemSpriteOptions>): Promise<void>;
-    spriteDestroy(params: DestroyContext<ZylemSpriteOptions>): Promise<void>;
+    spriteUpdate(params: UpdateContext<ZylemSpriteOptions>): void;
+    spriteDestroy(params: DestroyContext<ZylemSpriteOptions>): void;
     buildInfo(): Record<string, any>;
 }
 type SpriteOptions = BaseNode | Partial<ZylemSpriteOptions>;
-declare function sprite(...args: Array<SpriteOptions>): Promise<ZylemSprite>;
+declare function createSprite(...args: Array<SpriteOptions>): ZylemSprite;
 
 type ZylemSphereOptions = GameEntityOptions & {
     radius?: number;
@@ -78,7 +78,7 @@ declare class ZylemSphere extends GameEntity<ZylemSphereOptions> {
     buildInfo(): Record<string, any>;
 }
 type SphereOptions = BaseNode | Partial<ZylemSphereOptions>;
-declare function sphere(...args: Array<SphereOptions>): Promise<ZylemSphere>;
+declare function createSphere(...args: Array<SphereOptions>): ZylemSphere;
 
 type ZylemRectOptions = GameEntityOptions & {
     width?: number;
@@ -133,7 +133,7 @@ declare class ZylemRect extends GameEntity<ZylemRectOptions> {
     buildInfo(): Record<string, any>;
 }
 type RectOptions = BaseNode | Partial<ZylemRectOptions>;
-declare function rect(...args: Array<RectOptions>): Promise<ZylemRect>;
+declare function createRect(...args: Array<RectOptions>): ZylemRect;
 
 type ZylemTextOptions = GameEntityOptions & {
     text?: string;
@@ -179,7 +179,7 @@ declare class ZylemText extends GameEntity<ZylemTextOptions> {
     private textDestroy;
 }
 type TextOptions = BaseNode | Partial<ZylemTextOptions>;
-declare function text(...args: Array<TextOptions>): Promise<ZylemText>;
+declare function createText(...args: Array<TextOptions>): ZylemText;
 
 type ZylemBoxOptions = GameEntityOptions;
 declare const BOX_TYPE: unique symbol;
@@ -189,7 +189,7 @@ declare class ZylemBox extends GameEntity<ZylemBoxOptions> {
     buildInfo(): Record<string, any>;
 }
 type BoxOptions = BaseNode | ZylemBoxOptions;
-declare function box(...args: Array<BoxOptions>): Promise<ZylemBox>;
+declare function createBox(...args: Array<BoxOptions>): ZylemBox;
 
 type ZylemPlaneOptions = GameEntityOptions & {
     tile?: Vector2;
@@ -206,7 +206,7 @@ declare class ZylemPlane extends GameEntity<ZylemPlaneOptions> {
     constructor(options?: ZylemPlaneOptions);
 }
 type PlaneOptions = BaseNode | Partial<ZylemPlaneOptions>;
-declare function plane(...args: Array<PlaneOptions>): Promise<ZylemPlane>;
+declare function createPlane(...args: Array<PlaneOptions>): ZylemPlane;
 
 type OnHeldParams = {
     delta: number;
@@ -246,10 +246,12 @@ declare class ZylemZone extends GameEntity<ZylemZoneOptions> implements Collisio
     held(delta: number, other: any): void;
 }
 type ZoneOptions = BaseNode | Partial<ZylemZoneOptions>;
-declare function zone(...args: Array<ZoneOptions>): Promise<ZylemZone>;
+declare function createZone(...args: Array<ZoneOptions>): ZylemZone;
 
 interface EntityLoaderDelegate {
-    load(): Promise<void>;
+    /** Initiates loading (may be async internally, but call returns immediately) */
+    load(): void;
+    /** Returns data synchronously (may be null if still loading) */
     data(): any;
 }
 
@@ -290,15 +292,32 @@ declare class ZylemActor extends GameEntity<ZylemActorOptions> implements Entity
     private _assetLoader;
     controlledRotation: boolean;
     constructor(options?: ZylemActorOptions);
-    load(): Promise<void>;
-    data(): Promise<any>;
-    actorUpdate(params: UpdateContext<ZylemActorOptions>): Promise<void>;
+    /**
+     * Initiates model and animation loading in background (deferred).
+     * Call returns immediately; assets will be ready on subsequent updates.
+     */
+    load(): void;
+    /**
+     * Returns current data synchronously.
+     * May return null values if loading is still in progress.
+     */
+    data(): any;
+    actorUpdate(params: UpdateContext<ZylemActorOptions>): void;
     /**
      * Clean up actor resources including animations, models, and groups
      */
     actorDestroy(): void;
-    private loadModels;
+    /**
+     * Deferred loading - starts async load and updates entity when complete.
+     * Called by synchronous load() method.
+     */
+    private loadModelsDeferred;
     playAnimation(animationOptions: AnimationOptions): void;
+    /**
+     * Apply material overrides from options to all meshes in the loaded model.
+     * Only applies if material options are explicitly specified (not just defaults).
+     */
+    private applyMaterialOverrides;
     get object(): Object3D | null;
     /**
      * Provide custom debug information for the actor
@@ -307,6 +326,6 @@ declare class ZylemActor extends GameEntity<ZylemActorOptions> implements Entity
     getDebugInfo(): Record<string, any>;
 }
 type ActorOptions = BaseNode | ZylemActorOptions;
-declare function actor(...args: Array<ActorOptions>): Promise<ZylemActor>;
+declare function createActor(...args: Array<ActorOptions>): ZylemActor;
 
-export { ACTOR_TYPE as A, BOX_TYPE as B, PLANE_TYPE as P, RECT_TYPE as R, SPRITE_TYPE as S, TEXT_TYPE as T, ZylemBox as Z, sprite as a, box as b, actor as c, SPHERE_TYPE as d, ZONE_TYPE as e, ZylemWorld as f, ZylemSprite as g, ZylemSphere as h, ZylemRect as i, ZylemText as j, ZylemPlane as k, ZylemZone as l, ZylemActor as m, plane as p, rect as r, sphere as s, text as t, zone as z };
+export { ACTOR_TYPE as A, BOX_TYPE as B, PLANE_TYPE as P, RECT_TYPE as R, SPRITE_TYPE as S, TEXT_TYPE as T, ZylemBox as Z, createSphere as a, createSprite as b, createBox as c, createPlane as d, createZone as e, createActor as f, createText as g, createRect as h, SPHERE_TYPE as i, ZONE_TYPE as j, ZylemWorld as k, ZylemSprite as l, ZylemSphere as m, ZylemRect as n, ZylemText as o, ZylemPlane as p, ZylemZone as q, ZylemActor as r };

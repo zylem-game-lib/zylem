@@ -1,8 +1,8 @@
 import { Color, Vector3 } from 'three';
-import { createGame, createStage, sphere, createCamera, Perspectives } from '@zylem/game-lib';
+import { createGame, createStage, createSphere, createCamera, Perspectives } from '@zylem/game-lib';
 
 // TODO: custom shader and texture for planet
-const planet = await sphere({
+const planet = createSphere({
 	radius: 10,
 	material: { color: new Color(Color.NAMES.blue) },
 });

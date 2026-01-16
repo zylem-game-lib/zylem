@@ -15,7 +15,7 @@ export interface CreateGameEntityOptions<T extends GameEntity<any>, CreateOption
 	entityType: symbol;
 };
 
-export async function createEntity<T extends GameEntity<any>, CreateOptions extends GameEntityOptions>(params: CreateGameEntityOptions<T, CreateOptions>): Promise<T> {
+export function createEntity<T extends GameEntity<any>, CreateOptions extends GameEntityOptions>(params: CreateGameEntityOptions<T, CreateOptions>): T {
 	const {
 		args,
 		defaultConfig,
@@ -47,8 +47,8 @@ export async function createEntity<T extends GameEntity<any>, CreateOptions exte
 		try {
 			if (isLoadable(entity)) {
 				const loader = new EntityLoader(entity);
-				await loader.load();
-				entityData = await loader.data();
+				loader.load();
+				entityData = loader.data();
 			}
 		} catch (error) {
 			console.error("Error creating entity with loader:", error);
@@ -60,7 +60,7 @@ export async function createEntity<T extends GameEntity<any>, CreateOptions exte
 			CollisionBuilderClass ? new CollisionBuilderClass(entityData) : null,
 		);
 		if (arg.material) {
-			await builder.withMaterial(arg.material, entityType);
+			builder.withMaterial(arg.material, entityType);
 		}
 	}
 
@@ -68,6 +68,6 @@ export async function createEntity<T extends GameEntity<any>, CreateOptions exte
 		throw new Error(`missing options for ${String(entityType)}, builder is not initialized.`);
 	}
 
-	return await builder.build();
+	return builder.build();
 }
 

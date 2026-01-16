@@ -1,5 +1,5 @@
-export { Z as ZylemBox, c as actor, b as box, p as plane, r as rect, s as sphere, a as sprite, t as text, z as zone } from './entities-D4U-6yRX.js';
-import './entity-BtSVUHY-.js';
+export { Z as ZylemBox, f as createActor, c as createBox, d as createPlane, h as createRect, a as createSphere, b as createSprite, g as createText, e as createZone } from './entities-BIlTKaEP.js';
+import './entity-9AMNjC28.js';
 import 'three';
 import '@dimforge/rapier3d-compat';
 import 'bitecs';
