@@ -180,6 +180,9 @@ importers:
       three:
         specifier: ^0.180.0
         version: 0.180.0
+      typescript-fsm:
+        specifier: ^1.6.0
+        version: 1.6.0
       valtio:
         specifier: ^2.1.7
         version: 2.1.7(react@18.3.1)
@@ -1939,6 +1942,9 @@ packages:
     resolution: {integrity: sha512-ytQKuwgmrrkDTFP4LjR0ToE2nqgy886GpvRSpU0JAnrdBYppuY5rLkRUYPU1yCryb24SsKBTL/hlDQAEFVwtZg==}
     engines: {node: '>=18.0.0'}
     hasBin: true
+
+  typescript-fsm@1.6.0:
+    resolution: {integrity: sha512-wmDVbIZ/iyytlNOLdwyvLTdnArSZw48IwjbHuIcZo+DA2do27pOM+hZJsjPzcQ0ux/lzkZ1i1PPfP16GOGPYuQ==}
 
   typescript@5.8.2:
     resolution: {integrity: sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==}
@@ -3757,6 +3763,8 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
     optional: true
+
+  typescript-fsm@1.6.0: {}
 
   typescript@5.8.2: {}
 

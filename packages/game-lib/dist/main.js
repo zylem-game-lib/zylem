@@ -216,18 +216,18 @@ var init_debug_state = __esm({
 
 // ../../node_modules/.pnpm/mitt@3.0.1/node_modules/mitt/dist/mitt.mjs
 function mitt_default(n) {
-  return { all: n = n || /* @__PURE__ */ new Map(), on: function(t, e) {
-    var i = n.get(t);
-    i ? i.push(e) : n.set(t, [e]);
-  }, off: function(t, e) {
-    var i = n.get(t);
-    i && (e ? i.splice(i.indexOf(e) >>> 0, 1) : n.set(t, []));
-  }, emit: function(t, e) {
-    var i = n.get(t);
+  return { all: n = n || /* @__PURE__ */ new Map(), on: function(t4, e) {
+    var i = n.get(t4);
+    i ? i.push(e) : n.set(t4, [e]);
+  }, off: function(t4, e) {
+    var i = n.get(t4);
+    i && (e ? i.splice(i.indexOf(e) >>> 0, 1) : n.set(t4, []));
+  }, emit: function(t4, e) {
+    var i = n.get(t4);
     i && i.slice().map(function(n2) {
       n2(e);
     }), (i = n.get("*")) && i.slice().map(function(n2) {
-      n2(t, e);
+      n2(t4, e);
     });
   } };
 }
@@ -588,6 +588,11 @@ var init_entity = __esm({
         collision: []
       };
       collisionType;
+      /**
+       * @deprecated Use the new ECS-based behavior system instead.
+       * Use 'any' for callback types to avoid contravariance issues
+       * with function parameters. Type safety is enforced where callbacks are registered.
+       */
       behaviorCallbackMap = {
         setup: [],
         update: [],
@@ -596,6 +601,8 @@ var init_entity = __esm({
       };
       // Event delegate for dispatch/listen API
       eventDelegate = new EventEmitterDelegate();
+      // Behavior references (new ECS pattern)
+      behaviorRefs = [];
       constructor() {
         super();
       }
@@ -617,6 +624,44 @@ var init_entity = __esm({
         const existing = this.collisionDelegate.collision ?? [];
         this.collisionDelegate.collision = [...existing, ...callbacks];
         return this;
+      }
+      /**
+       * Use a behavior on this entity via typed descriptor.
+       * Behaviors will be auto-registered as systems when the entity is spawned.
+       * @param descriptor The behavior descriptor (import from behaviors module)
+       * @param options Optional overrides for the behavior's default options
+       * @returns BehaviorHandle for lazy FSM access
+       */
+      use(descriptor, options) {
+        const behaviorRef = {
+          descriptor,
+          options: { ...descriptor.defaultOptions, ...options }
+        };
+        this.behaviorRefs.push(behaviorRef);
+        return {
+          getFSM: () => behaviorRef.fsm ?? null,
+          getLastHits: () => {
+            const fsm = behaviorRef.fsm ?? null;
+            if (!fsm || typeof fsm.getLastHits !== "function") return null;
+            return fsm.getLastHits();
+          },
+          getMovement: (moveX2, moveY2) => {
+            const fsm = behaviorRef.fsm ?? null;
+            if (!fsm || typeof fsm.getMovement !== "function") {
+              return { moveX: moveX2, moveY: moveY2 };
+            }
+            return fsm.getMovement(moveX2, moveY2);
+          },
+          getOptions: () => behaviorRef.options,
+          ref: behaviorRef
+        };
+      }
+      /**
+       * Get all behavior references attached to this entity.
+       * Used by the stage to auto-register required systems.
+       */
+      getBehaviorRefs() {
+        return this.behaviorRefs;
       }
       /**
        * Entity-specific setup - runs behavior callbacks
@@ -661,6 +706,10 @@ var init_entity = __esm({
           callback({ entity: this, other, globals });
         });
       }
+      /**
+       * @deprecated Use the new ECS-based behavior system instead.
+       * See `lib/behaviors/thruster/thruster-movement.behavior.ts` for an example.
+       */
       addBehavior(behaviorCallback) {
         const handler = behaviorCallback.handler;
         if (handler) {
@@ -668,6 +717,10 @@ var init_entity = __esm({
         }
         return this;
       }
+      /**
+       * @deprecated Use the new ECS-based behavior system instead.
+       * See `lib/behaviors/thruster/thruster-movement.behavior.ts` for an example.
+       */
       addBehaviors(behaviorCallbacks) {
         behaviorCallbacks.forEach((callback) => {
           const handler = callback.handler;
@@ -4095,7 +4148,7 @@ var init_stage_config = __esm({
 });
 
 // src/lib/stage/zylem-stage.ts
-import { addComponent, addEntity, createWorld as createECS, removeEntity } from "bitecs";
+import { addEntity, createWorld as createECS, removeEntity } from "bitecs";
 import { Color as Color9, Vector3 as Vector313 } from "three";
 import { subscribe as subscribe5 } from "valtio/vanilla";
 import { nanoid as nanoid2 } from "nanoid";
@@ -4136,6 +4189,8 @@ var init_zylem_stage = __esm({
       ecs = createECS();
       testSystem = null;
       transformSystem = null;
+      behaviorSystems = [];
+      registeredSystemKeys = /* @__PURE__ */ new Set();
       debugDelegate = null;
       cameraDebugDelegate = null;
       debugStateUnsubscribe = null;
@@ -4292,6 +4347,9 @@ var init_zylem_stage = __esm({
         }
         this.world.update(params);
         this.transformSystem?.system(this.ecs);
+        for (const system of this.behaviorSystems) {
+          system.update(this.ecs, delta);
+        }
         this._childrenMap.forEach((child, eid) => {
           child.nodeUpdate({
             ...params,
@@ -4340,6 +4398,11 @@ var init_zylem_stage = __esm({
         this.cameraRef = null;
         this.transformSystem?.destroy(this.ecs);
         this.transformSystem = null;
+        for (const system of this.behaviorSystems) {
+          system.destroy?.(this.ecs);
+        }
+        this.behaviorSystems = [];
+        this.registeredSystemKeys.clear();
         resetStageVariables();
         clearVariables(this);
       }
@@ -4355,12 +4418,13 @@ var init_zylem_stage = __esm({
         const eid = addEntity(this.ecs);
         entity.eid = eid;
         this.scene.addEntity(entity);
-        if (child.behaviors) {
-          for (let behavior of child.behaviors) {
-            addComponent(this.ecs, behavior.component, entity.eid);
-            const keys = Object.keys(behavior.values);
-            for (const key of keys) {
-              behavior.component[key][entity.eid] = behavior.values[key];
+        if (typeof entity.getBehaviorRefs === "function") {
+          for (const ref of entity.getBehaviorRefs()) {
+            const key = ref.descriptor.key;
+            if (!this.registeredSystemKeys.has(key)) {
+              const system = ref.descriptor.systemFactory({ world: this.world, ecs: this.ecs });
+              this.behaviorSystems.push(system);
+              this.registeredSystemKeys.add(key);
             }
           }
         }
@@ -4422,6 +4486,21 @@ var init_zylem_stage = __esm({
       }
       onLoading(callback) {
         return this.loadingDelegate.onLoading(callback);
+      }
+      /**
+       * Register an ECS behavior system to run each frame.
+       * @param systemOrFactory A BehaviorSystem instance or factory function
+       * @returns this for chaining
+       */
+      registerSystem(systemOrFactory) {
+        let system;
+        if (typeof systemOrFactory === "function") {
+          system = systemOrFactory({ world: this.world, ecs: this.ecs });
+        } else {
+          system = systemOrFactory;
+        }
+        this.behaviorSystems.push(system);
+        return this;
       }
       /**
        * Remove an entity and its resources by its UUID.
@@ -6723,6 +6802,34 @@ var EntityFactory = {
 };
 EntityFactory.register("text", (opts) => createText(opts));
 EntityFactory.register("sprite", (opts) => createSprite(opts));
+function createEntityFactory(template) {
+  return {
+    template,
+    generate(count) {
+      const entities = [];
+      for (let i = 0; i < count; i++) {
+        const EntityClass = template.constructor;
+        const options = { ...template.options };
+        const clone = new EntityClass(options).create();
+        const templateRefs = template.getBehaviorRefs();
+        for (const ref of templateRefs) {
+          clone.use(ref.descriptor, ref.options);
+        }
+        const templateCallbacks = template.lifecycleCallbacks;
+        if (templateCallbacks) {
+          const cloneCallbacks = clone.lifecycleCallbacks;
+          if (cloneCallbacks) {
+            cloneCallbacks.setup.push(...templateCallbacks.setup);
+            cloneCallbacks.update.push(...templateCallbacks.update);
+            cloneCallbacks.destroy.push(...templateCallbacks.destroy);
+          }
+        }
+        entities.push(clone);
+      }
+      return entities;
+    }
+  };
+}
 
 // src/lib/stage/stage-factory.ts
 var StageFactory = {
@@ -7938,8 +8045,8 @@ function _handleRicochet2DCollision(collisionContext, options, callback) {
       const baseSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
       const speed = clamp(baseSpeed * speedUpFactor, minSpeed, maxSpeed);
       if (absOff > deadzone) {
-        const t = (absOff - deadzone) / (1 - deadzone);
-        const angle = Math.sign(clampedOffsetX) * (t * maxAngleRad);
+        const t4 = (absOff - deadzone) / (1 - deadzone);
+        const angle = Math.sign(clampedOffsetX) * (t4 * maxAngleRad);
         const cosA = Math.cos(angle);
         const sinA = Math.sin(angle);
         const vy = Math.abs(speed * cosA);
@@ -7970,8 +8077,8 @@ function _handleRicochet2DCollision(collisionContext, options, callback) {
       const baseSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
       const speed = clamp(baseSpeed * speedUpFactor, minSpeed, maxSpeed);
       if (absOff > deadzone) {
-        const t = (absOff - deadzone) / (1 - deadzone);
-        const angle = Math.sign(clampedOffsetY) * (t * maxAngleRad);
+        const t4 = (absOff - deadzone) / (1 - deadzone);
+        const angle = Math.sign(clampedOffsetY) * (t4 * maxAngleRad);
         const cosA = Math.cos(angle);
         const sinA = Math.sin(angle);
         const vx = Math.abs(speed * cosA);
@@ -8216,42 +8323,651 @@ function movementSequence2D(opts, onStep) {
   };
 }
 
+// src/lib/behaviors/behavior-descriptor.ts
+function defineBehavior(config) {
+  return {
+    key: /* @__PURE__ */ Symbol.for(`zylem:behavior:${config.name}`),
+    defaultOptions: config.defaultOptions,
+    systemFactory: config.systemFactory
+  };
+}
+
+// src/lib/behaviors/components.ts
+import { Vector3 as Vector322, Quaternion as Quaternion5 } from "three";
+function createTransformComponent() {
+  return {
+    position: new Vector322(),
+    rotation: new Quaternion5()
+  };
+}
+function createPhysicsBodyComponent(body) {
+  return { body };
+}
+
+// src/lib/behaviors/physics-step.behavior.ts
+var PhysicsStepBehavior = class {
+  constructor(physicsWorld) {
+    this.physicsWorld = physicsWorld;
+  }
+  update(dt) {
+    this.physicsWorld.timestep = dt;
+    this.physicsWorld.step();
+  }
+};
+
+// src/lib/behaviors/physics-sync.behavior.ts
+var PhysicsSyncBehavior = class {
+  constructor(world) {
+    this.world = world;
+  }
+  /**
+   * Query entities that have both physics body and transform components
+   */
+  queryEntities() {
+    const entities = [];
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (gameEntity.physics?.body && gameEntity.transform) {
+        entities.push({
+          physics: gameEntity.physics,
+          transform: gameEntity.transform
+        });
+      }
+    }
+    return entities;
+  }
+  update(_dt) {
+    const entities = this.queryEntities();
+    for (const e of entities) {
+      const body = e.physics.body;
+      const transform = e.transform;
+      const p = body.translation();
+      transform.position.set(p.x, p.y, p.z);
+      const r = body.rotation();
+      transform.rotation.set(r.x, r.y, r.z, r.w);
+    }
+  }
+};
+
+// src/lib/behaviors/thruster/components.ts
+function createThrusterMovementComponent(linearThrust, angularThrust, options) {
+  return {
+    linearThrust,
+    angularThrust,
+    linearDamping: options?.linearDamping,
+    angularDamping: options?.angularDamping
+  };
+}
+function createThrusterInputComponent() {
+  return {
+    thrust: 0,
+    rotate: 0
+  };
+}
+function createThrusterStateComponent() {
+  return {
+    enabled: true,
+    currentThrust: 0
+  };
+}
+
+// src/lib/behaviors/thruster/thruster-fsm.ts
+import { StateMachine, t } from "typescript-fsm";
+var ThrusterState = /* @__PURE__ */ ((ThrusterState2) => {
+  ThrusterState2["Idle"] = "idle";
+  ThrusterState2["Active"] = "active";
+  ThrusterState2["Boosting"] = "boosting";
+  ThrusterState2["Disabled"] = "disabled";
+  ThrusterState2["Docked"] = "docked";
+  return ThrusterState2;
+})(ThrusterState || {});
+var ThrusterEvent = /* @__PURE__ */ ((ThrusterEvent2) => {
+  ThrusterEvent2["Activate"] = "activate";
+  ThrusterEvent2["Deactivate"] = "deactivate";
+  ThrusterEvent2["Boost"] = "boost";
+  ThrusterEvent2["EndBoost"] = "endBoost";
+  ThrusterEvent2["Disable"] = "disable";
+  ThrusterEvent2["Enable"] = "enable";
+  ThrusterEvent2["Dock"] = "dock";
+  ThrusterEvent2["Undock"] = "undock";
+  return ThrusterEvent2;
+})(ThrusterEvent || {});
+var ThrusterFSM = class {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.machine = new StateMachine(
+      "idle" /* Idle */,
+      [
+        // Core transitions
+        t("idle" /* Idle */, "activate" /* Activate */, "active" /* Active */),
+        t("active" /* Active */, "deactivate" /* Deactivate */, "idle" /* Idle */),
+        t("active" /* Active */, "boost" /* Boost */, "boosting" /* Boosting */),
+        t("active" /* Active */, "disable" /* Disable */, "disabled" /* Disabled */),
+        t("active" /* Active */, "dock" /* Dock */, "docked" /* Docked */),
+        t("boosting" /* Boosting */, "endBoost" /* EndBoost */, "active" /* Active */),
+        t("boosting" /* Boosting */, "disable" /* Disable */, "disabled" /* Disabled */),
+        t("disabled" /* Disabled */, "enable" /* Enable */, "idle" /* Idle */),
+        t("docked" /* Docked */, "undock" /* Undock */, "idle" /* Idle */),
+        // Self-transitions (no-ops for redundant events)
+        t("idle" /* Idle */, "deactivate" /* Deactivate */, "idle" /* Idle */),
+        t("active" /* Active */, "activate" /* Activate */, "active" /* Active */)
+      ]
+    );
+  }
+  machine;
+  /**
+   * Get current state
+   */
+  getState() {
+    return this.machine.getState();
+  }
+  /**
+   * Dispatch an event to transition state
+   */
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+  /**
+   * Update FSM state based on player input.
+   * Auto-transitions between Idle/Active to report current state.
+   * Does NOT modify input - just observes and reports.
+   */
+  update(playerInput) {
+    const state2 = this.machine.getState();
+    const hasInput = Math.abs(playerInput.thrust) > 0.01 || Math.abs(playerInput.rotate) > 0.01;
+    if (hasInput && state2 === "idle" /* Idle */) {
+      this.dispatch("activate" /* Activate */);
+    } else if (!hasInput && state2 === "active" /* Active */) {
+      this.dispatch("deactivate" /* Deactivate */);
+    }
+  }
+};
+
+// src/lib/behaviors/thruster/thruster-movement.behavior.ts
+var ThrusterMovementBehavior = class {
+  constructor(world) {
+    this.world = world;
+  }
+  /**
+   * Query function - returns entities with required thruster components
+   */
+  queryEntities() {
+    const entities = [];
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (gameEntity.physics?.body && gameEntity.thruster && gameEntity.input) {
+        entities.push({
+          physics: gameEntity.physics,
+          thruster: gameEntity.thruster,
+          input: gameEntity.input
+        });
+      }
+    }
+    return entities;
+  }
+  update(_dt) {
+    const entities = this.queryEntities();
+    for (const e of entities) {
+      const body = e.physics.body;
+      const thruster = e.thruster;
+      const input = e.input;
+      const q = body.rotation();
+      const rotationZ = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+      if (input.thrust !== 0) {
+        const currentVel = body.linvel();
+        if (input.thrust > 0) {
+          const forwardX = Math.sin(-rotationZ);
+          const forwardY = Math.cos(-rotationZ);
+          const thrustAmount = thruster.linearThrust * input.thrust * 0.1;
+          body.setLinvel({
+            x: currentVel.x + forwardX * thrustAmount,
+            y: currentVel.y + forwardY * thrustAmount,
+            z: currentVel.z
+          }, true);
+        } else {
+          const brakeAmount = 0.9;
+          body.setLinvel({
+            x: currentVel.x * brakeAmount,
+            y: currentVel.y * brakeAmount,
+            z: currentVel.z
+          }, true);
+        }
+      }
+      if (input.rotate !== 0) {
+        body.setAngvel({ x: 0, y: 0, z: -thruster.angularThrust * input.rotate }, true);
+      } else {
+        const angVel = body.angvel();
+        body.setAngvel({ x: angVel.x, y: angVel.y, z: 0 }, true);
+      }
+    }
+  }
+};
+
+// src/lib/behaviors/thruster/thruster.descriptor.ts
+var defaultOptions = {
+  linearThrust: 10,
+  angularThrust: 5
+};
+var ThrusterBehaviorSystem = class {
+  constructor(world) {
+    this.world = world;
+    this.movementBehavior = new ThrusterMovementBehavior(world);
+  }
+  movementBehavior;
+  update(ecs, delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const thrusterRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:thruster")
+      );
+      if (!thrusterRef || !gameEntity.body) continue;
+      const options = thrusterRef.options;
+      if (!gameEntity.thruster) {
+        gameEntity.thruster = {
+          linearThrust: options.linearThrust,
+          angularThrust: options.angularThrust
+        };
+      }
+      if (!gameEntity.input) {
+        gameEntity.input = {
+          thrust: 0,
+          rotate: 0
+        };
+      }
+      if (!gameEntity.physics) {
+        gameEntity.physics = { body: gameEntity.body };
+      }
+      if (!thrusterRef.fsm && gameEntity.input) {
+        thrusterRef.fsm = new ThrusterFSM({ input: gameEntity.input });
+      }
+      if (thrusterRef.fsm && gameEntity.input) {
+        thrusterRef.fsm.update({
+          thrust: gameEntity.input.thrust,
+          rotate: gameEntity.input.rotate
+        });
+      }
+    }
+    this.movementBehavior.update(delta);
+  }
+  destroy(_ecs) {
+  }
+};
+var ThrusterBehavior = defineBehavior({
+  name: "thruster",
+  defaultOptions,
+  systemFactory: (ctx) => new ThrusterBehaviorSystem(ctx.world)
+});
+
+// src/lib/behaviors/screen-wrap/screen-wrap-fsm.ts
+import { StateMachine as StateMachine2, t as t2 } from "typescript-fsm";
+var ScreenWrapState = /* @__PURE__ */ ((ScreenWrapState2) => {
+  ScreenWrapState2["Center"] = "center";
+  ScreenWrapState2["NearEdgeLeft"] = "near-edge-left";
+  ScreenWrapState2["NearEdgeRight"] = "near-edge-right";
+  ScreenWrapState2["NearEdgeTop"] = "near-edge-top";
+  ScreenWrapState2["NearEdgeBottom"] = "near-edge-bottom";
+  ScreenWrapState2["Wrapped"] = "wrapped";
+  return ScreenWrapState2;
+})(ScreenWrapState || {});
+var ScreenWrapEvent = /* @__PURE__ */ ((ScreenWrapEvent2) => {
+  ScreenWrapEvent2["EnterCenter"] = "enter-center";
+  ScreenWrapEvent2["ApproachLeft"] = "approach-left";
+  ScreenWrapEvent2["ApproachRight"] = "approach-right";
+  ScreenWrapEvent2["ApproachTop"] = "approach-top";
+  ScreenWrapEvent2["ApproachBottom"] = "approach-bottom";
+  ScreenWrapEvent2["Wrap"] = "wrap";
+  return ScreenWrapEvent2;
+})(ScreenWrapEvent || {});
+var ScreenWrapFSM = class {
+  machine;
+  constructor() {
+    this.machine = new StateMachine2(
+      "center" /* Center */,
+      [
+        // From Center
+        t2("center" /* Center */, "approach-left" /* ApproachLeft */, "near-edge-left" /* NearEdgeLeft */),
+        t2("center" /* Center */, "approach-right" /* ApproachRight */, "near-edge-right" /* NearEdgeRight */),
+        t2("center" /* Center */, "approach-top" /* ApproachTop */, "near-edge-top" /* NearEdgeTop */),
+        t2("center" /* Center */, "approach-bottom" /* ApproachBottom */, "near-edge-bottom" /* NearEdgeBottom */),
+        // From NearEdge to Wrapped
+        t2("near-edge-left" /* NearEdgeLeft */, "wrap" /* Wrap */, "wrapped" /* Wrapped */),
+        t2("near-edge-right" /* NearEdgeRight */, "wrap" /* Wrap */, "wrapped" /* Wrapped */),
+        t2("near-edge-top" /* NearEdgeTop */, "wrap" /* Wrap */, "wrapped" /* Wrapped */),
+        t2("near-edge-bottom" /* NearEdgeBottom */, "wrap" /* Wrap */, "wrapped" /* Wrapped */),
+        // From NearEdge back to Center
+        t2("near-edge-left" /* NearEdgeLeft */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        t2("near-edge-right" /* NearEdgeRight */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        t2("near-edge-top" /* NearEdgeTop */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        t2("near-edge-bottom" /* NearEdgeBottom */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        // From Wrapped back to Center
+        t2("wrapped" /* Wrapped */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        // From Wrapped to NearEdge (landed near opposite edge)
+        t2("wrapped" /* Wrapped */, "approach-left" /* ApproachLeft */, "near-edge-left" /* NearEdgeLeft */),
+        t2("wrapped" /* Wrapped */, "approach-right" /* ApproachRight */, "near-edge-right" /* NearEdgeRight */),
+        t2("wrapped" /* Wrapped */, "approach-top" /* ApproachTop */, "near-edge-top" /* NearEdgeTop */),
+        t2("wrapped" /* Wrapped */, "approach-bottom" /* ApproachBottom */, "near-edge-bottom" /* NearEdgeBottom */),
+        // Self-transitions (no-ops for redundant events)
+        t2("center" /* Center */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        t2("near-edge-left" /* NearEdgeLeft */, "approach-left" /* ApproachLeft */, "near-edge-left" /* NearEdgeLeft */),
+        t2("near-edge-right" /* NearEdgeRight */, "approach-right" /* ApproachRight */, "near-edge-right" /* NearEdgeRight */),
+        t2("near-edge-top" /* NearEdgeTop */, "approach-top" /* ApproachTop */, "near-edge-top" /* NearEdgeTop */),
+        t2("near-edge-bottom" /* NearEdgeBottom */, "approach-bottom" /* ApproachBottom */, "near-edge-bottom" /* NearEdgeBottom */)
+      ]
+    );
+  }
+  getState() {
+    return this.machine.getState();
+  }
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+  /**
+   * Update FSM based on entity position relative to bounds
+   */
+  update(position2, bounds, wrapped) {
+    const { x, y } = position2;
+    const { minX, maxX, minY, maxY, edgeThreshold } = bounds;
+    if (wrapped) {
+      this.dispatch("wrap" /* Wrap */);
+      return;
+    }
+    const nearLeft = x < minX + edgeThreshold;
+    const nearRight = x > maxX - edgeThreshold;
+    const nearBottom = y < minY + edgeThreshold;
+    const nearTop = y > maxY - edgeThreshold;
+    if (nearLeft) {
+      this.dispatch("approach-left" /* ApproachLeft */);
+    } else if (nearRight) {
+      this.dispatch("approach-right" /* ApproachRight */);
+    } else if (nearTop) {
+      this.dispatch("approach-top" /* ApproachTop */);
+    } else if (nearBottom) {
+      this.dispatch("approach-bottom" /* ApproachBottom */);
+    } else {
+      this.dispatch("enter-center" /* EnterCenter */);
+    }
+  }
+};
+
+// src/lib/behaviors/screen-wrap/screen-wrap.descriptor.ts
+var defaultOptions2 = {
+  width: 20,
+  height: 15,
+  centerX: 0,
+  centerY: 0,
+  edgeThreshold: 2
+};
+var ScreenWrapSystem = class {
+  constructor(world) {
+    this.world = world;
+  }
+  update(ecs, delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const wrapRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:screen-wrap")
+      );
+      if (!wrapRef || !gameEntity.body) continue;
+      const options = wrapRef.options;
+      if (!wrapRef.fsm) {
+        wrapRef.fsm = new ScreenWrapFSM();
+      }
+      const wrapped = this.wrapEntity(gameEntity, options);
+      const pos = gameEntity.body.translation();
+      const { width, height, centerX, centerY, edgeThreshold } = options;
+      const halfWidth = width / 2;
+      const halfHeight = height / 2;
+      wrapRef.fsm.update(
+        { x: pos.x, y: pos.y },
+        {
+          minX: centerX - halfWidth,
+          maxX: centerX + halfWidth,
+          minY: centerY - halfHeight,
+          maxY: centerY + halfHeight,
+          edgeThreshold
+        },
+        wrapped
+      );
+    }
+  }
+  wrapEntity(entity, options) {
+    const body = entity.body;
+    if (!body) return false;
+    const { width, height, centerX, centerY } = options;
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+    const minX = centerX - halfWidth;
+    const maxX = centerX + halfWidth;
+    const minY = centerY - halfHeight;
+    const maxY = centerY + halfHeight;
+    const pos = body.translation();
+    let newX = pos.x;
+    let newY = pos.y;
+    let wrapped = false;
+    if (pos.x < minX) {
+      newX = maxX - (minX - pos.x);
+      wrapped = true;
+    } else if (pos.x > maxX) {
+      newX = minX + (pos.x - maxX);
+      wrapped = true;
+    }
+    if (pos.y < minY) {
+      newY = maxY - (minY - pos.y);
+      wrapped = true;
+    } else if (pos.y > maxY) {
+      newY = minY + (pos.y - maxY);
+      wrapped = true;
+    }
+    if (wrapped) {
+      body.setTranslation({ x: newX, y: newY, z: pos.z }, true);
+    }
+    return wrapped;
+  }
+  destroy(_ecs) {
+  }
+};
+var ScreenWrapBehavior = defineBehavior({
+  name: "screen-wrap",
+  defaultOptions: defaultOptions2,
+  systemFactory: (ctx) => new ScreenWrapSystem(ctx.world)
+});
+
+// src/lib/behaviors/world-boundary-2d/world-boundary-2d-fsm.ts
+import { StateMachine as StateMachine3, t as t3 } from "typescript-fsm";
+var WorldBoundary2DState = /* @__PURE__ */ ((WorldBoundary2DState2) => {
+  WorldBoundary2DState2["Inside"] = "inside";
+  WorldBoundary2DState2["Touching"] = "touching";
+  return WorldBoundary2DState2;
+})(WorldBoundary2DState || {});
+var WorldBoundary2DEvent = /* @__PURE__ */ ((WorldBoundary2DEvent2) => {
+  WorldBoundary2DEvent2["EnterInside"] = "enter-inside";
+  WorldBoundary2DEvent2["TouchBoundary"] = "touch-boundary";
+  return WorldBoundary2DEvent2;
+})(WorldBoundary2DEvent || {});
+function computeWorldBoundary2DHits(position2, bounds) {
+  const hits = {
+    top: false,
+    bottom: false,
+    left: false,
+    right: false
+  };
+  if (position2.x <= bounds.left) hits.left = true;
+  else if (position2.x >= bounds.right) hits.right = true;
+  if (position2.y <= bounds.bottom) hits.bottom = true;
+  else if (position2.y >= bounds.top) hits.top = true;
+  return hits;
+}
+function hasAnyWorldBoundary2DHit(hits) {
+  return !!(hits.left || hits.right || hits.top || hits.bottom);
+}
+var WorldBoundary2DFSM = class {
+  machine;
+  lastHits = { top: false, bottom: false, left: false, right: false };
+  lastPosition = null;
+  lastUpdatedAtMs = null;
+  constructor() {
+    this.machine = new StateMachine3(
+      "inside" /* Inside */,
+      [
+        t3("inside" /* Inside */, "touch-boundary" /* TouchBoundary */, "touching" /* Touching */),
+        t3("touching" /* Touching */, "enter-inside" /* EnterInside */, "inside" /* Inside */),
+        // Self transitions (no-ops)
+        t3("inside" /* Inside */, "enter-inside" /* EnterInside */, "inside" /* Inside */),
+        t3("touching" /* Touching */, "touch-boundary" /* TouchBoundary */, "touching" /* Touching */)
+      ]
+    );
+  }
+  getState() {
+    return this.machine.getState();
+  }
+  /**
+   * Returns the last computed hits (always available after first update call).
+   */
+  getLastHits() {
+    return this.lastHits;
+  }
+  /**
+   * Returns adjusted movement values based on boundary hits.
+   * If the entity is touching a boundary and trying to move further into it,
+   * that axis component is zeroed out.
+   *
+   * @param moveX - The desired X movement
+   * @param moveY - The desired Y movement
+   * @returns Adjusted { moveX, moveY } with boundary-blocked axes zeroed
+   */
+  getMovement(moveX2, moveY2) {
+    const hits = this.lastHits;
+    let adjustedX = moveX2;
+    let adjustedY = moveY2;
+    if (hits.left && moveX2 < 0 || hits.right && moveX2 > 0) {
+      adjustedX = 0;
+    }
+    if (hits.bottom && moveY2 < 0 || hits.top && moveY2 > 0) {
+      adjustedY = 0;
+    }
+    return { moveX: adjustedX, moveY: adjustedY };
+  }
+  /**
+   * Returns the last position passed to `update`, if any.
+   */
+  getLastPosition() {
+    return this.lastPosition;
+  }
+  /**
+   * Best-effort timestamp (ms) of the last `update(...)` call.
+   * This is optional metadata; systems can ignore it.
+   */
+  getLastUpdatedAtMs() {
+    return this.lastUpdatedAtMs;
+  }
+  /**
+   * Update FSM + extended state based on current position and bounds.
+   * Returns the computed hits for convenience.
+   */
+  update(position2, bounds) {
+    const hits = computeWorldBoundary2DHits(position2, bounds);
+    this.lastHits = hits;
+    this.lastPosition = { x: position2.x, y: position2.y };
+    this.lastUpdatedAtMs = Date.now();
+    if (hasAnyWorldBoundary2DHit(hits)) {
+      this.dispatch("touch-boundary" /* TouchBoundary */);
+    } else {
+      this.dispatch("enter-inside" /* EnterInside */);
+    }
+    return hits;
+  }
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+};
+
+// src/lib/behaviors/world-boundary-2d/world-boundary-2d.descriptor.ts
+var defaultOptions3 = {
+  boundaries: { top: 0, bottom: 0, left: 0, right: 0 }
+};
+var WorldBoundary2DSystem = class {
+  constructor(world) {
+    this.world = world;
+  }
+  update(_ecs, _delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const boundaryRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:world-boundary-2d")
+      );
+      if (!boundaryRef || !gameEntity.body) continue;
+      const options = boundaryRef.options;
+      if (!boundaryRef.fsm) {
+        boundaryRef.fsm = new WorldBoundary2DFSM();
+      }
+      const body = gameEntity.body;
+      const pos = body.translation();
+      boundaryRef.fsm.update(
+        { x: pos.x, y: pos.y },
+        options.boundaries
+      );
+    }
+  }
+  destroy(_ecs) {
+  }
+};
+var WorldBoundary2DBehavior = defineBehavior({
+  name: "world-boundary-2d",
+  defaultOptions: defaultOptions3,
+  systemFactory: (ctx) => new WorldBoundary2DSystem(ctx.world)
+});
+
 // src/lib/actions/capabilities/moveable.ts
-import { Vector3 as Vector322 } from "three";
+import { Vector3 as Vector323 } from "three";
 function moveX(entity, delta) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector322(delta, currentVelocity.y, currentVelocity.z);
+  const newVelocity = new Vector323(delta, currentVelocity.y, currentVelocity.z);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveY(entity, delta) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector322(currentVelocity.x, delta, currentVelocity.z);
+  const newVelocity = new Vector323(currentVelocity.x, delta, currentVelocity.z);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveZ(entity, delta) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector322(currentVelocity.x, currentVelocity.y, delta);
+  const newVelocity = new Vector323(currentVelocity.x, currentVelocity.y, delta);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveXY(entity, deltaX, deltaY) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector322(deltaX, deltaY, currentVelocity.z);
+  const newVelocity = new Vector323(deltaX, deltaY, currentVelocity.z);
   entity.body.setLinvel(newVelocity, true);
 }
 function moveXZ(entity, deltaX, deltaZ) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector322(deltaX, currentVelocity.y, deltaZ);
+  const newVelocity = new Vector323(deltaX, currentVelocity.y, deltaZ);
   entity.body.setLinvel(newVelocity, true);
 }
 function move(entity, vector) {
   if (!entity.body) return;
   const currentVelocity = entity.body.linvel();
-  const newVelocity = new Vector322(
+  const newVelocity = new Vector323(
     currentVelocity.x + vector.x,
     currentVelocity.y + vector.y,
     currentVelocity.z + vector.z
@@ -8260,7 +8976,7 @@ function move(entity, vector) {
 }
 function resetVelocity(entity) {
   if (!entity.body) return;
-  entity.body.setLinvel(new Vector322(0, 0, 0), true);
+  entity.body.setLinvel(new Vector323(0, 0, 0), true);
   entity.body.setLinearDamping(5);
 }
 function moveForwardXY(entity, delta, rotation2DAngle) {
@@ -8390,14 +9106,14 @@ function makeMoveable(entity) {
 }
 
 // src/lib/actions/capabilities/rotatable.ts
-import { Euler as Euler3, Vector3 as Vector323, MathUtils, Quaternion as Quaternion5 } from "three";
+import { Euler as Euler3, Vector3 as Vector324, MathUtils, Quaternion as Quaternion6 } from "three";
 function rotateInDirection(entity, moveVector) {
   if (!entity.body) return;
   const rotate = Math.atan2(-moveVector.x, moveVector.z);
   rotateYEuler(entity, rotate);
 }
 function rotateYEuler(entity, amount) {
-  rotateEuler(entity, new Vector323(0, -amount, 0));
+  rotateEuler(entity, new Vector324(0, -amount, 0));
 }
 function rotateEuler(entity, rotation2) {
   if (!entity.group) return;
@@ -8445,7 +9161,7 @@ function setRotationDegreesZ(entity, z) {
 }
 function setRotation(entity, x, y, z) {
   if (!entity.body) return;
-  const quat = new Quaternion5().setFromEuler(new Euler3(x, y, z));
+  const quat = new Quaternion6().setFromEuler(new Euler3(x, y, z));
   entity.body.setRotation({ w: quat.w, x: quat.x, y: quat.y, z: quat.z }, true);
 }
 function setRotationDegrees(entity, x, y, z) {
@@ -8658,7 +9374,15 @@ var ZylemGameElement = class extends HTMLElement {
     this.container.style.width = "100%";
     this.container.style.height = "100%";
     this.container.style.position = "relative";
+    this.container.style.outline = "none";
+    this.container.tabIndex = 0;
     this.shadowRoot.appendChild(this.container);
+  }
+  /**
+   * Focus the game container for keyboard input
+   */
+  focus() {
+    this.container.focus();
   }
   set game(game) {
     if (this._game) {
@@ -8722,32 +9446,55 @@ export {
   Howl,
   PLANE_TYPE,
   Perspectives,
+  PhysicsStepBehavior,
+  PhysicsSyncBehavior,
   RAPIER2 as RAPIER,
   RECT_TYPE,
   SPHERE_TYPE,
   SPRITE_TYPE,
+  ScreenWrapBehavior,
+  ScreenWrapEvent,
+  ScreenWrapFSM,
+  ScreenWrapState,
   StageManager,
   TEXT_TYPE,
   THREE2 as THREE,
+  ThrusterBehavior,
+  ThrusterEvent,
+  ThrusterFSM,
+  ThrusterMovementBehavior,
+  ThrusterState,
+  WorldBoundary2DBehavior,
+  WorldBoundary2DEvent,
+  WorldBoundary2DFSM,
+  WorldBoundary2DState,
   ZONE_TYPE,
   ZylemBox,
   ZylemGameElement,
   boundary2d,
   clearGlobalSubscriptions,
+  computeWorldBoundary2DHits,
   createActor,
   createBox,
   createCamera,
+  createEntityFactory,
   createGame,
   createGlobal,
+  createPhysicsBodyComponent,
   createPlane,
   createRect,
   createSphere,
   createSprite,
   createStage,
   createText,
+  createThrusterInputComponent,
+  createThrusterMovementComponent,
+  createThrusterStateComponent,
+  createTransformComponent,
   createVariable,
   createZone,
   debugState,
+  defineBehavior,
   destroy,
   entitySpawner,
   gameConfig,
@@ -8756,6 +9503,7 @@ export {
   getVariable,
   globalChange,
   globalChanges,
+  hasAnyWorldBoundary2DHit,
   makeMoveable,
   makeRotatable,
   makeTransformable,

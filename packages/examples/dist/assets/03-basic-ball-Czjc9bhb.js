@@ -1,1 +1,0 @@
-import{c as s,a as c,C as a,m}from"./index-Cb3xPl2v.js";const e=c({color:new a(a.NAMES.aqua)});m(e).onUpdate(({me:o,inputs:l})=>{const{Horizontal:t,Vertical:r}=l.p1.axes;o.moveXY(t.value*5,-r.value*5)});const u=await s({debug:!0,id:"basic-ball",globals:{gameNumber:0}},e);export{u as default};

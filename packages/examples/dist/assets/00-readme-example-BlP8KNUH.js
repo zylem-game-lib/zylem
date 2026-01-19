@@ -1,1 +1,0 @@
-import{c as d,m,a as c,b as n}from"./index-Cb3xPl2v.js";const e=m(c());e.onUpdate(({me:o,inputs:t,delta:r})=>{const{Horizontal:s,Vertical:l}=t.p1.axes,a=600*r;o.moveXY(s.value*a,-l.value*a)});e.addBehavior(n({boundaries:{top:3,bottom:-3,left:-6,right:6}}));const b=d(e);export{b as default};

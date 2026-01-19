@@ -282,6 +282,11 @@ var GameEntity = class extends BaseNode {
     collision: []
   };
   collisionType;
+  /**
+   * @deprecated Use the new ECS-based behavior system instead.
+   * Use 'any' for callback types to avoid contravariance issues
+   * with function parameters. Type safety is enforced where callbacks are registered.
+   */
   behaviorCallbackMap = {
     setup: [],
     update: [],
@@ -290,6 +295,8 @@ var GameEntity = class extends BaseNode {
   };
   // Event delegate for dispatch/listen API
   eventDelegate = new EventEmitterDelegate();
+  // Behavior references (new ECS pattern)
+  behaviorRefs = [];
   constructor() {
     super();
   }
@@ -311,6 +318,44 @@ var GameEntity = class extends BaseNode {
     const existing = this.collisionDelegate.collision ?? [];
     this.collisionDelegate.collision = [...existing, ...callbacks];
     return this;
+  }
+  /**
+   * Use a behavior on this entity via typed descriptor.
+   * Behaviors will be auto-registered as systems when the entity is spawned.
+   * @param descriptor The behavior descriptor (import from behaviors module)
+   * @param options Optional overrides for the behavior's default options
+   * @returns BehaviorHandle for lazy FSM access
+   */
+  use(descriptor, options) {
+    const behaviorRef = {
+      descriptor,
+      options: { ...descriptor.defaultOptions, ...options }
+    };
+    this.behaviorRefs.push(behaviorRef);
+    return {
+      getFSM: () => behaviorRef.fsm ?? null,
+      getLastHits: () => {
+        const fsm = behaviorRef.fsm ?? null;
+        if (!fsm || typeof fsm.getLastHits !== "function") return null;
+        return fsm.getLastHits();
+      },
+      getMovement: (moveX, moveY) => {
+        const fsm = behaviorRef.fsm ?? null;
+        if (!fsm || typeof fsm.getMovement !== "function") {
+          return { moveX, moveY };
+        }
+        return fsm.getMovement(moveX, moveY);
+      },
+      getOptions: () => behaviorRef.options,
+      ref: behaviorRef
+    };
+  }
+  /**
+   * Get all behavior references attached to this entity.
+   * Used by the stage to auto-register required systems.
+   */
+  getBehaviorRefs() {
+    return this.behaviorRefs;
   }
   /**
    * Entity-specific setup - runs behavior callbacks
@@ -355,6 +400,10 @@ var GameEntity = class extends BaseNode {
       callback({ entity: this, other, globals });
     });
   }
+  /**
+   * @deprecated Use the new ECS-based behavior system instead.
+   * See `lib/behaviors/thruster/thruster-movement.behavior.ts` for an example.
+   */
   addBehavior(behaviorCallback) {
     const handler = behaviorCallback.handler;
     if (handler) {
@@ -362,6 +411,10 @@ var GameEntity = class extends BaseNode {
     }
     return this;
   }
+  /**
+   * @deprecated Use the new ECS-based behavior system instead.
+   * See `lib/behaviors/thruster/thruster-movement.behavior.ts` for an example.
+   */
   addBehaviors(behaviorCallbacks) {
     behaviorCallbacks.forEach((callback) => {
       const handler = callback.handler;

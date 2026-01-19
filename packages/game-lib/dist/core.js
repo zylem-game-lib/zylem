@@ -574,6 +574,11 @@ var init_entity = __esm({
         collision: []
       };
       collisionType;
+      /**
+       * @deprecated Use the new ECS-based behavior system instead.
+       * Use 'any' for callback types to avoid contravariance issues
+       * with function parameters. Type safety is enforced where callbacks are registered.
+       */
       behaviorCallbackMap = {
         setup: [],
         update: [],
@@ -582,6 +587,8 @@ var init_entity = __esm({
       };
       // Event delegate for dispatch/listen API
       eventDelegate = new EventEmitterDelegate();
+      // Behavior references (new ECS pattern)
+      behaviorRefs = [];
       constructor() {
         super();
       }
@@ -603,6 +610,44 @@ var init_entity = __esm({
         const existing = this.collisionDelegate.collision ?? [];
         this.collisionDelegate.collision = [...existing, ...callbacks];
         return this;
+      }
+      /**
+       * Use a behavior on this entity via typed descriptor.
+       * Behaviors will be auto-registered as systems when the entity is spawned.
+       * @param descriptor The behavior descriptor (import from behaviors module)
+       * @param options Optional overrides for the behavior's default options
+       * @returns BehaviorHandle for lazy FSM access
+       */
+      use(descriptor, options) {
+        const behaviorRef = {
+          descriptor,
+          options: { ...descriptor.defaultOptions, ...options }
+        };
+        this.behaviorRefs.push(behaviorRef);
+        return {
+          getFSM: () => behaviorRef.fsm ?? null,
+          getLastHits: () => {
+            const fsm = behaviorRef.fsm ?? null;
+            if (!fsm || typeof fsm.getLastHits !== "function") return null;
+            return fsm.getLastHits();
+          },
+          getMovement: (moveX, moveY) => {
+            const fsm = behaviorRef.fsm ?? null;
+            if (!fsm || typeof fsm.getMovement !== "function") {
+              return { moveX, moveY };
+            }
+            return fsm.getMovement(moveX, moveY);
+          },
+          getOptions: () => behaviorRef.options,
+          ref: behaviorRef
+        };
+      }
+      /**
+       * Get all behavior references attached to this entity.
+       * Used by the stage to auto-register required systems.
+       */
+      getBehaviorRefs() {
+        return this.behaviorRefs;
       }
       /**
        * Entity-specific setup - runs behavior callbacks
@@ -647,6 +692,10 @@ var init_entity = __esm({
           callback({ entity: this, other, globals });
         });
       }
+      /**
+       * @deprecated Use the new ECS-based behavior system instead.
+       * See `lib/behaviors/thruster/thruster-movement.behavior.ts` for an example.
+       */
       addBehavior(behaviorCallback) {
         const handler = behaviorCallback.handler;
         if (handler) {
@@ -654,6 +703,10 @@ var init_entity = __esm({
         }
         return this;
       }
+      /**
+       * @deprecated Use the new ECS-based behavior system instead.
+       * See `lib/behaviors/thruster/thruster-movement.behavior.ts` for an example.
+       */
       addBehaviors(behaviorCallbacks) {
         behaviorCallbacks.forEach((callback) => {
           const handler = callback.handler;
@@ -3909,7 +3962,7 @@ var init_stage_config = __esm({
 });
 
 // src/lib/stage/zylem-stage.ts
-import { addComponent, addEntity, createWorld as createECS, removeEntity } from "bitecs";
+import { addEntity, createWorld as createECS, removeEntity } from "bitecs";
 import { Color as Color9, Vector3 as Vector313 } from "three";
 import { subscribe as subscribe5 } from "valtio/vanilla";
 import { nanoid as nanoid2 } from "nanoid";
@@ -3950,6 +4003,8 @@ var init_zylem_stage = __esm({
       ecs = createECS();
       testSystem = null;
       transformSystem = null;
+      behaviorSystems = [];
+      registeredSystemKeys = /* @__PURE__ */ new Set();
       debugDelegate = null;
       cameraDebugDelegate = null;
       debugStateUnsubscribe = null;
@@ -4106,6 +4161,9 @@ var init_zylem_stage = __esm({
         }
         this.world.update(params);
         this.transformSystem?.system(this.ecs);
+        for (const system of this.behaviorSystems) {
+          system.update(this.ecs, delta);
+        }
         this._childrenMap.forEach((child, eid) => {
           child.nodeUpdate({
             ...params,
@@ -4154,6 +4212,11 @@ var init_zylem_stage = __esm({
         this.cameraRef = null;
         this.transformSystem?.destroy(this.ecs);
         this.transformSystem = null;
+        for (const system of this.behaviorSystems) {
+          system.destroy?.(this.ecs);
+        }
+        this.behaviorSystems = [];
+        this.registeredSystemKeys.clear();
         resetStageVariables();
         clearVariables(this);
       }
@@ -4169,12 +4232,13 @@ var init_zylem_stage = __esm({
         const eid = addEntity(this.ecs);
         entity.eid = eid;
         this.scene.addEntity(entity);
-        if (child.behaviors) {
-          for (let behavior of child.behaviors) {
-            addComponent(this.ecs, behavior.component, entity.eid);
-            const keys = Object.keys(behavior.values);
-            for (const key of keys) {
-              behavior.component[key][entity.eid] = behavior.values[key];
+        if (typeof entity.getBehaviorRefs === "function") {
+          for (const ref of entity.getBehaviorRefs()) {
+            const key = ref.descriptor.key;
+            if (!this.registeredSystemKeys.has(key)) {
+              const system = ref.descriptor.systemFactory({ world: this.world, ecs: this.ecs });
+              this.behaviorSystems.push(system);
+              this.registeredSystemKeys.add(key);
             }
           }
         }
@@ -4236,6 +4300,21 @@ var init_zylem_stage = __esm({
       }
       onLoading(callback) {
         return this.loadingDelegate.onLoading(callback);
+      }
+      /**
+       * Register an ECS behavior system to run each frame.
+       * @param systemOrFactory A BehaviorSystem instance or factory function
+       * @returns this for chaining
+       */
+      registerSystem(systemOrFactory) {
+        let system;
+        if (typeof systemOrFactory === "function") {
+          system = systemOrFactory({ world: this.world, ecs: this.ecs });
+        } else {
+          system = systemOrFactory;
+        }
+        this.behaviorSystems.push(system);
+        return this;
       }
       /**
        * Remove an entity and its resources by its UUID.

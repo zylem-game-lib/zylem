@@ -28,6 +28,7 @@ export { createZone } from '../lib/entities/zone';
 export { createActor } from '../lib/entities/actor';
 export { createText } from '../lib/entities/text';
 export { createRect } from '../lib/entities/rect';
+export { createEntityFactory, type TemplateFactory } from '../lib/entities/entity-factory';
 export { ZylemBox } from '../lib/entities/box';
 
 // Behaviors
@@ -36,6 +37,9 @@ export { ricochet2DInBounds } from '../lib/actions/behaviors/ricochet/ricochet-2
 export { ricochet2DCollision } from '../lib/actions/behaviors/ricochet/ricochet-2d-collision';
 export { boundary2d } from '../lib/actions/behaviors/boundaries/boundary';
 export { movementSequence2D } from '../lib/actions/behaviors/movement/movement-sequence-2d';
+
+// ECS Components & Behaviors (new thruster system)
+export * from '../lib/behaviors';
 
 // Capabilities
 export { makeMoveable } from '../lib/actions/capabilities/moveable';
