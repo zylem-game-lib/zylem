@@ -1,4 +1,4 @@
-import { addComponent, addEntity, createWorld as createECS, removeEntity } from 'bitecs';
+import { addEntity, createWorld as createECS, removeEntity } from 'bitecs';
 import { Color, Vector3, Vector2 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
@@ -29,6 +29,7 @@ import { ZylemCamera } from '../camera/zylem-camera';
 import { LoadingEvent } from '../core/interfaces';
 import { parseStageOptions } from './stage-config';
 import { isBaseNode, isThenable } from '../core/utility/options-parser';
+import type { BehaviorSystem, BehaviorSystemFactory } from '../behaviors/behavior-system';
 export type { LoadingEvent };
 
 export interface ZylemStageConfig {
@@ -83,6 +84,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	ecs = createECS();
 	testSystem: any = null;
 	transformSystem: ReturnType<typeof createTransformSystem> | null = null;
+	private behaviorSystems: BehaviorSystem[] = [];
+	private registeredSystemKeys: Set<symbol> = new Set();
 	debugDelegate: StageDebugDelegate | null = null;
 	cameraDebugDelegate: StageCameraDebugDelegate | null = null;
 	private debugStateUnsubscribe: (() => void) | null = null;
@@ -285,6 +288,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		}
 		this.world.update(params);
 		this.transformSystem?.system(this.ecs);
+		// Run registered ECS behavior systems
+		for (const system of this.behaviorSystems) {
+			system.update(this.ecs, delta);
+		}
 		this._childrenMap.forEach((child, eid) => {
 			child.nodeUpdate({
 				...params,
@@ -341,6 +348,13 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.transformSystem?.destroy(this.ecs);
 		this.transformSystem = null;
 
+		// Cleanup behavior systems
+		for (const system of this.behaviorSystems) {
+			system.destroy?.(this.ecs);
+		}
+		this.behaviorSystems = [];
+		this.registeredSystemKeys.clear();
+
 		// Clear reactive stage variables on unload
 		resetStageVariables();
 		// Clear object-scoped variables for this stage
@@ -359,18 +373,19 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		const eid = addEntity(this.ecs);
 		entity.eid = eid;
 		this.scene.addEntity(entity);
-		// @ts-ignore
-		if (child.behaviors) {
-			// @ts-ignore
-			for (let behavior of child.behaviors) {
-				addComponent(this.ecs, behavior.component, entity.eid);
-				const keys = Object.keys(behavior.values);
-				for (const key of keys) {
-					// @ts-ignore
-					behavior.component[key][entity.eid] = behavior.values[key];
+
+		// Auto-register behavior systems from entity refs
+		if (typeof entity.getBehaviorRefs === 'function') {
+			for (const ref of entity.getBehaviorRefs()) {
+				const key = ref.descriptor.key;
+				if (!this.registeredSystemKeys.has(key)) {
+					const system = ref.descriptor.systemFactory({ world: this.world, ecs: this.ecs });
+					this.behaviorSystems.push(system);
+					this.registeredSystemKeys.add(key);
 				}
 			}
 		}
+
 		if (entity.colliderDesc) {
 			this.world.addEntity(entity);
 		}
@@ -429,6 +444,22 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	onLoading(callback: (event: LoadingEvent) => void) {
 		return this.loadingDelegate.onLoading(callback);
+	}
+
+	/**
+	 * Register an ECS behavior system to run each frame.
+	 * @param systemOrFactory A BehaviorSystem instance or factory function
+	 * @returns this for chaining
+	 */
+	registerSystem(systemOrFactory: BehaviorSystem | BehaviorSystemFactory): this {
+		let system: BehaviorSystem;
+		if (typeof systemOrFactory === 'function') {
+			system = systemOrFactory({ world: this.world, ecs: this.ecs });
+		} else {
+			system = systemOrFactory;
+		}
+		this.behaviorSystems.push(system);
+		return this;
 	}
 
 	/**

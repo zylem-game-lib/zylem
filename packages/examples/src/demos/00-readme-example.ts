@@ -1,32 +1,32 @@
-import { boundary2d, createGame, makeMoveable, createSphere } from '@zylem/game-lib';
+import {
+  WorldBoundary2DBehavior,
+  createGame,
+  makeMoveable,
+  createSphere,
+} from '@zylem/game-lib';
 
 // Creates a moveable sphere
 const ball = makeMoveable(createSphere());
 
-// when the ball is updated, move it based on the inputs
-ball.onUpdate(({ me, inputs, delta }) => {
-	// get the horizontal and vertical inputs from player one's controller
-	const { Horizontal, Vertical } = inputs.p1.axes;
-	// set the speed of the ball based on the delta time for smoother movement
-	const speed = 600 * delta;
-	// move the ball based on the inputs and the speed
-	me.moveXY(
-		Horizontal.value * speed,
-		-Vertical.value * speed
-	);
+// attach new boundary behavior and keep the handle
+const boundary = ball.use(WorldBoundary2DBehavior, {
+  boundaries: { top: 3, bottom: -3, left: -6, right: 6 },
 });
 
-// add a boundary behavior to the ball
-ball.addBehavior(
-	boundary2d({
-		boundaries: {
-			top: 3,
-			bottom: -3,
-			left: -6,
-			right: 6,
-		},
-	})
-);
+// when the ball is updated, move it based on the inputs
+ball.onUpdate(({ me, inputs, delta }) => {
+  const { Horizontal, Vertical } = inputs.p1.axes;
 
-// start the game with the ball
+  const speed = 600 * delta;
+
+  // Input -> desired movement (note: Y is inverted)
+  let moveX = Horizontal.value * speed;
+  let moveY = -Vertical.value * speed;
+
+  // Adjust movement based on boundary collisions
+  ({ moveX, moveY } = boundary.getMovement(moveX, moveY));
+
+  me.moveXY(moveX, moveY);
+});
+
 export default createGame(ball);

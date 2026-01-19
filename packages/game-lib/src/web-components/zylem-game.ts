@@ -28,7 +28,16 @@ export class ZylemGameElement extends HTMLElement {
     this.container.style.width = '100%';
     this.container.style.height = '100%';
     this.container.style.position = 'relative';
+    this.container.style.outline = 'none'; // Remove focus outline
+    this.container.tabIndex = 0; // Make focusable for keyboard input
     this.shadowRoot!.appendChild(this.container);
+  }
+
+  /**
+   * Focus the game container for keyboard input
+   */
+  public focus(): void {
+    this.container.focus();
   }
 
   set game(game: Game<any>) {

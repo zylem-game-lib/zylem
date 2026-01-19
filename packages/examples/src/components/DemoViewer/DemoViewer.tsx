@@ -59,6 +59,7 @@ const ExampleRunner: Component = () => {
             setLoading(true);
         } else if (event.type === 'complete') {
             setLoading(false);
+            gameRef?.focus();
         }
     };
 

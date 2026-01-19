@@ -84,6 +84,7 @@
     "nanoid": "^5.1.5",
     "stats.js": "^0.17.0",
     "three": "^0.180.0",
+    "typescript-fsm": "^1.6.0",
     "valtio": "^2.1.7"
   },
   "peerDependencies": {
