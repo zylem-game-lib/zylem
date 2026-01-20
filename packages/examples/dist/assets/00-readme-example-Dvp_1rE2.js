@@ -1,1 +1,0 @@
-import{c,m as d,g as p,W as v}from"./index-CC7bRG2V.js";const o=d(p()),u=o.use(v,{boundaries:{top:3,bottom:-3,left:-6,right:6}});o.onUpdate(({me:r,inputs:s,delta:l})=>{const{Horizontal:m,Vertical:n}=s.p1.axes,t=600*l;let e=m.value*t,a=-n.value*t;({moveX:e,moveY:a}=u.getMovement(e,a)),r.moveXY(e,a)});const b=c(o);export{b as default};

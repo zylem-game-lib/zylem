@@ -4,6 +4,15 @@ exports[`create a basic stage > default configuration 1`] = `
 Stage {
   "_pendingEntities": [],
   "destroyCallbacks": [],
+  "eventDelegate": EventEmitterDelegate {
+    "emitter": {
+      "all": Map {},
+      "emit": [Function],
+      "off": [Function],
+      "on": [Function],
+    },
+    "unsubscribes": [],
+  },
   "options": [
     {
       "backgroundColor": 209900,

@@ -4,12 +4,30 @@ exports[`create a basic game > default configuration 1`] = `
 Game {
   "activeGlobalSubscriptions": [],
   "destroyCallbacks": [],
+  "eventDelegate": EventEmitterDelegate {
+    "emitter": {
+      "all": Map {},
+      "emit": [Function],
+      "off": [Function],
+      "on": [Function],
+    },
+    "unsubscribes": [],
+  },
   "globalChangeCallbacks": [],
   "globalChangesCallbacks": [],
   "options": [
     Stage {
       "_pendingEntities": [],
       "destroyCallbacks": [],
+      "eventDelegate": EventEmitterDelegate {
+        "emitter": {
+          "all": Map {},
+          "emit": [Function],
+          "off": [Function],
+          "on": [Function],
+        },
+        "unsubscribes": [],
+      },
       "options": [
         {
           "backgroundColor": 209900,

@@ -170,6 +170,19 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		}
 	}
 
+	/**
+	 * Execute a single frame update.
+	 * Useful for testing or manual frame stepping.
+	 * @param deltaTime Optional delta time in seconds (defaults to 1/60)
+	 */
+	step(deltaTime: number = 1/60): void {
+		if (!this.wrappedGame) {
+			console.error(this.refErrorMessage);
+			return;
+		}
+		this.wrappedGame.step(deltaTime);
+	}
+
 	async reset() {
 		if (!this.wrappedGame) {
 			console.error(this.refErrorMessage);
