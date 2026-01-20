@@ -1,7 +1,7 @@
 import { BaseNode } from '../base-node';
 import { Stage } from '../../stage/stage';
 import { GameEntity, GameEntityLifeCycle } from '../../entities/entity';
-import { BaseGlobals, ZylemGameConfig } from '../../game/game-interfaces';
+import { BaseGlobals, ZylemGameConfig, GameInputConfig } from '../../game/game-interfaces';
 import { GameConfigLike } from '~/lib/game/game-config';
 
 // export function isStageContext(value: unknown): value is StageContext {
@@ -16,11 +16,21 @@ export type GameOptions<TGlobals extends BaseGlobals> = Array<
 	BaseNode
 >;
 
+/** 
+ * TODO: need to revisit the way configurations are handled
+ * 
+ * - default config is applied first
+ * - then only one config should be allowed. 
+ * - if multiple configs are provided, the last one is used
+ * - then any nodes provided are applied
+ * 
+ **/
+
 export async function convertNodes<TGlobals extends BaseGlobals>(
 	_options: GameOptions<TGlobals>
-): Promise<{ id: string, globals: TGlobals, stages: Stage[] }> {
+): Promise<{ id: string, globals: TGlobals, stages: Stage[], input?: GameInputConfig }> {
 	const { getGameDefaultConfig } = await import('../../game/game-default');
-	let converted = { ...getGameDefaultConfig<TGlobals>() } as { id: string, globals: TGlobals, stages: Stage[] };
+	let convertedDefault = { ...getGameDefaultConfig<TGlobals>() } as { id: string, globals: TGlobals, stages: Stage[], input?: GameInputConfig };
 	const configurations: ZylemGameConfig<Stage, any, TGlobals>[] = [];
 	const stages: Stage[] = [];
 	const entities: (BaseNode | GameEntity<any>)[] = [];
@@ -37,9 +47,14 @@ export async function convertNodes<TGlobals extends BaseGlobals>(
 			configurations.push(configuration as ZylemGameConfig<Stage, any, TGlobals>);
 		}
 	});
+
 	configurations.forEach((configuration) => {
-		converted = Object.assign(converted, { ...configuration });
+		convertedDefault = Object.assign(convertedDefault, { ...configuration });
 	});
+
+	const converted = convertedDefault;
+	converted.input = configurations[0].input;
+	
 	stages.forEach((stageInstance) => {
 		stageInstance.addEntities(entities as BaseNode[]);
 	});
@@ -48,7 +63,7 @@ export async function convertNodes<TGlobals extends BaseGlobals>(
 	} else {
 		converted.stages[0].addEntities(entities as BaseNode[]);
 	}
-	return converted as unknown as { id: string, globals: TGlobals, stages: Stage[] };
+	return converted as unknown as { id: string, globals: TGlobals, stages: Stage[], input?: GameInputConfig };
 }
 
 export function hasStages<TGlobals extends BaseGlobals>(_options: GameOptions<TGlobals>): Boolean {

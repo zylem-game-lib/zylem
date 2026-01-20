@@ -8,11 +8,12 @@
  */
 
 import type { IWorld } from 'bitecs';
-import { defineBehavior } from '../behavior-descriptor';
+import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorSystem } from '../behavior-system';
 import {
 	WorldBoundary2DFSM,
 	type WorldBoundary2DBounds,
+	type WorldBoundary2DHits,
 } from './world-boundary-2d-fsm';
 
 export interface WorldBoundary2DOptions {
@@ -26,9 +27,44 @@ export interface WorldBoundary2DOptions {
 	boundaries: WorldBoundary2DBounds;
 }
 
+/**
+ * Handle methods provided by WorldBoundary2DBehavior
+ */
+export interface WorldBoundary2DHandle {
+	/**
+	 * Get the last computed boundary hits.
+	 * Returns null until entity is spawned and FSM is initialized.
+	 */
+	getLastHits(): WorldBoundary2DHits | null;
+
+	/**
+	 * Get adjusted movement values based on boundary hits.
+	 * Zeros out movement into boundaries the entity is touching.
+	 */
+	getMovement(moveX: number, moveY: number): { moveX: number; moveY: number };
+}
+
 const defaultOptions: WorldBoundary2DOptions = {
 	boundaries: { top: 0, bottom: 0, left: 0, right: 0 },
 };
+
+/**
+ * Creates behavior-specific handle methods for WorldBoundary2DBehavior.
+ */
+function createWorldBoundary2DHandle(
+	ref: BehaviorRef<WorldBoundary2DOptions>
+): WorldBoundary2DHandle {
+	return {
+		getLastHits: () => {
+			const fsm = ref.fsm as WorldBoundary2DFSM | undefined;
+			return fsm?.getLastHits() ?? null;
+		},
+		getMovement: (moveX: number, moveY: number) => {
+			const fsm = ref.fsm as WorldBoundary2DFSM | undefined;
+			return fsm?.getMovement(moveX, moveY) ?? { moveX, moveY };
+		},
+	};
+}
 
 /**
  * WorldBoundary2DSystem
@@ -92,6 +128,7 @@ class WorldBoundary2DSystem implements BehaviorSystem {
  *
  * ship.onUpdate(({ me }) => {
  *   let moveX = ..., moveY = ...;
+ *   const hits = boundary.getLastHits(); // Fully typed!
  *   ({ moveX, moveY } = boundary.getMovement(moveX, moveY));
  *   me.moveXY(moveX, moveY);
  * });
@@ -101,4 +138,5 @@ export const WorldBoundary2DBehavior = defineBehavior({
 	name: 'world-boundary-2d',
 	defaultOptions,
 	systemFactory: (ctx) => new WorldBoundary2DSystem(ctx.world),
+	createHandle: createWorldBoundary2DHandle,
 });

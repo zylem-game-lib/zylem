@@ -317,6 +317,12 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	/** Cleanup owned resources when the stage is destroyed. */
 	protected _destroy(params: DestroyContext<ZylemStage>): void {
+		// Cleanup behavior systems
+		for (const system of this.behaviorSystems) {
+			system.destroy?.(this.ecs);
+		}
+		this.behaviorSystems = [];
+		this.registeredSystemKeys.clear();
 		this._childrenMap.forEach((child) => {
 			try { child.nodeDestroy({ me: child, globals: getGlobals() }); } catch { /* noop */ }
 		});
@@ -347,13 +353,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		// Cleanup transform system
 		this.transformSystem?.destroy(this.ecs);
 		this.transformSystem = null;
-
-		// Cleanup behavior systems
-		for (const system of this.behaviorSystems) {
-			system.destroy?.(this.ecs);
-		}
-		this.behaviorSystems = [];
-		this.registeredSystemKeys.clear();
 
 		// Clear reactive stage variables on unload
 		resetStageVariables();

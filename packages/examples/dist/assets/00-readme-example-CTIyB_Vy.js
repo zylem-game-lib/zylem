@@ -1,1 +1,0 @@
-import{c as m,m as c,a as n,W as p}from"./index-DU1gm4m_.js";const e=c(n());e.onUpdate(({me:o,inputs:t,delta:r})=>{const{Horizontal:s,Vertical:l}=t.p1.axes,a=600*r;o.moveXY(s.value*a,-l.value*a)});e.use(p,{boundaries:{top:3,bottom:-3,left:-6,right:6}});const i=m(e);export{i as default};

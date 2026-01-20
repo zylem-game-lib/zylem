@@ -153,6 +153,14 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
 		}
 	}
 
+	getWidth() {
+		return this.options.width ?? 0;
+	}
+
+	getHeight() {
+		return this.options.height ?? 0;
+	}
+
 	private roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
 		const radius = Math.min(r, Math.floor(Math.min(w, h) / 2));
 		ctx.moveTo(x + radius, y);

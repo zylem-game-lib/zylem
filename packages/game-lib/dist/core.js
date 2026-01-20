@@ -616,7 +616,7 @@ var init_entity = __esm({
        * Behaviors will be auto-registered as systems when the entity is spawned.
        * @param descriptor The behavior descriptor (import from behaviors module)
        * @param options Optional overrides for the behavior's default options
-       * @returns BehaviorHandle for lazy FSM access
+       * @returns BehaviorHandle with behavior-specific methods for lazy FSM access
        */
       use(descriptor, options) {
         const behaviorRef = {
@@ -624,22 +624,15 @@ var init_entity = __esm({
           options: { ...descriptor.defaultOptions, ...options }
         };
         this.behaviorRefs.push(behaviorRef);
-        return {
+        const baseHandle = {
           getFSM: () => behaviorRef.fsm ?? null,
-          getLastHits: () => {
-            const fsm = behaviorRef.fsm ?? null;
-            if (!fsm || typeof fsm.getLastHits !== "function") return null;
-            return fsm.getLastHits();
-          },
-          getMovement: (moveX, moveY) => {
-            const fsm = behaviorRef.fsm ?? null;
-            if (!fsm || typeof fsm.getMovement !== "function") {
-              return { moveX, moveY };
-            }
-            return fsm.getMovement(moveX, moveY);
-          },
           getOptions: () => behaviorRef.options,
           ref: behaviorRef
+        };
+        const customMethods = descriptor.createHandle?.(behaviorRef) ?? {};
+        return {
+          ...baseHandle,
+          ...customMethods
         };
       }
       /**
@@ -4186,6 +4179,11 @@ var init_zylem_stage = __esm({
       }
       /** Cleanup owned resources when the stage is destroyed. */
       _destroy(params) {
+        for (const system of this.behaviorSystems) {
+          system.destroy?.(this.ecs);
+        }
+        this.behaviorSystems = [];
+        this.registeredSystemKeys.clear();
         this._childrenMap.forEach((child) => {
           try {
             child.nodeDestroy({ me: child, globals: getGlobals() });
@@ -4212,11 +4210,6 @@ var init_zylem_stage = __esm({
         this.cameraRef = null;
         this.transformSystem?.destroy(this.ecs);
         this.transformSystem = null;
-        for (const system of this.behaviorSystems) {
-          system.destroy?.(this.ecs);
-        }
-        this.behaviorSystems = [];
-        this.registeredSystemKeys.clear();
         resetStageVariables();
         clearVariables(this);
       }
@@ -4670,15 +4663,101 @@ var init_game_default = __esm({
 init_game_state();
 init_debug_state();
 
+// src/lib/input/input-state.ts
+function createButtonState() {
+  return { pressed: false, released: false, held: 0 };
+}
+function createAnalogState() {
+  return { value: 0, held: 0 };
+}
+function compileMapping(mapping) {
+  const compiled = /* @__PURE__ */ new Map();
+  if (!mapping) return compiled;
+  for (const [key, targets] of Object.entries(mapping)) {
+    if (!targets || targets.length === 0) continue;
+    const paths = [];
+    for (const target of targets) {
+      const [rawCategory, rawName] = (target || "").split(".");
+      if (!rawCategory || !rawName) continue;
+      const category = rawCategory.toLowerCase();
+      const nameKey = rawName.toLowerCase();
+      if (category === "buttons") {
+        const propertyMap = {
+          "a": "A",
+          "b": "B",
+          "x": "X",
+          "y": "Y",
+          "start": "Start",
+          "select": "Select",
+          "l": "L",
+          "r": "R"
+        };
+        const prop = propertyMap[nameKey];
+        if (prop) {
+          paths.push({ category: "buttons", property: prop });
+        }
+      } else if (category === "directions") {
+        const propertyMap = {
+          "up": "Up",
+          "down": "Down",
+          "left": "Left",
+          "right": "Right"
+        };
+        const prop = propertyMap[nameKey];
+        if (prop) {
+          paths.push({ category: "directions", property: prop });
+        }
+      } else if (category === "shoulders") {
+        const propertyMap = {
+          "ltrigger": "LTrigger",
+          "rtrigger": "RTrigger"
+        };
+        const prop = propertyMap[nameKey];
+        if (prop) {
+          paths.push({ category: "shoulders", property: prop });
+        }
+      }
+    }
+    if (paths.length > 0) {
+      compiled.set(key, paths);
+    }
+  }
+  return compiled;
+}
+function mergeButtonState(a, b) {
+  if (!a && !b) return createButtonState();
+  if (!a) return { ...b };
+  if (!b) return { ...a };
+  return {
+    pressed: a.pressed || b.pressed,
+    released: a.released || b.released,
+    held: a.held + b.held
+  };
+}
+function mergeAnalogState(a, b) {
+  if (!a && !b) return createAnalogState();
+  if (!a) return { ...b };
+  if (!b) return { ...a };
+  return {
+    value: a.value + b.value,
+    held: a.held + b.held
+  };
+}
+
 // src/lib/input/keyboard-provider.ts
 var KeyboardProvider = class {
   keyStates = /* @__PURE__ */ new Map();
   keyButtonStates = /* @__PURE__ */ new Map();
   mapping = null;
+  compiledMapping;
   includeDefaultBase = true;
   constructor(mapping, options) {
+    console.log("[KeyboardProvider] Constructor called with mapping:", mapping, "options:", options);
     this.mapping = mapping ?? null;
     this.includeDefaultBase = options?.includeDefaultBase ?? true;
+    console.log("[KeyboardProvider] About to call compileMapping with:", this.mapping);
+    this.compiledMapping = compileMapping(this.mapping);
+    console.log("[KeyboardProvider] compileMapping returned, size:", this.compiledMapping.size);
     window.addEventListener("keydown", ({ key }) => this.keyStates.set(key, true));
     window.addEventListener("keyup", ({ key }) => this.keyStates.set(key, false));
   }
@@ -4715,66 +4794,28 @@ var KeyboardProvider = class {
     const value = this.getAxisValue(negativeKey, positiveKey);
     return { value, held: delta };
   }
-  mergeButtonState(a, b) {
-    return {
-      pressed: a?.pressed || b?.pressed || false,
-      released: a?.released || b?.released || false,
-      held: (a?.held || 0) + (b?.held || 0)
-    };
-  }
+  /**
+   * Optimized custom mapping application using pre-computed paths.
+   * No string parsing happens here - all lookups are O(1).
+   */
   applyCustomMapping(input, delta) {
-    if (!this.mapping) return input;
-    for (const [key, targets] of Object.entries(this.mapping)) {
-      if (!targets || targets.length === 0) continue;
+    if (this.compiledMapping.size === 0) return input;
+    for (const [key, paths] of this.compiledMapping.entries()) {
       const state2 = this.handleButtonState(key, delta);
-      for (const target of targets) {
-        const [rawCategory, rawName] = (target || "").split(".");
-        if (!rawCategory || !rawName) continue;
-        const category = rawCategory.toLowerCase();
-        const nameKey = rawName.toLowerCase();
+      for (const path of paths) {
+        const { category, property } = path;
         if (category === "buttons") {
-          const map = {
-            "a": "A",
-            "b": "B",
-            "x": "X",
-            "y": "Y",
-            "start": "Start",
-            "select": "Select",
-            "l": "L",
-            "r": "R"
-          };
-          const prop = map[nameKey];
-          if (!prop) continue;
-          const nextButtons = input.buttons || {};
-          nextButtons[prop] = this.mergeButtonState(nextButtons[prop], state2);
-          input.buttons = nextButtons;
-          continue;
-        }
-        if (category === "directions") {
-          const map = {
-            "up": "Up",
-            "down": "Down",
-            "left": "Left",
-            "right": "Right"
-          };
-          const prop = map[nameKey];
-          if (!prop) continue;
-          const nextDirections = input.directions || {};
-          nextDirections[prop] = this.mergeButtonState(nextDirections[prop], state2);
-          input.directions = nextDirections;
-          continue;
-        }
-        if (category === "shoulders") {
-          const map = {
-            "ltrigger": "LTrigger",
-            "rtrigger": "RTrigger"
-          };
-          const prop = map[nameKey];
-          if (!prop) continue;
-          const nextShoulders = input.shoulders || {};
-          nextShoulders[prop] = this.mergeButtonState(nextShoulders[prop], state2);
-          input.shoulders = nextShoulders;
-          continue;
+          if (!input.buttons) input.buttons = {};
+          const nextButtons = input.buttons;
+          nextButtons[property] = mergeButtonState(nextButtons[property], state2);
+        } else if (category === "directions") {
+          if (!input.directions) input.directions = {};
+          const nextDirections = input.directions;
+          nextDirections[property] = mergeButtonState(nextDirections[property], state2);
+        } else if (category === "shoulders") {
+          if (!input.shoulders) input.shoulders = {};
+          const nextShoulders = input.shoulders;
+          nextShoulders[property] = mergeButtonState(nextShoulders[property], state2);
         }
       }
     }
@@ -4808,7 +4849,13 @@ var KeyboardProvider = class {
         RTrigger: this.handleButtonState("E", delta)
       };
     }
-    return this.applyCustomMapping(base, delta);
+    const result = this.applyCustomMapping(base, delta);
+    if (this.isKeyPressed("w") || this.isKeyPressed("s") || this.isKeyPressed("ArrowUp") || this.isKeyPressed("ArrowDown")) {
+      console.log("[KeyboardProvider] includeDefaultBase:", this.includeDefaultBase);
+      console.log("[KeyboardProvider] compiledMapping size:", this.compiledMapping.size);
+      console.log("[KeyboardProvider] result.directions:", result.directions);
+    }
+    return result;
   }
   getName() {
     return "keyboard";
@@ -4913,9 +4960,14 @@ var InputManager = class {
   currentInputs = {};
   previousInputs = {};
   constructor(config) {
+    console.log("[InputManager] Constructor called with config:", config);
+    console.log("[InputManager] config?.p1:", config?.p1);
+    console.log("[InputManager] config?.p1?.key:", config?.p1?.key);
     if (config?.p1?.key) {
+      console.log("[InputManager] Creating P1 KeyboardProvider with custom mapping:", config.p1.key);
       this.addInputProvider(1, new KeyboardProvider(config.p1.key, { includeDefaultBase: false }));
     } else {
+      console.log("[InputManager] Creating P1 KeyboardProvider with default mapping");
       this.addInputProvider(1, new KeyboardProvider());
     }
     this.addInputProvider(1, new GamepadProvider(0));
@@ -4969,44 +5021,31 @@ var InputManager = class {
     });
     return inputs;
   }
-  mergeButtonState(a, b) {
-    return {
-      pressed: a?.pressed || b?.pressed || false,
-      released: a?.released || b?.released || false,
-      held: (a?.held || 0) + (b?.held || 0)
-    };
-  }
-  mergeAnalogState(a, b) {
-    return {
-      value: (a?.value || 0) + (b?.value || 0),
-      held: (a?.held || 0) + (b?.held || 0)
-    };
-  }
   mergeInputs(a, b) {
     return {
       buttons: {
-        A: this.mergeButtonState(a.buttons?.A, b.buttons?.A),
-        B: this.mergeButtonState(a.buttons?.B, b.buttons?.B),
-        X: this.mergeButtonState(a.buttons?.X, b.buttons?.X),
-        Y: this.mergeButtonState(a.buttons?.Y, b.buttons?.Y),
-        Start: this.mergeButtonState(a.buttons?.Start, b.buttons?.Start),
-        Select: this.mergeButtonState(a.buttons?.Select, b.buttons?.Select),
-        L: this.mergeButtonState(a.buttons?.L, b.buttons?.L),
-        R: this.mergeButtonState(a.buttons?.R, b.buttons?.R)
+        A: mergeButtonState(a.buttons?.A, b.buttons?.A),
+        B: mergeButtonState(a.buttons?.B, b.buttons?.B),
+        X: mergeButtonState(a.buttons?.X, b.buttons?.X),
+        Y: mergeButtonState(a.buttons?.Y, b.buttons?.Y),
+        Start: mergeButtonState(a.buttons?.Start, b.buttons?.Start),
+        Select: mergeButtonState(a.buttons?.Select, b.buttons?.Select),
+        L: mergeButtonState(a.buttons?.L, b.buttons?.L),
+        R: mergeButtonState(a.buttons?.R, b.buttons?.R)
       },
       directions: {
-        Up: this.mergeButtonState(a.directions?.Up, b.directions?.Up),
-        Down: this.mergeButtonState(a.directions?.Down, b.directions?.Down),
-        Left: this.mergeButtonState(a.directions?.Left, b.directions?.Left),
-        Right: this.mergeButtonState(a.directions?.Right, b.directions?.Right)
+        Up: mergeButtonState(a.directions?.Up, b.directions?.Up),
+        Down: mergeButtonState(a.directions?.Down, b.directions?.Down),
+        Left: mergeButtonState(a.directions?.Left, b.directions?.Left),
+        Right: mergeButtonState(a.directions?.Right, b.directions?.Right)
       },
       axes: {
-        Horizontal: this.mergeAnalogState(a.axes?.Horizontal, b.axes?.Horizontal),
-        Vertical: this.mergeAnalogState(a.axes?.Vertical, b.axes?.Vertical)
+        Horizontal: mergeAnalogState(a.axes?.Horizontal, b.axes?.Horizontal),
+        Vertical: mergeAnalogState(a.axes?.Vertical, b.axes?.Vertical)
       },
       shoulders: {
-        LTrigger: this.mergeButtonState(a.shoulders?.LTrigger, b.shoulders?.LTrigger),
-        RTrigger: this.mergeButtonState(a.shoulders?.RTrigger, b.shoulders?.RTrigger)
+        LTrigger: mergeButtonState(a.shoulders?.LTrigger, b.shoulders?.LTrigger),
+        RTrigger: mergeButtonState(a.shoulders?.RTrigger, b.shoulders?.RTrigger)
       }
     };
   }
@@ -5687,11 +5726,14 @@ var ZylemGame = class _ZylemGame {
   static MAX_DELTA_SECONDS = 1 / 30;
   constructor(options, wrapperRef) {
     this.wrapperRef = wrapperRef;
-    this.inputManager = new InputManager(options.input);
     this.timer = new Timer();
     this.timer.connect(document);
+    console.log("[ZylemGame] options:", options);
+    console.log("[ZylemGame] options.input:", options.input);
     const config = resolveGameConfig(options);
     console.log(config);
+    console.log("[ZylemGame] config.input:", config.input);
+    this.inputManager = new InputManager(config.input);
     this.id = config.id;
     this.stages = config.stages || [];
     this.container = config.container;
@@ -5953,7 +5995,7 @@ init_stage();
 init_entity();
 async function convertNodes(_options) {
   const { getGameDefaultConfig: getGameDefaultConfig2 } = await Promise.resolve().then(() => (init_game_default(), game_default_exports));
-  let converted = { ...getGameDefaultConfig2() };
+  let convertedDefault = { ...getGameDefaultConfig2() };
   const configurations = [];
   const stages = [];
   const entities = [];
@@ -5970,8 +6012,10 @@ async function convertNodes(_options) {
     }
   });
   configurations.forEach((configuration) => {
-    converted = Object.assign(converted, { ...configuration });
+    convertedDefault = Object.assign(convertedDefault, { ...configuration });
   });
+  const converted = convertedDefault;
+  converted.input = configurations[0].input;
   stages.forEach((stageInstance) => {
     stageInstance.addEntities(entities);
   });

@@ -1,1 +1,0 @@
-import{c as t,m as r,a as c,C as e,r as s,h as n,t as d}from"./index-DU1gm4m_.js";const o=r(c({color:new e(e.NAMES.red)}));o.addBehavior(s({boundaries:{top:6,bottom:-6,left:-12,right:12}},()=>{d()})).onSetup(({me:a})=>{a.move(new n(3,4,0))});const m=t({id:"ricochet-test"},o);export{m as default};

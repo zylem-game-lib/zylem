@@ -324,7 +324,7 @@ var GameEntity = class extends BaseNode {
    * Behaviors will be auto-registered as systems when the entity is spawned.
    * @param descriptor The behavior descriptor (import from behaviors module)
    * @param options Optional overrides for the behavior's default options
-   * @returns BehaviorHandle for lazy FSM access
+   * @returns BehaviorHandle with behavior-specific methods for lazy FSM access
    */
   use(descriptor, options) {
     const behaviorRef = {
@@ -332,22 +332,15 @@ var GameEntity = class extends BaseNode {
       options: { ...descriptor.defaultOptions, ...options }
     };
     this.behaviorRefs.push(behaviorRef);
-    return {
+    const baseHandle = {
       getFSM: () => behaviorRef.fsm ?? null,
-      getLastHits: () => {
-        const fsm = behaviorRef.fsm ?? null;
-        if (!fsm || typeof fsm.getLastHits !== "function") return null;
-        return fsm.getLastHits();
-      },
-      getMovement: (moveX, moveY) => {
-        const fsm = behaviorRef.fsm ?? null;
-        if (!fsm || typeof fsm.getMovement !== "function") {
-          return { moveX, moveY };
-        }
-        return fsm.getMovement(moveX, moveY);
-      },
       getOptions: () => behaviorRef.options,
       ref: behaviorRef
+    };
+    const customMethods = descriptor.createHandle?.(behaviorRef) ?? {};
+    return {
+      ...baseHandle,
+      ...customMethods
     };
   }
   /**
@@ -2981,6 +2974,12 @@ var ZylemRect = class _ZylemRect extends GameEntity {
         this._sprite.material.needsUpdate = true;
       }
     }
+  }
+  getWidth() {
+    return this.options.width ?? 0;
+  }
+  getHeight() {
+    return this.options.height ?? 0;
   }
   roundedRectPath(ctx, x, y, w, h, r) {
     const radius = Math.min(r, Math.floor(Math.min(w, h) / 2));

@@ -1,1 +1,0 @@
-import{c as t,d as o,f as s,C as e,P as c,h as a,a as n}from"./index-DU1gm4m_.js";const d=n({radius:10,material:{color:new e(e.NAMES.blue)}}),l=s({perspective:c.ThirdPerson,position:new a(0,0,-60),target:new a(0,0,0)}),r=o({backgroundColor:new e(e.NAMES.black)},l);r.add(d);const m=t({id:"zylem-planet-demo",debug:!0},r);export{m as default};

@@ -17,4 +17,7 @@ export {
 	WorldBoundary2DEvent,
 } from './world-boundary-2d-fsm';
 
-export type { WorldBoundary2DOptions } from './world-boundary-2d.descriptor';
+export type {
+	WorldBoundary2DOptions,
+	WorldBoundary2DHandle,
+} from './world-boundary-2d.descriptor';

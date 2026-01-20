@@ -1,398 +1,1173 @@
-// src/lib/actions/behaviors/boundaries/boundary.ts
-var defaultBoundaryOptions = {
-  boundaries: {
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0
-  },
-  stopMovement: true
+// src/lib/behaviors/behavior-descriptor.ts
+function defineBehavior(config) {
+  return {
+    key: /* @__PURE__ */ Symbol.for(`zylem:behavior:${config.name}`),
+    defaultOptions: config.defaultOptions,
+    systemFactory: config.systemFactory,
+    createHandle: config.createHandle
+  };
+}
+
+// src/lib/behaviors/components.ts
+import { Vector3, Quaternion } from "three";
+function createTransformComponent() {
+  return {
+    position: new Vector3(),
+    rotation: new Quaternion()
+  };
+}
+function createPhysicsBodyComponent(body) {
+  return { body };
+}
+
+// src/lib/behaviors/physics-step.behavior.ts
+var PhysicsStepBehavior = class {
+  constructor(physicsWorld) {
+    this.physicsWorld = physicsWorld;
+  }
+  update(dt) {
+    this.physicsWorld.timestep = dt;
+    this.physicsWorld.step();
+  }
 };
-function boundary2d(options = {}) {
-  return {
-    type: "update",
-    handler: (updateContext) => {
-      _boundary2d(updateContext, options);
-    }
-  };
-}
-function _boundary2d(updateContext, options) {
-  const { me: entity } = updateContext;
-  const { boundaries, onBoundary } = {
-    ...defaultBoundaryOptions,
-    ...options
-  };
-  const position = entity.getPosition();
-  if (!position) return;
-  let boundariesHit = { top: false, bottom: false, left: false, right: false };
-  if (position.x <= boundaries.left) {
-    boundariesHit.left = true;
-  } else if (position.x >= boundaries.right) {
-    boundariesHit.right = true;
-  }
-  if (position.y <= boundaries.bottom) {
-    boundariesHit.bottom = true;
-  } else if (position.y >= boundaries.top) {
-    boundariesHit.top = true;
-  }
-  const stopMovement = options.stopMovement ?? true;
-  if (stopMovement && boundariesHit) {
-    const velocity = entity.getVelocity() ?? { x: 0, y: 0, z: 0 };
-    let { x: newX, y: newY } = velocity;
-    if (velocity?.y < 0 && boundariesHit.bottom) {
-      newY = 0;
-    } else if (velocity?.y > 0 && boundariesHit.top) {
-      newY = 0;
-    }
-    if (velocity?.x < 0 && boundariesHit.left) {
-      newX = 0;
-    } else if (velocity?.x > 0 && boundariesHit.right) {
-      newX = 0;
-    }
-    entity.moveXY(newX, newY);
-  }
-  if (onBoundary && boundariesHit) {
-    onBoundary({
-      me: entity,
-      boundary: boundariesHit,
-      position: { x: position.x, y: position.y, z: position.z },
-      updateContext
-    });
-  }
-}
 
-// src/lib/collision/collision-builder.ts
-import { ActiveCollisionTypes, ColliderDesc, RigidBodyDesc, RigidBodyType, Vector3 } from "@dimforge/rapier3d-compat";
-var typeToGroup = /* @__PURE__ */ new Map();
-var nextGroupId = 0;
-function getOrCreateCollisionGroupId(type) {
-  let groupId = typeToGroup.get(type);
-  if (groupId === void 0) {
-    groupId = nextGroupId++ % 16;
-    typeToGroup.set(type, groupId);
+// src/lib/behaviors/physics-sync.behavior.ts
+var PhysicsSyncBehavior = class {
+  constructor(world) {
+    this.world = world;
   }
-  return groupId;
-}
-
-// src/lib/collision/utils.ts
-function matchesCollisionSelector(other, selector) {
-  if (!selector) return true;
-  const otherName = other.name ?? "";
-  if ("name" in selector) {
-    const sel = selector.name;
-    if (sel instanceof RegExp) {
-      return sel.test(otherName);
-    } else if (Array.isArray(sel)) {
-      return sel.some((s) => s === otherName);
-    } else {
-      return otherName === sel;
-    }
-  } else if ("mask" in selector) {
-    const m = selector.mask;
-    if (m instanceof RegExp) {
-      const type = other.collisionType ?? "";
-      return m.test(type);
-    } else {
-      const type = other.collisionType ?? "";
-      const gid = getOrCreateCollisionGroupId(type);
-      return (m & 1 << gid) !== 0;
-    }
-  } else if ("test" in selector) {
-    return !!selector.test(other);
-  }
-  return true;
-}
-
-// src/lib/actions/behaviors/ricochet/ricochet-2d-collision.ts
-function ricochet2DCollision(options = {}, callback) {
-  return {
-    type: "collision",
-    handler: (collisionContext) => {
-      _handleRicochet2DCollision(collisionContext, options, callback);
-    }
-  };
-}
-function _handleRicochet2DCollision(collisionContext, options, callback) {
-  const { entity, other } = collisionContext;
-  const self = entity;
-  if (other.collider?.isSensor()) return;
-  const {
-    minSpeed = 2,
-    maxSpeed = 20,
-    separation = 0,
-    collisionWith = void 0
-  } = {
-    ...options
-  };
-  const reflectionMode = options?.reflectionMode ?? "angled";
-  const maxAngleDeg = options?.maxAngleDeg ?? 60;
-  const speedUpFactor = options?.speedUpFactor ?? 1.05;
-  const minOffsetForAngle = options?.minOffsetForAngle ?? 0.15;
-  const centerRetentionFactor = options?.centerRetentionFactor ?? 0.5;
-  if (!matchesCollisionSelector(other, collisionWith)) return;
-  const selfPos = self.getPosition();
-  const otherPos = other.body?.translation();
-  const vel = self.getVelocity();
-  if (!selfPos || !otherPos || !vel) return;
-  let newVelX = vel.x;
-  let newVelY = vel.y;
-  let newX = selfPos.x;
-  let newY = selfPos.y;
-  const dx = selfPos.x - otherPos.x;
-  const dy = selfPos.y - otherPos.y;
-  let extentX = null;
-  let extentY = null;
-  const colliderShape = other.collider?.shape;
-  if (colliderShape) {
-    if (colliderShape.halfExtents) {
-      extentX = Math.abs(colliderShape.halfExtents.x ?? colliderShape.halfExtents[0] ?? null);
-      extentY = Math.abs(colliderShape.halfExtents.y ?? colliderShape.halfExtents[1] ?? null);
-    }
-    if ((extentX == null || extentY == null) && typeof colliderShape.radius === "number") {
-      extentX = extentX ?? Math.abs(colliderShape.radius);
-      extentY = extentY ?? Math.abs(colliderShape.radius);
-    }
-  }
-  if ((extentX == null || extentY == null) && typeof other.collider?.halfExtents === "function") {
-    const he = other.collider.halfExtents();
-    if (he) {
-      extentX = extentX ?? Math.abs(he.x);
-      extentY = extentY ?? Math.abs(he.y);
-    }
-  }
-  if ((extentX == null || extentY == null) && typeof other.collider?.radius === "function") {
-    const r = other.collider.radius();
-    if (typeof r === "number") {
-      extentX = extentX ?? Math.abs(r);
-      extentY = extentY ?? Math.abs(r);
-    }
-  }
-  let relX = 0;
-  let relY = 0;
-  if (extentX && extentY) {
-    relX = clamp(dx / extentX, -1, 1);
-    relY = clamp(dy / extentY, -1, 1);
-  } else {
-    relX = Math.sign(dx);
-    relY = Math.sign(dy);
-  }
-  let bounceVertical = Math.abs(dy) >= Math.abs(dx);
-  let selfExtentX = null;
-  let selfExtentY = null;
-  const selfShape = self.collider?.shape;
-  if (selfShape) {
-    if (selfShape.halfExtents) {
-      selfExtentX = Math.abs(selfShape.halfExtents.x ?? selfShape.halfExtents[0] ?? null);
-      selfExtentY = Math.abs(selfShape.halfExtents.y ?? selfShape.halfExtents[1] ?? null);
-    }
-    if ((selfExtentX == null || selfExtentY == null) && typeof selfShape.radius === "number") {
-      selfExtentX = selfExtentX ?? Math.abs(selfShape.radius);
-      selfExtentY = selfExtentY ?? Math.abs(selfShape.radius);
-    }
-  }
-  if ((selfExtentX == null || selfExtentY == null) && typeof self.collider?.halfExtents === "function") {
-    const heS = self.collider.halfExtents();
-    if (heS) {
-      selfExtentX = selfExtentX ?? Math.abs(heS.x);
-      selfExtentY = selfExtentY ?? Math.abs(heS.y);
-    }
-  }
-  if ((selfExtentX == null || selfExtentY == null) && typeof self.collider?.radius === "function") {
-    const rS = self.collider.radius();
-    if (typeof rS === "number") {
-      selfExtentX = selfExtentX ?? Math.abs(rS);
-      selfExtentY = selfExtentY ?? Math.abs(rS);
-    }
-  }
-  if (extentX != null && extentY != null && selfExtentX != null && selfExtentY != null) {
-    const penX = selfExtentX + extentX - Math.abs(dx);
-    const penY = selfExtentY + extentY - Math.abs(dy);
-    if (!Number.isNaN(penX) && !Number.isNaN(penY)) {
-      bounceVertical = penY <= penX;
-    }
-  }
-  let usedAngleDeflection = false;
-  if (bounceVertical) {
-    const resolvedY = (extentY ?? 0) + (selfExtentY ?? 0) + separation;
-    newY = otherPos.y + (dy > 0 ? resolvedY : -resolvedY);
-    newX = selfPos.x;
-    const isHorizontalPaddle = extentX != null && extentY != null && extentX > extentY;
-    if (isHorizontalPaddle && reflectionMode === "angled") {
-      const maxAngleRad = maxAngleDeg * Math.PI / 180;
-      const deadzone = Math.max(0, Math.min(1, minOffsetForAngle));
-      const clampedOffsetX = clamp(relX, -1, 1);
-      const absOff = Math.abs(clampedOffsetX);
-      const baseSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-      const speed = clamp(baseSpeed * speedUpFactor, minSpeed, maxSpeed);
-      if (absOff > deadzone) {
-        const t = (absOff - deadzone) / (1 - deadzone);
-        const angle = Math.sign(clampedOffsetX) * (t * maxAngleRad);
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
-        const vy = Math.abs(speed * cosA);
-        const vx = speed * sinA;
-        newVelY = dy > 0 ? vy : -vy;
-        newVelX = vx;
-      } else {
-        const vx = vel.x * centerRetentionFactor;
-        const vyMagSquared = Math.max(0, speed * speed - vx * vx);
-        const vy = Math.sqrt(vyMagSquared);
-        newVelY = dy > 0 ? vy : -vy;
-        newVelX = vx;
-      }
-      usedAngleDeflection = true;
-    } else {
-      newVelY = dy > 0 ? Math.abs(vel.y) : -Math.abs(vel.y);
-      if (reflectionMode === "simple") usedAngleDeflection = true;
-    }
-  } else {
-    const resolvedX = (extentX ?? 0) + (selfExtentX ?? 0) + separation;
-    newX = otherPos.x + (dx > 0 ? resolvedX : -resolvedX);
-    newY = selfPos.y;
-    if (reflectionMode === "angled") {
-      const maxAngleRad = maxAngleDeg * Math.PI / 180;
-      const deadzone = Math.max(0, Math.min(1, minOffsetForAngle));
-      const clampedOffsetY = clamp(relY, -1, 1);
-      const absOff = Math.abs(clampedOffsetY);
-      const baseSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-      const speed = clamp(baseSpeed * speedUpFactor, minSpeed, maxSpeed);
-      if (absOff > deadzone) {
-        const t = (absOff - deadzone) / (1 - deadzone);
-        const angle = Math.sign(clampedOffsetY) * (t * maxAngleRad);
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
-        const vx = Math.abs(speed * cosA);
-        const vy = speed * sinA;
-        newVelX = dx > 0 ? vx : -vx;
-        newVelY = vy;
-      } else {
-        const vy = vel.y * centerRetentionFactor;
-        const vxMagSquared = Math.max(0, speed * speed - vy * vy);
-        const vx = Math.sqrt(vxMagSquared);
-        newVelX = dx > 0 ? vx : -vx;
-        newVelY = vy;
-      }
-      usedAngleDeflection = true;
-    } else {
-      newVelX = dx > 0 ? Math.abs(vel.x) : -Math.abs(vel.x);
-      newVelY = vel.y;
-      usedAngleDeflection = true;
-    }
-  }
-  if (!usedAngleDeflection) {
-    const additionBaseX = Math.abs(newVelX);
-    const additionBaseY = Math.abs(newVelY);
-    const addX = Math.sign(relX) * Math.abs(relX) * additionBaseX;
-    const addY = Math.sign(relY) * Math.abs(relY) * additionBaseY;
-    newVelX += addX;
-    newVelY += addY;
-  }
-  const currentSpeed = Math.sqrt(newVelX * newVelX + newVelY * newVelY);
-  if (currentSpeed > 0) {
-    const targetSpeed = clamp(currentSpeed, minSpeed, maxSpeed);
-    if (targetSpeed !== currentSpeed) {
-      const scale = targetSpeed / currentSpeed;
-      newVelX *= scale;
-      newVelY *= scale;
-    }
-  }
-  if (newX !== selfPos.x || newY !== selfPos.y) {
-    self.setPosition(newX, newY, selfPos.z);
-    self.moveXY(newVelX, newVelY);
-    if (callback) {
-      const velocityAfter = self.getVelocity();
-      if (velocityAfter) {
-        callback({
-          position: { x: newX, y: newY, z: selfPos.z },
-          ...collisionContext
+  /**
+   * Query entities that have both physics body and transform components
+   */
+  queryEntities() {
+    const entities = [];
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (gameEntity.physics?.body && gameEntity.transform) {
+        entities.push({
+          physics: gameEntity.physics,
+          transform: gameEntity.transform
         });
       }
     }
+    return entities;
   }
+  update(_dt) {
+    const entities = this.queryEntities();
+    for (const e of entities) {
+      const body = e.physics.body;
+      const transform = e.transform;
+      const p = body.translation();
+      transform.position.set(p.x, p.y, p.z);
+      const r = body.rotation();
+      transform.rotation.set(r.x, r.y, r.z, r.w);
+    }
+  }
+};
+
+// src/lib/behaviors/thruster/components.ts
+function createThrusterMovementComponent(linearThrust, angularThrust, options) {
+  return {
+    linearThrust,
+    angularThrust,
+    linearDamping: options?.linearDamping,
+    angularDamping: options?.angularDamping
+  };
+}
+function createThrusterInputComponent() {
+  return {
+    thrust: 0,
+    rotate: 0
+  };
+}
+function createThrusterStateComponent() {
+  return {
+    enabled: true,
+    currentThrust: 0
+  };
 }
 
-// src/lib/actions/behaviors/ricochet/ricochet.ts
+// src/lib/behaviors/thruster/thruster-fsm.ts
+import { StateMachine, t } from "typescript-fsm";
+var ThrusterState = /* @__PURE__ */ ((ThrusterState2) => {
+  ThrusterState2["Idle"] = "idle";
+  ThrusterState2["Active"] = "active";
+  ThrusterState2["Boosting"] = "boosting";
+  ThrusterState2["Disabled"] = "disabled";
+  ThrusterState2["Docked"] = "docked";
+  return ThrusterState2;
+})(ThrusterState || {});
+var ThrusterEvent = /* @__PURE__ */ ((ThrusterEvent2) => {
+  ThrusterEvent2["Activate"] = "activate";
+  ThrusterEvent2["Deactivate"] = "deactivate";
+  ThrusterEvent2["Boost"] = "boost";
+  ThrusterEvent2["EndBoost"] = "endBoost";
+  ThrusterEvent2["Disable"] = "disable";
+  ThrusterEvent2["Enable"] = "enable";
+  ThrusterEvent2["Dock"] = "dock";
+  ThrusterEvent2["Undock"] = "undock";
+  return ThrusterEvent2;
+})(ThrusterEvent || {});
+var ThrusterFSM = class {
+  constructor(ctx) {
+    this.ctx = ctx;
+    this.machine = new StateMachine(
+      "idle" /* Idle */,
+      [
+        // Core transitions
+        t("idle" /* Idle */, "activate" /* Activate */, "active" /* Active */),
+        t("active" /* Active */, "deactivate" /* Deactivate */, "idle" /* Idle */),
+        t("active" /* Active */, "boost" /* Boost */, "boosting" /* Boosting */),
+        t("active" /* Active */, "disable" /* Disable */, "disabled" /* Disabled */),
+        t("active" /* Active */, "dock" /* Dock */, "docked" /* Docked */),
+        t("boosting" /* Boosting */, "endBoost" /* EndBoost */, "active" /* Active */),
+        t("boosting" /* Boosting */, "disable" /* Disable */, "disabled" /* Disabled */),
+        t("disabled" /* Disabled */, "enable" /* Enable */, "idle" /* Idle */),
+        t("docked" /* Docked */, "undock" /* Undock */, "idle" /* Idle */),
+        // Self-transitions (no-ops for redundant events)
+        t("idle" /* Idle */, "deactivate" /* Deactivate */, "idle" /* Idle */),
+        t("active" /* Active */, "activate" /* Activate */, "active" /* Active */)
+      ]
+    );
+  }
+  machine;
+  /**
+   * Get current state
+   */
+  getState() {
+    return this.machine.getState();
+  }
+  /**
+   * Dispatch an event to transition state
+   */
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+  /**
+   * Update FSM state based on player input.
+   * Auto-transitions between Idle/Active to report current state.
+   * Does NOT modify input - just observes and reports.
+   */
+  update(playerInput) {
+    const state = this.machine.getState();
+    const hasInput = Math.abs(playerInput.thrust) > 0.01 || Math.abs(playerInput.rotate) > 0.01;
+    if (hasInput && state === "idle" /* Idle */) {
+      this.dispatch("activate" /* Activate */);
+    } else if (!hasInput && state === "active" /* Active */) {
+      this.dispatch("deactivate" /* Deactivate */);
+    }
+  }
+};
+
+// src/lib/behaviors/thruster/thruster-movement.behavior.ts
+var ThrusterMovementBehavior = class {
+  constructor(world) {
+    this.world = world;
+  }
+  /**
+   * Query function - returns entities with required thruster components
+   */
+  queryEntities() {
+    const entities = [];
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (gameEntity.physics?.body && gameEntity.thruster && gameEntity.input) {
+        entities.push({
+          physics: gameEntity.physics,
+          thruster: gameEntity.thruster,
+          input: gameEntity.input
+        });
+      }
+    }
+    return entities;
+  }
+  update(_dt) {
+    const entities = this.queryEntities();
+    for (const e of entities) {
+      const body = e.physics.body;
+      const thruster = e.thruster;
+      const input = e.input;
+      const q = body.rotation();
+      const rotationZ = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+      if (input.thrust !== 0) {
+        const currentVel = body.linvel();
+        if (input.thrust > 0) {
+          const forwardX = Math.sin(-rotationZ);
+          const forwardY = Math.cos(-rotationZ);
+          const thrustAmount = thruster.linearThrust * input.thrust * 0.1;
+          body.setLinvel({
+            x: currentVel.x + forwardX * thrustAmount,
+            y: currentVel.y + forwardY * thrustAmount,
+            z: currentVel.z
+          }, true);
+        } else {
+          const brakeAmount = 0.9;
+          body.setLinvel({
+            x: currentVel.x * brakeAmount,
+            y: currentVel.y * brakeAmount,
+            z: currentVel.z
+          }, true);
+        }
+      }
+      if (input.rotate !== 0) {
+        body.setAngvel({ x: 0, y: 0, z: -thruster.angularThrust * input.rotate }, true);
+      } else {
+        const angVel = body.angvel();
+        body.setAngvel({ x: angVel.x, y: angVel.y, z: 0 }, true);
+      }
+    }
+  }
+};
+
+// src/lib/behaviors/thruster/thruster.descriptor.ts
+var defaultOptions = {
+  linearThrust: 10,
+  angularThrust: 5
+};
+var ThrusterBehaviorSystem = class {
+  constructor(world) {
+    this.world = world;
+    this.movementBehavior = new ThrusterMovementBehavior(world);
+  }
+  movementBehavior;
+  update(ecs, delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const thrusterRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:thruster")
+      );
+      if (!thrusterRef || !gameEntity.body) continue;
+      const options = thrusterRef.options;
+      if (!gameEntity.thruster) {
+        gameEntity.thruster = {
+          linearThrust: options.linearThrust,
+          angularThrust: options.angularThrust
+        };
+      }
+      if (!gameEntity.input) {
+        gameEntity.input = {
+          thrust: 0,
+          rotate: 0
+        };
+      }
+      if (!gameEntity.physics) {
+        gameEntity.physics = { body: gameEntity.body };
+      }
+      if (!thrusterRef.fsm && gameEntity.input) {
+        thrusterRef.fsm = new ThrusterFSM({ input: gameEntity.input });
+      }
+      if (thrusterRef.fsm && gameEntity.input) {
+        thrusterRef.fsm.update({
+          thrust: gameEntity.input.thrust,
+          rotate: gameEntity.input.rotate
+        });
+      }
+    }
+    this.movementBehavior.update(delta);
+  }
+  destroy(_ecs) {
+  }
+};
+var ThrusterBehavior = defineBehavior({
+  name: "thruster",
+  defaultOptions,
+  systemFactory: (ctx) => new ThrusterBehaviorSystem(ctx.world)
+});
+
+// src/lib/behaviors/screen-wrap/screen-wrap-fsm.ts
+import { StateMachine as StateMachine2, t as t2 } from "typescript-fsm";
+var ScreenWrapState = /* @__PURE__ */ ((ScreenWrapState2) => {
+  ScreenWrapState2["Center"] = "center";
+  ScreenWrapState2["NearEdgeLeft"] = "near-edge-left";
+  ScreenWrapState2["NearEdgeRight"] = "near-edge-right";
+  ScreenWrapState2["NearEdgeTop"] = "near-edge-top";
+  ScreenWrapState2["NearEdgeBottom"] = "near-edge-bottom";
+  ScreenWrapState2["Wrapped"] = "wrapped";
+  return ScreenWrapState2;
+})(ScreenWrapState || {});
+var ScreenWrapEvent = /* @__PURE__ */ ((ScreenWrapEvent2) => {
+  ScreenWrapEvent2["EnterCenter"] = "enter-center";
+  ScreenWrapEvent2["ApproachLeft"] = "approach-left";
+  ScreenWrapEvent2["ApproachRight"] = "approach-right";
+  ScreenWrapEvent2["ApproachTop"] = "approach-top";
+  ScreenWrapEvent2["ApproachBottom"] = "approach-bottom";
+  ScreenWrapEvent2["Wrap"] = "wrap";
+  return ScreenWrapEvent2;
+})(ScreenWrapEvent || {});
+var ScreenWrapFSM = class {
+  machine;
+  constructor() {
+    this.machine = new StateMachine2(
+      "center" /* Center */,
+      [
+        // From Center
+        t2("center" /* Center */, "approach-left" /* ApproachLeft */, "near-edge-left" /* NearEdgeLeft */),
+        t2("center" /* Center */, "approach-right" /* ApproachRight */, "near-edge-right" /* NearEdgeRight */),
+        t2("center" /* Center */, "approach-top" /* ApproachTop */, "near-edge-top" /* NearEdgeTop */),
+        t2("center" /* Center */, "approach-bottom" /* ApproachBottom */, "near-edge-bottom" /* NearEdgeBottom */),
+        // From NearEdge to Wrapped
+        t2("near-edge-left" /* NearEdgeLeft */, "wrap" /* Wrap */, "wrapped" /* Wrapped */),
+        t2("near-edge-right" /* NearEdgeRight */, "wrap" /* Wrap */, "wrapped" /* Wrapped */),
+        t2("near-edge-top" /* NearEdgeTop */, "wrap" /* Wrap */, "wrapped" /* Wrapped */),
+        t2("near-edge-bottom" /* NearEdgeBottom */, "wrap" /* Wrap */, "wrapped" /* Wrapped */),
+        // From NearEdge back to Center
+        t2("near-edge-left" /* NearEdgeLeft */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        t2("near-edge-right" /* NearEdgeRight */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        t2("near-edge-top" /* NearEdgeTop */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        t2("near-edge-bottom" /* NearEdgeBottom */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        // From Wrapped back to Center
+        t2("wrapped" /* Wrapped */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        // From Wrapped to NearEdge (landed near opposite edge)
+        t2("wrapped" /* Wrapped */, "approach-left" /* ApproachLeft */, "near-edge-left" /* NearEdgeLeft */),
+        t2("wrapped" /* Wrapped */, "approach-right" /* ApproachRight */, "near-edge-right" /* NearEdgeRight */),
+        t2("wrapped" /* Wrapped */, "approach-top" /* ApproachTop */, "near-edge-top" /* NearEdgeTop */),
+        t2("wrapped" /* Wrapped */, "approach-bottom" /* ApproachBottom */, "near-edge-bottom" /* NearEdgeBottom */),
+        // Self-transitions (no-ops for redundant events)
+        t2("center" /* Center */, "enter-center" /* EnterCenter */, "center" /* Center */),
+        t2("near-edge-left" /* NearEdgeLeft */, "approach-left" /* ApproachLeft */, "near-edge-left" /* NearEdgeLeft */),
+        t2("near-edge-right" /* NearEdgeRight */, "approach-right" /* ApproachRight */, "near-edge-right" /* NearEdgeRight */),
+        t2("near-edge-top" /* NearEdgeTop */, "approach-top" /* ApproachTop */, "near-edge-top" /* NearEdgeTop */),
+        t2("near-edge-bottom" /* NearEdgeBottom */, "approach-bottom" /* ApproachBottom */, "near-edge-bottom" /* NearEdgeBottom */)
+      ]
+    );
+  }
+  getState() {
+    return this.machine.getState();
+  }
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+  /**
+   * Update FSM based on entity position relative to bounds
+   */
+  update(position, bounds, wrapped) {
+    const { x, y } = position;
+    const { minX, maxX, minY, maxY, edgeThreshold } = bounds;
+    if (wrapped) {
+      this.dispatch("wrap" /* Wrap */);
+      return;
+    }
+    const nearLeft = x < minX + edgeThreshold;
+    const nearRight = x > maxX - edgeThreshold;
+    const nearBottom = y < minY + edgeThreshold;
+    const nearTop = y > maxY - edgeThreshold;
+    if (nearLeft) {
+      this.dispatch("approach-left" /* ApproachLeft */);
+    } else if (nearRight) {
+      this.dispatch("approach-right" /* ApproachRight */);
+    } else if (nearTop) {
+      this.dispatch("approach-top" /* ApproachTop */);
+    } else if (nearBottom) {
+      this.dispatch("approach-bottom" /* ApproachBottom */);
+    } else {
+      this.dispatch("enter-center" /* EnterCenter */);
+    }
+  }
+};
+
+// src/lib/behaviors/screen-wrap/screen-wrap.descriptor.ts
+var defaultOptions2 = {
+  width: 20,
+  height: 15,
+  centerX: 0,
+  centerY: 0,
+  edgeThreshold: 2
+};
+var ScreenWrapSystem = class {
+  constructor(world) {
+    this.world = world;
+  }
+  update(ecs, delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const wrapRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:screen-wrap")
+      );
+      if (!wrapRef || !gameEntity.body) continue;
+      const options = wrapRef.options;
+      if (!wrapRef.fsm) {
+        wrapRef.fsm = new ScreenWrapFSM();
+      }
+      const wrapped = this.wrapEntity(gameEntity, options);
+      const pos = gameEntity.body.translation();
+      const { width, height, centerX, centerY, edgeThreshold } = options;
+      const halfWidth = width / 2;
+      const halfHeight = height / 2;
+      wrapRef.fsm.update(
+        { x: pos.x, y: pos.y },
+        {
+          minX: centerX - halfWidth,
+          maxX: centerX + halfWidth,
+          minY: centerY - halfHeight,
+          maxY: centerY + halfHeight,
+          edgeThreshold
+        },
+        wrapped
+      );
+    }
+  }
+  wrapEntity(entity, options) {
+    const body = entity.body;
+    if (!body) return false;
+    const { width, height, centerX, centerY } = options;
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+    const minX = centerX - halfWidth;
+    const maxX = centerX + halfWidth;
+    const minY = centerY - halfHeight;
+    const maxY = centerY + halfHeight;
+    const pos = body.translation();
+    let newX = pos.x;
+    let newY = pos.y;
+    let wrapped = false;
+    if (pos.x < minX) {
+      newX = maxX - (minX - pos.x);
+      wrapped = true;
+    } else if (pos.x > maxX) {
+      newX = minX + (pos.x - maxX);
+      wrapped = true;
+    }
+    if (pos.y < minY) {
+      newY = maxY - (minY - pos.y);
+      wrapped = true;
+    } else if (pos.y > maxY) {
+      newY = minY + (pos.y - maxY);
+      wrapped = true;
+    }
+    if (wrapped) {
+      body.setTranslation({ x: newX, y: newY, z: pos.z }, true);
+    }
+    return wrapped;
+  }
+  destroy(_ecs) {
+  }
+};
+var ScreenWrapBehavior = defineBehavior({
+  name: "screen-wrap",
+  defaultOptions: defaultOptions2,
+  systemFactory: (ctx) => new ScreenWrapSystem(ctx.world)
+});
+
+// src/lib/behaviors/world-boundary-2d/world-boundary-2d-fsm.ts
+import { StateMachine as StateMachine3, t as t3 } from "typescript-fsm";
+var WorldBoundary2DState = /* @__PURE__ */ ((WorldBoundary2DState2) => {
+  WorldBoundary2DState2["Inside"] = "inside";
+  WorldBoundary2DState2["Touching"] = "touching";
+  return WorldBoundary2DState2;
+})(WorldBoundary2DState || {});
+var WorldBoundary2DEvent = /* @__PURE__ */ ((WorldBoundary2DEvent2) => {
+  WorldBoundary2DEvent2["EnterInside"] = "enter-inside";
+  WorldBoundary2DEvent2["TouchBoundary"] = "touch-boundary";
+  return WorldBoundary2DEvent2;
+})(WorldBoundary2DEvent || {});
+function computeWorldBoundary2DHits(position, bounds) {
+  const hits = {
+    top: false,
+    bottom: false,
+    left: false,
+    right: false
+  };
+  if (position.x <= bounds.left) hits.left = true;
+  else if (position.x >= bounds.right) hits.right = true;
+  if (position.y <= bounds.bottom) hits.bottom = true;
+  else if (position.y >= bounds.top) hits.top = true;
+  return hits;
+}
+function hasAnyWorldBoundary2DHit(hits) {
+  return !!(hits.left || hits.right || hits.top || hits.bottom);
+}
+var WorldBoundary2DFSM = class {
+  machine;
+  lastHits = { top: false, bottom: false, left: false, right: false };
+  lastPosition = null;
+  lastUpdatedAtMs = null;
+  constructor() {
+    this.machine = new StateMachine3(
+      "inside" /* Inside */,
+      [
+        t3("inside" /* Inside */, "touch-boundary" /* TouchBoundary */, "touching" /* Touching */),
+        t3("touching" /* Touching */, "enter-inside" /* EnterInside */, "inside" /* Inside */),
+        // Self transitions (no-ops)
+        t3("inside" /* Inside */, "enter-inside" /* EnterInside */, "inside" /* Inside */),
+        t3("touching" /* Touching */, "touch-boundary" /* TouchBoundary */, "touching" /* Touching */)
+      ]
+    );
+  }
+  getState() {
+    return this.machine.getState();
+  }
+  /**
+   * Returns the last computed hits (always available after first update call).
+   */
+  getLastHits() {
+    return this.lastHits;
+  }
+  /**
+   * Returns adjusted movement values based on boundary hits.
+   * If the entity is touching a boundary and trying to move further into it,
+   * that axis component is zeroed out.
+   *
+   * @param moveX - The desired X movement
+   * @param moveY - The desired Y movement
+   * @returns Adjusted { moveX, moveY } with boundary-blocked axes zeroed
+   */
+  getMovement(moveX, moveY) {
+    const hits = this.lastHits;
+    let adjustedX = moveX;
+    let adjustedY = moveY;
+    if (hits.left && moveX < 0 || hits.right && moveX > 0) {
+      adjustedX = 0;
+    }
+    if (hits.bottom && moveY < 0 || hits.top && moveY > 0) {
+      adjustedY = 0;
+    }
+    return { moveX: adjustedX, moveY: adjustedY };
+  }
+  /**
+   * Returns the last position passed to `update`, if any.
+   */
+  getLastPosition() {
+    return this.lastPosition;
+  }
+  /**
+   * Best-effort timestamp (ms) of the last `update(...)` call.
+   * This is optional metadata; systems can ignore it.
+   */
+  getLastUpdatedAtMs() {
+    return this.lastUpdatedAtMs;
+  }
+  /**
+   * Update FSM + extended state based on current position and bounds.
+   * Returns the computed hits for convenience.
+   */
+  update(position, bounds) {
+    const hits = computeWorldBoundary2DHits(position, bounds);
+    this.lastHits = hits;
+    this.lastPosition = { x: position.x, y: position.y };
+    this.lastUpdatedAtMs = Date.now();
+    if (hasAnyWorldBoundary2DHit(hits)) {
+      this.dispatch("touch-boundary" /* TouchBoundary */);
+    } else {
+      this.dispatch("enter-inside" /* EnterInside */);
+    }
+    return hits;
+  }
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+};
+
+// src/lib/behaviors/world-boundary-2d/world-boundary-2d.descriptor.ts
+var defaultOptions3 = {
+  boundaries: { top: 0, bottom: 0, left: 0, right: 0 }
+};
+function createWorldBoundary2DHandle(ref) {
+  return {
+    getLastHits: () => {
+      const fsm = ref.fsm;
+      return fsm?.getLastHits() ?? null;
+    },
+    getMovement: (moveX, moveY) => {
+      const fsm = ref.fsm;
+      return fsm?.getMovement(moveX, moveY) ?? { moveX, moveY };
+    }
+  };
+}
+var WorldBoundary2DSystem = class {
+  constructor(world) {
+    this.world = world;
+  }
+  update(_ecs, _delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const boundaryRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:world-boundary-2d")
+      );
+      if (!boundaryRef || !gameEntity.body) continue;
+      const options = boundaryRef.options;
+      if (!boundaryRef.fsm) {
+        boundaryRef.fsm = new WorldBoundary2DFSM();
+      }
+      const body = gameEntity.body;
+      const pos = body.translation();
+      boundaryRef.fsm.update(
+        { x: pos.x, y: pos.y },
+        options.boundaries
+      );
+    }
+  }
+  destroy(_ecs) {
+  }
+};
+var WorldBoundary2DBehavior = defineBehavior({
+  name: "world-boundary-2d",
+  defaultOptions: defaultOptions3,
+  systemFactory: (ctx) => new WorldBoundary2DSystem(ctx.world),
+  createHandle: createWorldBoundary2DHandle
+});
+
+// src/lib/behaviors/ricochet-2d/ricochet-2d-fsm.ts
+import { StateMachine as StateMachine4, t as t4 } from "typescript-fsm";
+var Ricochet2DState = /* @__PURE__ */ ((Ricochet2DState2) => {
+  Ricochet2DState2["Idle"] = "idle";
+  Ricochet2DState2["Ricocheting"] = "ricocheting";
+  return Ricochet2DState2;
+})(Ricochet2DState || {});
+var Ricochet2DEvent = /* @__PURE__ */ ((Ricochet2DEvent2) => {
+  Ricochet2DEvent2["StartRicochet"] = "start-ricochet";
+  Ricochet2DEvent2["EndRicochet"] = "end-ricochet";
+  return Ricochet2DEvent2;
+})(Ricochet2DEvent || {});
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
+var Ricochet2DFSM = class {
+  machine;
+  lastResult = null;
+  lastUpdatedAtMs = null;
+  constructor() {
+    this.machine = new StateMachine4(
+      "idle" /* Idle */,
+      [
+        t4("idle" /* Idle */, "start-ricochet" /* StartRicochet */, "ricocheting" /* Ricocheting */),
+        t4("ricocheting" /* Ricocheting */, "end-ricochet" /* EndRicochet */, "idle" /* Idle */),
+        // Self transitions (no-ops)
+        t4("idle" /* Idle */, "end-ricochet" /* EndRicochet */, "idle" /* Idle */),
+        t4("ricocheting" /* Ricocheting */, "start-ricochet" /* StartRicochet */, "ricocheting" /* Ricocheting */)
+      ]
+    );
+  }
+  getState() {
+    return this.machine.getState();
+  }
+  /**
+   * Returns the last computed ricochet result, or null if none.
+   */
+  getLastResult() {
+    return this.lastResult;
+  }
+  /**
+   * Best-effort timestamp (ms) of the last computation.
+   */
+  getLastUpdatedAtMs() {
+    return this.lastUpdatedAtMs;
+  }
+  /**
+   * Compute a ricochet result from collision context.
+   * Returns the result for the consumer to apply, or null if invalid input.
+   */
+  computeRicochet(ctx, options = {}) {
+    const {
+      minSpeed = 2,
+      maxSpeed = 20,
+      speedMultiplier = 1.05,
+      reflectionMode = "angled",
+      maxAngleDeg = 60
+    } = options;
+    const { selfVelocity, selfPosition, otherPosition, otherSize } = this.extractDataFromEntities(ctx);
+    if (!selfVelocity) {
+      this.dispatch("end-ricochet" /* EndRicochet */);
+      return null;
+    }
+    const speed = Math.hypot(selfVelocity.x, selfVelocity.y);
+    if (speed === 0) {
+      this.dispatch("end-ricochet" /* EndRicochet */);
+      return null;
+    }
+    const normal = ctx.contact.normal ?? this.computeNormalFromPositions(selfPosition, otherPosition);
+    if (!normal) {
+      this.dispatch("end-ricochet" /* EndRicochet */);
+      return null;
+    }
+    let reflected = this.computeBasicReflection(selfVelocity, normal);
+    if (reflectionMode === "angled") {
+      reflected = this.computeAngledDeflection(
+        selfVelocity,
+        normal,
+        speed,
+        maxAngleDeg,
+        speedMultiplier,
+        selfPosition,
+        otherPosition,
+        otherSize,
+        ctx.contact.position
+      );
+    }
+    reflected = this.applySpeedClamp(reflected, minSpeed, maxSpeed);
+    const result = {
+      velocity: { x: reflected.x, y: reflected.y, z: 0 },
+      speed: Math.hypot(reflected.x, reflected.y),
+      normal: { x: normal.x, y: normal.y, z: 0 }
+    };
+    this.lastResult = result;
+    this.lastUpdatedAtMs = Date.now();
+    this.dispatch("start-ricochet" /* StartRicochet */);
+    return result;
+  }
+  /**
+   * Extract velocity, position, and size data from entities or context.
+   */
+  extractDataFromEntities(ctx) {
+    let selfVelocity = ctx.selfVelocity;
+    let selfPosition = ctx.selfPosition;
+    let otherPosition = ctx.otherPosition;
+    let otherSize = ctx.otherSize;
+    if (ctx.entity?.body) {
+      const vel = ctx.entity.body.linvel();
+      selfVelocity = selfVelocity ?? { x: vel.x, y: vel.y, z: vel.z };
+      const pos = ctx.entity.body.translation();
+      selfPosition = selfPosition ?? { x: pos.x, y: pos.y, z: pos.z };
+    }
+    if (ctx.otherEntity?.body) {
+      const pos = ctx.otherEntity.body.translation();
+      otherPosition = otherPosition ?? { x: pos.x, y: pos.y, z: pos.z };
+    }
+    if (ctx.otherEntity && "size" in ctx.otherEntity) {
+      const size = ctx.otherEntity.size;
+      if (size && typeof size.x === "number") {
+        otherSize = otherSize ?? { x: size.x, y: size.y, z: size.z };
+      }
+    }
+    return { selfVelocity, selfPosition, otherPosition, otherSize };
+  }
+  /**
+   * Compute collision normal from entity positions using AABB heuristic.
+   */
+  computeNormalFromPositions(selfPosition, otherPosition) {
+    if (!selfPosition || !otherPosition) return null;
+    const dx = selfPosition.x - otherPosition.x;
+    const dy = selfPosition.y - otherPosition.y;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return { x: dx > 0 ? 1 : -1, y: 0, z: 0 };
+    } else {
+      return { x: 0, y: dy > 0 ? 1 : -1, z: 0 };
+    }
+  }
+  /**
+   * Compute basic reflection using the formula: v' = v - 2(v·n)n
+   */
+  computeBasicReflection(velocity, normal) {
+    const vx = velocity.x;
+    const vy = velocity.y;
+    const dotProduct = vx * normal.x + vy * normal.y;
+    return {
+      x: vx - 2 * dotProduct * normal.x,
+      y: vy - 2 * dotProduct * normal.y
+    };
+  }
+  /**
+   * Compute angled deflection for paddle-style reflections.
+   */
+  computeAngledDeflection(velocity, normal, speed, maxAngleDeg, speedMultiplier, selfPosition, otherPosition, otherSize, contactPosition) {
+    const maxAngleRad = maxAngleDeg * Math.PI / 180;
+    let tx = -normal.y;
+    let ty = normal.x;
+    if (Math.abs(normal.x) > Math.abs(normal.y)) {
+      if (ty < 0) {
+        tx = -tx;
+        ty = -ty;
+      }
+    } else {
+      if (tx < 0) {
+        tx = -tx;
+        ty = -ty;
+      }
+    }
+    const offset = this.computeHitOffset(
+      velocity,
+      normal,
+      speed,
+      tx,
+      ty,
+      selfPosition,
+      otherPosition,
+      otherSize,
+      contactPosition
+    );
+    const angle = clamp(offset, -1, 1) * maxAngleRad;
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+    const newSpeed = speed * speedMultiplier;
+    return {
+      x: newSpeed * (normal.x * cosA + tx * sinA),
+      y: newSpeed * (normal.y * cosA + ty * sinA)
+    };
+  }
+  /**
+   * Compute hit offset for angled deflection (-1 to 1).
+   */
+  computeHitOffset(velocity, normal, speed, tx, ty, selfPosition, otherPosition, otherSize, contactPosition) {
+    if (otherPosition && otherSize) {
+      const useY = Math.abs(normal.x) > Math.abs(normal.y);
+      const halfExtent = useY ? otherSize.y / 2 : otherSize.x / 2;
+      if (useY) {
+        const selfY = selfPosition?.y ?? contactPosition?.y ?? 0;
+        const paddleY = otherPosition.y;
+        return (selfY - paddleY) / halfExtent;
+      } else {
+        const selfX = selfPosition?.x ?? contactPosition?.x ?? 0;
+        const paddleX = otherPosition.x;
+        return (selfX - paddleX) / halfExtent;
+      }
+    }
+    return (velocity.x * tx + velocity.y * ty) / speed;
+  }
+  /**
+   * Apply speed constraints to the reflected velocity.
+   */
+  applySpeedClamp(velocity, minSpeed, maxSpeed) {
+    const currentSpeed = Math.hypot(velocity.x, velocity.y);
+    if (currentSpeed === 0) return velocity;
+    const targetSpeed = clamp(currentSpeed, minSpeed, maxSpeed);
+    const scale = targetSpeed / currentSpeed;
+    return {
+      x: velocity.x * scale,
+      y: velocity.y * scale
+    };
+  }
+  /**
+   * Clear the ricochet state (call after consumer has applied the result).
+   */
+  clearRicochet() {
+    this.dispatch("end-ricochet" /* EndRicochet */);
+  }
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+};
 
-// src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.ts
-function ricochet2DInBounds(options = {}, callback) {
+// src/lib/behaviors/ricochet-2d/ricochet-2d.descriptor.ts
+var defaultOptions4 = {
+  minSpeed: 2,
+  maxSpeed: 20,
+  speedMultiplier: 1.05,
+  reflectionMode: "angled",
+  maxAngleDeg: 60
+};
+function createRicochet2DHandle(ref) {
   return {
-    type: "update",
-    handler: (updateContext) => {
-      _handleRicochet2DInBounds(updateContext, options, callback);
+    getRicochet: (ctx) => {
+      const fsm = ref.fsm;
+      if (!fsm) return null;
+      return fsm.computeRicochet(ctx, ref.options);
+    },
+    getLastResult: () => {
+      const fsm = ref.fsm;
+      return fsm?.getLastResult() ?? null;
     }
   };
 }
-function _handleRicochet2DInBounds(updateContext, options, callback) {
-  const { me } = updateContext;
-  const {
-    restitution = 0,
-    minSpeed = 2,
-    maxSpeed = 20,
-    boundaries = { top: 5, bottom: -5, left: -6.5, right: 6.5 },
-    separation = 0
-  } = { ...options };
-  const position = me.getPosition();
-  const velocity = me.getVelocity();
-  if (!position || !velocity) return;
-  let newVelX = velocity.x;
-  let newVelY = velocity.y;
-  let newX = position.x;
-  let newY = position.y;
-  let ricochetBoundary = null;
-  if (position.x <= boundaries.left) {
-    newVelX = Math.abs(velocity.x);
-    newX = boundaries.left + separation;
-    ricochetBoundary = "left";
-  } else if (position.x >= boundaries.right) {
-    newVelX = -Math.abs(velocity.x);
-    newX = boundaries.right - separation;
-    ricochetBoundary = "right";
+var Ricochet2DSystem = class {
+  constructor(world) {
+    this.world = world;
   }
-  if (position.y <= boundaries.bottom) {
-    newVelY = Math.abs(velocity.y);
-    newY = boundaries.bottom + separation;
-    ricochetBoundary = "bottom";
-  } else if (position.y >= boundaries.top) {
-    newVelY = -Math.abs(velocity.y);
-    newY = boundaries.top - separation;
-    ricochetBoundary = "top";
-  }
-  const currentSpeed = Math.sqrt(newVelX * newVelX + newVelY * newVelY);
-  if (currentSpeed > 0) {
-    const targetSpeed = clamp(currentSpeed, minSpeed, maxSpeed);
-    if (targetSpeed !== currentSpeed) {
-      const scale = targetSpeed / currentSpeed;
-      newVelX *= scale;
-      newVelY *= scale;
-    }
-  }
-  if (restitution) {
-    newVelX *= restitution;
-    newVelY *= restitution;
-  }
-  if (newX !== position.x || newY !== position.y) {
-    me.setPosition(newX, newY, position.z);
-    me.moveXY(newVelX, newVelY);
-    if (callback && ricochetBoundary) {
-      const velocityAfter = me.getVelocity();
-      if (velocityAfter) {
-        callback({
-          boundary: ricochetBoundary,
-          position: { x: newX, y: newY, z: position.z },
-          velocityBefore: velocity,
-          velocityAfter,
-          ...updateContext
-        });
+  update(_ecs, _delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const ricochetRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:ricochet-2d")
+      );
+      if (!ricochetRef) continue;
+      if (!ricochetRef.fsm) {
+        ricochetRef.fsm = new Ricochet2DFSM();
       }
     }
   }
+  destroy(_ecs) {
+  }
+};
+var Ricochet2DBehavior = defineBehavior({
+  name: "ricochet-2d",
+  defaultOptions: defaultOptions4,
+  systemFactory: (ctx) => new Ricochet2DSystem(ctx.world),
+  createHandle: createRicochet2DHandle
+});
+
+// src/lib/behaviors/movement-sequence-2d/movement-sequence-2d-fsm.ts
+import { StateMachine as StateMachine5, t as t5 } from "typescript-fsm";
+var MovementSequence2DState = /* @__PURE__ */ ((MovementSequence2DState2) => {
+  MovementSequence2DState2["Idle"] = "idle";
+  MovementSequence2DState2["Running"] = "running";
+  MovementSequence2DState2["Paused"] = "paused";
+  MovementSequence2DState2["Completed"] = "completed";
+  return MovementSequence2DState2;
+})(MovementSequence2DState || {});
+var MovementSequence2DEvent = /* @__PURE__ */ ((MovementSequence2DEvent2) => {
+  MovementSequence2DEvent2["Start"] = "start";
+  MovementSequence2DEvent2["Pause"] = "pause";
+  MovementSequence2DEvent2["Resume"] = "resume";
+  MovementSequence2DEvent2["Complete"] = "complete";
+  MovementSequence2DEvent2["Reset"] = "reset";
+  return MovementSequence2DEvent2;
+})(MovementSequence2DEvent || {});
+var MovementSequence2DFSM = class {
+  machine;
+  sequence = [];
+  loop = true;
+  currentIndex = 0;
+  timeRemaining = 0;
+  constructor() {
+    this.machine = new StateMachine5(
+      "idle" /* Idle */,
+      [
+        // From Idle
+        t5("idle" /* Idle */, "start" /* Start */, "running" /* Running */),
+        // From Running
+        t5("running" /* Running */, "pause" /* Pause */, "paused" /* Paused */),
+        t5("running" /* Running */, "complete" /* Complete */, "completed" /* Completed */),
+        t5("running" /* Running */, "reset" /* Reset */, "idle" /* Idle */),
+        // From Paused
+        t5("paused" /* Paused */, "resume" /* Resume */, "running" /* Running */),
+        t5("paused" /* Paused */, "reset" /* Reset */, "idle" /* Idle */),
+        // From Completed
+        t5("completed" /* Completed */, "reset" /* Reset */, "idle" /* Idle */),
+        t5("completed" /* Completed */, "start" /* Start */, "running" /* Running */),
+        // Self-transitions (no-ops)
+        t5("idle" /* Idle */, "pause" /* Pause */, "idle" /* Idle */),
+        t5("idle" /* Idle */, "resume" /* Resume */, "idle" /* Idle */),
+        t5("running" /* Running */, "start" /* Start */, "running" /* Running */),
+        t5("running" /* Running */, "resume" /* Resume */, "running" /* Running */),
+        t5("paused" /* Paused */, "pause" /* Pause */, "paused" /* Paused */),
+        t5("completed" /* Completed */, "complete" /* Complete */, "completed" /* Completed */)
+      ]
+    );
+  }
+  /**
+   * Initialize the sequence. Call this once with options.
+   */
+  init(sequence, loop) {
+    this.sequence = sequence;
+    this.loop = loop;
+    this.currentIndex = 0;
+    this.timeRemaining = sequence.length > 0 ? sequence[0].timeInSeconds : 0;
+  }
+  getState() {
+    return this.machine.getState();
+  }
+  /**
+   * Start the sequence (from Idle or Completed).
+   */
+  start() {
+    if (this.machine.getState() === "idle" /* Idle */ || this.machine.getState() === "completed" /* Completed */) {
+      this.currentIndex = 0;
+      this.timeRemaining = this.sequence.length > 0 ? this.sequence[0].timeInSeconds : 0;
+    }
+    this.dispatch("start" /* Start */);
+  }
+  /**
+   * Pause the sequence.
+   */
+  pause() {
+    this.dispatch("pause" /* Pause */);
+  }
+  /**
+   * Resume a paused sequence.
+   */
+  resume() {
+    this.dispatch("resume" /* Resume */);
+  }
+  /**
+   * Reset to Idle state.
+   */
+  reset() {
+    this.dispatch("reset" /* Reset */);
+    this.currentIndex = 0;
+    this.timeRemaining = this.sequence.length > 0 ? this.sequence[0].timeInSeconds : 0;
+  }
+  /**
+   * Update the sequence with delta time.
+   * Returns the current movement to apply.
+   * Automatically starts if in Idle state.
+   */
+  update(delta) {
+    if (this.sequence.length === 0) {
+      return { moveX: 0, moveY: 0 };
+    }
+    if (this.machine.getState() === "idle" /* Idle */) {
+      this.start();
+    }
+    if (this.machine.getState() !== "running" /* Running */) {
+      if (this.machine.getState() === "completed" /* Completed */) {
+        return { moveX: 0, moveY: 0 };
+      }
+      const step2 = this.sequence[this.currentIndex];
+      return { moveX: step2?.moveX ?? 0, moveY: step2?.moveY ?? 0 };
+    }
+    let timeLeft = this.timeRemaining - delta;
+    while (timeLeft <= 0) {
+      const overflow = -timeLeft;
+      this.currentIndex += 1;
+      if (this.currentIndex >= this.sequence.length) {
+        if (!this.loop) {
+          this.dispatch("complete" /* Complete */);
+          return { moveX: 0, moveY: 0 };
+        }
+        this.currentIndex = 0;
+      }
+      timeLeft = this.sequence[this.currentIndex].timeInSeconds - overflow;
+    }
+    this.timeRemaining = timeLeft;
+    const step = this.sequence[this.currentIndex];
+    return { moveX: step?.moveX ?? 0, moveY: step?.moveY ?? 0 };
+  }
+  /**
+   * Get the current movement without advancing time.
+   */
+  getMovement() {
+    if (this.sequence.length === 0 || this.machine.getState() === "completed" /* Completed */) {
+      return { moveX: 0, moveY: 0 };
+    }
+    const step = this.sequence[this.currentIndex];
+    return { moveX: step?.moveX ?? 0, moveY: step?.moveY ?? 0 };
+  }
+  /**
+   * Get current step info.
+   */
+  getCurrentStep() {
+    if (this.sequence.length === 0) return null;
+    const step = this.sequence[this.currentIndex];
+    if (!step) return null;
+    return {
+      name: step.name,
+      index: this.currentIndex,
+      moveX: step.moveX ?? 0,
+      moveY: step.moveY ?? 0,
+      timeRemaining: this.timeRemaining
+    };
+  }
+  /**
+   * Get sequence progress.
+   */
+  getProgress() {
+    return {
+      stepIndex: this.currentIndex,
+      totalSteps: this.sequence.length,
+      stepTimeRemaining: this.timeRemaining,
+      done: this.machine.getState() === "completed" /* Completed */
+    };
+  }
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+};
+
+// src/lib/behaviors/movement-sequence-2d/movement-sequence-2d.descriptor.ts
+var defaultOptions5 = {
+  sequence: [],
+  loop: true
+};
+function createMovementSequence2DHandle(ref) {
+  return {
+    getMovement: () => {
+      const fsm = ref.fsm;
+      return fsm?.getMovement() ?? { moveX: 0, moveY: 0 };
+    },
+    getCurrentStep: () => {
+      const fsm = ref.fsm;
+      return fsm?.getCurrentStep() ?? null;
+    },
+    getProgress: () => {
+      const fsm = ref.fsm;
+      return fsm?.getProgress() ?? { stepIndex: 0, totalSteps: 0, stepTimeRemaining: 0, done: true };
+    },
+    pause: () => {
+      const fsm = ref.fsm;
+      fsm?.pause();
+    },
+    resume: () => {
+      const fsm = ref.fsm;
+      fsm?.resume();
+    },
+    reset: () => {
+      const fsm = ref.fsm;
+      fsm?.reset();
+    }
+  };
 }
+var MovementSequence2DSystem = class {
+  constructor(world) {
+    this.world = world;
+  }
+  update(_ecs, delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const sequenceRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:movement-sequence-2d")
+      );
+      if (!sequenceRef) continue;
+      const options = sequenceRef.options;
+      if (!sequenceRef.fsm) {
+        sequenceRef.fsm = new MovementSequence2DFSM();
+        sequenceRef.fsm.init(options.sequence, options.loop);
+      }
+      sequenceRef.fsm.update(delta);
+    }
+  }
+  destroy(_ecs) {
+  }
+};
+var MovementSequence2DBehavior = defineBehavior({
+  name: "movement-sequence-2d",
+  defaultOptions: defaultOptions5,
+  systemFactory: (ctx) => new MovementSequence2DSystem(ctx.world),
+  createHandle: createMovementSequence2DHandle
+});
 export {
-  boundary2d,
-  ricochet2DCollision,
-  ricochet2DInBounds
+  MovementSequence2DBehavior,
+  MovementSequence2DEvent,
+  MovementSequence2DFSM,
+  MovementSequence2DState,
+  PhysicsStepBehavior,
+  PhysicsSyncBehavior,
+  Ricochet2DBehavior,
+  Ricochet2DEvent,
+  Ricochet2DFSM,
+  Ricochet2DState,
+  ScreenWrapBehavior,
+  ScreenWrapEvent,
+  ScreenWrapFSM,
+  ScreenWrapState,
+  ThrusterBehavior,
+  ThrusterEvent,
+  ThrusterFSM,
+  ThrusterMovementBehavior,
+  ThrusterState,
+  WorldBoundary2DBehavior,
+  WorldBoundary2DEvent,
+  WorldBoundary2DFSM,
+  WorldBoundary2DState,
+  computeWorldBoundary2DHits,
+  createPhysicsBodyComponent,
+  createThrusterInputComponent,
+  createThrusterMovementComponent,
+  createThrusterStateComponent,
+  createTransformComponent,
+  defineBehavior,
+  hasAnyWorldBoundary2DHit
 };
 //# sourceMappingURL=behaviors.js.map

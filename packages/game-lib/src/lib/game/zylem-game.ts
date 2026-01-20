@@ -61,11 +61,20 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 	constructor(options: ZylemGameOptions<TGlobals>, wrapperRef: Game<TGlobals>) {
 		this.wrapperRef = wrapperRef;
-		this.inputManager = new InputManager(options.input);
 		this.timer = new Timer();
 		this.timer.connect(document);
+		
+		console.log('[ZylemGame] options:', options);
+		console.log('[ZylemGame] options.input:', options.input);
+		
+		// Resolve config first to get the proper input configuration
 		const config = resolveGameConfig(options as any);
 		console.log(config);
+		console.log('[ZylemGame] config.input:', config.input);
+		
+		// Now create InputManager with the resolved config's input settings
+		this.inputManager = new InputManager(config.input);
+		
 		this.id = config.id;
 		this.stages = (config.stages as any) || [];
 		this.container = config.container;

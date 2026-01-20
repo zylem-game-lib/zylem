@@ -169,36 +169,35 @@ export class GameEntity<O extends GameEntityOptions>
    * Behaviors will be auto-registered as systems when the entity is spawned.
    * @param descriptor The behavior descriptor (import from behaviors module)
    * @param options Optional overrides for the behavior's default options
-   * @returns BehaviorHandle for lazy FSM access
+   * @returns BehaviorHandle with behavior-specific methods for lazy FSM access
    */
-  public use<O extends Record<string, any>>(
-    descriptor: BehaviorDescriptor<O>,
+  public use<
+    O extends Record<string, any>,
+    H extends Record<string, any> = Record<string, never>,
+  >(
+    descriptor: BehaviorDescriptor<O, H>,
     options?: Partial<O>,
-  ): BehaviorHandle<O> {
+  ): BehaviorHandle<O, H> {
     const behaviorRef: BehaviorRef<O> = {
-      descriptor,
+      descriptor: descriptor as BehaviorDescriptor<O, any>,
       options: { ...descriptor.defaultOptions, ...options } as O,
     };
-    this.behaviorRefs.push(behaviorRef);
+    this.behaviorRefs.push(behaviorRef as BehaviorRef<any>);
 
-    // Return handle for lazy access
-    return {
+    // Create base handle
+    const baseHandle = {
       getFSM: () => behaviorRef.fsm ?? null,
-      getLastHits: () => {
-        const fsm: any = behaviorRef.fsm ?? null;
-        if (!fsm || typeof fsm.getLastHits !== 'function') return null;
-        return fsm.getLastHits();
-      },
-      getMovement: (moveX: number, moveY: number) => {
-        const fsm: any = behaviorRef.fsm ?? null;
-        if (!fsm || typeof fsm.getMovement !== 'function') {
-          return { moveX, moveY };
-        }
-        return fsm.getMovement(moveX, moveY);
-      },
       getOptions: () => behaviorRef.options,
       ref: behaviorRef,
     };
+
+    // Merge behavior-specific methods if createHandle is provided
+    const customMethods = descriptor.createHandle?.(behaviorRef) ?? ({} as H);
+
+    return {
+      ...baseHandle,
+      ...customMethods,
+    } as BehaviorHandle<O, H>;
   }
 
   /**
