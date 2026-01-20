@@ -334,6 +334,12 @@ declare class ZylemGame<TGlobals extends BaseGlobals> {
     setGlobals(options: ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals>): void;
     params(): UpdateContext<ZylemGame<TGlobals>, TGlobals>;
     start(): void;
+    /**
+     * Execute a single frame update.
+     * This method can be called directly for testing or from the game loop.
+     * @param deltaTime Optional delta time in seconds. If not provided, uses timer delta.
+     */
+    step(deltaTime?: number): void;
     loop(timestamp: number): void;
     dispose(): void;
     outOfLoop(): void;
@@ -412,6 +418,12 @@ declare class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
     getCurrentStage(): Stage | null;
     pause(): Promise<void>;
     resume(): Promise<void>;
+    /**
+     * Execute a single frame update.
+     * Useful for testing or manual frame stepping.
+     * @param deltaTime Optional delta time in seconds (defaults to 1/60)
+     */
+    step(deltaTime?: number): void;
     reset(): Promise<void>;
     previousStage(): void;
     loadStageFromId(stageId: string): Promise<void>;

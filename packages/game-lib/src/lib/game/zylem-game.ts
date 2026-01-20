@@ -206,22 +206,35 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.loop(0);
 	}
 
+	/**
+	 * Execute a single frame update.
+	 * This method can be called directly for testing or from the game loop.
+	 * @param deltaTime Optional delta time in seconds. If not provided, uses timer delta.
+	 */
+	step(deltaTime?: number): void {
+		const stage = this.currentStage();
+		if (!stage || !stage.wrappedStage) return;
+
+		const params = this.params();
+		const delta = deltaTime !== undefined ? deltaTime : params.delta;
+		const clampedDelta = Math.min(Math.max(delta, 0), ZylemGame.MAX_DELTA_SECONDS);
+		const clampedParams = { ...params, delta: clampedDelta };
+
+		if (this.customUpdate) {
+			this.customUpdate(clampedParams);
+		}
+
+		stage.wrappedStage?.nodeUpdate({ ...clampedParams, me: stage.wrappedStage as ZylemStage });
+
+		this.totalTime += clampedDelta;
+		state.time = this.totalTime;
+	}
+
 	loop(timestamp: number) {
 		this.debugDelegate?.begin();
 		if (!isPaused()) {
 			this.timer.update(timestamp);
-			const stage = this.currentStage();
-			const params = this.params();
-			const clampedDelta = Math.min(Math.max(params.delta, 0), ZylemGame.MAX_DELTA_SECONDS);
-			const clampedParams = { ...params, delta: clampedDelta };
-			if (this.customUpdate) {
-				this.customUpdate(clampedParams);
-			}
-			if (stage && stage.wrappedStage) {
-				stage.wrappedStage!.nodeUpdate({ ...clampedParams, me: stage!.wrappedStage as ZylemStage });
-			}
-			this.totalTime += clampedParams.delta;
-			state.time = this.totalTime;
+			this.step();
 			this.previousTimeStamp = timestamp;
 		}
 		this.debugDelegate?.end();
