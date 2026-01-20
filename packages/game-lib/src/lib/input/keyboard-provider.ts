@@ -1,15 +1,24 @@
 import { InputProvider } from './input-provider';
 import { AnalogState, ButtonState, InputGamepad } from './input';
+import { compileMapping, createInputGamepadState, mergeButtonState } from './input-state';
 
 export class KeyboardProvider implements InputProvider {
 	private keyStates = new Map<string, boolean>();
 	private keyButtonStates = new Map<string, ButtonState>();
 	private mapping: Record<string, string[]> | null = null;
+	private compiledMapping: Map<string, Array<{ category: string; property: string }>>;
 	private includeDefaultBase: boolean = true;
 
 	constructor(mapping?: Record<string, string[]>, options?: { includeDefaultBase?: boolean }) {
+		console.log('[KeyboardProvider] Constructor called with mapping:', mapping, 'options:', options);
 		this.mapping = mapping ?? null;
 		this.includeDefaultBase = options?.includeDefaultBase ?? true;
+		
+		// Pre-compute the mapping at construction time
+		console.log('[KeyboardProvider] About to call compileMapping with:', this.mapping);
+		this.compiledMapping = compileMapping(this.mapping);
+		console.log('[KeyboardProvider] compileMapping returned, size:', this.compiledMapping.size);
+		
 		window.addEventListener('keydown', ({ key }) => this.keyStates.set(key, true));
 		window.addEventListener('keyup', ({ key }) => this.keyStates.set(key, false));
 	}
@@ -53,61 +62,35 @@ export class KeyboardProvider implements InputProvider {
 		return { value, held: delta };
 	}
 
-	private mergeButtonState(a: ButtonState | undefined, b: ButtonState | undefined): ButtonState {
-		return {
-			pressed: a?.pressed || b?.pressed || false,
-			released: a?.released || b?.released || false,
-			held: (a?.held || 0) + (b?.held || 0),
-		};
-	}
-
+	/**
+	 * Optimized custom mapping application using pre-computed paths.
+	 * No string parsing happens here - all lookups are O(1).
+	 */
 	private applyCustomMapping(input: Partial<InputGamepad>, delta: number): Partial<InputGamepad> {
-		if (!this.mapping) return input;
-		for (const [key, targets] of Object.entries(this.mapping)) {
-			if (!targets || targets.length === 0) continue;
+		if (this.compiledMapping.size === 0) return input;
+
+		for (const [key, paths] of this.compiledMapping.entries()) {
 			const state = this.handleButtonState(key, delta);
-			for (const target of targets) {
-				const [rawCategory, rawName] = (target || '').split('.');
-				if (!rawCategory || !rawName) continue;
-				const category = rawCategory.toLowerCase();
-				const nameKey = rawName.toLowerCase();
+			
+			for (const path of paths) {
+				const { category, property } = path;
+				
 				if (category === 'buttons') {
-					const map: Record<string, keyof InputGamepad['buttons']> = {
-						'a': 'A', 'b': 'B', 'x': 'X', 'y': 'Y',
-						'start': 'Start', 'select': 'Select',
-						'l': 'L', 'r': 'R',
-					};
-					const prop = map[nameKey];
-					if (!prop) continue;
-					const nextButtons = (input.buttons || {} as any);
-					nextButtons[prop] = this.mergeButtonState(nextButtons[prop], state);
-					input.buttons = nextButtons;
-					continue;
-				}
-				if (category === 'directions') {
-					const map: Record<string, keyof InputGamepad['directions']> = {
-						'up': 'Up', 'down': 'Down', 'left': 'Left', 'right': 'Right',
-					};
-					const prop = map[nameKey];
-					if (!prop) continue;
-					const nextDirections = (input.directions || {} as any);
-					nextDirections[prop] = this.mergeButtonState(nextDirections[prop], state);
-					input.directions = nextDirections;
-					continue;
-				}
-				if (category === 'shoulders') {
-					const map: Record<string, keyof InputGamepad['shoulders']> = {
-						'ltrigger': 'LTrigger', 'rtrigger': 'RTrigger',
-					};
-					const prop = map[nameKey];
-					if (!prop) continue;
-					const nextShoulders = (input.shoulders || {} as any);
-					nextShoulders[prop] = this.mergeButtonState(nextShoulders[prop], state);
-					input.shoulders = nextShoulders;
-					continue;
+					if (!input.buttons) input.buttons = {} as any;
+					const nextButtons = input.buttons as any;
+					nextButtons[property] = mergeButtonState(nextButtons[property], state);
+				} else if (category === 'directions') {
+					if (!input.directions) input.directions = {} as any;
+					const nextDirections = input.directions as any;
+					nextDirections[property] = mergeButtonState(nextDirections[property], state);
+				} else if (category === 'shoulders') {
+					if (!input.shoulders) input.shoulders = {} as any;
+					const nextShoulders = input.shoulders as any;
+					nextShoulders[property] = mergeButtonState(nextShoulders[property], state);
 				}
 			}
 		}
+		
 		return input;
 	}
 
@@ -139,7 +122,16 @@ export class KeyboardProvider implements InputProvider {
 				RTrigger: this.handleButtonState('E', delta),
 			};
 		}
-		return this.applyCustomMapping(base, delta);
+		const result = this.applyCustomMapping(base, delta);
+		
+		// DEBUG: Log when keys are pressed
+		if (this.isKeyPressed('w') || this.isKeyPressed('s') || this.isKeyPressed('ArrowUp') || this.isKeyPressed('ArrowDown')) {
+			console.log('[KeyboardProvider] includeDefaultBase:', this.includeDefaultBase);
+			console.log('[KeyboardProvider] compiledMapping size:', this.compiledMapping.size);
+			console.log('[KeyboardProvider] result.directions:', result.directions);
+		}
+		
+		return result;
 	}
 
 	getName(): string {

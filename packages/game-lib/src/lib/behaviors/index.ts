@@ -36,3 +36,9 @@ export * from './screen-wrap';
 
 // World Boundary 2D Module
 export * from './world-boundary-2d';
+
+// Ricochet 2D Module
+export * from './ricochet-2d';
+
+// Movement Sequence 2D Module
+export * from './movement-sequence-2d';

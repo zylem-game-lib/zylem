@@ -8,9 +8,9 @@ export interface BaseEntityInterface {
 	uuid: string;
 	name: string;
 	eid: number;
-	group: Group | null;
-	body: RigidBody | null;
-	collider: Collider | null;
+	group: Group | null | undefined;
+	body: RigidBody | null | undefined;
+	collider: Collider | null | undefined;
 }
 
 /**

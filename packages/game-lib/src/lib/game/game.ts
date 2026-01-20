@@ -1,6 +1,6 @@
 import { ZylemGame, GameLoadingEvent } from './zylem-game';
 import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
-import { IGame, LoadingEvent } from '../core/interfaces';
+import { IGame } from '../core/interfaces';
 import { setPaused } from '../debug/debug-state';
 import { BaseGlobals } from './game-interfaces';
 import { convertNodes, GameOptions, hasStages, extractGlobalsFromOptions } from '../core/utility/nodes';

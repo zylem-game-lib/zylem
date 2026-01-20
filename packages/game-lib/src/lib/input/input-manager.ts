@@ -3,6 +3,7 @@ import { AnalogState, ButtonState, InputGamepad, InputPlayerNumber, Inputs } fro
 import { KeyboardProvider } from './keyboard-provider';
 import { GamepadProvider } from './gamepad-provider';
 import { GameInputConfig } from '../game/game-interfaces';
+import { mergeButtonState, mergeAnalogState } from './input-state';
 
 
 export class InputManager {
@@ -11,9 +12,15 @@ export class InputManager {
 	private previousInputs: Inputs = {} as Inputs;
 
 	constructor(config?: GameInputConfig) {
+		console.log('[InputManager] Constructor called with config:', config);
+		console.log('[InputManager] config?.p1:', config?.p1);
+		console.log('[InputManager] config?.p1?.key:', config?.p1?.key);
+		
 		if (config?.p1?.key) {
+			console.log('[InputManager] Creating P1 KeyboardProvider with custom mapping:', config.p1.key);
 			this.addInputProvider(1, new KeyboardProvider(config.p1.key, { includeDefaultBase: false }));
 		} else {
+			console.log('[InputManager] Creating P1 KeyboardProvider with default mapping');
 			this.addInputProvider(1, new KeyboardProvider());
 		}
 		this.addInputProvider(1, new GamepadProvider(0));
@@ -72,46 +79,31 @@ export class InputManager {
 		return inputs;
 	}
 
-	mergeButtonState(a: ButtonState | undefined, b: ButtonState | undefined): ButtonState {
-		return {
-			pressed: a?.pressed || b?.pressed || false,
-			released: a?.released || b?.released || false,
-			held: (a?.held || 0) + (b?.held || 0),
-		};
-	}
-
-	mergeAnalogState(a: AnalogState | undefined, b: AnalogState | undefined): AnalogState {
-		return {
-			value: (a?.value || 0) + (b?.value || 0),
-			held: (a?.held || 0) + (b?.held || 0),
-		};
-	}
-
 	private mergeInputs(a: Partial<InputGamepad>, b: Partial<InputGamepad>): Partial<InputGamepad> {
 		return {
 			buttons: {
-				A: this.mergeButtonState(a.buttons?.A, b.buttons?.A),
-				B: this.mergeButtonState(a.buttons?.B, b.buttons?.B),
-				X: this.mergeButtonState(a.buttons?.X, b.buttons?.X),
-				Y: this.mergeButtonState(a.buttons?.Y, b.buttons?.Y),
-				Start: this.mergeButtonState(a.buttons?.Start, b.buttons?.Start),
-				Select: this.mergeButtonState(a.buttons?.Select, b.buttons?.Select),
-				L: this.mergeButtonState(a.buttons?.L, b.buttons?.L),
-				R: this.mergeButtonState(a.buttons?.R, b.buttons?.R),
+				A: mergeButtonState(a.buttons?.A, b.buttons?.A),
+				B: mergeButtonState(a.buttons?.B, b.buttons?.B),
+				X: mergeButtonState(a.buttons?.X, b.buttons?.X),
+				Y: mergeButtonState(a.buttons?.Y, b.buttons?.Y),
+				Start: mergeButtonState(a.buttons?.Start, b.buttons?.Start),
+				Select: mergeButtonState(a.buttons?.Select, b.buttons?.Select),
+				L: mergeButtonState(a.buttons?.L, b.buttons?.L),
+				R: mergeButtonState(a.buttons?.R, b.buttons?.R),
 			},
 			directions: {
-				Up: this.mergeButtonState(a.directions?.Up, b.directions?.Up),
-				Down: this.mergeButtonState(a.directions?.Down, b.directions?.Down),
-				Left: this.mergeButtonState(a.directions?.Left, b.directions?.Left),
-				Right: this.mergeButtonState(a.directions?.Right, b.directions?.Right),
+				Up: mergeButtonState(a.directions?.Up, b.directions?.Up),
+				Down: mergeButtonState(a.directions?.Down, b.directions?.Down),
+				Left: mergeButtonState(a.directions?.Left, b.directions?.Left),
+				Right: mergeButtonState(a.directions?.Right, b.directions?.Right),
 			},
 			axes: {
-				Horizontal: this.mergeAnalogState(a.axes?.Horizontal, b.axes?.Horizontal),
-				Vertical: this.mergeAnalogState(a.axes?.Vertical, b.axes?.Vertical),
+				Horizontal: mergeAnalogState(a.axes?.Horizontal, b.axes?.Horizontal),
+				Vertical: mergeAnalogState(a.axes?.Vertical, b.axes?.Vertical),
 			},
 			shoulders: {
-				LTrigger: this.mergeButtonState(a.shoulders?.LTrigger, b.shoulders?.LTrigger),
-				RTrigger: this.mergeButtonState(a.shoulders?.RTrigger, b.shoulders?.RTrigger),
+				LTrigger: mergeButtonState(a.shoulders?.LTrigger, b.shoulders?.LTrigger),
+				RTrigger: mergeButtonState(a.shoulders?.RTrigger, b.shoulders?.RTrigger),
 			}
 		};
 	}

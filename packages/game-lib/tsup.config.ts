@@ -3,13 +3,13 @@ import fs from 'fs';
 
 export default defineConfig({
 	entry: {
+		behaviors: 'src/api/behaviors.ts',
 		main: 'src/api/main.ts',
 		core: 'src/api/core.ts',
 		camera: 'src/api/camera.ts',
 		stage: 'src/api/stage.ts',
 		entities: 'src/api/entities.ts',
 		actions: 'src/api/actions.ts',
-		behaviors: 'src/api/behaviors.ts',
 	},
 	format: ['esm'],
 	dts: true, // Generate TypeScript declaration files

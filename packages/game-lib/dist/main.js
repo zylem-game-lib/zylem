@@ -216,18 +216,18 @@ var init_debug_state = __esm({
 
 // ../../node_modules/.pnpm/mitt@3.0.1/node_modules/mitt/dist/mitt.mjs
 function mitt_default(n) {
-  return { all: n = n || /* @__PURE__ */ new Map(), on: function(t4, e) {
-    var i = n.get(t4);
-    i ? i.push(e) : n.set(t4, [e]);
-  }, off: function(t4, e) {
-    var i = n.get(t4);
-    i && (e ? i.splice(i.indexOf(e) >>> 0, 1) : n.set(t4, []));
-  }, emit: function(t4, e) {
-    var i = n.get(t4);
+  return { all: n = n || /* @__PURE__ */ new Map(), on: function(t6, e) {
+    var i = n.get(t6);
+    i ? i.push(e) : n.set(t6, [e]);
+  }, off: function(t6, e) {
+    var i = n.get(t6);
+    i && (e ? i.splice(i.indexOf(e) >>> 0, 1) : n.set(t6, []));
+  }, emit: function(t6, e) {
+    var i = n.get(t6);
     i && i.slice().map(function(n2) {
       n2(e);
     }), (i = n.get("*")) && i.slice().map(function(n2) {
-      n2(t4, e);
+      n2(t6, e);
     });
   } };
 }
@@ -630,7 +630,7 @@ var init_entity = __esm({
        * Behaviors will be auto-registered as systems when the entity is spawned.
        * @param descriptor The behavior descriptor (import from behaviors module)
        * @param options Optional overrides for the behavior's default options
-       * @returns BehaviorHandle for lazy FSM access
+       * @returns BehaviorHandle with behavior-specific methods for lazy FSM access
        */
       use(descriptor, options) {
         const behaviorRef = {
@@ -638,22 +638,15 @@ var init_entity = __esm({
           options: { ...descriptor.defaultOptions, ...options }
         };
         this.behaviorRefs.push(behaviorRef);
-        return {
+        const baseHandle = {
           getFSM: () => behaviorRef.fsm ?? null,
-          getLastHits: () => {
-            const fsm = behaviorRef.fsm ?? null;
-            if (!fsm || typeof fsm.getLastHits !== "function") return null;
-            return fsm.getLastHits();
-          },
-          getMovement: (moveX2, moveY2) => {
-            const fsm = behaviorRef.fsm ?? null;
-            if (!fsm || typeof fsm.getMovement !== "function") {
-              return { moveX: moveX2, moveY: moveY2 };
-            }
-            return fsm.getMovement(moveX2, moveY2);
-          },
           getOptions: () => behaviorRef.options,
           ref: behaviorRef
+        };
+        const customMethods = descriptor.createHandle?.(behaviorRef) ?? {};
+        return {
+          ...baseHandle,
+          ...customMethods
         };
       }
       /**
@@ -4372,6 +4365,11 @@ var init_zylem_stage = __esm({
       }
       /** Cleanup owned resources when the stage is destroyed. */
       _destroy(params) {
+        for (const system of this.behaviorSystems) {
+          system.destroy?.(this.ecs);
+        }
+        this.behaviorSystems = [];
+        this.registeredSystemKeys.clear();
         this._childrenMap.forEach((child) => {
           try {
             child.nodeDestroy({ me: child, globals: getGlobals() });
@@ -4398,11 +4396,6 @@ var init_zylem_stage = __esm({
         this.cameraRef = null;
         this.transformSystem?.destroy(this.ecs);
         this.transformSystem = null;
-        for (const system of this.behaviorSystems) {
-          system.destroy?.(this.ecs);
-        }
-        this.behaviorSystems = [];
-        this.registeredSystemKeys.clear();
         resetStageVariables();
         clearVariables(this);
       }
@@ -4868,15 +4861,101 @@ var init_game_default = __esm({
 init_game_state();
 init_debug_state();
 
+// src/lib/input/input-state.ts
+function createButtonState() {
+  return { pressed: false, released: false, held: 0 };
+}
+function createAnalogState() {
+  return { value: 0, held: 0 };
+}
+function compileMapping(mapping) {
+  const compiled = /* @__PURE__ */ new Map();
+  if (!mapping) return compiled;
+  for (const [key, targets] of Object.entries(mapping)) {
+    if (!targets || targets.length === 0) continue;
+    const paths = [];
+    for (const target of targets) {
+      const [rawCategory, rawName] = (target || "").split(".");
+      if (!rawCategory || !rawName) continue;
+      const category = rawCategory.toLowerCase();
+      const nameKey = rawName.toLowerCase();
+      if (category === "buttons") {
+        const propertyMap = {
+          "a": "A",
+          "b": "B",
+          "x": "X",
+          "y": "Y",
+          "start": "Start",
+          "select": "Select",
+          "l": "L",
+          "r": "R"
+        };
+        const prop = propertyMap[nameKey];
+        if (prop) {
+          paths.push({ category: "buttons", property: prop });
+        }
+      } else if (category === "directions") {
+        const propertyMap = {
+          "up": "Up",
+          "down": "Down",
+          "left": "Left",
+          "right": "Right"
+        };
+        const prop = propertyMap[nameKey];
+        if (prop) {
+          paths.push({ category: "directions", property: prop });
+        }
+      } else if (category === "shoulders") {
+        const propertyMap = {
+          "ltrigger": "LTrigger",
+          "rtrigger": "RTrigger"
+        };
+        const prop = propertyMap[nameKey];
+        if (prop) {
+          paths.push({ category: "shoulders", property: prop });
+        }
+      }
+    }
+    if (paths.length > 0) {
+      compiled.set(key, paths);
+    }
+  }
+  return compiled;
+}
+function mergeButtonState(a, b) {
+  if (!a && !b) return createButtonState();
+  if (!a) return { ...b };
+  if (!b) return { ...a };
+  return {
+    pressed: a.pressed || b.pressed,
+    released: a.released || b.released,
+    held: a.held + b.held
+  };
+}
+function mergeAnalogState(a, b) {
+  if (!a && !b) return createAnalogState();
+  if (!a) return { ...b };
+  if (!b) return { ...a };
+  return {
+    value: a.value + b.value,
+    held: a.held + b.held
+  };
+}
+
 // src/lib/input/keyboard-provider.ts
 var KeyboardProvider = class {
   keyStates = /* @__PURE__ */ new Map();
   keyButtonStates = /* @__PURE__ */ new Map();
   mapping = null;
+  compiledMapping;
   includeDefaultBase = true;
   constructor(mapping, options) {
+    console.log("[KeyboardProvider] Constructor called with mapping:", mapping, "options:", options);
     this.mapping = mapping ?? null;
     this.includeDefaultBase = options?.includeDefaultBase ?? true;
+    console.log("[KeyboardProvider] About to call compileMapping with:", this.mapping);
+    this.compiledMapping = compileMapping(this.mapping);
+    console.log("[KeyboardProvider] compileMapping returned, size:", this.compiledMapping.size);
     window.addEventListener("keydown", ({ key }) => this.keyStates.set(key, true));
     window.addEventListener("keyup", ({ key }) => this.keyStates.set(key, false));
   }
@@ -4913,66 +4992,28 @@ var KeyboardProvider = class {
     const value = this.getAxisValue(negativeKey, positiveKey);
     return { value, held: delta };
   }
-  mergeButtonState(a, b) {
-    return {
-      pressed: a?.pressed || b?.pressed || false,
-      released: a?.released || b?.released || false,
-      held: (a?.held || 0) + (b?.held || 0)
-    };
-  }
+  /**
+   * Optimized custom mapping application using pre-computed paths.
+   * No string parsing happens here - all lookups are O(1).
+   */
   applyCustomMapping(input, delta) {
-    if (!this.mapping) return input;
-    for (const [key, targets] of Object.entries(this.mapping)) {
-      if (!targets || targets.length === 0) continue;
+    if (this.compiledMapping.size === 0) return input;
+    for (const [key, paths] of this.compiledMapping.entries()) {
       const state2 = this.handleButtonState(key, delta);
-      for (const target of targets) {
-        const [rawCategory, rawName] = (target || "").split(".");
-        if (!rawCategory || !rawName) continue;
-        const category = rawCategory.toLowerCase();
-        const nameKey = rawName.toLowerCase();
+      for (const path of paths) {
+        const { category, property } = path;
         if (category === "buttons") {
-          const map = {
-            "a": "A",
-            "b": "B",
-            "x": "X",
-            "y": "Y",
-            "start": "Start",
-            "select": "Select",
-            "l": "L",
-            "r": "R"
-          };
-          const prop = map[nameKey];
-          if (!prop) continue;
-          const nextButtons = input.buttons || {};
-          nextButtons[prop] = this.mergeButtonState(nextButtons[prop], state2);
-          input.buttons = nextButtons;
-          continue;
-        }
-        if (category === "directions") {
-          const map = {
-            "up": "Up",
-            "down": "Down",
-            "left": "Left",
-            "right": "Right"
-          };
-          const prop = map[nameKey];
-          if (!prop) continue;
-          const nextDirections = input.directions || {};
-          nextDirections[prop] = this.mergeButtonState(nextDirections[prop], state2);
-          input.directions = nextDirections;
-          continue;
-        }
-        if (category === "shoulders") {
-          const map = {
-            "ltrigger": "LTrigger",
-            "rtrigger": "RTrigger"
-          };
-          const prop = map[nameKey];
-          if (!prop) continue;
-          const nextShoulders = input.shoulders || {};
-          nextShoulders[prop] = this.mergeButtonState(nextShoulders[prop], state2);
-          input.shoulders = nextShoulders;
-          continue;
+          if (!input.buttons) input.buttons = {};
+          const nextButtons = input.buttons;
+          nextButtons[property] = mergeButtonState(nextButtons[property], state2);
+        } else if (category === "directions") {
+          if (!input.directions) input.directions = {};
+          const nextDirections = input.directions;
+          nextDirections[property] = mergeButtonState(nextDirections[property], state2);
+        } else if (category === "shoulders") {
+          if (!input.shoulders) input.shoulders = {};
+          const nextShoulders = input.shoulders;
+          nextShoulders[property] = mergeButtonState(nextShoulders[property], state2);
         }
       }
     }
@@ -5006,7 +5047,13 @@ var KeyboardProvider = class {
         RTrigger: this.handleButtonState("E", delta)
       };
     }
-    return this.applyCustomMapping(base, delta);
+    const result = this.applyCustomMapping(base, delta);
+    if (this.isKeyPressed("w") || this.isKeyPressed("s") || this.isKeyPressed("ArrowUp") || this.isKeyPressed("ArrowDown")) {
+      console.log("[KeyboardProvider] includeDefaultBase:", this.includeDefaultBase);
+      console.log("[KeyboardProvider] compiledMapping size:", this.compiledMapping.size);
+      console.log("[KeyboardProvider] result.directions:", result.directions);
+    }
+    return result;
   }
   getName() {
     return "keyboard";
@@ -5111,9 +5158,14 @@ var InputManager = class {
   currentInputs = {};
   previousInputs = {};
   constructor(config) {
+    console.log("[InputManager] Constructor called with config:", config);
+    console.log("[InputManager] config?.p1:", config?.p1);
+    console.log("[InputManager] config?.p1?.key:", config?.p1?.key);
     if (config?.p1?.key) {
+      console.log("[InputManager] Creating P1 KeyboardProvider with custom mapping:", config.p1.key);
       this.addInputProvider(1, new KeyboardProvider(config.p1.key, { includeDefaultBase: false }));
     } else {
+      console.log("[InputManager] Creating P1 KeyboardProvider with default mapping");
       this.addInputProvider(1, new KeyboardProvider());
     }
     this.addInputProvider(1, new GamepadProvider(0));
@@ -5167,44 +5219,31 @@ var InputManager = class {
     });
     return inputs;
   }
-  mergeButtonState(a, b) {
-    return {
-      pressed: a?.pressed || b?.pressed || false,
-      released: a?.released || b?.released || false,
-      held: (a?.held || 0) + (b?.held || 0)
-    };
-  }
-  mergeAnalogState(a, b) {
-    return {
-      value: (a?.value || 0) + (b?.value || 0),
-      held: (a?.held || 0) + (b?.held || 0)
-    };
-  }
   mergeInputs(a, b) {
     return {
       buttons: {
-        A: this.mergeButtonState(a.buttons?.A, b.buttons?.A),
-        B: this.mergeButtonState(a.buttons?.B, b.buttons?.B),
-        X: this.mergeButtonState(a.buttons?.X, b.buttons?.X),
-        Y: this.mergeButtonState(a.buttons?.Y, b.buttons?.Y),
-        Start: this.mergeButtonState(a.buttons?.Start, b.buttons?.Start),
-        Select: this.mergeButtonState(a.buttons?.Select, b.buttons?.Select),
-        L: this.mergeButtonState(a.buttons?.L, b.buttons?.L),
-        R: this.mergeButtonState(a.buttons?.R, b.buttons?.R)
+        A: mergeButtonState(a.buttons?.A, b.buttons?.A),
+        B: mergeButtonState(a.buttons?.B, b.buttons?.B),
+        X: mergeButtonState(a.buttons?.X, b.buttons?.X),
+        Y: mergeButtonState(a.buttons?.Y, b.buttons?.Y),
+        Start: mergeButtonState(a.buttons?.Start, b.buttons?.Start),
+        Select: mergeButtonState(a.buttons?.Select, b.buttons?.Select),
+        L: mergeButtonState(a.buttons?.L, b.buttons?.L),
+        R: mergeButtonState(a.buttons?.R, b.buttons?.R)
       },
       directions: {
-        Up: this.mergeButtonState(a.directions?.Up, b.directions?.Up),
-        Down: this.mergeButtonState(a.directions?.Down, b.directions?.Down),
-        Left: this.mergeButtonState(a.directions?.Left, b.directions?.Left),
-        Right: this.mergeButtonState(a.directions?.Right, b.directions?.Right)
+        Up: mergeButtonState(a.directions?.Up, b.directions?.Up),
+        Down: mergeButtonState(a.directions?.Down, b.directions?.Down),
+        Left: mergeButtonState(a.directions?.Left, b.directions?.Left),
+        Right: mergeButtonState(a.directions?.Right, b.directions?.Right)
       },
       axes: {
-        Horizontal: this.mergeAnalogState(a.axes?.Horizontal, b.axes?.Horizontal),
-        Vertical: this.mergeAnalogState(a.axes?.Vertical, b.axes?.Vertical)
+        Horizontal: mergeAnalogState(a.axes?.Horizontal, b.axes?.Horizontal),
+        Vertical: mergeAnalogState(a.axes?.Vertical, b.axes?.Vertical)
       },
       shoulders: {
-        LTrigger: this.mergeButtonState(a.shoulders?.LTrigger, b.shoulders?.LTrigger),
-        RTrigger: this.mergeButtonState(a.shoulders?.RTrigger, b.shoulders?.RTrigger)
+        LTrigger: mergeButtonState(a.shoulders?.LTrigger, b.shoulders?.LTrigger),
+        RTrigger: mergeButtonState(a.shoulders?.RTrigger, b.shoulders?.RTrigger)
       }
     };
   }
@@ -5888,11 +5927,14 @@ var ZylemGame = class _ZylemGame {
   static MAX_DELTA_SECONDS = 1 / 30;
   constructor(options, wrapperRef) {
     this.wrapperRef = wrapperRef;
-    this.inputManager = new InputManager(options.input);
     this.timer = new Timer();
     this.timer.connect(document);
+    console.log("[ZylemGame] options:", options);
+    console.log("[ZylemGame] options.input:", options.input);
     const config = resolveGameConfig(options);
     console.log(config);
+    console.log("[ZylemGame] config.input:", config.input);
+    this.inputManager = new InputManager(config.input);
     this.id = config.id;
     this.stages = config.stages || [];
     this.container = config.container;
@@ -6154,7 +6196,7 @@ init_stage();
 init_entity();
 async function convertNodes(_options) {
   const { getGameDefaultConfig: getGameDefaultConfig2 } = await Promise.resolve().then(() => (init_game_default(), game_default_exports));
-  let converted = { ...getGameDefaultConfig2() };
+  let convertedDefault = { ...getGameDefaultConfig2() };
   const configurations = [];
   const stages = [];
   const entities = [];
@@ -6171,8 +6213,10 @@ async function convertNodes(_options) {
     }
   });
   configurations.forEach((configuration) => {
-    converted = Object.assign(converted, { ...configuration });
+    convertedDefault = Object.assign(convertedDefault, { ...configuration });
   });
+  const converted = convertedDefault;
+  converted.input = configurations[0].input;
   stages.forEach((stageInstance) => {
     stageInstance.addEntities(entities);
   });
@@ -7731,6 +7775,12 @@ var ZylemRect = class _ZylemRect extends GameEntity {
       }
     }
   }
+  getWidth() {
+    return this.options.width ?? 0;
+  }
+  getHeight() {
+    return this.options.height ?? 0;
+  }
   roundedRectPath(ctx, x, y, w, h, r) {
     const radius = Math.min(r, Math.floor(Math.min(w, h) / 2));
     ctx.moveTo(x + radius, y);
@@ -7893,442 +7943,13 @@ function createRect(...args) {
   });
 }
 
-// src/lib/collision/utils.ts
-init_collision_builder();
-function matchesCollisionSelector(other, selector) {
-  if (!selector) return true;
-  const otherName = other.name ?? "";
-  if ("name" in selector) {
-    const sel = selector.name;
-    if (sel instanceof RegExp) {
-      return sel.test(otherName);
-    } else if (Array.isArray(sel)) {
-      return sel.some((s) => s === otherName);
-    } else {
-      return otherName === sel;
-    }
-  } else if ("mask" in selector) {
-    const m = selector.mask;
-    if (m instanceof RegExp) {
-      const type = other.collisionType ?? "";
-      return m.test(type);
-    } else {
-      const type = other.collisionType ?? "";
-      const gid = getOrCreateCollisionGroupId(type);
-      return (m & 1 << gid) !== 0;
-    }
-  } else if ("test" in selector) {
-    return !!selector.test(other);
-  }
-  return true;
-}
-
-// src/lib/actions/behaviors/ricochet/ricochet-2d-collision.ts
-function ricochet2DCollision(options = {}, callback) {
-  return {
-    type: "collision",
-    handler: (collisionContext) => {
-      _handleRicochet2DCollision(collisionContext, options, callback);
-    }
-  };
-}
-function _handleRicochet2DCollision(collisionContext, options, callback) {
-  const { entity, other } = collisionContext;
-  const self = entity;
-  if (other.collider?.isSensor()) return;
-  const {
-    minSpeed = 2,
-    maxSpeed = 20,
-    separation = 0,
-    collisionWith = void 0
-  } = {
-    ...options
-  };
-  const reflectionMode = options?.reflectionMode ?? "angled";
-  const maxAngleDeg = options?.maxAngleDeg ?? 60;
-  const speedUpFactor = options?.speedUpFactor ?? 1.05;
-  const minOffsetForAngle = options?.minOffsetForAngle ?? 0.15;
-  const centerRetentionFactor = options?.centerRetentionFactor ?? 0.5;
-  if (!matchesCollisionSelector(other, collisionWith)) return;
-  const selfPos = self.getPosition();
-  const otherPos = other.body?.translation();
-  const vel = self.getVelocity();
-  if (!selfPos || !otherPos || !vel) return;
-  let newVelX = vel.x;
-  let newVelY = vel.y;
-  let newX = selfPos.x;
-  let newY = selfPos.y;
-  const dx = selfPos.x - otherPos.x;
-  const dy = selfPos.y - otherPos.y;
-  let extentX = null;
-  let extentY = null;
-  const colliderShape = other.collider?.shape;
-  if (colliderShape) {
-    if (colliderShape.halfExtents) {
-      extentX = Math.abs(colliderShape.halfExtents.x ?? colliderShape.halfExtents[0] ?? null);
-      extentY = Math.abs(colliderShape.halfExtents.y ?? colliderShape.halfExtents[1] ?? null);
-    }
-    if ((extentX == null || extentY == null) && typeof colliderShape.radius === "number") {
-      extentX = extentX ?? Math.abs(colliderShape.radius);
-      extentY = extentY ?? Math.abs(colliderShape.radius);
-    }
-  }
-  if ((extentX == null || extentY == null) && typeof other.collider?.halfExtents === "function") {
-    const he = other.collider.halfExtents();
-    if (he) {
-      extentX = extentX ?? Math.abs(he.x);
-      extentY = extentY ?? Math.abs(he.y);
-    }
-  }
-  if ((extentX == null || extentY == null) && typeof other.collider?.radius === "function") {
-    const r = other.collider.radius();
-    if (typeof r === "number") {
-      extentX = extentX ?? Math.abs(r);
-      extentY = extentY ?? Math.abs(r);
-    }
-  }
-  let relX = 0;
-  let relY = 0;
-  if (extentX && extentY) {
-    relX = clamp(dx / extentX, -1, 1);
-    relY = clamp(dy / extentY, -1, 1);
-  } else {
-    relX = Math.sign(dx);
-    relY = Math.sign(dy);
-  }
-  let bounceVertical = Math.abs(dy) >= Math.abs(dx);
-  let selfExtentX = null;
-  let selfExtentY = null;
-  const selfShape = self.collider?.shape;
-  if (selfShape) {
-    if (selfShape.halfExtents) {
-      selfExtentX = Math.abs(selfShape.halfExtents.x ?? selfShape.halfExtents[0] ?? null);
-      selfExtentY = Math.abs(selfShape.halfExtents.y ?? selfShape.halfExtents[1] ?? null);
-    }
-    if ((selfExtentX == null || selfExtentY == null) && typeof selfShape.radius === "number") {
-      selfExtentX = selfExtentX ?? Math.abs(selfShape.radius);
-      selfExtentY = selfExtentY ?? Math.abs(selfShape.radius);
-    }
-  }
-  if ((selfExtentX == null || selfExtentY == null) && typeof self.collider?.halfExtents === "function") {
-    const heS = self.collider.halfExtents();
-    if (heS) {
-      selfExtentX = selfExtentX ?? Math.abs(heS.x);
-      selfExtentY = selfExtentY ?? Math.abs(heS.y);
-    }
-  }
-  if ((selfExtentX == null || selfExtentY == null) && typeof self.collider?.radius === "function") {
-    const rS = self.collider.radius();
-    if (typeof rS === "number") {
-      selfExtentX = selfExtentX ?? Math.abs(rS);
-      selfExtentY = selfExtentY ?? Math.abs(rS);
-    }
-  }
-  if (extentX != null && extentY != null && selfExtentX != null && selfExtentY != null) {
-    const penX = selfExtentX + extentX - Math.abs(dx);
-    const penY = selfExtentY + extentY - Math.abs(dy);
-    if (!Number.isNaN(penX) && !Number.isNaN(penY)) {
-      bounceVertical = penY <= penX;
-    }
-  }
-  let usedAngleDeflection = false;
-  if (bounceVertical) {
-    const resolvedY = (extentY ?? 0) + (selfExtentY ?? 0) + separation;
-    newY = otherPos.y + (dy > 0 ? resolvedY : -resolvedY);
-    newX = selfPos.x;
-    const isHorizontalPaddle = extentX != null && extentY != null && extentX > extentY;
-    if (isHorizontalPaddle && reflectionMode === "angled") {
-      const maxAngleRad = maxAngleDeg * Math.PI / 180;
-      const deadzone = Math.max(0, Math.min(1, minOffsetForAngle));
-      const clampedOffsetX = clamp(relX, -1, 1);
-      const absOff = Math.abs(clampedOffsetX);
-      const baseSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-      const speed = clamp(baseSpeed * speedUpFactor, minSpeed, maxSpeed);
-      if (absOff > deadzone) {
-        const t4 = (absOff - deadzone) / (1 - deadzone);
-        const angle = Math.sign(clampedOffsetX) * (t4 * maxAngleRad);
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
-        const vy = Math.abs(speed * cosA);
-        const vx = speed * sinA;
-        newVelY = dy > 0 ? vy : -vy;
-        newVelX = vx;
-      } else {
-        const vx = vel.x * centerRetentionFactor;
-        const vyMagSquared = Math.max(0, speed * speed - vx * vx);
-        const vy = Math.sqrt(vyMagSquared);
-        newVelY = dy > 0 ? vy : -vy;
-        newVelX = vx;
-      }
-      usedAngleDeflection = true;
-    } else {
-      newVelY = dy > 0 ? Math.abs(vel.y) : -Math.abs(vel.y);
-      if (reflectionMode === "simple") usedAngleDeflection = true;
-    }
-  } else {
-    const resolvedX = (extentX ?? 0) + (selfExtentX ?? 0) + separation;
-    newX = otherPos.x + (dx > 0 ? resolvedX : -resolvedX);
-    newY = selfPos.y;
-    if (reflectionMode === "angled") {
-      const maxAngleRad = maxAngleDeg * Math.PI / 180;
-      const deadzone = Math.max(0, Math.min(1, minOffsetForAngle));
-      const clampedOffsetY = clamp(relY, -1, 1);
-      const absOff = Math.abs(clampedOffsetY);
-      const baseSpeed = Math.sqrt(vel.x * vel.x + vel.y * vel.y);
-      const speed = clamp(baseSpeed * speedUpFactor, minSpeed, maxSpeed);
-      if (absOff > deadzone) {
-        const t4 = (absOff - deadzone) / (1 - deadzone);
-        const angle = Math.sign(clampedOffsetY) * (t4 * maxAngleRad);
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
-        const vx = Math.abs(speed * cosA);
-        const vy = speed * sinA;
-        newVelX = dx > 0 ? vx : -vx;
-        newVelY = vy;
-      } else {
-        const vy = vel.y * centerRetentionFactor;
-        const vxMagSquared = Math.max(0, speed * speed - vy * vy);
-        const vx = Math.sqrt(vxMagSquared);
-        newVelX = dx > 0 ? vx : -vx;
-        newVelY = vy;
-      }
-      usedAngleDeflection = true;
-    } else {
-      newVelX = dx > 0 ? Math.abs(vel.x) : -Math.abs(vel.x);
-      newVelY = vel.y;
-      usedAngleDeflection = true;
-    }
-  }
-  if (!usedAngleDeflection) {
-    const additionBaseX = Math.abs(newVelX);
-    const additionBaseY = Math.abs(newVelY);
-    const addX = Math.sign(relX) * Math.abs(relX) * additionBaseX;
-    const addY = Math.sign(relY) * Math.abs(relY) * additionBaseY;
-    newVelX += addX;
-    newVelY += addY;
-  }
-  const currentSpeed = Math.sqrt(newVelX * newVelX + newVelY * newVelY);
-  if (currentSpeed > 0) {
-    const targetSpeed = clamp(currentSpeed, minSpeed, maxSpeed);
-    if (targetSpeed !== currentSpeed) {
-      const scale2 = targetSpeed / currentSpeed;
-      newVelX *= scale2;
-      newVelY *= scale2;
-    }
-  }
-  if (newX !== selfPos.x || newY !== selfPos.y) {
-    self.setPosition(newX, newY, selfPos.z);
-    self.moveXY(newVelX, newVelY);
-    if (callback) {
-      const velocityAfter = self.getVelocity();
-      if (velocityAfter) {
-        callback({
-          position: { x: newX, y: newY, z: selfPos.z },
-          ...collisionContext
-        });
-      }
-    }
-  }
-}
-
-// src/lib/actions/behaviors/ricochet/ricochet.ts
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-// src/lib/actions/behaviors/ricochet/ricochet-2d-in-bounds.ts
-function ricochet2DInBounds(options = {}, callback) {
-  return {
-    type: "update",
-    handler: (updateContext) => {
-      _handleRicochet2DInBounds(updateContext, options, callback);
-    }
-  };
-}
-function _handleRicochet2DInBounds(updateContext, options, callback) {
-  const { me } = updateContext;
-  const {
-    restitution = 0,
-    minSpeed = 2,
-    maxSpeed = 20,
-    boundaries = { top: 5, bottom: -5, left: -6.5, right: 6.5 },
-    separation = 0
-  } = { ...options };
-  const position2 = me.getPosition();
-  const velocity = me.getVelocity();
-  if (!position2 || !velocity) return;
-  let newVelX = velocity.x;
-  let newVelY = velocity.y;
-  let newX = position2.x;
-  let newY = position2.y;
-  let ricochetBoundary = null;
-  if (position2.x <= boundaries.left) {
-    newVelX = Math.abs(velocity.x);
-    newX = boundaries.left + separation;
-    ricochetBoundary = "left";
-  } else if (position2.x >= boundaries.right) {
-    newVelX = -Math.abs(velocity.x);
-    newX = boundaries.right - separation;
-    ricochetBoundary = "right";
-  }
-  if (position2.y <= boundaries.bottom) {
-    newVelY = Math.abs(velocity.y);
-    newY = boundaries.bottom + separation;
-    ricochetBoundary = "bottom";
-  } else if (position2.y >= boundaries.top) {
-    newVelY = -Math.abs(velocity.y);
-    newY = boundaries.top - separation;
-    ricochetBoundary = "top";
-  }
-  const currentSpeed = Math.sqrt(newVelX * newVelX + newVelY * newVelY);
-  if (currentSpeed > 0) {
-    const targetSpeed = clamp(currentSpeed, minSpeed, maxSpeed);
-    if (targetSpeed !== currentSpeed) {
-      const scale2 = targetSpeed / currentSpeed;
-      newVelX *= scale2;
-      newVelY *= scale2;
-    }
-  }
-  if (restitution) {
-    newVelX *= restitution;
-    newVelY *= restitution;
-  }
-  if (newX !== position2.x || newY !== position2.y) {
-    me.setPosition(newX, newY, position2.z);
-    me.moveXY(newVelX, newVelY);
-    if (callback && ricochetBoundary) {
-      const velocityAfter = me.getVelocity();
-      if (velocityAfter) {
-        callback({
-          boundary: ricochetBoundary,
-          position: { x: newX, y: newY, z: position2.z },
-          velocityBefore: velocity,
-          velocityAfter,
-          ...updateContext
-        });
-      }
-    }
-  }
-}
-
-// src/lib/actions/behaviors/boundaries/boundary.ts
-var defaultBoundaryOptions = {
-  boundaries: {
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0
-  },
-  stopMovement: true
-};
-function boundary2d(options = {}) {
-  return {
-    type: "update",
-    handler: (updateContext) => {
-      _boundary2d(updateContext, options);
-    }
-  };
-}
-function _boundary2d(updateContext, options) {
-  const { me: entity } = updateContext;
-  const { boundaries, onBoundary } = {
-    ...defaultBoundaryOptions,
-    ...options
-  };
-  const position2 = entity.getPosition();
-  if (!position2) return;
-  let boundariesHit = { top: false, bottom: false, left: false, right: false };
-  if (position2.x <= boundaries.left) {
-    boundariesHit.left = true;
-  } else if (position2.x >= boundaries.right) {
-    boundariesHit.right = true;
-  }
-  if (position2.y <= boundaries.bottom) {
-    boundariesHit.bottom = true;
-  } else if (position2.y >= boundaries.top) {
-    boundariesHit.top = true;
-  }
-  const stopMovement = options.stopMovement ?? true;
-  if (stopMovement && boundariesHit) {
-    const velocity = entity.getVelocity() ?? { x: 0, y: 0, z: 0 };
-    let { x: newX, y: newY } = velocity;
-    if (velocity?.y < 0 && boundariesHit.bottom) {
-      newY = 0;
-    } else if (velocity?.y > 0 && boundariesHit.top) {
-      newY = 0;
-    }
-    if (velocity?.x < 0 && boundariesHit.left) {
-      newX = 0;
-    } else if (velocity?.x > 0 && boundariesHit.right) {
-      newX = 0;
-    }
-    entity.moveXY(newX, newY);
-  }
-  if (onBoundary && boundariesHit) {
-    onBoundary({
-      me: entity,
-      boundary: boundariesHit,
-      position: { x: position2.x, y: position2.y, z: position2.z },
-      updateContext
-    });
-  }
-}
-
-// src/lib/actions/behaviors/movement/movement-sequence-2d.ts
-var STATE_KEY = "__movementSequence2D";
-function movementSequence2D(opts, onStep) {
-  const { sequence, loop = true } = opts;
-  return {
-    type: "update",
-    handler: (ctx) => {
-      const { me, delta } = ctx;
-      if (!sequence || sequence.length === 0) return;
-      const custom = me.custom ?? (me.custom = {});
-      let state2 = custom[STATE_KEY];
-      if (!state2) {
-        state2 = {
-          currentIndex: 0,
-          timeRemaining: sequence[0].timeInSeconds,
-          lastNotifiedIndex: -1,
-          done: false
-        };
-        custom[STATE_KEY] = state2;
-      }
-      if (state2.done) return;
-      let current = sequence[state2.currentIndex];
-      const moveX2 = current.moveX ?? 0;
-      const moveY2 = current.moveY ?? 0;
-      me.moveXY(moveX2, moveY2);
-      if (state2.lastNotifiedIndex !== state2.currentIndex) {
-        state2.lastNotifiedIndex = state2.currentIndex;
-        onStep?.(current, state2.currentIndex, ctx);
-      }
-      let timeLeft = state2.timeRemaining - delta;
-      while (timeLeft <= 0) {
-        const overflow = -timeLeft;
-        state2.currentIndex += 1;
-        if (state2.currentIndex >= sequence.length) {
-          if (!loop) {
-            state2.done = true;
-            me.moveXY(0, 0);
-            return;
-          }
-          state2.currentIndex = 0;
-        }
-        current = sequence[state2.currentIndex];
-        timeLeft = current.timeInSeconds - overflow;
-      }
-      state2.timeRemaining = timeLeft;
-    }
-  };
-}
-
 // src/lib/behaviors/behavior-descriptor.ts
 function defineBehavior(config) {
   return {
     key: /* @__PURE__ */ Symbol.for(`zylem:behavior:${config.name}`),
     defaultOptions: config.defaultOptions,
-    systemFactory: config.systemFactory
+    systemFactory: config.systemFactory,
+    createHandle: config.createHandle
   };
 }
 
@@ -8897,6 +8518,18 @@ var WorldBoundary2DFSM = class {
 var defaultOptions3 = {
   boundaries: { top: 0, bottom: 0, left: 0, right: 0 }
 };
+function createWorldBoundary2DHandle(ref) {
+  return {
+    getLastHits: () => {
+      const fsm = ref.fsm;
+      return fsm?.getLastHits() ?? null;
+    },
+    getMovement: (moveX2, moveY2) => {
+      const fsm = ref.fsm;
+      return fsm?.getMovement(moveX2, moveY2) ?? { moveX: moveX2, moveY: moveY2 };
+    }
+  };
+}
 var WorldBoundary2DSystem = class {
   constructor(world) {
     this.world = world;
@@ -8929,7 +8562,525 @@ var WorldBoundary2DSystem = class {
 var WorldBoundary2DBehavior = defineBehavior({
   name: "world-boundary-2d",
   defaultOptions: defaultOptions3,
-  systemFactory: (ctx) => new WorldBoundary2DSystem(ctx.world)
+  systemFactory: (ctx) => new WorldBoundary2DSystem(ctx.world),
+  createHandle: createWorldBoundary2DHandle
+});
+
+// src/lib/behaviors/ricochet-2d/ricochet-2d-fsm.ts
+import { StateMachine as StateMachine4, t as t4 } from "typescript-fsm";
+var Ricochet2DState = /* @__PURE__ */ ((Ricochet2DState2) => {
+  Ricochet2DState2["Idle"] = "idle";
+  Ricochet2DState2["Ricocheting"] = "ricocheting";
+  return Ricochet2DState2;
+})(Ricochet2DState || {});
+var Ricochet2DEvent = /* @__PURE__ */ ((Ricochet2DEvent2) => {
+  Ricochet2DEvent2["StartRicochet"] = "start-ricochet";
+  Ricochet2DEvent2["EndRicochet"] = "end-ricochet";
+  return Ricochet2DEvent2;
+})(Ricochet2DEvent || {});
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+var Ricochet2DFSM = class {
+  machine;
+  lastResult = null;
+  lastUpdatedAtMs = null;
+  constructor() {
+    this.machine = new StateMachine4(
+      "idle" /* Idle */,
+      [
+        t4("idle" /* Idle */, "start-ricochet" /* StartRicochet */, "ricocheting" /* Ricocheting */),
+        t4("ricocheting" /* Ricocheting */, "end-ricochet" /* EndRicochet */, "idle" /* Idle */),
+        // Self transitions (no-ops)
+        t4("idle" /* Idle */, "end-ricochet" /* EndRicochet */, "idle" /* Idle */),
+        t4("ricocheting" /* Ricocheting */, "start-ricochet" /* StartRicochet */, "ricocheting" /* Ricocheting */)
+      ]
+    );
+  }
+  getState() {
+    return this.machine.getState();
+  }
+  /**
+   * Returns the last computed ricochet result, or null if none.
+   */
+  getLastResult() {
+    return this.lastResult;
+  }
+  /**
+   * Best-effort timestamp (ms) of the last computation.
+   */
+  getLastUpdatedAtMs() {
+    return this.lastUpdatedAtMs;
+  }
+  /**
+   * Compute a ricochet result from collision context.
+   * Returns the result for the consumer to apply, or null if invalid input.
+   */
+  computeRicochet(ctx, options = {}) {
+    const {
+      minSpeed = 2,
+      maxSpeed = 20,
+      speedMultiplier = 1.05,
+      reflectionMode = "angled",
+      maxAngleDeg = 60
+    } = options;
+    const { selfVelocity, selfPosition, otherPosition, otherSize } = this.extractDataFromEntities(ctx);
+    if (!selfVelocity) {
+      this.dispatch("end-ricochet" /* EndRicochet */);
+      return null;
+    }
+    const speed = Math.hypot(selfVelocity.x, selfVelocity.y);
+    if (speed === 0) {
+      this.dispatch("end-ricochet" /* EndRicochet */);
+      return null;
+    }
+    const normal = ctx.contact.normal ?? this.computeNormalFromPositions(selfPosition, otherPosition);
+    if (!normal) {
+      this.dispatch("end-ricochet" /* EndRicochet */);
+      return null;
+    }
+    let reflected = this.computeBasicReflection(selfVelocity, normal);
+    if (reflectionMode === "angled") {
+      reflected = this.computeAngledDeflection(
+        selfVelocity,
+        normal,
+        speed,
+        maxAngleDeg,
+        speedMultiplier,
+        selfPosition,
+        otherPosition,
+        otherSize,
+        ctx.contact.position
+      );
+    }
+    reflected = this.applySpeedClamp(reflected, minSpeed, maxSpeed);
+    const result = {
+      velocity: { x: reflected.x, y: reflected.y, z: 0 },
+      speed: Math.hypot(reflected.x, reflected.y),
+      normal: { x: normal.x, y: normal.y, z: 0 }
+    };
+    this.lastResult = result;
+    this.lastUpdatedAtMs = Date.now();
+    this.dispatch("start-ricochet" /* StartRicochet */);
+    return result;
+  }
+  /**
+   * Extract velocity, position, and size data from entities or context.
+   */
+  extractDataFromEntities(ctx) {
+    let selfVelocity = ctx.selfVelocity;
+    let selfPosition = ctx.selfPosition;
+    let otherPosition = ctx.otherPosition;
+    let otherSize = ctx.otherSize;
+    if (ctx.entity?.body) {
+      const vel = ctx.entity.body.linvel();
+      selfVelocity = selfVelocity ?? { x: vel.x, y: vel.y, z: vel.z };
+      const pos = ctx.entity.body.translation();
+      selfPosition = selfPosition ?? { x: pos.x, y: pos.y, z: pos.z };
+    }
+    if (ctx.otherEntity?.body) {
+      const pos = ctx.otherEntity.body.translation();
+      otherPosition = otherPosition ?? { x: pos.x, y: pos.y, z: pos.z };
+    }
+    if (ctx.otherEntity && "size" in ctx.otherEntity) {
+      const size = ctx.otherEntity.size;
+      if (size && typeof size.x === "number") {
+        otherSize = otherSize ?? { x: size.x, y: size.y, z: size.z };
+      }
+    }
+    return { selfVelocity, selfPosition, otherPosition, otherSize };
+  }
+  /**
+   * Compute collision normal from entity positions using AABB heuristic.
+   */
+  computeNormalFromPositions(selfPosition, otherPosition) {
+    if (!selfPosition || !otherPosition) return null;
+    const dx = selfPosition.x - otherPosition.x;
+    const dy = selfPosition.y - otherPosition.y;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return { x: dx > 0 ? 1 : -1, y: 0, z: 0 };
+    } else {
+      return { x: 0, y: dy > 0 ? 1 : -1, z: 0 };
+    }
+  }
+  /**
+   * Compute basic reflection using the formula: v' = v - 2(v·n)n
+   */
+  computeBasicReflection(velocity, normal) {
+    const vx = velocity.x;
+    const vy = velocity.y;
+    const dotProduct = vx * normal.x + vy * normal.y;
+    return {
+      x: vx - 2 * dotProduct * normal.x,
+      y: vy - 2 * dotProduct * normal.y
+    };
+  }
+  /**
+   * Compute angled deflection for paddle-style reflections.
+   */
+  computeAngledDeflection(velocity, normal, speed, maxAngleDeg, speedMultiplier, selfPosition, otherPosition, otherSize, contactPosition) {
+    const maxAngleRad = maxAngleDeg * Math.PI / 180;
+    let tx = -normal.y;
+    let ty = normal.x;
+    if (Math.abs(normal.x) > Math.abs(normal.y)) {
+      if (ty < 0) {
+        tx = -tx;
+        ty = -ty;
+      }
+    } else {
+      if (tx < 0) {
+        tx = -tx;
+        ty = -ty;
+      }
+    }
+    const offset = this.computeHitOffset(
+      velocity,
+      normal,
+      speed,
+      tx,
+      ty,
+      selfPosition,
+      otherPosition,
+      otherSize,
+      contactPosition
+    );
+    const angle = clamp(offset, -1, 1) * maxAngleRad;
+    const cosA = Math.cos(angle);
+    const sinA = Math.sin(angle);
+    const newSpeed = speed * speedMultiplier;
+    return {
+      x: newSpeed * (normal.x * cosA + tx * sinA),
+      y: newSpeed * (normal.y * cosA + ty * sinA)
+    };
+  }
+  /**
+   * Compute hit offset for angled deflection (-1 to 1).
+   */
+  computeHitOffset(velocity, normal, speed, tx, ty, selfPosition, otherPosition, otherSize, contactPosition) {
+    if (otherPosition && otherSize) {
+      const useY = Math.abs(normal.x) > Math.abs(normal.y);
+      const halfExtent = useY ? otherSize.y / 2 : otherSize.x / 2;
+      if (useY) {
+        const selfY = selfPosition?.y ?? contactPosition?.y ?? 0;
+        const paddleY = otherPosition.y;
+        return (selfY - paddleY) / halfExtent;
+      } else {
+        const selfX = selfPosition?.x ?? contactPosition?.x ?? 0;
+        const paddleX = otherPosition.x;
+        return (selfX - paddleX) / halfExtent;
+      }
+    }
+    return (velocity.x * tx + velocity.y * ty) / speed;
+  }
+  /**
+   * Apply speed constraints to the reflected velocity.
+   */
+  applySpeedClamp(velocity, minSpeed, maxSpeed) {
+    const currentSpeed = Math.hypot(velocity.x, velocity.y);
+    if (currentSpeed === 0) return velocity;
+    const targetSpeed = clamp(currentSpeed, minSpeed, maxSpeed);
+    const scale2 = targetSpeed / currentSpeed;
+    return {
+      x: velocity.x * scale2,
+      y: velocity.y * scale2
+    };
+  }
+  /**
+   * Clear the ricochet state (call after consumer has applied the result).
+   */
+  clearRicochet() {
+    this.dispatch("end-ricochet" /* EndRicochet */);
+  }
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+};
+
+// src/lib/behaviors/ricochet-2d/ricochet-2d.descriptor.ts
+var defaultOptions4 = {
+  minSpeed: 2,
+  maxSpeed: 20,
+  speedMultiplier: 1.05,
+  reflectionMode: "angled",
+  maxAngleDeg: 60
+};
+function createRicochet2DHandle(ref) {
+  return {
+    getRicochet: (ctx) => {
+      const fsm = ref.fsm;
+      if (!fsm) return null;
+      return fsm.computeRicochet(ctx, ref.options);
+    },
+    getLastResult: () => {
+      const fsm = ref.fsm;
+      return fsm?.getLastResult() ?? null;
+    }
+  };
+}
+var Ricochet2DSystem = class {
+  constructor(world) {
+    this.world = world;
+  }
+  update(_ecs, _delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const ricochetRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:ricochet-2d")
+      );
+      if (!ricochetRef) continue;
+      if (!ricochetRef.fsm) {
+        ricochetRef.fsm = new Ricochet2DFSM();
+      }
+    }
+  }
+  destroy(_ecs) {
+  }
+};
+var Ricochet2DBehavior = defineBehavior({
+  name: "ricochet-2d",
+  defaultOptions: defaultOptions4,
+  systemFactory: (ctx) => new Ricochet2DSystem(ctx.world),
+  createHandle: createRicochet2DHandle
+});
+
+// src/lib/behaviors/movement-sequence-2d/movement-sequence-2d-fsm.ts
+import { StateMachine as StateMachine5, t as t5 } from "typescript-fsm";
+var MovementSequence2DState = /* @__PURE__ */ ((MovementSequence2DState2) => {
+  MovementSequence2DState2["Idle"] = "idle";
+  MovementSequence2DState2["Running"] = "running";
+  MovementSequence2DState2["Paused"] = "paused";
+  MovementSequence2DState2["Completed"] = "completed";
+  return MovementSequence2DState2;
+})(MovementSequence2DState || {});
+var MovementSequence2DEvent = /* @__PURE__ */ ((MovementSequence2DEvent2) => {
+  MovementSequence2DEvent2["Start"] = "start";
+  MovementSequence2DEvent2["Pause"] = "pause";
+  MovementSequence2DEvent2["Resume"] = "resume";
+  MovementSequence2DEvent2["Complete"] = "complete";
+  MovementSequence2DEvent2["Reset"] = "reset";
+  return MovementSequence2DEvent2;
+})(MovementSequence2DEvent || {});
+var MovementSequence2DFSM = class {
+  machine;
+  sequence = [];
+  loop = true;
+  currentIndex = 0;
+  timeRemaining = 0;
+  constructor() {
+    this.machine = new StateMachine5(
+      "idle" /* Idle */,
+      [
+        // From Idle
+        t5("idle" /* Idle */, "start" /* Start */, "running" /* Running */),
+        // From Running
+        t5("running" /* Running */, "pause" /* Pause */, "paused" /* Paused */),
+        t5("running" /* Running */, "complete" /* Complete */, "completed" /* Completed */),
+        t5("running" /* Running */, "reset" /* Reset */, "idle" /* Idle */),
+        // From Paused
+        t5("paused" /* Paused */, "resume" /* Resume */, "running" /* Running */),
+        t5("paused" /* Paused */, "reset" /* Reset */, "idle" /* Idle */),
+        // From Completed
+        t5("completed" /* Completed */, "reset" /* Reset */, "idle" /* Idle */),
+        t5("completed" /* Completed */, "start" /* Start */, "running" /* Running */),
+        // Self-transitions (no-ops)
+        t5("idle" /* Idle */, "pause" /* Pause */, "idle" /* Idle */),
+        t5("idle" /* Idle */, "resume" /* Resume */, "idle" /* Idle */),
+        t5("running" /* Running */, "start" /* Start */, "running" /* Running */),
+        t5("running" /* Running */, "resume" /* Resume */, "running" /* Running */),
+        t5("paused" /* Paused */, "pause" /* Pause */, "paused" /* Paused */),
+        t5("completed" /* Completed */, "complete" /* Complete */, "completed" /* Completed */)
+      ]
+    );
+  }
+  /**
+   * Initialize the sequence. Call this once with options.
+   */
+  init(sequence, loop) {
+    this.sequence = sequence;
+    this.loop = loop;
+    this.currentIndex = 0;
+    this.timeRemaining = sequence.length > 0 ? sequence[0].timeInSeconds : 0;
+  }
+  getState() {
+    return this.machine.getState();
+  }
+  /**
+   * Start the sequence (from Idle or Completed).
+   */
+  start() {
+    if (this.machine.getState() === "idle" /* Idle */ || this.machine.getState() === "completed" /* Completed */) {
+      this.currentIndex = 0;
+      this.timeRemaining = this.sequence.length > 0 ? this.sequence[0].timeInSeconds : 0;
+    }
+    this.dispatch("start" /* Start */);
+  }
+  /**
+   * Pause the sequence.
+   */
+  pause() {
+    this.dispatch("pause" /* Pause */);
+  }
+  /**
+   * Resume a paused sequence.
+   */
+  resume() {
+    this.dispatch("resume" /* Resume */);
+  }
+  /**
+   * Reset to Idle state.
+   */
+  reset() {
+    this.dispatch("reset" /* Reset */);
+    this.currentIndex = 0;
+    this.timeRemaining = this.sequence.length > 0 ? this.sequence[0].timeInSeconds : 0;
+  }
+  /**
+   * Update the sequence with delta time.
+   * Returns the current movement to apply.
+   * Automatically starts if in Idle state.
+   */
+  update(delta) {
+    if (this.sequence.length === 0) {
+      return { moveX: 0, moveY: 0 };
+    }
+    if (this.machine.getState() === "idle" /* Idle */) {
+      this.start();
+    }
+    if (this.machine.getState() !== "running" /* Running */) {
+      if (this.machine.getState() === "completed" /* Completed */) {
+        return { moveX: 0, moveY: 0 };
+      }
+      const step2 = this.sequence[this.currentIndex];
+      return { moveX: step2?.moveX ?? 0, moveY: step2?.moveY ?? 0 };
+    }
+    let timeLeft = this.timeRemaining - delta;
+    while (timeLeft <= 0) {
+      const overflow = -timeLeft;
+      this.currentIndex += 1;
+      if (this.currentIndex >= this.sequence.length) {
+        if (!this.loop) {
+          this.dispatch("complete" /* Complete */);
+          return { moveX: 0, moveY: 0 };
+        }
+        this.currentIndex = 0;
+      }
+      timeLeft = this.sequence[this.currentIndex].timeInSeconds - overflow;
+    }
+    this.timeRemaining = timeLeft;
+    const step = this.sequence[this.currentIndex];
+    return { moveX: step?.moveX ?? 0, moveY: step?.moveY ?? 0 };
+  }
+  /**
+   * Get the current movement without advancing time.
+   */
+  getMovement() {
+    if (this.sequence.length === 0 || this.machine.getState() === "completed" /* Completed */) {
+      return { moveX: 0, moveY: 0 };
+    }
+    const step = this.sequence[this.currentIndex];
+    return { moveX: step?.moveX ?? 0, moveY: step?.moveY ?? 0 };
+  }
+  /**
+   * Get current step info.
+   */
+  getCurrentStep() {
+    if (this.sequence.length === 0) return null;
+    const step = this.sequence[this.currentIndex];
+    if (!step) return null;
+    return {
+      name: step.name,
+      index: this.currentIndex,
+      moveX: step.moveX ?? 0,
+      moveY: step.moveY ?? 0,
+      timeRemaining: this.timeRemaining
+    };
+  }
+  /**
+   * Get sequence progress.
+   */
+  getProgress() {
+    return {
+      stepIndex: this.currentIndex,
+      totalSteps: this.sequence.length,
+      stepTimeRemaining: this.timeRemaining,
+      done: this.machine.getState() === "completed" /* Completed */
+    };
+  }
+  dispatch(event) {
+    if (this.machine.can(event)) {
+      this.machine.dispatch(event);
+    }
+  }
+};
+
+// src/lib/behaviors/movement-sequence-2d/movement-sequence-2d.descriptor.ts
+var defaultOptions5 = {
+  sequence: [],
+  loop: true
+};
+function createMovementSequence2DHandle(ref) {
+  return {
+    getMovement: () => {
+      const fsm = ref.fsm;
+      return fsm?.getMovement() ?? { moveX: 0, moveY: 0 };
+    },
+    getCurrentStep: () => {
+      const fsm = ref.fsm;
+      return fsm?.getCurrentStep() ?? null;
+    },
+    getProgress: () => {
+      const fsm = ref.fsm;
+      return fsm?.getProgress() ?? { stepIndex: 0, totalSteps: 0, stepTimeRemaining: 0, done: true };
+    },
+    pause: () => {
+      const fsm = ref.fsm;
+      fsm?.pause();
+    },
+    resume: () => {
+      const fsm = ref.fsm;
+      fsm?.resume();
+    },
+    reset: () => {
+      const fsm = ref.fsm;
+      fsm?.reset();
+    }
+  };
+}
+var MovementSequence2DSystem = class {
+  constructor(world) {
+    this.world = world;
+  }
+  update(_ecs, delta) {
+    if (!this.world?.collisionMap) return;
+    for (const [, entity] of this.world.collisionMap) {
+      const gameEntity = entity;
+      if (typeof gameEntity.getBehaviorRefs !== "function") continue;
+      const refs = gameEntity.getBehaviorRefs();
+      const sequenceRef = refs.find(
+        (r) => r.descriptor.key === /* @__PURE__ */ Symbol.for("zylem:behavior:movement-sequence-2d")
+      );
+      if (!sequenceRef) continue;
+      const options = sequenceRef.options;
+      if (!sequenceRef.fsm) {
+        sequenceRef.fsm = new MovementSequence2DFSM();
+        sequenceRef.fsm.init(options.sequence, options.loop);
+      }
+      sequenceRef.fsm.update(delta);
+    }
+  }
+  destroy(_ecs) {
+  }
+};
+var MovementSequence2DBehavior = defineBehavior({
+  name: "movement-sequence-2d",
+  defaultOptions: defaultOptions5,
+  systemFactory: (ctx) => new MovementSequence2DSystem(ctx.world),
+  createHandle: createMovementSequence2DHandle
 });
 
 // src/lib/actions/capabilities/moveable.ts
@@ -9444,12 +9595,20 @@ export {
   EventEmitterDelegate,
   Game,
   Howl,
+  MovementSequence2DBehavior,
+  MovementSequence2DEvent,
+  MovementSequence2DFSM,
+  MovementSequence2DState,
   PLANE_TYPE,
   Perspectives,
   PhysicsStepBehavior,
   PhysicsSyncBehavior,
   RAPIER2 as RAPIER,
   RECT_TYPE,
+  Ricochet2DBehavior,
+  Ricochet2DEvent,
+  Ricochet2DFSM,
+  Ricochet2DState,
   SPHERE_TYPE,
   SPRITE_TYPE,
   ScreenWrapBehavior,
@@ -9471,7 +9630,6 @@ export {
   ZONE_TYPE,
   ZylemBox,
   ZylemGameElement,
-  boundary2d,
   clearGlobalSubscriptions,
   computeWorldBoundary2DHits,
   createActor,
@@ -9509,15 +9667,12 @@ export {
   makeTransformable,
   move,
   moveable,
-  movementSequence2D,
   onGlobalChange,
   onGlobalChanges,
   onVariableChange,
   onVariableChanges,
   pingPongBeep,
   resetVelocity,
-  ricochet2DCollision,
-  ricochet2DInBounds,
   ricochetSound,
   rotatable,
   rotateInDirection,

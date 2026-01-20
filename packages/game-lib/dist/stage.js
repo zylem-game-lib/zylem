@@ -428,7 +428,7 @@ var GameEntity = class extends BaseNode {
    * Behaviors will be auto-registered as systems when the entity is spawned.
    * @param descriptor The behavior descriptor (import from behaviors module)
    * @param options Optional overrides for the behavior's default options
-   * @returns BehaviorHandle for lazy FSM access
+   * @returns BehaviorHandle with behavior-specific methods for lazy FSM access
    */
   use(descriptor, options) {
     const behaviorRef = {
@@ -436,22 +436,15 @@ var GameEntity = class extends BaseNode {
       options: { ...descriptor.defaultOptions, ...options }
     };
     this.behaviorRefs.push(behaviorRef);
-    return {
+    const baseHandle = {
       getFSM: () => behaviorRef.fsm ?? null,
-      getLastHits: () => {
-        const fsm = behaviorRef.fsm ?? null;
-        if (!fsm || typeof fsm.getLastHits !== "function") return null;
-        return fsm.getLastHits();
-      },
-      getMovement: (moveX, moveY) => {
-        const fsm = behaviorRef.fsm ?? null;
-        if (!fsm || typeof fsm.getMovement !== "function") {
-          return { moveX, moveY };
-        }
-        return fsm.getMovement(moveX, moveY);
-      },
       getOptions: () => behaviorRef.options,
       ref: behaviorRef
+    };
+    const customMethods = descriptor.createHandle?.(behaviorRef) ?? {};
+    return {
+      ...baseHandle,
+      ...customMethods
     };
   }
   /**
@@ -3326,6 +3319,11 @@ var ZylemStage = class extends LifeCycleBase {
   }
   /** Cleanup owned resources when the stage is destroyed. */
   _destroy(params) {
+    for (const system of this.behaviorSystems) {
+      system.destroy?.(this.ecs);
+    }
+    this.behaviorSystems = [];
+    this.registeredSystemKeys.clear();
     this._childrenMap.forEach((child) => {
       try {
         child.nodeDestroy({ me: child, globals: getGlobals() });
@@ -3352,11 +3350,6 @@ var ZylemStage = class extends LifeCycleBase {
     this.cameraRef = null;
     this.transformSystem?.destroy(this.ecs);
     this.transformSystem = null;
-    for (const system of this.behaviorSystems) {
-      system.destroy?.(this.ecs);
-    }
-    this.behaviorSystems = [];
-    this.registeredSystemKeys.clear();
     resetStageVariables();
     clearVariables(this);
   }

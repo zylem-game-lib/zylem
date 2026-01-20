@@ -18,7 +18,21 @@ export type GameModule = {
   default: Game<any>;
 };
 
-export const examples: ExampleConfig[] = Object.entries(allModules)
+// Define the predefined order for specific examples
+// Examples not in this list will be sorted alphabetically after these
+const PREDEFINED_ORDER = [
+  '00-readme-example',
+  '00-screen-wrap',
+  '00-input',
+  '00-pong',
+  '00-breakout',
+  '00-space-invaders',
+  '00-third-person-test',
+  // 'stage-test/00-stage-test',
+];
+
+// Create a map of all examples
+const allExamples = Object.entries(allModules)
   .map(([path, load]) => {
     // Extract the filename from the path
     // e.g., ./demos/01-basic.ts -> 01-basic
@@ -44,5 +58,19 @@ export const examples: ExampleConfig[] = Object.entries(allModules)
       load: load as () => Promise<GameModule>
     };
   })
-  .filter((config): config is ExampleConfig => config !== null)
+  .filter((config): config is ExampleConfig => config !== null);
+
+// Create a map for quick lookup
+const examplesMap = new Map(allExamples.map(ex => [ex.id, ex]));
+console.log(examplesMap);
+// Separate predefined examples (in order) and remaining examples (alphabetically sorted)
+const predefinedExamples = PREDEFINED_ORDER
+  .map(id => examplesMap.get(id))
+  .filter((config): config is ExampleConfig => config !== undefined);
+
+const remainingExamples = allExamples
+  .filter(ex => !PREDEFINED_ORDER.includes(ex.id))
   .sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+
+// Combine predefined examples first, then alphabetically sorted remaining examples
+export const examples: ExampleConfig[] = [...predefinedExamples, ...remainingExamples];

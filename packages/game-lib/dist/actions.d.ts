@@ -1,5 +1,4 @@
-export { m as makeMoveable } from './moveable-B_vyA6cw.js';
-export { m as makeRotatable, a as makeTransformable } from './transformable-CUhvyuYO.js';
+export { m as makeMoveable, a as makeRotatable, b as makeTransformable } from './transformable-CegbjBWI.js';
 import 'three';
 import '@dimforge/rapier3d-compat';
 
