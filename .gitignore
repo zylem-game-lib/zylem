@@ -9,6 +9,10 @@ lerna-debug.log*
 
 src/**/*.js
 
+packages/editor/dist
+packages/examples/dist
+packages/zylem-styles/dist
+
 .env
 
 node_modules
