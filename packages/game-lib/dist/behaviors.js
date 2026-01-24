@@ -8,6 +8,12 @@ function defineBehavior(config) {
   };
 }
 
+// src/lib/behaviors/use-behavior.ts
+function useBehavior(entity, descriptor, options) {
+  entity.use(descriptor, options);
+  return entity;
+}
+
 // src/lib/behaviors/components.ts
 import { Vector3, Quaternion } from "three";
 function createTransformComponent() {
@@ -173,11 +179,11 @@ var ThrusterMovementBehavior = class {
     const entities = [];
     for (const [, entity] of this.world.collisionMap) {
       const gameEntity = entity;
-      if (gameEntity.physics?.body && gameEntity.thruster && gameEntity.input) {
+      if (gameEntity.physics?.body && gameEntity.thruster && gameEntity.$thruster) {
         entities.push({
           physics: gameEntity.physics,
           thruster: gameEntity.thruster,
-          input: gameEntity.input
+          $thruster: gameEntity.$thruster
         });
       }
     }
@@ -188,7 +194,7 @@ var ThrusterMovementBehavior = class {
     for (const e of entities) {
       const body = e.physics.body;
       const thruster = e.thruster;
-      const input = e.input;
+      const input = e.$thruster;
       const q = body.rotation();
       const rotationZ = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
       if (input.thrust !== 0) {
@@ -249,8 +255,8 @@ var ThrusterBehaviorSystem = class {
           angularThrust: options.angularThrust
         };
       }
-      if (!gameEntity.input) {
-        gameEntity.input = {
+      if (!gameEntity.$thruster) {
+        gameEntity.$thruster = {
           thrust: 0,
           rotate: 0
         };
@@ -258,13 +264,13 @@ var ThrusterBehaviorSystem = class {
       if (!gameEntity.physics) {
         gameEntity.physics = { body: gameEntity.body };
       }
-      if (!thrusterRef.fsm && gameEntity.input) {
-        thrusterRef.fsm = new ThrusterFSM({ input: gameEntity.input });
+      if (!thrusterRef.fsm && gameEntity.$thruster) {
+        thrusterRef.fsm = new ThrusterFSM({ input: gameEntity.$thruster });
       }
-      if (thrusterRef.fsm && gameEntity.input) {
+      if (thrusterRef.fsm && gameEntity.$thruster) {
         thrusterRef.fsm.update({
-          thrust: gameEntity.input.thrust,
-          rotate: gameEntity.input.rotate
+          thrust: gameEntity.$thruster.thrust,
+          rotate: gameEntity.$thruster.rotate
         });
       }
     }
@@ -1137,7 +1143,36 @@ var MovementSequence2DBehavior = defineBehavior({
   systemFactory: (ctx) => new MovementSequence2DSystem(ctx.world),
   createHandle: createMovementSequence2DHandle
 });
+
+// src/lib/coordinators/boundary-ricochet.coordinator.ts
+var BoundaryRicochetCoordinator = class {
+  constructor(entity, boundary, ricochet) {
+    this.entity = entity;
+    this.boundary = boundary;
+    this.ricochet = ricochet;
+  }
+  /**
+   * Update loop - call this every frame
+   */
+  update() {
+    const hits = this.boundary.getLastHits();
+    if (!hits) return null;
+    const anyHit = hits.left || hits.right || hits.top || hits.bottom;
+    if (!anyHit) return null;
+    let normalX = 0;
+    let normalY = 0;
+    if (hits.left) normalX = 1;
+    if (hits.right) normalX = -1;
+    if (hits.bottom) normalY = 1;
+    if (hits.top) normalY = -1;
+    return this.ricochet.getRicochet({
+      entity: this.entity,
+      contact: { normal: { x: normalX, y: normalY } }
+    });
+  }
+};
 export {
+  BoundaryRicochetCoordinator,
   MovementSequence2DBehavior,
   MovementSequence2DEvent,
   MovementSequence2DFSM,
@@ -1168,6 +1203,7 @@ export {
   createThrusterStateComponent,
   createTransformComponent,
   defineBehavior,
-  hasAnyWorldBoundary2DHit
+  hasAnyWorldBoundary2DHit,
+  useBehavior
 };
 //# sourceMappingURL=behaviors.js.map

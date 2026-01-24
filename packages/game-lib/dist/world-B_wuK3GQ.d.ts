@@ -77,7 +77,7 @@ interface BehaviorRef<O extends Record<string, any> = Record<string, any>> {
  * - A system factory to create the behavior system
  * - An optional handle factory for behavior-specific methods
  */
-interface BehaviorDescriptor<O extends Record<string, any> = Record<string, any>, H extends Record<string, any> = Record<string, never>> {
+interface BehaviorDescriptor<O extends Record<string, any> = Record<string, any>, H extends Record<string, any> = Record<string, never>, I = unknown> {
     /** Unique symbol identifying this behavior */
     readonly key: symbol;
     /** Default options (used for type inference) */
@@ -98,7 +98,7 @@ type BehaviorHandle<O extends Record<string, any> = Record<string, any>, H exten
 /**
  * Configuration for defining a new behavior
  */
-interface DefineBehaviorConfig<O extends Record<string, any>, H extends Record<string, any> = Record<string, never>> {
+interface DefineBehaviorConfig<O extends Record<string, any>, H extends Record<string, any> = Record<string, never>, I = unknown> {
     /** Human-readable name for debugging */
     name: string;
     /** Default options - these define the type */
@@ -140,7 +140,65 @@ interface DefineBehaviorConfig<O extends Record<string, any>, H extends Record<s
  * const hits = boundary.getLastHits(); // Fully typed!
  * ```
  */
-declare function defineBehavior<O extends Record<string, any>, H extends Record<string, any> = Record<string, never>>(config: DefineBehaviorConfig<O, H>): BehaviorDescriptor<O, H>;
+declare function defineBehavior<O extends Record<string, any>, H extends Record<string, any> = Record<string, never>, I = unknown>(config: DefineBehaviorConfig<O, H, I>): BehaviorDescriptor<O, H, I>;
+
+type Vec3 = Vector3 | Vector3$1;
+
+declare function shortHash(objString: string): string;
+
+type ZylemShaderType = 'standard' | 'fire' | 'star' | 'debug';
+
+interface MaterialOptions {
+    path?: string;
+    repeat?: Vector2;
+    shader?: ZylemShaderType;
+    color?: Color;
+}
+type BatchGeometryMap = Map<symbol, number>;
+interface BatchMaterialMapObject {
+    geometryMap: BatchGeometryMap;
+    material: Material;
+}
+type BatchKey = ReturnType<typeof shortHash>;
+type TexturePath = string | null;
+declare class MaterialBuilder {
+    static batchMaterialMap: Map<BatchKey, BatchMaterialMapObject>;
+    materials: Material[];
+    batchMaterial(options: Partial<MaterialOptions>, entityType: symbol): void;
+    build(options: Partial<MaterialOptions>, entityType: symbol): void;
+    withColor(color: Color): this;
+    withShader(shaderType: ZylemShaderType): this;
+    /**
+     * Set texture - loads in background (deferred).
+     * Material is created immediately with null map, texture applies when loaded.
+     */
+    setTexture(texturePath?: TexturePath, repeat?: Vector2): void;
+    setColor(color: Color): void;
+    setShader(customShader: ZylemShaderType): void;
+}
+
+/**
+ * Options for configuring entity collision behavior.
+ */
+interface CollisionOptions {
+    static?: boolean;
+    sensor?: boolean;
+    size?: Vector3$1;
+    position?: Vector3$1;
+    collisionType?: string;
+    collisionFilter?: string[];
+}
+declare class CollisionBuilder {
+    static: boolean;
+    sensor: boolean;
+    gravity: Vec3;
+    build(options: Partial<CollisionOptions>): [RigidBodyDesc, ColliderDesc];
+    withCollision(collisionOptions: Partial<CollisionOptions>): this;
+    collider(options: CollisionOptions): ColliderDesc;
+    bodyDesc({ isDynamicBody }: {
+        isDynamicBody?: boolean | undefined;
+    }): RigidBodyDesc;
+}
 
 /** Input
  *
@@ -266,64 +324,6 @@ interface CleanupContext<T, TGlobals extends GlobalRecord = any> {
 }
 interface CleanupFunction<T, TGlobals extends GlobalRecord = any> {
     (context: CleanupContext<T, TGlobals>): void;
-}
-
-type Vec3 = Vector3 | Vector3$1;
-
-declare function shortHash(objString: string): string;
-
-type ZylemShaderType = 'standard' | 'fire' | 'star' | 'debug';
-
-interface MaterialOptions {
-    path?: string;
-    repeat?: Vector2;
-    shader?: ZylemShaderType;
-    color?: Color;
-}
-type BatchGeometryMap = Map<symbol, number>;
-interface BatchMaterialMapObject {
-    geometryMap: BatchGeometryMap;
-    material: Material;
-}
-type BatchKey = ReturnType<typeof shortHash>;
-type TexturePath = string | null;
-declare class MaterialBuilder {
-    static batchMaterialMap: Map<BatchKey, BatchMaterialMapObject>;
-    materials: Material[];
-    batchMaterial(options: Partial<MaterialOptions>, entityType: symbol): void;
-    build(options: Partial<MaterialOptions>, entityType: symbol): void;
-    withColor(color: Color): this;
-    withShader(shaderType: ZylemShaderType): this;
-    /**
-     * Set texture - loads in background (deferred).
-     * Material is created immediately with null map, texture applies when loaded.
-     */
-    setTexture(texturePath?: TexturePath, repeat?: Vector2): void;
-    setColor(color: Color): void;
-    setShader(customShader: ZylemShaderType): void;
-}
-
-/**
- * Options for configuring entity collision behavior.
- */
-interface CollisionOptions {
-    static?: boolean;
-    sensor?: boolean;
-    size?: Vector3$1;
-    position?: Vector3$1;
-    collisionType?: string;
-    collisionFilter?: string[];
-}
-declare class CollisionBuilder {
-    static: boolean;
-    sensor: boolean;
-    gravity: Vec3;
-    build(options: Partial<CollisionOptions>): [RigidBodyDesc, ColliderDesc];
-    withCollision(collisionOptions: Partial<CollisionOptions>): this;
-    collider(options: CollisionOptions): ColliderDesc;
-    bodyDesc({ isDynamicBody }: {
-        isDynamicBody?: boolean | undefined;
-    }): RigidBodyDesc;
 }
 
 interface NodeInterface {

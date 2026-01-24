@@ -9,7 +9,7 @@ import {
 	Vector3
 } from 'three';
 import { shortHash, sortedStringify } from '../core/utility/strings';
-import shaderMap, { ZylemShaderObject, ZylemShaderType } from '../core/preset-shader';
+import shaderMap, { ZylemShaderObject, ZylemShaderType } from './preset-shader';
 import { assetManager } from '../core/asset-manager';
 
 export interface MaterialOptions {

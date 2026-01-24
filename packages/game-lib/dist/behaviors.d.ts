@@ -1,12 +1,23 @@
-import { r as ZylemWorld, k as BehaviorDescriptor } from './world-B7lAKbQ0.js';
-export { m as BehaviorHandle, l as BehaviorRef, B as BehaviorSystem, i as BehaviorSystemFactory, D as DefineBehaviorConfig, j as defineBehavior } from './world-B7lAKbQ0.js';
+import { G as GameEntity, k as BehaviorDescriptor, r as ZylemWorld } from './world-B_wuK3GQ.js';
+export { m as BehaviorHandle, l as BehaviorRef, B as BehaviorSystem, i as BehaviorSystemFactory, D as DefineBehaviorConfig, j as defineBehavior } from './world-B_wuK3GQ.js';
 import { RigidBody, World } from '@dimforge/rapier3d-compat';
 import { Vector3, Quaternion } from 'three';
 import { StateMachine } from 'typescript-fsm';
 import { B as BaseEntityInterface } from './entity-types-DAu8sGJH.js';
+import { M as MoveableEntity } from './moveable-B_vyA6cw.js';
 import './entity-Bq_eNEDI.js';
 import 'bitecs';
 import 'mitt';
+
+/**
+ * Type-safe helper to apply a behavior to an entity and return the entity cast to the behavior's interface.
+ *
+ * @param entity The entity to apply the behavior to
+ * @param descriptor The behavior descriptor
+ * @param options Behavior options
+ * @returns The entity, cast to E & I (where I is the behavior's interface)
+ */
+declare function useBehavior<E extends GameEntity<any>, O extends Record<string, any>, H extends Record<string, any>, I>(entity: E, descriptor: BehaviorDescriptor<O, H, I>, options?: Partial<O>): E & I;
 
 /**
  * Core ECS Components
@@ -78,7 +89,7 @@ interface Behavior {
 interface ThrusterEntity {
     physics: PhysicsBodyComponent;
     thruster: ThrusterMovementComponent;
-    input: ThrusterInputComponent;
+    $thruster: ThrusterInputComponent;
 }
 /**
  * ThrusterMovementBehavior - Force generator for thruster-equipped entities
@@ -196,12 +207,6 @@ declare class ThrusterFSM {
 }
 
 /**
- * Thruster Behavior Descriptor
- *
- * Type-safe descriptor for the thruster behavior system using the new entity.use() API.
- * This wraps the existing ThrusterMovementBehavior and components.
- */
-/**
  * Thruster behavior options (typed for entity.use() autocomplete)
  */
 interface ThrusterBehaviorOptions {
@@ -223,7 +228,7 @@ interface ThrusterBehaviorOptions {
  * ship.use(ThrusterBehavior, { linearThrust: 15, angularThrust: 8 });
  * ```
  */
-declare const ThrusterBehavior: BehaviorDescriptor<ThrusterBehaviorOptions, Record<string, never>>;
+declare const ThrusterBehavior: BehaviorDescriptor<ThrusterBehaviorOptions, Record<string, never>, ThrusterEntity>;
 
 /**
  * ScreenWrapBehavior
@@ -261,7 +266,7 @@ interface ScreenWrapOptions {
  * console.log(fsm?.getState()); // 'center', 'near-edge-left', 'wrapped', etc.
  * ```
  */
-declare const ScreenWrapBehavior: BehaviorDescriptor<ScreenWrapOptions, Record<string, never>>;
+declare const ScreenWrapBehavior: BehaviorDescriptor<ScreenWrapOptions, Record<string, never>, unknown>;
 
 /**
  * ScreenWrapFSM
@@ -440,7 +445,7 @@ interface WorldBoundary2DHandle {
  * });
  * ```
  */
-declare const WorldBoundary2DBehavior: BehaviorDescriptor<WorldBoundary2DOptions, WorldBoundary2DHandle>;
+declare const WorldBoundary2DBehavior: BehaviorDescriptor<WorldBoundary2DOptions, WorldBoundary2DHandle, unknown>;
 
 /**
  * Ricochet2DFSM
@@ -661,7 +666,7 @@ interface Ricochet2DHandle {
  * });
  * ```
  */
-declare const Ricochet2DBehavior: BehaviorDescriptor<Ricochet2DOptions, Ricochet2DHandle>;
+declare const Ricochet2DBehavior: BehaviorDescriptor<Ricochet2DOptions, Ricochet2DHandle, unknown>;
 
 /**
  * MovementSequence2DFSM
@@ -824,6 +829,26 @@ interface MovementSequence2DHandle {
  * });
  * ```
  */
-declare const MovementSequence2DBehavior: BehaviorDescriptor<MovementSequence2DOptions, MovementSequence2DHandle>;
+declare const MovementSequence2DBehavior: BehaviorDescriptor<MovementSequence2DOptions, MovementSequence2DHandle, unknown>;
 
-export { type Behavior, BehaviorDescriptor, MovementSequence2DBehavior, type MovementSequence2DCurrentStep, MovementSequence2DEvent, MovementSequence2DFSM, type MovementSequence2DHandle, type MovementSequence2DMovement, type MovementSequence2DOptions, type MovementSequence2DProgress, MovementSequence2DState, type MovementSequence2DStep, type PhysicsBodyComponent, PhysicsStepBehavior, PhysicsSyncBehavior, type PlayerInput, Ricochet2DBehavior, type Ricochet2DCollisionContext, Ricochet2DEvent, Ricochet2DFSM, type Ricochet2DHandle, type Ricochet2DOptions, type Ricochet2DResult, Ricochet2DState, ScreenWrapBehavior, ScreenWrapEvent, ScreenWrapFSM, type ScreenWrapOptions, ScreenWrapState, ThrusterBehavior, type ThrusterBehaviorOptions, type ThrusterEntity, ThrusterEvent, ThrusterFSM, type ThrusterFSMContext, type ThrusterInputComponent, ThrusterMovementBehavior, type ThrusterMovementComponent, ThrusterState, type ThrusterStateComponent, type TransformComponent, WorldBoundary2DBehavior, type WorldBoundary2DBounds, WorldBoundary2DEvent, WorldBoundary2DFSM, type WorldBoundary2DHandle, type WorldBoundary2DHit, type WorldBoundary2DHits, type WorldBoundary2DOptions, type WorldBoundary2DPosition, WorldBoundary2DState, computeWorldBoundary2DHits, createPhysicsBodyComponent, createThrusterInputComponent, createThrusterMovementComponent, createThrusterStateComponent, createTransformComponent, hasAnyWorldBoundary2DHit };
+/**
+ * Coordinator that bridges WorldBoundary2DBehavior and Ricochet2DBehavior.
+ *
+ * Automatically handles:
+ * 1. Checking boundary hits
+ * 2. Computing collision normals
+ * 3. Requesting ricochet result
+ * 4. Applying movement
+ */
+declare class BoundaryRicochetCoordinator {
+    private entity;
+    private boundary;
+    private ricochet;
+    constructor(entity: GameEntity<any> & MoveableEntity, boundary: WorldBoundary2DHandle, ricochet: Ricochet2DHandle);
+    /**
+     * Update loop - call this every frame
+     */
+    update(): Ricochet2DResult | null;
+}
+
+export { type Behavior, BehaviorDescriptor, BoundaryRicochetCoordinator, MovementSequence2DBehavior, type MovementSequence2DCurrentStep, MovementSequence2DEvent, MovementSequence2DFSM, type MovementSequence2DHandle, type MovementSequence2DMovement, type MovementSequence2DOptions, type MovementSequence2DProgress, MovementSequence2DState, type MovementSequence2DStep, type PhysicsBodyComponent, PhysicsStepBehavior, PhysicsSyncBehavior, type PlayerInput, Ricochet2DBehavior, type Ricochet2DCollisionContext, Ricochet2DEvent, Ricochet2DFSM, type Ricochet2DHandle, type Ricochet2DOptions, type Ricochet2DResult, Ricochet2DState, ScreenWrapBehavior, ScreenWrapEvent, ScreenWrapFSM, type ScreenWrapOptions, ScreenWrapState, ThrusterBehavior, type ThrusterBehaviorOptions, type ThrusterEntity, ThrusterEvent, ThrusterFSM, type ThrusterFSMContext, type ThrusterInputComponent, ThrusterMovementBehavior, type ThrusterMovementComponent, ThrusterState, type ThrusterStateComponent, type TransformComponent, WorldBoundary2DBehavior, type WorldBoundary2DBounds, WorldBoundary2DEvent, WorldBoundary2DFSM, type WorldBoundary2DHandle, type WorldBoundary2DHit, type WorldBoundary2DHits, type WorldBoundary2DOptions, type WorldBoundary2DPosition, WorldBoundary2DState, computeWorldBoundary2DHits, createPhysicsBodyComponent, createThrusterInputComponent, createThrusterMovementComponent, createThrusterStateComponent, createTransformComponent, hasAnyWorldBoundary2DHit, useBehavior };

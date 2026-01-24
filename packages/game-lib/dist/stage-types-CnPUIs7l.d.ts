@@ -1,4 +1,4 @@
-import { n as SetupFunction, G as GameEntity, o as UpdateFunction, p as DestroyFunction, S as SetupContext, U as UpdateContext, q as DestroyContext, r as ZylemWorld, s as BaseNode, L as LoadingEvent, B as BehaviorSystem, i as BehaviorSystemFactory, c as StageEvents } from './world-B7lAKbQ0.js';
+import { n as SetupFunction, G as GameEntity, o as UpdateFunction, p as DestroyFunction, S as SetupContext, U as UpdateContext, q as DestroyContext, r as ZylemWorld, s as BaseNode, L as LoadingEvent, B as BehaviorSystem, i as BehaviorSystemFactory, c as StageEvents } from './world-B_wuK3GQ.js';
 import * as bitecs from 'bitecs';
 import { defineSystem, IWorld } from 'bitecs';
 import { Scene, Color, Object3D, Vector3 } from 'three';
@@ -6,7 +6,7 @@ import { E as Entity, L as LifecycleFunction, S as StageEntity } from './entity-
 import { Z as ZylemCamera, C as CameraDebugDelegate, b as CameraDebugState, d as CameraWrapper } from './camera-CTwQrI7i.js';
 import { G as GameEntityInterface, B as BaseEntityInterface } from './entity-types-DAu8sGJH.js';
 import RAPIER__default from '@dimforge/rapier3d-compat';
-import { S as SPRITE_TYPE, k as ZylemSprite, i as SPHERE_TYPE, l as ZylemSphere, R as RECT_TYPE, m as ZylemRect, T as TEXT_TYPE, n as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, o as ZylemPlane, j as ZONE_TYPE, p as ZylemZone, A as ACTOR_TYPE, q as ZylemActor } from './entities-DjseUYAM.js';
+import { S as SPRITE_TYPE, k as ZylemSprite, i as SPHERE_TYPE, l as ZylemSphere, R as RECT_TYPE, m as ZylemRect, T as TEXT_TYPE, n as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, o as ZylemPlane, j as ZONE_TYPE, p as ZylemZone, A as ACTOR_TYPE, q as ZylemActor } from './entities-mJaYZm7_.js';
 
 interface SceneState {
     backgroundColor: Color | string;

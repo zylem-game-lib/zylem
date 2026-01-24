@@ -1620,6 +1620,9 @@ var ZylemWorld = class {
         continue;
       }
       this.world.contactsWith(gameEntity.body.collider(0), (otherCollider) => {
+        if (!otherCollider) {
+          return;
+        }
         const uuid = otherCollider._parent.userData.uuid;
         const entity = dictionaryRef.get(uuid);
         if (!entity) {
@@ -1630,6 +1633,9 @@ var ZylemWorld = class {
         }
       });
       this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
+        if (!otherCollider) {
+          return;
+        }
         const uuid = otherCollider._parent.userData.uuid;
         const entity = dictionaryRef.get(uuid);
         if (!entity) {

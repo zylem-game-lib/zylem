@@ -1,4 +1,4 @@
-import { G as GameEntity, a as GameEntityOptions, U as UpdateContext, q as DestroyContext, s as BaseNode, T as TexturePath, y as CollisionHandlerDelegate, V as Vec3, M as MaterialOptions } from './world-B7lAKbQ0.js';
+import { G as GameEntity, a as GameEntityOptions, U as UpdateContext, q as DestroyContext, s as BaseNode, T as TexturePath, y as CollisionHandlerDelegate, V as Vec3, M as MaterialOptions } from './world-B_wuK3GQ.js';
 import { Vector3, Sprite, Color, Vector2, Object3D } from 'three';
 
 type SpriteImage = {

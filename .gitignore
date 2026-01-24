@@ -13,6 +13,8 @@ packages/editor/dist
 packages/examples/dist
 packages/zylem-styles/dist
 
+tsconfig.tsbuildinfo
+
 .env
 
 node_modules

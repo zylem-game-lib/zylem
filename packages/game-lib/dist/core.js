@@ -1823,10 +1823,10 @@ var init_debug2 = __esm({
   }
 });
 
-// src/lib/core/preset-shader.ts
+// src/lib/graphics/preset-shader.ts
 var starShader, fireShader, standardShader, debugShader, shaderMap, preset_shader_default;
 var init_preset_shader = __esm({
-  "src/lib/core/preset-shader.ts"() {
+  "src/lib/graphics/preset-shader.ts"() {
     "use strict";
     init_stars();
     init_fire();
@@ -2370,6 +2370,9 @@ var init_world = __esm({
             continue;
           }
           this.world.contactsWith(gameEntity.body.collider(0), (otherCollider) => {
+            if (!otherCollider) {
+              return;
+            }
             const uuid = otherCollider._parent.userData.uuid;
             const entity = dictionaryRef.get(uuid);
             if (!entity) {
@@ -2380,6 +2383,9 @@ var init_world = __esm({
             }
           });
           this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
+            if (!otherCollider) {
+              return;
+            }
             const uuid = otherCollider._parent.userData.uuid;
             const entity = dictionaryRef.get(uuid);
             if (!entity) {

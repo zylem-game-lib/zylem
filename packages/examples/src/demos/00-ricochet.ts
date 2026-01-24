@@ -2,7 +2,8 @@ import { Color, Vector3 } from 'three';
 import { 
 	createGame, createSphere, makeMoveable, 
 	Ricochet2DBehavior, WorldBoundary2DBehavior,
-	BoundaryRicochetCoordinator
+	BoundaryRicochetCoordinator,
+	ricochetSound
 } from '@zylem/game-lib';
 
 const ball = makeMoveable(createSphere({ color: new Color(Color.NAMES.red) }));
@@ -29,6 +30,7 @@ ball.onUpdate(({ me }) => {
 	const result = coordinator.update();
 	if (result) {
 		me.moveXY(result.velocity.x, result.velocity.y);
+		ricochetSound();
 	}
 });
 

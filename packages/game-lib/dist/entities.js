@@ -589,7 +589,7 @@ var object_shader_default = "uniform vec2 uvScale;\nvarying vec2 vUv;\n\nvoid ma
 // src/lib/graphics/shaders/vertex/debug.glsl
 var debug_default2 = "varying vec3 vBarycentric;\n\nvoid main() {\n    vec3 barycentric = vec3(0.0);\n    int index = gl_VertexID % 3;\n    if (index == 0) barycentric = vec3(1.0, 0.0, 0.0);\n    else if (index == 1) barycentric = vec3(0.0, 1.0, 0.0);\n    else barycentric = vec3(0.0, 0.0, 1.0);\n    vBarycentric = barycentric;\n    \n    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n}\n";
 
-// src/lib/core/preset-shader.ts
+// src/lib/graphics/preset-shader.ts
 var starShader = {
   fragment: stars_default,
   vertex: object_shader_default
