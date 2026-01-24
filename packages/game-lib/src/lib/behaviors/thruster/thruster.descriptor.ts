@@ -8,7 +8,7 @@
 import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorSystem } from '../behavior-system';
-import { ThrusterMovementBehavior } from './thruster-movement.behavior';
+import { ThrusterMovementBehavior, ThrusterEntity } from './thruster-movement.behavior';
 import { ThrusterFSM } from './thruster-fsm';
 import type { ThrusterMovementComponent, ThrusterInputComponent } from './components';
 
@@ -71,8 +71,8 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
 				} as ThrusterMovementComponent;
 			}
 
-			if (!gameEntity.input) {
-				gameEntity.input = {
+			if (!gameEntity.$thruster) {
+				gameEntity.$thruster = {
 					thrust: 0,
 					rotate: 0,
 				} as ThrusterInputComponent;
@@ -83,15 +83,15 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
 			}
 
 			// Create FSM lazily and attach to the BehaviorRef for handle.getFSM()
-			if (!thrusterRef.fsm && gameEntity.input) {
-				thrusterRef.fsm = new ThrusterFSM({ input: gameEntity.input });
+			if (!thrusterRef.fsm && gameEntity.$thruster) {
+				thrusterRef.fsm = new ThrusterFSM({ input: gameEntity.$thruster });
 			}
 
 			// Update FSM to sync state with input (auto-transitions)
-			if (thrusterRef.fsm && gameEntity.input) {
+			if (thrusterRef.fsm && gameEntity.$thruster) {
 				thrusterRef.fsm.update({
-					thrust: gameEntity.input.thrust,
-					rotate: gameEntity.input.rotate,
+					thrust: gameEntity.$thruster.thrust,
+					rotate: gameEntity.$thruster.rotate,
 				});
 			}
 		}
@@ -118,7 +118,7 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
  * ship.use(ThrusterBehavior, { linearThrust: 15, angularThrust: 8 });
  * ```
  */
-export const ThrusterBehavior = defineBehavior({
+export const ThrusterBehavior = defineBehavior<ThrusterBehaviorOptions, Record<string, never>, ThrusterEntity>({
 	name: 'thruster',
 	defaultOptions,
 	systemFactory: (ctx) => new ThrusterBehaviorSystem(ctx.world),

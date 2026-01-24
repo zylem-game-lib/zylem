@@ -11,6 +11,7 @@ import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorSystem } from '../behavior-system';
 import { Ricochet2DFSM, type Ricochet2DResult, type Ricochet2DCollisionContext } from './ricochet-2d-fsm';
+export type { Ricochet2DResult };
 
 export interface Ricochet2DOptions {
 	/**

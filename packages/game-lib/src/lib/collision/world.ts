@@ -118,6 +118,9 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				continue;
 			}
 			this.world.contactsWith(gameEntity.body.collider(0), (otherCollider) => {
+				if (!otherCollider) {
+					return;
+				}
 				// @ts-ignore
 				const uuid = otherCollider._parent.userData.uuid;
 				const entity = dictionaryRef.get(uuid);
@@ -129,6 +132,9 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				}
 			});
 			this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
+				if (!otherCollider) {
+					return;
+				}
 				// @ts-ignore
 				const uuid = otherCollider._parent.userData.uuid;
 				const entity = dictionaryRef.get(uuid);

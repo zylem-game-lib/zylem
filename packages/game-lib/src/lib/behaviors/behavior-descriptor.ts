@@ -48,6 +48,7 @@ export interface BehaviorRef<
 export interface BehaviorDescriptor<
   O extends Record<string, any> = Record<string, any>,
   H extends Record<string, any> = Record<string, never>,
+  I = unknown,
 > {
   /** Unique symbol identifying this behavior */
   readonly key: symbol;
@@ -77,6 +78,7 @@ export type BehaviorHandle<
 export interface DefineBehaviorConfig<
   O extends Record<string, any>,
   H extends Record<string, any> = Record<string, never>,
+  I = unknown,
 > {
   /** Human-readable name for debugging */
   name: string;
@@ -123,9 +125,10 @@ export interface DefineBehaviorConfig<
 export function defineBehavior<
   O extends Record<string, any>,
   H extends Record<string, any> = Record<string, never>,
+  I = unknown,
 >(
-  config: DefineBehaviorConfig<O, H>,
-): BehaviorDescriptor<O, H> {
+  config: DefineBehaviorConfig<O, H, I>,
+): BehaviorDescriptor<O, H, I> {
   return {
     key: Symbol.for(`zylem:behavior:${config.name}`),
     defaultOptions: config.defaultOptions,

@@ -1,12 +1,13 @@
-import { createGame, createSprite, createStage, ThrusterBehavior, ScreenWrapBehavior, makeMoveable, makeRotatable } from "@zylem/game-lib";
+import { createGame, createSprite, createStage, ThrusterBehavior, ScreenWrapBehavior, makeMoveable, makeRotatable, useBehavior } from "@zylem/game-lib";
 import playerShipImg from '@zylem/assets/2d/space/player-ship.png';
 
 function playerFactory() {
-    const playerShip = makeRotatable(makeMoveable(createSprite({
+    const baseShip = makeRotatable(makeMoveable(createSprite({
         images: [{ name: 'player-ship', file: playerShipImg }],
     })));
     
-    playerShip.use(
+    const playerShip = useBehavior(
+        baseShip,
         ThrusterBehavior,
         {
             linearThrust: 5,
@@ -25,10 +26,9 @@ function playerFactory() {
     playerShip.onUpdate(({ me, inputs }) => {
         const { Horizontal, Vertical } = inputs.p1.axes;
         
-        const entity = me as any;
-        if (entity.input) {
-            entity.input.thrust = -Vertical.value;
-            entity.input.rotate = Horizontal.value;
+        if (me.$thruster) {
+            me.$thruster.thrust = -Vertical.value;
+            me.$thruster.rotate = Horizontal.value;
         }
     });
 

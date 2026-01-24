@@ -16,6 +16,8 @@ export type {
   DefineBehaviorConfig,
 } from './behavior-descriptor';
 
+export { useBehavior } from './use-behavior';
+
 // Core ECS Components
 export {
   type TransformComponent,
@@ -42,3 +44,6 @@ export * from './ricochet-2d';
 
 // Movement Sequence 2D Module
 export * from './movement-sequence-2d';
+
+// Coordinators
+export * from '../coordinators/boundary-ricochet.coordinator';

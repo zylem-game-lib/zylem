@@ -2,7 +2,7 @@ import { Color, Vector2, Vector3 } from 'three';
 import { 
 	createGame, createBox, createSphere, createStage, createCamera, createZone, createText,
 	setGlobal, makeMoveable, ricochetSound, destroy,
-	WorldBoundary2DBehavior, Ricochet2DBehavior
+	WorldBoundary2DBehavior, Ricochet2DBehavior, BoundaryRicochetCoordinator
 } from '@zylem/game-lib';
 
 const board = { top: 10, bottom: -10, left: -12, right: 12 };
@@ -61,27 +61,13 @@ moveableBall.onSetup(({ me }) => {
 	me.moveXY(0, 8);
 });
 
+const ballCoordinator = new BoundaryRicochetCoordinator(moveableBall, ballBoundary, ballRicochet);
+
 moveableBall.onUpdate(({ me }) => {
-	const hits = ballBoundary.getLastHits();
-	if (!hits) return;
-
-	const hasHit = hits.top || hits.left || hits.right;
-	if (!hasHit) return;
-
-	// Compute normal from boundary hits
-	let normalX = 0, normalY = 0;
-	if (hits.left) normalX = 1;
-	if (hits.right) normalX = -1;
-	if (hits.top) normalY = -1;
-
-	const result = ballRicochet.getRicochet({
-		entity: me,
-		contact: { normal: { x: normalX, y: normalY } },
-	});
-
+	const result = ballCoordinator.update();
 	if (result) {
-		me.body?.setLinvel({ x: result.velocity.x, y: result.velocity.y, z: 0 }, true);
-		ricochetSound();
+		me.moveXY(result.velocity.x, result.velocity.y);
+		ricochetSound(900, 0.04);
 	}
 });
 
@@ -140,9 +126,6 @@ failZone.onEnter(({ visitor, globals }) => {
 		if ((globals.lives as number) !== 0) {
 			moveableBall.setPosition(0, -7, 0);
 			moveableBall.moveXY(0, 8);
-		} else {
-			moveableBall.setPosition(0, -2, 0);
-			moveableBall.moveXY(0, 0);
 		}
 	}
 });
@@ -231,6 +214,10 @@ game.onGlobalChange<string>('status', (value) => {
 	if (value === 'win') statusText.updateText('You Win!');
 	else if (value === 'lose') statusText.updateText('Game Over');
 	else statusText.updateText('');
+	if (value === 'win' || value === 'lose') {
+		moveableBall.setPosition(0, -2, 0);
+		moveableBall.moveXY(0, 0);
+	}
 });
 
 game.onGlobalChange<number>('score', (value) => {

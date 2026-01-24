@@ -3,7 +3,7 @@ import {
     createGame, createBox, createSphere, createStage, createCamera, createZone, createText,
     makeMoveable, ricochetSound, pingPongBeep,
     getGlobal, setGlobal,
-    WorldBoundary2DBehavior, Ricochet2DBehavior
+    WorldBoundary2DBehavior, Ricochet2DBehavior, BoundaryRicochetCoordinator
 } from '@zylem/game-lib';
 
 const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
@@ -36,23 +36,10 @@ moveableBall.onSetup(({ me }) => {
 	me.move(new Vector3(5, 0, 0));
 });
 
+const ballCoordinator = new BoundaryRicochetCoordinator(moveableBall, ballBoundary, ballRicochet);
+
 moveableBall.onUpdate(({ me }) => {
-	const hits = ballBoundary.getLastHits();
-	if (!hits) return;
-
-	const hitTopBottom = hits.top || hits.bottom;
-	if (!hitTopBottom) return;
-
-	// Compute collision normal from boundary hits
-	let normalY = 0;
-	if (hits.bottom) normalY = 1;
-	if (hits.top) normalY = -1;
-
-	// Compute ricochet result for wall bounce
-	const result = ballRicochet.getRicochet({
-		entity: me,
-		contact: { normal: { x: 0, y: normalY } },
-	});
+	const result = ballCoordinator.update();
 
 	if (result) {
 		me.body?.setLinvel({ x: result.velocity.x, y: result.velocity.y, z: 0 }, true);

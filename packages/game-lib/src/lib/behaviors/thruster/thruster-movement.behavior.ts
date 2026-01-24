@@ -22,7 +22,7 @@ export interface Behavior {
 export interface ThrusterEntity {
 	physics: PhysicsBodyComponent;
 	thruster: ThrusterMovementComponent;
-	input: ThrusterInputComponent;
+	$thruster: ThrusterInputComponent;
 }
 
 /**
@@ -47,12 +47,12 @@ export class ThrusterMovementBehavior implements Behavior {
 			if (
 				gameEntity.physics?.body &&
 				gameEntity.thruster &&
-				gameEntity.input
+				gameEntity.$thruster
 			) {
 				entities.push({
 					physics: gameEntity.physics,
 					thruster: gameEntity.thruster,
-					input: gameEntity.input,
+					$thruster: gameEntity.$thruster,
 				});
 			}
 		}
@@ -66,7 +66,7 @@ export class ThrusterMovementBehavior implements Behavior {
 		for (const e of entities) {
 			const body = e.physics.body;
 			const thruster = e.thruster;
-			const input = e.input;
+			const input = e.$thruster;
 
 			// Get Z rotation from quaternion (for 2D sprites)
 			const q = body.rotation();
