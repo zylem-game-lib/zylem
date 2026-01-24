@@ -59,25 +59,33 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
         height: Math.max(minSize.height, height),
     });
 
-    const handleTitleBarMouseDown = (e: MouseEvent) => {
+    const handleTitleBarPointerDown = (e: PointerEvent) => {
         isDragging = true;
         hasMoved = false;
         dragStartPos = { x: e.clientX, y: e.clientY };
         panelStartPos = { ...position() };
-        e.preventDefault();
+        
+        // Prevent default on mouse to avoid selection, but allow touch actions if needed
+        // though touch-action: none handles the scrolling prevention
+        if (e.pointerType === 'mouse') {
+            e.preventDefault();
+        }
     };
 
-    const handleResizeMouseDown = (direction: ResizeDirection) => (e: MouseEvent) => {
+    const handleResizePointerDown = (direction: ResizeDirection) => (e: PointerEvent) => {
         isResizing = true;
         resizeDirection = direction;
         dragStartPos = { x: e.clientX, y: e.clientY };
         panelStartPos = { ...position() };
         panelStartSize = { ...size() };
-        e.preventDefault();
+        
+        if (e.pointerType === 'mouse') {
+            e.preventDefault();
+        }
         e.stopPropagation();
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
         if (isDragging) {
             const deltaX = e.clientX - dragStartPos.x;
             const deltaY = e.clientY - dragStartPos.y;
@@ -136,7 +144,7 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
         }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
         if (isDragging && hasMoved) {
             // Notify parent of new position
             props.onMove?.(position());
@@ -148,19 +156,20 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
     };
 
     onMount(() => {
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
     });
 
     onCleanup(() => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
     });
 
     const resizeHandleStyle = (cursor: string): JSX.CSSProperties => ({
         position: 'absolute',
         'z-index': 10,
         cursor,
+        'touch-action': 'none',
     });
 
     return (
@@ -180,14 +189,15 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
             {/* Title bar */}
             <div
                 class="floating-panel-titlebar"
-                onMouseDown={handleTitleBarMouseDown}
                 style={{
                     cursor: 'grab',
                     display: 'flex',
                     'align-items': 'center',
                     'justify-content': 'space-between',
                     'user-select': 'none',
+                    'touch-action': 'none',
                 }}
+                onPointerDown={handleTitleBarPointerDown}
             >
                 <span class="floating-panel-title">{props.title ?? 'Panel'}</span>
                 <div class="floating-panel-controls">
@@ -234,37 +244,37 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
             {/* Resize handles - edges */}
             <div
                 style={{ ...resizeHandleStyle('ns-resize'), top: 0, left: '10px', right: '10px', height: '6px' }}
-                onMouseDown={handleResizeMouseDown('n')}
+                onPointerDown={handleResizePointerDown('n')}
             />
             <div
                 style={{ ...resizeHandleStyle('ns-resize'), bottom: 0, left: '10px', right: '10px', height: '6px' }}
-                onMouseDown={handleResizeMouseDown('s')}
+                onPointerDown={handleResizePointerDown('s')}
             />
             <div
                 style={{ ...resizeHandleStyle('ew-resize'), left: 0, top: '10px', bottom: '10px', width: '6px' }}
-                onMouseDown={handleResizeMouseDown('w')}
+                onPointerDown={handleResizePointerDown('w')}
             />
             <div
                 style={{ ...resizeHandleStyle('ew-resize'), right: 0, top: '10px', bottom: '10px', width: '6px' }}
-                onMouseDown={handleResizeMouseDown('e')}
+                onPointerDown={handleResizePointerDown('e')}
             />
 
             {/* Resize handles - corners */}
             <div
                 style={{ ...resizeHandleStyle('nwse-resize'), top: 0, left: 0, width: '10px', height: '10px' }}
-                onMouseDown={handleResizeMouseDown('nw')}
+                onPointerDown={handleResizePointerDown('nw')}
             />
             <div
                 style={{ ...resizeHandleStyle('nesw-resize'), top: 0, right: 0, width: '10px', height: '10px' }}
-                onMouseDown={handleResizeMouseDown('ne')}
+                onPointerDown={handleResizePointerDown('ne')}
             />
             <div
                 style={{ ...resizeHandleStyle('nesw-resize'), bottom: 0, left: 0, width: '10px', height: '10px' }}
-                onMouseDown={handleResizeMouseDown('sw')}
+                onPointerDown={handleResizePointerDown('sw')}
             />
             <div
                 style={{ ...resizeHandleStyle('nwse-resize'), bottom: 0, right: 0, width: '10px', height: '10px' }}
-                onMouseDown={handleResizeMouseDown('se')}
+                onPointerDown={handleResizePointerDown('se')}
             />
         </div>
     );

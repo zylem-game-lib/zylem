@@ -37,7 +37,7 @@ export const DraggableAccordionItem: Component<DraggableAccordionItemProps> = (p
     const [headerSize, setHeaderSize] = createSignal({ width: 0, height: 0 });
 
     let dragStartPos = { x: 0, y: 0 };
-    let isMouseDown = false;
+    let isPointerDown = false;
 
     // Get current index of this panel in the order
     const getCurrentIndex = () => {
@@ -46,11 +46,11 @@ export const DraggableAccordionItem: Component<DraggableAccordionItemProps> = (p
         return dockedPanels.indexOf(props.value);
     };
 
-    const handleMouseDown = (e: MouseEvent) => {
+    const handlePointerDown = (e: PointerEvent) => {
         // Only start drag on left click
         if (e.button !== 0) return;
 
-        isMouseDown = true;
+        isPointerDown = true;
         dragStartPos = { x: e.clientX, y: e.clientY };
 
         // Find the menu panel parent for bounds checking
@@ -62,11 +62,15 @@ export const DraggableAccordionItem: Component<DraggableAccordionItemProps> = (p
             setHeaderSize({ width: rect.width, height: rect.height });
         }
 
-        e.preventDefault();
+        // Prevent default on mouse to avoid text selection, but allow touch to propagate for clicks
+        // (scrolling is handled by touch-action: none)
+        if (e.pointerType === 'mouse') {
+            e.preventDefault();
+        }
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
-        if (!isMouseDown) return;
+    const handlePointerMove = (e: PointerEvent) => {
+        if (!isPointerDown) return;
 
         const deltaX = e.clientX - dragStartPos.x;
         const deltaY = e.clientY - dragStartPos.y;
@@ -119,11 +123,11 @@ export const DraggableAccordionItem: Component<DraggableAccordionItemProps> = (p
         }
     };
 
-    const handleMouseUp = (e: MouseEvent) => {
-        if (!isMouseDown) return;
+    const handlePointerUp = (e: PointerEvent) => {
+        if (!isPointerDown) return;
 
         const wasDragging = isDragging();
-        isMouseDown = false;
+        isPointerDown = false;
         setIsDragging(false);
 
         if (wasDragging && menuPanelRef) {
@@ -182,13 +186,13 @@ export const DraggableAccordionItem: Component<DraggableAccordionItemProps> = (p
     };
 
     onMount(() => {
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
     });
 
     onCleanup(() => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
     });
 
     return (
@@ -201,7 +205,8 @@ export const DraggableAccordionItem: Component<DraggableAccordionItemProps> = (p
                 <Accordion.Header
                     ref={headerRef}
                     class="accordion-header"
-                    onMouseDown={handleMouseDown}
+                    onPointerDown={handlePointerDown}
+                    style={{ "touch-action": "none" }}
                 >
                     <Accordion.Trigger class="accordion-trigger zylem-exo-2">
                         {props.title}

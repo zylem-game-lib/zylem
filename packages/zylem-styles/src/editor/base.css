@@ -26,7 +26,6 @@ button {
   cursor: grab;
   z-index: 1;
 
-  transition: transform 0.3s ease-in-out;
   pointer-events: auto;
 }
 

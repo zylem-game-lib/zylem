@@ -54,15 +54,20 @@ export const EditorToggleButton: Component<EditorToggleButtonProps> = (props) =>
         return { x: snappedX, y: snappedY };
     };
 
-    const handleMouseDown = (e: MouseEvent) => {
+    const handlePointerDown = (e: PointerEvent) => {
         isDragging = true;
         hasMoved = false;
         dragStartPos = { x: e.clientX, y: e.clientY };
         buttonStartPos = { ...position() };
-        e.preventDefault();
+        
+        // Prevent default on mouse to avoid selection, but allow touch actions if needed
+        // though touch-action: none handles the scrolling prevention
+        if (e.pointerType === 'mouse') {
+            e.preventDefault();
+        }
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
         if (!isDragging) return;
 
         const deltaX = e.clientX - dragStartPos.x;
@@ -88,7 +93,7 @@ export const EditorToggleButton: Component<EditorToggleButtonProps> = (props) =>
         }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
         if (isDragging) {
             if (hasMoved) {
                 // Snap to corner on release
@@ -113,13 +118,13 @@ export const EditorToggleButton: Component<EditorToggleButtonProps> = (props) =>
         setPosition(initialPos);
         setToggleButtonPosition(initialPos);
 
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
     });
 
     onCleanup(() => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        window.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('pointermove', handlePointerMove);
+        window.removeEventListener('pointerup', handlePointerUp);
     });
 
     return (
@@ -130,13 +135,13 @@ export const EditorToggleButton: Component<EditorToggleButtonProps> = (props) =>
                 top: `${position().y}px`,
                 'z-index': 1001,
                 cursor: 'grab',
-                transition: isDragging ? 'none' : 'left 0.2s ease-out, top 0.2s ease-out',
+                'touch-action': 'none'
             }}
         >
             <button
                 id="zylem-editor-toggle"
                 type="button"
-                onMouseDown={handleMouseDown}
+                onPointerDown={handlePointerDown}
             />
         </div>
     );
