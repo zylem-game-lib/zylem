@@ -113,4 +113,4 @@ declare class CameraWrapper {
 }
 declare function createCamera(options: CameraOptions): CameraWrapper;
 
-export { type CameraDebugDelegate as C, type PerspectiveType as P, ZylemCamera as Z, Perspectives as a, type CameraDebugState as b, createCamera as c, CameraWrapper as d };
+export { type CameraDebugDelegate as C, type PerspectiveType as P, ZylemCamera as Z, type CameraDebugState as a, CameraWrapper as b, createCamera as c, Perspectives as d };

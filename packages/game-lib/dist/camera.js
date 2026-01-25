@@ -103,11 +103,33 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 // src/lib/graphics/render-pass.ts
 import * as THREE from "three";
 
-// src/lib/graphics/shaders/fragment/standard.glsl
-var standard_default = "uniform sampler2D tDiffuse;\nvarying vec2 vUv;\n\nvoid main() {\n	vec4 texel = texture2D( tDiffuse, vUv );\n\n	gl_FragColor = texel;\n}";
+// src/lib/graphics/shaders/vertex/object.shader.ts
+var objectVertexShader = `
+uniform vec2 uvScale;
+varying vec2 vUv;
 
-// src/lib/graphics/shaders/vertex/standard.glsl
-var standard_default2 = "varying vec2 vUv;\n\nvoid main() {\n	vUv = uv;\n	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );\n}";
+void main() {
+	vUv = uv;
+	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+	gl_Position = projectionMatrix * mvPosition;
+}
+`;
+
+// src/lib/graphics/shaders/standard.shader.ts
+var fragment = `
+uniform sampler2D tDiffuse;
+varying vec2 vUv;
+
+void main() {
+	vec4 texel = texture2D( tDiffuse, vUv );
+
+	gl_FragColor = texel;
+}
+`;
+var standardShader = {
+  vertex: objectVertexShader,
+  fragment
+};
 
 // src/lib/graphics/render-pass.ts
 import { WebGLRenderTarget } from "three";
@@ -166,8 +188,8 @@ var RenderPass = class extends Pass {
           )
         }
       },
-      vertexShader: standard_default2,
-      fragmentShader: standard_default
+      vertexShader: standardShader.vertex,
+      fragmentShader: standardShader.fragment
     });
   }
   dispose() {

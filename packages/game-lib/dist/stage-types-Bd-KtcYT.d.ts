@@ -1,16 +1,17 @@
-import { n as SetupFunction, G as GameEntity, o as UpdateFunction, p as DestroyFunction, S as SetupContext, U as UpdateContext, q as DestroyContext, r as ZylemWorld, s as BaseNode, L as LoadingEvent, B as BehaviorSystem, i as BehaviorSystemFactory, c as StageEvents } from './world-B_wuK3GQ.js';
+import { S as SetupFunction, Z as ZylemShaderObject, G as GameEntity, U as UpdateFunction, D as DestroyFunction, a as SetupContext, b as UpdateContext, c as DestroyContext, d as ZylemWorld, B as BaseNode, L as LoadingEvent, e as BehaviorSystem, f as BehaviorSystemFactory, g as GameEntityOptions, h as StageEvents } from './world-C8tQ7Plj.js';
 import * as bitecs from 'bitecs';
 import { defineSystem, IWorld } from 'bitecs';
 import { Scene, Color, Object3D, Vector3 } from 'three';
 import { E as Entity, L as LifecycleFunction, S as StageEntity } from './entity-Bq_eNEDI.js';
-import { Z as ZylemCamera, C as CameraDebugDelegate, b as CameraDebugState, d as CameraWrapper } from './camera-CTwQrI7i.js';
+import { Z as ZylemCamera, C as CameraDebugDelegate, a as CameraDebugState, b as CameraWrapper } from './camera-CeJPAgGg.js';
 import { G as GameEntityInterface, B as BaseEntityInterface } from './entity-types-DAu8sGJH.js';
 import RAPIER__default from '@dimforge/rapier3d-compat';
-import { S as SPRITE_TYPE, k as ZylemSprite, i as SPHERE_TYPE, l as ZylemSphere, R as RECT_TYPE, m as ZylemRect, T as TEXT_TYPE, n as ZylemText, B as BOX_TYPE, Z as ZylemBox, P as PLANE_TYPE, o as ZylemPlane, j as ZONE_TYPE, p as ZylemZone, A as ACTOR_TYPE, q as ZylemActor } from './entities-mJaYZm7_.js';
+import { S as SPRITE_TYPE, Z as ZylemSprite, a as SPHERE_TYPE, b as ZylemSphere, R as RECT_TYPE, c as ZylemRect, T as TEXT_TYPE, d as ZylemText, B as BOX_TYPE, e as ZylemBox, P as PLANE_TYPE, f as ZylemPlane, g as ZONE_TYPE, h as ZylemZone, A as ACTOR_TYPE, i as ZylemActor } from './entities-DvByhMGU.js';
 
 interface SceneState {
     backgroundColor: Color | string;
     backgroundImage: string | null;
+    backgroundShader?: ZylemShaderObject | null;
 }
 declare class ZylemScene implements Entity<ZylemScene> {
     type: string;
@@ -23,7 +24,13 @@ declare class ZylemScene implements Entity<ZylemScene> {
     _destroy?: ((globals?: any) => void) | undefined;
     name?: string | undefined;
     tag?: Set<string> | undefined;
+    private skyboxMaterial;
     constructor(id: string, camera: ZylemCamera, state: SceneState);
+    /**
+     * Create a large inverted box with the shader for skybox effect
+     * Uses the pos.xyww trick to ensure skybox is always at maximum depth
+     */
+    private setupBackgroundShader;
     setup(): void;
     destroy(): void;
     /**
@@ -55,6 +62,10 @@ declare class ZylemScene implements Entity<ZylemScene> {
      * Add debug helpers to scene
      */
     debugScene(): void;
+    /**
+     * Update skybox shader uniforms
+     */
+    updateSkybox(delta: number): void;
 }
 
 /**
@@ -125,6 +136,7 @@ interface ZylemStageConfig {
     inputs: Record<string, string[]>;
     backgroundColor: Color | string;
     backgroundImage: string | null;
+    backgroundShader: any | null;
     gravity: Vector3;
     variables: Record<string, any>;
     stageRef?: Stage;
@@ -252,6 +264,20 @@ declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     enqueue(...items: StageEntityInput[]): void;
 }
 
+type ZylemDiskOptions = GameEntityOptions & {
+    innerRadius?: number;
+    outerRadius?: number;
+    thetaSegments?: number;
+};
+declare const DISK_TYPE: unique symbol;
+declare class ZylemDisk extends GameEntity<ZylemDiskOptions> {
+    static type: symbol;
+    constructor(options?: ZylemDiskOptions);
+    buildInfo(): Record<string, any>;
+}
+type DiskOptions = BaseNode | Partial<ZylemDiskOptions>;
+declare function createDisk(...args: Array<DiskOptions>): ZylemDisk;
+
 /**
  * Maps entity type symbols to their class types.
  * Used by getEntityByName to infer return types.
@@ -265,6 +291,7 @@ interface EntityTypeMap {
     [PLANE_TYPE]: ZylemPlane;
     [ZONE_TYPE]: ZylemZone;
     [ACTOR_TYPE]: ZylemActor;
+    [DISK_TYPE]: ZylemDisk;
 }
 
 type NodeLike = {
@@ -345,4 +372,4 @@ interface StageInterface {
     state: StageStateInterface;
 }
 
-export { type StageStateInterface as S, type StageOptions as a, Stage as b, createStage as c, type StageInterface as d };
+export { type StageStateInterface as S, type StageOptions as a, Stage as b, createStage as c, createDisk as d, type StageInterface as e };

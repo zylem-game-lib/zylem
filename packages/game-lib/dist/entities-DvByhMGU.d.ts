@@ -1,4 +1,4 @@
-import { G as GameEntity, a as GameEntityOptions, U as UpdateContext, q as DestroyContext, s as BaseNode, T as TexturePath, y as CollisionHandlerDelegate, V as Vec3, M as MaterialOptions } from './world-B_wuK3GQ.js';
+import { G as GameEntity, g as GameEntityOptions, b as UpdateContext, c as DestroyContext, B as BaseNode, T as TexturePath, A as CollisionHandlerDelegate, V as Vec3, M as MaterialOptions } from './world-C8tQ7Plj.js';
 import { Vector3, Sprite, Color, Vector2, Object3D } from 'three';
 
 type SpriteImage = {
@@ -303,4 +303,4 @@ declare class ZylemActor extends GameEntity<ZylemActorOptions> implements Entity
 type ActorOptions = BaseNode | ZylemActorOptions;
 declare function createActor(...args: Array<ActorOptions>): ZylemActor;
 
-export { ACTOR_TYPE as A, BOX_TYPE as B, PLANE_TYPE as P, RECT_TYPE as R, SPRITE_TYPE as S, TEXT_TYPE as T, ZylemBox as Z, createSphere as a, createSprite as b, createBox as c, createPlane as d, createZone as e, createActor as f, createText as g, createRect as h, SPHERE_TYPE as i, ZONE_TYPE as j, ZylemSprite as k, ZylemSphere as l, ZylemRect as m, ZylemText as n, ZylemPlane as o, ZylemZone as p, ZylemActor as q };
+export { ACTOR_TYPE as A, BOX_TYPE as B, PLANE_TYPE as P, RECT_TYPE as R, SPRITE_TYPE as S, TEXT_TYPE as T, ZylemSprite as Z, SPHERE_TYPE as a, ZylemSphere as b, ZylemRect as c, ZylemText as d, ZylemBox as e, ZylemPlane as f, ZONE_TYPE as g, ZylemZone as h, ZylemActor as i, createBox as j, createSphere as k, createSprite as l, createPlane as m, createZone as n, createActor as o, createText as p, createRect as q };

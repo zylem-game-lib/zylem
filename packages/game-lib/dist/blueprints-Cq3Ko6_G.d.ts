@@ -1,6 +1,6 @@
 import { Vector2 } from 'three';
-import { G as GameEntity } from './world-B_wuK3GQ.js';
-import { b as Stage } from './stage-types-CnPUIs7l.js';
+import { G as GameEntity } from './world-C8tQ7Plj.js';
+import { b as Stage } from './stage-types-Bd-KtcYT.js';
 import * as _sinclair_typebox from '@sinclair/typebox';
 import { Static } from '@sinclair/typebox';
 

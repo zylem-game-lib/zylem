@@ -146,12 +146,14 @@ type Vec3 = Vector3 | Vector3$1;
 
 declare function shortHash(objString: string): string;
 
-type ZylemShaderType = 'standard' | 'fire' | 'star' | 'debug';
-
+type ZylemShaderObject = {
+    fragment: string;
+    vertex: string;
+};
 interface MaterialOptions {
     path?: string;
     repeat?: Vector2;
-    shader?: ZylemShaderType;
+    shader?: ZylemShaderObject;
     color?: Color;
 }
 type BatchGeometryMap = Map<symbol, number>;
@@ -167,14 +169,14 @@ declare class MaterialBuilder {
     batchMaterial(options: Partial<MaterialOptions>, entityType: symbol): void;
     build(options: Partial<MaterialOptions>, entityType: symbol): void;
     withColor(color: Color): this;
-    withShader(shaderType: ZylemShaderType): this;
+    withShader(shader: ZylemShaderObject): this;
     /**
      * Set texture - loads in background (deferred).
      * Material is created immediately with null map, texture applies when loaded.
      */
     setTexture(texturePath?: TexturePath, repeat?: Vector2): void;
     setColor(color: Color): void;
-    setShader(customShader: ZylemShaderType): void;
+    setShader(customShader: ZylemShaderObject): void;
 }
 
 /**
@@ -769,4 +771,4 @@ declare class ZylemWorld implements Entity<ZylemWorld> {
     destroy(): void;
 }
 
-export { type BehaviorSystem as B, type CleanupContext as C, type DefineBehaviorConfig as D, EventEmitterDelegate as E, GameEntity as G, type InputGamepad as I, type LoadingEvent as L, type MaterialOptions as M, type SetupContext as S, type TexturePath as T, type UpdateContext as U, type Vec3 as V, type ZylemEvents as Z, type GameEntityOptions as a, type GameEvents as b, type StageEvents as c, type EntityEvents as d, type GameLoadingPayload as e, type StateDispatchPayload as f, type StageConfigPayload as g, type EntityConfigPayload as h, type BehaviorSystemFactory as i, defineBehavior as j, type BehaviorDescriptor as k, type BehaviorRef as l, type BehaviorHandle as m, type SetupFunction as n, type UpdateFunction as o, type DestroyFunction as p, type DestroyContext as q, ZylemWorld as r, BaseNode as s, type InputPlayerNumber as t, type Inputs as u, GameEntityLifeCycle as v, type IGame as w, type LoadedContext as x, type CollisionHandlerDelegate as y, zylemEventBus as z };
+export { type CollisionHandlerDelegate as A, BaseNode as B, type CleanupContext as C, type DestroyFunction as D, EventEmitterDelegate as E, GameEntity as G, type InputGamepad as I, type LoadingEvent as L, type MaterialOptions as M, type SetupFunction as S, type TexturePath as T, type UpdateFunction as U, type Vec3 as V, type ZylemShaderObject as Z, type SetupContext as a, type UpdateContext as b, type DestroyContext as c, ZylemWorld as d, type BehaviorSystem as e, type BehaviorSystemFactory as f, type GameEntityOptions as g, type StageEvents as h, type ZylemEvents as i, type GameEvents as j, type EntityEvents as k, type GameLoadingPayload as l, type StateDispatchPayload as m, type StageConfigPayload as n, type EntityConfigPayload as o, defineBehavior as p, type BehaviorDescriptor as q, type BehaviorRef as r, type BehaviorHandle as s, type DefineBehaviorConfig as t, type InputPlayerNumber as u, type Inputs as v, GameEntityLifeCycle as w, type IGame as x, type LoadedContext as y, zylemEventBus as z };

@@ -1,12 +1,12 @@
-import { G as Game } from './core-Dg2rXRfI.js';
-export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-Dg2rXRfI.js';
-export { a as StageOptions, c as createStage } from './stage-types-CnPUIs7l.js';
-import { S as StageBlueprint } from './blueprints-CPXLgMIQ.js';
-export { e as entitySpawner } from './blueprints-CPXLgMIQ.js';
-export { P as PerspectiveType, a as Perspectives, c as createCamera } from './camera-CTwQrI7i.js';
-export { A as ACTOR_TYPE, B as BOX_TYPE, P as PLANE_TYPE, R as RECT_TYPE, i as SPHERE_TYPE, S as SPRITE_TYPE, T as TEXT_TYPE, j as ZONE_TYPE, Z as ZylemBox, f as createActor, c as createBox, d as createPlane, h as createRect, a as createSphere, b as createSprite, g as createText, e as createZone } from './entities-mJaYZm7_.js';
-import { G as GameEntity, a as GameEntityOptions } from './world-B_wuK3GQ.js';
-export { k as BehaviorDescriptor, m as BehaviorHandle, l as BehaviorRef, B as BehaviorSystem, i as BehaviorSystemFactory, D as DefineBehaviorConfig, h as EntityConfigPayload, d as EntityEvents, E as EventEmitterDelegate, b as GameEvents, e as GameLoadingPayload, L as LoadingEvent, S as SetupContext, g as StageConfigPayload, c as StageEvents, f as StateDispatchPayload, U as UpdateContext, Z as ZylemEvents, j as defineBehavior, z as zylemEventBus } from './world-B_wuK3GQ.js';
+import { G as Game } from './core-bO8TzV7u.js';
+export { V as Vect3, Z as ZylemGameConfig, c as createGame, g as gameConfig, a as globalChange, b as globalChanges, d as variableChange, e as variableChanges, v as vessel } from './core-bO8TzV7u.js';
+export { a as StageOptions, d as createDisk, c as createStage } from './stage-types-Bd-KtcYT.js';
+import { S as StageBlueprint } from './blueprints-Cq3Ko6_G.js';
+export { e as entitySpawner } from './blueprints-Cq3Ko6_G.js';
+export { P as PerspectiveType, d as Perspectives, c as createCamera } from './camera-CeJPAgGg.js';
+export { A as ACTOR_TYPE, B as BOX_TYPE, P as PLANE_TYPE, R as RECT_TYPE, a as SPHERE_TYPE, S as SPRITE_TYPE, T as TEXT_TYPE, g as ZONE_TYPE, e as ZylemBox, o as createActor, j as createBox, m as createPlane, q as createRect, k as createSphere, l as createSprite, p as createText, n as createZone } from './entities-DvByhMGU.js';
+import { G as GameEntity, g as GameEntityOptions } from './world-C8tQ7Plj.js';
+export { q as BehaviorDescriptor, s as BehaviorHandle, r as BehaviorRef, e as BehaviorSystem, f as BehaviorSystemFactory, t as DefineBehaviorConfig, o as EntityConfigPayload, k as EntityEvents, E as EventEmitterDelegate, j as GameEvents, l as GameLoadingPayload, L as LoadingEvent, a as SetupContext, n as StageConfigPayload, h as StageEvents, m as StateDispatchPayload, b as UpdateContext, i as ZylemEvents, Z as ZylemShaderObject, p as defineBehavior, z as zylemEventBus } from './world-C8tQ7Plj.js';
 export { Behavior, BoundaryRicochetCoordinator, MovementSequence2DBehavior, MovementSequence2DCurrentStep, MovementSequence2DEvent, MovementSequence2DFSM, MovementSequence2DHandle, MovementSequence2DMovement, MovementSequence2DOptions, MovementSequence2DProgress, MovementSequence2DState, MovementSequence2DStep, PhysicsBodyComponent, PhysicsStepBehavior, PhysicsSyncBehavior, PlayerInput, Ricochet2DBehavior, Ricochet2DCollisionContext, Ricochet2DEvent, Ricochet2DFSM, Ricochet2DHandle, Ricochet2DOptions, Ricochet2DResult, Ricochet2DState, ScreenWrapBehavior, ScreenWrapEvent, ScreenWrapFSM, ScreenWrapOptions, ScreenWrapState, ThrusterBehavior, ThrusterBehaviorOptions, ThrusterEntity, ThrusterEvent, ThrusterFSM, ThrusterFSMContext, ThrusterInputComponent, ThrusterMovementBehavior, ThrusterMovementComponent, ThrusterState, ThrusterStateComponent, TransformComponent, WorldBoundary2DBehavior, WorldBoundary2DBounds, WorldBoundary2DEvent, WorldBoundary2DFSM, WorldBoundary2DHandle, WorldBoundary2DHit, WorldBoundary2DHits, WorldBoundary2DOptions, WorldBoundary2DPosition, WorldBoundary2DState, computeWorldBoundary2DHits, createPhysicsBodyComponent, createThrusterInputComponent, createThrusterMovementComponent, createThrusterStateComponent, createTransformComponent, hasAnyWorldBoundary2DHit, useBehavior } from './behaviors.js';
 export { m as makeMoveable, b as move, a as moveable, r as resetVelocity } from './moveable-B_vyA6cw.js';
 export { m as makeRotatable, a as makeTransformable, r as rotatable, b as rotateInDirection } from './transformable-CUhvyuYO.js';
@@ -39,8 +39,8 @@ declare const StageManager: {
             data?: {
                 [x: string]: any;
             } | undefined;
-            id: string;
             type: string;
+            id: string;
         }[];
     }>;
     registerStaticStage(id: string, blueprint: StageBlueprint): void;
@@ -226,4 +226,26 @@ declare class ZylemGameElement extends HTMLElement {
     disconnectedCallback(): void;
 }
 
-export { type DebugTools, Game, StageBlueprint, StageManager, type TemplateFactory, ZylemGameElement, type ZylemGameState, clearGlobalSubscriptions, createEntityFactory, createGlobal, createVariable, debugState, destroy, getGlobal, getGlobals, getVariable, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setDebugTool, setGlobal, setPaused, setVariable, stageState };
+declare const fireShader: {
+    vertex: string;
+    fragment: string;
+};
+
+declare const starShader: {
+    vertex: string;
+    fragment: string;
+};
+
+declare const standardShader: {
+    vertex: string;
+    fragment: string;
+};
+
+declare const debugShader: {
+    vertex: string;
+    fragment: string;
+};
+
+declare const objectVertexShader = "\nuniform vec2 uvScale;\nvarying vec2 vUv;\n\nvoid main() {\n\tvUv = uv;\n\tvec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );\n\tgl_Position = projectionMatrix * mvPosition;\n}\n";
+
+export { type DebugTools, Game, StageBlueprint, StageManager, type TemplateFactory, ZylemGameElement, type ZylemGameState, clearGlobalSubscriptions, createEntityFactory, createGlobal, createVariable, debugShader, debugState, destroy, fireShader, getGlobal, getGlobals, getVariable, objectVertexShader, onGlobalChange, onGlobalChanges, onVariableChange, onVariableChanges, pingPongBeep, ricochetSound, setDebugTool, setGlobal, setPaused, setVariable, stageState, standardShader, starShader };
