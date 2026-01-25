@@ -1,13 +1,13 @@
-import type { Component, JSX } from 'solid-js';
-import { Dynamic } from 'solid-js/web';
+import type { Component } from 'solid-js';
 import Box from 'lucide-solid/icons/box';
-import Circle from 'lucide-solid/icons/circle';
-import Image from 'lucide-solid/icons/image';
 import Type from 'lucide-solid/icons/type';
-import User from 'lucide-solid/icons/user';
 import Square from 'lucide-solid/icons/square';
-import Layers from 'lucide-solid/icons/layers';
 import Grid3x3 from 'lucide-solid/icons/grid-3x3';
+import Torus from 'lucide-solid/icons/torus';
+import PersonStanding from 'lucide-solid/icons/person-standing';
+import GhostIcon from 'lucide-solid/icons/ghost';
+import SquareDashed from 'lucide-solid/icons/square-dashed';
+import Globe from 'lucide-solid/icons/globe';
 
 /**
  * Map entity type strings to lucide-solid icons.
@@ -15,13 +15,14 @@ import Grid3x3 from 'lucide-solid/icons/grid-3x3';
  */
 const ICON_MAP: Record<string, Component<{ class?: string }>> = {
 	Box: Box as Component<{ class?: string }>,
-	Sphere: Circle as Component<{ class?: string }>,
-	Sprite: Image as Component<{ class?: string }>,
-	Actor: User as Component<{ class?: string }>,
+	Sphere: Globe as Component<{ class?: string }>,
+	Disk: Torus as Component<{ class?: string }>,
+	Sprite: GhostIcon as Component<{ class?: string }>,
+	Actor: PersonStanding as Component<{ class?: string }>,
 	Text: Type as Component<{ class?: string }>,
 	Rect: Square as Component<{ class?: string }>,
-	Plane: Layers as Component<{ class?: string }>,
-	Zone: Grid3x3 as Component<{ class?: string }>,
+	Plane: Grid3x3 as Component<{ class?: string }>,
+	Zone: SquareDashed as Component<{ class?: string }>,
 };
 
 export interface EntityIconProps {
