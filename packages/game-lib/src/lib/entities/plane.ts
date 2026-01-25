@@ -1,5 +1,5 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
-import { Color, PlaneGeometry, Vector2, Vector3 } from 'three';
+import { PlaneGeometry, Vector2, Vector3 } from 'three';
 import { TexturePath } from '../graphics/material';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
@@ -21,16 +21,14 @@ type ZylemPlaneOptions = GameEntityOptions & {
 
 const DEFAULT_SUBDIVISIONS = 4;
 
+import { commonDefaults } from './common';
+
 const planeDefaults: ZylemPlaneOptions = {
+	...commonDefaults,
 	tile: new Vector2(10, 10),
 	repeat: new Vector2(1, 1),
-	position: new Vector3(0, 0, 0),
 	collision: {
 		static: true,
-	},
-	material: {
-		color: new Color('#ffffff'),
-		shader: 'standard'
 	},
 	subdivisions: DEFAULT_SUBDIVISIONS,
 	randomizeHeight: false,

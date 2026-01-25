@@ -6,6 +6,7 @@ import { ZylemBox, BOX_TYPE } from '../entities/box';
 import { ZylemPlane, PLANE_TYPE } from '../entities/plane';
 import { ZylemZone, ZONE_TYPE } from '../entities/zone';
 import { ZylemActor, ACTOR_TYPE } from '../entities/actor';
+import { ZylemDisk, DISK_TYPE } from '../entities/disk';
 import { BaseNode } from '../core/base-node';
 
 /**
@@ -21,6 +22,7 @@ export interface EntityTypeMap {
 	[PLANE_TYPE]: ZylemPlane;
 	[ZONE_TYPE]: ZylemZone;
 	[ACTOR_TYPE]: ZylemActor;
+	[DISK_TYPE]: ZylemDisk;
 }
 
 /**
@@ -41,4 +43,5 @@ export {
 	PLANE_TYPE,
 	ZONE_TYPE,
 	ACTOR_TYPE,
+	DISK_TYPE,
 };

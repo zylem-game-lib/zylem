@@ -1,3 +1,6 @@
+import { objectVertexShader } from './vertex/object.shader';
+
+const fragment = `
 #include <common>
  
 uniform vec3 iResolution;
@@ -47,3 +50,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 void main() {
   mainImage(gl_FragColor, vUv);
 }
+`;
+
+export const fireShader = {
+    vertex: objectVertexShader,
+    fragment
+};

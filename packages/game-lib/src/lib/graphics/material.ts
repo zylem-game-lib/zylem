@@ -9,13 +9,15 @@ import {
 	Vector3
 } from 'three';
 import { shortHash, sortedStringify } from '../core/utility/strings';
-import shaderMap, { ZylemShaderObject, ZylemShaderType } from './preset-shader';
+import { standardShader } from './shaders/standard.shader';
 import { assetManager } from '../core/asset-manager';
+
+export type ZylemShaderObject = { fragment: string, vertex: string };
 
 export interface MaterialOptions {
 	path?: string;
 	repeat?: Vector2;
-	shader?: ZylemShaderType;
+	shader?: ZylemShaderObject;
 	color?: Color;
 }
 
@@ -56,9 +58,19 @@ export class MaterialBuilder {
 
 	build(options: Partial<MaterialOptions>, entityType: symbol): void {
 		const { path, repeat, color, shader } = options;
-		if (shader) this.withShader(shader);
-		if (color) this.withColor(color);
-		this.setTexture(path ?? null, repeat);
+		// If shader is provided, use it; otherwise execute standard logic
+		if (shader) {
+			this.withShader(shader);
+		} else if (path) {
+			// If path provided but no shader, standard texture logic applies
+			this.setTexture(path, repeat);
+		}
+		
+		if (color) {
+			// standard color material if no custom shader
+			this.withColor(color);
+		}
+
 		if (this.materials.length === 0) {
 			this.setColor(new Color('#ffffff'));
 		}
@@ -70,8 +82,8 @@ export class MaterialBuilder {
 		return this;
 	}
 
-	withShader(shaderType: ZylemShaderType): this {
-		this.setShader(shaderType);
+	withShader(shader: ZylemShaderObject): this {
+		this.setShader(shader);
 		return this;
 	}
 
@@ -112,8 +124,8 @@ export class MaterialBuilder {
 		this.materials.push(material);
 	}
 
-	setShader(customShader: ZylemShaderType) {
-		const { fragment, vertex } = shaderMap.get(customShader) ?? shaderMap.get('standard') as ZylemShaderObject;
+	setShader(customShader: ZylemShaderObject) {
+		const { fragment, vertex } = customShader ?? standardShader;
 
 		const shader = new ShaderMaterial({
 			uniforms: {
@@ -125,6 +137,7 @@ export class MaterialBuilder {
 			},
 			vertexShader: vertex,
 			fragmentShader: fragment,
+			transparent: true,
 		});
 		this.materials.push(shader);
 	}

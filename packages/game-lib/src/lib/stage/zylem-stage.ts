@@ -36,6 +36,7 @@ export interface ZylemStageConfig {
 	inputs: Record<string, string[]>;
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
+	backgroundShader: any | null;
 	gravity: Vector3;
 	variables: Record<string, any>;
 	stageRef?: Stage;
@@ -127,6 +128,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			inputs: parsed.config.inputs,
 			backgroundColor: parsed.config.backgroundColor,
 			backgroundImage: parsed.config.backgroundImage,
+			backgroundShader: parsed.config.backgroundShader,
 			gravity: parsed.config.gravity,
 			variables: parsed.config.variables,
 			entities: [],
@@ -302,6 +304,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			}
 		});
 		this.scene.update({ delta });
+		this.scene.updateSkybox(delta);
 	}
 
 	public outOfLoop() {

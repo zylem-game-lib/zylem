@@ -11,16 +11,11 @@ import { createEntity } from './create';
 
 type ZylemBoxOptions = GameEntityOptions;
 
+import { commonDefaults } from './common';
+
 const boxDefaults: ZylemBoxOptions = {
+	...commonDefaults,
 	size: new Vector3(1, 1, 1),
-	position: new Vector3(0, 0, 0),
-	collision: {
-		static: false,
-	},
-	material: {
-		color: new Color('#ffffff'),
-		shader: 'standard'
-	},
 };
 
 export class BoxCollisionBuilder extends EntityCollisionBuilder {

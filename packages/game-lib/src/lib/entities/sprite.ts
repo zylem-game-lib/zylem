@@ -12,6 +12,7 @@ import { EntityCollisionBuilder } from './builder';
 import { createEntity } from './create';
 import { DestroyContext, DestroyFunction, UpdateContext, UpdateFunction } from '../core/base-node-life-cycle';
 import { DebugDelegate } from './delegates/debug';
+import { standardShader } from '../graphics/shaders/standard.shader';
 
 export type SpriteImage = { name: string; file: string };
 export type SpriteAnimation = {
@@ -28,16 +29,11 @@ type ZylemSpriteOptions = GameEntityOptions & {
 	collisionSize?: Vector3;
 };
 
+import { commonDefaults } from './common';
+
 const spriteDefaults: ZylemSpriteOptions = {
+	...commonDefaults,
 	size: new Vector3(1, 1, 1),
-	position: new Vector3(0, 0, 0),
-	collision: {
-		static: false,
-	},
-	material: {
-		color: new Color('#ffffff'),
-		shader: 'standard'
-	},
 	images: [],
 	animations: [],
 };

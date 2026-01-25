@@ -28,6 +28,7 @@ export { createZone } from '../lib/entities/zone';
 export { createActor } from '../lib/entities/actor';
 export { createText } from '../lib/entities/text';
 export { createRect } from '../lib/entities/rect';
+export { createDisk } from '../lib/entities/disk';
 export { createEntityFactory, type TemplateFactory } from '../lib/entities/entity-factory';
 export { ZylemBox } from '../lib/entities/box';
 
@@ -95,3 +96,11 @@ export {
 	type StageConfigPayload,
 	type EntityConfigPayload,
 } from '../lib/events';
+
+// Shaders
+export { fireShader } from '../lib/graphics/shaders/fire.shader';
+export { starShader } from '../lib/graphics/shaders/star.shader';
+export { standardShader } from '../lib/graphics/shaders/standard.shader';
+export { debugShader } from '../lib/graphics/shaders/debug.shader';
+export { objectVertexShader } from '../lib/graphics/shaders/vertex/object.shader';
+export type { ZylemShaderObject } from '../lib/graphics/material';

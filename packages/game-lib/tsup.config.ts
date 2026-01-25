@@ -1,5 +1,4 @@
 import { defineConfig } from 'tsup';
-import fs from 'fs';
 
 export default defineConfig({
 	entry: {
@@ -36,18 +35,4 @@ export default defineConfig({
 			js: '.js',
 		};
 	},
-	esbuildPlugins: [
-		{
-			name: 'glsl-loader',
-			setup(build) {
-				build.onLoad({ filter: /\.glsl$/}, async (args) => {
-					const text = await fs.promises.readFile(args.path, 'utf8');
-					return {
-						contents: `export default ${JSON.stringify(text)}`,
-						loader: 'js',
-					};
-				});
-			},
-		},
-	],
 });

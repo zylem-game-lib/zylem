@@ -1,3 +1,6 @@
+import { debugVertexShader } from './vertex/debug.shader';
+
+const fragment = `
 varying vec3 vBarycentric;
 uniform vec3 baseColor;
 uniform vec3 wireframeColor;
@@ -18,3 +21,9 @@ void main() {
     
     gl_FragColor = vec4(finalColor, 1.0);
 }
+`;
+
+export const debugShader = {
+    vertex: debugVertexShader,
+    fragment
+};

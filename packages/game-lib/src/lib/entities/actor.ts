@@ -12,6 +12,8 @@ import { MaterialOptions } from '../graphics/material';
 import { DebugInfoProvider } from './delegates/debug';
 import { EntityBuilder } from './builder';
 import { EntityCollisionBuilder } from './builder';
+import { commonDefaults } from './common';
+import { standardShader } from '~/api/main';
 
 type AnimationObject = {
 	key?: string;
@@ -30,14 +32,14 @@ type ZylemActorOptions = GameEntityOptions & {
 };
 
 const actorDefaults: ZylemActorOptions = {
-	position: { x: 0, y: 0, z: 0 },
+	...commonDefaults,
 	collision: {
 		static: false,
 		size: new Vector3(0.5, 0.5, 0.5),
 		position: new Vector3(0, 0, 0),
 	},
 	material: {
-		shader: 'standard',
+		shader: standardShader
 	},
 	animations: [],
 	models: [],

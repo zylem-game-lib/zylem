@@ -7,6 +7,7 @@ import { EntityCollisionBuilder } from './builder';
 import { createEntity } from './create';
 import { CollisionHandlerDelegate } from '../collision/world';
 import { state } from '../game/game-state';
+import { commonDefaults } from './common';
 
 export type OnHeldParams = {
 	delta: number;
@@ -28,13 +29,10 @@ type ZylemZoneOptions = GameEntityOptions & {
 };
 
 const zoneDefaults: ZylemZoneOptions = {
+	...commonDefaults,
 	size: new Vector3(1, 1, 1),
-	position: new Vector3(0, 0, 0),
 	collision: {
 		static: true,
-	},
-	material: {
-		shader: 'standard'
 	},
 };
 

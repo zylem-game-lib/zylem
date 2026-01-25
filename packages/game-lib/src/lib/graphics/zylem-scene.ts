@@ -5,7 +5,12 @@ import {
 	DirectionalLight,
 	Object3D,
 	Vector3,
-	GridHelper
+	GridHelper,
+	SphereGeometry,
+	BoxGeometry,
+	ShaderMaterial,
+	Mesh,
+	BackSide
 } from 'three';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
@@ -14,10 +19,12 @@ import { debugState } from '../debug/debug-state';
 import { SetupFunction } from '../core/base-node-life-cycle';
 import { getGlobals } from '../game/game-state';
 import { assetManager } from '../core/asset-manager';
+import { ZylemShaderObject } from './material';
 
 interface SceneState {
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
+	backgroundShader?: ZylemShaderObject | null;
 }
 
 export class ZylemScene implements Entity<ZylemScene> {
@@ -33,12 +40,20 @@ export class ZylemScene implements Entity<ZylemScene> {
 	name?: string | undefined;
 	tag?: Set<string> | undefined;
 
+	// Skybox for background shaders
+	private skyboxMaterial: ShaderMaterial | null = null;
+
 	constructor(id: string, camera: ZylemCamera, state: SceneState) {
 		const scene = new Scene();
 		const isColor = state.backgroundColor instanceof Color;
 		const backgroundColor = (isColor) ? state.backgroundColor : new Color(state.backgroundColor);
 		scene.background = backgroundColor as Color;
-		if (state.backgroundImage) {
+		
+		console.log('ZylemScene state.backgroundShader:', state.backgroundShader);
+		
+		if (state.backgroundShader) {
+			this.setupBackgroundShader(scene, state.backgroundShader);
+		} else if (state.backgroundImage) {
 			// Load background image asynchronously via asset manager
 			assetManager.loadTexture(state.backgroundImage).then(texture => {
 				scene.background = texture;
@@ -55,6 +70,50 @@ export class ZylemScene implements Entity<ZylemScene> {
 		}
 	}
 
+	/**
+	 * Create a large inverted box with the shader for skybox effect
+	 * Uses the pos.xyww trick to ensure skybox is always at maximum depth
+	 */
+	private setupBackgroundShader(scene: Scene, shader: ZylemShaderObject) {
+		// Clear the solid color background
+		scene.background = null;
+
+		// Skybox vertex shader with depth trick (pos.xyww ensures depth = 1.0)
+		const skyboxVertexShader = `
+			varying vec2 vUv;
+			varying vec3 vWorldPosition;
+			
+			void main() {
+				vUv = uv;
+				vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+				vWorldPosition = worldPosition.xyz;
+				vec4 pos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+				gl_Position = pos.xyww;  // Ensures depth is always 1.0 (farthest)
+			}
+		`;
+
+		// Create shader material with skybox-specific settings
+		this.skyboxMaterial = new ShaderMaterial({
+			vertexShader: skyboxVertexShader,
+			fragmentShader: shader.fragment,
+			uniforms: {
+				iTime: { value: 0.0 },
+			},
+			side: BackSide,  // Render on inside of geometry
+			depthWrite: false,  // Don't write to depth buffer
+			depthTest: true,  // But do test depth
+		});
+
+		// Use BoxGeometry for skybox (like the CodePen example)
+		const geometry = new BoxGeometry(1, 1, 1);
+		const skybox = new Mesh(geometry, this.skyboxMaterial);
+		skybox.scale.setScalar(100000);  // Scale up significantly
+		skybox.frustumCulled = false;  // Always render
+		scene.add(skybox);
+		
+		console.log('Skybox created with pos.xyww technique');
+	}
+
 	setup() {
 		if (this._setup) {
 			this._setup({ me: this, camera: this.zylemCamera, globals: getGlobals() });
@@ -64,6 +123,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 	destroy() {
 		if (this.zylemCamera && (this.zylemCamera as any).destroy) {
 			(this.zylemCamera as any).destroy();
+		}
+		if (this.skyboxMaterial) {
+			this.skyboxMaterial.dispose();
 		}
 		if (this.scene) {
 			this.scene.traverse((obj: any) => {
@@ -171,5 +233,14 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 		const gridHelper = new GridHelper(size, divisions);
 		this.scene.add(gridHelper);
+	}
+
+	/**
+	 * Update skybox shader uniforms
+	 */
+	updateSkybox(delta: number) {
+		if (this.skyboxMaterial?.uniforms?.iTime) {
+			this.skyboxMaterial.uniforms.iTime.value += delta;
+		}
 	}
 }

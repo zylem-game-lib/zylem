@@ -12,6 +12,7 @@ import { ZylemBlueColor } from '../core/utility/vector';
 export const initialStageState = {
 	backgroundColor: ZylemBlueColor,
 	backgroundImage: null,
+	backgroundShader: null,
 	inputs: {
 		p1: ['gamepad-1', 'keyboard'],
 		p2: ['gamepad-2', 'keyboard'],

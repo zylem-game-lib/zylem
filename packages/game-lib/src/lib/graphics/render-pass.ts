@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import fragmentShader from './shaders/fragment/standard.glsl';
-import vertexShader from './shaders/vertex/standard.glsl';
+import { standardShader } from './shaders/standard.shader';
 import { WebGLRenderer, WebGLRenderTarget } from 'three';
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
@@ -70,8 +69,8 @@ export default class RenderPass extends Pass {
 					)
 				}
 			},
-			vertexShader: vertexShader,
-			fragmentShader: fragmentShader
+			vertexShader: standardShader.vertex,
+			fragmentShader: standardShader.fragment
 		});
 	}
 

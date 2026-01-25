@@ -7,22 +7,18 @@ import { EntityBuilder } from './builder';
 import { EntityCollisionBuilder } from './builder';
 import { EntityMeshBuilder } from './builder';
 import { DebugDelegate } from './delegates/debug';
+import { standardShader } from '../graphics/shaders/standard.shader';
 import { createEntity } from './create';
 
 type ZylemSphereOptions = GameEntityOptions & {
 	radius?: number;
 };
 
+import { commonDefaults } from './common';
+
 const sphereDefaults: ZylemSphereOptions = {
+	...commonDefaults,
 	radius: 1,
-	position: new Vector3(0, 0, 0),
-	collision: {
-		static: false,
-	},
-	material: {
-		color: new Color('#ffffff'),
-		shader: 'standard'
-	},
 };
 
 export class SphereCollisionBuilder extends EntityCollisionBuilder {
