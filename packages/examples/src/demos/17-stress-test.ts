@@ -4,7 +4,7 @@
 // TODO: need to create a material map for reused materials
 
 import { Color, Vector2, Vector3 } from 'three';
-import { createGame, createStage, createBox, createSphere, createCamera, createPlane } from '@zylem/game-lib';
+import { createGame, createStage, createBox, createSphere, createCamera, createPlane, fireShader, starShader } from '@zylem/game-lib';
 
 import rainManPath from '@zylem/assets/2d/rain-man.png';
 import grassNormalPath from '@zylem/assets/3d/textures/grass-normal.png';
@@ -24,10 +24,10 @@ let testBoxes: any[] = [];
 
 for (let i = 0; i < 20; i++) {
 	for (let j = 0; j < 5; j++) {
-		const nextBox = createBox({
+			const nextBox = createBox({
 			size: new Vector3(1 + Math.random() * 1, 1 + Math.random() * 1, 1 + Math.random() * 1),
 			position: new Vector3(i - 10, j + 2, 5),
-			material: { shader: 'star' },
+			material: { shader: starShader },
 			custom: {
 				superProp: 1
 			}
@@ -36,7 +36,7 @@ for (let i = 0; i < 20; i++) {
 		const nextBox2 = createSphere({
 			radius: 0.25 + Math.random() * 0.5,
 			position: new Vector3(i - 10, 10 + j, 3),
-			material: { shader: 'fire' }
+			material: { shader: fireShader }
 		});
 		testBoxes.push(nextBox2);
 	}
@@ -54,7 +54,7 @@ const testground = createPlane({
 const testSphere = createSphere({
 	position: new Vector3(0, 3, 10),
 	material: {
-		shader: 'star'
+		shader: starShader
 	}
 })
 
@@ -70,7 +70,7 @@ for (let k = 0; k < 6; k++) {
 				collision: { static: false },
 				material: {
 					color: useShader ? undefined : new Color(Color.NAMES[key as keyof typeof Color.NAMES]),
-					shader: useShader ? 'star' : 'standard'
+					shader: useShader ? starShader : undefined
 				},
 				radius: 0.2 + Math.random() * 1.5,
 				position: { x: (j * 2) - 2, y: i + 2 + (i * 2), z: 10 + k * 2 },

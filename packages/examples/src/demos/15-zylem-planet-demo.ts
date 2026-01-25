@@ -1,31 +1,41 @@
-import { Color, Vector3 } from 'three';
-import { createGame, createStage, createSphere, createCamera, Perspectives } from '@zylem/game-lib';
+import { Vector3 } from 'three';
+import { createGame, createStage, createSphere, createDisk, createCamera, Perspectives, makeTransformable } from '@zylem/game-lib';
+import { planetShader } from './planet-demo/planet.shader';
+import { ringShader } from './planet-demo/ring.shader';
+import { starfieldShader } from './planet-demo/starfield.shader';
 
-// TODO: custom shader and texture for planet
+// Planet with blue procedural shader
 const planet = createSphere({
-	radius: 10,
-	material: { color: new Color(Color.NAMES.blue) },
+	radius: 20,
+	material: { shader: planetShader },
 });
 
-// TODO: ring entity for planet
+// Ring around planet with red procedural shader
+const ring = makeTransformable(createDisk({
+  innerRadius: 25,
+  outerRadius: 36,
+  thetaSegments: 64,
+  material: { shader: ringShader },
+})).onSetup(({ me }) => {
+  me.setRotationDegreesZ(-23);
+});
 
-// TODO: more options for camera
 const camera = createCamera({
 	perspective: Perspectives.ThirdPerson,
-	position: new Vector3(0, 0, -60),
+	position: new Vector3(0, 30, -80),
 	target: new Vector3(0, 0, 0),
 });
 
-// TODO: particle system for stage
-const stage1 = createStage({
-	backgroundColor: new Color(Color.NAMES.black),
+const stage = createStage({
+	backgroundShader: starfieldShader,
 }, camera);
 
-stage1.add(planet);
+stage.add(planet);
+stage.add(ring);
 
 const game = createGame({
 	id: 'zylem-planet-demo',
 	debug: true,
-}, stage1);
+}, stage);
 
 export default game;
