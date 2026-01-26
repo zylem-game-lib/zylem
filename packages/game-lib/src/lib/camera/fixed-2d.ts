@@ -1,5 +1,5 @@
-import { Scene, Vector2, WebGLRenderer } from 'three';
-import { PerspectiveController, ZylemCamera } from './zylem-camera';
+import { Scene, Vector2 } from 'three';
+import { PerspectiveController, ZylemCamera, ZylemRenderer } from './zylem-camera';
 
 /**
  * Fixed 2D Camera Controller
@@ -7,7 +7,7 @@ import { PerspectiveController, ZylemCamera } from './zylem-camera';
  */
 export class Fixed2DCamera implements PerspectiveController {
 	screenResolution: Vector2 | null = null;
-	renderer: WebGLRenderer | null = null;
+	renderer: ZylemRenderer | null = null;
 	scene: Scene | null = null;
 	cameraRef: ZylemCamera | null = null;
 
@@ -18,7 +18,7 @@ export class Fixed2DCamera implements PerspectiveController {
 	/**
 	 * Setup the fixed 2D camera controller
 	 */
-	setup(params: { screenResolution: Vector2; renderer: WebGLRenderer; scene: Scene; camera: ZylemCamera }) {
+	setup(params: { screenResolution: Vector2; renderer: ZylemRenderer; scene: Scene; camera: ZylemCamera }) {
 		const { screenResolution, renderer, scene, camera } = params;
 		this.screenResolution = screenResolution;
 		this.renderer = renderer;

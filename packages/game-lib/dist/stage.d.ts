@@ -1,16 +1,17 @@
-import { S as StageStateInterface } from './stage-types-Bd-KtcYT.js';
-export { a as StageOptions, c as createStage } from './stage-types-Bd-KtcYT.js';
-export { S as StageBlueprint, e as entitySpawner } from './blueprints-Cq3Ko6_G.js';
-import './world-C8tQ7Plj.js';
+import { S as StageStateInterface } from './stage-types-BqXdYMzu.js';
+export { a as StageOptions, c as createStage } from './stage-types-BqXdYMzu.js';
+export { S as StageBlueprint, e as entitySpawner } from './blueprints-DGCyjTBI.js';
+import './world-VVcvzTVb.js';
 import 'three';
 import '@dimforge/rapier3d-compat';
 import './entity-Bq_eNEDI.js';
 import 'bitecs';
 import 'mitt';
-import './camera-CeJPAgGg.js';
+import './camera-DrTbdaJ1.js';
+import 'three/webgpu';
 import 'three/examples/jsm/postprocessing/EffectComposer.js';
 import './entity-types-DAu8sGJH.js';
-import './entities-DvByhMGU.js';
+import './entities-Nn7RlZgV.js';
 import '@sinclair/typebox';
 
 /**

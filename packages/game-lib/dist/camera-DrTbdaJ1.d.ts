@@ -1,4 +1,5 @@
 import { Object3D, Camera, Vector2, WebGLRenderer, Scene, Vector3 } from 'three';
+import { WebGPURenderer } from 'three/webgpu';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { S as StageEntity } from './entity-Bq_eNEDI.js';
 
@@ -21,12 +22,27 @@ interface CameraDebugDelegate {
 }
 
 /**
+ * Renderer type option for choosing rendering backend
+ * - 'auto': Try WebGPU first, fall back to WebGL
+ * - 'webgpu': Force WebGPU (error if not supported)
+ * - 'webgl': Force WebGL
+ */
+type RendererType = 'auto' | 'webgpu' | 'webgl';
+/**
+ * Union type for renderer instances
+ */
+type ZylemRenderer = WebGLRenderer | WebGPURenderer;
+/**
+ * Check if WebGPU is supported in the current browser
+ */
+declare function isWebGPUSupported(): Promise<boolean>;
+/**
  * Interface for perspective-specific camera controllers
  */
 interface PerspectiveController {
     setup(params: {
         screenResolution: Vector2;
-        renderer: WebGLRenderer;
+        renderer: ZylemRenderer;
         scene: Scene;
         camera: ZylemCamera;
     }): void;
@@ -37,15 +53,26 @@ declare class ZylemCamera {
     cameraRig: Object3D | null;
     camera: Camera;
     screenResolution: Vector2;
-    renderer: WebGLRenderer;
+    renderer: ZylemRenderer;
     composer: EffectComposer;
     _perspective: PerspectiveType;
     target: StageEntity | null;
     sceneRef: Scene | null;
     frustumSize: number;
+    rendererType: RendererType;
+    private _isWebGPU;
     perspectiveController: PerspectiveController | null;
     private orbitController;
-    constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize?: number);
+    constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize?: number, rendererType?: RendererType);
+    /**
+     * Initialize renderer (must be called before setup)
+     * This is async because WebGPU requires async initialization
+     */
+    initRenderer(): Promise<void>;
+    /**
+     * Check if using WebGPU renderer
+     */
+    get isWebGPU(): boolean;
     /**
      * Setup the camera with a scene
      */
@@ -106,6 +133,12 @@ interface CameraOptions {
     target?: Vector3;
     zoom?: number;
     screenResolution?: Vector2;
+    /**
+     * Renderer type: 'auto' | 'webgpu' | 'webgl'
+     * Use 'webgpu' for TSL shaders
+     * @default 'webgl'
+     */
+    rendererType?: RendererType;
 }
 declare class CameraWrapper {
     cameraRef: ZylemCamera;
@@ -113,4 +146,4 @@ declare class CameraWrapper {
 }
 declare function createCamera(options: CameraOptions): CameraWrapper;
 
-export { type CameraDebugDelegate as C, type PerspectiveType as P, ZylemCamera as Z, type CameraDebugState as a, CameraWrapper as b, createCamera as c, Perspectives as d };
+export { type CameraDebugDelegate as C, type PerspectiveType as P, type RendererType as R, ZylemCamera as Z, type CameraDebugState as a, CameraWrapper as b, createCamera as c, Perspectives as d, type ZylemRenderer as e, isWebGPUSupported as i };

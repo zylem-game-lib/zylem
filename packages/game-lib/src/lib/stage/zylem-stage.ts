@@ -3,10 +3,10 @@ import { Color, Vector3, Vector2 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
+import { InstanceManager } from '../graphics/instance-manager';
 import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, setStageVariables, clearVariables, initialStageState } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
-import { ZylemBlueColor } from '../core/utility/vector';
 import { debugState } from '../debug/debug-state';
 import { subscribe } from 'valtio/vanilla';
 import { getGlobals } from "../game/game-state";
@@ -69,6 +69,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
+	instanceManager: InstanceManager | null = null;
 
 	children: Array<BaseNode> = [];
 	_childrenMap: Map<number, BaseNode> = new Map();
@@ -188,6 +189,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.scene.setup();
 		this.entityModelDelegate.attach(this.scene);
 
+		// Initialize instance manager for mesh batching
+		this.instanceManager = new InstanceManager();
+		this.instanceManager.setScene(this.scene.scene);
+
 		this.loadingDelegate.emitStart();
 
 		// Run entity loading with generator pattern for real-time progress
@@ -303,6 +308,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 				this.removeEntityByUuid(child.uuid);
 			}
 		});
+		// Sync instanced mesh transforms
+		this.instanceManager?.update();
 		this.scene.update({ delta });
 		this.scene.updateSkybox(delta);
 	}
@@ -348,6 +355,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.cameraDebugDelegate = null;
 
 		this.entityModelDelegate.dispose();
+
+		// Dispose instance manager
+		this.instanceManager?.dispose();
+		this.instanceManager = null;
 
 		this.isLoaded = false;
 		this.world = null as any;
@@ -396,8 +407,57 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			globals: getGlobals(),
 			camera: this.scene.zylemCamera,
 		});
+
+		// Register for instanced rendering if opted in
+		this.tryRegisterInstance(entity);
+
 		this.addEntityToStage(entity);
 		this.entityModelDelegate.observe(entity);
+	}
+
+	/**
+	 * Try to register an entity for instanced rendering.
+	 * Batching is enabled by default unless explicitly disabled with batched: false.
+	 */
+	private tryRegisterInstance(entity: GameEntity<any>): void {
+		if (!this.instanceManager) return;
+
+		// Batching is disabled by default, must be explicitly enabled
+		const options = entity.options as any;
+		if (options?.batched !== true) return;
+
+		// Need mesh with geometry and material
+		if (!entity.mesh?.geometry || !entity.materials?.length) return;
+
+		const geometry = entity.mesh.geometry;
+		const material = entity.materials[0];
+
+		// Generate batch key based on entity type and options
+		const entityType = (entity.constructor as any).type?.description || 'unknown';
+		const size = options.size || { x: 1, y: 1, z: 1 };
+		const matOptions = options.material || {};
+
+		const batchKey = InstanceManager.generateBatchKey({
+			geometryType: entityType,
+			dimensions: { x: size.x, y: size.y, z: size.z },
+			materialPath: matOptions.path || null,
+			shaderType: matOptions.shader ? 'custom' : 'standard',
+			colorHex: matOptions.color?.getHex?.() || 0xffffff,
+		});
+
+		// Register with instance manager
+		const instanceId = this.instanceManager.register(entity, geometry, material, batchKey);
+
+		if (instanceId >= 0) {
+			entity.batchKey = batchKey;
+			entity.instanceId = instanceId;
+			entity.isInstanced = true;
+
+			// Hide the individual mesh since it's now part of an instanced batch
+			if (entity.mesh) {
+				entity.mesh.visible = false;
+			}
+		}
 	}
 
 	buildEntityState(child: BaseNode): Partial<BaseEntityInterface> {
@@ -477,6 +537,11 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		if (!entity) return false;
 
 		this.entityModelDelegate.unobserve(uuid);
+
+		// Unregister from instance manager if instanced
+		if (entity.isInstanced && this.instanceManager) {
+			this.instanceManager.unregister(entity);
+		}
 
 		this.world.destroyEntity(entity);
 

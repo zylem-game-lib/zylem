@@ -334,6 +334,13 @@ var init_entity = __esm({
         collision: []
       };
       collisionType;
+      // Instancing support
+      /** Batch key for instanced rendering (null if not instanced) */
+      batchKey = null;
+      /** Index within the instanced mesh batch */
+      instanceId = -1;
+      /** Whether this entity uses instanced rendering */
+      isInstanced = false;
       /**
        * @deprecated Use the new ECS-based behavior system instead.
        * Use 'any' for callback types to avoid contravariance issues
@@ -1360,15 +1367,32 @@ var init_asset_manager = __esm({
 });
 
 // src/lib/graphics/material.ts
+import { Color as Color2, Vector2 as Vector22, Vector3 as Vector32 } from "three";
 import {
-  Color as Color2,
   MeshPhongMaterial,
   MeshStandardMaterial,
   RepeatWrapping as RepeatWrapping2,
-  ShaderMaterial as ShaderMaterial2,
-  Vector2 as Vector22,
-  Vector3 as Vector32
+  ShaderMaterial as ShaderMaterial2
 } from "three";
+import {
+  MeshBasicNodeMaterial,
+  MeshStandardNodeMaterial
+} from "three/webgpu";
+import {
+  uniform,
+  uv,
+  time,
+  vec3,
+  vec4,
+  float,
+  Fn
+} from "three/tsl";
+function isTSLShader(shader) {
+  return "colorNode" in shader;
+}
+function isGLSLShader(shader) {
+  return "fragment" in shader && "vertex" in shader;
+}
 var MaterialBuilder;
 var init_material = __esm({
   "src/lib/graphics/material.ts"() {
@@ -1379,6 +1403,11 @@ var init_material = __esm({
     MaterialBuilder = class _MaterialBuilder {
       static batchMaterialMap = /* @__PURE__ */ new Map();
       materials = [];
+      /** Whether to use TSL/NodeMaterial (for WebGPU compatibility) */
+      useTSL;
+      constructor(useTSL = false) {
+        this.useTSL = useTSL;
+      }
       batchMaterial(options, entityType) {
         const batchKey = shortHash(sortedStringify(options));
         const mappedObject = _MaterialBuilder.batchMaterialMap.get(batchKey);
@@ -1390,69 +1419,101 @@ var init_material = __esm({
             mappedObject.geometryMap.set(entityType, 1);
           }
         } else {
-          _MaterialBuilder.batchMaterialMap.set(
-            batchKey,
-            {
-              geometryMap: /* @__PURE__ */ new Map([[entityType, 1]]),
-              material: this.materials[0]
-            }
-          );
+          _MaterialBuilder.batchMaterialMap.set(batchKey, {
+            geometryMap: /* @__PURE__ */ new Map([[entityType, 1]]),
+            material: this.materials[0]
+          });
         }
       }
       build(options, entityType) {
-        const { path, repeat, color, shader } = options;
+        const { path, repeat, color, shader, useTSL } = options;
+        const shouldUseTSL = useTSL ?? this.useTSL;
         if (shader) {
-          this.withShader(shader);
+          if (isTSLShader(shader)) {
+            this.setTSLShader(shader);
+          } else if (isGLSLShader(shader)) {
+            if (shouldUseTSL) {
+              console.warn("MaterialBuilder: GLSL shader provided but TSL mode requested. Using GLSL.");
+            }
+            this.setShader(shader);
+          }
         } else if (path) {
-          this.setTexture(path, repeat);
+          this.setTexture(path, repeat, shouldUseTSL);
         }
         if (color) {
-          this.withColor(color);
+          this.withColor(color, shouldUseTSL);
         }
         if (this.materials.length === 0) {
-          this.setColor(new Color2("#ffffff"));
+          this.setColor(new Color2("#ffffff"), shouldUseTSL);
         }
         this.batchMaterial(options, entityType);
       }
-      withColor(color) {
-        this.setColor(color);
+      withColor(color, useTSL = false) {
+        this.setColor(color, useTSL);
         return this;
       }
       withShader(shader) {
         this.setShader(shader);
         return this;
       }
+      withTSLShader(shader) {
+        this.setTSLShader(shader);
+        return this;
+      }
       /**
        * Set texture - loads in background (deferred).
        * Material is created immediately with null map, texture applies when loaded.
        */
-      setTexture(texturePath = null, repeat = new Vector22(1, 1)) {
+      setTexture(texturePath = null, repeat = new Vector22(1, 1), useTSL = false) {
         if (!texturePath) {
           return;
         }
-        const material = new MeshPhongMaterial({
-          map: null
-        });
-        this.materials.push(material);
-        assetManager.loadTexture(texturePath, {
-          clone: true,
-          repeat
-        }).then((texture) => {
-          texture.wrapS = RepeatWrapping2;
-          texture.wrapT = RepeatWrapping2;
-          material.map = texture;
-          material.needsUpdate = true;
-        });
+        if (useTSL) {
+          const material = new MeshStandardNodeMaterial();
+          this.materials.push(material);
+          assetManager.loadTexture(texturePath, {
+            clone: true,
+            repeat
+          }).then((texture) => {
+            texture.wrapS = RepeatWrapping2;
+            texture.wrapT = RepeatWrapping2;
+            material.map = texture;
+            material.needsUpdate = true;
+          });
+        } else {
+          const material = new MeshPhongMaterial({
+            map: null
+          });
+          this.materials.push(material);
+          assetManager.loadTexture(texturePath, {
+            clone: true,
+            repeat
+          }).then((texture) => {
+            texture.wrapS = RepeatWrapping2;
+            texture.wrapT = RepeatWrapping2;
+            material.map = texture;
+            material.needsUpdate = true;
+          });
+        }
       }
-      setColor(color) {
-        const material = new MeshStandardMaterial({
-          color,
-          emissiveIntensity: 0.5,
-          lightMapIntensity: 0.5,
-          fog: true
-        });
-        this.materials.push(material);
+      setColor(color, useTSL = false) {
+        if (useTSL) {
+          const material = new MeshStandardNodeMaterial();
+          material.color = color;
+          this.materials.push(material);
+        } else {
+          const material = new MeshStandardMaterial({
+            color,
+            emissiveIntensity: 0.5,
+            lightMapIntensity: 0.5,
+            fog: true
+          });
+          this.materials.push(material);
+        }
       }
+      /**
+       * Set GLSL shader (WebGL only)
+       */
       setShader(customShader) {
         const { fragment: fragment2, vertex } = customShader ?? standardShader;
         const shader = new ShaderMaterial2({
@@ -1466,9 +1527,19 @@ var init_material = __esm({
           vertexShader: vertex,
           fragmentShader: fragment2,
           transparent: true
-          // blending: NormalBlending
         });
         this.materials.push(shader);
+      }
+      /**
+       * Set TSL shader (WebGPU compatible)
+       */
+      setTSLShader(tslShader) {
+        const material = new MeshBasicNodeMaterial();
+        material.colorNode = tslShader.colorNode;
+        if (tslShader.transparent) {
+          material.transparent = true;
+        }
+        this.materials.push(material);
       }
     };
   }

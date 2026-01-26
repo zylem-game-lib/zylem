@@ -1,4 +1,5 @@
 import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, WebGLRenderer, Scene } from 'three';
+import { WebGPURenderer } from 'three/webgpu';
 import { PerspectiveType, Perspectives } from './perspective';
 import { ThirdPersonCamera } from './third-person';
 import { Fixed2DCamera } from './fixed-2d';
@@ -11,10 +12,36 @@ import { CameraOrbitController, CameraDebugDelegate } from './camera-debug-deleg
 export type { CameraDebugState, CameraDebugDelegate } from './camera-debug-delegate';
 
 /**
+ * Renderer type option for choosing rendering backend
+ * - 'auto': Try WebGPU first, fall back to WebGL
+ * - 'webgpu': Force WebGPU (error if not supported)
+ * - 'webgl': Force WebGL
+ */
+export type RendererType = 'auto' | 'webgpu' | 'webgl';
+
+/**
+ * Union type for renderer instances
+ */
+export type ZylemRenderer = WebGLRenderer | WebGPURenderer;
+
+/**
+ * Check if WebGPU is supported in the current browser
+ */
+export async function isWebGPUSupported(): Promise<boolean> {
+	if (!('gpu' in navigator)) return false;
+	try {
+		const adapter = await (navigator as any).gpu.requestAdapter();
+		return adapter !== null;
+	} catch {
+		return false;
+	}
+}
+
+/**
  * Interface for perspective-specific camera controllers
  */
 export interface PerspectiveController {
-	setup(params: { screenResolution: Vector2; renderer: WebGLRenderer; scene: Scene; camera: ZylemCamera }): void;
+	setup(params: { screenResolution: Vector2; renderer: ZylemRenderer; scene: Scene; camera: ZylemCamera }): void;
 	update(delta: number): void;
 	resize(width: number, height: number): void;
 }
@@ -23,12 +50,14 @@ export class ZylemCamera {
 	cameraRig: Object3D | null = null;
 	camera: Camera;
 	screenResolution: Vector2;
-	renderer: WebGLRenderer;
-	composer: EffectComposer;
+	renderer!: ZylemRenderer;
+	composer!: EffectComposer;
 	_perspective: PerspectiveType;
 	target: StageEntity | null = null;
 	sceneRef: Scene | null = null;
 	frustumSize = 10;
+	rendererType: RendererType;
+	private _isWebGPU = false;
 
 	// Perspective controller delegation
 	perspectiveController: PerspectiveController | null = null;
@@ -36,17 +65,11 @@ export class ZylemCamera {
 	// Debug/orbit controls delegation
 	private orbitController: CameraOrbitController | null = null;
 
-	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10) {
+	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10, rendererType: RendererType = 'webgl') {
 		this._perspective = perspective;
 		this.screenResolution = screenResolution;
 		this.frustumSize = frustumSize;
-		// Initialize renderer
-		this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
-		this.renderer.setSize(screenResolution.x, screenResolution.y);
-		this.renderer.shadowMap.enabled = true;
-
-		// Initialize composer
-		this.composer = new EffectComposer(this.renderer);
+		this.rendererType = rendererType;
 
 		// Create camera based on perspective
 		const aspectRatio = screenResolution.x / screenResolution.y;
@@ -66,23 +89,78 @@ export class ZylemCamera {
 
 		// Initialize perspective controller
 		this.initializePerspectiveController();
+	}
 
-		// Initialize orbit controller (handles debug mode orbit controls)
+	/**
+	 * Initialize renderer (must be called before setup)
+	 * This is async because WebGPU requires async initialization
+	 */
+	async initRenderer(): Promise<void> {
+		let useWebGPU = false;
+
+		if (this.rendererType === 'webgpu') {
+			useWebGPU = true;
+		} else if (this.rendererType === 'auto') {
+			useWebGPU = await isWebGPUSupported();
+		}
+
+		if (useWebGPU) {
+			try {
+				this.renderer = new WebGPURenderer({ antialias: true });
+				await this.renderer.init();
+				this._isWebGPU = true;
+				console.log('ZylemCamera: Using WebGPU renderer');
+			} catch (e) {
+				console.warn('ZylemCamera: WebGPU init failed, falling back to WebGL', e);
+				this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
+				this._isWebGPU = false;
+			}
+		} else {
+			this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
+			this._isWebGPU = false;
+			console.log('ZylemCamera: Using WebGL renderer');
+		}
+
+		this.renderer.setSize(this.screenResolution.x, this.screenResolution.y);
+		if (this.renderer instanceof WebGLRenderer) {
+			this.renderer.shadowMap.enabled = true;
+		}
+
+		// Initialize composer (WebGPU uses different post-processing, handle later)
+		if (!this._isWebGPU) {
+			this.composer = new EffectComposer(this.renderer as WebGLRenderer);
+		}
+
+		// Initialize orbit controller
 		this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement, this.cameraRig);
+	}
+
+	/**
+	 * Check if using WebGPU renderer
+	 */
+	get isWebGPU(): boolean {
+		return this._isWebGPU;
 	}
 
 	/**
 	 * Setup the camera with a scene
 	 */
 	async setup(scene: Scene) {
+		// Ensure renderer is initialized first
+		if (!this.renderer) {
+			await this.initRenderer();
+		}
+
 		this.sceneRef = scene;
 
-		// Setup render pass
-		let renderResolution = this.screenResolution.clone().divideScalar(2);
-		renderResolution.x |= 0;
-		renderResolution.y |= 0;
-		const pass = new RenderPass(renderResolution, scene, this.camera);
-		this.composer.addPass(pass);
+		// Setup render pass (only for WebGL, WebGPU has different post-processing)
+		if (!this._isWebGPU) {
+			let renderResolution = this.screenResolution.clone().divideScalar(2);
+			renderResolution.x |= 0;
+			renderResolution.y |= 0;
+			const pass = new RenderPass(renderResolution, scene, this.camera);
+			this.composer.addPass(pass);
+		}
 
 		// Setup perspective controller
 		if (this.perspectiveController) {
@@ -98,7 +176,7 @@ export class ZylemCamera {
 		this.orbitController?.setScene(scene);
 
 		// Start render loop
-		this.renderer.setAnimationLoop((delta) => {
+		this.renderer.setAnimationLoop((delta: number) => {
 			this.update(delta || 0);
 		});
 	}
@@ -117,7 +195,13 @@ export class ZylemCamera {
 		}
 
 		// Render the scene
-		this.composer.render(delta);
+		if (this._isWebGPU && this.sceneRef) {
+			// WebGPU: Direct rendering (post-processing handled differently)
+			this.renderer.render(this.sceneRef, this.camera);
+		} else if (this.composer) {
+			// WebGL: Use EffectComposer for post-processing
+			this.composer.render(delta);
+		}
 	}
 
 	/**
