@@ -3,7 +3,7 @@ import { BaseNode } from '../core/base-node';
 import { CameraWrapper } from '../camera/camera';
 import { isBaseNode, isCameraWrapper, isConfigObject, isEntityInput, isThenable } from '../core/utility/options-parser';
 import { ZylemBlueColor } from '../core/utility/vector';
-import type { ZylemShaderObject } from '../graphics/material';
+import type { ZylemShader } from '../graphics/material';
 
 /**
  * Stage configuration type for user-facing options.
@@ -12,7 +12,7 @@ export type StageConfigLike = Partial<{
 	inputs: Record<string, string[]>;
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
-	backgroundShader: ZylemShaderObject;
+	backgroundShader: ZylemShader;
 	gravity: Vector3;
 	variables: Record<string, any>;
 }>;
@@ -25,7 +25,7 @@ export class StageConfig {
 		public inputs: Record<string, string[]>,
 		public backgroundColor: Color | string,
 		public backgroundImage: string | null,
-		public backgroundShader: ZylemShaderObject | null,
+		public backgroundShader: ZylemShader | null,
 		public gravity: Vector3,
 		public variables: Record<string, any>,
 	) { }

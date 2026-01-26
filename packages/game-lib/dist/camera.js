@@ -2,7 +2,8 @@
 import { Vector2 as Vector23, Vector3 as Vector34 } from "three";
 
 // src/lib/camera/zylem-camera.ts
-import { PerspectiveCamera, Vector3 as Vector33, Object3D as Object3D2, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
+import { PerspectiveCamera, Vector3 as Vector33, Object3D as Object3D2, OrthographicCamera, WebGLRenderer as WebGLRenderer2 } from "three";
+import { WebGPURenderer } from "three/webgpu";
 
 // src/lib/camera/perspective.ts
 var Perspectives = {
@@ -464,6 +465,15 @@ var CameraOrbitController = class {
 };
 
 // src/lib/camera/zylem-camera.ts
+async function isWebGPUSupported() {
+  if (!("gpu" in navigator)) return false;
+  try {
+    const adapter = await navigator.gpu.requestAdapter();
+    return adapter !== null;
+  } catch {
+    return false;
+  }
+}
 var ZylemCamera = class {
   cameraRig = null;
   camera;
@@ -474,18 +484,17 @@ var ZylemCamera = class {
   target = null;
   sceneRef = null;
   frustumSize = 10;
+  rendererType;
+  _isWebGPU = false;
   // Perspective controller delegation
   perspectiveController = null;
   // Debug/orbit controls delegation
   orbitController = null;
-  constructor(perspective, screenResolution, frustumSize = 10) {
+  constructor(perspective, screenResolution, frustumSize = 10, rendererType = "webgl") {
     this._perspective = perspective;
     this.screenResolution = screenResolution;
     this.frustumSize = frustumSize;
-    this.renderer = new WebGLRenderer3({ antialias: false, alpha: true });
-    this.renderer.setSize(screenResolution.x, screenResolution.y);
-    this.renderer.shadowMap.enabled = true;
-    this.composer = new EffectComposer(this.renderer);
+    this.rendererType = rendererType;
     const aspectRatio = screenResolution.x / screenResolution.y;
     this.camera = this.createCameraForPerspective(aspectRatio);
     if (this.needsRig()) {
@@ -498,18 +507,64 @@ var ZylemCamera = class {
       this.camera.lookAt(new Vector33(0, 0, 0));
     }
     this.initializePerspectiveController();
+  }
+  /**
+   * Initialize renderer (must be called before setup)
+   * This is async because WebGPU requires async initialization
+   */
+  async initRenderer() {
+    let useWebGPU = false;
+    if (this.rendererType === "webgpu") {
+      useWebGPU = true;
+    } else if (this.rendererType === "auto") {
+      useWebGPU = await isWebGPUSupported();
+    }
+    if (useWebGPU) {
+      try {
+        this.renderer = new WebGPURenderer({ antialias: true });
+        await this.renderer.init();
+        this._isWebGPU = true;
+        console.log("ZylemCamera: Using WebGPU renderer");
+      } catch (e) {
+        console.warn("ZylemCamera: WebGPU init failed, falling back to WebGL", e);
+        this.renderer = new WebGLRenderer2({ antialias: false, alpha: true });
+        this._isWebGPU = false;
+      }
+    } else {
+      this.renderer = new WebGLRenderer2({ antialias: false, alpha: true });
+      this._isWebGPU = false;
+      console.log("ZylemCamera: Using WebGL renderer");
+    }
+    this.renderer.setSize(this.screenResolution.x, this.screenResolution.y);
+    if (this.renderer instanceof WebGLRenderer2) {
+      this.renderer.shadowMap.enabled = true;
+    }
+    if (!this._isWebGPU) {
+      this.composer = new EffectComposer(this.renderer);
+    }
     this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement, this.cameraRig);
+  }
+  /**
+   * Check if using WebGPU renderer
+   */
+  get isWebGPU() {
+    return this._isWebGPU;
   }
   /**
    * Setup the camera with a scene
    */
   async setup(scene) {
+    if (!this.renderer) {
+      await this.initRenderer();
+    }
     this.sceneRef = scene;
-    let renderResolution = this.screenResolution.clone().divideScalar(2);
-    renderResolution.x |= 0;
-    renderResolution.y |= 0;
-    const pass = new RenderPass(renderResolution, scene, this.camera);
-    this.composer.addPass(pass);
+    if (!this._isWebGPU) {
+      let renderResolution = this.screenResolution.clone().divideScalar(2);
+      renderResolution.x |= 0;
+      renderResolution.y |= 0;
+      const pass = new RenderPass(renderResolution, scene, this.camera);
+      this.composer.addPass(pass);
+    }
     if (this.perspectiveController) {
       this.perspectiveController.setup({
         screenResolution: this.screenResolution,
@@ -531,7 +586,11 @@ var ZylemCamera = class {
     if (this.perspectiveController && !this.isDebugModeActive()) {
       this.perspectiveController.update(delta);
     }
-    this.composer.render(delta);
+    if (this._isWebGPU && this.sceneRef) {
+      this.renderer.render(this.sceneRef, this.camera);
+    } else if (this.composer) {
+      this.composer.render(delta);
+    }
   }
   /**
    * Check if debug mode is active (orbit controls taking over camera)
@@ -705,7 +764,12 @@ function createCamera(options) {
   if (options.perspective === "fixed-2d") {
     frustumSize = options.zoom || 10;
   }
-  const zylemCamera = new ZylemCamera(options.perspective || "third-person", screenResolution, frustumSize);
+  const zylemCamera = new ZylemCamera(
+    options.perspective || "third-person",
+    screenResolution,
+    frustumSize,
+    options.rendererType || "webgl"
+  );
   zylemCamera.move(options.position || new Vector34(0, 0, 0));
   zylemCamera.camera.lookAt(options.target || new Vector34(0, 0, 0));
   return new CameraWrapper(zylemCamera);

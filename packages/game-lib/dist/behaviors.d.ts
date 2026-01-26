@@ -1,5 +1,5 @@
-import { G as GameEntity, q as BehaviorDescriptor, d as ZylemWorld } from './world-C8tQ7Plj.js';
-export { s as BehaviorHandle, r as BehaviorRef, e as BehaviorSystem, f as BehaviorSystemFactory, t as DefineBehaviorConfig, p as defineBehavior } from './world-C8tQ7Plj.js';
+import { G as GameEntity, u as BehaviorDescriptor, d as ZylemWorld } from './world-VVcvzTVb.js';
+export { w as BehaviorHandle, v as BehaviorRef, e as BehaviorSystem, f as BehaviorSystemFactory, x as DefineBehaviorConfig, t as defineBehavior } from './world-VVcvzTVb.js';
 import { RigidBody, World } from '@dimforge/rapier3d-compat';
 import { Vector3, Quaternion } from 'three';
 import { StateMachine } from 'typescript-fsm';

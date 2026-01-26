@@ -10,8 +10,10 @@ import {
 	BoxGeometry,
 	ShaderMaterial,
 	Mesh,
-	BackSide
+	BackSide,
+	Material,
 } from 'three';
+import { MeshBasicNodeMaterial } from 'three/webgpu';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
 import { ZylemCamera } from '../camera/zylem-camera';
@@ -19,12 +21,12 @@ import { debugState } from '../debug/debug-state';
 import { SetupFunction } from '../core/base-node-life-cycle';
 import { getGlobals } from '../game/game-state';
 import { assetManager } from '../core/asset-manager';
-import { ZylemShaderObject } from './material';
+import { ZylemShader, isTSLShader, isGLSLShader } from './material';
 
 interface SceneState {
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
-	backgroundShader?: ZylemShaderObject | null;
+	backgroundShader?: ZylemShader | null;
 }
 
 export class ZylemScene implements Entity<ZylemScene> {
@@ -40,8 +42,8 @@ export class ZylemScene implements Entity<ZylemScene> {
 	name?: string | undefined;
 	tag?: Set<string> | undefined;
 
-	// Skybox for background shaders
-	private skyboxMaterial: ShaderMaterial | null = null;
+	// Skybox for background shaders (supports both GLSL ShaderMaterial and TSL MeshBasicNodeMaterial)
+	private skyboxMaterial: Material | null = null;
 
 	constructor(id: string, camera: ZylemCamera, state: SceneState) {
 		const scene = new Scene();
@@ -72,46 +74,58 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	/**
 	 * Create a large inverted box with the shader for skybox effect
-	 * Uses the pos.xyww trick to ensure skybox is always at maximum depth
+	 * Supports both GLSL (ShaderMaterial) and TSL (MeshBasicNodeMaterial) shaders
 	 */
-	private setupBackgroundShader(scene: Scene, shader: ZylemShaderObject) {
+	private setupBackgroundShader(scene: Scene, shader: ZylemShader) {
 		// Clear the solid color background
 		scene.background = null;
 
-		// Skybox vertex shader with depth trick (pos.xyww ensures depth = 1.0)
-		const skyboxVertexShader = `
-			varying vec2 vUv;
-			varying vec3 vWorldPosition;
-			
-			void main() {
-				vUv = uv;
-				vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-				vWorldPosition = worldPosition.xyz;
-				vec4 pos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-				gl_Position = pos.xyww;  // Ensures depth is always 1.0 (farthest)
+		if (isTSLShader(shader)) {
+			// TSL shader - use MeshBasicNodeMaterial for WebGPU
+			this.skyboxMaterial = new MeshBasicNodeMaterial();
+			(this.skyboxMaterial as MeshBasicNodeMaterial).colorNode = shader.colorNode;
+			if (shader.transparent) {
+				this.skyboxMaterial.transparent = true;
 			}
-		`;
+			this.skyboxMaterial.side = BackSide;
+			this.skyboxMaterial.depthWrite = false;
+			console.log('Skybox created with TSL shader');
+		} else if (isGLSLShader(shader)) {
+			// GLSL shader - use ShaderMaterial for WebGL
+			// Skybox vertex shader with depth trick (pos.xyww ensures depth = 1.0)
+			const skyboxVertexShader = `
+				varying vec2 vUv;
+				varying vec3 vWorldPosition;
+				
+				void main() {
+					vUv = uv;
+					vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+					vWorldPosition = worldPosition.xyz;
+					vec4 pos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+					gl_Position = pos.xyww;  // Ensures depth is always 1.0 (farthest)
+				}
+			`;
 
-		// Create shader material with skybox-specific settings
-		this.skyboxMaterial = new ShaderMaterial({
-			vertexShader: skyboxVertexShader,
-			fragmentShader: shader.fragment,
-			uniforms: {
-				iTime: { value: 0.0 },
-			},
-			side: BackSide,  // Render on inside of geometry
-			depthWrite: false,  // Don't write to depth buffer
-			depthTest: true,  // But do test depth
-		});
+			// Create shader material with skybox-specific settings
+			this.skyboxMaterial = new ShaderMaterial({
+				vertexShader: skyboxVertexShader,
+				fragmentShader: shader.fragment,
+				uniforms: {
+					iTime: { value: 0.0 },
+				},
+				side: BackSide,  // Render on inside of geometry
+				depthWrite: false,  // Don't write to depth buffer
+				depthTest: true,  // But do test depth
+			});
+			console.log('Skybox created with GLSL shader');
+		}
 
-		// Use BoxGeometry for skybox (like the CodePen example)
+		// Use BoxGeometry for skybox
 		const geometry = new BoxGeometry(1, 1, 1);
-		const skybox = new Mesh(geometry, this.skyboxMaterial);
+		const skybox = new Mesh(geometry, this.skyboxMaterial!);
 		skybox.scale.setScalar(100000);  // Scale up significantly
 		skybox.frustumCulled = false;  // Always render
 		scene.add(skybox);
-		
-		console.log('Skybox created with pos.xyww technique');
 	}
 
 	setup() {
@@ -236,11 +250,14 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	/**
-	 * Update skybox shader uniforms
+	 * Update skybox shader uniforms (only applies to GLSL ShaderMaterial)
+	 * TSL shaders use the time node which auto-updates
 	 */
 	updateSkybox(delta: number) {
-		if (this.skyboxMaterial?.uniforms?.iTime) {
-			this.skyboxMaterial.uniforms.iTime.value += delta;
+		if (this.skyboxMaterial && this.skyboxMaterial instanceof ShaderMaterial) {
+			if (this.skyboxMaterial.uniforms?.iTime) {
+				this.skyboxMaterial.uniforms.iTime.value += delta;
+			}
 		}
 	}
 }

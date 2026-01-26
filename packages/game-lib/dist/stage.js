@@ -442,6 +442,13 @@ var init_entity = __esm({
         collision: []
       };
       collisionType;
+      // Instancing support
+      /** Batch key for instanced rendering (null if not instanced) */
+      batchKey = null;
+      /** Index within the instanced mesh batch */
+      instanceId = -1;
+      /** Whether this entity uses instanced rendering */
+      isInstanced = false;
       /**
        * @deprecated Use the new ECS-based behavior system instead.
        * Use 'any' for callback types to avoid contravariance issues
@@ -1464,6 +1471,27 @@ var init_animation = __esm({
   }
 });
 
+// src/lib/core/utility/strings.ts
+function sortedStringify(obj) {
+  const sortedObj = Object.keys(obj).sort().reduce((acc, key) => {
+    acc[key] = obj[key];
+    return acc;
+  }, {});
+  return JSON.stringify(sortedObj);
+}
+function shortHash(objString) {
+  let hash = 0;
+  for (let i = 0; i < objString.length; i++) {
+    hash = Math.imul(31, hash) + objString.charCodeAt(i) | 0;
+  }
+  return hash.toString(36);
+}
+var init_strings = __esm({
+  "src/lib/core/utility/strings.ts"() {
+    "use strict";
+  }
+});
+
 // src/lib/graphics/shaders/vertex/object.shader.ts
 var objectVertexShader;
 var init_object_shader = __esm({
@@ -1505,17 +1533,50 @@ void main() {
   }
 });
 
+// src/lib/graphics/material.ts
+import { Color as Color2, Vector2 as Vector22, Vector3 } from "three";
+import {
+  MeshPhongMaterial,
+  MeshStandardMaterial,
+  RepeatWrapping as RepeatWrapping2,
+  ShaderMaterial as ShaderMaterial2
+} from "three";
+import {
+  MeshBasicNodeMaterial,
+  MeshStandardNodeMaterial
+} from "three/webgpu";
+import {
+  uniform,
+  uv,
+  time,
+  vec3,
+  vec4,
+  float,
+  Fn
+} from "three/tsl";
+function isTSLShader(shader) {
+  return "colorNode" in shader;
+}
+function isGLSLShader(shader) {
+  return "fragment" in shader && "vertex" in shader;
+}
+var init_material = __esm({
+  "src/lib/graphics/material.ts"() {
+    "use strict";
+  }
+});
+
 // src/lib/entities/common.ts
-import { Color as Color2, Vector3 } from "three";
+import { Color as Color3, Vector3 as Vector32 } from "three";
 var commonDefaults;
 var init_common = __esm({
   "src/lib/entities/common.ts"() {
     "use strict";
     init_standard_shader();
     commonDefaults = {
-      position: new Vector3(0, 0, 0),
+      position: new Vector32(0, 0, 0),
       material: {
-        color: new Color2("#ffffff"),
+        color: new Color3("#ffffff"),
         shader: standardShader
       },
       collision: {
@@ -1558,7 +1619,7 @@ var init_debug_state = __esm({
 });
 
 // src/lib/stage/entity-spawner.ts
-import { Euler, Quaternion as Quaternion2, Vector2 as Vector22 } from "three";
+import { Euler, Quaternion as Quaternion2, Vector2 as Vector23 } from "three";
 function entitySpawner(factory) {
   return {
     spawn: async (stage, x, y) => {
@@ -1566,7 +1627,7 @@ function entitySpawner(factory) {
       stage.add(instance);
       return instance;
     },
-    spawnRelative: async (source, stage, offset = new Vector22(0, 1)) => {
+    spawnRelative: async (source, stage, offset = new Vector23(0, 1)) => {
       if (!source.body) {
         console.warn("body missing for entity during spawnRelative");
         return void 0;
@@ -1610,7 +1671,7 @@ var init_perspective = __esm({
 });
 
 // src/lib/camera/third-person.ts
-import { Vector3 as Vector32 } from "three";
+import { Vector3 as Vector33 } from "three";
 var ThirdPersonCamera;
 var init_third_person = __esm({
   "src/lib/camera/third-person.ts"() {
@@ -1622,7 +1683,7 @@ var init_third_person = __esm({
       scene = null;
       cameraRef = null;
       constructor() {
-        this.distance = new Vector32(0, 5, 8);
+        this.distance = new Vector33(0, 5, 8);
       }
       /**
        * Setup the third person camera controller
@@ -1792,7 +1853,7 @@ var init_render_pass = __esm({
 });
 
 // src/lib/camera/camera-debug-delegate.ts
-import { Vector3 as Vector33 } from "three";
+import { Vector3 as Vector34 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 var CameraOrbitController;
 var init_camera_debug_delegate = __esm({
@@ -1805,7 +1866,7 @@ var init_camera_debug_delegate = __esm({
       sceneRef = null;
       orbitControls = null;
       orbitTarget = null;
-      orbitTargetWorldPos = new Vector33();
+      orbitTargetWorldPos = new Vector34();
       debugDelegate = null;
       debugUnsubscribe = null;
       debugStateSnapshot = { enabled: false, selected: [] };
@@ -2022,7 +2083,7 @@ var init_camera_debug_delegate = __esm({
           return;
         }
         this.savedCameraLocalPosition = this.camera.position.clone();
-        const worldPos = new Vector33();
+        const worldPos = new Vector34();
         this.camera.getWorldPosition(worldPos);
         this.cameraRig.remove(this.camera);
         if (this.sceneRef) {
@@ -2052,8 +2113,18 @@ var init_camera_debug_delegate = __esm({
 });
 
 // src/lib/camera/zylem-camera.ts
-import { PerspectiveCamera, Vector3 as Vector34, Object3D as Object3D4, OrthographicCamera, WebGLRenderer as WebGLRenderer3 } from "three";
+import { PerspectiveCamera, Vector3 as Vector35, Object3D as Object3D4, OrthographicCamera, WebGLRenderer as WebGLRenderer2 } from "three";
+import { WebGPURenderer } from "three/webgpu";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+async function isWebGPUSupported() {
+  if (!("gpu" in navigator)) return false;
+  try {
+    const adapter = await navigator.gpu.requestAdapter();
+    return adapter !== null;
+  } catch {
+    return false;
+  }
+}
 var ZylemCamera;
 var init_zylem_camera = __esm({
   "src/lib/camera/zylem-camera.ts"() {
@@ -2073,42 +2144,87 @@ var init_zylem_camera = __esm({
       target = null;
       sceneRef = null;
       frustumSize = 10;
+      rendererType;
+      _isWebGPU = false;
       // Perspective controller delegation
       perspectiveController = null;
       // Debug/orbit controls delegation
       orbitController = null;
-      constructor(perspective, screenResolution, frustumSize = 10) {
+      constructor(perspective, screenResolution, frustumSize = 10, rendererType = "webgl") {
         this._perspective = perspective;
         this.screenResolution = screenResolution;
         this.frustumSize = frustumSize;
-        this.renderer = new WebGLRenderer3({ antialias: false, alpha: true });
-        this.renderer.setSize(screenResolution.x, screenResolution.y);
-        this.renderer.shadowMap.enabled = true;
-        this.composer = new EffectComposer(this.renderer);
+        this.rendererType = rendererType;
         const aspectRatio = screenResolution.x / screenResolution.y;
         this.camera = this.createCameraForPerspective(aspectRatio);
         if (this.needsRig()) {
           this.cameraRig = new Object3D4();
           this.cameraRig.position.set(0, 3, 10);
           this.cameraRig.add(this.camera);
-          this.camera.lookAt(new Vector34(0, 2, 0));
+          this.camera.lookAt(new Vector35(0, 2, 0));
         } else {
           this.camera.position.set(0, 0, 10);
-          this.camera.lookAt(new Vector34(0, 0, 0));
+          this.camera.lookAt(new Vector35(0, 0, 0));
         }
         this.initializePerspectiveController();
+      }
+      /**
+       * Initialize renderer (must be called before setup)
+       * This is async because WebGPU requires async initialization
+       */
+      async initRenderer() {
+        let useWebGPU = false;
+        if (this.rendererType === "webgpu") {
+          useWebGPU = true;
+        } else if (this.rendererType === "auto") {
+          useWebGPU = await isWebGPUSupported();
+        }
+        if (useWebGPU) {
+          try {
+            this.renderer = new WebGPURenderer({ antialias: true });
+            await this.renderer.init();
+            this._isWebGPU = true;
+            console.log("ZylemCamera: Using WebGPU renderer");
+          } catch (e) {
+            console.warn("ZylemCamera: WebGPU init failed, falling back to WebGL", e);
+            this.renderer = new WebGLRenderer2({ antialias: false, alpha: true });
+            this._isWebGPU = false;
+          }
+        } else {
+          this.renderer = new WebGLRenderer2({ antialias: false, alpha: true });
+          this._isWebGPU = false;
+          console.log("ZylemCamera: Using WebGL renderer");
+        }
+        this.renderer.setSize(this.screenResolution.x, this.screenResolution.y);
+        if (this.renderer instanceof WebGLRenderer2) {
+          this.renderer.shadowMap.enabled = true;
+        }
+        if (!this._isWebGPU) {
+          this.composer = new EffectComposer(this.renderer);
+        }
         this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement, this.cameraRig);
+      }
+      /**
+       * Check if using WebGPU renderer
+       */
+      get isWebGPU() {
+        return this._isWebGPU;
       }
       /**
        * Setup the camera with a scene
        */
       async setup(scene) {
+        if (!this.renderer) {
+          await this.initRenderer();
+        }
         this.sceneRef = scene;
-        let renderResolution = this.screenResolution.clone().divideScalar(2);
-        renderResolution.x |= 0;
-        renderResolution.y |= 0;
-        const pass = new RenderPass(renderResolution, scene, this.camera);
-        this.composer.addPass(pass);
+        if (!this._isWebGPU) {
+          let renderResolution = this.screenResolution.clone().divideScalar(2);
+          renderResolution.x |= 0;
+          renderResolution.y |= 0;
+          const pass = new RenderPass(renderResolution, scene, this.camera);
+          this.composer.addPass(pass);
+        }
         if (this.perspectiveController) {
           this.perspectiveController.setup({
             screenResolution: this.screenResolution,
@@ -2130,7 +2246,11 @@ var init_zylem_camera = __esm({
         if (this.perspectiveController && !this.isDebugModeActive()) {
           this.perspectiveController.update(delta);
         }
-        this.composer.render(delta);
+        if (this._isWebGPU && this.sceneRef) {
+          this.renderer.render(this.sceneRef, this.camera);
+        } else if (this.composer) {
+          this.composer.render(delta);
+        }
       }
       /**
        * Check if debug mode is active (orbit controls taking over camera)
@@ -2294,7 +2414,7 @@ var init_zylem_camera = __esm({
 });
 
 // src/lib/camera/camera.ts
-import { Vector2 as Vector25, Vector3 as Vector35 } from "three";
+import { Vector2 as Vector26, Vector3 as Vector36 } from "three";
 var CameraWrapper;
 var init_camera = __esm({
   "src/lib/camera/camera.ts"() {
@@ -2364,20 +2484,20 @@ var init_behaviors = __esm({
 });
 
 // src/lib/core/utility/vector.ts
-import { Color as Color3 } from "three";
-import { Vector3 as Vector36 } from "@dimforge/rapier3d-compat";
+import { Color as Color4 } from "three";
+import { Vector3 as Vector37 } from "@dimforge/rapier3d-compat";
 var ZylemBlueColor, Vec0, Vec1;
 var init_vector = __esm({
   "src/lib/core/utility/vector.ts"() {
     "use strict";
-    ZylemBlueColor = new Color3("#0333EC");
-    Vec0 = new Vector36(0, 0, 0);
-    Vec1 = new Vector36(1, 1, 1);
+    ZylemBlueColor = new Color4("#0333EC");
+    Vec0 = new Vector37(0, 0, 0);
+    Vec1 = new Vector37(1, 1, 1);
   }
 });
 
 // src/lib/stage/stage-state.ts
-import { Color as Color4, Vector3 as Vector37 } from "three";
+import { Color as Color5, Vector3 as Vector38 } from "three";
 import { proxy as proxy3, subscribe as subscribe2 } from "valtio/vanilla";
 function clearVariables(target) {
   variableProxyStore.delete(target);
@@ -2395,19 +2515,19 @@ var init_stage_state = __esm({
         p1: ["gamepad-1", "keyboard"],
         p2: ["gamepad-2", "keyboard"]
       },
-      gravity: new Vector37(0, 0, 0),
+      gravity: new Vector38(0, 0, 0),
       variables: {},
       entities: []
     };
     stageState = proxy3({
-      backgroundColor: new Color4(Color4.NAMES.cornflowerblue),
+      backgroundColor: new Color5(Color5.NAMES.cornflowerblue),
       backgroundImage: null,
       inputs: {
         p1: ["gamepad-1", "keyboard-1"],
         p2: ["gamepad-2", "keyboard-2"]
       },
       variables: {},
-      gravity: new Vector37(0, 0, 0),
+      gravity: new Vector38(0, 0, 0),
       entities: []
     });
     setStageBackgroundColor = (value) => {
@@ -2440,7 +2560,7 @@ var init_main = __esm({
 
 // src/lib/entities/actor.ts
 import { ActiveCollisionTypes, ColliderDesc } from "@dimforge/rapier3d-compat";
-import { MeshStandardMaterial, Group as Group2, Vector3 as Vector38 } from "three";
+import { MeshStandardMaterial as MeshStandardMaterial2, Group as Group2, Vector3 as Vector39 } from "three";
 var actorDefaults, ACTOR_TYPE, ZylemActor;
 var init_actor = __esm({
   "src/lib/entities/actor.ts"() {
@@ -2454,8 +2574,8 @@ var init_actor = __esm({
       ...commonDefaults,
       collision: {
         static: false,
-        size: new Vector38(0.5, 0.5, 0.5),
-        position: new Vector38(0, 0, 0)
+        size: new Vector39(0.5, 0.5, 0.5),
+        position: new Vector39(0, 0, 0)
       },
       material: {
         shader: standardShader
@@ -2588,7 +2708,7 @@ var init_actor = __esm({
           if (child.isMesh) {
             const mesh = child;
             if (materialOptions.color) {
-              const newMaterial = new MeshStandardMaterial({
+              const newMaterial = new MeshStandardMaterial2({
                 color: materialOptions.color,
                 emissiveIntensity: 0.5,
                 lightMapIntensity: 0.5,
@@ -2791,16 +2911,17 @@ var init_world = __esm({
 // src/lib/graphics/zylem-scene.ts
 import {
   Scene as Scene4,
-  Color as Color5,
+  Color as Color6,
   AmbientLight,
   DirectionalLight,
-  Vector3 as Vector39,
+  Vector3 as Vector310,
   GridHelper,
   BoxGeometry,
-  ShaderMaterial as ShaderMaterial3,
+  ShaderMaterial as ShaderMaterial4,
   Mesh as Mesh3,
   BackSide
 } from "three";
+import { MeshBasicNodeMaterial as MeshBasicNodeMaterial2 } from "three/webgpu";
 var ZylemScene;
 var init_zylem_scene = __esm({
   "src/lib/graphics/zylem-scene.ts"() {
@@ -2808,6 +2929,7 @@ var init_zylem_scene = __esm({
     init_debug_state();
     init_game_state();
     init_asset_manager();
+    init_material();
     ZylemScene = class {
       type = "Scene";
       _setup;
@@ -2820,12 +2942,12 @@ var init_zylem_scene = __esm({
       _destroy;
       name;
       tag;
-      // Skybox for background shaders
+      // Skybox for background shaders (supports both GLSL ShaderMaterial and TSL MeshBasicNodeMaterial)
       skyboxMaterial = null;
       constructor(id, camera, state2) {
         const scene = new Scene4();
-        const isColor = state2.backgroundColor instanceof Color5;
-        const backgroundColor = isColor ? state2.backgroundColor : new Color5(state2.backgroundColor);
+        const isColor = state2.backgroundColor instanceof Color6;
+        const backgroundColor = isColor ? state2.backgroundColor : new Color6(state2.backgroundColor);
         scene.background = backgroundColor;
         console.log("ZylemScene state.backgroundShader:", state2.backgroundShader);
         if (state2.backgroundShader) {
@@ -2845,41 +2967,52 @@ var init_zylem_scene = __esm({
       }
       /**
        * Create a large inverted box with the shader for skybox effect
-       * Uses the pos.xyww trick to ensure skybox is always at maximum depth
+       * Supports both GLSL (ShaderMaterial) and TSL (MeshBasicNodeMaterial) shaders
        */
       setupBackgroundShader(scene, shader) {
         scene.background = null;
-        const skyboxVertexShader = `
-			varying vec2 vUv;
-			varying vec3 vWorldPosition;
-			
-			void main() {
-				vUv = uv;
-				vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-				vWorldPosition = worldPosition.xyz;
-				vec4 pos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-				gl_Position = pos.xyww;  // Ensures depth is always 1.0 (farthest)
-			}
-		`;
-        this.skyboxMaterial = new ShaderMaterial3({
-          vertexShader: skyboxVertexShader,
-          fragmentShader: shader.fragment,
-          uniforms: {
-            iTime: { value: 0 }
-          },
-          side: BackSide,
-          // Render on inside of geometry
-          depthWrite: false,
-          // Don't write to depth buffer
-          depthTest: true
-          // But do test depth
-        });
+        if (isTSLShader(shader)) {
+          this.skyboxMaterial = new MeshBasicNodeMaterial2();
+          this.skyboxMaterial.colorNode = shader.colorNode;
+          if (shader.transparent) {
+            this.skyboxMaterial.transparent = true;
+          }
+          this.skyboxMaterial.side = BackSide;
+          this.skyboxMaterial.depthWrite = false;
+          console.log("Skybox created with TSL shader");
+        } else if (isGLSLShader(shader)) {
+          const skyboxVertexShader = `
+				varying vec2 vUv;
+				varying vec3 vWorldPosition;
+				
+				void main() {
+					vUv = uv;
+					vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+					vWorldPosition = worldPosition.xyz;
+					vec4 pos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+					gl_Position = pos.xyww;  // Ensures depth is always 1.0 (farthest)
+				}
+			`;
+          this.skyboxMaterial = new ShaderMaterial4({
+            vertexShader: skyboxVertexShader,
+            fragmentShader: shader.fragment,
+            uniforms: {
+              iTime: { value: 0 }
+            },
+            side: BackSide,
+            // Render on inside of geometry
+            depthWrite: false,
+            // Don't write to depth buffer
+            depthTest: true
+            // But do test depth
+          });
+          console.log("Skybox created with GLSL shader");
+        }
         const geometry = new BoxGeometry(1, 1, 1);
         const skybox = new Mesh3(geometry, this.skyboxMaterial);
         skybox.scale.setScalar(1e5);
         skybox.frustumCulled = false;
         scene.add(skybox);
-        console.log("Skybox created with pos.xyww technique");
       }
       setup() {
         if (this._setup) {
@@ -2948,7 +3081,7 @@ var init_zylem_scene = __esm({
       /**
        * Add object to scene
        */
-      add(object, position2 = new Vector39(0, 0, 0)) {
+      add(object, position2 = new Vector310(0, 0, 0)) {
         object.position.set(position2.x, position2.y, position2.z);
         this.scene.add(object);
       }
@@ -2967,7 +3100,7 @@ var init_zylem_scene = __esm({
        * Uses entity's current body position if physics is active.
        */
       addEntityGroup(entity) {
-        const position2 = entity.body ? new Vector39(
+        const position2 = entity.body ? new Vector310(
           entity.body.translation().x,
           entity.body.translation().y,
           entity.body.translation().z
@@ -2988,12 +3121,269 @@ var init_zylem_scene = __esm({
         this.scene.add(gridHelper);
       }
       /**
-       * Update skybox shader uniforms
+       * Update skybox shader uniforms (only applies to GLSL ShaderMaterial)
+       * TSL shaders use the time node which auto-updates
        */
       updateSkybox(delta) {
-        if (this.skyboxMaterial?.uniforms?.iTime) {
-          this.skyboxMaterial.uniforms.iTime.value += delta;
+        if (this.skyboxMaterial && this.skyboxMaterial instanceof ShaderMaterial4) {
+          if (this.skyboxMaterial.uniforms?.iTime) {
+            this.skyboxMaterial.uniforms.iTime.value += delta;
+          }
         }
+      }
+    };
+  }
+});
+
+// src/lib/graphics/instance-manager.ts
+import { InstancedMesh, Matrix4, Vector3 as Vector311, Quaternion as Quaternion4 } from "three";
+var InstanceManager;
+var init_instance_manager = __esm({
+  "src/lib/graphics/instance-manager.ts"() {
+    "use strict";
+    init_strings();
+    InstanceManager = class _InstanceManager {
+      batches = /* @__PURE__ */ new Map();
+      entityToBatch = /* @__PURE__ */ new Map();
+      // entity UUID -> batch key
+      scene = null;
+      /** Default initial capacity for new batches */
+      static DEFAULT_CAPACITY = 128;
+      /** Factor to grow batch when full */
+      static GROWTH_FACTOR = 2;
+      /**
+       * Set the scene to add instanced meshes to
+       */
+      setScene(scene) {
+        this.scene = scene;
+      }
+      /**
+       * Generate a batch key from configuration
+       */
+      static generateBatchKey(config) {
+        const keyData = {
+          geo: `${config.geometryType}:${sortedStringify(config.dimensions)}`,
+          mat: config.materialPath || "none",
+          shader: config.shaderType || "standard",
+          color: config.colorHex ?? 16777215
+        };
+        return shortHash(sortedStringify(keyData));
+      }
+      /**
+       * Register an entity with the instance manager
+       * @returns The instance index, or -1 if registration failed
+       */
+      register(entity, geometry, material, batchKey) {
+        let batch = this.batches.get(batchKey);
+        if (!batch) {
+          batch = this.createBatch(batchKey, geometry, material);
+        }
+        let index;
+        if (batch.freeIndices.length > 0) {
+          index = batch.freeIndices.pop();
+        } else {
+          index = batch.entities.length;
+          if (index >= batch.capacity) {
+            this.growBatch(batch);
+          }
+          batch.entities.push(null);
+        }
+        batch.entities[index] = entity;
+        batch.entityMap.set(entity.uuid, index);
+        this.entityToBatch.set(entity.uuid, batchKey);
+        batch.instancedMesh.count = Math.max(batch.instancedMesh.count, index + 1);
+        batch.activeIndices.push(index);
+        batch.dirtyIndices.add(index);
+        return index;
+      }
+      /**
+       * Unregister an entity from the instance manager
+       */
+      unregister(entity) {
+        const batchKey = this.entityToBatch.get(entity.uuid);
+        if (!batchKey) return;
+        const batch = this.batches.get(batchKey);
+        if (!batch) return;
+        const index = batch.entityMap.get(entity.uuid);
+        if (index === void 0) return;
+        batch.entities[index] = null;
+        batch.entityMap.delete(entity.uuid);
+        this.entityToBatch.delete(entity.uuid);
+        batch.freeIndices.push(index);
+        const idxInActive = batch.activeIndices.indexOf(index);
+        if (idxInActive !== -1) {
+          const last = batch.activeIndices.pop();
+          if (idxInActive < batch.activeIndices.length) {
+            batch.activeIndices[idxInActive] = last;
+          }
+        }
+        batch.dirtyIndices.delete(index);
+        const matrix = new Matrix4();
+        matrix.makeScale(0, 0, 0);
+        batch.instancedMesh.setMatrixAt(index, matrix);
+        batch.instancedMesh.instanceMatrix.needsUpdate = true;
+      }
+      /**
+       * Mark an entity's transform as dirty (needs syncing)
+       */
+      markDirty(entity) {
+        const batchKey = this.entityToBatch.get(entity.uuid);
+        if (!batchKey) return;
+        const batch = this.batches.get(batchKey);
+        if (!batch) return;
+        const index = batch.entityMap.get(entity.uuid);
+        if (index !== void 0) {
+          batch.dirtyIndices.add(index);
+        }
+      }
+      /**
+       * Update all dirty instance transforms
+       * Call this once per frame
+       */
+      /**
+       * Update all active instance transforms
+       * Call this once per frame
+       */
+      update() {
+        const matrix = new Matrix4();
+        const pos = new Vector311();
+        const quat = new Quaternion4();
+        const scale2 = new Vector311(1, 1, 1);
+        for (const batch of this.batches.values()) {
+          if (batch.activeIndices.length === 0) continue;
+          let needsUpdate = false;
+          if (batch.dirtyIndices.size > 0) {
+            for (const index of batch.dirtyIndices) {
+              this.updateInstanceMatrix(batch, index, matrix, pos, quat, scale2);
+            }
+            batch.dirtyIndices.clear();
+            needsUpdate = true;
+          }
+          for (const index of batch.activeIndices) {
+            const entity = batch.entities[index];
+            if (entity && entity.body) {
+              this.updateInstanceMatrix(batch, index, matrix, pos, quat, scale2);
+              needsUpdate = true;
+            }
+          }
+          if (needsUpdate) {
+            batch.instancedMesh.instanceMatrix.needsUpdate = true;
+          }
+        }
+      }
+      updateInstanceMatrix(batch, index, matrix, pos, quat, scale2) {
+        const entity = batch.entities[index];
+        if (!entity) return;
+        if (entity.body) {
+          const translation = entity.body.translation();
+          const rotation2 = entity.body.rotation();
+          pos.set(translation.x, translation.y, translation.z);
+          quat.set(rotation2.x, rotation2.y, rotation2.z, rotation2.w);
+          matrix.compose(pos, quat, scale2);
+        } else if (entity.mesh) {
+          entity.mesh.updateMatrix();
+          matrix.copy(entity.mesh.matrix);
+        } else if (entity.group) {
+          entity.group.updateMatrix();
+          matrix.copy(entity.group.matrix);
+        }
+        batch.instancedMesh.setMatrixAt(index, matrix);
+      }
+      /**
+       * Get batch info for an entity
+       */
+      getBatchInfo(entity) {
+        const batchKey = this.entityToBatch.get(entity.uuid);
+        if (!batchKey) return null;
+        const batch = this.batches.get(batchKey);
+        if (!batch) return null;
+        const instanceId = batch.entityMap.get(entity.uuid);
+        if (instanceId === void 0) return null;
+        return { batchKey, instanceId };
+      }
+      /**
+       * Get statistics about current batching
+       */
+      getStats() {
+        let totalInstances = 0;
+        const batches = [];
+        for (const [key, batch] of this.batches) {
+          const count = batch.entityMap.size;
+          totalInstances += count;
+          batches.push({ key, count, capacity: batch.capacity });
+        }
+        return { batchCount: this.batches.size, totalInstances, batches };
+      }
+      /**
+       * Dispose all batches and release resources
+       */
+      dispose() {
+        for (const batch of this.batches.values()) {
+          if (this.scene) {
+            this.scene.remove(batch.instancedMesh);
+          }
+          batch.instancedMesh.dispose();
+          batch.geometry.dispose();
+        }
+        this.batches.clear();
+        this.entityToBatch.clear();
+      }
+      /**
+       * Create a new batch group
+       */
+      createBatch(key, geometry, material) {
+        const capacity = _InstanceManager.DEFAULT_CAPACITY;
+        const instancedMesh = new InstancedMesh(geometry, material, capacity);
+        instancedMesh.count = 0;
+        instancedMesh.frustumCulled = false;
+        const hiddenMatrix = new Matrix4().makeScale(0, 0, 0);
+        for (let i = 0; i < capacity; i++) {
+          instancedMesh.setMatrixAt(i, hiddenMatrix);
+        }
+        instancedMesh.instanceMatrix.needsUpdate = true;
+        const batch = {
+          key,
+          instancedMesh,
+          geometry,
+          material,
+          entityMap: /* @__PURE__ */ new Map(),
+          entities: [],
+          freeIndices: [],
+          activeIndices: [],
+          dirtyIndices: /* @__PURE__ */ new Set(),
+          capacity
+        };
+        this.batches.set(key, batch);
+        if (this.scene) {
+          this.scene.add(instancedMesh);
+        }
+        return batch;
+      }
+      /**
+       * Grow a batch's capacity
+       */
+      growBatch(batch) {
+        const newCapacity = batch.capacity * _InstanceManager.GROWTH_FACTOR;
+        const newInstancedMesh = new InstancedMesh(batch.geometry, batch.material, newCapacity);
+        newInstancedMesh.count = batch.instancedMesh.count;
+        newInstancedMesh.frustumCulled = false;
+        const matrix = new Matrix4();
+        for (let i = 0; i < batch.capacity; i++) {
+          batch.instancedMesh.getMatrixAt(i, matrix);
+          newInstancedMesh.setMatrixAt(i, matrix);
+        }
+        const hiddenMatrix = new Matrix4().makeScale(0, 0, 0);
+        for (let i = batch.capacity; i < newCapacity; i++) {
+          newInstancedMesh.setMatrixAt(i, hiddenMatrix);
+        }
+        newInstancedMesh.instanceMatrix.needsUpdate = true;
+        if (this.scene) {
+          this.scene.remove(batch.instancedMesh);
+          this.scene.add(newInstancedMesh);
+        }
+        batch.instancedMesh.dispose();
+        batch.instancedMesh = newInstancedMesh;
+        batch.capacity = newCapacity;
       }
     };
   }
@@ -3043,14 +3433,14 @@ var init_lifecycle_base = __esm({
 import {
   Box3,
   BoxGeometry as BoxGeometry2,
-  Color as Color6,
+  Color as Color7,
   EdgesGeometry,
   Group as Group3,
   LineBasicMaterial,
   LineSegments,
   Mesh as Mesh4,
   MeshBasicMaterial,
-  Vector3 as Vector310
+  Vector3 as Vector312
 } from "three";
 var DebugEntityCursor;
 var init_debug_entity_cursor = __esm({
@@ -3061,10 +3451,10 @@ var init_debug_entity_cursor = __esm({
       container;
       fillMesh;
       edgeLines;
-      currentColor = new Color6(65280);
+      currentColor = new Color7(65280);
       bbox = new Box3();
-      size = new Vector310();
-      center = new Vector310();
+      size = new Vector312();
+      center = new Vector312();
       constructor(scene) {
         this.scene = scene;
         const initialGeometry = new BoxGeometry2(1, 1, 1);
@@ -3138,7 +3528,7 @@ var init_debug_entity_cursor = __esm({
 
 // src/lib/stage/stage-debug-delegate.ts
 import { Ray } from "@dimforge/rapier3d-compat";
-import { BufferAttribute, BufferGeometry as BufferGeometry2, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 as Vector26 } from "three";
+import { BufferAttribute, BufferGeometry as BufferGeometry3, LineBasicMaterial as LineBasicMaterial2, LineSegments as LineSegments2, Raycaster, Vector2 as Vector27 } from "three";
 var SELECT_TOOL_COLOR, DELETE_TOOL_COLOR, StageDebugDelegate;
 var init_stage_debug_delegate = __esm({
   "src/lib/stage/stage-debug-delegate.ts"() {
@@ -3150,7 +3540,7 @@ var init_stage_debug_delegate = __esm({
     StageDebugDelegate = class {
       stage;
       options;
-      mouseNdc = new Vector26(-2, -2);
+      mouseNdc = new Vector27(-2, -2);
       raycaster = new Raycaster();
       isMouseDown = false;
       disposeFns = [];
@@ -3167,7 +3557,7 @@ var init_stage_debug_delegate = __esm({
       initDebugVisuals() {
         if (this.debugLines || !this.stage.scene) return;
         this.debugLines = new LineSegments2(
-          new BufferGeometry2(),
+          new BufferGeometry3(),
           new LineBasicMaterial2({ vertexColors: true })
         );
         this.stage.scene.scene.add(this.debugLines);
@@ -3340,7 +3730,7 @@ var init_stage_camera_debug_delegate = __esm({
 });
 
 // src/lib/stage/stage-camera-delegate.ts
-import { Vector2 as Vector27 } from "three";
+import { Vector2 as Vector28 } from "three";
 var StageCameraDelegate;
 var init_stage_camera_delegate = __esm({
   "src/lib/stage/stage-camera-delegate.ts"() {
@@ -3358,7 +3748,7 @@ var init_stage_camera_delegate = __esm({
       createDefaultCamera() {
         const width = window.innerWidth;
         const height = window.innerHeight;
-        const screenResolution = new Vector27(width, height);
+        const screenResolution = new Vector28(width, height);
         return new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
       }
       /**
@@ -3558,7 +3948,7 @@ var init_options_parser = __esm({
 });
 
 // src/lib/stage/stage-config.ts
-import { Vector3 as Vector312 } from "three";
+import { Vector3 as Vector314 } from "three";
 function createDefaultStageConfig() {
   return new StageConfig(
     {
@@ -3568,7 +3958,7 @@ function createDefaultStageConfig() {
     ZylemBlueColor,
     null,
     null,
-    new Vector312(0, 0, 0),
+    new Vector314(0, 0, 0),
     {}
   );
 }
@@ -3620,7 +4010,7 @@ var init_stage_config = __esm({
 
 // src/lib/stage/zylem-stage.ts
 import { addEntity, createWorld as createECS, removeEntity } from "bitecs";
-import { Color as Color8, Vector3 as Vector313 } from "three";
+import { Color as Color9, Vector3 as Vector315 } from "three";
 import { subscribe as subscribe4 } from "valtio/vanilla";
 import { nanoid as nanoid2 } from "nanoid";
 var STAGE_TYPE, ZylemStage;
@@ -3629,6 +4019,7 @@ var init_zylem_stage = __esm({
     "use strict";
     init_world();
     init_zylem_scene();
+    init_instance_manager();
     init_stage_state();
     init_debug_state();
     init_game_state();
@@ -3649,6 +4040,7 @@ var init_zylem_stage = __esm({
       gravity;
       world;
       scene;
+      instanceManager = null;
       children = [];
       _childrenMap = /* @__PURE__ */ new Map();
       _removalMap = /* @__PURE__ */ new Map();
@@ -3699,7 +4091,7 @@ var init_zylem_stage = __esm({
           variables: parsed.config.variables,
           entities: []
         });
-        this.gravity = parsed.config.gravity ?? new Vector313(0, 0, 0);
+        this.gravity = parsed.config.gravity ?? new Vector315(0, 0, 0);
       }
       handleEntityImmediatelyOrQueue(entity) {
         if (this.isLoaded) {
@@ -3720,7 +4112,7 @@ var init_zylem_stage = __esm({
       }
       setState() {
         const { backgroundColor, backgroundImage } = this.state;
-        const color = backgroundColor instanceof Color8 ? backgroundColor : new Color8(backgroundColor);
+        const color = backgroundColor instanceof Color9 ? backgroundColor : new Color9(backgroundColor);
         setStageBackgroundColor(color);
         setStageBackgroundImage(backgroundImage);
         setStageVariables(this.state.variables ?? {});
@@ -3736,10 +4128,12 @@ var init_zylem_stage = __esm({
         const zylemCamera = this.cameraDelegate.resolveCamera(camera, this.camera);
         this.cameraRef = zylemCamera;
         this.scene = new ZylemScene(id, zylemCamera, this.state);
-        const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector313(0, 0, 0));
+        const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector315(0, 0, 0));
         this.world = new ZylemWorld(physicsWorld);
         this.scene.setup();
         this.entityModelDelegate.attach(this.scene);
+        this.instanceManager = new InstanceManager();
+        this.instanceManager.setScene(this.scene.scene);
         this.loadingDelegate.emitStart();
         await this.runEntityLoadGenerator();
         this.transformSystem = createTransformSystem(this);
@@ -3831,6 +4225,7 @@ var init_zylem_stage = __esm({
             this.removeEntityByUuid(child.uuid);
           }
         });
+        this.instanceManager?.update();
         this.scene.update({ delta });
         this.scene.updateSkybox(delta);
       }
@@ -3870,6 +4265,8 @@ var init_zylem_stage = __esm({
         this.cameraRef?.setDebugDelegate(null);
         this.cameraDebugDelegate = null;
         this.entityModelDelegate.dispose();
+        this.instanceManager?.dispose();
+        this.instanceManager = null;
         this.isLoaded = false;
         this.world = null;
         this.scene = null;
@@ -3909,8 +4306,40 @@ var init_zylem_stage = __esm({
           globals: getGlobals(),
           camera: this.scene.zylemCamera
         });
+        this.tryRegisterInstance(entity);
         this.addEntityToStage(entity);
         this.entityModelDelegate.observe(entity);
+      }
+      /**
+       * Try to register an entity for instanced rendering.
+       * Batching is enabled by default unless explicitly disabled with batched: false.
+       */
+      tryRegisterInstance(entity) {
+        if (!this.instanceManager) return;
+        const options = entity.options;
+        if (options?.batched !== true) return;
+        if (!entity.mesh?.geometry || !entity.materials?.length) return;
+        const geometry = entity.mesh.geometry;
+        const material = entity.materials[0];
+        const entityType = entity.constructor.type?.description || "unknown";
+        const size = options.size || { x: 1, y: 1, z: 1 };
+        const matOptions = options.material || {};
+        const batchKey = InstanceManager.generateBatchKey({
+          geometryType: entityType,
+          dimensions: { x: size.x, y: size.y, z: size.z },
+          materialPath: matOptions.path || null,
+          shaderType: matOptions.shader ? "custom" : "standard",
+          colorHex: matOptions.color?.getHex?.() || 16777215
+        });
+        const instanceId = this.instanceManager.register(entity, geometry, material, batchKey);
+        if (instanceId >= 0) {
+          entity.batchKey = batchKey;
+          entity.instanceId = instanceId;
+          entity.isInstanced = true;
+          if (entity.mesh) {
+            entity.mesh.visible = false;
+          }
+        }
       }
       buildEntityState(child) {
         if (child instanceof GameEntity) {
@@ -3985,6 +4414,9 @@ var init_zylem_stage = __esm({
         const entity = mapEntity ?? this._debugMap.get(uuid);
         if (!entity) return false;
         this.entityModelDelegate.unobserve(uuid);
+        if (entity.isInstanced && this.instanceManager) {
+          this.instanceManager.unregister(entity);
+        }
         this.world.destroyEntity(entity);
         if (entity.group) {
           this.scene.scene.remove(entity.group);
@@ -4059,7 +4491,7 @@ var init_zylem_stage = __esm({
 
 // src/lib/stage/stage-default.ts
 import { proxy as proxy4 } from "valtio/vanilla";
-import { Vector3 as Vector314 } from "three";
+import { Vector3 as Vector316 } from "three";
 function getStageOptions(options) {
   const defaults = getStageDefaultConfig();
   let originalConfig = {};
@@ -4090,7 +4522,7 @@ var init_stage_default = __esm({
         p1: ["gamepad-1", "keyboard"],
         p2: ["gamepad-2", "keyboard"]
       },
-      gravity: new Vector314(0, 0, 0),
+      gravity: new Vector316(0, 0, 0),
       variables: {}
     };
     stageDefaultsState = proxy4({

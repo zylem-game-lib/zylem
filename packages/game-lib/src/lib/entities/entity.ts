@@ -116,6 +116,14 @@ export class GameEntity<O extends GameEntityOptions>
   };
   public collisionType?: string;
 
+  // Instancing support
+  /** Batch key for instanced rendering (null if not instanced) */
+  public batchKey: string | null = null;
+  /** Index within the instanced mesh batch */
+  public instanceId: number = -1;
+  /** Whether this entity uses instanced rendering */
+  public isInstanced: boolean = false;
+
   /**
    * @deprecated Use the new ECS-based behavior system instead.
    * Use 'any' for callback types to avoid contravariance issues

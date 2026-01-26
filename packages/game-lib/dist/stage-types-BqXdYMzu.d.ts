@@ -1,17 +1,17 @@
-import { S as SetupFunction, Z as ZylemShaderObject, G as GameEntity, U as UpdateFunction, D as DestroyFunction, a as SetupContext, b as UpdateContext, c as DestroyContext, d as ZylemWorld, B as BaseNode, L as LoadingEvent, e as BehaviorSystem, f as BehaviorSystemFactory, g as GameEntityOptions, h as StageEvents } from './world-C8tQ7Plj.js';
+import { S as SetupFunction, Z as ZylemShader, G as GameEntity, U as UpdateFunction, D as DestroyFunction, a as SetupContext, b as UpdateContext, c as DestroyContext, d as ZylemWorld, B as BaseNode, L as LoadingEvent, e as BehaviorSystem, f as BehaviorSystemFactory, g as GameEntityOptions, h as StageEvents } from './world-VVcvzTVb.js';
 import * as bitecs from 'bitecs';
 import { defineSystem, IWorld } from 'bitecs';
-import { Scene, Color, Object3D, Vector3 } from 'three';
+import { Scene, Color, Object3D, Vector3, BufferGeometry, Material } from 'three';
 import { E as Entity, L as LifecycleFunction, S as StageEntity } from './entity-Bq_eNEDI.js';
-import { Z as ZylemCamera, C as CameraDebugDelegate, a as CameraDebugState, b as CameraWrapper } from './camera-CeJPAgGg.js';
+import { Z as ZylemCamera, C as CameraDebugDelegate, a as CameraDebugState, b as CameraWrapper } from './camera-DrTbdaJ1.js';
 import { G as GameEntityInterface, B as BaseEntityInterface } from './entity-types-DAu8sGJH.js';
 import RAPIER__default from '@dimforge/rapier3d-compat';
-import { S as SPRITE_TYPE, Z as ZylemSprite, a as SPHERE_TYPE, b as ZylemSphere, R as RECT_TYPE, c as ZylemRect, T as TEXT_TYPE, d as ZylemText, B as BOX_TYPE, e as ZylemBox, P as PLANE_TYPE, f as ZylemPlane, g as ZONE_TYPE, h as ZylemZone, A as ACTOR_TYPE, i as ZylemActor } from './entities-DvByhMGU.js';
+import { S as SPRITE_TYPE, Z as ZylemSprite, a as SPHERE_TYPE, b as ZylemSphere, R as RECT_TYPE, c as ZylemRect, T as TEXT_TYPE, d as ZylemText, B as BOX_TYPE, e as ZylemBox, P as PLANE_TYPE, f as ZylemPlane, g as ZONE_TYPE, h as ZylemZone, A as ACTOR_TYPE, i as ZylemActor } from './entities-Nn7RlZgV.js';
 
 interface SceneState {
     backgroundColor: Color | string;
     backgroundImage: string | null;
-    backgroundShader?: ZylemShaderObject | null;
+    backgroundShader?: ZylemShader | null;
 }
 declare class ZylemScene implements Entity<ZylemScene> {
     type: string;
@@ -28,7 +28,7 @@ declare class ZylemScene implements Entity<ZylemScene> {
     constructor(id: string, camera: ZylemCamera, state: SceneState);
     /**
      * Create a large inverted box with the shader for skybox effect
-     * Uses the pos.xyww trick to ensure skybox is always at maximum depth
+     * Supports both GLSL (ShaderMaterial) and TSL (MeshBasicNodeMaterial) shaders
      */
     private setupBackgroundShader;
     setup(): void;
@@ -63,9 +63,95 @@ declare class ZylemScene implements Entity<ZylemScene> {
      */
     debugScene(): void;
     /**
-     * Update skybox shader uniforms
+     * Update skybox shader uniforms (only applies to GLSL ShaderMaterial)
+     * TSL shaders use the time node which auto-updates
      */
     updateSkybox(delta: number): void;
+}
+
+/**
+ * Configuration for batch key generation
+ */
+interface BatchKeyConfig {
+    geometryType: string;
+    dimensions: Record<string, number>;
+    materialPath?: string | null;
+    shaderType?: 'standard' | 'custom';
+    colorHex?: number;
+}
+/**
+ * Manages instanced mesh batching for entities
+ */
+declare class InstanceManager {
+    private batches;
+    private entityToBatch;
+    private scene;
+    /** Default initial capacity for new batches */
+    static DEFAULT_CAPACITY: number;
+    /** Factor to grow batch when full */
+    static GROWTH_FACTOR: number;
+    /**
+     * Set the scene to add instanced meshes to
+     */
+    setScene(scene: Object3D): void;
+    /**
+     * Generate a batch key from configuration
+     */
+    static generateBatchKey(config: BatchKeyConfig): string;
+    /**
+     * Register an entity with the instance manager
+     * @returns The instance index, or -1 if registration failed
+     */
+    register(entity: GameEntity<any>, geometry: BufferGeometry, material: Material, batchKey: string): number;
+    /**
+     * Unregister an entity from the instance manager
+     */
+    unregister(entity: GameEntity<any>): void;
+    /**
+     * Mark an entity's transform as dirty (needs syncing)
+     */
+    markDirty(entity: GameEntity<any>): void;
+    /**
+     * Update all dirty instance transforms
+     * Call this once per frame
+     */
+    /**
+     * Update all active instance transforms
+     * Call this once per frame
+     */
+    update(): void;
+    private updateInstanceMatrix;
+    /**
+     * Get batch info for an entity
+     */
+    getBatchInfo(entity: GameEntity<any>): {
+        batchKey: string;
+        instanceId: number;
+    } | null;
+    /**
+     * Get statistics about current batching
+     */
+    getStats(): {
+        batchCount: number;
+        totalInstances: number;
+        batches: {
+            key: string;
+            count: number;
+            capacity: number;
+        }[];
+    };
+    /**
+     * Dispose all batches and release resources
+     */
+    dispose(): void;
+    /**
+     * Create a new batch group
+     */
+    private createBatch;
+    /**
+     * Grow a batch's capacity
+     */
+    private growBatch;
 }
 
 /**
@@ -165,6 +251,7 @@ declare class ZylemStage extends LifeCycleBase<ZylemStage> {
     gravity: Vector3;
     world: ZylemWorld | null;
     scene: ZylemScene | null;
+    instanceManager: InstanceManager | null;
     children: Array<BaseNode>;
     _childrenMap: Map<number, BaseNode>;
     _removalMap: Map<number, BaseNode>;
@@ -226,6 +313,11 @@ declare class ZylemStage extends LifeCycleBase<ZylemStage> {
      * Safe to call only after `load` when scene/world exist.
      */
     spawnEntity(child: BaseNode): Promise<void>;
+    /**
+     * Try to register an entity for instanced rendering.
+     * Batching is enabled by default unless explicitly disabled with batched: false.
+     */
+    private tryRegisterInstance;
     buildEntityState(child: BaseNode): Partial<BaseEntityInterface>;
     /** Add the entity to internal maps and notify listeners. */
     addEntityToStage(entity: BaseNode): void;

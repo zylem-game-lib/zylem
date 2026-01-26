@@ -1,6 +1,6 @@
 import { Vector2, Vector3 } from "three";
 import { PerspectiveType } from "./perspective";
-import { ZylemCamera } from "./zylem-camera";
+import { RendererType, ZylemCamera } from "./zylem-camera";
 
 export interface CameraOptions {
 	perspective?: PerspectiveType;
@@ -8,6 +8,12 @@ export interface CameraOptions {
 	target?: Vector3;
 	zoom?: number;
 	screenResolution?: Vector2;
+	/**
+	 * Renderer type: 'auto' | 'webgpu' | 'webgl'
+	 * Use 'webgpu' for TSL shaders
+	 * @default 'webgl'
+	 */
+	rendererType?: RendererType;
 }
 
 export class CameraWrapper {
@@ -24,7 +30,12 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 	if (options.perspective === 'fixed-2d') {
 		frustumSize = options.zoom || 10;
 	}
-	const zylemCamera = new ZylemCamera(options.perspective || 'third-person', screenResolution, frustumSize);
+	const zylemCamera = new ZylemCamera(
+		options.perspective || 'third-person',
+		screenResolution,
+		frustumSize,
+		options.rendererType || 'webgl'
+	);
 
 	// Set initial position and target
 	zylemCamera.move(options.position || new Vector3(0, 0, 0));

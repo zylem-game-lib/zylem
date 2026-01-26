@@ -1,19 +1,19 @@
-import { Scene, Vector2, Vector3, WebGLRenderer } from 'three';
-import { PerspectiveController, ZylemCamera } from './zylem-camera';
+import { Scene, Vector2, Vector3 } from 'three';
+import { PerspectiveController, ZylemCamera, ZylemRenderer } from './zylem-camera';
 import { StageEntity } from '../interfaces/entity';
 
 interface ThirdPersonCameraOptions {
 	target: StageEntity;
 	distance: Vector3;
 	screenResolution: Vector2;
-	renderer: WebGLRenderer;
+	renderer: ZylemRenderer;
 	scene: Scene;
 }
 
 export class ThirdPersonCamera implements PerspectiveController {
 	distance: Vector3;
 	screenResolution: Vector2 | null = null;
-	renderer: WebGLRenderer | null = null;
+	renderer: ZylemRenderer | null = null;
 	scene: Scene | null = null;
 	cameraRef: ZylemCamera | null = null;
 
@@ -24,7 +24,7 @@ export class ThirdPersonCamera implements PerspectiveController {
 	/**
 	 * Setup the third person camera controller
 	 */
-	setup(params: { screenResolution: Vector2; renderer: WebGLRenderer; scene: Scene; camera: ZylemCamera }) {
+	setup(params: { screenResolution: Vector2; renderer: ZylemRenderer; scene: Scene; camera: ZylemCamera }) {
 		const { screenResolution, renderer, scene, camera } = params;
 		this.screenResolution = screenResolution;
 		this.renderer = renderer;

@@ -146,15 +146,43 @@ type Vec3 = Vector3 | Vector3$1;
 
 declare function shortHash(objString: string): string;
 
+/**
+ * GLSL shader object (traditional approach for WebGL)
+ */
 type ZylemShaderObject = {
     fragment: string;
     vertex: string;
 };
+/**
+ * TSL shader type (for WebGPU)
+ * colorNode should be a TSL node that returns the fragment color
+ */
+type ZylemTSLShader = {
+    colorNode: any;
+    transparent?: boolean;
+};
+/**
+ * Combined shader type supporting both GLSL and TSL
+ */
+type ZylemShader = ZylemShaderObject | ZylemTSLShader;
+/**
+ * Check if a shader is a TSL shader
+ */
+declare function isTSLShader(shader: ZylemShader): shader is ZylemTSLShader;
+/**
+ * Check if a shader is a GLSL shader
+ */
+declare function isGLSLShader(shader: ZylemShader): shader is ZylemShaderObject;
 interface MaterialOptions {
     path?: string;
     repeat?: Vector2;
-    shader?: ZylemShaderObject;
+    shader?: ZylemShader;
     color?: Color;
+    /**
+     * When true, prefer TSL/NodeMaterial (for WebGPU)
+     * When false, prefer GLSL/ShaderMaterial (for WebGL)
+     */
+    useTSL?: boolean;
 }
 type BatchGeometryMap = Map<symbol, number>;
 interface BatchMaterialMapObject {
@@ -166,17 +194,28 @@ type TexturePath = string | null;
 declare class MaterialBuilder {
     static batchMaterialMap: Map<BatchKey, BatchMaterialMapObject>;
     materials: Material[];
+    /** Whether to use TSL/NodeMaterial (for WebGPU compatibility) */
+    private useTSL;
+    constructor(useTSL?: boolean);
     batchMaterial(options: Partial<MaterialOptions>, entityType: symbol): void;
     build(options: Partial<MaterialOptions>, entityType: symbol): void;
-    withColor(color: Color): this;
+    withColor(color: Color, useTSL?: boolean): this;
     withShader(shader: ZylemShaderObject): this;
+    withTSLShader(shader: ZylemTSLShader): this;
     /**
      * Set texture - loads in background (deferred).
      * Material is created immediately with null map, texture applies when loaded.
      */
-    setTexture(texturePath?: TexturePath, repeat?: Vector2): void;
-    setColor(color: Color): void;
+    setTexture(texturePath?: TexturePath, repeat?: Vector2, useTSL?: boolean): void;
+    setColor(color: Color, useTSL?: boolean): void;
+    /**
+     * Set GLSL shader (WebGL only)
+     */
     setShader(customShader: ZylemShaderObject): void;
+    /**
+     * Set TSL shader (WebGPU compatible)
+     */
+    setTSLShader(tslShader: ZylemTSLShader): void;
 }
 
 /**
@@ -667,6 +706,12 @@ declare class GameEntity<O extends GameEntityOptions> extends BaseNode<O> implem
     debugMaterial: ShaderMaterial | undefined;
     collisionDelegate: CollisionDelegate<this, O>;
     collisionType?: string;
+    /** Batch key for instanced rendering (null if not instanced) */
+    batchKey: string | null;
+    /** Index within the instanced mesh batch */
+    instanceId: number;
+    /** Whether this entity uses instanced rendering */
+    isInstanced: boolean;
     /**
      * @deprecated Use the new ECS-based behavior system instead.
      * Use 'any' for callback types to avoid contravariance issues
@@ -771,4 +816,4 @@ declare class ZylemWorld implements Entity<ZylemWorld> {
     destroy(): void;
 }
 
-export { type CollisionHandlerDelegate as A, BaseNode as B, type CleanupContext as C, type DestroyFunction as D, EventEmitterDelegate as E, GameEntity as G, type InputGamepad as I, type LoadingEvent as L, type MaterialOptions as M, type SetupFunction as S, type TexturePath as T, type UpdateFunction as U, type Vec3 as V, type ZylemShaderObject as Z, type SetupContext as a, type UpdateContext as b, type DestroyContext as c, ZylemWorld as d, type BehaviorSystem as e, type BehaviorSystemFactory as f, type GameEntityOptions as g, type StageEvents as h, type ZylemEvents as i, type GameEvents as j, type EntityEvents as k, type GameLoadingPayload as l, type StateDispatchPayload as m, type StageConfigPayload as n, type EntityConfigPayload as o, defineBehavior as p, type BehaviorDescriptor as q, type BehaviorRef as r, type BehaviorHandle as s, type DefineBehaviorConfig as t, type InputPlayerNumber as u, type Inputs as v, GameEntityLifeCycle as w, type IGame as x, type LoadedContext as y, zylemEventBus as z };
+export { type Inputs as A, BaseNode as B, GameEntityLifeCycle as C, type DestroyFunction as D, EventEmitterDelegate as E, type IGame as F, GameEntity as G, type LoadedContext as H, type InputGamepad as I, type CleanupContext as J, type CollisionHandlerDelegate as K, type LoadingEvent as L, type MaterialOptions as M, type SetupFunction as S, type TexturePath as T, type UpdateFunction as U, type Vec3 as V, type ZylemShader as Z, type SetupContext as a, type UpdateContext as b, type DestroyContext as c, ZylemWorld as d, type BehaviorSystem as e, type BehaviorSystemFactory as f, type GameEntityOptions as g, type StageEvents as h, type ZylemEvents as i, type GameEvents as j, type EntityEvents as k, type GameLoadingPayload as l, type StateDispatchPayload as m, type StageConfigPayload as n, type EntityConfigPayload as o, type ZylemShaderObject as p, type ZylemTSLShader as q, isTSLShader as r, isGLSLShader as s, defineBehavior as t, type BehaviorDescriptor as u, type BehaviorRef as v, type BehaviorHandle as w, type DefineBehaviorConfig as x, type InputPlayerNumber as y, zylemEventBus as z };
