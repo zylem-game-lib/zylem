@@ -27,7 +27,14 @@ const ground = createPlane({
 	collision: { static: true },
 	tile: new Vector2(20, 20),
 	position: new Vector3(0, 0, 0),
-	material: { path: grassNormalPath, color: new Color(0x666666) },
+	material: { path: grassNormalPath },
+});
+
+
+const box3 = createBox({
+	position: new Vector3(2, 5, 5),
+	material: { color: new Color(0xff0000) }, // Same color -> Same batch
+    batched: true
 });
 
 const game = createGame(
@@ -38,7 +45,8 @@ const game = createGame(
 	),
 	ground,
 	box1,
-	box2
+	box2,
+	box3
 );
 
 export default game;
