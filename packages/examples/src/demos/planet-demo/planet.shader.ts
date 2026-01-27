@@ -6,13 +6,17 @@ const fragment = `
 precision highp float;
 
 uniform float iTime;
+uniform sampler2D normalMap;
+uniform vec3 lightDir;   // world or view space
+uniform float normalStrength;
+
 varying vec2 vUv;
 
 // ---- Constants ----
 const vec3 colorA = vec3(0.02, 0.10, 0.60);
 const vec3 colorB = vec3(0.03, 0.22, 0.80);
 const vec3 colorC = vec3(0.05, 0.30, 0.95);
-const float speed = 0.3;
+const float speed = 1.3;
 
 // --------------------------------------------------
 // Cheaper 3D hash
@@ -53,6 +57,7 @@ float fbm(vec3 x) {
     return v;
 }
 
+// Convert UV → sphere direction
 vec3 uvTo3D(vec2 uv) {
     float theta = uv.x * 6.2831853;
     float phi   = uv.y * 3.1415926;
@@ -64,29 +69,47 @@ vec3 uvTo3D(vec2 uv) {
     );
 }
 
+// Decode tangent-space normal
+vec3 unpackNormal(vec3 n) {
+    return normalize(n * 2.0 - 1.0);
+}
+
 void main() {
     float time = iTime * speed;
 
-    vec3 pos = uvTo3D(vUv);
+    // Base sphere normal
+    vec3 sphereNormal = normalize(uvTo3D(vUv));
 
-    // Animate cheaply
+    // Sample and apply normal map with reduced strength
+    vec3 nTex = texture2D(normalMap, vUv).xyz;
+    vec3 detailNormal = unpackNormal(nTex);
+    // Reduce the normal map influence significantly
+    detailNormal.xy *= normalStrength * 0.5 * (2.0 - sin(time));
+
+    // Blend detail into sphere normal more subtly
+    vec3 normal = normalize(
+        sphereNormal + detailNormal * 0.5
+    );
+
+    // Animate noise space
     vec3 t = vec3(cos(time * 0.2), sin(time * 0.2), sin(time * 0.2));
-    pos += t;
+    float n = fbm(sphereNormal + t + time * 0.02);
 
-    // Single FBM
-    float n = fbm(pos + time * 0.02);
-
-    // Derived variation (no second FBM)
+    // Color palette
     vec3 q = vec3(n, sin(n * 3.0), cos(n * 3.0));
-
     vec3 col = mix(colorA, colorB, clamp(q.x, 0.0, 1.0));
-    col = mix(col, colorC, clamp(q.y * 0.5 + 0.5, 0.0, 1.0));
+    col = mix(colorC, col, clamp(q.y * 0.5 + 0.5, 0.0, 1.0));
 
-    float light = smoothstep(0.2, 0.8, n);
-    col *= light * 0.9 + 0.3;
+    // ---- Lighting ----
+    vec3 L = normalize(lightDir);
+    float diffuse = max(dot(normal, L), 0.0);
+
+    float ambient = 0.75;
+    col *= diffuse * 0.9 + ambient;
 
     gl_FragColor = vec4(col, 1.0);
 }
+
 `;
 
 export const planetShader = {

@@ -36,15 +36,28 @@ float starLayer(vec2 uv, float scale, float time) {
 
     float dist = length(d);
 
-    // Star size
-    float size = mix(0.015, 0.03, h);
+    // --------------------------------------------------
+    // Size tiers
+    bool bigStar = h > 0.985;        // ~1.5% chance
+    bool midStar = h > 0.94;         // medium stars
 
-    // Cheap brightness falloff
+    float baseSize = mix(0.012, 0.02, h);
+
+    float size = baseSize;
+    if (midStar) size *= 1.1;
+    if (bigStar) size *= 2.5;
+
+    // Core + glow
     float core = max(0.0, 1.0 - dist / size);
-    float glow = max(0.0, 1.0 - dist / (size * 4.0)) * 0.15;
 
-    // Twinkle (single sine)
-    float twinkle = 0.6 + 0.4 * sin(time * (0.6 + h) + h * 6.28);
+    float glowRadius = size * (bigStar ? 8.0 : 4.0);
+    float glowStrength = bigStar ? 0.35 : 0.15;
+
+    float glow = max(0.0, 1.0 - dist / glowRadius) * glowStrength;
+
+    // Twinkle (big stars twinkle slower)
+    float twinkleSpeed = bigStar ? 0.4 : 0.8;
+    float twinkle = 0.6 + 0.4 * sin(time * (twinkleSpeed + h) + h * 6.28);
 
     return (core + glow) * twinkle;
 }

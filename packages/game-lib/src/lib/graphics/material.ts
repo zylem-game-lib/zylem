@@ -48,6 +48,7 @@ export function isGLSLShader(shader: ZylemShader): shader is ZylemShaderObject {
 
 export interface MaterialOptions {
 	path?: string;
+	normalMap?: string;
 	repeat?: Vector2;
 	shader?: ZylemShader;
 	color?: Color;
@@ -100,7 +101,7 @@ export class MaterialBuilder {
 	}
 
 	build(options: Partial<MaterialOptions>, entityType: symbol): void {
-		const { path, repeat, color, shader, useTSL } = options;
+		const { path, normalMap, repeat, color, shader, useTSL } = options;
 		
 		// Override TSL preference if specified in options
 		const shouldUseTSL = useTSL ?? this.useTSL;
@@ -129,6 +130,12 @@ export class MaterialBuilder {
 		if (this.materials.length === 0) {
 			this.setColor(new Color('#ffffff'), shouldUseTSL);
 		}
+
+		// Apply normal map if present (to the last added material)
+		if (normalMap && this.materials.length > 0) {
+			this.setNormalMap(normalMap, repeat);
+		}
+
 		this.batchMaterial(options, entityType);
 	}
 
@@ -193,6 +200,41 @@ export class MaterialBuilder {
 		}
 	}
 
+	/**
+	 * Set normal map for the current material
+	 */
+	setNormalMap(normalMapPath: string, repeat: Vector2 = new Vector2(1, 1)): void {
+		const material = this.materials[this.materials.length - 1];
+		if (!material) return;
+
+		assetManager
+			.loadTexture(normalMapPath, {
+				clone: true,
+				repeat,
+			})
+			.then((texture) => {
+				texture.wrapS = RepeatWrapping;
+				texture.wrapT = RepeatWrapping;
+				
+				if (material instanceof MeshStandardMaterial 
+					|| material instanceof MeshPhongMaterial
+					|| material instanceof MeshStandardNodeMaterial) {
+					material.normalMap = texture;
+					material.needsUpdate = true;
+				} else if (material instanceof ShaderMaterial) {
+					// Support for custom shaders if they have tNormal or normalMap uniform
+					if (material.uniforms.tNormal) {
+						material.uniforms.tNormal.value = texture;
+						material.needsUpdate = true;
+					}
+					if (material.uniforms.normalMap) {
+						material.uniforms.normalMap.value = texture;
+						material.needsUpdate = true;
+					}
+				}
+			});
+	}
+
 	setColor(color: Color, useTSL: boolean = false) {
 		if (useTSL) {
 			// TSL/WebGPU compatible material
@@ -224,6 +266,9 @@ export class MaterialBuilder {
 				tDiffuse: { value: null },
 				tDepth: { value: null },
 				tNormal: { value: null },
+				normalMap: { value: null },
+				lightDir: { value: new Vector3(1, 1, 1) },
+				normalStrength: { value: 1.0 },
 			},
 			vertexShader: vertex,
 			fragmentShader: fragment,
