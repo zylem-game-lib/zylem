@@ -1,72 +1,108 @@
 import { Vector3 } from 'three';
 import { RigidBody, Vector } from '@dimforge/rapier3d-compat';
+import type { TransformState } from './transform-store';
 
 export interface EntityWithBody {
 	body: RigidBody | null;
+	transformStore?: TransformState;
 }
 
 /**
- * Move an entity along the X axis, preserving other velocities
+ * Move an entity along the X axis, preserving other velocities.
+ * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveX(entity: EntityWithBody, delta: number): void {
-	if (!entity.body) return;
-	const currentVelocity = entity.body.linvel();
-	const newVelocity = new Vector3(delta, currentVelocity.y, currentVelocity.z);
-	entity.body.setLinvel(newVelocity, true);
+	if (entity.transformStore) {
+		entity.transformStore.velocity.x = delta;
+		entity.transformStore.dirty.velocity = true;
+	} else if (entity.body) {
+		const currentVelocity = entity.body.linvel();
+		const newVelocity = new Vector3(delta, currentVelocity.y, currentVelocity.z);
+		entity.body.setLinvel(newVelocity, true);
+	}
 }
 
 /**
- * Move an entity along the Y axis, preserving other velocities
+ * Move an entity along the Y axis, preserving other velocities.
+ * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveY(entity: EntityWithBody, delta: number): void {
-	if (!entity.body) return;
-	const currentVelocity = entity.body.linvel();
-	const newVelocity = new Vector3(currentVelocity.x, delta, currentVelocity.z);
-	entity.body.setLinvel(newVelocity, true);
+	if (entity.transformStore) {
+		entity.transformStore.velocity.y = delta;
+		entity.transformStore.dirty.velocity = true;
+	} else if (entity.body) {
+		const currentVelocity = entity.body.linvel();
+		const newVelocity = new Vector3(currentVelocity.x, delta, currentVelocity.z);
+		entity.body.setLinvel(newVelocity, true);
+	}
 }
 
 /**
- * Move an entity along the Z axis, preserving other velocities
+ * Move an entity along the Z axis, preserving other velocities.
+ * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveZ(entity: EntityWithBody, delta: number): void {
-	if (!entity.body) return;
-	const currentVelocity = entity.body.linvel();
-	const newVelocity = new Vector3(currentVelocity.x, currentVelocity.y, delta);
-	entity.body.setLinvel(newVelocity, true);
+	if (entity.transformStore) {
+		entity.transformStore.velocity.z = delta;
+		entity.transformStore.dirty.velocity = true;
+	} else if (entity.body) {
+		const currentVelocity = entity.body.linvel();
+		const newVelocity = new Vector3(currentVelocity.x, currentVelocity.y, delta);
+		entity.body.setLinvel(newVelocity, true);
+	}
 }
 
 /**
- * Move an entity along the X and Y axis, preserving Z velocity
+ * Move an entity along the X and Y axis, preserving Z velocity.
+ * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveXY(entity: EntityWithBody, deltaX: number, deltaY: number): void {
-	if (!entity.body) return;
-	const currentVelocity = entity.body.linvel();
-	const newVelocity = new Vector3(deltaX, deltaY, currentVelocity.z);
-	entity.body.setLinvel(newVelocity, true);
+	if (entity.transformStore) {
+		entity.transformStore.velocity.x = deltaX;
+		entity.transformStore.velocity.y = deltaY;
+		entity.transformStore.dirty.velocity = true;
+	} else if (entity.body) {
+		const currentVelocity = entity.body.linvel();
+		const newVelocity = new Vector3(deltaX, deltaY, currentVelocity.z);
+		entity.body.setLinvel(newVelocity, true);
+	}
 }
 
 /**
- * Move an entity along the X and Z axis, preserving Y velocity
+ * Move an entity along the X and Z axis, preserving Y velocity.
+ * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveXZ(entity: EntityWithBody, deltaX: number, deltaZ: number): void {
-	if (!entity.body) return;
-	const currentVelocity = entity.body.linvel();
-	const newVelocity = new Vector3(deltaX, currentVelocity.y, deltaZ);
-	entity.body.setLinvel(newVelocity, true);
+	if (entity.transformStore) {
+		entity.transformStore.velocity.x = deltaX;
+		entity.transformStore.velocity.z = deltaZ;
+		entity.transformStore.dirty.velocity = true;
+	} else if (entity.body) {
+		const currentVelocity = entity.body.linvel();
+		const newVelocity = new Vector3(deltaX, currentVelocity.y, deltaZ);
+		entity.body.setLinvel(newVelocity, true);
+	}
 }
 
 /**
- * Move entity based on a vector, adding to existing velocities
+ * Move entity based on a vector, adding to existing velocities.
+ * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function move(entity: EntityWithBody, vector: Vector3): void {
-	if (!entity.body) return;
-	const currentVelocity = entity.body.linvel();
-	const newVelocity = new Vector3(
-		currentVelocity.x + vector.x,
-		currentVelocity.y + vector.y,
-		currentVelocity.z + vector.z
-	);
-	entity.body.setLinvel(newVelocity, true);
+	if (entity.transformStore) {
+		entity.transformStore.velocity.x += vector.x;
+		entity.transformStore.velocity.y += vector.y;
+		entity.transformStore.velocity.z += vector.z;
+		entity.transformStore.dirty.velocity = true;
+	} else if (entity.body) {
+		const currentVelocity = entity.body.linvel();
+		const newVelocity = new Vector3(
+			currentVelocity.x + vector.x,
+			currentVelocity.y + vector.y,
+			currentVelocity.z + vector.z
+		);
+		entity.body.setLinvel(newVelocity, true);
+	}
 }
 
 /**

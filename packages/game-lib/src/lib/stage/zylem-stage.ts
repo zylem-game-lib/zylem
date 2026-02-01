@@ -30,6 +30,7 @@ import { LoadingEvent } from '../core/interfaces';
 import { parseStageOptions } from './stage-config';
 import { isBaseNode, isThenable } from '../core/utility/options-parser';
 import type { BehaviorSystem, BehaviorSystemFactory } from '../behaviors/behavior-system';
+import { applyTransformChanges } from '../actions/capabilities/apply-transform';
 export type { LoadingEvent };
 
 export interface ZylemStageConfig {
@@ -294,7 +295,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			return;
 		}
 		this.world.update(params);
-		this.transformSystem?.system(this.ecs);
 		// Run registered ECS behavior systems
 		for (const system of this.behaviorSystems) {
 			system.update(this.ecs, delta);
@@ -304,10 +304,20 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 				...params,
 				me: child,
 			});
+			
+			// Apply pending transformations after update callbacks
+			if ((child as any).transformStore) {
+				applyTransformChanges(child as any, (child as any).transformStore);
+			}
+			
 			if (child.markedForRemoval) {
 				this.removeEntityByUuid(child.uuid);
 			}
 		});
+		
+		// Sync physics to rendering AFTER transforms are applied
+		this.transformSystem?.system(this.ecs);
+		
 		// Sync instanced mesh transforms
 		this.instanceManager?.update();
 		this.scene.update({ delta });

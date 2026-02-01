@@ -29,6 +29,8 @@ import type {
   BehaviorRef,
   BehaviorHandle,
 } from '../behaviors/behavior-descriptor';
+import type { TransformState } from '../actions/capabilities/transform-store';
+import { applyTransformChanges } from '../actions/capabilities/apply-transform';
 
 export interface CollisionContext<
   T,
@@ -145,6 +147,9 @@ export class GameEntity<O extends GameEntityOptions>
   // Behavior references (new ECS pattern)
   private behaviorRefs: BehaviorRef[] = [];
 
+  // Transform store for batched physics updates (optional, attached by makeTransformable)
+  public transformStore?: TransformState;
+
   constructor() {
     super();
   }
@@ -221,9 +226,9 @@ export class GameEntity<O extends GameEntityOptions>
    * (User callbacks are handled by BaseNode's lifecycleCallbacks.setup)
    */
   public _setup(params: SetupContext<this>): void {
-    this.behaviorCallbackMap.setup.forEach((callback) => {
-      callback({ ...params, me: this });
-    });
+    // this.behaviorCallbackMap.setup.forEach((callback) => {
+    //   callback({ ...params, me: this });
+    // });
   }
 
   protected async _loaded(_params: LoadedContext<this>): Promise<void> {}
@@ -234,9 +239,14 @@ export class GameEntity<O extends GameEntityOptions>
    */
   public _update(params: UpdateContext<this>): void {
     this.updateMaterials(params);
-    this.behaviorCallbackMap.update.forEach((callback) => {
-      callback({ ...params, me: this });
-    });
+    // this.behaviorCallbackMap.update.forEach((callback) => {
+    //   callback({ ...params, me: this });
+    // });
+    
+    // Apply pending transformations to physics after update callbacks
+    if (this.transformStore) {
+      applyTransformChanges(this, this.transformStore);
+    }
   }
 
   /**
@@ -244,9 +254,9 @@ export class GameEntity<O extends GameEntityOptions>
    * (User callbacks are handled by BaseNode's lifecycleCallbacks.destroy)
    */
   public _destroy(params: DestroyContext<this>): void {
-    this.behaviorCallbackMap.destroy.forEach((callback) => {
-      callback({ ...params, me: this });
-    });
+    // this.behaviorCallbackMap.destroy.forEach((callback) => {
+    //   callback({ ...params, me: this });
+    // });
   }
 
   protected async _cleanup(_params: CleanupContext<this>): Promise<void> {}
@@ -258,9 +268,9 @@ export class GameEntity<O extends GameEntityOptions>
         callback({ entity: this, other, globals });
       });
     }
-    this.behaviorCallbackMap.collision.forEach((callback) => {
-      callback({ entity: this, other, globals });
-    });
+    // this.behaviorCallbackMap.collision.forEach((callback) => {
+    //   callback({ entity: this, other, globals });
+    // });
   }
 
   /**
