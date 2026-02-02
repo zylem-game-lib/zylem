@@ -10,7 +10,7 @@
 import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorSystem } from '../behavior-system';
-import { Ricochet2DFSM, type Ricochet2DResult, type Ricochet2DCollisionContext } from './ricochet-2d-fsm';
+import { Ricochet2DFSM, type Ricochet2DResult, type Ricochet2DCollisionContext, type RicochetCallback } from './ricochet-2d-fsm';
 export type { Ricochet2DResult };
 
 export interface Ricochet2DOptions {
@@ -61,9 +61,27 @@ export interface Ricochet2DHandle {
 	getRicochet(ctx: Ricochet2DCollisionContext): Ricochet2DResult | null;
 
 	/**
+	 * Compute ricochet and apply velocity directly via transformStore.
+	 * Emits to onRicochet listeners if successful.
+	 *
+	 * @param ctx - Collision context with entity and contact normal
+	 * @returns true if ricochet was computed and applied, false otherwise
+	 */
+	applyRicochet(ctx: Ricochet2DCollisionContext): boolean;
+
+	/**
 	 * Get the last computed ricochet result, or null if none.
 	 */
 	getLastResult(): Ricochet2DResult | null;
+
+	/**
+	 * Register a listener for ricochet events.
+	 * Called whenever a ricochet is computed (from getRicochet or applyRicochet).
+	 *
+	 * @param callback - Function to call with ricochet result
+	 * @returns Unsubscribe function
+	 */
+	onRicochet(callback: RicochetCallback): () => void;
 }
 
 const defaultOptions: Ricochet2DOptions = {
@@ -86,9 +104,49 @@ function createRicochet2DHandle(
 			if (!fsm) return null;
 			return fsm.computeRicochet(ctx, ref.options);
 		},
+		applyRicochet: (ctx: Ricochet2DCollisionContext): boolean => {
+			const fsm = ref.fsm as Ricochet2DFSM | undefined;
+			if (!fsm) return false;
+
+			// Skip if on cooldown (prevents rapid duplicate applications)
+			if (fsm.isOnCooldown()) return false;
+
+			const result = fsm.computeRicochet(ctx, ref.options);
+			if (!result) return false;
+
+			// Apply velocity via transformStore
+			const entity = ctx.entity as any;
+			if (entity?.transformStore) {
+				entity.transformStore.velocity.x = result.velocity.x;
+				entity.transformStore.velocity.y = result.velocity.y;
+				entity.transformStore.velocity.z = result.velocity.z ?? 0;
+				entity.transformStore.dirty.velocity = true;
+			}
+
+			return true;
+		},
 		getLastResult: () => {
 			const fsm = ref.fsm as Ricochet2DFSM | undefined;
 			return fsm?.getLastResult() ?? null;
+		},
+		onRicochet: (callback: RicochetCallback): (() => void) => {
+			const fsm = ref.fsm as Ricochet2DFSM | undefined;
+			if (!fsm) {
+				// FSM not ready yet - queue callback for later
+				// System will apply pending callbacks when FSM is created
+				if (!(ref as any).pendingListeners) {
+					(ref as any).pendingListeners = [];
+				}
+				(ref as any).pendingListeners.push(callback);
+				
+				// Return unsubscribe that removes from pending queue
+				return () => {
+					const pending = (ref as any).pendingListeners as RicochetCallback[];
+					const idx = pending.indexOf(callback);
+					if (idx >= 0) pending.splice(idx, 1);
+				};
+			}
+			return fsm.addListener(callback);
 		},
 	};
 }
@@ -104,9 +162,14 @@ function createRicochet2DHandle(
  * Consumers call `getRicochet(ctx)` during collision callbacks to compute results.
  */
 class Ricochet2DSystem implements BehaviorSystem {
+	private elapsedMs: number = 0;
+
 	constructor(private world: any) {}
 
-	update(_ecs: IWorld, _delta: number): void {
+	update(_ecs: IWorld, delta: number): void {
+		// Accumulate elapsed time (delta is in seconds)
+		this.elapsedMs += delta * 1000;
+
 		if (!this.world?.collisionMap) return;
 
 		for (const [, entity] of this.world.collisionMap) {
@@ -124,12 +187,38 @@ class Ricochet2DSystem implements BehaviorSystem {
 			// Create FSM lazily on first update after spawn
 			if (!ricochetRef.fsm) {
 				ricochetRef.fsm = new Ricochet2DFSM();
+				
+				// Apply any pending listeners that were registered before FSM existed
+				const pending = (ricochetRef as any).pendingListeners as RicochetCallback[] | undefined;
+				if (pending) {
+					for (const cb of pending) {
+						ricochetRef.fsm.addListener(cb);
+					}
+					(ricochetRef as any).pendingListeners = [];
+				}
 			}
+
+			// Sync current game time to FSM
+			ricochetRef.fsm.setCurrentTimeMs(this.elapsedMs);
 		}
 	}
 
 	destroy(_ecs: IWorld): void {
-		// No explicit cleanup required (FSMs are stored on behavior refs)
+		if (!this.world?.collisionMap) return;
+
+		for (const [, entity] of this.world.collisionMap) {
+			const gameEntity = entity as any;
+			if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
+
+			const refs = gameEntity.getBehaviorRefs();
+			const ricochetRef = refs.find(
+				(r: any) => r.descriptor.key === Symbol.for('zylem:behavior:ricochet-2d')
+			);
+
+			if (ricochetRef?.fsm) {
+				ricochetRef.fsm.resetCooldown();
+			}
+		}
 	}
 }
 

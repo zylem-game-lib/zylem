@@ -125,11 +125,11 @@ export class KeyboardProvider implements InputProvider {
 		const result = this.applyCustomMapping(base, delta);
 		
 		// DEBUG: Log when keys are pressed
-		if (this.isKeyPressed('w') || this.isKeyPressed('s') || this.isKeyPressed('ArrowUp') || this.isKeyPressed('ArrowDown')) {
-			console.log('[KeyboardProvider] includeDefaultBase:', this.includeDefaultBase);
-			console.log('[KeyboardProvider] compiledMapping size:', this.compiledMapping.size);
-			console.log('[KeyboardProvider] result.directions:', result.directions);
-		}
+		// if (this.isKeyPressed('w') || this.isKeyPressed('s') || this.isKeyPressed('ArrowUp') || this.isKeyPressed('ArrowDown')) {
+		// 	console.log('[KeyboardProvider] includeDefaultBase:', this.includeDefaultBase);
+		// 	console.log('[KeyboardProvider] compiledMapping size:', this.compiledMapping.size);
+		// 	console.log('[KeyboardProvider] result.directions:', result.directions);
+		// }
 		
 		return result;
 	}

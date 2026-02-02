@@ -61,31 +61,26 @@ moveableBall.onSetup(({ me }) => {
 	me.moveXY(0, 8);
 });
 
+ballRicochet.onRicochet(() => {
+	ricochetSound(900, 0.04);
+});
+
 const ballCoordinator = new BoundaryRicochetCoordinator(moveableBall, ballBoundary, ballRicochet);
 
-moveableBall.onUpdate(({ me }) => {
-	const result = ballCoordinator.update();
-	if (result) {
-		me.moveXY(result.velocity.x, result.velocity.y);
-		ricochetSound(900, 0.04);
-	}
+moveableBall.onUpdate(() => {
+	ballCoordinator.update();
 });
 
 // Handle brick collisions
 moveableBall.onCollision(({ entity, other, globals }) => {
 	if (other.name !== 'brick') return;
 
-	// Compute ricochet with entities (automatic normal and size detection)
-	const result = ballRicochet.getRicochet({
+	// Apply ricochet with entities (automatic normal and size detection)
+	ballRicochet.applyRicochet({
 		entity,
 		otherEntity: other,
 		contact: {},
 	});
-
-	if (result) {
-		entity.body?.setLinvel({ x: result.velocity.x, y: result.velocity.y, z: 0 }, true);
-		ricochetSound(900, 0.04);
-	}
 
 	// Update score and destroy brick
 	const remaining = (globals.bricksRemaining as number) - 1;
@@ -99,17 +94,12 @@ moveableBall.onCollision(({ entity, other }) => {
 	if (other.name !== 'paddle') return;
 
 	// Use angled reflection for paddle (force upward normal)
-	const result = ballRicochet.getRicochet({
+	ballRicochet.applyRicochet({
 		entity,
 		otherEntity: other,
 		otherSize: paddleSize,
 		contact: { normal: { x: 0, y: 1 } },
 	});
-
-	if (result) {
-		entity.body?.setLinvel({ x: result.velocity.x, y: result.velocity.y, z: 0 }, true);
-		ricochetSound(900, 0.04);
-	}
 });
 
 const failZone = createZone({

@@ -245,7 +245,7 @@ export class ZylemCamera {
 	resize(width: number, height: number) {
 		this.screenResolution.set(width, height);
 		this.renderer.setSize(width, height, false);
-		this.composer.setSize(width, height);
+		this.composer.setSize(width, height); // TODO: fix composer is not defined on resize
 
 		if (this.camera instanceof PerspectiveCamera) {
 			this.camera.aspect = width / height;

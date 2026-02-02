@@ -1,34 +1,52 @@
 /// <reference types="@zylem/assets" />
 
-import { ArrowHelper, Vector3 } from 'three';
-import { createGame, createStage, createZone, rotateInDirection, move, resetVelocity } from '@zylem/game-lib';
-import { Ray } from '@dimforge/rapier3d-compat';
+import { Vector3 } from 'three';
+import { createGame, createStage, createZone, Platformer3DBehavior } from '@zylem/game-lib';
 import { playgroundPlane, playgroundActor, playgroundPlatforms } from '../utils';
-import { StageEntity } from '@zylem/game-lib';
 import skybox from '@zylem/assets/3d/skybox/default.png';
-import { SetupContext, UpdateContext } from '@zylem/game-lib';
+import { UpdateContext } from '@zylem/game-lib';
+import { createCamera } from '@zylem/game-lib';
+import { TransformableEntity } from '~/lib/actions/capabilities/apply-transform';
+import { GameEntity } from '~/lib/entities';
+import { StageEntity } from '@zylem/game-lib';
 
-const stage1 = await createStage({
-	gravity: new Vector3(0, -9.82, 0),
-	backgroundImage: skybox,
+const groundPlane = playgroundPlane('dirt');
+const player = playgroundActor('player') as TransformableEntity & GameEntity<any> & StageEntity;
+const platforms = playgroundPlatforms();
+
+const camera = createCamera({
+	position: { x: 0, y: 8, z: 7 },
+	perspective: 'third-person',
 });
 
-const groundPlane = await playgroundPlane('dirt');
-const player = await playgroundActor('player');
-const platforms = await playgroundPlatforms();
+const stage = createStage({
+	gravity: new Vector3(0, -9.82, 0),
+	backgroundImage: skybox
+}, camera);
+
+// Attach platformer behavior with double-jump
+const platformerHandle = player.use(Platformer3DBehavior, {
+	walkSpeed: 10,
+	runSpeed: 20,
+	jumpForce: 16,
+	maxJumps: 2, // Double jump!
+	gravity: 9.82,
+	groundRayLength: 0.25,
+});
+
 const startingZone = createZone({
 	position: { x: 0, y: 0, z: 0 },
 	size: new Vector3(10, 10, 10),
 	onEnter: ({ self, visitor, globals }) => {
-		// testGame.log(`${visitor.uuid} entered the starting zone 🚶‍♂️`);
+		// testGame.log(`${visitor.uuid} entered the starting zone 🚶♂️`);
 	},
 	onExit: ({ self, visitor, globals }) => {
-		// testGame.log(`${visitor.uuid} exited the starting zone 🚶‍♂️`);
+		// testGame.log(`${visitor.uuid} exited the starting zone 🚶♂️`);
 	},
 });
 
 const endingZone = createZone({
-	position: { x: 0, y: 20, z: 0 },
+	position: { x: 0, y: 30, z: 0 },
 	size: new Vector3(10, 10, 10),
 	onEnter: ({ self, visitor, globals }) => {
 		// testGame.log(`${visitor.uuid} entered the ending zone ⛳️`);
@@ -38,156 +56,64 @@ const endingZone = createZone({
 	},
 });
 
-const testGame = createGame(
+stage.add(startingZone);
+stage.add(endingZone);
+stage.add(groundPlane);
+stage.add(player);
+stage.add(...platforms);
+
+const game = createGame(
 	{
 		id: 'behaviors-test',
 		debug: true,
-		// preset: 'SNES',
-		// resolution: '512x448',
 	},
-	stage1,
-	startingZone,
-	endingZone,
-	groundPlane,
-	player,
-	...platforms,
+	stage
 );
 
 let lastMovement = new Vector3();
-let playerForce = new Vector3();
+player.onSetup(({ me }) => {
+	camera.cameraRef.target = me;
+});
 
-let rayLength = 1;
-let rapierRay: Ray;
-let arrow: ArrowHelper;
-
-let grounded = false;
-let jumping = false;
-let jumpStart = 5;
-const maxJumpHeight = 12;
-
-testGame.onSetup(({ camera }: SetupContext<any>) => {
-	if (player.group && camera && !(camera as any).target) {
-		(camera as any).target = player as unknown as StageEntity;
-	}
-}).onUpdate(({ inputs, delta }: UpdateContext<any>) => {
+player.onUpdate(({ inputs, me }: UpdateContext<any>) => {
 	const { p1 } = inputs;
 
-	if (!rapierRay) {
-		// Ray casting for ground detection
-		// @ts-ignore
-		const translation = player.body.translation();
-		const rayOrigin = new Vector3(translation.x, translation.y, translation.z);
-		const rayDirection = new Vector3(0, -1, 0); // Downward
-		rapierRay = new Ray(
-			{ x: rayOrigin.x, y: rayOrigin.y, z: rayOrigin.z },
-			{ x: rayDirection.x, y: rayDirection.y, z: rayDirection.z }
-		);
-		arrow = new ArrowHelper(rayDirection, rayOrigin, rayLength, 0xff0000);
-		// @ts-ignore
-		if (stage1.wrappedStage!.scene) {
-			stage1.wrappedStage!.scene.scene.add(arrow);
-		}
-		// @ts-ignore
-	}
-	// @ts-ignore
-	const rayOrigin = player.body.translation();
-	const rayDirection = new Vector3(0, -1, 0); // Downward
-	rapierRay.origin = rayOrigin;
-	rapierRay.dir = rayDirection;
-	if (stage1.wrappedStage!.world) {
-		stage1.wrappedStage!.world.world.castRay(rapierRay, rayLength, true, undefined, undefined, undefined, undefined, (collider) => {
-			// @ts-ignore
-			const ref = collider._parent.userData.uuid;
-			if (ref === player.uuid) {
-				return false;
-			}
-			if (ref !== player.uuid && !jumping) {
-				grounded = true;
-			}
-			return true;
-		});
-	}
-
-	// Get input values
 	const horizontal = p1.axes.Horizontal.value;
 	const vertical = p1.axes.Vertical.value;
 
-	// Create movement vectors
-	const forward = new Vector3(0, 0, 1);
-	const right = new Vector3(1, 0, 0);
+	me.$platformer.moveX = horizontal;
+	me.$platformer.moveZ = vertical;
+	me.$platformer.jump = p1.buttons.A.held > 0;
+	me.$platformer.run = p1.shoulders.LTrigger.held > 0;
 
-	// Calculate movement force
-	let moveForce = 12;
+	const state = platformerHandle.getState();
 
-	if (p1.shoulders.LTrigger.held > 0 && grounded) {
-		moveForce = 24;
+	switch (state) {
+		case 'running':
+			me.playAnimation({ key: 'running' });
+			break;
+		case 'walking':
+			me.playAnimation({ key: 'walking' });
+			break;
+		case 'jumping':
+			me.playAnimation({ key: 'jumping-up', pauseAtEnd: true });
+			break;
+		case 'falling':
+			me.playAnimation({ key: 'jumping-down', pauseAtEnd: true });
+			break;
+		case 'landing':
+			me.playAnimation({ key: 'idle' });
+			break;
+		default:
+			me.playAnimation({ key: 'idle' });
+			break;
 	}
-
-	const gravity = 9.82;
-
-	// Reset force vector
-	playerForce.set(0, 0, 0);
-
-	// Apply movement forces based on input
 	if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
-		playerForce.addScaledVector(right, horizontal * moveForce);
-		playerForce.addScaledVector(forward, vertical * moveForce);
+		lastMovement.set(horizontal, 0, vertical);
 	}
-
-	// Handle jumping
-	if (p1.buttons.A.held > 0 && grounded && !jumping) {
-		jumping = true;
-		jumpStart = maxJumpHeight;
-		grounded = false;
+	if (lastMovement.lengthSq() > 0) {
+		me.rotateInDirection(lastMovement);
 	}
-
-	if (jumping) {
-		jumpStart -= (delta * maxJumpHeight);
-		playerForce.y = jumpStart + maxJumpHeight;
-	}
-
-	// Apply gravity if not grounded
-	playerForce.y -= gravity;
-
-	if (playerForce.y < -gravity) {
-		jumping = false;
-	}
-
-	// Apply movement using physics body
-	// @ts-ignore
-	resetVelocity(player);
-	// @ts-ignore
-	move(player, playerForce);
-
-	if (grounded) {
-		const forceMagnitudeX = Math.abs(playerForce.x);
-		const forceMagnitudeZ = Math.abs(playerForce.z);
-		const highestForceMagnitude = Math.max(forceMagnitudeX, forceMagnitudeZ);
-		if (highestForceMagnitude > 2 && highestForceMagnitude <= 12) {
-			player.playAnimation({ key: 'walking' });
-		} else if (highestForceMagnitude > 12) {
-			player.playAnimation({ key: 'running' });
-		} else {
-			player.playAnimation({ key: 'idle' });
-		}
-	} else {
-		if (playerForce.y > 5) {
-			player.playAnimation({ key: 'jumping-up', pauseAtEnd: true });
-		} else if (jumping === false) {
-			player.playAnimation({ key: 'jumping-down', pauseAtEnd: true });
-		}
-	}
-
-	// Store last movement for rotation
-	if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
-		lastMovement = playerForce.clone();
-	}
-
-	// Rotate player in movement direction
-	// @ts-ignore
-	// resetRotation(player);
-	// @ts-ignore
-	rotateInDirection(player, lastMovement);
 });
 
-export default testGame;
+export default game;

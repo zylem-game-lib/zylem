@@ -33,18 +33,17 @@ const ballBoundary = moveableBall.use(WorldBoundary2DBehavior, {
 
 moveableBall.onSetup(({ me }) => {
 	me.setPosition(0, 0, 0);
-	me.move(new Vector3(5, 0, 0));
+	me.moveX(5);
+});
+
+ballRicochet.onRicochet(() => {
+	ricochetSound();
 });
 
 const ballCoordinator = new BoundaryRicochetCoordinator(moveableBall, ballBoundary, ballRicochet);
 
-moveableBall.onUpdate(({ me }) => {
-	const result = ballCoordinator.update();
-
-	if (result) {
-		me.body?.setLinvel({ x: result.velocity.x, y: result.velocity.y, z: 0 }, true);
-		ricochetSound();
-	}
+moveableBall.onUpdate(() => {
+	ballCoordinator.update();
 });
 
 // Handle paddle collisions
@@ -58,16 +57,15 @@ moveableBall.onCollision(({ entity, other }) => {
 
 	const normalX = ballPos.x > paddlePos.x ? 1 : -1;
 
-	// Compute ricochet with entities and explicit normal
-	const result = ballRicochet.getRicochet({
+	// Apply ricochet with entities and explicit normal
+	const applied = ballRicochet.applyRicochet({
 		entity,
 		otherEntity: other,
 		otherSize: paddleSize,
 		contact: { normal: { x: normalX, y: 0 } },
 	});
 
-	if (result) {
-		entity.body?.setLinvel({ x: result.velocity.x, y: result.velocity.y, z: 0 }, true);
+	if (applied) {
 		pingPongBeep();
 	}
 });

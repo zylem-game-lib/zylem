@@ -26,12 +26,12 @@ ball.onSetup(({ me }) => {
 
 const coordinator = new BoundaryRicochetCoordinator(ball, boundary, ricochet);
 
-ball.onUpdate(({ me }) => {
-	const result = coordinator.update();
-	if (result) {
-		me.moveXY(result.velocity.x, result.velocity.y);
-		ricochetSound();
-	}
+ricochet.onRicochet(() => {
+	ricochetSound();
+});
+
+ball.onUpdate(() => {
+	coordinator.update();
 });
 
 const game = createGame({
