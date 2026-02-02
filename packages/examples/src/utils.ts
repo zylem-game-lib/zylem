@@ -1,7 +1,7 @@
 /// <reference types="@zylem/assets" />
 // import type { CollisionOptions } from "@zylem/game-lib";
 import type { ZylemBox } from "@zylem/game-lib";
-import { createActor, createBox, createPlane } from "@zylem/game-lib";
+import { createActor, createBox, createPlane, makeTransformable } from "@zylem/game-lib";
 import { Color, Vector2, Vector3 } from "three";
 
 import grass from '@zylem/assets/3d/textures/grass.jpg';
@@ -41,6 +41,7 @@ export const playgroundPlane: any = (type: PlaygroundPlaneType, size: Vector2 = 
 			path: planeTypeToPath[type],
 			repeat: new Vector2(repeatX, repeatY)
 		},
+		position: { x: 0, y: -4, z: 0 },
 		randomizeHeight: true,
 	});
 }
@@ -82,7 +83,7 @@ const actorTypeToCollision: Record<PlaygroundActorType, any> = {
 };
 
 export const playgroundActor: any = (type: PlaygroundActorType) => {
-	return createActor({
+	return makeTransformable(createActor({
 		position: { x: 0, y: 10, z: 4 },
 		scale: actorTypeToScale[type],
 		models: [actorTypeToPath[type]],
@@ -91,103 +92,102 @@ export const playgroundActor: any = (type: PlaygroundActorType) => {
 			color: new Color(Color.NAMES.lightgreen),
 		},
 		collision: actorTypeToCollision[type],
-	});
+	}));
+}
+
+/**
+ * Platform shape definitions for the platformer course
+ */
+const platformShapes = {
+	// Long thin platform for bridges
+	longPlank: { x: 8, y: 0.5, z: 2 },
+	// Small square platform
+	square: { x: 3, y: 0.5, z: 3 },
+	// Larger square platform
+	largeSquare: { x: 6, y: 0.5, z: 6 },
+	// Tall box (can jump on top)
+	box: { x: 3, y: 3, z: 3 },
+	// Medium height box
+	mediumBox: { x: 4, y: 2, z: 4 },
+};
+
+type PlatformShape = keyof typeof platformShapes;
+
+interface PlatformConfig {
+	shape: PlatformShape;
+	position: { x: number; y: number; z: number };
 }
 
 export const playgroundPlatforms = () => {
 	const boxes: ZylemBox[] = [];
 
-	// Create a starting platform
+	// Starting platform - large square at ground level
 	const startPlatform = createBox({
 		position: { x: 0, y: 1, z: 0 },
-		size: { x: 6, y: 0.5, z: 4 },
+		size: platformShapes.largeSquare,
 		collision: { static: true },
-		material: {
-			path: steel,
-		}
+		material: { path: steel }
 	});
 
-	const platformConfigs = [
-		// First set - connected platforms forming a staircase
-		{ x: 8, y: 3, z: 0, width: 6, depth: 4 },
-		{ x: 12, y: 4, z: 1, width: 4, depth: 3 },
-		{ x: 16, y: 5, z: 2, width: 5, depth: 5 },
-
-		// Second set - larger isolated platform
-		{ x: 8, y: 7, z: 4, width: 8, depth: 6 },
-
-		// Third set - connected narrow bridge
-		{ x: 0, y: 9, z: 6, width: 10, depth: 2 },
-		{ x: -8, y: 9, z: 6, width: 8, depth: 2 },
-
-		// Fourth set - varying sizes
-		{ x: -16, y: 13, z: 2, width: 7, depth: 4 },
-		{ x: -8, y: 15, z: 0, width: 3, depth: 8 },
-
-		// Fifth set - connected L-shape
-		{ x: 0, y: 17, z: -2, width: 6, depth: 3 },
-		{ x: 4, y: 17, z: -4, width: 3, depth: 5 }
+	// Course layout - platforms arranged in the center area (-30 to 30 range)
+	// leaving ~20 units of empty space on borders of 100x100 ground plane
+	const courseConfigs: PlatformConfig[] = [
+		// Path 1: Staircase of boxes going up
+		{ shape: 'mediumBox', position: { x: 8, y: 0, z: 0 } },
+		{ shape: 'box', position: { x: 12, y: 0, z: -4 } },
+		{ shape: 'square', position: { x: 16, y: 4, z: -4 } },
+		
+		// Path 2: Long plank bridge to side area
+		{ shape: 'longPlank', position: { x: 0, y: 3, z: -8 } },
+		{ shape: 'square', position: { x: -8, y: 3, z: -8 } },
+		{ shape: 'mediumBox', position: { x: -12, y: 0, z: -8 } },
+		
+		// Central tower area
+		{ shape: 'largeSquare', position: { x: 0, y: 6, z: 0 } },
+		{ shape: 'box', position: { x: 0, y: 6.5, z: 12 } },
+		{ shape: 'square', position: { x: 0, y: 10, z: 8 } },
+		
+		// Left wing
+		{ shape: 'longPlank', position: { x: -10, y: 8, z: 4 } },
+		{ shape: 'square', position: { x: -18, y: 8, z: 4 } },
+		{ shape: 'mediumBox', position: { x: -22, y: 0, z: 4 } },
+		{ shape: 'square', position: { x: -22, y: 4, z: 8 } },
+		
+		// Right wing
+		{ shape: 'longPlank', position: { x: 10, y: 8, z: 4 } },
+		{ shape: 'largeSquare', position: { x: 18, y: 8, z: 4 } },
+		{ shape: 'box', position: { x: 22, y: 0, z: 0 } },
+		
+		// Upper level connecting bridges
+		{ shape: 'longPlank', position: { x: -8, y: 12, z: 0 } },
+		{ shape: 'longPlank', position: { x: 8, y: 12, z: 0 } },
+		{ shape: 'largeSquare', position: { x: 0, y: 14, z: 0 } },
+		
+		// Scattered stepping stones
+		{ shape: 'square', position: { x: -15, y: 5, z: -15 } },
+		{ shape: 'square', position: { x: -10, y: 6, z: -18 } },
+		{ shape: 'square', position: { x: -5, y: 7, z: -22 } },
+		{ shape: 'mediumBox', position: { x: 0, y: 0, z: -30 } },
+		
+		// Back corner area
+		{ shape: 'box', position: { x: 15, y: 0, z: -15 } },
+		{ shape: 'square', position: { x: 15, y: 5, z: -20 } },
+		{ shape: 'longPlank', position: { x: 20, y: 6, z: -15 } },
 	];
 
-	const jumpPlatforms: ZylemBox[] = [];
-	for (const config of platformConfigs) {
-		jumpPlatforms.push(createBox({
-			position: { x: config.x, y: config.y, z: config.z },
-			size: { x: config.width, y: 0.5, z: config.depth },
+	// Create all platforms from configs
+	for (const [i, config] of courseConfigs.entries()) {
+		const size = platformShapes[config.shape];
+		boxes.push(createBox({
+			name: `${config.shape}-${i}`,
+			position: config.position,
+			size,
 			collision: { static: true },
-			material: {
-				path: steel,
-			}
+			material: { path: steel }
 		}));
 	}
 
-	const loopRadius = 12;
-	const loopHeight = 21;
-	const loopSegments = 8;
-	const loopPlatforms: ZylemBox[] = [];
-
-	for (let i = 0; i < loopSegments; i++) {
-		const angle = (i / loopSegments) * Math.PI * 2;
-		const x = Math.cos(angle) * loopRadius;
-		const z = Math.sin(angle) * loopRadius;
-
-		// Vary platform sizes based on position in the loop
-		const width = 3 + Math.sin(angle * 2) * 2; // Varies between 1-5
-		const depth = 2 + Math.cos(angle * 3) * 1.5; // Varies between 0.5-3.5
-
-		// Connect some adjacent platforms in the loop
-		if (i % 2 === 0 && i < loopSegments - 1) {
-			// Create a connecting platform between this and the next platform
-			const nextAngle = ((i + 1) / loopSegments) * Math.PI * 2;
-			const nextX = Math.cos(nextAngle) * loopRadius;
-			const nextZ = Math.sin(nextAngle) * loopRadius;
-
-			// Calculate midpoint for the connecting platform
-			const midX = (x + nextX) / 2;
-			const midZ = (z + nextZ) / 2;
-
-			loopPlatforms.push(createBox({
-				position: { x: midX, y: loopHeight, z: midZ - 6 },
-				size: { x: 2, y: 0.5, z: 2 },
-				collision: { static: true },
-				material: {
-					path: steel,
-				}
-			}));
-		}
-
-		loopPlatforms.push(createBox({
-			position: { x: x, y: loopHeight, z: z - 6 },
-			size: { x: width, y: 0.5, z: depth },
-			collision: { static: true },
-			material: {
-				path: steel,
-			}
-		}));
-	}
-
-	boxes.push(startPlatform, ...jumpPlatforms, ...loopPlatforms);
-
+	boxes.push(startPlatform);
 	return boxes;
 };
 

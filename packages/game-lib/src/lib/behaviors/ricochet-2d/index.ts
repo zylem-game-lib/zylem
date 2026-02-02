@@ -11,6 +11,7 @@ export {
 	Ricochet2DEvent,
 	type Ricochet2DResult,
 	type Ricochet2DCollisionContext,
+	type RicochetCallback,
 } from './ricochet-2d-fsm';
 
 // Behavior descriptor, options, and handle

@@ -31,5 +31,5 @@ export interface BehaviorSystem {
  * Receives the stage for access to world, scene, etc.
  */
 export type BehaviorSystemFactory<T extends BehaviorSystem = BehaviorSystem> = (
-	stage: { world: any; ecs: IWorld }
+	stage: { world: any; ecs: IWorld; scene: any }
 ) => T;

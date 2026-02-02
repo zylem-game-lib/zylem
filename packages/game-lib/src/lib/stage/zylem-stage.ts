@@ -402,7 +402,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			for (const ref of entity.getBehaviorRefs()) {
 				const key = ref.descriptor.key;
 				if (!this.registeredSystemKeys.has(key)) {
-					const system = ref.descriptor.systemFactory({ world: this.world, ecs: this.ecs });
+					const system = ref.descriptor.systemFactory({ world: this.world, ecs: this.ecs, scene: this.scene });
 					this.behaviorSystems.push(system);
 					this.registeredSystemKeys.add(key);
 				}
@@ -526,7 +526,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	registerSystem(systemOrFactory: BehaviorSystem | BehaviorSystemFactory): this {
 		let system: BehaviorSystem;
 		if (typeof systemOrFactory === 'function') {
-			system = systemOrFactory({ world: this.world, ecs: this.ecs });
+		system = systemOrFactory({ world: this.world, ecs: this.ecs, scene: this.scene });
 		} else {
 			system = systemOrFactory;
 		}

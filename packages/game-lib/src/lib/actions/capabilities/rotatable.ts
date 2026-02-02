@@ -35,117 +35,101 @@ export function rotateEuler(entity: RotatableEntity, rotation: Vector3): void {
 
 /**
  * Rotate an entity around the Y axis.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function rotateY(entity: RotatableEntity, delta: number): void {
-	if (entity.transformStore) {
-		// Create delta rotation quaternion
-		const halfAngle = delta / 2;
-		const deltaW = Math.cos(halfAngle);
-		const deltaY = Math.sin(halfAngle);
-		
-		// Get current rotation from store
-		const q = entity.transformStore.rotation;
-		
-		// Multiply quaternions: q_new = q_current * q_delta
-		// For Y-axis rotation: q_delta = (0, deltaY, 0, deltaW)
-		const newW = q.w * deltaW - q.y * deltaY;
-		const newX = q.x * deltaW + q.z * deltaY;
-		const newY = q.y * deltaW + q.w * deltaY;
-		const newZ = q.z * deltaW - q.x * deltaY;
-		
-		entity.transformStore.rotation.w = newW;
-		entity.transformStore.rotation.x = newX;
-		entity.transformStore.rotation.y = newY;
-		entity.transformStore.rotation.z = newZ;
-		entity.transformStore.dirty.rotation = true;
-	} else {
-		setRotationY(entity, delta);
-	}
+	if (!entity.transformStore) return;
+	
+	// Create delta rotation quaternion
+	const halfAngle = delta / 2;
+	const deltaW = Math.cos(halfAngle);
+	const deltaY = Math.sin(halfAngle);
+	
+	// Get current rotation from store
+	const q = entity.transformStore.rotation;
+	
+	// Multiply quaternions: q_new = q_current * q_delta
+	// For Y-axis rotation: q_delta = (0, deltaY, 0, deltaW)
+	const newW = q.w * deltaW - q.y * deltaY;
+	const newX = q.x * deltaW + q.z * deltaY;
+	const newY = q.y * deltaW + q.w * deltaY;
+	const newZ = q.z * deltaW - q.x * deltaY;
+	
+	entity.transformStore.rotation.w = newW;
+	entity.transformStore.rotation.x = newX;
+	entity.transformStore.rotation.y = newY;
+	entity.transformStore.rotation.z = newZ;
+	entity.transformStore.dirty.rotation = true;
 }
 
 /**
  * Rotate an entity around the X axis.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function rotateX(entity: RotatableEntity, delta: number): void {
-	if (entity.transformStore) {
-		// Create delta rotation quaternion
-		const halfAngle = delta / 2;
-		const deltaW = Math.cos(halfAngle);
-		const deltaX = Math.sin(halfAngle);
-		
-		// Get current rotation from store
-		const q = entity.transformStore.rotation;
-		
-		// Multiply quaternions: q_new = q_current * q_delta
-		// For X-axis rotation: q_delta = (deltaX, 0, 0, deltaW)
-		const newW = q.w * deltaW - q.x * deltaX;
-		const newX = q.x * deltaW + q.w * deltaX;
-		const newY = q.y * deltaW + q.z * deltaX;
-		const newZ = q.z * deltaW - q.y * deltaX;
-		
-		entity.transformStore.rotation.w = newW;
-		entity.transformStore.rotation.x = newX;
-		entity.transformStore.rotation.y = newY;
-		entity.transformStore.rotation.z = newZ;
-		entity.transformStore.dirty.rotation = true;
-	} else {
-		setRotationX(entity, delta);
-	}
+	if (!entity.transformStore) return;
+	
+	// Create delta rotation quaternion
+	const halfAngle = delta / 2;
+	const deltaW = Math.cos(halfAngle);
+	const deltaX = Math.sin(halfAngle);
+	
+	// Get current rotation from store
+	const q = entity.transformStore.rotation;
+	
+	// Multiply quaternions: q_new = q_current * q_delta
+	// For X-axis rotation: q_delta = (deltaX, 0, 0, deltaW)
+	const newW = q.w * deltaW - q.x * deltaX;
+	const newX = q.x * deltaW + q.w * deltaX;
+	const newY = q.y * deltaW + q.z * deltaX;
+	const newZ = q.z * deltaW - q.y * deltaX;
+	
+	entity.transformStore.rotation.w = newW;
+	entity.transformStore.rotation.x = newX;
+	entity.transformStore.rotation.y = newY;
+	entity.transformStore.rotation.z = newZ;
+	entity.transformStore.dirty.rotation = true;
 }
 
 /**
  * Rotate an entity around the Z axis.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function rotateZ(entity: RotatableEntity, delta: number): void {
-	if (entity.transformStore) {
-		// Create delta rotation quaternion
-		const halfAngle = delta / 2;
-		const deltaW = Math.cos(halfAngle);
-		const deltaZ = Math.sin(halfAngle);
-		
-		// Get current rotation from store
-		const q = entity.transformStore.rotation;
-		
-		// Multiply quaternions: q_new = q_current * q_delta
-		// For Z-axis rotation: q_delta = (0, 0, deltaZ, deltaW)
-		const newW = q.w * deltaW - q.z * deltaZ;
-		const newX = q.x * deltaW - q.y * deltaZ;
-		const newY = q.y * deltaW + q.x * deltaZ;
-		const newZ = q.z * deltaW + q.w * deltaZ;
-		
-		entity.transformStore.rotation.w = newW;
-		entity.transformStore.rotation.x = newX;
-		entity.transformStore.rotation.y = newY;
-		entity.transformStore.rotation.z = newZ;
-		entity.transformStore.dirty.rotation = true;
-	} else {
-		setRotationZ(entity, delta);
-	}
+	if (!entity.transformStore) return;
+	
+	// Create delta rotation quaternion
+	const halfAngle = delta / 2;
+	const deltaW = Math.cos(halfAngle);
+	const deltaZ = Math.sin(halfAngle);
+	
+	// Get current rotation from store
+	const q = entity.transformStore.rotation;
+	
+	// Multiply quaternions: q_new = q_current * q_delta
+	// For Z-axis rotation: q_delta = (0, 0, deltaZ, deltaW)
+	const newW = q.w * deltaW - q.z * deltaZ;
+	const newX = q.x * deltaW - q.y * deltaZ;
+	const newY = q.y * deltaW + q.x * deltaZ;
+	const newZ = q.z * deltaW + q.w * deltaZ;
+	
+	entity.transformStore.rotation.w = newW;
+	entity.transformStore.rotation.x = newX;
+	entity.transformStore.rotation.y = newY;
+	entity.transformStore.rotation.z = newZ;
+	entity.transformStore.dirty.rotation = true;
 }
 
 /**
  * Set rotation around Y axis.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function setRotationY(entity: RotatableEntity, y: number): void {
-	if (entity.transformStore) {
-		const halfAngle = y / 2;
-		const w = Math.cos(halfAngle);
-		const yComponent = Math.sin(halfAngle);
-		entity.transformStore.rotation.w = w;
-		entity.transformStore.rotation.x = 0;
-		entity.transformStore.rotation.y = yComponent;
-		entity.transformStore.rotation.z = 0;
-		entity.transformStore.dirty.rotation = true;
-	} else if (entity.body) {
-		const halfAngle = y / 2;
-		const w = Math.cos(halfAngle);
-		const yComponent = Math.sin(halfAngle);
-		entity.body.setRotation({ w: w, x: 0, y: yComponent, z: 0 }, true);
-	}
+	if (!entity.transformStore) return;
+	const halfAngle = y / 2;
+	const w = Math.cos(halfAngle);
+	const yComponent = Math.sin(halfAngle);
+	entity.transformStore.rotation.w = w;
+	entity.transformStore.rotation.x = 0;
+	entity.transformStore.rotation.y = yComponent;
+	entity.transformStore.rotation.z = 0;
+	entity.transformStore.dirty.rotation = true;
 }
 
 /**
@@ -158,24 +142,17 @@ export function setRotationDegreesY(entity: RotatableEntity, y: number): void {
 
 /**
  * Set rotation around X axis.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function setRotationX(entity: RotatableEntity, x: number): void {
-	if (entity.transformStore) {
-		const halfAngle = x / 2;
-		const w = Math.cos(halfAngle);
-		const xComponent = Math.sin(halfAngle);
-		entity.transformStore.rotation.w = w;
-		entity.transformStore.rotation.x = xComponent;
-		entity.transformStore.rotation.y = 0;
-		entity.transformStore.rotation.z = 0;
-		entity.transformStore.dirty.rotation = true;
-	} else if (entity.body) {
-		const halfAngle = x / 2;
-		const w = Math.cos(halfAngle);
-		const xComponent = Math.sin(halfAngle);
-		entity.body.setRotation({ w: w, x: xComponent, y: 0, z: 0 }, true);
-	}
+	if (!entity.transformStore) return;
+	const halfAngle = x / 2;
+	const w = Math.cos(halfAngle);
+	const xComponent = Math.sin(halfAngle);
+	entity.transformStore.rotation.w = w;
+	entity.transformStore.rotation.x = xComponent;
+	entity.transformStore.rotation.y = 0;
+	entity.transformStore.rotation.z = 0;
+	entity.transformStore.dirty.rotation = true;
 }
 
 /**
@@ -188,24 +165,17 @@ export function setRotationDegreesX(entity: RotatableEntity, x: number): void {
 
 /**
  * Set rotation around Z axis.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function setRotationZ(entity: RotatableEntity, z: number): void {
-	if (entity.transformStore) {
-		const halfAngle = z / 2;
-		const w = Math.cos(halfAngle);
-		const zComponent = Math.sin(halfAngle);
-		entity.transformStore.rotation.w = w;
-		entity.transformStore.rotation.x = 0;
-		entity.transformStore.rotation.y = 0;
-		entity.transformStore.rotation.z = zComponent;
-		entity.transformStore.dirty.rotation = true;
-	} else if (entity.body) {
-		const halfAngle = z / 2;
-		const w = Math.cos(halfAngle);
-		const zComponent = Math.sin(halfAngle);
-		entity.body.setRotation({ w: w, x: 0, y: 0, z: zComponent }, true);
-	}
+	if (!entity.transformStore) return;
+	const halfAngle = z / 2;
+	const w = Math.cos(halfAngle);
+	const zComponent = Math.sin(halfAngle);
+	entity.transformStore.rotation.w = w;
+	entity.transformStore.rotation.x = 0;
+	entity.transformStore.rotation.y = 0;
+	entity.transformStore.rotation.z = zComponent;
+	entity.transformStore.dirty.rotation = true;
 }
 
 /**
@@ -218,20 +188,15 @@ export function setRotationDegreesZ(entity: RotatableEntity, z: number): void {
 
 /**
  * Set rotation for all axes.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function setRotation(entity: RotatableEntity, x: number, y: number, z: number): void {
-	if (entity.transformStore) {
-		const quat = new Quaternion().setFromEuler(new Euler(x, y, z));
-		entity.transformStore.rotation.w = quat.w;
-		entity.transformStore.rotation.x = quat.x;
-		entity.transformStore.rotation.y = quat.y;
-		entity.transformStore.rotation.z = quat.z;
-		entity.transformStore.dirty.rotation = true;
-	} else if (entity.body) {
-		const quat = new Quaternion().setFromEuler(new Euler(x, y, z));
-		entity.body.setRotation({ w: quat.w, x: quat.x, y: quat.y, z: quat.z }, true);
-	}
+	if (!entity.transformStore) return;
+	const quat = new Quaternion().setFromEuler(new Euler(x, y, z));
+	entity.transformStore.rotation.w = quat.w;
+	entity.transformStore.rotation.x = quat.x;
+	entity.transformStore.rotation.y = quat.y;
+	entity.transformStore.rotation.z = quat.z;
+	entity.transformStore.dirty.rotation = true;
 }
 
 /**
@@ -325,10 +290,17 @@ export function rotatable<T extends { new(...args: any[]): RotatableEntity }>(co
 }
 
 /**
- * Enhance an entity instance with rotatable methods
+ * Enhance an entity instance with rotatable methods.
+ * Automatically creates a transform store if one doesn't exist.
  */
 export function makeRotatable<T extends RotatableEntity>(entity: T): T & RotatableEntityAPI {
 	const rotatableEntity = entity as T & RotatableEntityAPI;
+
+	// Create transform store if it doesn't exist
+	if (!rotatableEntity.transformStore) {
+		const { createTransformStore } = require('./transform-store');
+		rotatableEntity.transformStore = createTransformStore();
+	}
 
 	rotatableEntity.rotateInDirection = (moveVector: Vector3) => rotateInDirection(entity, moveVector);
 	rotatableEntity.rotateYEuler = (amount: number) => rotateYEuler(entity, amount);
