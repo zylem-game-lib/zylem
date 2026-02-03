@@ -96,7 +96,6 @@ export class AnimationDelegate {
 	playAnimation(opts: AnimationOptions): void {
 		if (!this._mixer) return;
 		const { key, pauseAtPercentage = 0, pauseAtEnd = false, fadeToKey, fadeDuration = 0.5 } = opts;
-		console.log('playAnimation', key, this._currentKey);
 		if (key === this._currentKey) return;
 
 		// Check if the new action exists BEFORE stopping the current animation

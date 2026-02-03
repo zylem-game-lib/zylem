@@ -29,6 +29,8 @@ export interface Platformer3DMovementComponent {
 	jumpBufferTime: number;
 	/** Velocity multiplier when releasing jump button early (0-1) */
 	jumpCutMultiplier: number;
+	/** Time in seconds before multi-jump becomes available (0 = after button release) */
+	multiJumpWindowTime: number;
 }
 
 export function createPlatformer3DMovementComponent(
@@ -44,6 +46,7 @@ export function createPlatformer3DMovementComponent(
 		coyoteTime: options.coyoteTime ?? 0.1,
 		jumpBufferTime: options.jumpBufferTime ?? 0.1,
 		jumpCutMultiplier: options.jumpCutMultiplier ?? 0.5,
+		multiJumpWindowTime: options.multiJumpWindowTime ?? 0.15, // 150ms default
 	};
 }
 
@@ -111,6 +114,10 @@ export interface Platformer3DStateComponent {
 	jumpHeld: boolean;
 	/** Has the jump cut been applied for this jump? */
 	jumpCutApplied: boolean;
+	/** Has jump button been released since last jump (required for multi-jump) */
+	jumpReleasedSinceLastJump: boolean;
+	/** Time since current jump started (for multi-jump window) */
+	timeSinceJump: number;
 }
 
 export function createPlatformer3DStateComponent(): Platformer3DStateComponent {
@@ -130,5 +137,7 @@ export function createPlatformer3DStateComponent(): Platformer3DStateComponent {
 		jumpBufferTimer: 0,
 		jumpHeld: false,
 		jumpCutApplied: false,
+		jumpReleasedSinceLastJump: true,
+		timeSinceJump: 0,
 	};
 }

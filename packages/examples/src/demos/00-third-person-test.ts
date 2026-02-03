@@ -29,7 +29,7 @@ const platformerHandle = player.use(Platformer3DBehavior, {
 	walkSpeed: 10,
 	runSpeed: 20,
 	jumpForce: 16,
-	maxJumps: 2, // Double jump!
+	maxJumps: 4, // Double jump!
 	gravity: 9.82,
 	groundRayLength: 0.25,
 });
@@ -99,10 +99,10 @@ player.onUpdate(({ inputs, me }: UpdateContext<any>) => {
 			me.playAnimation({ key: 'jumping-up', pauseAtEnd: true });
 			break;
 		case 'falling':
-			me.playAnimation({ key: 'jumping-down', pauseAtEnd: true });
+			me.playAnimation({ key: 'jumping-up', pauseAtEnd: true });
 			break;
 		case 'landing':
-			me.playAnimation({ key: 'idle' });
+			me.playAnimation({ key: 'jumping-down', pauseAtEnd: true });
 			break;
 		default:
 			me.playAnimation({ key: 'idle' });
