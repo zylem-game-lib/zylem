@@ -176,8 +176,17 @@ export class Platformer3DBehavior {
 		const movement = entity.platformer;
 		const state = entity.platformerState;
 
-		// 1. Jump Buffering
-		// If jump pressed, queue it in buffer
+		// Track time since last jump (for multi-jump window)
+		if (state.jumping || state.falling) {
+			state.timeSinceJump += delta;
+		}
+
+		// Track jump button release (required for multi-jump)
+		if (!input.jump && state.jumpHeld) {
+			state.jumpReleasedSinceLastJump = true;
+		}
+
+		// 1. Jump Buffering - queue on new press
 		if (input.jump && !state.jumpPressedLastFrame) {
 			state.jumpBuffered = true;
 			state.jumpBufferTimer = movement.jumpBufferTime;
@@ -195,40 +204,59 @@ export class Platformer3DBehavior {
 		}
 
 		// 2. Variable Jump Height (Jump Cut)
-		// If jump released while moving up, cut velocity
-		if (!input.jump && state.jumping && !state.jumpCutApplied) {
+		// Only apply jump cut if we've been jumping for a bit (prevents cutting multi-jump immediately)
+		const minTimeBeforeCut = 0.1; // 100ms minimum before cut can apply
+		const canApplyCut = state.timeSinceJump >= minTimeBeforeCut;
+		if (!input.jump && state.jumping && !state.jumpCutApplied && canApplyCut) {
 			const velocity = entity.body.linvel();
-			if (velocity.y > 0) {
-				entity.transformStore.velocity.y = velocity.y * movement.jumpCutMultiplier;
-				entity.transformStore.dirty.velocity = true;
-				state.jumpCutApplied = true;
-			}
+			entity.transformStore.velocity.y = velocity.y * movement.jumpCutMultiplier;
+			entity.transformStore.dirty.velocity = true;
+			state.jumpCutApplied = true;
 		}
 
 		// Execute Jump (if buffered input exists)
 		if (!state.jumpBuffered) return;
 
-		// 3. Coyote Time & Multi-Jump Check
-		// - On ground: can jump
-		// - Coyote time: not grounded but recently was -> can jump (counts as first jump)
-		// - In air: can jump if haven't used all jumps
+		// 3. Jump eligibility check
+		const inCoyoteWindow = !state.grounded && state.timeSinceGrounded <= movement.coyoteTime;
+		const isFirstJump = state.grounded || (inCoyoteWindow && state.jumpCount === 0);
 		
-		const isFirstJump = state.grounded || state.timeSinceGrounded <= movement.coyoteTime;
-		const canMultiJump = state.jumpCount < movement.maxJumps;
+		// Multi-jump requirements:
+		// 1. Not grounded
+		// 2. Have jumps remaining
+		// 3. Button was released since last jump (no holding for double jump)
+		// 4. Within the jump window (after multiJumpWindowTime has passed)
+		const hasJumpsRemaining = state.jumpCount < movement.maxJumps;
+		const buttonReleased = state.jumpReleasedSinceLastJump;
+		const inMultiJumpWindow = state.timeSinceJump >= movement.multiJumpWindowTime;
+		const canMultiJump = !state.grounded && hasJumpsRemaining && buttonReleased && inMultiJumpWindow;
 		
-		// If using coyote time, we must treat it as using up the first jump slot
-		// But ensure we don't accidentally grant infinite jumps by resetting jumpCount
+		// DEBUG: Log jump attempt
+		console.log('[JUMP DEBUG] Attempting jump:', {
+			grounded: state.grounded,
+			jumpCount: state.jumpCount,
+			maxJumps: movement.maxJumps,
+			isFirstJump,
+			canMultiJump,
+			'--- Multi-jump conditions ---': '',
+			'!grounded': !state.grounded,
+			hasJumpsRemaining,
+			buttonReleased,
+			inMultiJumpWindow,
+			timeSinceJump: state.timeSinceJump.toFixed(3),
+			multiJumpWindowTime: movement.multiJumpWindowTime,
+		});
 		
 		if (isFirstJump || canMultiJump) {
+			console.log('[JUMP DEBUG] ✅ EXECUTING JUMP #' + (state.jumpCount + 1));
+			
 			// Consume buffered input
 			state.jumpBuffered = false;
 			
-			// If jumping from ground/coyote, reset count to 1
-			if (isFirstJump) {
-				state.jumpCount = 1;
-			} else {
-				state.jumpCount++;
-			}
+			// Increment jump count and reset tracking
+			state.jumpCount++;
+			state.jumpReleasedSinceLastJump = false; // Must release again for next jump
+			state.timeSinceJump = 0; // Reset window timer
 
 			// Record jump start height
 			state.jumpStartHeight = entity.body.translation().y;
@@ -236,11 +264,13 @@ export class Platformer3DBehavior {
 			// Apply jump force
 			state.jumping = true;
 			state.falling = false;
-			state.jumpCutApplied = false; // Reset cut flag for new jump
+			state.jumpCutApplied = false;
 
 			// Apply jump force via transform store
 			entity.transformStore.velocity.y = movement.jumpForce;
 			entity.transformStore.dirty.velocity = true;
+		} else {
+			console.log('[JUMP DEBUG] ❌ JUMP BLOCKED - conditions not met');
 		}
 	}
 
@@ -252,6 +282,12 @@ export class Platformer3DBehavior {
 		const state = entity.platformerState;
 
 		if (state.grounded) return;
+		
+		// Skip gravity on the same frame as a jump (prevents overwriting jump velocity)
+		// timeSinceJump is reset to 0 when we jump, so if it's very small, we just jumped
+		if (state.jumping && state.timeSinceJump < 0.01) {
+			return;
+		}
 
 		// Get current velocity from physics body and add gravity
 		const currentVel = entity.body.linvel();
@@ -265,36 +301,37 @@ export class Platformer3DBehavior {
 	/**
 	 * Update entity state based on physics
 	 */
-	/**
-	 * Update entity state based on physics
-	 */
 	private updateState(entity: Platformer3DEntity, delta: number): void {
 		const state = entity.platformerState;
 
-
-
-		// 2. Reset grounded state before detection
+		// 1. Reset grounded state before detection
 		const wasGrounded = state.grounded;
-		
-		// Reset state.grounded based on collision (we'll also check raycast)
-		// We trust collision more than raycast for "am I touching something"
-		let isGrounded = false;
 		
 		// Read ACTUAL velocity from physics body
 		const velocity = entity.body.linvel();
 		
-		// Don't detect ground if we're jumping upward (prevents false positives right after jump)
-		if (state.jumping && velocity.y > 0.1) {
-			// Still moving upward from jump, definitely not grounded
-			isGrounded = false;
+		let isGrounded = false;
+		
+		// Separate ground detection for airborne vs walking
+		const isAirborne = state.jumping || state.falling;
+		
+		if (isAirborne) {
+			// Airborne: Must be FALLING (not jumping) with very low velocity to land
+			// This prevents false grounding at jump apex or during descent
+			const nearGround = this.detectGround(entity);
+			const canLand = state.falling && !state.jumping; // Only land when falling, not jumping
+			const hasLanded = Math.abs(velocity.y) < 0.5; // Very strict threshold for landing
+			isGrounded = nearGround && canLand && hasLanded;
 		} else {
-			// If not colliding, try raycast (predictive / edge case coverage)
-			isGrounded = this.detectGround(entity);
+			// On ground (walking/idle): Normal raycast detection with lenient threshold
+			const nearGround = this.detectGround(entity);
+			const notFallingFast = velocity.y > -2.0; // Lenient - don't ground while falling fast
+			isGrounded = nearGround && notFallingFast;
 		}
 
 		state.grounded = isGrounded;
 
-		// 3. Update Coyote Timer
+		// 2. Update Coyote Timer
 		if (state.grounded) {
 			state.timeSinceGrounded = 0;
 			state.lastGroundedY = entity.body.translation().y;
@@ -302,7 +339,7 @@ export class Platformer3DBehavior {
 			state.timeSinceGrounded += delta;
 		}
 
-		// 4. Landing Logic
+		// 3. Landing Logic
 		if (!wasGrounded && state.grounded) {
 			state.jumpCount = 0;
 			state.jumping = false;
@@ -310,7 +347,7 @@ export class Platformer3DBehavior {
 			state.jumpCutApplied = false;
 		}
 
-		// 5. Falling Logic (negative Y velocity and not grounded)
+		// 4. Falling Logic (negative Y velocity and not grounded)
 		if (velocity.y < -0.1 && !state.grounded) {
 			if (state.jumping && velocity.y < 0) {
 				state.jumping = false;
