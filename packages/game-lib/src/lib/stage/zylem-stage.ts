@@ -240,13 +240,13 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	 * Runs the entity load generator, yielding to the event loop between loads.
 	 * This allows the browser to process events and update the UI in real-time.
 	 */
-	private async runEntityLoadGenerator(): Promise<void> {
+	private runEntityLoadGenerator(): void {
 		const gen = this.entityLoadGenerator();
 		for (const progress of gen) {
 			this.loadingDelegate.emitProgress(`Loaded ${progress.name}`, progress.current, progress.total);
 			// Yield to event loop so browser can process events and update UI
 			// Use setTimeout(0) for more reliable async behavior than RAF
-			await new Promise<void>(resolve => setTimeout(resolve, 0));
+			new Promise<void>(resolve => setTimeout(resolve, 0));
 		}
 	}
 

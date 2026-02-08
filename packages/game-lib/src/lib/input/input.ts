@@ -52,7 +52,8 @@ export type Inputs = Record<InputPlayer, InputGamepad>;
 export type ButtonName = keyof InputGamepad['buttons'];
 export type InputHandlerCallback = () => void;
 
-interface InputHandler {
-	onPress(button: ButtonName, callback: InputHandlerCallback): void;
-	update(currentInputs: Inputs): void;
+export interface InputProvider {
+	getInput(delta: number): Partial<InputGamepad>;
+	isConnected(): boolean;
+	getName(): string;
 }

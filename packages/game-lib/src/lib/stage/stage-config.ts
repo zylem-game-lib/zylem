@@ -1,7 +1,7 @@
 import { Color, Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
 import { CameraWrapper } from '../camera/camera';
-import { isBaseNode, isCameraWrapper, isConfigObject, isEntityInput, isThenable } from '../core/utility/options-parser';
+import { isBaseNode, isCameraWrapper, isConfigObject, isEntityInput } from '../core/utility/options-parser';
 import { ZylemBlueColor } from '../core/utility/vector';
 import type { ZylemShader } from '../graphics/material';
 
