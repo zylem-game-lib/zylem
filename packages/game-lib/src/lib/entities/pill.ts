@@ -1,13 +1,9 @@
-import { ColliderDesc } from '@dimforge/rapier3d-compat';
-import { CapsuleGeometry, Color } from 'three';
-import { Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
-import { EntityBuilder } from './builder';
-import { EntityCollisionBuilder } from './builder';
-import { EntityMeshBuilder } from './builder';
 import { DebugDelegate } from './delegates/debug';
-import { createEntity } from './create';
+import { commonDefaults, mergeArgs } from './common';
+import { pillMesh } from './parts/mesh-factories';
+import { pillCollision } from './parts/collision-factories';
 
 type ZylemPillOptions = GameEntityOptions & {
 	/** Radius of the capsule hemispheres */
@@ -20,8 +16,6 @@ type ZylemPillOptions = GameEntityOptions & {
 	radialSegments?: number;
 };
 
-import { commonDefaults } from './common';
-
 const pillDefaults: ZylemPillOptions = {
 	...commonDefaults,
 	radius: 0.5,
@@ -29,32 +23,6 @@ const pillDefaults: ZylemPillOptions = {
 	capSegments: 10,
 	radialSegments: 20,
 };
-
-export class PillCollisionBuilder extends EntityCollisionBuilder {
-	collider(options: ZylemPillOptions): ColliderDesc {
-		const radius = options.radius ?? 0.5;
-		const length = options.length ?? 1;
-		// Rapier capsule uses half-length of the cylindrical section
-		let colliderDesc = ColliderDesc.capsule(length / 2, radius);
-		return colliderDesc;
-	}
-}
-
-export class PillMeshBuilder extends EntityMeshBuilder {
-	build(options: ZylemPillOptions): CapsuleGeometry {
-		const radius = options.radius ?? 0.5;
-		const length = options.length ?? 1;
-		const capSegments = options.capSegments ?? 10;
-		const radialSegments = options.radialSegments ?? 20;
-		return new CapsuleGeometry(radius, length, capSegments, radialSegments);
-	}
-}
-
-export class PillBuilder extends EntityBuilder<ZylemPill, ZylemPillOptions> {
-	protected createEntity(options: Partial<ZylemPillOptions>): ZylemPill {
-		return new ZylemPill(options);
-	}
-}
 
 export const PILL_TYPE = Symbol('Pill');
 
@@ -91,13 +59,25 @@ type PillOptions = BaseNode | Partial<ZylemPillOptions>;
  * @param args Options or child nodes
  */
 export function createPill(...args: Array<PillOptions>): ZylemPill {
-	return createEntity<ZylemPill, ZylemPillOptions>({
-		args,
-		defaultConfig: pillDefaults,
-		EntityClass: ZylemPill,
-		BuilderClass: PillBuilder,
-		MeshBuilderClass: PillMeshBuilder,
-		CollisionBuilderClass: PillCollisionBuilder,
-		entityType: ZylemPill.type
-	});
+	const options = mergeArgs(args, pillDefaults);
+	const entity = new ZylemPill(options);
+	entity.add(
+		pillMesh({
+			radius: options.radius,
+			length: options.length,
+			capSegments: options.capSegments,
+			radialSegments: options.radialSegments,
+			material: options.material,
+			color: options.color,
+		}),
+		pillCollision({
+			radius: options.radius,
+			length: options.length,
+			static: options.collision?.static,
+			sensor: options.collision?.sensor,
+			collisionType: options.collisionType,
+			collisionFilter: options.collisionFilter,
+		}),
+	);
+	return entity;
 }

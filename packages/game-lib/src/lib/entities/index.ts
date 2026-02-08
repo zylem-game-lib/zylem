@@ -16,6 +16,6 @@ export * from './delegates/debug';
 export type {
 	GameEntity,
 	GameEntityOptions,
-	CompoundColliderConfig,
-	CompoundMeshConfig,
 } from './entity';
+
+export { create } from './entity';

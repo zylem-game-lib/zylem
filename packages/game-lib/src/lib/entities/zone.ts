@@ -1,13 +1,10 @@
-import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
-import { EntityBuilder } from './builder';
-import { EntityCollisionBuilder } from './builder';
-import { createEntity } from './create';
 import { CollisionHandlerDelegate } from '../collision/world';
 import { state } from '../game/game-state';
-import { commonDefaults } from './common';
+import { commonDefaults, mergeArgs } from './common';
+import { zoneCollision } from './parts/collision-factories';
 
 export type OnHeldParams = {
 	delta: number;
@@ -35,23 +32,6 @@ const zoneDefaults: ZylemZoneOptions = {
 		static: true,
 	},
 };
-
-export class ZoneCollisionBuilder extends EntityCollisionBuilder {
-	collider(options: ZylemZoneOptions): ColliderDesc {
-		const size = options.size || new Vector3(1, 1, 1);
-		const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
-		let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
-		colliderDesc.setSensor(true);
-		colliderDesc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;
-		return colliderDesc;
-	}
-}
-
-export class ZoneBuilder extends EntityBuilder<ZylemZone, ZylemZoneOptions> {
-	protected createEntity(options: Partial<ZylemZoneOptions>): ZylemZone {
-		return new ZylemZone(options);
-	}
-}
 
 export const ZONE_TYPE = Symbol('Zone');
 
@@ -147,12 +127,15 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions> implements Collision
 type ZoneOptions = BaseNode | Partial<ZylemZoneOptions>;
 
 export function createZone(...args: Array<ZoneOptions>): ZylemZone {
-	return createEntity<ZylemZone, ZylemZoneOptions>({
-		args,
-		defaultConfig: zoneDefaults,
-		EntityClass: ZylemZone,
-		BuilderClass: ZoneBuilder,
-		CollisionBuilderClass: ZoneCollisionBuilder,
-		entityType: ZylemZone.type
-	});
+	const options = mergeArgs(args, zoneDefaults);
+	const entity = new ZylemZone(options);
+	entity.add(
+		zoneCollision({
+			size: options.size,
+			static: options.collision?.static ?? true,
+			collisionType: options.collisionType,
+			collisionFilter: options.collisionFilter,
+		}),
+	);
+	return entity;
 }
