@@ -34,21 +34,20 @@ export { createActor } from '../lib/entities/actor';
 export { createText } from '../lib/entities/text';
 export { createRect } from '../lib/entities/rect';
 export { createDisk } from '../lib/entities/disk';
+export { createCone } from '../lib/entities/cone';
+export { createPyramid } from '../lib/entities/pyramid';
+export { createCylinder } from '../lib/entities/cylinder';
+export { createPill } from '../lib/entities/pill';
 export { createEntityFactory, type TemplateFactory } from '../lib/entities/entity-factory';
 export { ZylemBox } from '../lib/entities/box';
+export type { CompoundColliderConfig, CompoundMeshConfig } from '../lib/entities/entity';
 
 // ECS Components & Behaviors (new thruster system)
 export * from '../lib/behaviors';
 
-// Capabilities
-export { makeMoveable } from '../lib/actions/capabilities/moveable';
-export { makeRotatable } from '../lib/actions/capabilities/rotatable';
-export { makeTransformable } from '../lib/actions/capabilities/transformable';
-export { rotatable } from '../lib/actions/capabilities/rotatable';
-export { moveable } from '../lib/actions/capabilities/moveable';
+// Standalone action functions (capabilities are auto-applied on all entities)
 export { rotateInDirection } from '../lib/actions/capabilities/rotatable';
-export { move } from '../lib/actions/capabilities/moveable';
-export { resetVelocity } from '../lib/actions/capabilities/moveable';
+export { move, resetVelocity } from '../lib/actions/capabilities/moveable';
 
 
 // Destruction utilities
@@ -96,7 +95,8 @@ export type { StageEntity } from '../lib/interfaces/entity';
 // Entity type symbols for getEntityByName type inference
 export { 
 	TEXT_TYPE, SPRITE_TYPE, BOX_TYPE, SPHERE_TYPE, 
-	RECT_TYPE, PLANE_TYPE, ZONE_TYPE, ACTOR_TYPE 
+	RECT_TYPE, PLANE_TYPE, ZONE_TYPE, ACTOR_TYPE,
+	CONE_TYPE, PYRAMID_TYPE, CYLINDER_TYPE, PILL_TYPE,
 } from '../lib/types/entity-type-map';
 
 // Events

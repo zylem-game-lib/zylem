@@ -1,6 +1,7 @@
 import { Euler, Vector3, MathUtils, Quaternion } from 'three';
 import { RigidBody } from '@dimforge/rapier3d-compat';
 import type { TransformState } from './transform-store';
+import { createTransformStore } from './transform-store';
 
 export interface RotatableEntity {
 	body: RigidBody | null;
@@ -237,59 +238,6 @@ export interface RotatableEntityAPI extends RotatableEntity {
 }
 
 /**
- * Class decorator to enhance an entity with rotatable methods
- */
-export function rotatable<T extends { new(...args: any[]): RotatableEntity }>(constructor: T) {
-	return class extends constructor implements RotatableEntityAPI {
-		rotateInDirection(moveVector: Vector3): void {
-			rotateInDirection(this, moveVector);
-		}
-		rotateYEuler(amount: number): void {
-			rotateYEuler(this, amount);
-		}
-		rotateEuler(rotation: Vector3): void {
-			rotateEuler(this, rotation);
-		}
-		rotateY(delta: number): void {
-			rotateY(this, delta);
-		}
-		rotateX(delta: number): void {
-			rotateX(this, delta);
-		}
-		rotateZ(delta: number): void {
-			rotateZ(this, delta);
-		}
-		setRotationY(y: number): void {
-			setRotationY(this, y);
-		}
-		setRotationX(x: number): void {
-			setRotationX(this, x);	
-		}
-		setRotationZ(z: number): void {
-			setRotationZ(this, z);
-		}
-		setRotationDegrees(x: number, y: number, z: number): void {
-			setRotationDegrees(this, x, y, z);
-		}
-		setRotationDegreesY(y: number): void {
-			setRotationDegreesY(this, y);
-		}
-		setRotationDegreesX(x: number): void {
-			setRotationDegreesX(this, x);
-		}
-		setRotationDegreesZ(z: number): void {
-			setRotationDegreesZ(this, z);
-		}
-		setRotation(x: number, y: number, z: number): void {
-			setRotation(this, x, y, z);
-		}
-		getRotation(): any {
-			return getRotation(this);
-		}
-	};
-}
-
-/**
  * Enhance an entity instance with rotatable methods.
  * Automatically creates a transform store if one doesn't exist.
  */
@@ -298,7 +246,6 @@ export function makeRotatable<T extends RotatableEntity>(entity: T): T & Rotatab
 
 	// Create transform store if it doesn't exist
 	if (!rotatableEntity.transformStore) {
-		const { createTransformStore } = require('./transform-store');
 		rotatableEntity.transformStore = createTransformStore();
 	}
 

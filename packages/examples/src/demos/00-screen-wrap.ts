@@ -4,17 +4,15 @@ import {
 	createStage,
 	ThrusterBehavior,
 	ScreenWrapBehavior,
-	makeMoveable,
-	makeRotatable,
 	useBehavior,
 	useArrowsForAxes
 } from "@zylem/game-lib";
 import playerShipImg from '@zylem/assets/2d/space/player-ship.png';
 
 function playerFactory() {
-	const baseShip = makeRotatable(makeMoveable(createSprite({
+	const baseShip = createSprite({
 		images: [{ name: 'player-ship', file: playerShipImg }],
-	})));
+	});
 
 	const playerShip = useBehavior(
 		baseShip,

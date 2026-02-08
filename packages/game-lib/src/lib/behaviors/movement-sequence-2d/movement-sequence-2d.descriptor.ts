@@ -171,7 +171,7 @@ class MovementSequence2DSystem implements BehaviorSystem {
  * ```ts
  * import { MovementSequence2DBehavior } from "@zylem/game-lib";
  *
- * const enemy = makeMoveable(createSprite({ ... }));
+ * const enemy = createSprite({ ... });
  * const sequence = enemy.use(MovementSequence2DBehavior, {
  *   sequence: [
  *     { name: 'right', moveX: 3, moveY: 0, timeInSeconds: 2 },

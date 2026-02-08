@@ -1,7 +1,7 @@
 /// <reference types="@zylem/assets" />
 // import type { CollisionOptions } from "@zylem/game-lib";
 import type { ZylemBox } from "@zylem/game-lib";
-import { createActor, createBox, createPlane, makeTransformable } from "@zylem/game-lib";
+import { createActor, createBox, createPlane } from "@zylem/game-lib";
 import { Color, Vector2, Vector3 } from "three";
 
 import grass from '@zylem/assets/3d/textures/grass.jpg';
@@ -83,7 +83,7 @@ const actorTypeToCollision: Record<PlaygroundActorType, any> = {
 };
 
 export const playgroundActor: any = (type: PlaygroundActorType) => {
-	return makeTransformable(createActor({
+	return createActor({
 		position: { x: 0, y: 10, z: 4 },
 		scale: actorTypeToScale[type],
 		models: [actorTypeToPath[type]],
@@ -92,7 +92,7 @@ export const playgroundActor: any = (type: PlaygroundActorType) => {
 			color: new Color(Color.NAMES.lightgreen),
 		},
 		collision: actorTypeToCollision[type],
-	}));
+	});
 }
 
 /**

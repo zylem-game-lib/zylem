@@ -1,7 +1,7 @@
 import { Color, Vector3, Vector2 } from 'three';
 import { 
     createGame, createBox, createSphere, createStage, createCamera, createZone, createText,
-    makeMoveable, ricochetSound, pingPongBeep,
+    ricochetSound, pingPongBeep,
     getGlobal, setGlobal,
     WorldBoundary2DBehavior, Ricochet2DBehavior, BoundaryRicochetCoordinator
 } from '@zylem/game-lib';
@@ -15,10 +15,8 @@ const ball = createSphere({
 	color: new Color(Color.NAMES.white),
 });
 
-const moveableBall = makeMoveable(ball);
-
 // Attach ricochet behavior for ball reflection
-const ballRicochet = moveableBall.use(Ricochet2DBehavior, {
+const ballRicochet = ball.use(Ricochet2DBehavior, {
 	minSpeed: 5,
 	maxSpeed: 10,
 	speedMultiplier: 1.05,
@@ -27,11 +25,11 @@ const ballRicochet = moveableBall.use(Ricochet2DBehavior, {
 });
 
 // Attach boundary behavior to detect wall hits
-const ballBoundary = moveableBall.use(WorldBoundary2DBehavior, {
+const ballBoundary = ball.use(WorldBoundary2DBehavior, {
 	boundaries: gameBounds,
 });
 
-moveableBall.onSetup(({ me }) => {
+ball.onSetup(({ me }) => {
 	me.setPosition(0, 0, 0);
 	me.moveX(5);
 });
@@ -40,14 +38,14 @@ ballRicochet.onRicochet(() => {
 	ricochetSound();
 });
 
-const ballCoordinator = new BoundaryRicochetCoordinator(moveableBall, ballBoundary, ballRicochet);
+const ballCoordinator = new BoundaryRicochetCoordinator(ball, ballBoundary, ballRicochet);
 
-moveableBall.onUpdate(() => {
+ball.onUpdate(() => {
 	ballCoordinator.update();
 });
 
 // Handle paddle collisions
-moveableBall.onCollision(({ entity, other }) => {
+ball.onCollision(({ entity, other }) => {
 	if (!other.name || other.name.indexOf('paddle') === -1) return;
 
 	// Determine collision normal based on paddle position (always force horizontal reflection)
@@ -81,12 +79,11 @@ const paddle1 = createBox({
 	material: paddleMaterial,
 });
 
-const paddle1Moveable = makeMoveable(paddle1);
-const paddle1Boundary = paddle1Moveable.use(WorldBoundary2DBehavior, {
+const paddle1Boundary = paddle1.use(WorldBoundary2DBehavior, {
 	boundaries: gameBounds,
 });
 
-paddle1Moveable.onUpdate(({ me, inputs }) => {
+paddle1.onUpdate(({ me, inputs }) => {
 	const { Up, Down } = inputs.p1.directions;
 	const { Vertical } = inputs.p1.axes;
 	let value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
@@ -104,12 +101,11 @@ const paddle2 = createBox({
 	material: paddleMaterial,
 });
 
-const paddle2Moveable = makeMoveable(paddle2);
-const paddle2Boundary = paddle2Moveable.use(WorldBoundary2DBehavior, {
+const paddle2Boundary = paddle2.use(WorldBoundary2DBehavior, {
 	boundaries: gameBounds,
 });
 
-paddle2Moveable.onUpdate(({ me, inputs }) => {
+paddle2.onUpdate(({ me, inputs }) => {
 	const { Up, Down } = inputs.p2.directions;
 	const { Vertical } = inputs.p2.axes;
 	const value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -(Vertical.value);
@@ -127,10 +123,10 @@ const p1Goal = createZone({
 });
 p1Goal.onEnter(({ visitor }) => {
 	const p1Score = getGlobal<number>('p1Score') ?? 0;
-	if (visitor.uuid === moveableBall.uuid) {
+	if (visitor.uuid === ball.uuid) {
 		setGlobal('p1Score', p1Score + 1);
-		moveableBall.setPosition(0, 0, 0);
-		moveableBall.moveXY(-5, 0);
+		ball.setPosition(0, 0, 0);
+		ball.moveXY(-5, 0);
 	}
 });
 
@@ -141,10 +137,10 @@ const p2Goal = createZone({
 });
 p2Goal.onEnter(({ visitor }) => {
 	const p2Score = getGlobal<number>('p2Score') ?? 0;
-	if (visitor.uuid === moveableBall.uuid) {
+	if (visitor.uuid === ball.uuid) {
 		setGlobal('p2Score', p2Score + 1);
-		moveableBall.setPosition(0, 0, 0);
-		moveableBall.moveXY(5, 0);
+		ball.setPosition(0, 0, 0);
+		ball.moveXY(5, 0);
 	}
 });
 
@@ -198,13 +194,13 @@ const goalScore = 3;
 game.onGlobalChanges<[number, number]>(['p1Score', 'p2Score'], ([p1, p2]) => {
 	if (p1 >= goalScore) {
 		setGlobal('winner', 'p1');
-		moveableBall.setPosition(0, 1, 0);
-		moveableBall.moveXY(0, 0);
+		ball.setPosition(0, 1, 0);
+		ball.moveXY(0, 0);
 	}
 	if (p2 >= goalScore) {
 		setGlobal('winner', 'p2');
-		moveableBall.setPosition(0, 1, 0);
-		moveableBall.moveXY(0, 0);
+		ball.setPosition(0, 1, 0);
+		ball.moveXY(0, 0);
 	}
 });
 
