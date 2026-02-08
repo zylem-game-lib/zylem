@@ -39,10 +39,15 @@ npm install @zylem/game-lib
  * the ball can be controlled with the arrow keys or gamepad
  * the ball cannot go outside the boundaries
  */
-import { boundary2d, createGame, makeMoveable, sphere } from '@zylem/game-lib';
+import { createGame, createSphere, WorldBoundary2DBehavior } from '@zylem/game-lib';
 
-// Creates a moveable sphere
-const ball = makeMoveable(await sphere());
+// Creates a sphere (movement capabilities are built-in)
+const ball = createSphere();
+
+// attach boundary behavior
+ball.use(WorldBoundary2DBehavior, {
+  boundaries: { top: 3, bottom: -3, left: -6, right: 6 },
+});
 
 // when the ball is updated, move it based on the inputs
 ball.onUpdate(({ me, inputs, delta }) => {
@@ -54,20 +59,8 @@ ball.onUpdate(({ me, inputs, delta }) => {
   me.moveXY(Horizontal.value * speed, -Vertical.value * speed);
 });
 
-// add a boundary behavior to the ball
-ball.addBehavior(
-  boundary2d({
-    boundaries: {
-      top: 3,
-      bottom: -3,
-      left: -6,
-      right: 6,
-    },
-  }),
-);
-
 // start the game with the ball
-createGame(ball).start();
+createGame(ball);
 ```
 
 ## Development

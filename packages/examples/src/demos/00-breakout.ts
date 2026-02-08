@@ -1,7 +1,7 @@
 import { Color, Vector2, Vector3 } from 'three';
 import { 
 	createGame, createBox, createSphere, createStage, createCamera, createZone, createText,
-	setGlobal, makeMoveable, ricochetSound, destroy,
+	setGlobal, ricochetSound, destroy,
 	WorldBoundary2DBehavior, Ricochet2DBehavior, BoundaryRicochetCoordinator
 } from '@zylem/game-lib';
 
@@ -17,12 +17,11 @@ const paddle = createBox({
 	material: { color: new Color('#ffffff') },
 });
 
-const paddleMoveable = makeMoveable(paddle);
-const paddleBoundary = paddleMoveable.use(WorldBoundary2DBehavior, {
+const paddleBoundary = paddle.use(WorldBoundary2DBehavior, {
 	boundaries: board,
 });
 
-paddleMoveable.onUpdate(({ me, inputs }) => {
+paddle.onUpdate(({ me, inputs }) => {
 	const { Left, Right } = inputs.p1.directions;
 	const { Horizontal } = inputs.p1.axes;
 	const value = (Right.held ? 1 : 0) - (Left.held ? 1 : 0) || Horizontal.value;
@@ -40,10 +39,8 @@ const ball = createSphere({
 	material: { color: new Color(Color.NAMES.lightgreen) },
 });
 
-const moveableBall = makeMoveable(ball);
-
 // Attach ricochet behavior for reflections
-const ballRicochet = moveableBall.use(Ricochet2DBehavior, {
+const ballRicochet = ball.use(Ricochet2DBehavior, {
 	minSpeed: 3,
 	maxSpeed: 25,
 	speedMultiplier: 1.0,
@@ -52,11 +49,11 @@ const ballRicochet = moveableBall.use(Ricochet2DBehavior, {
 });
 
 // Attach boundary behavior for wall detection
-const ballBoundary = moveableBall.use(WorldBoundary2DBehavior, {
+const ballBoundary = ball.use(WorldBoundary2DBehavior, {
 	boundaries: board,
 });
 
-moveableBall.onSetup(({ me }) => {
+ball.onSetup(({ me }) => {
 	me.setPosition(0, -7, 0);
 	me.moveXY(0, 8);
 });
@@ -65,14 +62,14 @@ ballRicochet.onRicochet(() => {
 	ricochetSound(900, 0.04);
 });
 
-const ballCoordinator = new BoundaryRicochetCoordinator(moveableBall, ballBoundary, ballRicochet);
+const ballCoordinator = new BoundaryRicochetCoordinator(ball, ballBoundary, ballRicochet);
 
-moveableBall.onUpdate(() => {
+ball.onUpdate(() => {
 	ballCoordinator.update();
 });
 
 // Handle brick collisions
-moveableBall.onCollision(({ entity, other, globals }) => {
+ball.onCollision(({ entity, other, globals }) => {
 	if (other.name !== 'brick') return;
 
 	// Apply ricochet with entities (automatic normal and size detection)
@@ -90,7 +87,7 @@ moveableBall.onCollision(({ entity, other, globals }) => {
 });
 
 // Handle paddle collisions
-moveableBall.onCollision(({ entity, other }) => {
+ball.onCollision(({ entity, other }) => {
 	if (other.name !== 'paddle') return;
 
 	// Use angled reflection for paddle (force upward normal)
@@ -109,13 +106,13 @@ const failZone = createZone({
 });
 
 failZone.onEnter(({ visitor, globals }) => {
-	if (visitor.uuid === moveableBall.uuid) {
+	if (visitor.uuid === ball.uuid) {
 		if ((globals.lives as number) > 0) {
 			setGlobal('lives', (globals.lives as number) - 1);
 		}
 		if ((globals.lives as number) !== 0) {
-			moveableBall.setPosition(0, -7, 0);
-			moveableBall.moveXY(0, 8);
+			ball.setPosition(0, -7, 0);
+			ball.moveXY(0, 8);
 		}
 	}
 });
@@ -193,7 +190,7 @@ const game = createGame({
 			},
 		},
 	},
-}, stage1, paddle, moveableBall, failZone, scoreText, livesText, statusText, ...bricks);
+}, stage1, paddle, ball, failZone, scoreText, livesText, statusText, ...bricks);
 
 game.onGlobalChanges<[number, number]>(['bricksRemaining', 'lives'], ([remaining, lives]) => {
 	if (remaining <= 0) setGlobal('status', 'win');
@@ -205,8 +202,8 @@ game.onGlobalChange<string>('status', (value) => {
 	else if (value === 'lose') statusText.updateText('Game Over');
 	else statusText.updateText('');
 	if (value === 'win' || value === 'lose') {
-		moveableBall.setPosition(0, -2, 0);
-		moveableBall.moveXY(0, 0);
+		ball.setPosition(0, -2, 0);
+		ball.moveXY(0, 0);
 	}
 });
 

@@ -6,10 +6,16 @@ export * from './sprite';
 export * from './zone';
 export * from './text';
 export * from './rect';
+export * from './cone';
+export * from './pyramid';
+export * from './cylinder';
+export * from './pill';
 export { createEntity } from './create';
 export * from './delegates/debug';
 
 export type {
 	GameEntity,
 	GameEntityOptions,
+	CompoundColliderConfig,
+	CompoundMeshConfig,
 } from './entity';

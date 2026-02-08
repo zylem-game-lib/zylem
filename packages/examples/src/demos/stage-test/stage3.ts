@@ -48,7 +48,7 @@ const mySprite = createSprite({
 	name: 'rain-man',
 });
 
-const myActor = await playgroundActor('mascot');
+const myActor = playgroundActor('mascot');
 
 const myZone = createZone({
 	position: { x: 14, y: 3, z: 3 },

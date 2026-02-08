@@ -39,8 +39,11 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 
 	/**
 	 * Lifecycle callback arrays - use onSetup(), onUpdate(), etc. to add callbacks
+	 * Uses `any` for the type parameter to avoid invariance issues when subclasses
+	 * are assigned to BaseNode references. Type safety is enforced by the public
+	 * onSetup/onUpdate/etc. methods which are typed with `this`.
 	 */
-	protected lifecycleCallbacks: LifecycleCallbacks<this> = {
+	protected lifecycleCallbacks: LifecycleCallbacks<any> = {
 		setup: [],
 		loaded: [],
 		update: [],

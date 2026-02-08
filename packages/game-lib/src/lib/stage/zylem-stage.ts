@@ -33,6 +33,7 @@ import { parseStageOptions } from './stage-config';
 import { isBaseNode, isThenable } from '../core/utility/options-parser';
 import type { BehaviorSystem, BehaviorSystemFactory } from '../behaviors/behavior-system';
 import { applyTransformChanges } from '../actions/capabilities/apply-transform';
+import { Vessel } from '../core/vessel';
 export type { LoadingEvent };
 
 export interface ZylemStageConfig {
@@ -442,6 +443,31 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		if (!this.scene || !this.world) {
 			return;
 		}
+
+		// If the child is a Vessel, spawn each of its children individually
+		// then register the Vessel itself so it participates in the update loop.
+		if (child instanceof Vessel) {
+			child.create();
+			for (const childEntity of child.getChildren()) {
+				if (childEntity instanceof BaseNode) {
+					await this.spawnEntity(childEntity);
+				}
+			}
+			// Assign an ECS eid so the Vessel can be tracked in _childrenMap
+			const vesselEid = addEntity(this.ecs);
+			child.eid = vesselEid;
+
+			// Run vessel lifecycle after children are spawned
+			child.nodeSetup({
+				me: child,
+				globals: getGlobals(),
+				camera: this.scene.zylemCamera,
+			});
+
+			this.addEntityToStage(child);
+			return;
+		}
+
 		const entity = child.create();
 		const eid = addEntity(this.ecs);
 		entity.eid = eid;
@@ -462,6 +488,14 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		if (entity.colliderDesc) {
 			this.world.addEntity(entity);
 		}
+
+		// Recursively spawn any BaseNode children (for nested entities)
+		for (const childNode of child.getChildren()) {
+			if (childNode instanceof BaseNode) {
+				await this.spawnEntity(childNode);
+			}
+		}
+
 		child.nodeSetup({
 			me: child,
 			globals: getGlobals(),

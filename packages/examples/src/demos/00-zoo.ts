@@ -1,4 +1,4 @@
-import { createBox, createGame, createStage, makeTransformable } from "@zylem/game-lib";
+import { createBox, createGame, createStage } from "@zylem/game-lib";
 import { Color } from "three";
 
 const stage = createStage({ backgroundColor: new Color("#2e129f") });
@@ -16,11 +16,11 @@ function createDemoBox(col: number, row: number, color: Color, label: string) {
     const x = (col - GRID_COLS / 2 + 0.5) * SPACING;
     const y = 1.5 - (1 - row) * SPACING;
     
-    const box = makeTransformable(createBox({
+    const box = createBox({
         position: { x, y, z: 0 },
         size: { x: BOX_SIZE, y: BOX_SIZE, z: BOX_SIZE },
         color,
-    }));
+    });
     
     // Store initial position for reset
     (box as any).initialPosition = { x, y, z: 0 };

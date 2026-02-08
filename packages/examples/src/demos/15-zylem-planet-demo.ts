@@ -1,15 +1,15 @@
 import { Vector3 } from 'three';
-import { createGame, createStage, createSphere, createDisk, createCamera, Perspectives, makeTransformable, makeRotatable } from '@zylem/game-lib';
+import { createGame, createStage, createSphere, createDisk, createCamera, Perspectives } from '@zylem/game-lib';
 import { planetShader } from './planet-demo/planet.shader';
 import { ringShader } from './planet-demo/ring.shader';
 import { starfieldShader } from './planet-demo/starfield.shader';
 import zylemPlanetNormalOptimized from '../assets/zylem-planet-normal-optimized.png';
 
 // Planet with blue procedural shader
-const planet = makeRotatable(createSphere({
+const planet = createSphere({
 	radius: 20,
 	material: { shader: planetShader, normalMap: zylemPlanetNormalOptimized },
-}));
+});
 
 
 let rotation = 180;
@@ -19,12 +19,12 @@ planet.onUpdate(({ me, delta }) => {
 });
 
 // Ring around planet with red procedural shader
-const ring = makeTransformable(createDisk({
+const ring = createDisk({
   innerRadius: 25,
   outerRadius: 36,
   thetaSegments: 64,
   material: { shader: ringShader },
-})).onSetup(({ me }) => {
+}).onSetup(({ me }) => {
   me.setRotationDegreesZ(-23);
 })
 

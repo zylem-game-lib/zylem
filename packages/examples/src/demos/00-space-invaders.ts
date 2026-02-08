@@ -1,35 +1,35 @@
 import { Color, Vector2, Vector3 } from 'three';
 import {
-	createCamera, destroy, entitySpawner, createGame, makeMoveable,
+	createCamera, destroy, entitySpawner, createGame,
 	Perspectives, createSprite, createStage, createText, setGlobal, TEXT_TYPE,
-	WorldBoundary2DBehavior, MovementSequence2DBehavior, makeTransformable,
+	WorldBoundary2DBehavior, MovementSequence2DBehavior,
 	useArrowsForAxes
 } from '@zylem/game-lib';
 import playerShip from '@zylem/assets/2d/space/player-ship.png';
 import enemyShip from '@zylem/assets/2d/space/enemy-ship.png';
 import playerLaser from '@zylem/assets/2d/space/player-laser.png';
 
-const player = makeTransformable(createSprite({
+const player = createSprite({
 	name: 'player',
 	images: [
 		{ name: 'player', file: playerShip },
 	],
 	position: new Vector3(0, -5, 0),
-}));
+});
 
 const playerBoundary = player.use(WorldBoundary2DBehavior, {
 	boundaries: { top: 1, bottom: -7, left: -10, right: 10 },
 });
 
 async function createBullet(x: number, y: number) {
-	const bullet = makeTransformable(createSprite({
+	const bullet = createSprite({
 		name: 'bullet',
 		images: [
 			{ name: 'bullet', file: playerLaser },
 		],
 		position: new Vector3(x, y, 0),
 		size: new Vector3(0.5, 0.5, 1),
-	}));
+	});
 
 	const bulletBoundary = bullet.use(WorldBoundary2DBehavior, {
 		boundaries: { top: 10, bottom: -10, left: -10, right: 10 },
@@ -84,12 +84,12 @@ const enemies: any[] = [];
 
 for (let i = 0; i < 10; i++) {
 	for (let j = 0; j < 4; j++) {
-		const enemy = makeMoveable(createSprite({
+		const enemy = createSprite({
 			name: 'enemy',
 			images: [
 				{ name: 'enemy', file: enemyShip },
 			],
-		}));
+		});
 
 		// Attach movement sequence behavior (before onSetup so we can reset it)
 		const sequence = enemy.use(MovementSequence2DBehavior, {

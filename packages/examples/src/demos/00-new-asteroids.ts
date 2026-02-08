@@ -1,9 +1,9 @@
-import { createGame, createSprite, createStage, ThrusterBehavior, ScreenWrapBehavior, makeMoveable, makeRotatable, useBehavior } from "@zylem/game-lib";
+import { createGame, createSprite, createStage, ThrusterBehavior, ScreenWrapBehavior, useBehavior } from "@zylem/game-lib";
 import playerShipImg from '@zylem/assets/2d/space/player-ship.png';
 
-const baseShip = makeRotatable(makeMoveable(createSprite({
+const baseShip = createSprite({
     images: [{ name: 'player-ship', file: playerShipImg }],
-})));
+});
 
 const playerShip = useBehavior(
     baseShip,

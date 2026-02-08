@@ -7,6 +7,10 @@ import { ZylemPlane, PLANE_TYPE } from '../entities/plane';
 import { ZylemZone, ZONE_TYPE } from '../entities/zone';
 import { ZylemActor, ACTOR_TYPE } from '../entities/actor';
 import { ZylemDisk, DISK_TYPE } from '../entities/disk';
+import { ZylemCone, CONE_TYPE } from '../entities/cone';
+import { ZylemPyramid, PYRAMID_TYPE } from '../entities/pyramid';
+import { ZylemCylinder, CYLINDER_TYPE } from '../entities/cylinder';
+import { ZylemPill, PILL_TYPE } from '../entities/pill';
 import { BaseNode } from '../core/base-node';
 
 /**
@@ -23,6 +27,10 @@ export interface EntityTypeMap {
 	[ZONE_TYPE]: ZylemZone;
 	[ACTOR_TYPE]: ZylemActor;
 	[DISK_TYPE]: ZylemDisk;
+	[CONE_TYPE]: ZylemCone;
+	[PYRAMID_TYPE]: ZylemPyramid;
+	[CYLINDER_TYPE]: ZylemCylinder;
+	[PILL_TYPE]: ZylemPill;
 }
 
 /**
@@ -44,4 +52,8 @@ export {
 	ZONE_TYPE,
 	ACTOR_TYPE,
 	DISK_TYPE,
+	CONE_TYPE,
+	PYRAMID_TYPE,
+	CYLINDER_TYPE,
+	PILL_TYPE,
 };

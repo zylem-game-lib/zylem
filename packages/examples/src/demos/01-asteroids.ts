@@ -4,7 +4,6 @@ import {
 	destroy,
 	entitySpawner,
 	createGame,
-	makeTransformable,
 	Perspectives,
 	createSprite,
 	createStage,
@@ -51,12 +50,12 @@ let bulletCount = 0;
 let invincibilityTimer = 0;
 
 // Create player ship
-const player = makeTransformable(createSprite({
+const player = createSprite({
 	name: 'player',
 	images: [{ name: 'player', file: playerShipImg }],
 	position: new Vector3(0, 0, 0),
 	size: new Vector3(1, 1, 1),
-}));
+});
 
 player.onSetup(({ me }) => {
 	me.setPosition(0, 0, 0);
@@ -114,12 +113,12 @@ player.onCollision(({ entity, other, globals }) => {
 
 // Bullet factory
 async function createBullet(x: number, y: number, rotation: number) {
-	const bullet = makeTransformable(createSprite({
+	const bullet = createSprite({
 		name: 'bullet',
 		images: [{ name: 'bullet', file: playerLaserImg }],
 		position: new Vector3(x, y, 0),
 		size: new Vector3(0.4, 0.4, 1),
-	}));
+	});
 
 	bullet.onSetup(({ me }) => {
 		me.setPosition(x, y, 0);
@@ -169,12 +168,12 @@ async function spawnAsteroid(x: number, y: number, size: AsteroidSize, angle: nu
 	const config = asteroidConfig[size];
 	const imageFile = config.images[Math.floor(Math.random() * config.images.length)] as string;
 
-	const asteroid = makeTransformable(createSprite({
+	const asteroid = createSprite({
 		name: 'asteroid',
 		images: [{ name: 'asteroid', file: imageFile }],
 		position: new Vector3(x, y, 0),
 		size: new Vector3(config.scale, config.scale, 1),
-	}));
+	});
 
 	// Store size data for collision handling
 	(asteroid as any)._asteroidData = { size };
