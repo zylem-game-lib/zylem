@@ -2,9 +2,10 @@ import { ZylemGame, GameLoadingEvent } from './zylem-game';
 import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 import { IGame } from '../core/interfaces';
 import { setPaused } from '../debug/debug-state';
-import { BaseGlobals } from './game-interfaces';
+import { BaseGlobals, GameInputConfig } from './game-interfaces';
 import { convertNodes, GameOptions, hasStages, extractGlobalsFromOptions } from '../core/utility/nodes';
 import { resolveGameConfig } from './game-config';
+import { mergeInputConfigs } from '../input/input-presets';
 import { createStage, Stage } from '../stage/stage';
 import { StageManager, stageState } from '../stage/stage-manager';
 import { StageFactory } from '../stage/stage-factory';
@@ -29,6 +30,9 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 
 	// Event delegate for dispatch/listen API
 	private eventDelegate = new EventEmitterDelegate<GameEvents>();
+
+	/** Pending global input config set before the game starts. */
+	private pendingInputConfig: GameInputConfig | null = null;
 
 	refErrorMessage = 'lost reference to game';
 
@@ -60,6 +64,22 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		return this;
 	}
 
+	/**
+	 * Set composable input configuration as global defaults for the entire game.
+	 * Multiple configs are deep-merged (later configs win on key conflicts).
+	 * Per-stage overrides (via stage.setInputConfiguration) are merged on top.
+	 * Can be called before or after start().
+	 * @example game.setInputConfiguration(useArrowsForAxes('p1'), useWASDForDirections('p2'));
+	 */
+	setInputConfiguration(...configs: GameInputConfig[]): this {
+		const merged = mergeInputConfigs(...configs);
+		this.pendingInputConfig = merged;
+		if (this.wrappedGame) {
+			this.wrappedGame.setGlobalInputConfig(merged);
+		}
+		return this;
+	}
+
 	async start(): Promise<this> {
 		// Re-initialize globals for this game
 		resetGlobals();
@@ -79,6 +99,12 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private async load(): Promise<ZylemGame<TGlobals>> {
 		const options = await convertNodes<TGlobals>(this.options);
 		const resolved = resolveGameConfig(options as any);
+
+		// Merge any pending input configuration set via setInputConfiguration() before start
+		if (this.pendingInputConfig) {
+			resolved.input = mergeInputConfigs(resolved.input ?? {}, this.pendingInputConfig);
+		}
+
 		const game = new ZylemGame<TGlobals>({
 			...options as any,
 			...resolved as any,

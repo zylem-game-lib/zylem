@@ -1,8 +1,9 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { 
-	createCamera, destroy, entitySpawner, createGame, makeMoveable, 
+import {
+	createCamera, destroy, entitySpawner, createGame, makeMoveable,
 	Perspectives, createSprite, createStage, createText, setGlobal, TEXT_TYPE,
-	WorldBoundary2DBehavior, MovementSequence2DBehavior, makeTransformable
+	WorldBoundary2DBehavior, MovementSequence2DBehavior, makeTransformable,
+	useArrowsForAxes
 } from '@zylem/game-lib';
 import playerShip from '@zylem/assets/2d/space/player-ship.png';
 import enemyShip from '@zylem/assets/2d/space/enemy-ship.png';
@@ -16,7 +17,6 @@ const player = makeTransformable(createSprite({
 	position: new Vector3(0, -5, 0),
 }));
 
-// Attach boundary behavior to player
 const playerBoundary = player.use(WorldBoundary2DBehavior, {
 	boundaries: { top: 1, bottom: -7, left: -10, right: 10 },
 });
@@ -31,7 +31,6 @@ async function createBullet(x: number, y: number) {
 		size: new Vector3(0.5, 0.5, 1),
 	}));
 
-	// Attach boundary behavior to bullet
 	const bulletBoundary = bullet.use(WorldBoundary2DBehavior, {
 		boundaries: { top: 10, bottom: -10, left: -10, right: 10 },
 	});
@@ -77,7 +76,7 @@ player.onUpdate(({ me, inputs }) => {
 
 	if (A.pressed && shotsFired < maxShots) {
 		shotsFired++;
-		bulletSpawner.spawnRelative(player, stage1, new Vector2(0, 1));
+		bulletSpawner.spawnRelative(player, stage, new Vector2(0, 1));
 	}
 });
 
@@ -135,11 +134,12 @@ const camera = createCamera({
 	perspective: Perspectives.Fixed2D,
 });
 
-const stage1 = createStage({
+const stage = createStage({
 	backgroundColor: new Color(Color.NAMES.black),
 }, camera);
-stage1.add(player);
-stage1.add(...enemies);
+stage.add(player);
+stage.add(...enemies);
+stage.setInputConfiguration(useArrowsForAxes('p1'));
 
 const livesText = createText({
 	name: 'livesText',
@@ -164,12 +164,12 @@ const game = createGame({
 		lives: 3,
 		enemies: enemies.length,
 	},
-}, stage1, livesText, scoreText)
-.onGlobalChange<number>('score', (score, stage) => {
-	stage?.getEntityByName('scoreText', TEXT_TYPE)?.updateText(`Score: ${score}`);
-})
-.onGlobalChange<number>('lives', (lives, stage) => {
-	stage?.getEntityByName('livesText', TEXT_TYPE)?.updateText(`Lives: ${lives}`);
-});
+}, stage, livesText, scoreText)
+	.onGlobalChange<number>('score', (score, stage) => {
+		stage?.getEntityByName('scoreText', TEXT_TYPE)?.updateText(`Score: ${score}`);
+	})
+	.onGlobalChange<number>('lives', (lives, stage) => {
+		stage?.getEntityByName('livesText', TEXT_TYPE)?.updateText(`Lives: ${lives}`);
+	});
 
 export default game;

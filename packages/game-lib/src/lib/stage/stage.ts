@@ -7,6 +7,8 @@ import { stageState } from './stage-state';
 import { getStageOptions } from './stage-default';
 import { EntityTypeMap } from '../types/entity-type-map';
 import { EventEmitterDelegate, zylemEventBus, type StageEvents } from '../events';
+import { GameInputConfig } from '../game/game-interfaces';
+import { mergeInputConfigs } from '../input/input-presets';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
@@ -27,9 +29,33 @@ export class Stage {
 	// Event delegate for dispatch/listen API
 	private eventDelegate = new EventEmitterDelegate<StageEvents>();
 
+	/** Per-stage input configuration overrides. Merged with game-level defaults on stage load. */
+	inputConfig: GameInputConfig | null = null;
+
+	/**
+	 * Callback set by the game to trigger input reconfiguration
+	 * when this stage's input config changes at runtime.
+	 * @internal
+	 */
+	onInputConfigChanged: (() => void) | null = null;
+
 	constructor(options: StageOptions) {
 		this.options = options;
 		this.wrappedStage = null;
+	}
+
+	/**
+	 * Set composable input configuration for this stage.
+	 * Multiple configs are deep-merged (later configs win on key conflicts).
+	 * If this stage is currently active, the change takes effect immediately.
+	 * @example stage.setInputConfiguration(useArrowsForAxes('p1'), useWASDForDirections('p2'));
+	 */
+	setInputConfiguration(...configs: GameInputConfig[]): this {
+		this.inputConfig = mergeInputConfigs(...configs);
+		if (this.onInputConfigChanged) {
+			this.onInputConfigChanged();
+		}
+		return this;
 	}
 
 	async load(id: string, camera?: ZylemCamera | CameraWrapper | null) {

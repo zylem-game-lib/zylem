@@ -1,7 +1,7 @@
 /// <reference types="@zylem/assets" />
 
 import { Vector3 } from 'three';
-import { createGame, createStage, createZone, Platformer3DBehavior } from '@zylem/game-lib';
+import { createGame, createStage, createZone, Platformer3DBehavior, useArrowsForAxes } from '@zylem/game-lib';
 import { playgroundPlane, playgroundActor, playgroundPlatforms } from '../utils';
 import skybox from '@zylem/assets/3d/skybox/default.png';
 import { UpdateContext } from '@zylem/game-lib';
@@ -21,8 +21,8 @@ const camera = createCamera({
 
 const stage = createStage({
 	gravity: new Vector3(0, -9.82, 0),
-	backgroundImage: skybox
-}, camera);
+	backgroundImage: skybox,
+}, camera).setInputConfiguration(useArrowsForAxes('p1'));
 
 // Attach platformer behavior with double-jump
 const platformerHandle = player.use(Platformer3DBehavior, {

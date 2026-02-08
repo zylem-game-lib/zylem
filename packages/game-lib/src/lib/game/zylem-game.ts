@@ -5,10 +5,11 @@ import { debugState, isPaused, setDebugFlag } from '../debug/debug-state';
 import { Game } from './game';
 import { UpdateContext, SetupContext, DestroyContext } from '../core/base-node-life-cycle';
 import { InputManager } from '../input/input-manager';
+import { mergeInputConfigs } from '../input/input-presets';
 import { Timer } from '../core/three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
 import { Stage } from '../stage/stage';
-import { BaseGlobals, ZylemGameConfig } from './game-interfaces';
+import { BaseGlobals, GameInputConfig, ZylemGameConfig } from './game-interfaces';
 import { GameConfig, resolveGameConfig } from './game-config';
 import { AspectRatioDelegate } from '../device/aspect-ratio';
 import { GameCanvas } from './game-canvas';
@@ -42,6 +43,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	inputManager: InputManager;
 
 	wrapperRef: Game<TGlobals>;
+	globalInputConfig: GameInputConfig | undefined;
 	defaultCamera: ZylemCamera | null = null;
 	container: HTMLElement | null = null;
 	canvas: HTMLCanvasElement | null = null;
@@ -63,18 +65,12 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.wrapperRef = wrapperRef;
 		this.timer = new Timer();
 		this.timer.connect(document);
-		
-		console.log('[ZylemGame] options:', options);
-		console.log('[ZylemGame] options.input:', options.input);
-		
-		// Resolve config first to get the proper input configuration
+
 		const config = resolveGameConfig(options as any);
-		console.log(config);
-		console.log('[ZylemGame] config.input:', config.input);
-		
-		// Now create InputManager with the resolved config's input settings
+
+		this.globalInputConfig = config.input;
 		this.inputManager = new InputManager(config.input);
-		
+
 		this.id = config.id;
 		this.stages = (config.stages as any) || [];
 		this.container = config.container;
@@ -137,16 +133,48 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 				this.rendererObserver.setCamera(this.defaultCamera);
 			}
 
+			// Apply merged input configuration (global + stage overrides)
+			this.applyInputConfig(stage);
+
+			// Wire callback so runtime changes to stage input config take effect immediately
+			stage.onInputConfigChanged = () => this.applyInputConfig(stage);
+
 			// Emit state dispatch after stage is loaded so editor receives initial config
 			this.emitStateDispatch('@stage:loaded');
 		});
+	}
+
+	/**
+	 * Merges game-level global input config with the stage's per-stage overrides
+	 * and reconfigures the InputManager.
+	 */
+	applyInputConfig(stage: Stage): void {
+		const merged = mergeInputConfigs(
+			this.globalInputConfig ?? {},
+			stage.inputConfig ?? {},
+		);
+		this.inputManager.configure(merged);
+	}
+
+	/**
+	 * Update the game-level global input config and re-apply to the current stage.
+	 */
+	setGlobalInputConfig(config: GameInputConfig): void {
+		this.globalInputConfig = config;
+		const stage = this.currentStage();
+		if (stage) {
+			this.applyInputConfig(stage);
+		}
 	}
 
 	unloadCurrentStage() {
 		if (!this.currentStageId) return;
 		const current = this.getStage(this.currentStageId);
 		if (!current) return;
-		
+
+		// Disconnect input config callback from outgoing stage
+		current.onInputConfigChanged = null;
+
 		if (current?.wrappedStage) {
 			try {
 				current.wrappedStage.nodeDestroy({
