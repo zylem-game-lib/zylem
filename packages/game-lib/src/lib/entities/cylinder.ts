@@ -1,13 +1,9 @@
-import { ColliderDesc } from '@dimforge/rapier3d-compat';
-import { CylinderGeometry, Color } from 'three';
-import { Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
-import { EntityBuilder } from './builder';
-import { EntityCollisionBuilder } from './builder';
-import { EntityMeshBuilder } from './builder';
 import { DebugDelegate } from './delegates/debug';
-import { createEntity } from './create';
+import { commonDefaults, mergeArgs } from './common';
+import { cylinderMesh } from './parts/mesh-factories';
+import { cylinderCollision } from './parts/collision-factories';
 
 type ZylemCylinderOptions = GameEntityOptions & {
 	/** Top radius of the cylinder */
@@ -20,8 +16,6 @@ type ZylemCylinderOptions = GameEntityOptions & {
 	radialSegments?: number;
 };
 
-import { commonDefaults } from './common';
-
 const cylinderDefaults: ZylemCylinderOptions = {
 	...commonDefaults,
 	radiusTop: 1,
@@ -29,32 +23,6 @@ const cylinderDefaults: ZylemCylinderOptions = {
 	height: 2,
 	radialSegments: 32,
 };
-
-export class CylinderCollisionBuilder extends EntityCollisionBuilder {
-	collider(options: ZylemCylinderOptions): ColliderDesc {
-		const radius = Math.max(options.radiusTop ?? 1, options.radiusBottom ?? 1);
-		const height = options.height ?? 2;
-		// Rapier uses half-height for cylinder collider
-		let colliderDesc = ColliderDesc.cylinder(height / 2, radius);
-		return colliderDesc;
-	}
-}
-
-export class CylinderMeshBuilder extends EntityMeshBuilder {
-	build(options: ZylemCylinderOptions): CylinderGeometry {
-		const radiusTop = options.radiusTop ?? 1;
-		const radiusBottom = options.radiusBottom ?? 1;
-		const height = options.height ?? 2;
-		const radialSegments = options.radialSegments ?? 32;
-		return new CylinderGeometry(radiusTop, radiusBottom, height, radialSegments);
-	}
-}
-
-export class CylinderBuilder extends EntityBuilder<ZylemCylinder, ZylemCylinderOptions> {
-	protected createEntity(options: Partial<ZylemCylinderOptions>): ZylemCylinder {
-		return new ZylemCylinder(options);
-	}
-}
 
 export const CYLINDER_TYPE = Symbol('Cylinder');
 
@@ -93,13 +61,26 @@ type CylinderOptions = BaseNode | Partial<ZylemCylinderOptions>;
  * @param args Options or child nodes
  */
 export function createCylinder(...args: Array<CylinderOptions>): ZylemCylinder {
-	return createEntity<ZylemCylinder, ZylemCylinderOptions>({
-		args,
-		defaultConfig: cylinderDefaults,
-		EntityClass: ZylemCylinder,
-		BuilderClass: CylinderBuilder,
-		MeshBuilderClass: CylinderMeshBuilder,
-		CollisionBuilderClass: CylinderCollisionBuilder,
-		entityType: ZylemCylinder.type
-	});
+	const options = mergeArgs(args, cylinderDefaults);
+	const entity = new ZylemCylinder(options);
+	entity.add(
+		cylinderMesh({
+			radiusTop: options.radiusTop,
+			radiusBottom: options.radiusBottom,
+			height: options.height,
+			radialSegments: options.radialSegments,
+			material: options.material,
+			color: options.color,
+		}),
+		cylinderCollision({
+			radiusTop: options.radiusTop,
+			radiusBottom: options.radiusBottom,
+			height: options.height,
+			static: options.collision?.static,
+			sensor: options.collision?.sensor,
+			collisionType: options.collisionType,
+			collisionFilter: options.collisionFilter,
+		}),
+	);
+	return entity;
 }

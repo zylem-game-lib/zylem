@@ -35,6 +35,9 @@ import { createTransformStore } from '../actions/capabilities/transform-store';
 import { makeTransformable } from '../actions/capabilities/transformable';
 import type { MoveableEntity } from '../actions/capabilities/moveable';
 import type { RotatableEntityAPI } from '../actions/capabilities/rotatable';
+import { isCollisionComponent, type CollisionComponent } from './parts/collision-factories';
+import type { NodeInterface } from '../core/node-interface';
+import { commonDefaults } from './common';
 
 export interface CollisionContext<
 	T,
@@ -59,44 +62,6 @@ export type IBuilder<BuilderOptions = any> = {
 	postBuild: (options: BuilderOptions) => BuilderOptions;
 };
 
-/**
- * Configuration for an additional collider shape on a compound entity.
- * Each additional collider is attached to the same rigid body.
- */
-export interface CompoundColliderConfig {
-	/** Collider shape type */
-	shape: 'box' | 'sphere' | 'capsule' | 'cylinder';
-	/** Size for box colliders */
-	size?: Vec3;
-	/** Radius for sphere/capsule/cylinder colliders */
-	radius?: number;
-	/** Half-height for capsule/cylinder colliders */
-	halfHeight?: number;
-	/** Position offset relative to the entity origin */
-	offset?: Vec3;
-	/** Whether this collider is a sensor */
-	sensor?: boolean;
-}
-
-/**
- * Configuration for an additional mesh on a compound entity.
- * Each additional mesh is added to the entity's group.
- */
-export interface CompoundMeshConfig {
-	/** Geometry type */
-	geometry: 'box' | 'sphere' | 'capsule' | 'cylinder' | 'cone';
-	/** Size for box geometry */
-	size?: Vec3;
-	/** Radius for sphere/capsule/cylinder/cone geometry */
-	radius?: number;
-	/** Height for capsule/cylinder/cone geometry */
-	height?: number;
-	/** Position offset relative to the entity origin */
-	position?: Vec3;
-	/** Optional material override */
-	material?: Partial<MaterialOptions>;
-}
-
 export type GameEntityOptions = {
 	name?: string;
 	color?: Color;
@@ -109,10 +74,6 @@ export type GameEntityOptions = {
 	collisionType?: string;
 	collisionGroup?: string;
 	collisionFilter?: string[];
-	/** Additional collider shapes for compound collision bodies */
-	additionalColliders?: CompoundColliderConfig[];
-	/** Additional meshes for compound visual entities */
-	additionalMeshes?: CompoundMeshConfig[];
 	_builders?: {
 		meshBuilder?: IBuilder | EntityMeshBuilder | null;
 		collisionBuilder?: IBuilder | EntityCollisionBuilder | null;
@@ -148,7 +109,7 @@ export class GameEntity<O extends GameEntityOptions>
 	public colliderDescs: ColliderDesc[] = [];
 	/** All colliders attached to this entity's rigid body */
 	public colliders: Collider[] = [];
-	/** Built meshes for compound visual entities (from additionalMeshes config) */
+	/** Additional meshes for compound visual entities (added via add()) */
 	public compoundMeshes: Mesh[] = [];
 
 	public debugInfo: Record<string, any> = {};
@@ -215,6 +176,75 @@ export class GameEntity<O extends GameEntityOptions>
 		super();
 		this.transformStore = createTransformStore();
 		makeTransformable(this);
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Composable add() - accepts Mesh, CollisionComponent, or child entities
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Add meshes, collision components, or child entities to this entity.
+	 * Supports fluent chaining: `entity.add(boxMesh()).add(boxCollision())`.
+	 *
+	 * - `Mesh`: First mesh becomes the primary mesh; subsequent meshes are
+	 *   compound meshes grouped together.
+	 * - `CollisionComponent`: First sets bodyDesc + colliderDesc; subsequent
+	 *   add extra colliders to the same rigid body.
+	 * - `NodeInterface`: Added as a child entity (delegates to BaseNode.add).
+	 */
+	public add(...components: Array<NodeInterface | Mesh | CollisionComponent>): this {
+		for (const component of components) {
+			if (component instanceof Mesh) {
+				this.addMeshComponent(component);
+			} else if (isCollisionComponent(component)) {
+				this.addCollisionComponent(component);
+			} else {
+				super.add(component as NodeInterface);
+			}
+		}
+		return this;
+	}
+
+	private addMeshComponent(mesh: Mesh): void {
+		if (!this.mesh) {
+			// First mesh becomes the primary mesh
+			this.mesh = mesh;
+			if (!this.materials) {
+				this.materials = [];
+			}
+			if (mesh.material) {
+				const mat = mesh.material;
+				if (Array.isArray(mat)) {
+					this.materials.push(...mat);
+				} else {
+					this.materials.push(mat);
+				}
+			}
+		} else {
+			// Subsequent meshes are compound meshes
+			this.compoundMeshes.push(mesh);
+			// Ensure the entity has a group so all meshes are parented together
+			if (!this.group) {
+				this.group = new Group();
+				this.group.add(this.mesh);
+			}
+			this.group.add(mesh);
+		}
+	}
+
+	private addCollisionComponent(collision: CollisionComponent): void {
+		if (!this.bodyDesc) {
+			// First collision sets the body description and primary collider
+			this.bodyDesc = collision.bodyDesc;
+			this.colliderDesc = collision.colliderDesc;
+			this.colliderDescs.push(collision.colliderDesc);
+			// Apply entity position to the body
+			const pos = this.options?.position ?? { x: 0, y: 0, z: 0 };
+			this.bodyDesc.setTranslation(pos.x, pos.y, pos.z);
+		} else {
+			// Subsequent collisions add extra colliders to the same body
+			this.colliderDescs.push(collision.colliderDesc);
+		}
 	}
 
 	public create(): this {
@@ -373,4 +403,25 @@ export class GameEntity<O extends GameEntityOptions>
 	disposeEvents(): void {
 		this.eventDelegate.dispose();
 	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bare entity factory
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Create a bare entity with no mesh or collision.
+ * Use `.add(boxMesh(), boxCollision())` to compose its shape.
+ *
+ * @example
+ * ```ts
+ * const box = create({ position: { x: 0, y: 5, z: 0 } })
+ *   .add(boxMesh({ size: { x: 2, y: 2, z: 2 } }))
+ *   .add(boxCollision({ size: { x: 2, y: 2, z: 2 } }));
+ * ```
+ */
+export function create(options?: Partial<GameEntityOptions>): GameEntity<GameEntityOptions> {
+	const entity = new (GameEntity as any)() as GameEntity<GameEntityOptions>;
+	entity.options = { ...commonDefaults, ...options } as GameEntityOptions;
+	return entity;
 }

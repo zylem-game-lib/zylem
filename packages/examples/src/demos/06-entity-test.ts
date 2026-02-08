@@ -2,6 +2,7 @@ import {
 	createGame, createStage,
 	createBox, createPlane, createSphere, createSprite, createZone,
 	createCone, createPyramid, createCylinder, createPill,
+	create, boxMesh, boxCollision, sphereMesh, sphereCollision,
 } from '@zylem/game-lib';
 import { Vector3, Vector2 } from 'three';
 import { playgroundActor } from '../utils';
@@ -91,23 +92,16 @@ const myPill = createPill({
 	collision: { static: false },
 });
 
-// ─── Compound entity ─────────────────────────────────────────────────
+// ─── Compound entity (composable API) ────────────────────────────────
 // A box with two sphere "bumpers" on either side, all sharing one rigid body.
 
-const compoundEntity = createBox({
-	size: new Vector3(2, 2, 2),
-	position: { x: 0, y: 8, z: -8 },
-	collision: { static: false },
-	material: { path: woodPath },
-	additionalColliders: [
-		{ shape: 'sphere', radius: 1, offset: { x: 2, y: 0, z: 0 } },
-		{ shape: 'sphere', radius: 1, offset: { x: -2, y: 0, z: 0 } },
-	],
-	additionalMeshes: [
-		{ geometry: 'sphere', radius: 1, position: { x: 2, y: 0, z: 0 } },
-		{ geometry: 'sphere', radius: 1, position: { x: -2, y: 0, z: 0 } },
-	],
-});
+const compoundEntity = create({ position: { x: 0, y: 8, z: -8 }, collision: { static: false } })
+	.add(boxMesh({ size: { x: 2, y: 2, z: 2 }, material: { path: woodPath } }))
+	.add(boxCollision({ size: { x: 2, y: 2, z: 2 } }))
+	.add(sphereMesh({ radius: 1, position: { x: 2, y: 0, z: 0 } }))
+	.add(sphereCollision({ radius: 1, offset: { x: 2, y: 0, z: 0 } }))
+	.add(sphereMesh({ radius: 1, position: { x: -2, y: 0, z: 0 } }))
+	.add(sphereCollision({ radius: 1, offset: { x: -2, y: 0, z: 0 } }));
 
 // ─── Game ────────────────────────────────────────────────────────────
 

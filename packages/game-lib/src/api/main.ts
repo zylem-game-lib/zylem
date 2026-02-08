@@ -40,7 +40,15 @@ export { createCylinder } from '../lib/entities/cylinder';
 export { createPill } from '../lib/entities/pill';
 export { createEntityFactory, type TemplateFactory } from '../lib/entities/entity-factory';
 export { ZylemBox } from '../lib/entities/box';
-export type { CompoundColliderConfig, CompoundMeshConfig } from '../lib/entities/entity';
+export { create } from '../lib/entities/entity';
+
+// Component factories for composable entity API
+export {
+	boxMesh, sphereMesh, coneMesh, pyramidMesh, cylinderMesh, pillMesh,
+	boxCollision, sphereCollision, coneCollision, pyramidCollision,
+	cylinderCollision, pillCollision, planeCollision, zoneCollision,
+	type CollisionComponent,
+} from '../lib/entities/parts';
 
 // ECS Components & Behaviors (new thruster system)
 export * from '../lib/behaviors';
@@ -93,8 +101,8 @@ export type { SetupContext, UpdateContext } from '../lib/core/base-node-life-cyc
 export type { StageEntity } from '../lib/interfaces/entity';
 
 // Entity type symbols for getEntityByName type inference
-export { 
-	TEXT_TYPE, SPRITE_TYPE, BOX_TYPE, SPHERE_TYPE, 
+export {
+	TEXT_TYPE, SPRITE_TYPE, BOX_TYPE, SPHERE_TYPE,
 	RECT_TYPE, PLANE_TYPE, ZONE_TYPE, ACTOR_TYPE,
 	CONE_TYPE, PYRAMID_TYPE, CYLINDER_TYPE, PILL_TYPE,
 } from '../lib/types/entity-type-map';
