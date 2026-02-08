@@ -18,11 +18,22 @@ const inputText = createText({
 
 stage1.add(inputText);
 
-// output should look like 01.30 or 09.89
 const formatNumber = (num: number) => num.toFixed(2);
 
 const myGame = createGame(
 	stage1,
+	{
+		input: {
+			p1: {
+				key: {
+					'j': ['axes.Left'],
+					'l': ['axes.Right'],
+					'i': ['axes.Up'],
+					'k': ['axes.Down'],
+				},
+			},
+		},
+	},
 ).onSetup(({ game }) => {
 	console.log(game);
 }).onUpdate(({ inputs }) => {

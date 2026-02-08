@@ -1,26 +1,31 @@
-import { InputProvider } from './input-provider';
-import { AnalogState, ButtonState, InputGamepad } from './input';
-import { compileMapping, createInputGamepadState, mergeButtonState } from './input-state';
+import { InputProvider, AnalogState, ButtonState, InputGamepad } from './input';
+import { compileMapping, mergeAnalogState, mergeButtonState, PropertyPath } from './input-state';
 
 export class KeyboardProvider implements InputProvider {
 	private keyStates = new Map<string, boolean>();
 	private keyButtonStates = new Map<string, ButtonState>();
-	private mapping: Record<string, string[]> | null = null;
-	private compiledMapping: Map<string, Array<{ category: string; property: string }>>;
+	private analogStates = new Map<string, AnalogState>();
+	private compiledMapping: Map<string, PropertyPath[]>;
 	private includeDefaultBase: boolean = true;
 
+	private onKeyDown = ({ key }: KeyboardEvent) => this.keyStates.set(key, true);
+	private onKeyUp = ({ key }: KeyboardEvent) => this.keyStates.set(key, false);
+
 	constructor(mapping?: Record<string, string[]>, options?: { includeDefaultBase?: boolean }) {
-		console.log('[KeyboardProvider] Constructor called with mapping:', mapping, 'options:', options);
-		this.mapping = mapping ?? null;
 		this.includeDefaultBase = options?.includeDefaultBase ?? true;
-		
-		// Pre-compute the mapping at construction time
-		console.log('[KeyboardProvider] About to call compileMapping with:', this.mapping);
-		this.compiledMapping = compileMapping(this.mapping);
-		console.log('[KeyboardProvider] compileMapping returned, size:', this.compiledMapping.size);
-		
-		window.addEventListener('keydown', ({ key }) => this.keyStates.set(key, true));
-		window.addEventListener('keyup', ({ key }) => this.keyStates.set(key, false));
+		this.compiledMapping = compileMapping(mapping ?? null);
+
+		window.addEventListener('keydown', this.onKeyDown);
+		window.addEventListener('keyup', this.onKeyUp);
+	}
+
+	/** Removes event listeners and cleans up state. */
+	dispose(): void {
+		window.removeEventListener('keydown', this.onKeyDown);
+		window.removeEventListener('keyup', this.onKeyUp);
+		this.keyStates.clear();
+		this.keyButtonStates.clear();
+		this.analogStates.clear();
 	}
 
 	private isKeyPressed(key: string): boolean {
@@ -28,69 +33,83 @@ export class KeyboardProvider implements InputProvider {
 	}
 
 	private handleButtonState(key: string, delta: number): ButtonState {
-		let buttonState = this.keyButtonStates.get(key);
+		let state = this.keyButtonStates.get(key);
+		if (!state) {
+			state = { pressed: false, released: false, held: 0 };
+			this.keyButtonStates.set(key, state);
+		}
+
 		const isPressed = this.isKeyPressed(key);
+		state.pressed = isPressed && state.held === 0;
+		state.released = !isPressed && state.held > 0;
+		state.held = isPressed ? state.held + delta : 0;
 
-		if (!buttonState) {
-			buttonState = { pressed: false, released: false, held: 0 };
-			this.keyButtonStates.set(key, buttonState);
-		}
-
-		if (isPressed) {
-			if (buttonState.held === 0) {
-				buttonState.pressed = true;
-			} else {
-				buttonState.pressed = false;
-			}
-			buttonState.held += delta;
-			buttonState.released = false;
-		} else {
-			if (buttonState.held > 0) {
-				buttonState.released = true;
-				buttonState.held = 0;
-			} else {
-				buttonState.released = false;
-			}
-			buttonState.pressed = false;
-		}
-
-		return buttonState;
+		return state;
 	}
 
 	private handleAnalogState(negativeKey: string, positiveKey: string, delta: number): AnalogState {
-		const value = this.getAxisValue(negativeKey, positiveKey);
-		return { value, held: delta };
+		const stateKey = `${negativeKey}:${positiveKey}`;
+		let state = this.analogStates.get(stateKey);
+		if (!state) {
+			state = { value: 0, held: 0 };
+			this.analogStates.set(stateKey, state);
+		}
+
+		state.value = this.getAxisValue(negativeKey, positiveKey);
+		state.held = state.value !== 0 ? state.held + delta : 0;
+
+		return state;
 	}
 
 	/**
-	 * Optimized custom mapping application using pre-computed paths.
-	 * No string parsing happens here - all lookups are O(1).
+	 * Applies custom key mappings using pre-computed paths.
+	 * Handles buttons/directions/shoulders via ButtonState merging,
+	 * and axes via accumulated axis contributions with held tracking.
 	 */
 	private applyCustomMapping(input: Partial<InputGamepad>, delta: number): Partial<InputGamepad> {
 		if (this.compiledMapping.size === 0) return input;
 
+		// Collect axis contributions across all keys (initialized to 0)
+		const axisValues = new Map<string, number>();
+
 		for (const [key, paths] of this.compiledMapping.entries()) {
-			const state = this.handleButtonState(key, delta);
-			
+			let buttonState: ButtonState | null = null;
+
 			for (const path of paths) {
-				const { category, property } = path;
-				
-				if (category === 'buttons') {
-					if (!input.buttons) input.buttons = {} as any;
-					const nextButtons = input.buttons as any;
-					nextButtons[property] = mergeButtonState(nextButtons[property], state);
-				} else if (category === 'directions') {
-					if (!input.directions) input.directions = {} as any;
-					const nextDirections = input.directions as any;
-					nextDirections[property] = mergeButtonState(nextDirections[property], state);
-				} else if (category === 'shoulders') {
-					if (!input.shoulders) input.shoulders = {} as any;
-					const nextShoulders = input.shoulders as any;
-					nextShoulders[property] = mergeButtonState(nextShoulders[property], state);
+				if (path.category === 'axes') {
+					if (!axisValues.has(path.property)) {
+						axisValues.set(path.property, 0);
+					}
+					if (this.isKeyPressed(key)) {
+						axisValues.set(path.property, axisValues.get(path.property)! + path.axisDirection!);
+					}
+				} else {
+					// Lazy-compute button state only when needed
+					if (!buttonState) {
+						buttonState = this.handleButtonState(key, delta);
+					}
+					const group = ((input as any)[path.category] ??= {});
+					group[path.property] = mergeButtonState(group[path.property], buttonState);
 				}
 			}
 		}
-		
+
+		// Apply accumulated axis values with held-time tracking
+		if (axisValues.size > 0) {
+			if (!input.axes) input.axes = {} as any;
+			for (const [axisName, value] of axisValues.entries()) {
+				const stateKey = `custom:${axisName}`;
+				let state = this.analogStates.get(stateKey);
+				if (!state) {
+					state = { value: 0, held: 0 };
+					this.analogStates.set(stateKey, state);
+				}
+				state.value = value;
+				state.held = value !== 0 ? state.held + delta : 0;
+				(input.axes as any)[axisName] = mergeAnalogState((input.axes as any)[axisName], state);
+			}
+		}
+
 		return input;
 	}
 
@@ -113,25 +132,13 @@ export class KeyboardProvider implements InputProvider {
 				Left: this.handleButtonState('ArrowLeft', delta),
 				Right: this.handleButtonState('ArrowRight', delta),
 			};
-			base.axes = {
-				Horizontal: this.handleAnalogState('ArrowLeft', 'ArrowRight', delta),
-				Vertical: this.handleAnalogState('ArrowUp', 'ArrowDown', delta),
-			};
 			base.shoulders = {
 				LTrigger: this.handleButtonState('Q', delta),
 				RTrigger: this.handleButtonState('E', delta),
 			};
 		}
-		const result = this.applyCustomMapping(base, delta);
-		
-		// DEBUG: Log when keys are pressed
-		// if (this.isKeyPressed('w') || this.isKeyPressed('s') || this.isKeyPressed('ArrowUp') || this.isKeyPressed('ArrowDown')) {
-		// 	console.log('[KeyboardProvider] includeDefaultBase:', this.includeDefaultBase);
-		// 	console.log('[KeyboardProvider] compiledMapping size:', this.compiledMapping.size);
-		// 	console.log('[KeyboardProvider] result.directions:', result.directions);
-		// }
-		
-		return result;
+
+		return this.applyCustomMapping(base, delta);
 	}
 
 	getName(): string {
@@ -145,4 +152,4 @@ export class KeyboardProvider implements InputProvider {
 	isConnected(): boolean {
 		return true;
 	}
-} 
+}
