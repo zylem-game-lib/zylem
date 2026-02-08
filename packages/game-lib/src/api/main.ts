@@ -63,6 +63,17 @@ export * as RAPIER from '@dimforge/rapier3d-compat';
 // Update helpers
 export { globalChange, globalChanges, variableChange, variableChanges } from '../lib/actions/global-change';
 
+// Input presets
+export {
+	useArrowsForAxes,
+	useArrowsForDirections,
+	useWASDForDirections,
+	useWASDForAxes,
+	useIJKLForAxes,
+	useIJKLForDirections,
+	mergeInputConfigs,
+} from '../lib/input/input-presets';
+
 // State management - standalone functions
 export { setGlobal, getGlobal, createGlobal, onGlobalChange, onGlobalChanges, getGlobals, clearGlobalSubscriptions } from '../lib/game/game-state';
 export { setVariable, getVariable, createVariable, onVariableChange, onVariableChanges } from '../lib/stage/stage-state';
