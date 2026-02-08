@@ -180,6 +180,24 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
 		return `#${c.getHexString()}`;
 	}
 
+	/**
+	 * Get the viewport resolution from the renderer DOM element,
+	 * falling back to the camera's screenResolution if the renderer
+	 * is not available (e.g. when using the new RendererManager path).
+	 */
+	private getResolution(): { width: number; height: number } {
+		try {
+			const dom = this._cameraRef?.renderer?.domElement;
+			if (dom) {
+				return { width: dom.clientWidth || 1, height: dom.clientHeight || 1 };
+			}
+		} catch { /* renderer not available */ }
+		return {
+			width: this._cameraRef?.screenResolution?.x ?? 1,
+			height: this._cameraRef?.screenResolution?.y ?? 1,
+		};
+	}
+
 	private rectSetup(params: SetupContext<ZylemRectOptions>) {
 		this._cameraRef = (params.camera as unknown) as ZylemCamera | null;
 		if (this.options.stickToViewport && this._cameraRef) {
@@ -208,7 +226,6 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
 
 		// If bounds provided, compute screen-space rect from it and update size/position
 		if (this._cameraRef && this.options.bounds) {
-			const dom = this._cameraRef.renderer.domElement;
 			const screen = this.computeScreenBoundsFromOptions(this.options.bounds);
 			if (screen) {
 				const { x, y, width, height } = screen;
@@ -232,9 +249,7 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
 	private updateStickyTransform() {
 		if (!this._sprite || !this._cameraRef) return;
 		const camera = this._cameraRef.camera;
-		const dom = this._cameraRef.renderer.domElement;
-		const width = dom.clientWidth;
-		const height = dom.clientHeight;
+		const { width, height } = this.getResolution();
 		const px = (this.options.screenPosition ?? new Vector2(24, 24)).x;
 		const py = (this.options.screenPosition ?? new Vector2(24, 24)).y;
 		const zDist = Math.max(0.001, this.options.zDistance ?? 1);
@@ -282,16 +297,15 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
 	private worldToScreen(point: Vector3) {
 		if (!this._cameraRef) return { x: 0, y: 0 };
 		const camera = this._cameraRef.camera;
-		const dom = this._cameraRef.renderer.domElement;
+		const { width, height } = this.getResolution();
 		const v = point.clone().project(camera);
-		const x = (v.x + 1) / 2 * dom.clientWidth;
-		const y = (1 - v.y) / 2 * dom.clientHeight;
+		const x = (v.x + 1) / 2 * width;
+		const y = (1 - v.y) / 2 * height;
 		return { x, y };
 	}
 
 	private computeScreenBoundsFromOptions(bounds: NonNullable<ZylemRectOptions['bounds']>): { x: number; y: number; width: number; height: number } | null {
 		if (!this._cameraRef) return null;
-		const dom = this._cameraRef.renderer.domElement;
 		if (bounds.screen) {
 			return { ...bounds.screen };
 		}

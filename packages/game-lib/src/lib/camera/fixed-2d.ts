@@ -1,5 +1,6 @@
 import { Scene, Vector2 } from 'three';
-import { PerspectiveController, ZylemCamera, ZylemRenderer } from './zylem-camera';
+import { PerspectiveController, ZylemCamera } from './zylem-camera';
+import { ZylemRenderer } from './renderer-manager';
 
 /**
  * Fixed 2D Camera Controller

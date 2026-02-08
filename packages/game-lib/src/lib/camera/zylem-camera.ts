@@ -1,41 +1,16 @@
-import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, WebGLRenderer, Scene } from 'three';
-import { WebGPURenderer } from 'three/webgpu';
+import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, Scene } from 'three';
 import { PerspectiveType, Perspectives } from './perspective';
 import { ThirdPersonCamera } from './third-person';
 import { Fixed2DCamera } from './fixed-2d';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import RenderPass from '../graphics/render-pass';
 import { StageEntity } from '../interfaces/entity';
 import { CameraOrbitController, CameraDebugDelegate } from './camera-debug-delegate';
+import { RendererManager, DEFAULT_VIEWPORT } from './renderer-manager';
+import type { ZylemRenderer, RendererType, Viewport } from './renderer-manager';
 
 // Re-export for backwards compatibility
 export type { CameraDebugState, CameraDebugDelegate } from './camera-debug-delegate';
-
-/**
- * Renderer type option for choosing rendering backend
- * - 'auto': Try WebGPU first, fall back to WebGL
- * - 'webgpu': Force WebGPU (error if not supported)
- * - 'webgl': Force WebGL
- */
-export type RendererType = 'auto' | 'webgpu' | 'webgl';
-
-/**
- * Union type for renderer instances
- */
-export type ZylemRenderer = WebGLRenderer | WebGPURenderer;
-
-/**
- * Check if WebGPU is supported in the current browser
- */
-export async function isWebGPUSupported(): Promise<boolean> {
-	if (!('gpu' in navigator)) return false;
-	try {
-		const adapter = await (navigator as any).gpu.requestAdapter();
-		return adapter !== null;
-	} catch {
-		return false;
-	}
-}
+export type { RendererType, ZylemRenderer } from './renderer-manager';
+export { isWebGPUSupported } from './renderer-manager';
 
 /**
  * Interface for perspective-specific camera controllers
@@ -46,24 +21,63 @@ export interface PerspectiveController {
 	resize(width: number, height: number): void;
 }
 
+/**
+ * ZylemCamera is a lightweight camera wrapper that manages the Three.js camera,
+ * perspective controller, and viewport configuration. It no longer owns a renderer;
+ * rendering is handled by RendererManager.
+ */
 export class ZylemCamera {
 	cameraRig: Object3D | null = null;
 	camera: Camera;
 	screenResolution: Vector2;
-	renderer!: ZylemRenderer;
-	composer!: EffectComposer;
 	_perspective: PerspectiveType;
-	target: StageEntity | null = null;
-	sceneRef: Scene | null = null;
 	frustumSize = 10;
 	rendererType: RendererType;
-	private _isWebGPU = false;
+	sceneRef: Scene | null = null;
+
+	/** Name for camera manager lookup */
+	name: string = '';
+
+	/**
+	 * Viewport in normalized coordinates (0-1).
+	 * Default is fullscreen: { x: 0, y: 0, width: 1, height: 1 }
+	 */
+	viewport: Viewport = { ...DEFAULT_VIEWPORT };
+
+	/**
+	 * Multiple targets for the camera to follow/frame.
+	 * Replaces the old single `target` property.
+	 */
+	targets: StageEntity[] = [];
+
+	/**
+	 * @deprecated Use `targets` array instead. This getter/setter is kept for backward compatibility.
+	 */
+	get target(): StageEntity | null {
+		return this.targets.length > 0 ? this.targets[0] : null;
+	}
+
+	set target(entity: StageEntity | null) {
+		if (entity) {
+			if (this.targets.length === 0) {
+				this.targets.push(entity);
+			} else {
+				this.targets[0] = entity;
+			}
+		} else {
+			this.targets = [];
+		}
+	}
 
 	// Perspective controller delegation
 	perspectiveController: PerspectiveController | null = null;
 
-	// Debug/orbit controls delegation
+	// Orbit controls
 	private orbitController: CameraOrbitController | null = null;
+	private _useOrbitalControls = false;
+
+	/** Reference to the shared renderer manager (set during setup) */
+	private _rendererManager: RendererManager | null = null;
 
 	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10, rendererType: RendererType = 'webgl') {
 		this._perspective = perspective;
@@ -92,115 +106,83 @@ export class ZylemCamera {
 	}
 
 	/**
-	 * Initialize renderer (must be called before setup)
-	 * This is async because WebGPU requires async initialization
+	 * Setup the camera with a scene and renderer manager.
+	 * The renderer manager provides shared rendering infrastructure.
 	 */
-	async initRenderer(): Promise<void> {
-		let useWebGPU = false;
-
-		if (this.rendererType === 'webgpu') {
-			useWebGPU = true;
-		} else if (this.rendererType === 'auto') {
-			useWebGPU = await isWebGPUSupported();
-		}
-
-		if (useWebGPU) {
-			try {
-				this.renderer = new WebGPURenderer({ antialias: true });
-				await this.renderer.init();
-				this._isWebGPU = true;
-				console.log('ZylemCamera: Using WebGPU renderer');
-			} catch (e) {
-				console.warn('ZylemCamera: WebGPU init failed, falling back to WebGL', e);
-				this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
-				this._isWebGPU = false;
-			}
-		} else {
-			this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
-			this._isWebGPU = false;
-			console.log('ZylemCamera: Using WebGL renderer');
-		}
-
-		this.renderer.setSize(this.screenResolution.x, this.screenResolution.y);
-		if (this.renderer instanceof WebGLRenderer) {
-			this.renderer.shadowMap.enabled = true;
-		}
-
-		// Initialize composer (WebGPU uses different post-processing, handle later)
-		if (!this._isWebGPU) {
-			this.composer = new EffectComposer(this.renderer as WebGLRenderer);
-		}
-
-		// Initialize orbit controller
-		this.orbitController = new CameraOrbitController(this.camera, this.renderer.domElement, this.cameraRig);
-	}
-
-	/**
-	 * Check if using WebGPU renderer
-	 */
-	get isWebGPU(): boolean {
-		return this._isWebGPU;
-	}
-
-	/**
-	 * Setup the camera with a scene
-	 */
-	async setup(scene: Scene) {
-		// Ensure renderer is initialized first
-		if (!this.renderer) {
-			await this.initRenderer();
-		}
-
+	async setup(scene: Scene, rendererManager?: RendererManager): Promise<void> {
 		this.sceneRef = scene;
 
-		// Setup render pass (only for WebGL, WebGPU has different post-processing)
-		if (!this._isWebGPU) {
-			let renderResolution = this.screenResolution.clone().divideScalar(2);
-			renderResolution.x |= 0;
-			renderResolution.y |= 0;
-			const pass = new RenderPass(renderResolution, scene, this.camera);
-			this.composer.addPass(pass);
+		if (rendererManager) {
+			this._rendererManager = rendererManager;
+		}
+
+		// Ensure renderer manager is initialized
+		if (this._rendererManager && !this._rendererManager.initialized) {
+			await this._rendererManager.initRenderer();
 		}
 
 		// Setup perspective controller
-		if (this.perspectiveController) {
+		if (this.perspectiveController && this._rendererManager) {
 			this.perspectiveController.setup({
 				screenResolution: this.screenResolution,
-				renderer: this.renderer,
+				renderer: this._rendererManager.renderer,
 				scene: scene,
 				camera: this
 			});
 		}
 
-		// Set scene reference for orbit controller (needed for camera rig detachment)
-		this.orbitController?.setScene(scene);
+		// Initialize orbit controller if renderer is available
+		if (this._rendererManager) {
+			this.orbitController = new CameraOrbitController(
+				this.camera,
+				this._rendererManager.renderer.domElement,
+				this.cameraRig
+			);
+			this.orbitController.setScene(scene);
 
-		// Start render loop
-		this.renderer.setAnimationLoop((delta: number) => {
-			this.update(delta || 0);
-		});
+			// If orbital controls were requested, enable them
+			if (this._useOrbitalControls) {
+				this.orbitController.enableUserOrbitControls();
+			}
+		}
 	}
 
 	/**
-	 * Update camera and render
+	 * Legacy setup method for backward compatibility.
+	 * Creates a temporary RendererManager internally.
+	 * @deprecated Use setup(scene, rendererManager) instead.
 	 */
-	update(delta: number) {
-		// Update orbit controls (if debug mode is enabled)
-		this.orbitController?.update();
+	async setupLegacy(scene: Scene): Promise<void> {
+		if (!this._rendererManager) {
+			this._rendererManager = new RendererManager(this.screenResolution, this.rendererType);
+			await this._rendererManager.initRenderer();
 
-		// Skip perspective controller updates when in debug mode
-		// This keeps the debug camera isolated from game camera logic
-		if (this.perspectiveController && !this.isDebugModeActive()) {
-			this.perspectiveController.update(delta);
+			// Setup render pass for WebGL
+			this._rendererManager.setupRenderPass(scene, this.camera);
+
+			// Start render loop
+			this._rendererManager.startRenderLoop((delta) => {
+				this.update(delta);
+				if (this._rendererManager && this.sceneRef) {
+					this._rendererManager.render(this.sceneRef, this.camera);
+				}
+			});
 		}
 
-		// Render the scene
-		if (this._isWebGPU && this.sceneRef) {
-			// WebGPU: Direct rendering (post-processing handled differently)
-			this.renderer.render(this.sceneRef, this.camera);
-		} else if (this.composer) {
-			// WebGL: Use EffectComposer for post-processing
-			this.composer.render(delta);
+		await this.setup(scene, this._rendererManager);
+	}
+
+	/**
+	 * Update camera controllers (called each frame).
+	 * Does NOT render -- rendering is handled by RendererManager.
+	 */
+	update(delta: number): void {
+		// Update orbit controls (if debug mode or user orbital controls enabled)
+		this.orbitController?.update();
+
+		// Skip perspective controller updates when orbit controls are active
+		if (this.perspectiveController && !this.isDebugModeActive() && !this._useOrbitalControls) {
+			this.perspectiveController.update(delta);
 		}
 	}
 
@@ -212,40 +194,78 @@ export class ZylemCamera {
 	}
 
 	/**
-	 * Dispose renderer, composer, controls, and detach from scene
+	 * Enable user-configured orbital controls (not debug mode).
 	 */
-	destroy() {
-		try {
-			this.renderer.setAnimationLoop(null as any);
-		} catch { /* noop */ }
+	enableOrbitalControls(): void {
+		this._useOrbitalControls = true;
+		this.orbitController?.enableUserOrbitControls();
+	}
+
+	/**
+	 * Disable user-configured orbital controls.
+	 */
+	disableOrbitalControls(): void {
+		this._useOrbitalControls = false;
+		this.orbitController?.disableUserOrbitControls();
+	}
+
+	/**
+	 * Whether user orbital controls are enabled.
+	 */
+	get useOrbitalControls(): boolean {
+		return this._useOrbitalControls;
+	}
+
+	/**
+	 * Add a target entity for the camera to follow/frame.
+	 */
+	addTarget(entity: StageEntity): void {
+		if (!this.targets.includes(entity)) {
+			this.targets.push(entity);
+		}
+	}
+
+	/**
+	 * Remove a target entity.
+	 */
+	removeTarget(entity: StageEntity): void {
+		const index = this.targets.indexOf(entity);
+		if (index !== -1) {
+			this.targets.splice(index, 1);
+		}
+	}
+
+	/**
+	 * Clear all targets.
+	 */
+	clearTargets(): void {
+		this.targets = [];
+	}
+
+	/**
+	 * Dispose camera resources (not the renderer -- that's managed by RendererManager).
+	 */
+	destroy(): void {
 		try {
 			this.orbitController?.dispose();
 		} catch { /* noop */ }
-		try {
-			this.composer?.passes?.forEach((p: any) => p.dispose?.());
-			// @ts-ignore dispose exists on EffectComposer but not typed here
-			this.composer?.dispose?.();
-		} catch { /* noop */ }
-		try {
-			this.renderer.dispose();
-		} catch { /* noop */ }
 		this.sceneRef = null;
+		this.targets = [];
+		this._rendererManager = null;
 	}
 
 	/**
 	 * Attach a delegate to react to debug state changes.
 	 */
-	setDebugDelegate(delegate: CameraDebugDelegate | null) {
+	setDebugDelegate(delegate: CameraDebugDelegate | null): void {
 		this.orbitController?.setDebugDelegate(delegate);
 	}
 
 	/**
-	 * Resize camera and renderer
+	 * Resize camera projection.
 	 */
-	resize(width: number, height: number) {
+	resize(width: number, height: number): void {
 		this.screenResolution.set(width, height);
-		this.renderer.setSize(width, height, false);
-		this.composer.setSize(width, height); // TODO: fix composer is not defined on resize
 
 		if (this.camera instanceof PerspectiveCamera) {
 			this.camera.aspect = width / height;
@@ -258,11 +278,10 @@ export class ZylemCamera {
 	}
 
 	/**
-	 * Update renderer pixel ratio (DPR)
+	 * Set the viewport for this camera (normalized 0-1 coordinates).
 	 */
-	setPixelRatio(dpr: number) {
-		const safe = Math.max(1, Number.isFinite(dpr) ? dpr : 1);
-		this.renderer.setPixelRatio(safe);
+	setViewport(x: number, y: number, width: number, height: number): void {
+		this.viewport = { x, y, width, height };
 	}
 
 	/**
@@ -288,7 +307,7 @@ export class ZylemCamera {
 	/**
 	 * Initialize perspective-specific controller
 	 */
-	private initializePerspectiveController() {
+	private initializePerspectiveController(): void {
 		switch (this._perspective) {
 			case Perspectives.ThirdPerson:
 				this.perspectiveController = new ThirdPersonCamera();
@@ -336,7 +355,7 @@ export class ZylemCamera {
 	}
 
 	// Movement methods
-	private moveCamera(position: Vector3) {
+	private moveCamera(position: Vector3): void {
 		if (this._perspective === Perspectives.Flat2D || this._perspective === Perspectives.Fixed2D) {
 			this.frustumSize = position.z;
 		}
@@ -347,11 +366,11 @@ export class ZylemCamera {
 		}
 	}
 
-	move(position: Vector3) {
+	move(position: Vector3): void {
 		this.moveCamera(position);
 	}
 
-	rotate(pitch: number, yaw: number, roll: number) {
+	rotate(pitch: number, yaw: number, roll: number): void {
 		if (this.cameraRig) {
 			this.cameraRig.rotateX(pitch);
 			this.cameraRig.rotateY(yaw);
@@ -371,9 +390,50 @@ export class ZylemCamera {
 	}
 
 	/**
-	 * Get the DOM element for the renderer
+	 * Get the DOM element for the renderer.
+	 * @deprecated Access via RendererManager instead.
 	 */
 	getDomElement(): HTMLCanvasElement {
-		return this.renderer.domElement;
+		if (this._rendererManager) {
+			return this._rendererManager.getDomElement();
+		}
+		throw new Error('ZylemCamera: No renderer manager available. Call setup() first.');
+	}
+
+	/**
+	 * Get the renderer manager reference.
+	 */
+	getRendererManager(): RendererManager | null {
+		return this._rendererManager;
+	}
+
+	/**
+	 * Set the renderer manager reference (used by CameraManager during setup).
+	 */
+	setRendererManager(manager: RendererManager): void {
+		this._rendererManager = manager;
+	}
+
+	// ─── Legacy compatibility methods ────────────────────────────────────────
+
+	/**
+	 * @deprecated Renderer is now owned by RendererManager
+	 */
+	get renderer(): any {
+		return this._rendererManager?.renderer;
+	}
+
+	/**
+	 * @deprecated Composer is now owned by RendererManager
+	 */
+	get composer(): any {
+		return this._rendererManager?.composer;
+	}
+
+	/**
+	 * @deprecated Use RendererManager.setPixelRatio() instead
+	 */
+	setPixelRatio(dpr: number): void {
+		this._rendererManager?.setPixelRatio(dpr);
 	}
 }

@@ -13,6 +13,8 @@ Stage {
     },
     "unsubscribes": [],
   },
+  "inputConfig": null,
+  "onInputConfigChanged": null,
   "options": [
     {
       "backgroundColor": 209900,

@@ -1,7 +1,8 @@
 import { Vector2 } from 'three';
 import { ZylemCamera } from '../camera/zylem-camera';
-import { Perspectives, PerspectiveType } from '../camera/perspective';
+import { Perspectives } from '../camera/perspective';
 import { CameraWrapper } from '../camera/camera';
+import { CameraManager } from '../camera/camera-manager';
 import type { ZylemStage } from './zylem-stage';
 
 /**
@@ -41,5 +42,42 @@ export class StageCameraDelegate {
 			return cameraWrapper.cameraRef;
 		}
 		return this.createDefaultCamera();
+	}
+
+	/**
+	 * Build a CameraManager from stage options.
+	 * Supports single camera (backward compatible) and multiple cameras.
+	 * 
+	 * @param cameraOverride Optional camera override from game-level config
+	 * @param cameraWrappers Camera wrappers from stage options (can be single or array)
+	 * @returns A CameraManager populated with the resolved cameras
+	 */
+	buildCameraManager(
+		cameraOverride?: ZylemCamera | null,
+		...cameraWrappers: (CameraWrapper | undefined)[]
+	): CameraManager {
+		const manager = new CameraManager();
+
+		// If there's a camera override, use it as the primary
+		if (cameraOverride) {
+			manager.addCamera(cameraOverride, cameraOverride.name || 'main');
+			return manager;
+		}
+
+		// Add cameras from wrappers
+		const validWrappers = cameraWrappers.filter((w): w is CameraWrapper => w !== undefined);
+
+		if (validWrappers.length > 0) {
+			for (const wrapper of validWrappers) {
+				const cam = wrapper.cameraRef;
+				manager.addCamera(cam, cam.name || undefined);
+			}
+		} else {
+			// No cameras provided: create a default
+			const defaultCam = this.createDefaultCamera();
+			manager.addCamera(defaultCam, 'default');
+		}
+
+		return manager;
 	}
 }

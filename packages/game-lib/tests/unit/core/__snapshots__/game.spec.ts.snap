@@ -28,6 +28,8 @@ Game {
         },
         "unsubscribes": [],
       },
+      "inputConfig": null,
+      "onInputConfigChanged": null,
       "options": [
         {
           "backgroundColor": 209900,
@@ -56,6 +58,7 @@ Game {
       "wrappedStage": null,
     },
   ],
+  "pendingInputConfig": null,
   "pendingLoadingCallbacks": [],
   "refErrorMessage": "lost reference to game",
   "setupCallbacks": [],

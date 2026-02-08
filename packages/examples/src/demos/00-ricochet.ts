@@ -1,6 +1,6 @@
 import { Color, Vector3 } from 'three';
-import { 
-	createGame, createSphere, makeMoveable, 
+import {
+	createGame, createSphere, makeMoveable,
 	Ricochet2DBehavior, WorldBoundary2DBehavior,
 	BoundaryRicochetCoordinator,
 	ricochetSound
@@ -21,7 +21,7 @@ const boundary = ball.use(WorldBoundary2DBehavior, {
 });
 
 ball.onSetup(({ me }) => {
-	me.move(new Vector3(3, 4, 0));
+	me.moveXY(3, 4);
 });
 
 const coordinator = new BoundaryRicochetCoordinator(ball, boundary, ricochet);
