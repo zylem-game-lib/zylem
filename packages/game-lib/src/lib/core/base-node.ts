@@ -39,8 +39,11 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 
 	/**
 	 * Lifecycle callback arrays - use onSetup(), onUpdate(), etc. to add callbacks
+	 * Uses `any` for the type parameter to avoid invariance issues when subclasses
+	 * are assigned to BaseNode references. Type safety is enforced by the public
+	 * onSetup/onUpdate/etc. methods which are typed with `this`.
 	 */
-	protected lifecycleCallbacks: LifecycleCallbacks<this> = {
+	protected lifecycleCallbacks: LifecycleCallbacks<any> = {
 		setup: [],
 		loaded: [],
 		update: [],
@@ -172,18 +175,12 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	public nodeSetup(params: SetupContext<this>) {
 		if (DEBUG_FLAG) { /**  */ }
 		this.markedForRemoval = false;
-
-		// 1. Internal setup
 		if (typeof this._setup === 'function') {
 			this._setup(params);
 		}
-
-		// 2. Run all setup callbacks in order
 		for (const callback of this.lifecycleCallbacks.setup) {
 			callback(params);
 		}
-
-		// 3. Setup children
 		this.children.forEach(child => child.nodeSetup(params));
 	}
 
@@ -191,57 +188,39 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 		if (this.markedForRemoval) {
 			return;
 		}
-
-		// 1. Internal update
 		if (typeof this._update === 'function') {
 			this._update(params);
 		}
-
-		// 2. Run all update callbacks in order
 		for (const callback of this.lifecycleCallbacks.update) {
 			callback(params);
 		}
-
-		// 3. Update children
 		this.children.forEach(child => child.nodeUpdate(params));
 	}
 
 	public nodeDestroy(params: DestroyContext<this>): void {
-		// 1. Destroy children first
 		this.children.forEach(child => child.nodeDestroy(params));
-
-		// 2. Run all destroy callbacks in order
 		for (const callback of this.lifecycleCallbacks.destroy) {
 			callback(params);
 		}
-
-		// 3. Internal destroy
 		if (typeof this._destroy === 'function') {
 			this._destroy(params);
 		}
-
 		this.markedForRemoval = true;
 	}
 
 	public async nodeLoaded(params: LoadedContext<this>): Promise<void> {
-		// 1. Internal loaded
 		if (typeof this._loaded === 'function') {
 			await this._loaded(params);
 		}
-
-		// 2. Run all loaded callbacks in order
 		for (const callback of this.lifecycleCallbacks.loaded) {
 			callback(params);
 		}
 	}
 
 	public async nodeCleanup(params: CleanupContext<this>): Promise<void> {
-		// 1. Run all cleanup callbacks in order
 		for (const callback of this.lifecycleCallbacks.cleanup) {
 			callback(params);
 		}
-
-		// 2. Internal cleanup
 		if (typeof this._cleanup === 'function') {
 			await this._cleanup(params);
 		}

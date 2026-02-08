@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { createGame, createStage, createSphere, createDisk, createCamera, Perspectives, makeTransformable } from '@zylem/game-lib';
+import { createGame, createStage, createSphere, createDisk, createCamera, Perspectives } from '@zylem/game-lib';
 import { planetTSL } from './planet-demo/planet.tsl';
 import { ringTSL } from './planet-demo/ring.tsl';
 import { starfieldTSL } from './planet-demo/starfield.tsl';
@@ -11,12 +11,12 @@ const planet = createSphere({
 });
 
 // Ring around planet with red procedural shader
-const ring = makeTransformable(createDisk({
+const ring = createDisk({
   innerRadius: 25,
   outerRadius: 36,
   thetaSegments: 64,
   material: { shader: ringTSL },
-})).onSetup(({ me }) => {
+}).onSetup(({ me }) => {
   me.setRotationDegreesZ(-23);
 });
 

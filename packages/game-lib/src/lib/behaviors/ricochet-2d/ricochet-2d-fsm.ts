@@ -63,6 +63,11 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * Callback type for ricochet event listeners.
+ */
+export type RicochetCallback = (result: Ricochet2DResult) => void;
+
+/**
  * FSM wrapper with extended state (lastResult).
  * Systems or consumers call `computeRicochet(...)` when a collision occurs.
  */
@@ -71,6 +76,8 @@ export class Ricochet2DFSM {
 
 	private lastResult: Ricochet2DResult | null = null;
 	private lastUpdatedAtMs: number | null = null;
+	private currentTimeMs: number = 0;
+	private listeners: Set<RicochetCallback> = new Set();
 
 	constructor() {
 		this.machine = new StateMachine<Ricochet2DState, Ricochet2DEvent, never>(
@@ -84,6 +91,28 @@ export class Ricochet2DFSM {
 				t(Ricochet2DState.Ricocheting, Ricochet2DEvent.StartRicochet, Ricochet2DState.Ricocheting),
 			]
 		);
+	}
+
+	/**
+	 * Add a listener for ricochet events.
+	 * @returns Unsubscribe function
+	 */
+	addListener(callback: RicochetCallback): () => void {
+		this.listeners.add(callback);
+		return () => this.listeners.delete(callback);
+	}
+
+	/**
+	 * Emit result to all listeners.
+	 */
+	private emitToListeners(result: Ricochet2DResult): void {
+		for (const callback of this.listeners) {
+			try {
+				callback(result);
+			} catch (e) {
+				console.error('[Ricochet2DFSM] Listener error:', e);
+			}
+		}
 	}
 
 	getState(): Ricochet2DState {
@@ -102,6 +131,30 @@ export class Ricochet2DFSM {
 	 */
 	getLastUpdatedAtMs(): number | null {
 		return this.lastUpdatedAtMs;
+	}
+
+	/**
+	 * Set current game time (called by system each frame).
+	 * Used for cooldown calculations.
+	 */
+	setCurrentTimeMs(timeMs: number): void {
+		this.currentTimeMs = timeMs;
+	}
+
+	/**
+	 * Check if ricochet is on cooldown (to prevent rapid duplicate applications).
+	 * @param cooldownMs Cooldown duration in milliseconds (default: 50ms)
+	 */
+	isOnCooldown(cooldownMs: number = 50): boolean {
+		if (this.lastUpdatedAtMs === null) return false;
+		return (this.currentTimeMs - this.lastUpdatedAtMs) < cooldownMs;
+	}
+
+	/**
+	 * Reset cooldown state (e.g., on entity respawn).
+	 */
+	resetCooldown(): void {
+		this.lastUpdatedAtMs = null;
 	}
 
 	/**
@@ -175,8 +228,9 @@ export class Ricochet2DFSM {
 		};
 
 		this.lastResult = result;
-		this.lastUpdatedAtMs = Date.now();
+		this.lastUpdatedAtMs = this.currentTimeMs;
 		this.dispatch(Ricochet2DEvent.StartRicochet);
+		this.emitToListeners(result);
 
 		return result;
 	}

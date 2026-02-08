@@ -26,10 +26,6 @@ export {
   createPhysicsBodyComponent,
 } from './components';
 
-// Physics Behaviors
-export { PhysicsStepBehavior } from './physics-step.behavior';
-export { PhysicsSyncBehavior } from './physics-sync.behavior';
-
 // Thruster Module (components, FSM, and behaviors)
 export * from './thruster';
 
@@ -44,6 +40,9 @@ export * from './ricochet-2d';
 
 // Movement Sequence 2D Module
 export * from './movement-sequence-2d';
+
+// Platformer 3D Module
+export * from './platformer-3d';
 
 // Coordinators
 export * from '../coordinators/boundary-ricochet.coordinator';

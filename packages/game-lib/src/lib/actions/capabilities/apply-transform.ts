@@ -1,5 +1,5 @@
 import { RigidBody } from '@dimforge/rapier3d-compat';
-import { TransformState, resetTransformStore } from './transform-store';
+import { TransformState } from './transform-store';
 
 /**
  * Entity that can have transformations applied from a store

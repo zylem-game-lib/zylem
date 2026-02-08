@@ -9,6 +9,7 @@ export type MouseMapping = Record<string, string[]>;
 export interface GameInputPlayerConfig {
 	key?: KeyboardMapping;
 	mouse?: MouseMapping;
+	includeDefaults?: boolean;
 }
 
 export interface GameInputConfig {

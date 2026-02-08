@@ -6,3 +6,7 @@ export { createZone } from '../lib/entities/zone';
 export { createActor } from '../lib/entities/actor';
 export { createText } from '../lib/entities/text';
 export { createRect } from '../lib/entities/rect';
+export { createCone } from '../lib/entities/cone';
+export { createPyramid } from '../lib/entities/pyramid';
+export { createCylinder } from '../lib/entities/cylinder';
+export { createPill } from '../lib/entities/pill';

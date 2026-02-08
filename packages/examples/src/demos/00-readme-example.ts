@@ -1,12 +1,11 @@
 import {
   WorldBoundary2DBehavior,
   createGame,
-  makeMoveable,
   createSphere,
 } from '@zylem/game-lib';
 
-// Creates a moveable sphere
-const ball = makeMoveable(createSphere());
+// Creates a sphere (movement capabilities are built-in)
+const ball = createSphere();
 
 // attach new boundary behavior and keep the handle
 const boundary = ball.use(WorldBoundary2DBehavior, {

@@ -12,8 +12,13 @@ export interface CameraDebugDelegate {
 }
 
 /**
- * Manages orbit controls and debug state for a camera.
- * Orbit controls are only active when debug mode is enabled.
+ * Manages orbit controls for a camera.
+ * Supports two modes:
+ * 1. **Debug mode**: orbit controls activated by the debug system, with save/restore of camera state
+ * 2. **User mode**: orbit controls enabled by the user via `useOrbitalControls` camera option
+ *
+ * These modes are independent -- debug mode takes precedence but user mode
+ * keeps orbit controls active even outside debug.
  */
 export class CameraOrbitController {
 	private camera: Camera;
@@ -41,6 +46,9 @@ export class CameraOrbitController {
 	private savedDebugCameraZoom: number | null = null;
 	private savedDebugOrbitTarget: Vector3 | null = null;
 
+	/** Whether user-configured orbital controls are enabled (independent of debug) */
+	private _userOrbitEnabled = false;
+
 	constructor(camera: Camera, domElement: HTMLElement, cameraRig?: Object3D | null) {
 		this.camera = camera;
 		this.domElement = domElement;
@@ -55,10 +63,17 @@ export class CameraOrbitController {
 	}
 
 	/**
-	 * Check if debug mode is currently active (orbit controls enabled).
+	 * Check if debug mode is currently active (orbit controls enabled via debug system).
 	 */
 	get isActive(): boolean {
 		return this.debugStateSnapshot.enabled;
+	}
+
+	/**
+	 * Check if any orbit controls are currently active (debug or user).
+	 */
+	get isOrbitActive(): boolean {
+		return this.debugStateSnapshot.enabled || this._userOrbitEnabled;
 	}
 
 	/**
@@ -71,6 +86,29 @@ export class CameraOrbitController {
 			this.orbitControls.target.copy(this.orbitTargetWorldPos);
 		}
 		this.orbitControls?.update();
+	}
+
+	/**
+	 * Enable user-configured orbital controls (not debug mode).
+	 * These orbit controls persist until explicitly disabled.
+	 */
+	enableUserOrbitControls(): void {
+		this._userOrbitEnabled = true;
+		if (!this.orbitControls) {
+			this.enableOrbitControls();
+		}
+	}
+
+	/**
+	 * Disable user-configured orbital controls.
+	 * Will not disable orbit controls if debug mode is active.
+	 */
+	disableUserOrbitControls(): void {
+		this._userOrbitEnabled = false;
+		// Only disable orbit controls if debug mode isn't also using them
+		if (!this.debugStateSnapshot.enabled) {
+			this.disableOrbitControls();
+		}
 	}
 
 	/**
@@ -126,7 +164,10 @@ export class CameraOrbitController {
 			// Exiting debug mode: save debug camera state, then restore game camera state
 			this.saveDebugCameraState();
 			this.orbitTarget = null;
-			this.disableOrbitControls();
+			// Only disable orbit controls if user mode isn't keeping them on
+			if (!this._userOrbitEnabled) {
+				this.disableOrbitControls();
+			}
 			this.reattachCameraToRig();
 			this.restoreCameraState();
 		} else if (state.enabled) {

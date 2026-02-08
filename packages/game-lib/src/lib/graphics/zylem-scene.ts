@@ -6,7 +6,6 @@ import {
 	Object3D,
 	Vector3,
 	GridHelper,
-	SphereGeometry,
 	BoxGeometry,
 	ShaderMaterial,
 	Mesh,
@@ -17,6 +16,8 @@ import { MeshBasicNodeMaterial } from 'three/webgpu';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
 import { ZylemCamera } from '../camera/zylem-camera';
+import { CameraManager } from '../camera/camera-manager';
+import { RendererManager } from '../camera/renderer-manager';
 import { debugState } from '../debug/debug-state';
 import { SetupFunction } from '../core/base-node-life-cycle';
 import { getGlobals } from '../game/game-state';
@@ -34,7 +35,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	_setup?: SetupFunction<ZylemScene>;
 	scene!: Scene;
+	/** @deprecated Use cameraManager instead */
 	zylemCamera!: ZylemCamera;
+	cameraManager: CameraManager | null = null;
 	containerElement: HTMLElement | null = null;
 	update: LifecycleFunction<ZylemScene> = () => { };
 	_collision?: ((entity: any, other: any, globals?: any) => void) | undefined;
@@ -66,7 +69,6 @@ export class ZylemScene implements Entity<ZylemScene> {
 		this.zylemCamera = camera;
 
 		this.setupLighting(scene);
-		this.setupCamera(scene, camera);
 		if (debugState.enabled) {
 			this.debugScene();
 		}
@@ -135,7 +137,11 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	destroy() {
-		if (this.zylemCamera && (this.zylemCamera as any).destroy) {
+		// Destroy via camera manager if available, otherwise legacy single camera
+		if (this.cameraManager) {
+			this.cameraManager.dispose();
+			this.cameraManager = null;
+		} else if (this.zylemCamera && (this.zylemCamera as any).destroy) {
 			(this.zylemCamera as any).destroy();
 		}
 		if (this.skyboxMaterial) {
@@ -156,18 +162,48 @@ export class ZylemScene implements Entity<ZylemScene> {
 			});
 		}
 	}
+
 	/**
-	 * Setup camera with the scene
+	 * Setup camera with the scene.
+	 * Supports both legacy single camera and CameraManager modes.
 	 */
-	setupCamera(scene: Scene, camera: ZylemCamera) {
+	setupCamera(scene: Scene, camera: ZylemCamera, rendererManager?: RendererManager) {
 		// Add camera rig or camera directly to scene
+		this.addCameraToScene(scene, camera);
+
+		if (rendererManager) {
+			// New path: camera setup with shared renderer manager
+			camera.setup(scene, rendererManager);
+		} else {
+			// Legacy path: camera handles its own renderer
+			camera.setupLegacy(scene);
+		}
+	}
+
+	/**
+	 * Setup with a CameraManager (multi-camera support).
+	 */
+	async setupCameraManager(scene: Scene, cameraManager: CameraManager, rendererManager: RendererManager): Promise<void> {
+		this.cameraManager = cameraManager;
+
+		// Add all active cameras to the scene
+		for (const camera of cameraManager.activeCameras) {
+			this.addCameraToScene(scene, camera);
+		}
+
+		// Setup the camera manager (initializes all cameras)
+		await cameraManager.setup(scene, rendererManager);
+	}
+
+	/**
+	 * Add a camera (rig or direct) to the scene graph.
+	 */
+	private addCameraToScene(scene: Scene, camera: ZylemCamera): void {
 		if (camera.cameraRig) {
 			scene.add(camera.cameraRig);
 		} else {
 			scene.add(camera.camera as Object3D);
 		}
-		// Camera handles its own setup now
-		camera.setup(scene);
 	}
 
 	/**
@@ -193,10 +229,17 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	/**
-	 * Update renderer size - delegates to camera
+	 * Update renderer size - delegates to camera manager or camera
 	 */
 	updateRenderer(width: number, height: number) {
-		this.zylemCamera.resize(width, height);
+		if (this.cameraManager) {
+			// Resize all cameras
+			for (const camera of this.cameraManager.allCameras) {
+				camera.resize(width, height);
+			}
+		} else {
+			this.zylemCamera.resize(width, height);
+		}
 	}
 
 	/**

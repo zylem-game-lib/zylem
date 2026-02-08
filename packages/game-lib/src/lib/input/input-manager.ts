@@ -1,10 +1,15 @@
-import { InputProvider } from './input-provider';
-import { AnalogState, ButtonState, InputGamepad, InputPlayerNumber, Inputs } from './input';
+import { InputProvider, InputGamepad, InputPlayerNumber, Inputs } from './input';
 import { KeyboardProvider } from './keyboard-provider';
 import { GamepadProvider } from './gamepad-provider';
-import { GameInputConfig } from '../game/game-interfaces';
+import { GameInputConfig, GameInputPlayerConfig } from '../game/game-interfaces';
 import { mergeButtonState, mergeAnalogState } from './input-state';
 
+interface PlayerEntry {
+	player: InputPlayerNumber;
+	config?: GameInputPlayerConfig;
+	gamepadIndex: number;
+	isP1: boolean;
+}
 
 export class InputManager {
 	private inputMap: Map<InputPlayerNumber, InputProvider[]> = new Map();
@@ -12,46 +17,48 @@ export class InputManager {
 	private previousInputs: Inputs = {} as Inputs;
 
 	constructor(config?: GameInputConfig) {
-		console.log('[InputManager] Constructor called with config:', config);
-		console.log('[InputManager] config?.p1:', config?.p1);
-		console.log('[InputManager] config?.p1?.key:', config?.p1?.key);
-		
-		if (config?.p1?.key) {
-			console.log('[InputManager] Creating P1 KeyboardProvider with custom mapping:', config.p1.key);
-			this.addInputProvider(1, new KeyboardProvider(config.p1.key, { includeDefaultBase: false }));
-		} else {
-			console.log('[InputManager] Creating P1 KeyboardProvider with default mapping');
-			this.addInputProvider(1, new KeyboardProvider());
+		const players = this.buildPlayerEntries(config);
+
+		for (const { player, config: playerConfig, gamepadIndex, isP1 } of players) {
+			if (playerConfig?.key) {
+				const includeDefaultBase = playerConfig.includeDefaults ?? isP1;
+				this.addInputProvider(player, new KeyboardProvider(playerConfig.key, { includeDefaultBase }));
+			} else if (isP1) {
+				this.addInputProvider(player, new KeyboardProvider());
+			}
+			this.addInputProvider(player, new GamepadProvider(gamepadIndex));
 		}
-		this.addInputProvider(1, new GamepadProvider(0));
-		if (config?.p2?.key) {
-			this.addInputProvider(2, new KeyboardProvider(config.p2.key, { includeDefaultBase: false }));
+	}
+
+	/**
+	 * Reconfigure keyboard providers at runtime without affecting gamepad providers.
+	 * Disposes existing keyboard providers and creates new ones from the given config.
+	 */
+	configure(config: GameInputConfig): void {
+		const players = this.buildPlayerEntries(config);
+
+		for (const { player, config: playerConfig, isP1 } of players) {
+			const providers = this.inputMap.get(player) ?? [];
+
+			// Dispose and remove keyboard providers
+			const remaining = providers.filter(p => {
+				if (p instanceof KeyboardProvider) {
+					p.dispose();
+					return false;
+				}
+				return true;
+			});
+
+			// Create new keyboard provider and prepend before gamepad providers
+			if (playerConfig?.key) {
+				const includeDefaultBase = playerConfig.includeDefaults ?? isP1;
+				remaining.unshift(new KeyboardProvider(playerConfig.key, { includeDefaultBase }));
+			} else if (isP1) {
+				remaining.unshift(new KeyboardProvider());
+			}
+
+			this.inputMap.set(player, remaining);
 		}
-		this.addInputProvider(2, new GamepadProvider(1));
-		if (config?.p3?.key) {
-			this.addInputProvider(3, new KeyboardProvider(config.p3.key, { includeDefaultBase: false }));
-		}
-		this.addInputProvider(3, new GamepadProvider(2));
-		if (config?.p4?.key) {
-			this.addInputProvider(4, new KeyboardProvider(config.p4.key, { includeDefaultBase: false }));
-		}
-		this.addInputProvider(4, new GamepadProvider(3));
-		if (config?.p5?.key) {
-			this.addInputProvider(5, new KeyboardProvider(config.p5.key, { includeDefaultBase: false }));
-		}
-		this.addInputProvider(5, new GamepadProvider(4));
-		if (config?.p6?.key) {
-			this.addInputProvider(6, new KeyboardProvider(config.p6.key, { includeDefaultBase: false }));
-		}
-		this.addInputProvider(6, new GamepadProvider(5));
-		if (config?.p7?.key) {
-			this.addInputProvider(7, new KeyboardProvider(config.p7.key, { includeDefaultBase: false }));
-		}
-		this.addInputProvider(7, new GamepadProvider(6));
-		if (config?.p8?.key) {
-			this.addInputProvider(8, new KeyboardProvider(config.p8.key, { includeDefaultBase: false }));
-		}
-		this.addInputProvider(8, new GamepadProvider(7));
 	}
 
 	addInputProvider(playerNumber: InputPlayerNumber, provider: InputProvider) {
@@ -77,6 +84,19 @@ export class InputManager {
 			} as InputGamepad;
 		});
 		return inputs;
+	}
+
+	private buildPlayerEntries(config?: GameInputConfig): PlayerEntry[] {
+		return [
+			{ player: 1, config: config?.p1, gamepadIndex: 0, isP1: true },
+			{ player: 2, config: config?.p2, gamepadIndex: 1, isP1: false },
+			{ player: 3, config: config?.p3, gamepadIndex: 2, isP1: false },
+			{ player: 4, config: config?.p4, gamepadIndex: 3, isP1: false },
+			{ player: 5, config: config?.p5, gamepadIndex: 4, isP1: false },
+			{ player: 6, config: config?.p6, gamepadIndex: 5, isP1: false },
+			{ player: 7, config: config?.p7, gamepadIndex: 6, isP1: false },
+			{ player: 8, config: config?.p8, gamepadIndex: 7, isP1: false },
+		];
 	}
 
 	private mergeInputs(a: Partial<InputGamepad>, b: Partial<InputGamepad>): Partial<InputGamepad> {
@@ -107,4 +127,4 @@ export class InputManager {
 			}
 		};
 	}
-} 
+}

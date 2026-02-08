@@ -4,9 +4,11 @@ import { InputGamepad, ButtonState, AnalogState, InputPlayerNumber } from './inp
  * Represents a direct property path for efficient state updates.
  * Avoids string parsing on every frame.
  */
-interface PropertyPath {
+export interface PropertyPath {
 	category: 'buttons' | 'directions' | 'shoulders' | 'axes';
 	property: string;
+	/** Axis contribution direction: -1 or 1. Only present for axes paths. */
+	axisDirection?: -1 | 1;
 }
 
 /**
@@ -112,6 +114,18 @@ export function compileMapping(mapping: Record<string, string[]> | null): Compil
 				const prop = propertyMap[nameKey];
 				if (prop) {
 					paths.push({ category: 'shoulders', property: prop });
+				}
+			} else if (category === 'axes') {
+				// Axis targets use directional names: axes.Left, axes.Right, axes.Up, axes.Down
+				const axisMap: Record<string, { property: string; direction: -1 | 1 }> = {
+					'left': { property: 'Horizontal', direction: -1 },
+					'right': { property: 'Horizontal', direction: 1 },
+					'up': { property: 'Vertical', direction: -1 },
+					'down': { property: 'Vertical', direction: 1 },
+				};
+				const axis = axisMap[nameKey];
+				if (axis) {
+					paths.push({ category: 'axes', property: axis.property, axisDirection: axis.direction });
 				}
 			}
 		}

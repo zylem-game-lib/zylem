@@ -42,9 +42,29 @@
       "types": "./dist/actions.d.ts",
       "import": "./dist/actions.js"
     },
-    "./behaviors": {
-      "types": "./dist/behaviors.d.ts",
-      "import": "./dist/behaviors.js"
+    "./behavior/thruster": {
+      "types": "./dist/behavior/thruster.d.ts",
+      "import": "./dist/behavior/thruster.js"
+    },
+    "./behavior/screen-wrap": {
+      "types": "./dist/behavior/screen-wrap.d.ts",
+      "import": "./dist/behavior/screen-wrap.js"
+    },
+    "./behavior/world-boundary-2d": {
+      "types": "./dist/behavior/world-boundary-2d.d.ts",
+      "import": "./dist/behavior/world-boundary-2d.js"
+    },
+    "./behavior/ricochet-2d": {
+      "types": "./dist/behavior/ricochet-2d.d.ts",
+      "import": "./dist/behavior/ricochet-2d.js"
+    },
+    "./behavior/movement-sequence-2d": {
+      "types": "./dist/behavior/movement-sequence-2d.d.ts",
+      "import": "./dist/behavior/movement-sequence-2d.js"
+    },
+    "./behavior/platformer-3d": {
+      "types": "./dist/behavior/platformer-3d.d.ts",
+      "import": "./dist/behavior/platformer-3d.js"
     }
   },
   "keywords": [

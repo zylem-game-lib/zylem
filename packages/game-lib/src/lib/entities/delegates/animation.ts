@@ -41,19 +41,30 @@ export class AnimationDelegate {
 		if (!animations.length) return;
 
 		const results = await Promise.all(animations.map(a => this._assetLoader.loadFile(a.path)));
-		this._animations = results
-			.filter((r): r is AssetLoaderResult => !!r.animation)
-			.map(r => r.animation!);
+		
+		// Build animations list while preserving original key mapping
+		// Filter to only successful loads and pair with their original keys
+		const loadedAnimations: { key: string; clip: AnimationClip }[] = [];
+		results.forEach((result, i) => {
+			if (result.animation) {
+				loadedAnimations.push({
+					key: animations[i].key || i.toString(),
+					clip: result.animation
+				});
+			}
+		});
 
-		if (!this._animations.length) return;
+		if (!loadedAnimations.length) return;
 
+		this._animations = loadedAnimations.map(a => a.clip);
 		this._mixer = new AnimationMixer(this.target);
-		this._animations.forEach((clip, i) => {
-			const key = animations[i].key || i.toString();
+		
+		// Create actions with correct key mapping
+		loadedAnimations.forEach(({ key, clip }) => {
 			this._actions[key] = this._mixer!.clipAction(clip);
 		});
 
-		this.playAnimation({ key: Object.keys(this._actions)[0] });
+		this.playAnimation({ key: loadedAnimations[0].key });
 	}
 
 	update(delta: number): void {
@@ -87,6 +98,11 @@ export class AnimationDelegate {
 		const { key, pauseAtPercentage = 0, pauseAtEnd = false, fadeToKey, fadeDuration = 0.5 } = opts;
 		if (key === this._currentKey) return;
 
+		// Check if the new action exists BEFORE stopping the current animation
+		// This prevents T-posing when an animation key doesn't exist
+		const action = this._actions[key];
+		if (!action) return;
+
 		this._queuedKey = fadeToKey || null;
 		this._fadeDuration = fadeDuration;
 
@@ -94,10 +110,7 @@ export class AnimationDelegate {
 		this._isPaused = false;
 
 		const prev = this._currentAction;
-		if (prev) prev.stop();
-
-		const action = this._actions[key];
-		if (!action) return;
+		// Don't stop prev here - crossFadeTo needs it playing for smooth transition
 
 		if (this._pauseAtPercentage > 0) {
 			action.setLoop(LoopOnce, Infinity);
@@ -107,10 +120,13 @@ export class AnimationDelegate {
 			action.clampWhenFinished = false;
 		}
 
+		// Start the new action
+		action.reset().play();
+
+		// Crossfade from previous if it exists
 		if (prev) {
 			prev.crossFadeTo(action, fadeDuration, false);
 		}
-		action.reset().play();
 
 		this._currentAction = action;
 		this._currentKey = key;

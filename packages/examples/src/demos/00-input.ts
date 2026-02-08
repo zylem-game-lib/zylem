@@ -1,5 +1,5 @@
 import { Color, Vector2 } from 'three';
-import { createGame, createStage, createText } from '@zylem/game-lib';
+import { createGame, createStage, createText, useArrowsForDirections, useIJKLForAxes } from '@zylem/game-lib';
 
 const stage1 = createStage({
 	inputs: {
@@ -8,6 +8,11 @@ const stage1 = createStage({
 	},
 	backgroundColor: new Color(Color.NAMES.mediumseagreen)
 });
+
+stage1.setInputConfiguration(
+	useArrowsForDirections('p1'),
+	useIJKLForAxes('p1'),
+);
 
 const inputText = createText({
 	name: 'inputText',
@@ -18,7 +23,6 @@ const inputText = createText({
 
 stage1.add(inputText);
 
-// output should look like 01.30 or 09.89
 const formatNumber = (num: number) => num.toFixed(2);
 
 const myGame = createGame(

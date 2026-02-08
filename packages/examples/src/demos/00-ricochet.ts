@@ -1,12 +1,12 @@
 import { Color, Vector3 } from 'three';
-import { 
-	createGame, createSphere, makeMoveable, 
+import {
+	createGame, createSphere,
 	Ricochet2DBehavior, WorldBoundary2DBehavior,
 	BoundaryRicochetCoordinator,
 	ricochetSound
 } from '@zylem/game-lib';
 
-const ball = makeMoveable(createSphere({ color: new Color(Color.NAMES.red) }));
+const ball = createSphere({ color: new Color(Color.NAMES.red) });
 
 const ricochet = ball.use(Ricochet2DBehavior, {
 	minSpeed: 5,
@@ -21,17 +21,17 @@ const boundary = ball.use(WorldBoundary2DBehavior, {
 });
 
 ball.onSetup(({ me }) => {
-	me.move(new Vector3(3, 4, 0));
+	me.moveXY(3, 4);
 });
 
 const coordinator = new BoundaryRicochetCoordinator(ball, boundary, ricochet);
 
-ball.onUpdate(({ me }) => {
-	const result = coordinator.update();
-	if (result) {
-		me.moveXY(result.velocity.x, result.velocity.y);
-		ricochetSound();
-	}
+ricochet.onRicochet(() => {
+	ricochetSound();
+});
+
+ball.onUpdate(() => {
+	coordinator.update();
 });
 
 const game = createGame({

@@ -48,8 +48,20 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			entity.body.lockTranslations(true, true);
 			entity.body.lockRotations(true, true);
 		}
+
+		// Create primary collider
 		const collider = this.world.createCollider(entity.colliderDesc, entity.body);
 		entity.collider = collider;
+		entity.colliders = [collider];
+
+		// Create additional compound colliders (if any)
+		if (entity.colliderDescs?.length > 1) {
+			for (let i = 1; i < entity.colliderDescs.length; i++) {
+				const additionalCollider = this.world.createCollider(entity.colliderDescs[i], entity.body);
+				entity.colliders.push(additionalCollider);
+			}
+		}
+
 		if (entity.controlledRotation || entity instanceof ZylemActor) {
 			entity.body.lockRotations(true, true);
 			entity.characterController = this.world.createCharacterController(0.01);
@@ -70,7 +82,12 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	destroyEntity(entity: GameEntity<any>) {
-		if (entity.collider) {
+		// Remove all colliders (compound support)
+		if (entity.colliders?.length) {
+			for (const collider of entity.colliders) {
+				this.world.removeCollider(collider, true);
+			}
+		} else if (entity.collider) {
 			this.world.removeCollider(entity.collider, true);
 		}
 		if (entity.body) {

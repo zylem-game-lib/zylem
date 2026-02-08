@@ -3,10 +3,13 @@ import { DestroyFunction, SetupContext, SetupFunction, UpdateFunction } from '..
 import { LoadingEvent, StageOptionItem, StageOptions, ZylemStage } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
+import { RendererManager } from '../camera/renderer-manager';
 import { stageState } from './stage-state';
 import { getStageOptions } from './stage-default';
 import { EntityTypeMap } from '../types/entity-type-map';
 import { EventEmitterDelegate, zylemEventBus, type StageEvents } from '../events';
+import { GameInputConfig } from '../game/game-interfaces';
+import { mergeInputConfigs } from '../input/input-presets';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
@@ -27,12 +30,36 @@ export class Stage {
 	// Event delegate for dispatch/listen API
 	private eventDelegate = new EventEmitterDelegate<StageEvents>();
 
+	/** Per-stage input configuration overrides. Merged with game-level defaults on stage load. */
+	inputConfig: GameInputConfig | null = null;
+
+	/**
+	 * Callback set by the game to trigger input reconfiguration
+	 * when this stage's input config changes at runtime.
+	 * @internal
+	 */
+	onInputConfigChanged: (() => void) | null = null;
+
 	constructor(options: StageOptions) {
 		this.options = options;
 		this.wrappedStage = null;
 	}
 
-	async load(id: string, camera?: ZylemCamera | CameraWrapper | null) {
+	/**
+	 * Set composable input configuration for this stage.
+	 * Multiple configs are deep-merged (later configs win on key conflicts).
+	 * If this stage is currently active, the change takes effect immediately.
+	 * @example stage.setInputConfiguration(useArrowsForAxes('p1'), useWASDForDirections('p2'));
+	 */
+	setInputConfiguration(...configs: GameInputConfig[]): this {
+		this.inputConfig = mergeInputConfigs(...configs);
+		if (this.onInputConfigChanged) {
+			this.onInputConfigChanged();
+		}
+		return this;
+	}
+
+	async load(id: string, camera?: ZylemCamera | CameraWrapper | null, rendererManager?: RendererManager | null) {
 		stageState.entities = [];
 		// Combine original options with pending entities, then clear pending
 		const loadOptions = [...this.options, ...this._pendingEntities] as StageOptions;
@@ -48,7 +75,7 @@ export class Stage {
 		this.pendingLoadingCallbacks = [];
 
 		const zylemCamera = camera instanceof CameraWrapper ? camera.cameraRef : camera;
-		await this.wrappedStage!.load(id, zylemCamera);
+		await this.wrappedStage!.load(id, zylemCamera, rendererManager);
 
 		this.wrappedStage!.onEntityAdded((child) => {
 			const next = this.wrappedStage!.buildEntityState(child);
@@ -175,6 +202,47 @@ export class Stage {
 	): T extends keyof EntityTypeMap ? EntityTypeMap[T] | undefined : BaseNode | undefined {
 		const entity = this.wrappedStage?.children.find(c => c.name === name);
 		return entity as any;
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Camera management
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Add a camera to this stage.
+	 * @param camera The ZylemCamera or CameraWrapper to add
+	 * @param name Optional name for lookup
+	 */
+	addCamera(camera: ZylemCamera | CameraWrapper, name?: string): string | null {
+		const zylemCam = camera instanceof CameraWrapper ? camera.cameraRef : camera;
+		return this.wrappedStage?.addCamera(zylemCam, name) ?? null;
+	}
+
+	/**
+	 * Remove a camera from this stage by name or reference.
+	 */
+	removeCamera(nameOrRef: string | ZylemCamera | CameraWrapper): boolean {
+		if (nameOrRef instanceof CameraWrapper) {
+			return this.wrappedStage?.removeCamera(nameOrRef.cameraRef) ?? false;
+		}
+		return this.wrappedStage?.removeCamera(nameOrRef) ?? false;
+	}
+
+	/**
+	 * Set the active camera by name or reference.
+	 */
+	setActiveCamera(nameOrRef: string | ZylemCamera | CameraWrapper): boolean {
+		if (nameOrRef instanceof CameraWrapper) {
+			return this.wrappedStage?.setActiveCamera(nameOrRef.cameraRef) ?? false;
+		}
+		return this.wrappedStage?.setActiveCamera(nameOrRef) ?? false;
+	}
+
+	/**
+	 * Get a camera by name from the camera manager.
+	 */
+	getCamera(name: string): ZylemCamera | null {
+		return this.wrappedStage?.getCamera(name) ?? null;
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ class MockNode extends BaseNode {
     protected _loaded(params: LoadedContext<this>) { return Promise.resolve(); }
     protected _update(params: UpdateContext<this>) { }
     protected _destroy(params: DestroyContext<this>) { }
-    protected _cleanup(params: CleanupContext<this>) { return Promise.resolve(); }
+    protected _cleanup(params: CleanupContext<this>) { }
 }
 
 describe('BaseNode', () => {

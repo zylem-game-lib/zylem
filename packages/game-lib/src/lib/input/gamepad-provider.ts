@@ -1,59 +1,63 @@
-import { InputProvider } from './input-provider';
-import { AnalogState, ButtonState, InputGamepad } from './input';
+import { InputProvider, AnalogState, ButtonState, InputGamepad } from './input';
 
 export class GamepadProvider implements InputProvider {
 	private gamepadIndex: number;
 	private connected: boolean = false;
 
 	private buttonStates: Record<number, ButtonState> = {};
+	private analogStates: Record<number, AnalogState> = {};
+
+	private onConnected = (e: GamepadEvent) => {
+		if (e.gamepad.index === this.gamepadIndex) {
+			this.connected = true;
+		}
+	};
+	private onDisconnected = (e: GamepadEvent) => {
+		if (e.gamepad.index === this.gamepadIndex) {
+			this.connected = false;
+		}
+	};
 
 	constructor(gamepadIndex: number) {
 		this.gamepadIndex = gamepadIndex;
-		window.addEventListener('gamepadconnected', (e) => {
-			if (e.gamepad.index === this.gamepadIndex) {
-				this.connected = true;
-			}
-		});
-		window.addEventListener('gamepaddisconnected', (e) => {
-			if (e.gamepad.index === this.gamepadIndex) {
-				this.connected = false;
-			}
-		});
+		window.addEventListener('gamepadconnected', this.onConnected);
+		window.addEventListener('gamepaddisconnected', this.onDisconnected);
+	}
+
+	/** Removes event listeners and cleans up state. */
+	dispose(): void {
+		window.removeEventListener('gamepadconnected', this.onConnected);
+		window.removeEventListener('gamepaddisconnected', this.onDisconnected);
+		this.buttonStates = {};
+		this.analogStates = {};
 	}
 
 	private handleButtonState(index: number, gamepad: Gamepad, delta: number): ButtonState {
+		let state = this.buttonStates[index];
+		if (!state) {
+			state = { pressed: false, released: false, held: 0 };
+			this.buttonStates[index] = state;
+		}
+
 		const isPressed = gamepad.buttons[index].pressed;
-		let buttonState = this.buttonStates[index];
+		state.pressed = isPressed && state.held === 0;
+		state.released = !isPressed && state.held > 0;
+		state.held = isPressed ? state.held + delta : 0;
 
-		if (!buttonState) {
-			buttonState = { pressed: false, released: false, held: 0 };
-			this.buttonStates[index] = buttonState;
-		}
-
-		if (isPressed) {
-			if (buttonState.held === 0) {
-				buttonState.pressed = true;
-			} else {
-				buttonState.pressed = false;
-			}
-			buttonState.held += delta;
-			buttonState.released = false;
-		} else {
-			if (buttonState.held > 0) {
-				buttonState.released = true;
-				buttonState.held = 0;
-			} else {
-				buttonState.released = false;
-			}
-			buttonState.pressed = false;
-		}
-
-		return buttonState;
+		return state;
 	}
 
 	private handleAnalogState(index: number, gamepad: Gamepad, delta: number): AnalogState {
-		const value = gamepad.axes[index];
-		return { value, held: delta };
+		let state = this.analogStates[index];
+		if (!state) {
+			state = { value: 0, held: 0 };
+			this.analogStates[index] = state;
+		}
+
+		state.value = gamepad.axes[index];
+		state.held = state.value !== 0 ? state.held + delta : 0;
+
+		return state;
 	}
 
 	getInput(delta: number): Partial<InputGamepad> {

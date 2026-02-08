@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 import { RigidBody, Vector } from '@dimforge/rapier3d-compat';
 import type { TransformState } from './transform-store';
+import { createTransformStore } from './transform-store';
 
 export interface EntityWithBody {
 	body: RigidBody | null;
@@ -9,100 +10,60 @@ export interface EntityWithBody {
 
 /**
  * Move an entity along the X axis, preserving other velocities.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveX(entity: EntityWithBody, delta: number): void {
-	if (entity.transformStore) {
-		entity.transformStore.velocity.x = delta;
-		entity.transformStore.dirty.velocity = true;
-	} else if (entity.body) {
-		const currentVelocity = entity.body.linvel();
-		const newVelocity = new Vector3(delta, currentVelocity.y, currentVelocity.z);
-		entity.body.setLinvel(newVelocity, true);
-	}
+	if (!entity.transformStore) return;
+	entity.transformStore.velocity.x = delta;
+	entity.transformStore.dirty.velocity = true;
 }
 
 /**
  * Move an entity along the Y axis, preserving other velocities.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveY(entity: EntityWithBody, delta: number): void {
-	if (entity.transformStore) {
-		entity.transformStore.velocity.y = delta;
-		entity.transformStore.dirty.velocity = true;
-	} else if (entity.body) {
-		const currentVelocity = entity.body.linvel();
-		const newVelocity = new Vector3(currentVelocity.x, delta, currentVelocity.z);
-		entity.body.setLinvel(newVelocity, true);
-	}
+	if (!entity.transformStore) return;
+	entity.transformStore.velocity.y = delta;
+	entity.transformStore.dirty.velocity = true;
 }
 
 /**
  * Move an entity along the Z axis, preserving other velocities.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveZ(entity: EntityWithBody, delta: number): void {
-	if (entity.transformStore) {
-		entity.transformStore.velocity.z = delta;
-		entity.transformStore.dirty.velocity = true;
-	} else if (entity.body) {
-		const currentVelocity = entity.body.linvel();
-		const newVelocity = new Vector3(currentVelocity.x, currentVelocity.y, delta);
-		entity.body.setLinvel(newVelocity, true);
-	}
+	if (!entity.transformStore) return;
+	entity.transformStore.velocity.z = delta;
+	entity.transformStore.dirty.velocity = true;
 }
 
 /**
  * Move an entity along the X and Y axis, preserving Z velocity.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveXY(entity: EntityWithBody, deltaX: number, deltaY: number): void {
-	if (entity.transformStore) {
-		entity.transformStore.velocity.x = deltaX;
-		entity.transformStore.velocity.y = deltaY;
-		entity.transformStore.dirty.velocity = true;
-	} else if (entity.body) {
-		const currentVelocity = entity.body.linvel();
-		const newVelocity = new Vector3(deltaX, deltaY, currentVelocity.z);
-		entity.body.setLinvel(newVelocity, true);
-	}
+	if (!entity.transformStore) return;
+	entity.transformStore.velocity.x = deltaX;
+	entity.transformStore.velocity.y = deltaY;
+	entity.transformStore.dirty.velocity = true;
 }
 
 /**
  * Move an entity along the X and Z axis, preserving Y velocity.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function moveXZ(entity: EntityWithBody, deltaX: number, deltaZ: number): void {
-	if (entity.transformStore) {
-		entity.transformStore.velocity.x = deltaX;
-		entity.transformStore.velocity.z = deltaZ;
-		entity.transformStore.dirty.velocity = true;
-	} else if (entity.body) {
-		const currentVelocity = entity.body.linvel();
-		const newVelocity = new Vector3(deltaX, currentVelocity.y, deltaZ);
-		entity.body.setLinvel(newVelocity, true);
-	}
+	if (!entity.transformStore) return;
+	entity.transformStore.velocity.x = deltaX;
+	entity.transformStore.velocity.z = deltaZ;
+	entity.transformStore.dirty.velocity = true;
 }
 
 /**
  * Move entity based on a vector, adding to existing velocities.
- * If entity has a transformStore, updates the store; otherwise applies immediately.
  */
 export function move(entity: EntityWithBody, vector: Vector3): void {
-	if (entity.transformStore) {
-		entity.transformStore.velocity.x += vector.x;
-		entity.transformStore.velocity.y += vector.y;
-		entity.transformStore.velocity.z += vector.z;
-		entity.transformStore.dirty.velocity = true;
-	} else if (entity.body) {
-		const currentVelocity = entity.body.linvel();
-		const newVelocity = new Vector3(
-			currentVelocity.x + vector.x,
-			currentVelocity.y + vector.y,
-			currentVelocity.z + vector.z
-		);
-		entity.body.setLinvel(newVelocity, true);
-	}
+	if (!entity.transformStore) return;
+	entity.transformStore.velocity.x += vector.x;
+	entity.transformStore.velocity.y += vector.y;
+	entity.transformStore.velocity.z += vector.z;
+	entity.transformStore.dirty.velocity = true;
 }
 
 /**
@@ -230,66 +191,16 @@ export interface MoveableEntity extends EntityWithBody {
 }
 
 /**
- * Class decorator to enhance an entity with additive movement methods
- */
-export function moveable<T extends { new(...args: any[]): EntityWithBody }>(constructor: T) {
-	return class extends constructor implements MoveableEntity {
-		moveX(delta: number): void {
-			moveX(this, delta);
-		}
-		moveY(delta: number): void {
-			moveY(this, delta);
-		}
-		moveZ(delta: number): void {
-			moveZ(this, delta);
-		}
-		moveXY(deltaX: number, deltaY: number): void {
-			moveXY(this, deltaX, deltaY);
-		}
-		moveXZ(deltaX: number, deltaZ: number): void {
-			moveXZ(this, deltaX, deltaZ);
-		}
-		move(vector: Vector3): void {
-			move(this, vector);
-		}
-		resetVelocity(): void {
-			resetVelocity(this);
-		}
-		moveForwardXY(delta: number, rotation2DAngle: number): void {
-			moveForwardXY(this, delta, rotation2DAngle);
-		}
-		getPosition(): Vector | null {
-			return getPosition(this);
-		}
-		getVelocity(): Vector | null {
-			return getVelocity(this);
-		}
-		setPosition(x: number, y: number, z: number): void {
-			setPosition(this, x, y, z);
-		}
-		setPositionX(x: number): void {
-			setPositionX(this, x);
-		}
-		setPositionY(y: number): void {
-			setPositionY(this, y);
-		}
-		setPositionZ(z: number): void {
-			setPositionZ(this, z);
-		}
-		wrapAroundXY(boundsX: number, boundsY: number): void {
-			wrapAroundXY(this, boundsX, boundsY);
-		}
-		wrapAround3D(boundsX: number, boundsY: number, boundsZ: number): void {
-			wrapAround3D(this, boundsX, boundsY, boundsZ);
-		}
-	};
-}
-
-/**
- * Enhance an entity with additive movement methods (retained for compatibility)
+ * Enhance an entity with additive movement methods.
+ * Automatically creates a transform store if one doesn't exist.
  */
 export function makeMoveable<T extends EntityWithBody>(entity: T): T & MoveableEntity {
 	const moveable = entity as T & MoveableEntity;
+
+	// Create transform store if it doesn't exist
+	if (!moveable.transformStore) {
+		moveable.transformStore = createTransformStore();
+	}
 
 	moveable.moveX = (delta: number) => moveX(entity, delta);
 	moveable.moveY = (delta: number) => moveY(entity, delta);
@@ -309,19 +220,4 @@ export function makeMoveable<T extends EntityWithBody>(entity: T): T & MoveableE
 	moveable.wrapAround3D = (boundsX: number, boundsY: number, boundsZ: number) => wrapAround3D(entity, boundsX, boundsY, boundsZ);
 
 	return moveable;
-}
-
-/**
- * Wrap a standalone function with movement capabilities
- */
-export function withMovement<T extends (...args: any[]) => any>(
-	fn: T,
-	entity: EntityWithBody
-): (...args: Parameters<T>) => ReturnType<T> & MoveableEntity {
-	const wrapped = (...args: Parameters<T>) => {
-		const result = fn(...args);
-		const moveableEntity = makeMoveable(entity);
-		return Object.assign(result, moveableEntity);
-	};
-	return wrapped as (...args: Parameters<T>) => ReturnType<T> & MoveableEntity;
 }
