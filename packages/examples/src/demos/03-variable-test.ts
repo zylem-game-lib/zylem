@@ -19,7 +19,7 @@ box1.onSetup(({ me }) => {
 box1.onUpdate(({ me, delta }) => {
 	const total = getVariable<number>(stage1, 'totalAngle') ?? 0;
 	const nextTotal = total + delta * 2;
-	me.rotateY(nextTotal);
+	me.rotateY(delta * 2);
 	setVariable(stage1, 'totalAngle', nextTotal);
 });
 

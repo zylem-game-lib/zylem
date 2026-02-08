@@ -13,7 +13,7 @@ import { DebugInfoProvider } from './delegates/debug';
 import { EntityBuilder } from './builder';
 import { EntityCollisionBuilder } from './builder';
 import { commonDefaults } from './common';
-import { standardShader } from '~/api/main';
+import { standardShader } from '../graphics/shaders/standard.shader';
 
 type AnimationObject = {
 	key?: string;

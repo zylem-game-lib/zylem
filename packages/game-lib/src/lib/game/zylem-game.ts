@@ -8,6 +8,9 @@ import { InputManager } from '../input/input-manager';
 import { mergeInputConfigs } from '../input/input-presets';
 import { Timer } from '../core/three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
+import { RendererManager, RendererType } from '../camera/renderer-manager';
+import { CameraWrapper } from '../camera/camera';
+import { isCameraWrapper } from '../core/utility/options-parser';
 import { Stage } from '../stage/stage';
 import { BaseGlobals, GameInputConfig, ZylemGameConfig } from './game-interfaces';
 import { GameConfig, resolveGameConfig } from './game-config';
@@ -45,6 +48,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	wrapperRef: Game<TGlobals>;
 	globalInputConfig: GameInputConfig | undefined;
 	defaultCamera: ZylemCamera | null = null;
+	/** Shared renderer manager for all stages */
+	rendererManager: RendererManager | null = null;
 	container: HTMLElement | null = null;
 	canvas: HTMLCanvasElement | null = null;
 	aspectRatioDelegate: AspectRatioDelegate | null = null;
@@ -115,33 +120,42 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.debugDelegate = new GameDebugDelegate();
 	}
 
-	loadStage(stage: Stage, stageIndex: number = 0): Promise<void> {
+	async loadStage(stage: Stage, stageIndex: number = 0): Promise<void> {
 		this.unloadCurrentStage();
 		const config = stage.options[0] as any;
 		
 		// Subscribe to stage loading events via delegate
 		this.loadingDelegate.wireStageLoading(stage, stageIndex);
 
-		// Start stage loading and return promise for backward compatibility
-		return stage.load(this.id, config?.camera as ZylemCamera | null).then(() => {
-			this.stageMap.set(stage.wrappedStage!.uuid, stage);
-			this.currentStageId = stage.wrappedStage!.uuid;
-			this.defaultCamera = stage.wrappedStage!.cameraRef!;
-			
-			// Trigger renderer observer with new camera
-			if (this.defaultCamera) {
-				this.rendererObserver.setCamera(this.defaultCamera);
-			}
+		// Lazily create the shared renderer manager.
+		// Inspect the stage's camera options to determine the renderer type
+		// (e.g. 'webgpu' vs 'webgl') before initializing the renderer.
+		if (!this.rendererManager) {
+			const rendererType = this.resolveRendererType(stage);
+			this.rendererManager = new RendererManager(undefined, rendererType);
+			await this.rendererManager.initRenderer();
+		}
 
-			// Apply merged input configuration (global + stage overrides)
-			this.applyInputConfig(stage);
+		// Start stage loading with shared renderer manager
+		await stage.load(this.id, config?.camera as ZylemCamera | null, this.rendererManager);
 
-			// Wire callback so runtime changes to stage input config take effect immediately
-			stage.onInputConfigChanged = () => this.applyInputConfig(stage);
+		this.stageMap.set(stage.wrappedStage!.uuid, stage);
+		this.currentStageId = stage.wrappedStage!.uuid;
+		this.defaultCamera = stage.wrappedStage!.cameraRef!;
+		
+		// Trigger renderer observer with renderer manager
+		if (this.rendererManager) {
+			this.rendererObserver.setRendererManager(this.rendererManager);
+		}
 
-			// Emit state dispatch after stage is loaded so editor receives initial config
-			this.emitStateDispatch('@stage:loaded');
-		});
+		// Apply merged input configuration (global + stage overrides)
+		this.applyInputConfig(stage);
+
+		// Wire callback so runtime changes to stage input config take effect immediately
+		stage.onInputConfigChanged = () => this.applyInputConfig(stage);
+
+		// Emit state dispatch after stage is loaded so editor receives initial config
+		this.emitStateDispatch('@stage:loaded');
 	}
 
 	/**
@@ -291,6 +305,12 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 		this.rendererObserver.dispose();
 
+		// Dispose the shared renderer manager
+		if (this.rendererManager) {
+			this.rendererManager.dispose();
+			this.rendererManager = null;
+		}
+
 		this.timer.dispose();
 
 		if (this.customDestroy) {
@@ -405,6 +425,23 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			entities: this.buildEntitiesPayload(),
 		};
 		zylemEventBus.emit('state:dispatch', statePayload);
+	}
+
+	/**
+	 * Inspect a stage's options to determine the renderer type.
+	 * Looks for CameraWrapper instances in the stage options and uses
+	 * the first camera's rendererType. Falls back to 'webgl'.
+	 */
+	private resolveRendererType(stage: Stage): RendererType {
+		for (const opt of stage.options) {
+			if (isCameraWrapper(opt)) {
+				const rt = (opt as CameraWrapper).cameraRef.rendererType;
+				if (rt && rt !== 'webgl') {
+					return rt;
+				}
+			}
+		}
+		return 'webgl';
 	}
 
 	/**

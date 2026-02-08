@@ -18,6 +18,8 @@ import { BaseNode } from '../core/base-node';
 import { nanoid } from 'nanoid';
 import { Stage } from './stage';
 import { CameraWrapper } from '../camera/camera';
+import { CameraManager } from '../camera/camera-manager';
+import { RendererManager } from '../camera/renderer-manager';
 import { StageDebugDelegate } from './stage-debug-delegate';
 import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
 import { StageCameraDelegate } from './stage-camera-delegate';
@@ -96,7 +98,12 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	uuid: string;
 	wrapperRef: Stage | null = null;
 	camera?: CameraWrapper;
+	cameras: CameraWrapper[] = [];
 	cameraRef?: ZylemCamera | null = null;
+	/** Camera manager for multi-camera support */
+	cameraManagerRef: CameraManager | null = null;
+	/** Shared renderer manager (injected by the game) */
+	rendererManager: RendererManager | null = null;
 
 	// Delegates
 	private cameraDelegate: StageCameraDelegate;
@@ -121,6 +128,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		// Parse the options array using the stage-config module
 		const parsed = parseStageOptions(options);
 		this.camera = parsed.camera;
+		this.cameras = parsed.cameras;
 		this.children = parsed.entities;
 		this.pendingEntities = parsed.asyncEntities;
 		
@@ -176,18 +184,54 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	 * @param id DOM element id for the renderer container
 	 * @param camera Optional camera override
 	 */
-	async load(id: string, camera?: ZylemCamera | null) {
+	async load(id: string, camera?: ZylemCamera | null, rendererManager?: RendererManager | null) {
 		this.setState();
 
-		// Use camera delegate to resolve camera
-		const zylemCamera = this.cameraDelegate.resolveCamera(camera, this.camera);
+		if (rendererManager) {
+			this.rendererManager = rendererManager;
+		}
+
+		// Build camera manager first so we can use its primary camera as the
+		// canonical camera reference. This avoids creating two separate default
+		// camera instances (one for the scene and a different one in the manager).
+		if (this.rendererManager) {
+			this.cameraManagerRef = this.cameraDelegate.buildCameraManager(
+				camera,
+				...this.cameras
+			);
+		}
+
+		// Derive the resolved camera from the camera manager's primary camera
+		// (when available), otherwise fall back to the legacy single-camera path.
+		const zylemCamera = this.cameraManagerRef?.primaryCamera
+			?? this.cameraDelegate.resolveCamera(camera, this.camera);
 		this.cameraRef = zylemCamera;
 		this.scene = new ZylemScene(id, zylemCamera, this.state);
 
 		const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector3(0, 0, 0));
 		this.world = new ZylemWorld(physicsWorld);
 
+		// Setup scene (lighting, etc.)
 		this.scene.setup();
+
+		// Setup cameras: prefer camera manager, fall back to legacy single camera
+		if (this.cameraManagerRef && this.rendererManager) {
+			await this.scene.setupCameraManager(this.scene.scene, this.cameraManagerRef, this.rendererManager);
+			// Setup render pass for the primary camera (WebGL post-processing)
+			const primaryCam = this.cameraManagerRef.primaryCamera;
+			if (primaryCam) {
+				this.rendererManager.setupRenderPass(this.scene.scene, primaryCam.camera);
+			}
+			// Start the render loop via the renderer manager
+			this.rendererManager.startRenderLoop((delta) => {
+				this.cameraManagerRef?.update(delta);
+				this.cameraManagerRef?.render(this.scene!.scene);
+			});
+		} else {
+			// Legacy path: single camera manages its own renderer
+			this.scene.setupCamera(this.scene.scene, zylemCamera);
+		}
+
 		this.entityModelDelegate.attach(this.scene);
 
 		// Initialize instance manager for mesh batching
@@ -370,10 +414,16 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.instanceManager?.dispose();
 		this.instanceManager = null;
 
+		// Stop renderer render loop if using renderer manager
+		if (this.rendererManager) {
+			this.rendererManager.stopRenderLoop();
+		}
+
 		this.isLoaded = false;
 		this.world = null as any;
 		this.scene = null as any;
 		this.cameraRef = null;
+		this.cameraManagerRef = null;
 		// Cleanup transform system
 		this.transformSystem?.destroy(this.ecs);
 		this.transformSystem = null;
@@ -588,6 +638,40 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	logMissingEntities() {
 		console.warn('Zylem world or scene is null');
+	}
+
+	// ─── Camera management forwarding ─────────────────────────────────────
+
+	/**
+	 * Add a camera to this stage's camera manager.
+	 */
+	addCamera(camera: ZylemCamera, name?: string): string | null {
+		if (!this.cameraManagerRef) {
+			console.warn('ZylemStage: CameraManager not available. Ensure stage is loaded with a RendererManager.');
+			return null;
+		}
+		return this.cameraManagerRef.addCamera(camera, name);
+	}
+
+	/**
+	 * Remove a camera from this stage's camera manager.
+	 */
+	removeCamera(nameOrRef: string | ZylemCamera): boolean {
+		return this.cameraManagerRef?.removeCamera(nameOrRef) ?? false;
+	}
+
+	/**
+	 * Set the active camera by name or reference.
+	 */
+	setActiveCamera(nameOrRef: string | ZylemCamera): boolean {
+		return this.cameraManagerRef?.setActiveCamera(nameOrRef) ?? false;
+	}
+
+	/**
+	 * Get a camera by name from the camera manager.
+	 */
+	getCamera(name: string): ZylemCamera | null {
+		return this.cameraManagerRef?.getCamera(name) ?? null;
 	}
 
 	/** Resize renderer viewport. */

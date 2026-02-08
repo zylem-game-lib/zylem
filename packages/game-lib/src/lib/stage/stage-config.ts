@@ -55,7 +55,10 @@ export interface ParsedStageOptions {
 	config: StageConfig;
 	entities: BaseNode[];
 	asyncEntities: Array<BaseNode | Promise<any> | (() => BaseNode | Promise<any>)>;
+	/** @deprecated Use `cameras` array instead for multi-camera support */
 	camera?: CameraWrapper;
+	/** All camera wrappers found in stage options */
+	cameras: CameraWrapper[];
 }
 
 /**
@@ -70,11 +73,11 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 	let config: Partial<StageConfig> = {};
 	const entities: BaseNode[] = [];
 	const asyncEntities: Array<BaseNode | Promise<any> | (() => BaseNode | Promise<any>)> = [];
-	let camera: CameraWrapper | undefined;
+	const cameras: CameraWrapper[] = [];
 
 	for (const item of options) {
 		if (isCameraWrapper(item)) {
-			camera = item;
+			cameras.push(item);
 		} else if (isBaseNode(item)) {
 			entities.push(item);
 		} else if (isEntityInput(item) && !isBaseNode(item)) {
@@ -94,7 +97,10 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		config.variables ?? defaults.variables,
 	);
 
-	return { config: resolvedConfig, entities, asyncEntities, camera };
+	// Backward compat: first camera is the legacy `camera` field
+	const camera = cameras.length > 0 ? cameras[0] : undefined;
+
+	return { config: resolvedConfig, entities, asyncEntities, camera, cameras };
 }
 
 /**

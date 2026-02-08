@@ -13,10 +13,13 @@ export { vessel } from '../lib/core/vessel';
 
 // Camera
 export { createCamera } from '../lib/camera/camera';
+export type { CameraOptions } from '../lib/camera/camera';
+export { CameraWrapper } from '../lib/camera/camera';
 export type { PerspectiveType } from '../lib/camera/perspective';
 export { Perspectives } from '../lib/camera/perspective';
-export type { RendererType, ZylemRenderer } from '../lib/camera/zylem-camera';
-export { isWebGPUSupported } from '../lib/camera/zylem-camera';
+export type { RendererType, ZylemRenderer, Viewport } from '../lib/camera/renderer-manager';
+export { isWebGPUSupported } from '../lib/camera/renderer-manager';
+export { CameraManager } from '../lib/camera/camera-manager';
 
 // Utility types
 export type { Vect3 } from '../lib/core/utility/vector';
