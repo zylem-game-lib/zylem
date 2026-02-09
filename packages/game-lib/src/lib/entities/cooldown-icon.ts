@@ -90,6 +90,7 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
 		this.createSprite();
 		this.prependSetup(this.iconSetup.bind(this) as any);
 		this.prependUpdate(this.iconUpdate.bind(this) as any);
+		this.onCleanup(this.iconDestroy.bind(this) as any);
 	}
 
 	private createSprite(): void {
@@ -295,6 +296,39 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
 		}
 
 		this.group?.position.set(localX, localY, -zDist);
+	}
+
+	/**
+	 * Dispose Three.js / DOM resources when the entity is destroyed.
+	 */
+	private iconDestroy(): void {
+		// Dispose canvas texture (GPU memory)
+		this._texture?.dispose();
+
+		// Dispose sprite material
+		if (this._sprite?.material) {
+			(this._sprite.material as SpriteMaterial).dispose();
+		}
+
+		// Remove sprite from group
+		if (this._sprite) {
+			this._sprite.removeFromParent();
+		}
+
+		// Remove group from parent (camera or scene)
+		this.group?.removeFromParent();
+
+		// Dispose loaded icon texture
+		this._iconTexture?.dispose();
+
+		// Clear references
+		this._sprite = null;
+		this._texture = null;
+		this._canvas = null;
+		this._ctx = null;
+		this._cameraRef = null;
+		this._iconTexture = null;
+		this._iconImage = null;
 	}
 }
 

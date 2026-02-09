@@ -166,7 +166,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 
 	protected abstract _destroy(params: DestroyContext<this>): void;
 
-	protected abstract _cleanup(params: CleanupContext<this>): Promise<void>;
+	protected abstract _cleanup(params: CleanupContext<this>): void;
 
 	// ─────────────────────────────────────────────────────────────────────────────
 	// Node lifecycle execution - runs internal + callback arrays
@@ -202,7 +202,12 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	}
 
 	public nodeDestroy(params: DestroyContext<this>): void {
+		// Guard against re-entry (e.g. destroy called twice during collision loop)
+		if (this.markedForRemoval) return;
+
 		this.children.forEach(child => child.nodeDestroy(params));
+
+		// Destroy phase -- consumer game logic (onDestroy callbacks + _destroy override)
 		for (const callback of this.lifecycleCallbacks.destroy) {
 			callback(params);
 		}
@@ -210,6 +215,14 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 			this._destroy(params);
 		}
 		this.markedForRemoval = true;
+
+		// Cleanup phase -- engine-internal resource disposal (onCleanup callbacks + _cleanup override)
+		for (const callback of this.lifecycleCallbacks.cleanup) {
+			callback(params);
+		}
+		if (typeof this._cleanup === 'function') {
+			this._cleanup(params);
+		}
 	}
 
 	public async nodeLoaded(params: LoadedContext<this>): Promise<void> {
@@ -221,12 +234,13 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 		}
 	}
 
-	public async nodeCleanup(params: CleanupContext<this>): Promise<void> {
+	public nodeCleanup(params: CleanupContext<this>): void {
+		this.children.forEach(child => (child as any).nodeCleanup?.(params));
 		for (const callback of this.lifecycleCallbacks.cleanup) {
 			callback(params);
 		}
 		if (typeof this._cleanup === 'function') {
-			await this._cleanup(params);
+			this._cleanup(params);
 		}
 	}
 

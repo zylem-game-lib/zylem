@@ -29,7 +29,7 @@ export class Vessel extends BaseNode<{}, Vessel> {
 
 	protected _destroy(_params: DestroyContext<this>): void { }
 
-	protected async _cleanup(_params: CleanupContext<this>): Promise<void> { }
+	protected _cleanup(_params: CleanupContext<this>): void { }
 
 	public create(): this {
 		return this;

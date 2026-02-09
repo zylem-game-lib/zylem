@@ -386,10 +386,22 @@ export class GameEntity<O extends GameEntityOptions>
 	}
 
 	/**
-	 * Entity-specific setup - runs behavior callbacks
+	 * Entity-specific setup - resets actions for a fresh stage session.
 	 * (User callbacks are handled by BaseNode's lifecycleCallbacks.setup)
 	 */
-	public _setup(params: SetupContext<this>): void { }
+	public _setup(params: SetupContext<this>): void {
+		// Reset actions for the new stage session.
+		// Remove completed fire-and-forget actions; reset all others
+		// so they replay from the beginning.
+		for (let i = this._actions.length - 1; i >= 0; i--) {
+			const act = this._actions[i];
+			if (act.done && !act.persistent) {
+				this._actions.splice(i, 1);
+			} else {
+				act.reset();
+			}
+		}
+	}
 
 	protected async _loaded(_params: LoadedContext<this>): Promise<void> { }
 
@@ -403,12 +415,45 @@ export class GameEntity<O extends GameEntityOptions>
 	}
 
 	/**
-	 * Entity-specific destroy - runs behavior callbacks
-	 * (User callbacks are handled by BaseNode's lifecycleCallbacks.destroy)
+	 * Entity-specific destroy -- reserved for consumer game logic.
+	 * Engine-internal resource disposal runs in _cleanup() instead.
 	 */
 	public _destroy(params: DestroyContext<this>): void { }
 
-	protected async _cleanup(_params: CleanupContext<this>): Promise<void> { }
+	/**
+	 * Engine-internal resource cleanup -- runs automatically after destroy.
+	 * Disposes GPU/DOM resources (meshes, materials, debug material).
+	 *
+	 * Note: actions, collision callbacks, and behavior refs are intentionally
+	 * NOT cleared here -- they are registered by consumer code at module level
+	 * and must persist across stage reloads. Actions are reset in _setup().
+	 */
+	protected _cleanup(_params: CleanupContext<this>): void {
+		// Dispose entity event emitter & subscriptions
+		this.disposeEvents();
+
+		// Dispose compound meshes
+		for (const m of this.compoundMeshes) {
+			m.geometry?.dispose();
+			if (Array.isArray(m.material)) {
+				m.material.forEach(mat => mat.dispose());
+			} else {
+				m.material?.dispose();
+			}
+		}
+		this.compoundMeshes.length = 0;
+
+		// Dispose debug material
+		this.debugMaterial?.dispose();
+		this.debugMaterial = undefined;
+
+		// Remove group from parent (camera or scene)
+		this.group?.removeFromParent();
+
+		// Note: physics references (body, collider, colliders) are intentionally
+		// NOT nulled here. They are needed by removeEntityByUuid() → world.destroyEntity()
+		// which runs later when the stage processes markedForRemoval entities.
+	}
 
 	public _collision(other: GameEntity<O>, globals?: any): void {
 		if (this.collisionDelegate.collision?.length) {

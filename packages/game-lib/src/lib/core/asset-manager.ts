@@ -141,7 +141,23 @@ export class AssetManager {
 			this.textureCache,
 			() => this.textureLoader.load(url, options),
 			options,
-			(texture) => options?.clone ? this.textureLoader.clone(texture) : texture
+			(texture) => {
+				if (!options?.clone) return texture;
+				const cloned = this.textureLoader.clone(texture);
+				// Re-apply per-instance texture options to the clone so that
+				// different callers sharing the same cached base texture can
+				// use independent repeat / wrap values.
+				if (options.repeat) {
+					cloned.repeat.copy(options.repeat);
+				}
+				if (options.wrapS !== undefined) {
+					cloned.wrapS = options.wrapS;
+				}
+				if (options.wrapT !== undefined) {
+					cloned.wrapT = options.wrapT;
+				}
+				return cloned;
+			}
 		);
 	}
 
