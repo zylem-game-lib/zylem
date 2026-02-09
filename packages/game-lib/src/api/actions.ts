@@ -1,14 +1,17 @@
-// Utility action helpers
-export { wait, actionOnPress, actionOnRelease, actionWithCooldown, actionWithThrottle } from '../lib/actions/behaviors/actions';
+// Actions API (Cocos2d-inspired)
+export { type Action } from '../lib/actions/action';
+export { moveBy, moveTo, rotateBy, delay, callFunc } from '../lib/actions/interval-actions';
+export { throttle, onPress, onRelease } from '../lib/actions/persistent-actions';
+export { sequence, parallel, repeat, repeatForever } from '../lib/actions/composition';
 
 // Transform store utilities
-export { 
-	createTransformStore, 
+export {
+	createTransformStore,
 	resetTransformStore,
-	type TransformState 
+	type TransformState
 } from '../lib/actions/capabilities/transform-store';
-export { 
-	applyTransformChanges 
+export {
+	applyTransformChanges
 } from '../lib/actions/capabilities/apply-transform';
 
 // Movement actions

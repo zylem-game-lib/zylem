@@ -191,6 +191,10 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 		if (typeof this._update === 'function') {
 			this._update(params);
 		}
+		// Tick entity actions before user callbacks so state is fresh
+		if (typeof (this as any)._tickActions === 'function') {
+			(this as any)._tickActions(params.delta);
+		}
 		for (const callback of this.lifecycleCallbacks.update) {
 			callback(params);
 		}

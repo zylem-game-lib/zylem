@@ -19,7 +19,7 @@ import {
 	CleanupContext,
 } from '../core/base-node-life-cycle';
 import type { EntityMeshBuilder, EntityCollisionBuilder } from './builder';
-import { Behavior } from '../actions/behaviors/behavior';
+import { Behavior } from '../behaviors/behavior';
 import {
 	EventEmitterDelegate,
 	zylemEventBus,
@@ -38,6 +38,7 @@ import type { RotatableEntityAPI } from '../actions/capabilities/rotatable';
 import { isCollisionComponent, type CollisionComponent } from './parts/collision-factories';
 import type { NodeInterface } from '../core/node-interface';
 import { commonDefaults } from './common';
+import type { Action } from '../actions/action';
 
 export interface CollisionContext<
 	T,
@@ -244,6 +245,76 @@ export class GameEntity<O extends GameEntityOptions>
 		} else {
 			// Subsequent collisions add extra colliders to the same body
 			this.colliderDescs.push(collision.colliderDesc);
+		}
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Actions API -- entity-scoped, self-contained stateful actions
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	private _actions: Action[] = [];
+
+	/**
+	 * Run a fire-and-forget action. Auto-removed when done.
+	 * @example `me.runAction(moveBy({ x: 10, duration: 0.3 }))`
+	 */
+	public runAction<A extends Action>(action: A): A {
+		this._actions.push(action);
+		return action;
+	}
+
+	/**
+	 * Register a persistent action (throttle, onPress). Not removed when done.
+	 * @example `const press = entity.action(onPress())`
+	 */
+	public action<A extends Action>(action: A): A {
+		action.persistent = true;
+		this._actions.push(action);
+		return action;
+	}
+
+	/**
+	 * Tick all registered actions. Called automatically before user onUpdate callbacks.
+	 *
+	 * Resets velocity/angularVelocity accumulation before ticking so that
+	 * actions can compose via `+=` without cross-frame build-up.
+	 * (The existing move helpers like `moveXY` use `=` which doesn't accumulate,
+	 * but action composition needs additive writes on a clean slate each frame.)
+	 */
+	public _tickActions(delta: number): void {
+		if (this._actions.length === 0) return;
+
+		// Clear accumulation from the previous frame so that
+		// actions can compose via `+=` on a clean slate each frame.
+		const store = this.transformStore;
+		store.velocity.x = 0;
+		store.velocity.y = 0;
+		store.velocity.z = 0;
+		store.dirty.velocity = false;
+		store.angularVelocity.x = 0;
+		store.angularVelocity.y = 0;
+		store.angularVelocity.z = 0;
+		store.dirty.angularVelocity = false;
+
+		for (let i = this._actions.length - 1; i >= 0; i--) {
+			const act = this._actions[i];
+			act.tick(this, delta);
+			if (act.done && !act.persistent) {
+				this._actions.splice(i, 1);
+			}
+		}
+
+		// If every non-persistent action finished this frame, zero out
+		// any velocity they wrote so the entity doesn't drift.
+		if (this._actions.length === 0) {
+			store.velocity.x = 0;
+			store.velocity.y = 0;
+			store.velocity.z = 0;
+			store.dirty.velocity = false;
+			store.angularVelocity.x = 0;
+			store.angularVelocity.y = 0;
+			store.angularVelocity.z = 0;
+			store.dirty.angularVelocity = false;
 		}
 	}
 

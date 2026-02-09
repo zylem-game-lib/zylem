@@ -58,10 +58,6 @@
       "types": "./dist/behavior/ricochet-2d.d.ts",
       "import": "./dist/behavior/ricochet-2d.js"
     },
-    "./behavior/movement-sequence-2d": {
-      "types": "./dist/behavior/movement-sequence-2d.d.ts",
-      "import": "./dist/behavior/movement-sequence-2d.js"
-    },
     "./behavior/platformer-3d": {
       "types": "./dist/behavior/platformer-3d.d.ts",
       "import": "./dist/behavior/platformer-3d.js"
