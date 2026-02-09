@@ -2,7 +2,8 @@ import { Color, Vector2, Vector3 } from 'three';
 import {
 	createCamera, destroy, entitySpawner, createGame,
 	Perspectives, createSprite, createStage, createText, setGlobal, TEXT_TYPE,
-	WorldBoundary2DBehavior, MovementSequence2DBehavior,
+	WorldBoundary2DBehavior,
+	moveBy, sequence, repeatForever,
 	useArrowsForAxes
 } from '@zylem/game-lib';
 import playerShip from '@zylem/assets/2d/space/player-ship.png';
@@ -91,16 +92,16 @@ for (let i = 0; i < 10; i++) {
 			],
 		});
 
-		// Attach movement sequence behavior (before onSetup so we can reset it)
-		const sequence = enemy.use(MovementSequence2DBehavior, {
-			sequence: [
-				{ name: 'move-left', moveX: -1.5, moveY: 0, timeInSeconds: 2 },
-				{ name: 'move-down', moveX: 0, moveY: -0.5, timeInSeconds: 0.5 },
-				{ name: 'move-right', moveX: 1.5, moveY: 0, timeInSeconds: 2 },
-				{ name: 'move-down', moveX: 0, moveY: -0.5, timeInSeconds: 0.5 },
-			],
-			loop: true,
-		});
+		// Movement patrol using actions (replaces MovementSequence2DBehavior)
+		const patrol = repeatForever(
+			sequence(
+				moveBy({ x: -3, duration: 2000 }),
+				moveBy({ y: -0.25, duration: 500 }),
+				moveBy({ x: 3, duration: 2000 }),
+				moveBy({ y: -0.25, duration: 500 }),
+			),
+		);
+		enemy.runAction(patrol);
 
 		// Attach boundary behavior
 		enemy.use(WorldBoundary2DBehavior, {
@@ -109,14 +110,8 @@ for (let i = 0; i < 10; i++) {
 
 		enemy.onSetup(({ me }) => {
 			me.setPosition(4 + (i * 2 - 10), j + 3, 0);
-			// Reset the sequence when the entity is set up (e.g., on game restart)
-			sequence.reset();
-		});
-
-		enemy.onUpdate(({ me }) => {
-			// Get movement from sequence and apply it
-			const { moveX, moveY } = sequence.getMovement();
-			me.moveXY(moveX, moveY);
+			// Reset the patrol when the entity is set up (e.g., on game restart)
+			patrol.reset();
 		});
 
 		enemy.onDestroy(({ globals }) => {

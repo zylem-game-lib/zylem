@@ -57,8 +57,20 @@ export * from '../lib/behaviors';
 export { rotateInDirection } from '../lib/actions/capabilities/rotatable';
 export { move, resetVelocity } from '../lib/actions/capabilities/moveable';
 
+// Actions API (Cocos2d-inspired)
+export { type Action } from '../lib/actions/action';
+export { moveBy, moveTo, rotateBy, delay, callFunc } from '../lib/actions/interval-actions';
+export { throttle, onPress, onRelease } from '../lib/actions/persistent-actions';
+export { sequence, parallel, repeat, repeatForever } from '../lib/actions/composition';
 
-// Destruction utilities
+// Cooldown system
+export {
+	CooldownBehavior,
+	registerCooldown, getCooldown, fireCooldown, resetCooldown,
+	type CooldownEntry, type CooldownHandle, type CooldownOptions,
+} from '../lib/behaviors/cooldown';
+export { createCooldownIcon } from '../lib/entities/cooldown-icon';
+
 // Destruction utilities
 export { destroy } from '../lib/entities/destroy';
 

@@ -10,20 +10,20 @@ export type { BehaviorSystem, BehaviorSystemFactory } from './behavior-system';
 // Behavior Descriptor Pattern
 export { defineBehavior } from './behavior-descriptor';
 export type {
-  BehaviorDescriptor,
-  BehaviorRef,
-  BehaviorHandle,
-  DefineBehaviorConfig,
+	BehaviorDescriptor,
+	BehaviorRef,
+	BehaviorHandle,
+	DefineBehaviorConfig,
 } from './behavior-descriptor';
 
 export { useBehavior } from './use-behavior';
 
 // Core ECS Components
 export {
-  type TransformComponent,
-  type PhysicsBodyComponent,
-  createTransformComponent,
-  createPhysicsBodyComponent,
+	type TransformComponent,
+	type PhysicsBodyComponent,
+	createTransformComponent,
+	createPhysicsBodyComponent,
 } from './components';
 
 // Thruster Module (components, FSM, and behaviors)
@@ -38,11 +38,11 @@ export * from './world-boundary-2d';
 // Ricochet 2D Module
 export * from './ricochet-2d';
 
-// Movement Sequence 2D Module
-export * from './movement-sequence-2d';
-
 // Platformer 3D Module
 export * from './platformer-3d';
+
+// Cooldown Module
+export * from './cooldown';
 
 // Coordinators
 export * from '../coordinators/boundary-ricochet.coordinator';
