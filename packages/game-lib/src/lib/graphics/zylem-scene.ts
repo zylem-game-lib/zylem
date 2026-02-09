@@ -11,6 +11,8 @@ import {
 	Mesh,
 	BackSide,
 	Material,
+	Texture,
+	Light,
 } from 'three';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
@@ -148,18 +150,41 @@ export class ZylemScene implements Entity<ZylemScene> {
 			this.skyboxMaterial.dispose();
 		}
 		if (this.scene) {
+			// Dispose background texture if present
+			if (this.scene.background instanceof Texture) {
+				this.scene.background.dispose();
+				this.scene.background = null;
+			}
+
 			this.scene.traverse((obj: any) => {
 				if (obj.geometry) {
 					obj.geometry.dispose?.();
 				}
 				if (obj.material) {
-					if (Array.isArray(obj.material)) {
-						obj.material.forEach((m: any) => m.dispose?.());
-					} else {
-						obj.material.dispose?.();
+					const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+					for (const mat of materials) {
+						// Dispose all texture maps on the material
+						if (mat.map) mat.map.dispose?.();
+						if (mat.normalMap) mat.normalMap.dispose?.();
+						if (mat.aoMap) mat.aoMap.dispose?.();
+						if (mat.emissiveMap) mat.emissiveMap.dispose?.();
+						if (mat.roughnessMap) mat.roughnessMap.dispose?.();
+						if (mat.metalnessMap) mat.metalnessMap.dispose?.();
+						if (mat.envMap) mat.envMap.dispose?.();
+						if (mat.lightMap) mat.lightMap.dispose?.();
+						if (mat.bumpMap) mat.bumpMap.dispose?.();
+						if (mat.displacementMap) mat.displacementMap.dispose?.();
+						if (mat.alphaMap) mat.alphaMap.dispose?.();
+						mat.dispose?.();
 					}
 				}
+				// Dispose shadow map render targets on lights
+				if ((obj as Light).isLight && (obj as any).shadow?.map) {
+					(obj as any).shadow.map.dispose();
+				}
 			});
+
+			this.scene.clear();
 		}
 	}
 

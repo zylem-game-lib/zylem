@@ -82,6 +82,11 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	destroyEntity(entity: GameEntity<any>) {
+		// Free character controller WASM resource if present
+		if ((entity as any).characterController) {
+			try { (entity as any).characterController.free(); } catch { /* noop */ }
+			(entity as any).characterController = null;
+		}
 		// Remove all colliders (compound support)
 		if (entity.colliders?.length) {
 			for (const collider of entity.colliders) {
@@ -134,21 +139,25 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				this.destroyEntity(gameEntity);
 				continue;
 			}
-			this.world.contactsWith(gameEntity.body.collider(0), (otherCollider) => {
-				if (!otherCollider) {
-					return;
-				}
-				// @ts-ignore
-				const uuid = otherCollider._parent.userData.uuid;
-				const entity = dictionaryRef.get(uuid);
-				if (!entity) {
-					return;
-				}
-				if (gameEntity._collision) {
-					gameEntity._collision(entity, state.globals);
-				}
-			});
-			this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
+		this.world.contactsWith(gameEntity.body.collider(0), (otherCollider) => {
+			if (!otherCollider) {
+				return;
+			}
+			// @ts-ignore
+			const uuid = otherCollider._parent.userData.uuid;
+			const entity = dictionaryRef.get(uuid);
+			if (!entity) {
+				return;
+			}
+			if (gameEntity._collision) {
+				gameEntity._collision(entity, state.globals);
+			}
+		});
+		// Body may have been invalidated by a destroy() call inside a collision callback
+		if (!gameEntity.body || gameEntity.markedForRemoval) {
+			continue;
+		}
+		this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
 				if (!otherCollider) {
 					return;
 				}
@@ -177,6 +186,8 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			this.collisionMap.clear();
 			this.collisionBehaviorMap.clear();
 			this._removalMap.clear();
+			// Free WASM-backed Rapier world before dropping the reference
+			try { this.world?.free(); } catch { /* noop */ }
 			// @ts-ignore
 			this.world = undefined as any;
 		} catch { /* noop */ }

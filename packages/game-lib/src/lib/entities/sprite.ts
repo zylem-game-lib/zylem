@@ -72,7 +72,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		this.options = { ...spriteDefaults, ...options };
 		// Add sprite-specific lifecycle callbacks (only registered once)
 		this.prependUpdate(this.spriteUpdate.bind(this) as any);
-		this.onDestroy(this.spriteDestroy.bind(this) as any);
+		this.onCleanup(this.spriteDestroy.bind(this) as any);
 	}
 
 	public create(): this {

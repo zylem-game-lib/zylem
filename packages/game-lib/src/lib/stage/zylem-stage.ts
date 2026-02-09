@@ -390,6 +390,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.registeredSystemKeys.clear();
 		this._childrenMap.forEach((child) => {
 			try { child.nodeDestroy({ me: child, globals: getGlobals() }); } catch { /* noop */ }
+			// Clear entity-scoped variable proxy store entries
+			clearVariables(child);
 		});
 		this._childrenMap.clear();
 		this._removalMap.clear();

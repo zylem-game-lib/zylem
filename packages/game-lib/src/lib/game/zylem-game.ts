@@ -201,6 +201,9 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			// Clear the Stage wrapper's reference to the destroyed stage
 			current.wrappedStage = null;
 		}
+
+		// Dispose Stage wrapper event delegate to prevent listener accumulation
+		current.dispose();
 		
 		// Remove from stage map
 		this.stageMap.delete(this.currentStageId);

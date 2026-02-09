@@ -136,6 +136,12 @@ export class RendererManager {
 	setupRenderPass(scene: Scene, camera: Camera): void {
 		if (this._isWebGPU || !this.composer) return;
 
+		// Dispose old passes before adding new ones (prevents GPU leak on stage transitions)
+		if (this.composer.passes.length > 0) {
+			this.composer.passes.forEach((p: any) => { try { p.dispose?.(); } catch { /* noop */ } });
+			this.composer.passes.length = 0;
+		}
+
 		const renderResolution = this.screenResolution.clone().divideScalar(2);
 		renderResolution.x |= 0;
 		renderResolution.y |= 0;
