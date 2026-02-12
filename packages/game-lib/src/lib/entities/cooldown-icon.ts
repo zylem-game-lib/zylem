@@ -18,7 +18,6 @@ import {
 	PerspectiveCamera,
 	OrthographicCamera,
 	Color,
-	TextureLoader,
 	Texture,
 	ClampToEdgeWrapping,
 } from 'three';
@@ -27,6 +26,63 @@ import { GameEntityOptions, GameEntity } from './entity';
 import { UpdateContext, SetupContext } from '../core/base-node-life-cycle';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { getCooldown } from '../behaviors/cooldown/cooldown-store';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Screen anchor system
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Reference point on the viewport for positioning UI elements.
+ * The offset in `screenPosition` is applied relative to this anchor.
+ */
+export type ScreenAnchor =
+	| 'top-left' | 'top-center' | 'top-right'
+	| 'center-left' | 'center' | 'center-right'
+	| 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+/** Fractional viewport coordinates for each anchor point. */
+const ANCHOR_FRACTIONS: Record<ScreenAnchor, { fx: number; fy: number }> = {
+	'top-left': { fx: 0, fy: 0 },
+	'top-center': { fx: 0.5, fy: 0 },
+	'top-right': { fx: 1, fy: 0 },
+	'center-left': { fx: 0, fy: 0.5 },
+	'center': { fx: 0.5, fy: 0.5 },
+	'center-right': { fx: 1, fy: 0.5 },
+	'bottom-left': { fx: 0, fy: 1 },
+	'bottom-center': { fx: 0.5, fy: 1 },
+	'bottom-right': { fx: 1, fy: 1 },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Icon size unit system
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Height of the virtual unit grid (in abstract "view units").
+ * Width scales with aspect ratio.
+ * At 4:3 the grid is 256 × 192, fitting exactly 12 extra-large (64-unit) icons.
+ */
+const VIEW_UNITS_HEIGHT = 192;
+
+/** Preset icon sizes in view units. */
+const ICON_SIZE_PRESETS = {
+	xs: 8,
+	sm: 16,
+	md: 32,
+	lg: 48,
+	xl: 64,
+} as const;
+
+/** Named size preset. */
+export type IconSizePreset = keyof typeof ICON_SIZE_PRESETS;
+
+/**
+ * Icon size expressed as a named preset, a square unit value, or
+ * a `{ width, height }` object for non-square icons.
+ *
+ * All numeric values are in **view units** (viewport height = 192 units).
+ */
+export type IconSize = IconSizePreset | number | { width: number; height: number };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Options
@@ -39,14 +95,32 @@ type ZylemCooldownIconOptions = GameEntityOptions & {
 	icon?: string;
 	/** Solid fill color when no icon texture is provided */
 	fillColor?: Color | string;
-	/** Size of the icon -- values 0-1 are treated as a fraction of viewport height, otherwise pixels */
-	iconSize?: number;
+	/**
+	 * Size of the icon in view units, a named preset, or a `{ width, height }` object.
+	 *
+	 * Presets: `'xs'` (8), `'sm'` (16), `'md'` (32), `'lg'` (48), `'xl'` (64).
+	 * A bare number creates a square icon of that many units.
+	 * The viewport height equals 192 units; width scales with aspect ratio.
+	 *
+	 * @default 'md'
+	 */
+	iconSize?: IconSize;
 	/** Whether to show remaining time text */
 	showTimer?: boolean;
 	/** Whether to attach to the camera viewport (default: true) */
 	stickToViewport?: boolean;
-	/** Screen position -- values 0-1 are treated as percentages, otherwise pixels */
-	screenPosition?: Vector2;
+	/**
+	 * Viewport anchor the icon is positioned relative to.
+	 * @default 'top-left'
+	 */
+	screenAnchor?: ScreenAnchor;
+	/**
+	 * Offset from the {@link screenAnchor} in **view units**.
+	 * Positive x = right, positive y = down.
+	 * Accepts a `Vector2` or a plain `{ x, y }` object.
+	 * @default { x: 0, y: 0 }
+	 */
+	screenPosition?: Vector2 | { x: number; y: number };
 	/** Distance from camera (default: 1) */
 	zDistance?: number;
 	/** Color of the sweep overlay (default: semi-transparent black) */
@@ -56,11 +130,12 @@ type ZylemCooldownIconOptions = GameEntityOptions & {
 const cooldownIconDefaults: ZylemCooldownIconOptions = {
 	position: undefined,
 	cooldown: '',
-	iconSize: 48,
+	iconSize: 'md',
 	fillColor: '#333333',
 	showTimer: true,
 	stickToViewport: true,
-	screenPosition: new Vector2(24, 24),
+	screenAnchor: 'top-left',
+	screenPosition: { x: 0, y: 0 },
 	zDistance: 1,
 	overlayColor: 'rgba(0, 0, 0, 0.65)',
 };
@@ -94,10 +169,9 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
 	}
 
 	private createSprite(): void {
-		const rawSize = this.options.iconSize ?? 48;
-		// If iconSize is a viewport fraction (0-1), use a fixed canvas resolution for quality.
-		// The actual display size is handled by sprite scaling in updateStickyTransform.
-		const canvasPixels = (rawSize > 0 && rawSize <= 1) ? 96 : rawSize;
+		// Use a fixed canvas resolution for all icon sizes.
+		// The actual display size is controlled by sprite scaling in updateStickyTransform.
+		const canvasPixels = 128;
 		this._canvas = document.createElement('canvas');
 		this._canvas.width = canvasPixels * 2; // 2x for retina
 		this._canvas.height = canvasPixels * 2;
@@ -209,6 +283,10 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
 	}
 
 	private iconSetup(params: SetupContext<ZylemCooldownIconOptions>): void {
+		// Recreate sprite resources if they were disposed by a previous cleanup
+		if (!this._sprite) {
+			this.createSprite();
+		}
 		this._cameraRef = (params.camera as unknown) as ZylemCamera | null;
 		if (this.options.stickToViewport && this._cameraRef) {
 			(this._cameraRef.camera as any).add(this.group);
@@ -233,25 +311,40 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
 	}
 
 	/**
-	 * Convert screen position to pixels.
-	 * Values in 0-1 are treated as viewport percentages; otherwise as raw pixels.
+	 * Resolve screen position to pixels.
+	 * Computes the anchor point in pixels, then adds the view-unit offset.
 	 */
-	private getScreenPixels(sp: Vector2, width: number, height: number) {
-		const isPercentX = sp.x >= 0 && sp.x <= 1;
-		const isPercentY = sp.y >= 0 && sp.y <= 1;
-		return {
-			px: isPercentX ? sp.x * width : sp.x,
-			py: isPercentY ? sp.y * height : sp.y,
-		};
+	private resolveScreenPosition(width: number, height: number): { px: number; py: number } {
+		const anchor = this.options.screenAnchor ?? 'top-left';
+		const pos = this.options.screenPosition ?? { x: 0, y: 0 };
+		const ox = pos instanceof Vector2 ? pos.x : pos.x;
+		const oy = pos instanceof Vector2 ? pos.y : pos.y;
+
+		const { fx, fy } = ANCHOR_FRACTIONS[anchor];
+		const ax = fx * width;
+		const ay = fy * height;
+
+		const pxPerUnit = height / VIEW_UNITS_HEIGHT;
+		return { px: ax + ox * pxPerUnit, py: ay + oy * pxPerUnit };
 	}
 
 	/**
-	 * Resolve iconSize to screen pixels.
-	 * Values 0-1 are treated as a fraction of viewport height; otherwise raw pixels.
+	 * Resolve `iconSize` to screen pixels using the view-unit grid.
+	 * Viewport height = {@link VIEW_UNITS_HEIGHT} units; width scales with aspect ratio.
 	 */
-	private getIconSizePixels(viewportHeight: number): number {
-		const raw = this.options.iconSize ?? 48;
-		return (raw > 0 && raw <= 1) ? raw * viewportHeight : raw;
+	private resolveIconSize(viewportHeight: number): { widthPx: number; heightPx: number } {
+		const raw = this.options.iconSize ?? 'md';
+		let w: number, h: number;
+		if (typeof raw === 'string') {
+			w = h = ICON_SIZE_PRESETS[raw as IconSizePreset];
+		} else if (typeof raw === 'number') {
+			w = h = raw;
+		} else {
+			w = raw.width;
+			h = raw.height;
+		}
+		const pxPerUnit = viewportHeight / VIEW_UNITS_HEIGHT;
+		return { widthPx: w * pxPerUnit, heightPx: h * pxPerUnit };
 	}
 
 	/** Compute the world-space half-extents at a given distance from the camera. */
@@ -276,8 +369,7 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
 		if (!this._sprite || !this._cameraRef) return;
 		const camera = this._cameraRef.camera as PerspectiveCamera | OrthographicCamera;
 		const { width, height } = this.getResolution();
-		const sp = this.options.screenPosition ?? new Vector2(24, 24);
-		const { px, py } = this.getScreenPixels(sp, width, height);
+		const { px, py } = this.resolveScreenPosition(width, height);
 		const zDist = Math.max(0.001, this.options.zDistance ?? 1);
 		const { worldHalfW, worldHalfH } = this.computeWorldExtents(camera, zDist);
 
@@ -289,9 +381,9 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
 		{
 			const planeH = worldHalfH * 2;
 			const unitsPerPixel = planeH / height;
-			const pixelH = this.getIconSizePixels(height);
-			const scaleY = Math.max(0.0001, pixelH * unitsPerPixel);
-			const scaleX = scaleY; // square icon
+			const { widthPx, heightPx } = this.resolveIconSize(height);
+			const scaleX = Math.max(0.0001, widthPx * unitsPerPixel);
+			const scaleY = Math.max(0.0001, heightPx * unitsPerPixel);
 			this._sprite.scale.set(scaleX, scaleY, 1);
 		}
 
@@ -346,9 +438,11 @@ type CooldownIconOptions = BaseNode | Partial<ZylemCooldownIconOptions>;
  * const attackIcon = createCooldownIcon({
  *   cooldown: 'attack',
  *   icon: swordIconPath,
- *   screenPosition: new Vector2(0.35, 0.9), // 35% from left, 90% from top
- *   stickToViewport: true,
- *   iconSize: 0.06, // 6% of viewport height
+ *   screenAnchor: 'top-center',         // reference point on the viewport
+ *   screenPosition: { x: 0, y: 10 },    // offset in view units from anchor
+ *   iconSize: 'sm',                      // preset (16 × 16 view units)
+ *   // iconSize: 24,                     // square  (24 × 24 view units)
+ *   // iconSize: { width: 16, height: 24 }, // custom rectangle
  * });
  * ```
  */

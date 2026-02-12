@@ -69,7 +69,7 @@ export {
 	registerCooldown, getCooldown, fireCooldown, resetCooldown,
 	type CooldownEntry, type CooldownHandle, type CooldownOptions,
 } from '../lib/behaviors/cooldown';
-export { createCooldownIcon } from '../lib/entities/cooldown-icon';
+export { createCooldownIcon, type IconSize, type IconSizePreset, type ScreenAnchor } from '../lib/entities/cooldown-icon';
 
 // Destruction utilities
 export { destroy } from '../lib/entities/destroy';

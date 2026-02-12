@@ -168,27 +168,27 @@ player.onUpdate(({ me, inputs }: any) => {
 const attackIcon = createCooldownIcon({
 	cooldown: 'attack',
 	fillColor: '#cc3333',
-	screenPosition: new Vector2(0.50, 0.1),
-	stickToViewport: true,
-	iconSize: 0.08,
+	screenAnchor: 'top-center',
+	screenPosition: { x: 0, y: 10 },
+	iconSize: 'sm',
 	showTimer: true,
 });
 
 const dashIcon = createCooldownIcon({
 	cooldown: 'dashRight',
 	fillColor: '#3366cc',
-	screenPosition: new Vector2(0.54, 0.1),
-	stickToViewport: true,
-	iconSize: 0.08,
+	screenAnchor: 'top-center',
+	screenPosition: { x: 15, y: 10 },
+	iconSize: 'sm',
 	showTimer: true,
 });
 
 const moveLeftIcon = createCooldownIcon({
 	cooldown: 'dashLeft',
 	fillColor: '#33cc44',
-	screenPosition: new Vector2(0.46, 0.1),
-	stickToViewport: true,
-	iconSize: 0.08,
+	screenAnchor: 'top-center',
+	screenPosition: { x: -15, y: 10 },
+	iconSize: 'sm',
 	showTimer: true,
 });
 
