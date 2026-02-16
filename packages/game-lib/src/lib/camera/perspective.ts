@@ -4,6 +4,7 @@ export const Perspectives = {
 	Isometric: 'isometric',
 	Flat2D: 'flat-2d',
 	Fixed2D: 'fixed-2d',
+	TopDown: 'top-down',
 } as const;
 
 export type PerspectiveType = (typeof Perspectives)[keyof typeof Perspectives];

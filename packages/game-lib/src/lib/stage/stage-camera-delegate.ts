@@ -72,6 +72,11 @@ export class StageCameraDelegate {
 				const cam = wrapper.cameraRef;
 				manager.addCamera(cam, cam.name || undefined);
 			}
+			// Activate all cameras beyond the first (addCamera auto-activates only the first).
+			// All cameras explicitly passed to createStage should render.
+			for (let i = 1; i < validWrappers.length; i++) {
+				manager.addActiveCamera(validWrappers[i].cameraRef);
+			}
 		} else {
 			// No cameras provided: create a default
 			const defaultCam = this.createDefaultCamera();

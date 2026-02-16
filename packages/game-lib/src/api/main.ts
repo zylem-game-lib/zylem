@@ -21,6 +21,25 @@ export type { RendererType, ZylemRenderer, Viewport } from '../lib/camera/render
 export { isWebGPUSupported } from '../lib/camera/renderer-manager';
 export { CameraManager } from '../lib/camera/camera-manager';
 
+// Camera pipeline types
+export type {
+	CameraPose, PoseDelta, CameraContext, TransformLike,
+	CameraPerspective, CameraBehavior, CameraAction, CameraPipelineState,
+} from '../lib/camera/types';
+export { CameraPipeline } from '../lib/camera/camera-pipeline';
+
+// Camera perspectives
+export { ThirdPersonPerspective, Fixed2DPerspective, createPerspective } from '../lib/camera/perspectives';
+export type { ThirdPersonOptions, Fixed2DOptions, PerspectiveOptions } from '../lib/camera/perspectives';
+
+// Camera behaviors
+export { createFollowTarget } from '../lib/camera/behaviors/follow-target';
+export type { FollowTargetOptions } from '../lib/camera/behaviors/follow-target';
+
+// Camera feed (render-to-texture utilities)
+export { setCameraFeed } from '../lib/camera/camera-feed';
+export type { CameraFeedOptions } from '../lib/camera/camera-feed';
+
 // Utility types
 export type { Vect3 } from '../lib/core/utility/vector';
 

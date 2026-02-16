@@ -1,8 +1,11 @@
-import { Vector2, Vector3 } from "three";
+import { Vector2, Vector3, Texture } from "three";
 import { PerspectiveType } from "./perspective";
 import { ZylemCamera } from "./zylem-camera";
 import { RendererType, Viewport, DEFAULT_VIEWPORT } from "./renderer-manager";
 import { StageEntity } from "../interfaces/entity";
+import type { CameraBehavior, CameraAction, CameraPipelineState } from "./types";
+import { createPerspective } from "./perspectives";
+import type { PerspectiveOptions } from "./perspectives";
 
 export interface CameraOptions {
 	perspective?: PerspectiveType;
@@ -32,11 +35,36 @@ export interface CameraOptions {
 	 * Optional name for camera manager lookup.
 	 */
 	name?: string;
+	/**
+	 * Initial behaviors to attach to the camera pipeline.
+	 * Keys are used for idempotent add/remove.
+	 */
+	behaviors?: Record<string, CameraBehavior>;
+	/**
+	 * Pipeline smoothing factor (0-1).
+	 * 1 = instant snap, 0 = no movement.
+	 * @default 0.15
+	 */
+	damping?: number;
+	/**
+	 * When set, the camera renders to an offscreen texture instead of a
+	 * screen viewport. Use with setCameraFeed() to display the feed on
+	 * an in-scene mesh (jumbotron, security monitor, portal, etc.).
+	 *
+	 * @default undefined (renders to screen)
+	 */
+	renderToTexture?: {
+		/** Texture width in pixels. @default 512 */
+		width?: number;
+		/** Texture height in pixels. @default 512 */
+		height?: number;
+	};
 }
 
 /**
  * CameraWrapper is the user-facing camera handle returned by createCamera().
- * It provides convenience methods for target management, orbital controls, and viewport configuration.
+ * It provides convenience methods for target management, orbital controls,
+ * viewport configuration, and the camera pose pipeline.
  */
 export class CameraWrapper {
 	cameraRef: ZylemCamera;
@@ -98,6 +126,70 @@ export class CameraWrapper {
 	setViewport(x: number, y: number, width: number, height: number): void {
 		this.cameraRef.setViewport(x, y, width, height);
 	}
+
+	// ─── Pipeline: Behaviors ────────────────────────────────────────────────
+
+	/**
+	 * Add or replace a behavior by key (idempotent).
+	 * Behaviors modify the desired camera pose each frame.
+	 *
+	 * @param key   Unique key for this behavior (used for replacement/removal).
+	 * @param behavior  The CameraBehavior implementation.
+	 */
+	addBehavior(key: string, behavior: CameraBehavior): void {
+		this.cameraRef.pipeline.addBehavior(key, behavior);
+	}
+
+	/**
+	 * Remove a behavior by key.
+	 */
+	removeBehavior(key: string): boolean {
+		return this.cameraRef.pipeline.removeBehavior(key);
+	}
+
+	// ─── Pipeline: Actions ──────────────────────────────────────────────────
+
+	/**
+	 * Add a transient action (screenshake, recoil, etc.).
+	 * Actions apply additive deltas and self-expire when isDone() returns true.
+	 */
+	addAction(action: CameraAction): void {
+		this.cameraRef.pipeline.addAction(action);
+	}
+
+	// ─── Pipeline: Perspective ──────────────────────────────────────────────
+
+	/**
+	 * Switch the camera's active perspective at runtime.
+	 * The first frame after switching snaps to the new pose (no lerp).
+	 *
+	 * @param type     Perspective type string (e.g. Perspectives.ThirdPerson).
+	 * @param options  Perspective-specific options (distance, height, zoom, etc.).
+	 */
+	setPerspective(type: PerspectiveType, options?: PerspectiveOptions): void {
+		this.cameraRef.pipeline.setPerspective(createPerspective(type, options));
+	}
+
+	// ─── Pipeline: Debug state ──────────────────────────────────────────────
+
+	/**
+	 * Return a debug snapshot of the camera pipeline state.
+	 * Includes: active perspective, desired/final pose, behavior keys, action count.
+	 */
+	getState(): CameraPipelineState {
+		return this.cameraRef.pipeline.getState();
+	}
+
+	// ─── Render-to-texture ─────────────────────────────────────────────────
+
+	/**
+	 * Get the offscreen render texture for this camera.
+	 * Returns null if the camera was not created with renderToTexture.
+	 * Use with setCameraFeed() or apply directly to a mesh material.
+	 */
+	getRenderTexture(): Texture | null {
+		return this.cameraRef.getRenderTexture();
+	}
 }
 
 /**
@@ -134,6 +226,22 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 	zylemCamera.move(position);
 	zylemCamera.camera.lookAt(target);
 
+	// Reconfigure the perspective with user-specified options (position, zoom, etc.)
+	// so the pipeline produces the correct base pose from the first frame.
+	const perspType = options.perspective || 'third-person';
+	if (perspType === 'fixed-2d' || perspType === 'flat-2d') {
+		zylemCamera.pipeline.setPerspective(
+			createPerspective(perspType, { zoom: frustumSize })
+		);
+	} else {
+		zylemCamera.pipeline.setPerspective(
+			createPerspective(perspType, {
+				initialPosition: position.clone(),
+				initialLookAt: target.clone(),
+			})
+		);
+	}
+
 	// Set viewport if provided
 	if (options.viewport) {
 		zylemCamera.viewport = { ...options.viewport };
@@ -141,9 +249,25 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 
 	// Configure orbital controls
 	if (options.useOrbitalControls) {
-		// Mark for enablement -- actual OrbitControls are created during setup()
-		// when the renderer DOM element is available
 		(zylemCamera as any)._useOrbitalControls = true;
+	}
+
+	// Configure pipeline damping
+	if (options.damping != null) {
+		zylemCamera.pipeline.damping = options.damping;
+	}
+
+	// Attach initial behaviors
+	if (options.behaviors) {
+		for (const [key, behavior] of Object.entries(options.behaviors)) {
+			zylemCamera.pipeline.addBehavior(key, behavior);
+		}
+	}
+
+	// Create render target for RTT cameras
+	if (options.renderToTexture) {
+		const { width = 512, height = 512 } = options.renderToTexture;
+		zylemCamera.createRenderTarget(width, height);
 	}
 
 	return new CameraWrapper(zylemCamera);

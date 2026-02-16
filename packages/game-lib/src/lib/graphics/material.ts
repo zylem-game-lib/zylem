@@ -73,6 +73,15 @@ export type TexturePath = string | null;
 export class MaterialBuilder {
 	static batchMaterialMap: Map<BatchKey, BatchMaterialMapObject> = new Map();
 
+	/**
+	 * Clear the static batch material cache.
+	 * Should be called during game disposal to prevent stale material references
+	 * from persisting across demo/stage switches.
+	 */
+	static clearBatchCache(): void {
+		MaterialBuilder.batchMaterialMap.clear();
+	}
+
 	materials: Material[] = [];
 
 	/** Whether to use TSL/NodeMaterial (for WebGPU compatibility) */

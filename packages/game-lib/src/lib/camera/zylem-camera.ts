@@ -1,11 +1,12 @@
-import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, Scene } from 'three';
+import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, Scene, WebGLRenderTarget, Texture, LinearFilter } from 'three';
 import { PerspectiveType, Perspectives } from './perspective';
-import { ThirdPersonCamera } from './third-person';
-import { Fixed2DCamera } from './fixed-2d';
 import { StageEntity } from '../interfaces/entity';
 import { CameraOrbitController, CameraDebugDelegate } from './camera-debug-delegate';
 import { RendererManager, DEFAULT_VIEWPORT } from './renderer-manager';
 import type { ZylemRenderer, RendererType, Viewport } from './renderer-manager';
+import { CameraPipeline } from './camera-pipeline';
+import { createPerspective } from './perspectives';
+import type { CameraContext, TransformLike, CameraPose } from './types';
 
 // Re-export for backwards compatibility
 export type { CameraDebugState, CameraDebugDelegate } from './camera-debug-delegate';
@@ -13,21 +14,20 @@ export type { RendererType, ZylemRenderer } from './renderer-manager';
 export { isWebGPUSupported } from './renderer-manager';
 
 /**
- * Interface for perspective-specific camera controllers
- */
-export interface PerspectiveController {
-	setup(params: { screenResolution: Vector2; renderer: ZylemRenderer; scene: Scene; camera: ZylemCamera }): void;
-	update(delta: number): void;
-	resize(width: number, height: number): void;
-}
-
-/**
  * ZylemCamera is a lightweight camera wrapper that manages the Three.js camera,
- * perspective controller, and viewport configuration. It no longer owns a renderer;
- * rendering is handled by RendererManager.
+ * the camera pose pipeline, and viewport configuration. Rendering is handled
+ * by RendererManager.
+ *
+ * The pipeline runs: Perspective -> Behaviors -> Actions -> Smoothing -> Commit.
+ * When orbit/debug controls are active, the pipeline is bypassed.
  */
 export class ZylemCamera {
+	/**
+	 * @deprecated No longer used. Kept as null for backward compatibility
+	 * with code that checks `camera.cameraRig` (e.g. scene graph insertion).
+	 */
 	cameraRig: Object3D | null = null;
+
 	camera: Camera;
 	screenResolution: Vector2;
 	_perspective: PerspectiveType;
@@ -35,7 +35,7 @@ export class ZylemCamera {
 	rendererType: RendererType;
 	sceneRef: Scene | null = null;
 
-	/** Name for camera manager lookup */
+	/** Name for camera manager lookup. */
 	name: string = '';
 
 	/**
@@ -46,12 +46,24 @@ export class ZylemCamera {
 
 	/**
 	 * Multiple targets for the camera to follow/frame.
-	 * Replaces the old single `target` property.
 	 */
 	targets: StageEntity[] = [];
 
 	/**
-	 * @deprecated Use `targets` array instead. This getter/setter is kept for backward compatibility.
+	 * The camera pose pipeline.
+	 * Exposed so CameraWrapper can delegate addBehavior/addAction/getState.
+	 */
+	pipeline: CameraPipeline;
+
+	/**
+	 * Offscreen render target for render-to-texture (RTT) cameras.
+	 * When set, the camera renders to this target instead of the screen viewport.
+	 * Created via createRenderTarget() or automatically by setCameraFeed().
+	 */
+	renderTarget: WebGLRenderTarget | null = null;
+
+	/**
+	 * @deprecated Use `targets` array instead. Kept for backward compatibility.
 	 */
 	get target(): StageEntity | null {
 		return this.targets.length > 0 ? this.targets[0] : null;
@@ -69,15 +81,15 @@ export class ZylemCamera {
 		}
 	}
 
-	// Perspective controller delegation
-	perspectiveController: PerspectiveController | null = null;
-
 	// Orbit controls
 	private orbitController: CameraOrbitController | null = null;
 	private _useOrbitalControls = false;
 
-	/** Reference to the shared renderer manager (set during setup) */
+	/** Reference to the shared renderer manager (set during setup). */
 	private _rendererManager: RendererManager | null = null;
+
+	/** Elapsed time tracker for CameraContext. */
+	private _elapsedTime = 0;
 
 	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10, rendererType: RendererType = 'webgl') {
 		this._perspective = perspective;
@@ -85,29 +97,21 @@ export class ZylemCamera {
 		this.frustumSize = frustumSize;
 		this.rendererType = rendererType;
 
-		// Create camera based on perspective
+		// Create Three.js camera based on perspective
 		const aspectRatio = screenResolution.x / screenResolution.y;
 		this.camera = this.createCameraForPerspective(aspectRatio);
 
-		// Setup camera rig only for perspectives that need it (e.g., third-person following)
-		if (this.needsRig()) {
-			this.cameraRig = new Object3D();
-			this.cameraRig.position.set(0, 3, 10);
-			this.cameraRig.add(this.camera);
-			this.camera.lookAt(new Vector3(0, 2, 0));
-		} else {
-			// Position camera directly for non-rig perspectives
-			this.camera.position.set(0, 0, 10);
-			this.camera.lookAt(new Vector3(0, 0, 0));
-		}
+		// Position camera directly (no rig)
+		this.camera.position.set(0, 0, 10);
+		this.camera.lookAt(new Vector3(0, 0, 0));
 
-		// Initialize perspective controller
-		this.initializePerspectiveController();
+		// Create pipeline with the appropriate perspective implementation
+		const perspectiveImpl = createPerspective(perspective);
+		this.pipeline = new CameraPipeline(perspectiveImpl);
 	}
 
 	/**
 	 * Setup the camera with a scene and renderer manager.
-	 * The renderer manager provides shared rendering infrastructure.
 	 */
 	async setup(scene: Scene, rendererManager?: RendererManager): Promise<void> {
 		this.sceneRef = scene;
@@ -121,22 +125,12 @@ export class ZylemCamera {
 			await this._rendererManager.initRenderer();
 		}
 
-		// Setup perspective controller
-		if (this.perspectiveController && this._rendererManager) {
-			this.perspectiveController.setup({
-				screenResolution: this.screenResolution,
-				renderer: this._rendererManager.renderer,
-				scene: scene,
-				camera: this
-			});
-		}
-
 		// Initialize orbit controller if renderer is available
 		if (this._rendererManager) {
 			this.orbitController = new CameraOrbitController(
 				this.camera,
 				this._rendererManager.renderer.domElement,
-				this.cameraRig
+				null // no camera rig
 			);
 			this.orbitController.setScene(scene);
 
@@ -173,21 +167,36 @@ export class ZylemCamera {
 	}
 
 	/**
-	 * Update camera controllers (called each frame).
-	 * Does NOT render -- rendering is handled by RendererManager.
+	 * Update the camera each frame.
+	 *
+	 * When orbit/debug controls are active, the pipeline is skipped and
+	 * orbit controls manage the camera directly. Otherwise, the pipeline
+	 * runs: Perspective -> Behaviors -> Actions -> Smoothing -> Commit.
 	 */
 	update(delta: number): void {
 		// Update orbit controls (if debug mode or user orbital controls enabled)
 		this.orbitController?.update();
 
-		// Skip perspective controller updates when orbit controls are active
-		if (this.perspectiveController && !this.isDebugModeActive() && !this._useOrbitalControls) {
-			this.perspectiveController.update(delta);
+		// Skip pipeline when orbit controls are active
+		if (this.isDebugModeActive() || this._useOrbitalControls) {
+			return;
 		}
+
+		// Accumulate elapsed time
+		this._elapsedTime += delta;
+
+		// Build context from current state
+		const ctx = this.buildContext(delta);
+
+		// Run the pipeline
+		const finalPose = this.pipeline.run(ctx);
+
+		// Commit the result to the Three.js camera
+		this.commitPose(finalPose);
 	}
 
 	/**
-	 * Check if debug mode is active (orbit controls taking over camera)
+	 * Check if debug mode is active (orbit controls taking over camera).
 	 */
 	isDebugModeActive(): boolean {
 		return this.orbitController?.isActive ?? false;
@@ -216,6 +225,8 @@ export class ZylemCamera {
 		return this._useOrbitalControls;
 	}
 
+	// ─── Target management ──────────────────────────────────────────────────
+
 	/**
 	 * Add a target entity for the camera to follow/frame.
 	 */
@@ -242,23 +253,13 @@ export class ZylemCamera {
 		this.targets = [];
 	}
 
-	/**
-	 * Dispose camera resources (not the renderer -- that's managed by RendererManager).
-	 */
-	destroy(): void {
-		try {
-			this.orbitController?.dispose();
-		} catch { /* noop */ }
-		this.sceneRef = null;
-		this.targets = [];
-		this._rendererManager = null;
-	}
+	// ─── Viewport & resize ──────────────────────────────────────────────────
 
 	/**
-	 * Attach a delegate to react to debug state changes.
+	 * Set the viewport for this camera (normalized 0-1 coordinates).
 	 */
-	setDebugDelegate(delegate: CameraDebugDelegate | null): void {
-		this.orbitController?.setDebugDelegate(delegate);
+	setViewport(x: number, y: number, width: number, height: number): void {
+		this.viewport = { x, y, width, height };
 	}
 
 	/**
@@ -272,122 +273,94 @@ export class ZylemCamera {
 			this.camera.updateProjectionMatrix();
 		}
 
-		if (this.perspectiveController) {
-			this.perspectiveController.resize(width, height);
+		if (this.camera instanceof OrthographicCamera) {
+			const aspect = width / height;
+			this.camera.left = this.frustumSize * aspect / -2;
+			this.camera.right = this.frustumSize * aspect / 2;
+			this.camera.top = this.frustumSize / 2;
+			this.camera.bottom = this.frustumSize / -2;
+			this.camera.updateProjectionMatrix();
 		}
 	}
 
-	/**
-	 * Set the viewport for this camera (normalized 0-1 coordinates).
-	 */
-	setViewport(x: number, y: number, width: number, height: number): void {
-		this.viewport = { x, y, width, height };
-	}
+	// ─── Render-to-texture ─────────────────────────────────────────────────
 
 	/**
-	 * Create camera based on perspective type
+	 * Create an offscreen render target for this camera.
+	 * When a render target is present, CameraManager renders this camera
+	 * to the target instead of the screen viewport.
+	 *
+	 * @param width  Texture width in pixels (default 512)
+	 * @param height Texture height in pixels (default 512)
 	 */
-	private createCameraForPerspective(aspectRatio: number): Camera {
-		switch (this._perspective) {
-			case Perspectives.ThirdPerson:
-				return this.createThirdPersonCamera(aspectRatio);
-			case Perspectives.FirstPerson:
-				return this.createFirstPersonCamera(aspectRatio);
-			case Perspectives.Isometric:
-				return this.createIsometricCamera(aspectRatio);
-			case Perspectives.Flat2D:
-				return this.createFlat2DCamera(aspectRatio);
-			case Perspectives.Fixed2D:
-				return this.createFixed2DCamera(aspectRatio);
-			default:
-				return this.createThirdPersonCamera(aspectRatio);
+	createRenderTarget(width: number = 512, height: number = 512): WebGLRenderTarget {
+		if (this.renderTarget) {
+			this.renderTarget.dispose();
 		}
+		this.renderTarget = new WebGLRenderTarget(width, height, {
+			minFilter: LinearFilter,
+			magFilter: LinearFilter,
+		});
+		return this.renderTarget;
 	}
 
 	/**
-	 * Initialize perspective-specific controller
+	 * Get the texture from the render target (for applying to a mesh material).
+	 * Returns null if no render target has been created.
 	 */
-	private initializePerspectiveController(): void {
-		switch (this._perspective) {
-			case Perspectives.ThirdPerson:
-				this.perspectiveController = new ThirdPersonCamera();
-				break;
-			case Perspectives.Fixed2D:
-				this.perspectiveController = new Fixed2DCamera();
-				break;
-			default:
-				this.perspectiveController = new ThirdPersonCamera();
-		}
+	getRenderTexture(): Texture | null {
+		return this.renderTarget?.texture ?? null;
 	}
 
-	private createThirdPersonCamera(aspectRatio: number): PerspectiveCamera {
-		return new PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+	// ─── Lifecycle ──────────────────────────────────────────────────────────
+
+	/**
+	 * Dispose camera resources.
+	 */
+	destroy(): void {
+		try {
+			this.orbitController?.dispose();
+		} catch { /* noop */ }
+		try {
+			this.renderTarget?.dispose();
+		} catch { /* noop */ }
+		this.renderTarget = null;
+		this.sceneRef = null;
+		this.targets = [];
+		this._rendererManager = null;
 	}
 
-	private createFirstPersonCamera(aspectRatio: number): PerspectiveCamera {
-		return new PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+	// ─── Debug delegate ─────────────────────────────────────────────────────
+
+	/**
+	 * Attach a delegate to react to debug state changes.
+	 */
+	setDebugDelegate(delegate: CameraDebugDelegate | null): void {
+		this.orbitController?.setDebugDelegate(delegate);
 	}
 
-	private createIsometricCamera(aspectRatio: number): OrthographicCamera {
-		return new OrthographicCamera(
-			this.frustumSize * aspectRatio / -2,
-			this.frustumSize * aspectRatio / 2,
-			this.frustumSize / 2,
-			this.frustumSize / -2,
-			1,
-			1000
-		);
-	}
+	// ─── Movement helpers (backward compat) ─────────────────────────────────
 
-	private createFlat2DCamera(aspectRatio: number): OrthographicCamera {
-		return new OrthographicCamera(
-			this.frustumSize * aspectRatio / -2,
-			this.frustumSize * aspectRatio / 2,
-			this.frustumSize / 2,
-			this.frustumSize / -2,
-			1,
-			1000
-		);
-	}
-
-	private createFixed2DCamera(aspectRatio: number): OrthographicCamera {
-		return this.createFlat2DCamera(aspectRatio);
-	}
-
-	// Movement methods
-	private moveCamera(position: Vector3): void {
+	/**
+	 * Directly set the camera position.
+	 */
+	move(position: Vector3): void {
 		if (this._perspective === Perspectives.Flat2D || this._perspective === Perspectives.Fixed2D) {
 			this.frustumSize = position.z;
 		}
-		if (this.cameraRig) {
-			this.cameraRig.position.set(position.x, position.y, position.z);
-		} else {
-			this.camera.position.set(position.x, position.y, position.z);
-		}
-	}
-
-	move(position: Vector3): void {
-		this.moveCamera(position);
-	}
-
-	rotate(pitch: number, yaw: number, roll: number): void {
-		if (this.cameraRig) {
-			this.cameraRig.rotateX(pitch);
-			this.cameraRig.rotateY(yaw);
-			this.cameraRig.rotateZ(roll);
-		} else {
-			(this.camera as Object3D).rotateX(pitch);
-			(this.camera as Object3D).rotateY(yaw);
-			(this.camera as Object3D).rotateZ(roll);
-		}
+		this.camera.position.set(position.x, position.y, position.z);
 	}
 
 	/**
-	 * Check if this perspective type needs a camera rig
+	 * Apply incremental rotation to the camera.
 	 */
-	private needsRig(): boolean {
-		return this._perspective === Perspectives.ThirdPerson;
+	rotate(pitch: number, yaw: number, roll: number): void {
+		(this.camera as Object3D).rotateX(pitch);
+		(this.camera as Object3D).rotateY(yaw);
+		(this.camera as Object3D).rotateZ(roll);
 	}
+
+	// ─── Renderer manager access ────────────────────────────────────────────
 
 	/**
 	 * Get the DOM element for the renderer.
@@ -416,24 +389,115 @@ export class ZylemCamera {
 
 	// ─── Legacy compatibility methods ────────────────────────────────────────
 
-	/**
-	 * @deprecated Renderer is now owned by RendererManager
-	 */
+	/** @deprecated Renderer is now owned by RendererManager */
 	get renderer(): any {
 		return this._rendererManager?.renderer;
 	}
 
-	/**
-	 * @deprecated Composer is now owned by RendererManager
-	 */
+	/** @deprecated Composer is now owned by RendererManager */
 	get composer(): any {
 		return this._rendererManager?.composer;
 	}
 
-	/**
-	 * @deprecated Use RendererManager.setPixelRatio() instead
-	 */
+	/** @deprecated Use RendererManager.setPixelRatio() instead */
 	setPixelRatio(dpr: number): void {
 		this._rendererManager?.setPixelRatio(dpr);
+	}
+
+	// ─── Private helpers ────────────────────────────────────────────────────
+
+	/**
+	 * Build a CameraContext from current ZylemCamera state.
+	 * Converts StageEntity[] targets into Record<string, TransformLike>.
+	 */
+	private buildContext(delta: number): CameraContext {
+		const targets: Record<string, TransformLike> = {};
+
+		for (let i = 0; i < this.targets.length; i++) {
+			const entity = this.targets[i];
+			const key = i === 0 ? 'primary' : `target_${i}`;
+			if (entity.group) {
+				targets[key] = {
+					position: entity.group.position,
+					rotation: entity.group.quaternion,
+				};
+			}
+		}
+
+		return {
+			dt: delta,
+			time: this._elapsedTime,
+			viewport: {
+				width: this.screenResolution.x,
+				height: this.screenResolution.y,
+				aspect: this.screenResolution.x / this.screenResolution.y,
+			},
+			targets,
+		};
+	}
+
+	/**
+	 * Apply the final pipeline pose to the Three.js camera.
+	 */
+	private commitPose(pose: CameraPose): void {
+		this.camera.position.copy(pose.position);
+
+		if (pose.lookAt) {
+			this.camera.lookAt(pose.lookAt);
+		} else {
+			this.camera.quaternion.copy(pose.rotation);
+		}
+
+		if (this.camera instanceof PerspectiveCamera) {
+			if (pose.fov != null) this.camera.fov = pose.fov;
+			if (pose.near != null) this.camera.near = pose.near;
+			if (pose.far != null) this.camera.far = pose.far;
+			this.camera.updateProjectionMatrix();
+		}
+
+		if (this.camera instanceof OrthographicCamera) {
+			if (pose.zoom != null) {
+				const aspect = this.screenResolution.x / this.screenResolution.y;
+				const size = pose.zoom;
+				this.camera.left = -size * aspect / 2;
+				this.camera.right = size * aspect / 2;
+				this.camera.top = size / 2;
+				this.camera.bottom = -size / 2;
+			}
+			if (pose.near != null) this.camera.near = pose.near;
+			if (pose.far != null) this.camera.far = pose.far;
+			this.camera.updateProjectionMatrix();
+		}
+	}
+
+	/**
+	 * Create a Three.js camera based on perspective type.
+	 */
+	private createCameraForPerspective(aspectRatio: number): Camera {
+		switch (this._perspective) {
+			case Perspectives.ThirdPerson:
+				return new PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+			case Perspectives.FirstPerson:
+				return new PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+			case Perspectives.Isometric:
+				return new OrthographicCamera(
+					this.frustumSize * aspectRatio / -2,
+					this.frustumSize * aspectRatio / 2,
+					this.frustumSize / 2,
+					this.frustumSize / -2,
+					1, 1000
+				);
+			case Perspectives.Flat2D:
+			case Perspectives.Fixed2D:
+				return new OrthographicCamera(
+					this.frustumSize * aspectRatio / -2,
+					this.frustumSize * aspectRatio / 2,
+					this.frustumSize / 2,
+					this.frustumSize / -2,
+					1, 1000
+				);
+			default:
+				return new PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+		}
 	}
 }

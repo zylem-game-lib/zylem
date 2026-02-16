@@ -3,6 +3,7 @@ import {
 	createBox, createPlane, createSphere, createSprite, createZone,
 	createCone, createPyramid, createCylinder, createPill,
 	create, boxMesh, boxCollision, sphereMesh, sphereCollision,
+	createCamera,
 } from '@zylem/game-lib';
 import { Vector3, Vector2 } from 'three';
 import { playgroundActor } from '../utils';
@@ -12,11 +13,10 @@ import woodPath from '@zylem/assets/3d/textures/wood-box.jpg';
 import marsSurfacePath from '@zylem/assets/3d/textures/mars-surface.jpg';
 import rainManPath from '@zylem/assets/2d/rain-man.png';
 
-const stage1 = createStage({ gravity: new Vector3(0, -9.82, 0) })
-	.onSetup(({ camera }: any) => {
-		(camera as any)?.camera.position.set(0, 10, 40);
-		(camera as any)?.camera.lookAt(0, 0, 0);
-	});
+const stage1 = createStage(
+	{ gravity: new Vector3(0, -9.82, 0) },
+	createCamera({ position: new Vector3(0, 10, 40), target: new Vector3(0, 0, 0) })
+);
 
 // ─── Existing entities ───────────────────────────────────────────────
 

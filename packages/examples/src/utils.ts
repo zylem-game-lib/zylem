@@ -84,7 +84,7 @@ const actorTypeToCollision: Record<PlaygroundActorType, any> = {
 
 export const playgroundActor: any = (type: PlaygroundActorType) => {
 	return createActor({
-		position: { x: 0, y: 10, z: 4 },
+		position: { x: 0, y: 0, z: 0 },
 		scale: actorTypeToScale[type],
 		models: [actorTypeToPath[type]],
 		animations: actorTypeToAnimations[type].map(animation => ({ key: animation, path: animationMap[type][animation]! })),
@@ -136,39 +136,39 @@ export const playgroundPlatforms = () => {
 		{ shape: 'mediumBox', position: { x: 8, y: 0, z: 0 } },
 		{ shape: 'box', position: { x: 12, y: 0, z: -4 } },
 		{ shape: 'square', position: { x: 16, y: 4, z: -4 } },
-		
+
 		// Path 2: Long plank bridge to side area
 		{ shape: 'longPlank', position: { x: 0, y: 3, z: -8 } },
 		{ shape: 'square', position: { x: -8, y: 3, z: -8 } },
 		{ shape: 'mediumBox', position: { x: -12, y: 0, z: -8 } },
-		
+
 		// Central tower area
 		{ shape: 'largeSquare', position: { x: 0, y: 6, z: 0 } },
 		{ shape: 'box', position: { x: 0, y: 6.5, z: 12 } },
 		{ shape: 'square', position: { x: 0, y: 10, z: 8 } },
-		
+
 		// Left wing
 		{ shape: 'longPlank', position: { x: -10, y: 8, z: 4 } },
 		{ shape: 'square', position: { x: -18, y: 8, z: 4 } },
 		{ shape: 'mediumBox', position: { x: -22, y: 0, z: 4 } },
 		{ shape: 'square', position: { x: -22, y: 4, z: 8 } },
-		
+
 		// Right wing
 		{ shape: 'longPlank', position: { x: 10, y: 8, z: 4 } },
 		{ shape: 'largeSquare', position: { x: 18, y: 8, z: 4 } },
 		{ shape: 'box', position: { x: 22, y: 0, z: 0 } },
-		
+
 		// Upper level connecting bridges
 		{ shape: 'longPlank', position: { x: -8, y: 12, z: 0 } },
 		{ shape: 'longPlank', position: { x: 8, y: 12, z: 0 } },
 		{ shape: 'largeSquare', position: { x: 0, y: 14, z: 0 } },
-		
+
 		// Scattered stepping stones
 		{ shape: 'square', position: { x: -15, y: 5, z: -15 } },
 		{ shape: 'square', position: { x: -10, y: 6, z: -18 } },
 		{ shape: 'square', position: { x: -5, y: 7, z: -22 } },
 		{ shape: 'mediumBox', position: { x: 0, y: 0, z: -30 } },
-		
+
 		// Back corner area
 		{ shape: 'box', position: { x: 15, y: 0, z: -15 } },
 		{ shape: 'square', position: { x: 15, y: 5, z: -20 } },

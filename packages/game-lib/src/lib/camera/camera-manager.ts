@@ -220,10 +220,32 @@ export class CameraManager {
 
 	/**
 	 * Render all active cameras through the renderer manager.
+	 * RTT cameras (those with a renderTarget) are rendered first to their
+	 * offscreen textures, then viewport cameras are rendered to the screen.
 	 */
 	render(scene: Scene): void {
 		if (!this._rendererManager || this._activeCameras.length === 0) return;
-		this._rendererManager.renderCameras(scene, this._activeCameras as ZylemCamera[]);
+
+		const rttCameras: ZylemCamera[] = [];
+		const viewportCameras: ZylemCamera[] = [];
+
+		for (const cam of this._activeCameras) {
+			if (cam.renderTarget) {
+				rttCameras.push(cam);
+			} else {
+				viewportCameras.push(cam);
+			}
+		}
+
+		// RTT pass first so textures are ready for the viewport pass
+		for (const cam of rttCameras) {
+			this._rendererManager.renderCameraToTarget(scene, cam);
+		}
+
+		// Viewport pass renders to the screen canvas
+		if (viewportCameras.length > 0) {
+			this._rendererManager.renderCameras(scene, viewportCameras);
+		}
 	}
 
 	/**

@@ -196,6 +196,28 @@ export class RendererManager {
 	}
 
 	/**
+	 * Render a camera to its offscreen render target (WebGL only).
+	 * Bypasses the EffectComposer since post-processing is not needed
+	 * for render-to-texture output.
+	 *
+	 * The camera must have a non-null renderTarget.
+	 */
+	renderCameraToTarget(scene: Scene, camera: ZylemCamera): void {
+		if (!camera.renderTarget) return;
+
+		if (this.renderer instanceof WebGLRenderer) {
+			const prevTarget = this.renderer.getRenderTarget();
+			this.renderer.setRenderTarget(camera.renderTarget);
+			this.renderer.clear();
+			this.renderer.render(scene, camera.camera);
+			this.renderer.setRenderTarget(prevTarget);
+		} else {
+			// WebGPU RTT not yet supported
+			console.warn('RendererManager: Render-to-texture is not yet supported for WebGPU');
+		}
+	}
+
+	/**
 	 * Render a scene from multiple cameras, each with their own viewport.
 	 * Cameras are rendered in order (first = bottom layer, last = top layer).
 	 */
