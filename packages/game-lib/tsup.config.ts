@@ -9,6 +9,10 @@ export default defineConfig({
 		stage: 'src/api/stage.ts',
 		entities: 'src/api/entities.ts',
 		actions: 'src/api/actions.ts',
+		physics: 'src/lib/physics/index.ts',
+
+		// Physics worker (standalone file for Web Worker instantiation)
+		'physics-worker': 'src/lib/physics/physics-worker.ts',
 
 		// Individual behavior exports (tree-shakeable deep imports)
 		'behavior/thruster': 'src/api/behavior/thruster.ts',

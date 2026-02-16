@@ -30,6 +30,10 @@ export default defineConfig({
 		port: 1337,
 		open: true,
 		allowedHosts: ['zylem.onrender.com'],
+		fs: {
+			// Allow serving files from sibling packages (e.g. game-lib source for workers)
+			allow: [path.resolve(__dirname, '..')],
+		},
 	},
 	// Resolve paths relative to the package root where index.html is
 	root: __dirname,

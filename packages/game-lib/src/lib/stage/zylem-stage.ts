@@ -40,6 +40,10 @@ export interface ZylemStageConfig {
 	variables: Record<string, any>;
 	/** Physics update rate in Hz (default 60). */
 	physicsRate: number;
+	/** Run physics in a Web Worker for true parallelism (default false). */
+	usePhysicsWorker: boolean;
+	/** URL to the physics worker script (required when usePhysicsWorker is true). */
+	physicsWorkerUrl?: URL | string;
 	stageRef?: Stage;
 }
 
@@ -128,6 +132,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			gravity: parsed.config.gravity,
 			variables: parsed.config.variables,
 			physicsRate: parsed.config.physicsRate,
+			usePhysicsWorker: parsed.config.usePhysicsWorker,
+			physicsWorkerUrl: parsed.config.physicsWorkerUrl,
 			entities: [],
 		};
 
@@ -171,8 +177,16 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.cameraRef = zylemCamera;
 		this.scene = new ZylemScene(id, zylemCamera, this.state);
 
-		const physicsWorld = await ZylemWorld.loadPhysics(this.gravity ?? new Vector3(0, 0, 0));
-		this.world = new ZylemWorld(physicsWorld, this.state.physicsRate);
+		const gravity = this.gravity ?? new Vector3(0, 0, 0);
+		if (this.state.usePhysicsWorker) {
+			const workerUrl = this.state.physicsWorkerUrl
+				? new URL(this.state.physicsWorkerUrl, typeof location !== 'undefined' ? location.href : undefined)
+				: undefined;
+			this.world = await ZylemWorld.loadPhysicsWorker(gravity, this.state.physicsRate, workerUrl);
+		} else {
+			const physicsWorld = await ZylemWorld.loadPhysics(gravity);
+			this.world = new ZylemWorld(physicsWorld, this.state.physicsRate);
+		}
 
 		this.scene.setup();
 

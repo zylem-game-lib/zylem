@@ -17,6 +17,16 @@ export type StageConfigLike = Partial<{
 	variables: Record<string, any>;
 	/** Physics update rate in Hz (default 60). */
 	physicsRate: number;
+	/** Run physics in a Web Worker (default false). */
+	usePhysicsWorker: boolean;
+	/**
+	 * URL to the physics worker script. Required when `usePhysicsWorker` is true.
+	 * In a Vite app, use:
+	 * ```ts
+	 * physicsWorkerUrl: new URL('@zylem/game-lib/dist/physics-worker.js', import.meta.url)
+	 * ```
+	 */
+	physicsWorkerUrl: URL | string;
 }>;
 
 /**
@@ -32,6 +42,10 @@ export class StageConfig {
 		public variables: Record<string, any>,
 		/** Physics update rate in Hz (default 60). */
 		public physicsRate: number = 60,
+		/** Run physics in a Web Worker (default false). */
+		public usePhysicsWorker: boolean = false,
+		/** URL to the physics worker script. Required when usePhysicsWorker is true. */
+		public physicsWorkerUrl: URL | string | undefined = undefined,
 	) { }
 }
 
@@ -50,6 +64,8 @@ export function createDefaultStageConfig(): StageConfig {
 		new Vector3(0, 0, 0),
 		{},
 		60,
+		false,
+		undefined,
 	);
 }
 
@@ -101,6 +117,8 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		config.gravity ?? defaults.gravity,
 		config.variables ?? defaults.variables,
 		config.physicsRate ?? defaults.physicsRate,
+		config.usePhysicsWorker ?? defaults.usePhysicsWorker,
+		(config as any).physicsWorkerUrl ?? defaults.physicsWorkerUrl,
 	);
 
 	// Backward compat: first camera is the legacy `camera` field

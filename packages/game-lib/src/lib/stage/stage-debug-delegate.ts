@@ -121,7 +121,11 @@ export class StageDebugDelegate {
 
 		const { world, cameraRef } = this.stage;
 
-		if (this.debugLines) {
+		// Debug rendering and raycasting require the direct Rapier world
+		// instance, which is not available in worker mode.
+		const hasDirectWorld = world.world != null;
+
+		if (this.debugLines && hasDirectWorld) {
 			const { vertices, colors } = world.world.debugRender();
 			this.debugLines.geometry.setAttribute('position', new BufferAttribute(vertices, 3));
 			this.debugLines.geometry.setAttribute('color', new BufferAttribute(colors, 4));
@@ -129,15 +133,21 @@ export class StageDebugDelegate {
 		const tool = getDebugTool();
 		const isCursorTool = tool === 'select' || tool === 'delete';
 
-		this.raycaster.setFromCamera(this.mouseNdc, cameraRef.camera);
-		const origin = this.raycaster.ray.origin.clone();
-		const direction = this.raycaster.ray.direction.clone().normalize();
+		let hit: RayColliderToi | null = null;
+		let origin: Vector3 | null = null;
+		let direction: Vector3 | null = null;
 
-		const rapierRay = new Ray(
-			{ x: origin.x, y: origin.y, z: origin.z },
-			{ x: direction.x, y: direction.y, z: direction.z },
-		);
-		const hit: RayColliderToi | null = world.world.castRay(rapierRay, this.options.maxRayDistance, true);
+		if (hasDirectWorld) {
+			this.raycaster.setFromCamera(this.mouseNdc, cameraRef.camera);
+			origin = this.raycaster.ray.origin.clone();
+			direction = this.raycaster.ray.direction.clone().normalize();
+
+			const rapierRay = new Ray(
+				{ x: origin.x, y: origin.y, z: origin.z },
+				{ x: direction.x, y: direction.y, z: direction.z },
+			);
+			hit = world.world.castRay(rapierRay, this.options.maxRayDistance, true);
+		}
 
 		if (hit && isCursorTool) {
 			// @ts-ignore - access compat object's parent userData mapping back to GameEntity
@@ -150,7 +160,7 @@ export class StageDebugDelegate {
 				resetHoveredEntity();
 			}
 
-			if (this.isMouseDown) {
+			if (this.isMouseDown && origin && direction) {
 				this.handleActionOnHit(hoveredUuid ?? null, origin, direction, hit.toi);
 			}
 		}
