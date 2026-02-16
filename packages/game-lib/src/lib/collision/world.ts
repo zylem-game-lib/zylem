@@ -29,14 +29,33 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	collisionBehaviorMap: Map<string, GameEntity<any>> = new Map();
 	_removalMap: Map<string, GameEntity<any>> = new Map();
 
+	/** Fixed timestep in seconds used for each physics step. */
+	readonly fixedTimestep: number;
+	/** Unprocessed time carried over between frames. */
+	private accumulator = 0;
+	/** Maximum number of physics steps allowed per frame to prevent spiral-of-death. */
+	private static readonly MAX_STEPS_PER_FRAME = 5;
+	/**
+	 * Interpolation alpha (0..1) representing the fraction of an unprocessed
+	 * timestep remaining after the last physics step. Can be used to interpolate
+	 * rendering transforms between the previous and current physics state.
+	 */
+	interpolationAlpha = 0;
+
 	static async loadPhysics(gravity: Vector3) {
 		await RAPIER.init();
 		const physicsWorld = new RAPIER.World(gravity);
 		return physicsWorld;
 	}
 
-	constructor(world: World) {
+	/**
+	 * @param world The Rapier physics world instance.
+	 * @param physicsRate Physics update rate in Hz (default 60).
+	 */
+	constructor(world: World, physicsRate = 60) {
 		this.world = world;
+		this.fixedTimestep = 1 / physicsRate;
+		this.world.integrationParameters.dt = this.fixedTimestep;
 	}
 
 	addEntity(entity: any) {
@@ -104,14 +123,30 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 
 	setup() { }
 
+	/**
+	 * Advance the physics simulation using a fixed-timestep accumulator.
+	 * The world is stepped zero or more times per frame so that physics
+	 * runs at a consistent rate regardless of the display refresh rate.
+	 */
 	update(params: UpdateContext<any>) {
 		const { delta } = params;
 		if (!this.world) {
 			return;
 		}
-		this.updateColliders(delta);
-		this.updatePostCollisionBehaviors(delta);
-		this.world.step();
+
+		this.accumulator += delta;
+
+		const maxAccumulator = this.fixedTimestep * ZylemWorld.MAX_STEPS_PER_FRAME;
+		this.accumulator = Math.min(this.accumulator, maxAccumulator);
+
+		while (this.accumulator >= this.fixedTimestep) {
+			this.updateColliders(this.fixedTimestep);
+			this.updatePostCollisionBehaviors(this.fixedTimestep);
+			this.world.step();
+			this.accumulator -= this.fixedTimestep;
+		}
+
+		this.interpolationAlpha = this.accumulator / this.fixedTimestep;
 	}
 
 	updatePostCollisionBehaviors(delta: number) {

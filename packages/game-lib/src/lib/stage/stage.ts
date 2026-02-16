@@ -200,7 +200,7 @@ export class Stage {
 		name: string,
 		type?: T
 	): T extends keyof EntityTypeMap ? EntityTypeMap[T] | undefined : BaseNode | undefined {
-		const entity = this.wrappedStage?.children.find(c => c.name === name);
+		const entity = this.wrappedStage?.getEntityByName(name);
 		return entity as any;
 	}
 

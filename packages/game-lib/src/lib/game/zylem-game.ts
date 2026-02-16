@@ -383,7 +383,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		if (!stage?.wrappedStage) return null;
 
 		const entities: EntityConfigPayload[] = [];
-		stage.wrappedStage._childrenMap.forEach((child) => {
+		stage.wrappedStage.entityDelegate.childrenMap.forEach((child) => {
 			// Get type string from the entity's constructor
 			const entityType = (child.constructor as any).type;
 			const typeStr = entityType ? String(entityType).replace('Symbol(', '').replace(')', '') : 'Unknown';

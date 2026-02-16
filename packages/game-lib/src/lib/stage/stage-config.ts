@@ -15,6 +15,8 @@ export type StageConfigLike = Partial<{
 	backgroundShader: ZylemShader;
 	gravity: Vector3;
 	variables: Record<string, any>;
+	/** Physics update rate in Hz (default 60). */
+	physicsRate: number;
 }>;
 
 /**
@@ -28,6 +30,8 @@ export class StageConfig {
 		public backgroundShader: ZylemShader | null,
 		public gravity: Vector3,
 		public variables: Record<string, any>,
+		/** Physics update rate in Hz (default 60). */
+		public physicsRate: number = 60,
 	) { }
 }
 
@@ -45,6 +49,7 @@ export function createDefaultStageConfig(): StageConfig {
 		null,
 		new Vector3(0, 0, 0),
 		{},
+		60,
 	);
 }
 
@@ -95,6 +100,7 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		config.backgroundShader ?? defaults.backgroundShader,
 		config.gravity ?? defaults.gravity,
 		config.variables ?? defaults.variables,
+		config.physicsRate ?? defaults.physicsRate,
 	);
 
 	// Backward compat: first camera is the legacy `camera` field

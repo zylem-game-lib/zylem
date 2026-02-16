@@ -19,6 +19,7 @@ export const initialStageState = {
 	},
 	gravity: new Vector3(0, 0, 0),
 	variables: {},
+	physicsRate: 60,
 	entities: [] as GameEntityInterface[],
 };
 
