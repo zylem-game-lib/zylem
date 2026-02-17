@@ -85,6 +85,9 @@ export class ZylemCamera {
 	private orbitController: CameraOrbitController | null = null;
 	private _useOrbitalControls = false;
 
+	/** When true, debug-mode orbital controls are not attached to this camera. */
+	_skipDebugOrbit = false;
+
 	/** Reference to the shared renderer manager (set during setup). */
 	private _rendererManager: RendererManager | null = null;
 
@@ -334,8 +337,10 @@ export class ZylemCamera {
 
 	/**
 	 * Attach a delegate to react to debug state changes.
+	 * Skipped when _skipDebugOrbit is true so the pipeline always runs.
 	 */
 	setDebugDelegate(delegate: CameraDebugDelegate | null): void {
+		if (this._skipDebugOrbit) return;
 		this.orbitController?.setDebugDelegate(delegate);
 	}
 

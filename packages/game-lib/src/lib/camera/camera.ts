@@ -3,7 +3,7 @@ import { PerspectiveType } from "./perspective";
 import { ZylemCamera } from "./zylem-camera";
 import { RendererType, Viewport, DEFAULT_VIEWPORT } from "./renderer-manager";
 import { StageEntity } from "../interfaces/entity";
-import type { CameraBehavior, CameraAction, CameraPipelineState } from "./types";
+import type { CameraBehavior, CameraAction, CameraPerspective, CameraPipelineState } from "./types";
 import { createPerspective } from "./perspectives";
 import type { PerspectiveOptions } from "./perspectives";
 
@@ -59,6 +59,14 @@ export interface CameraOptions {
 		/** Texture height in pixels. @default 512 */
 		height?: number;
 	};
+	/**
+	 * When true, this camera will not activate orbital controls in debug mode.
+	 * The pipeline (and its behaviors) will always run for this camera.
+	 * Use for cameras with custom behaviors (e.g. FPS mouse-look) that must
+	 * control the camera through the pipeline rather than debug orbit controls.
+	 * @default false
+	 */
+	skipDebugOrbit?: boolean;
 }
 
 /**
@@ -170,6 +178,18 @@ export class CameraWrapper {
 		this.cameraRef.pipeline.setPerspective(createPerspective(type, options));
 	}
 
+	/**
+	 * Retrieve the active perspective instance, cast to the desired type.
+	 * Useful for calling perspective-specific methods (e.g. FirstPersonPerspective.look()).
+	 *
+	 * @example
+	 * const fps = camera.getPerspective<FirstPersonPerspective>();
+	 * fps.look(dx, dy);
+	 */
+	getPerspective<T extends CameraPerspective = CameraPerspective>(): T {
+		return this.cameraRef.pipeline.perspective as T;
+	}
+
 	// ─── Pipeline: Debug state ──────────────────────────────────────────────
 
 	/**
@@ -250,6 +270,11 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 	// Configure orbital controls
 	if (options.useOrbitalControls) {
 		(zylemCamera as any)._useOrbitalControls = true;
+	}
+
+	// Opt out of debug-mode orbital controls
+	if (options.skipDebugOrbit) {
+		zylemCamera._skipDebugOrbit = true;
 	}
 
 	// Configure pipeline damping

@@ -29,8 +29,8 @@ export type {
 export { CameraPipeline } from '../lib/camera/camera-pipeline';
 
 // Camera perspectives
-export { ThirdPersonPerspective, Fixed2DPerspective, createPerspective } from '../lib/camera/perspectives';
-export type { ThirdPersonOptions, Fixed2DOptions, PerspectiveOptions } from '../lib/camera/perspectives';
+export { ThirdPersonPerspective, Fixed2DPerspective, FirstPersonPerspective, createPerspective } from '../lib/camera/perspectives';
+export type { ThirdPersonOptions, Fixed2DOptions, FirstPersonOptions, PerspectiveOptions } from '../lib/camera/perspectives';
 
 // Camera behaviors
 export { createFollowTarget } from '../lib/camera/behaviors/follow-target';

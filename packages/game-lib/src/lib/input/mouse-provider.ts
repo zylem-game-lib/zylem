@@ -43,6 +43,12 @@ export class MouseProvider implements InputProvider {
 	};
 
 	private onMouseDown = (e: MouseEvent) => {
+		const target = e.target as Element | null;
+		const isGameCanvas = target instanceof HTMLCanvasElement
+			&& this.targetElement.contains(target);
+
+		if (!isGameCanvas) return;
+
 		this.mouseButtonDown.add(e.button);
 		if (this.usePointerLock && !this.isLocked) {
 			this.targetElement.requestPointerLock();

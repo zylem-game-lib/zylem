@@ -41,6 +41,9 @@ export * from './ricochet-2d';
 // Platformer 3D Module
 export * from './platformer-3d';
 
+// First Person Controller Module
+export * from './first-person';
+
 // Cooldown Module
 export * from './cooldown';
 

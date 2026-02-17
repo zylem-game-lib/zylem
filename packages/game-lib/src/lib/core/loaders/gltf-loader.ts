@@ -1,10 +1,14 @@
 /**
  * GLTF loader adapter for the Asset Manager
- * Uses native fetch (already async/non-blocking in browsers) + parseAsync
+ * Uses native fetch (already async/non-blocking in browsers) + parseAsync.
+ * Automatically configures DRACOLoader for Draco-compressed meshes.
  */
 
 import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { LoaderAdapter, AssetLoadOptions, ModelLoadResult } from '../asset-types';
+
+const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/v1/decoders/';
 
 export interface GLTFLoadOptions extends AssetLoadOptions {
 	/** 
@@ -17,9 +21,14 @@ export interface GLTFLoadOptions extends AssetLoadOptions {
 
 export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 	private loader: GLTFLoader;
+	private dracoLoader: DRACOLoader;
 
 	constructor() {
+		this.dracoLoader = new DRACOLoader();
+		this.dracoLoader.setDecoderPath(DRACO_DECODER_PATH);
+
 		this.loader = new GLTFLoader();
+		this.loader.setDRACOLoader(this.dracoLoader);
 	}
 
 	isSupported(url: string): boolean {

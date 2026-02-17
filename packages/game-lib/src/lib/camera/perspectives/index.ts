@@ -4,17 +4,21 @@ import { ThirdPersonPerspective } from './third-person-perspective';
 import type { ThirdPersonOptions } from './third-person-perspective';
 import { Fixed2DPerspective } from './fixed-2d-perspective';
 import type { Fixed2DOptions } from './fixed-2d-perspective';
+import { FirstPersonPerspective } from './first-person-perspective';
+import type { FirstPersonOptions } from './first-person-perspective';
 
 export { ThirdPersonPerspective } from './third-person-perspective';
 export type { ThirdPersonOptions } from './third-person-perspective';
 export { Fixed2DPerspective } from './fixed-2d-perspective';
 export type { Fixed2DOptions } from './fixed-2d-perspective';
+export { FirstPersonPerspective } from './first-person-perspective';
+export type { FirstPersonOptions } from './first-person-perspective';
 
 /**
  * Perspective-specific options union.
  * Extend as new perspective types are added.
  */
-export type PerspectiveOptions = ThirdPersonOptions | Fixed2DOptions;
+export type PerspectiveOptions = ThirdPersonOptions | Fixed2DOptions | FirstPersonOptions;
 
 /**
  * Factory: create a CameraPerspective from a PerspectiveType string.
@@ -28,12 +32,7 @@ export function createPerspective(
 		case 'third-person':
 			return new ThirdPersonPerspective(options as ThirdPersonOptions);
 		case 'first-person':
-			// First person placeholder -- reuse third-person with tight distance
-			return new ThirdPersonPerspective({
-				distance: 0,
-				height: 0,
-				...(options as ThirdPersonOptions),
-			});
+			return new FirstPersonPerspective(options as FirstPersonOptions);
 		case 'isometric':
 			// Isometric placeholder -- fixed angle third-person
 			return new ThirdPersonPerspective({
