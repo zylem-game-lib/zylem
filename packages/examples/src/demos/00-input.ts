@@ -1,5 +1,5 @@
 import { Color, Vector2 } from 'three';
-import { createGame, createStage, createText, useArrowsForDirections, useIJKLForAxes } from '@zylem/game-lib';
+import { createGame, createStage, createText, useArrowsForDirections, useIJKLForAxes, useMouse } from '@zylem/game-lib';
 
 const stage1 = createStage({
 	inputs: {
@@ -12,6 +12,7 @@ const stage1 = createStage({
 stage1.setInputConfiguration(
 	useArrowsForDirections('p1'),
 	useIJKLForAxes('p1'),
+	useMouse('p1'),
 );
 
 const inputText = createText({
@@ -21,7 +22,15 @@ const inputText = createText({
 	screenPosition: new Vector2(0.5, 0.5),
 });
 
+const mouseInputText = createText({
+	name: 'mouseInputText',
+	text: '<mouse input>',
+	fontSize: 36,
+	screenPosition: new Vector2(0.5, 0.25),
+});
+
 stage1.add(inputText);
+stage1.add(mouseInputText);
 
 const formatNumber = (num: number) => num.toFixed(2);
 
@@ -65,13 +74,25 @@ const myGame = createGame(
 		}
 	}
 	for (const [name, axis] of Object.entries(p1.axes)) {
-		if (axis.value >= 0.5) {
-			inputText.updateText(`${name} held for ${formatNumber(axis.held)} seconds`);
-		}
-		if (axis.value <= -0.5) {
-			inputText.updateText(`${name} held for ${formatNumber(axis.held)} seconds`);
+		if (Math.abs(axis.value) >= 0.1) {
+			inputText.updateText(`${name}: ${formatNumber(axis.value)} (held ${formatNumber(axis.held)}s)`);
 		}
 	}
+
+	const ptr = p1.pointer;
+	const leftClick = p1.shoulders.LTrigger;
+	const rightClick = p1.shoulders.RTrigger;
+	const moveX = p1.axes.SecondaryHorizontal.value;
+	const moveY = p1.axes.SecondaryVertical.value;
+	const isDragging = leftClick.held > 0 && (moveX !== 0 || moveY !== 0);
+
+	const pos = ptr ? `position: (${formatNumber(ptr.x)}, ${formatNumber(ptr.y)})` : 'position: <>';
+	const move = `move: (${formatNumber(moveX)}, ${formatNumber(moveY)})`;
+	const drag = isDragging ? 'dragging' : 'idle';
+	const left = leftClick.held > 0 ? `L:${formatNumber(leftClick.held)}s` : leftClick.released ? 'L:released' : 'L:up';
+	const right = rightClick.held > 0 ? `R:${formatNumber(rightClick.held)}s` : rightClick.released ? 'R:released' : 'R:up';
+
+	mouseInputText.updateText(`${pos} | ${move} | ${drag} | ${left} | ${right}`);
 });
 
 export default myGame;

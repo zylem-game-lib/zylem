@@ -1,6 +1,7 @@
 import { InputProvider, InputGamepad, InputPlayerNumber, Inputs } from './input';
 import { KeyboardProvider } from './keyboard-provider';
 import { GamepadProvider } from './gamepad-provider';
+import { MouseProvider } from './mouse-provider';
 import { GameInputConfig, GameInputPlayerConfig } from '../game/game-interfaces';
 import { mergeButtonState, mergeAnalogState } from './input-state';
 
@@ -26,13 +27,16 @@ export class InputManager {
 			} else if (isP1) {
 				this.addInputProvider(player, new KeyboardProvider());
 			}
+			if (playerConfig?.mouse) {
+				this.addInputProvider(player, new MouseProvider(playerConfig.mouse));
+			}
 			this.addInputProvider(player, new GamepadProvider(gamepadIndex));
 		}
 	}
 
 	/**
-	 * Reconfigure keyboard providers at runtime without affecting gamepad providers.
-	 * Disposes existing keyboard providers and creates new ones from the given config.
+	 * Reconfigure keyboard and mouse providers at runtime without affecting gamepad providers.
+	 * Disposes existing keyboard/mouse providers and creates new ones from the given config.
 	 */
 	configure(config: GameInputConfig): void {
 		const players = this.buildPlayerEntries(config);
@@ -40,9 +44,9 @@ export class InputManager {
 		for (const { player, config: playerConfig, isP1 } of players) {
 			const providers = this.inputMap.get(player) ?? [];
 
-			// Dispose and remove keyboard providers
+			// Dispose and remove keyboard + mouse providers
 			const remaining = providers.filter(p => {
-				if (p instanceof KeyboardProvider) {
+				if (p instanceof KeyboardProvider || p instanceof MouseProvider) {
 					p.dispose();
 					return false;
 				}
@@ -55,6 +59,11 @@ export class InputManager {
 				remaining.unshift(new KeyboardProvider(playerConfig.key, { includeDefaultBase }));
 			} else if (isP1) {
 				remaining.unshift(new KeyboardProvider());
+			}
+
+			// Create new mouse provider
+			if (playerConfig?.mouse) {
+				remaining.unshift(new MouseProvider(playerConfig.mouse));
 			}
 
 			this.inputMap.set(player, remaining);
@@ -120,11 +129,14 @@ export class InputManager {
 			axes: {
 				Horizontal: mergeAnalogState(a.axes?.Horizontal, b.axes?.Horizontal),
 				Vertical: mergeAnalogState(a.axes?.Vertical, b.axes?.Vertical),
+				SecondaryHorizontal: mergeAnalogState(a.axes?.SecondaryHorizontal, b.axes?.SecondaryHorizontal),
+				SecondaryVertical: mergeAnalogState(a.axes?.SecondaryVertical, b.axes?.SecondaryVertical),
 			},
 			shoulders: {
 				LTrigger: mergeButtonState(a.shoulders?.LTrigger, b.shoulders?.LTrigger),
 				RTrigger: mergeButtonState(a.shoulders?.RTrigger, b.shoulders?.RTrigger),
-			}
+			},
+			pointer: b.pointer ?? a.pointer,
 		};
 	}
 }

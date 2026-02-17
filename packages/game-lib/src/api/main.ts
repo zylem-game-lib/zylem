@@ -112,6 +112,8 @@ export {
 	useWASDForAxes,
 	useIJKLForAxes,
 	useIJKLForDirections,
+	useMouseLook,
+	useMouse,
 	mergeInputConfigs,
 } from '../lib/input/input-presets';
 

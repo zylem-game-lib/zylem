@@ -1,5 +1,5 @@
 import { InputPlayer } from './input';
-import { GameInputConfig, GameInputPlayerConfig, KeyboardMapping } from '../game/game-interfaces';
+import { GameInputConfig, GameInputPlayerConfig, KeyboardMapping, MouseConfig } from '../game/game-interfaces';
 
 /**
  * Creates a GameInputConfig scoped to a single player.
@@ -87,6 +87,38 @@ export function useIJKLForDirections(player: InputPlayer): GameInputConfig {
 	});
 }
 
+/**
+ * Enables mouse-look with pointer lock for the given player.
+ * Mouse movement maps to SecondaryHorizontal/SecondaryVertical axes;
+ * left click maps to LTrigger, right click to RTrigger.
+ * @example stage.setInputConfiguration(useMouseLook('p1'));
+ */
+export function useMouseLook(player: InputPlayer, options?: { sensitivity?: number }): GameInputConfig {
+	return {
+		[player]: {
+			mouse: {
+				pointerLock: true,
+				sensitivity: options?.sensitivity,
+			} satisfies MouseConfig,
+		},
+	} as GameInputConfig;
+}
+
+/**
+ * Enables basic mouse input (no pointer lock) for the given player.
+ * @example stage.setInputConfiguration(useMouse('p1'));
+ */
+export function useMouse(player: InputPlayer, options?: { sensitivity?: number }): GameInputConfig {
+	return {
+		[player]: {
+			mouse: {
+				pointerLock: false,
+				sensitivity: options?.sensitivity,
+			} satisfies MouseConfig,
+		},
+	} as GameInputConfig;
+}
+
 const INPUT_PLAYERS: (keyof GameInputConfig)[] = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'];
 
 /**
@@ -104,9 +136,17 @@ export function mergeInputConfigs(...configs: GameInputConfig[]): GameInputConfi
 			if (!source) continue;
 
 			const target: GameInputPlayerConfig = result[player] ?? {};
+			const mergedMouse: MouseConfig | undefined =
+				(target.mouse || source.mouse)
+					? {
+						...target.mouse,
+						...source.mouse,
+						mapping: { ...target.mouse?.mapping, ...source.mouse?.mapping },
+					}
+					: undefined;
 			result[player] = {
 				key: { ...target.key, ...source.key },
-				mouse: { ...target.mouse, ...source.mouse },
+				mouse: mergedMouse,
 				includeDefaults: source.includeDefaults ?? target.includeDefaults,
 			};
 		}

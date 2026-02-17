@@ -6,9 +6,18 @@ export type BaseGlobals = Record<string, BasicTypes>;
 export type KeyboardMapping = Record<string, string[]>;
 export type MouseMapping = Record<string, string[]>;
 
+export interface MouseConfig {
+	/** Custom mapping from mouse actions to input properties. */
+	mapping?: MouseMapping;
+	/** Whether to capture the cursor via Pointer Lock API. */
+	pointerLock?: boolean;
+	/** Sensitivity multiplier for mouse movement (default 0.002). */
+	sensitivity?: number;
+}
+
 export interface GameInputPlayerConfig {
 	key?: KeyboardMapping;
-	mouse?: MouseMapping;
+	mouse?: MouseConfig;
 	includeDefaults?: boolean;
 }
 

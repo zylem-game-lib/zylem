@@ -60,6 +60,8 @@ export function createInputGamepadState(playerNumber: InputPlayerNumber): InputG
 		axes: {
 			Horizontal: createAnalogState(),
 			Vertical: createAnalogState(),
+			SecondaryHorizontal: createAnalogState(),
+			SecondaryVertical: createAnalogState(),
 		},
 	};
 }
@@ -117,11 +119,16 @@ export function compileMapping(mapping: Record<string, string[]> | null): Compil
 				}
 			} else if (category === 'axes') {
 				// Axis targets use directional names: axes.Left, axes.Right, axes.Up, axes.Down
+				// Right stick: axes.RightLeft, axes.RightRight, axes.RightUp, axes.RightDown
 				const axisMap: Record<string, { property: string; direction: -1 | 1 }> = {
 					'left': { property: 'Horizontal', direction: -1 },
 					'right': { property: 'Horizontal', direction: 1 },
 					'up': { property: 'Vertical', direction: -1 },
 					'down': { property: 'Vertical', direction: 1 },
+					'secondaryleft': { property: 'SecondaryHorizontal', direction: -1 },
+					'secondaryright': { property: 'SecondaryHorizontal', direction: 1 },
+					'secondaryup': { property: 'SecondaryVertical', direction: -1 },
+					'secondarydown': { property: 'SecondaryVertical', direction: 1 },
 				};
 				const axis = axisMap[nameKey];
 				if (axis) {
@@ -202,5 +209,12 @@ export function mergeInputGamepads(target: InputGamepad, source: Partial<InputGa
 	if (source.axes) {
 		target.axes.Horizontal = mergeAnalogState(target.axes.Horizontal, source.axes.Horizontal);
 		target.axes.Vertical = mergeAnalogState(target.axes.Vertical, source.axes.Vertical);
+		target.axes.SecondaryHorizontal = mergeAnalogState(target.axes.SecondaryHorizontal, source.axes.SecondaryHorizontal);
+		target.axes.SecondaryVertical = mergeAnalogState(target.axes.SecondaryVertical, source.axes.SecondaryVertical);
+	}
+
+	// Pointer: last-write-wins (not additive)
+	if (source.pointer) {
+		target.pointer = source.pointer;
 	}
 }

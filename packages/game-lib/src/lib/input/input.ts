@@ -44,6 +44,13 @@ export interface InputGamepad {
 	axes: {
 		Horizontal: AnalogState;
 		Vertical: AnalogState;
+		SecondaryHorizontal: AnalogState;
+		SecondaryVertical: AnalogState;
+	};
+	/** Screen-space cursor position (normalized 0..1). Only populated by MouseProvider. */
+	pointer?: {
+		x: number;
+		y: number;
 	};
 }
 

@@ -81,10 +81,12 @@ export class GamepadProvider implements InputProvider {
 				Left: this.handleButtonState(14, gamepad, delta),
 				Right: this.handleButtonState(15, gamepad, delta),
 			},
-			axes: {
-				Horizontal: this.handleAnalogState(0, gamepad, delta),
-				Vertical: this.handleAnalogState(1, gamepad, delta),
-			},
+		axes: {
+			Horizontal: this.handleAnalogState(0, gamepad, delta),
+			Vertical: this.handleAnalogState(1, gamepad, delta),
+			SecondaryHorizontal: this.handleAnalogState(2, gamepad, delta),
+			SecondaryVertical: this.handleAnalogState(3, gamepad, delta),
+		},
 			shoulders: {
 				LTrigger: this.handleButtonState(6, gamepad, delta),
 				RTrigger: this.handleButtonState(7, gamepad, delta),
