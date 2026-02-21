@@ -4,7 +4,7 @@
  * Components for first-person movement and camera control:
  * - Movement configuration (walk/run speed, sensitivity, eye height)
  * - Input intent (WASD movement + mouse look deltas)
- * - Runtime state (yaw, pitch, speed, grounded flag)
+ * - Runtime state (yaw, pitch, speed)
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -75,8 +75,6 @@ export interface FirstPersonStateComponent {
 	pitch: number;
 	/** Current movement speed being applied */
 	currentSpeed: number;
-	/** Whether the entity is on the ground (reserved for future physics) */
-	grounded: boolean;
 }
 
 export function createFirstPersonStateComponent(): FirstPersonStateComponent {
@@ -84,6 +82,5 @@ export function createFirstPersonStateComponent(): FirstPersonStateComponent {
 		yaw: 0,
 		pitch: 0,
 		currentSpeed: 0,
-		grounded: true,
 	};
 }

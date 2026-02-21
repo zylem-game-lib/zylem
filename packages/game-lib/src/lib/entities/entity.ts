@@ -33,6 +33,7 @@ import type {
 import type { TransformState } from '../actions/capabilities/transform-store';
 import { createTransformStore } from '../actions/capabilities/transform-store';
 import { makeTransformable } from '../actions/capabilities/transformable';
+import { clearVelocityIntent } from '../actions/capabilities/velocity-intents';
 import type { MoveableEntity } from '../actions/capabilities/moveable';
 import type { RotatableEntityAPI } from '../actions/capabilities/rotatable';
 import { isCollisionComponent, type CollisionComponent } from './parts/collision-factories';
@@ -290,7 +291,7 @@ export class GameEntity<O extends GameEntityOptions>
 		store.velocity.x = 0;
 		store.velocity.y = 0;
 		store.velocity.z = 0;
-		store.dirty.velocity = false;
+		clearVelocityIntent(store, 'actions');
 		store.angularVelocity.x = 0;
 		store.angularVelocity.y = 0;
 		store.angularVelocity.z = 0;
@@ -304,13 +305,11 @@ export class GameEntity<O extends GameEntityOptions>
 			}
 		}
 
-		// If every non-persistent action finished this frame, zero out
-		// any velocity they wrote so the entity doesn't drift.
 		if (this._actions.length === 0) {
 			store.velocity.x = 0;
 			store.velocity.y = 0;
 			store.velocity.z = 0;
-			store.dirty.velocity = false;
+			clearVelocityIntent(store, 'actions');
 			store.angularVelocity.x = 0;
 			store.angularVelocity.y = 0;
 			store.angularVelocity.z = 0;

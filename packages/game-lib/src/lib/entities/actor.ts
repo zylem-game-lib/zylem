@@ -68,11 +68,17 @@ class ActorCollisionBuilder extends EntityCollisionBuilder {
 	 */
 	private createCapsuleCollider(options: ZylemActorOptions): ColliderDesc {
 		const size = options.collision?.size ?? options.size ?? { x: 0.5, y: 1, z: 0.5 };
-		const halfHeight = ((size as any).y || 1);
-		const radius = Math.max((size as any).x || 0.5, (size as any).z || 0.5);
-		let colliderDesc = ColliderDesc.capsule(halfHeight, radius);
+		const fullWidth = (size as any).x || 0.5;
+		const fullHeight = (size as any).y || 1;
+		const fullDepth = (size as any).z || 0.5;
+		const radius = Math.max(fullWidth, fullDepth) / 2;
+		const halfTotalHeight = fullHeight / 2;
+		// Rapier capsule takes half the cylindrical segment length.
+		const halfCylinder = Math.max(0, halfTotalHeight - radius);
+		let colliderDesc = ColliderDesc.capsule(halfCylinder, radius);
 		colliderDesc.setSensor(false);
-		colliderDesc.setTranslation(0, halfHeight + radius, 0);
+		// Place capsule so its base sits near y=0 in local space.
+		colliderDesc.setTranslation(0, halfTotalHeight, 0);
 		colliderDesc.activeCollisionTypes = ActiveCollisionTypes.DEFAULT;
 		return colliderDesc;
 	}

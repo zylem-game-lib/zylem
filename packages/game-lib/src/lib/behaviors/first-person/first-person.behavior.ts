@@ -4,12 +4,14 @@
  * Handles first-person camera control and movement:
  * - Reads input component for WASD movement and mouse look deltas
  * - Drives a FirstPersonPerspective (yaw/pitch accumulation)
- * - Computes position movement relative to current yaw
+ * - Writes velocity to transformStore (physics-based movement)
+ * - Syncs camera position from the entity's rigid body each frame
  * - Positions an optional viewmodel entity relative to the camera
  */
 
 import { Vector3, Quaternion, Euler } from 'three';
 import type { FirstPersonPerspective } from '../../camera/perspectives/first-person-perspective';
+import { setVelocityIntent } from '../../actions/capabilities/velocity-intents';
 import type {
 	FirstPersonMovementComponent,
 	FirstPersonInputComponent,
@@ -34,6 +36,8 @@ export interface ViewmodelConfig {
  */
 export interface FirstPersonEntity {
 	uuid: string;
+	body: any;
+	transformStore: any;
 	firstPerson: FirstPersonMovementComponent;
 	$fps: FirstPersonInputComponent;
 	firstPersonState: FirstPersonStateComponent;
@@ -97,33 +101,61 @@ export class FirstPersonControllerBehavior {
 			const state: FirstPersonStateComponent = fpEntity.firstPersonState;
 			const perspective = this.perspectives.get(fpEntity.uuid);
 
-			// 1. Apply look
+			// 1. Sync camera position from physics body
+			if (perspective?.initialPosition && fpEntity.body) {
+				const pos = fpEntity.body.translation();
+				perspective.initialPosition.set(
+					pos.x,
+					pos.y + movement.eyeHeight,
+					pos.z,
+				);
+			}
+
+			// 2. Apply look
 			if (perspective) {
 				perspective.look(
 					-input.lookX * movement.lookSensitivity,
 					-input.lookY * movement.lookSensitivity,
 				);
 
-				// Sync state with perspective
 				state.yaw = perspective.yaw;
 				state.pitch = perspective.pitch;
 			}
 
-			// 2. Compute movement
+			// 3. Compute velocity-based movement and write to transformStore
 			const speed = input.sprint ? movement.runSpeed : movement.walkSpeed;
 			state.currentSpeed = speed;
 
 			const hasMovement = Math.abs(input.moveX) > 0.1 || Math.abs(input.moveZ) > 0.1;
 
-			if (hasMovement && perspective?.initialPosition) {
-				_forward.set(0, 0, -1).applyAxisAngle(_up, state.yaw);
-				_right.set(1, 0, 0).applyAxisAngle(_up, state.yaw);
+			if (fpEntity.transformStore) {
+				if (hasMovement) {
+					_forward.set(0, 0, -1).applyAxisAngle(_up, state.yaw);
+					_right.set(1, 0, 0).applyAxisAngle(_up, state.yaw);
 
-				perspective.initialPosition.addScaledVector(_forward, -input.moveZ * speed * delta);
-				perspective.initialPosition.addScaledVector(_right, input.moveX * speed * delta);
+					const vx =
+						_right.x * input.moveX * speed +
+						_forward.x * (-input.moveZ) * speed;
+					const vz =
+						_right.z * input.moveX * speed +
+						_forward.z * (-input.moveZ) * speed;
+					setVelocityIntent(
+						fpEntity.transformStore,
+						'first-person',
+						{ x: vx, z: vz },
+						{ mode: 'replace', priority: 10 },
+					);
+				} else {
+					setVelocityIntent(
+						fpEntity.transformStore,
+						'first-person',
+						{ x: 0, z: 0 },
+						{ mode: 'replace', priority: 10 },
+					);
+				}
 			}
 
-			// 3. Position viewmodel
+			// 4. Position viewmodel
 			const vm = this.viewmodels.get(fpEntity.uuid);
 			if (vm && perspective?.initialPosition) {
 				this.positionViewmodel(vm, perspective, state);

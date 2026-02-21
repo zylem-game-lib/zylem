@@ -1,5 +1,6 @@
 import type { GameEntity } from '../entities/entity';
 import { BaseAction, type Action } from './action';
+import { setVelocityIntent } from './capabilities/velocity-intents';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MoveBy -- accumulate position delta over duration via velocity
@@ -48,10 +49,8 @@ class MoveByAction extends BaseAction {
 		const vy = this.dy / this.duration;
 		const vz = this.dz / this.duration;
 		const store = entity.transformStore;
-		store.velocity.x += vx;
-		store.velocity.y += vy;
-		store.velocity.z += vz;
-		store.dirty.velocity = true;
+		if (!store) return;
+		setVelocityIntent(store, 'actions', { x: vx, y: vy, z: vz }, { mode: 'add' });
 	}
 }
 
@@ -115,10 +114,8 @@ class MoveToAction extends BaseAction {
 		const vy = this.dy / this.duration;
 		const vz = this.dz / this.duration;
 		const store = entity.transformStore;
-		store.velocity.x += vx;
-		store.velocity.y += vy;
-		store.velocity.z += vz;
-		store.dirty.velocity = true;
+		if (!store) return;
+		setVelocityIntent(store, 'actions', { x: vx, y: vy, z: vz }, { mode: 'add' });
 	}
 
 	reset(): void {

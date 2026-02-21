@@ -44,6 +44,9 @@ export * from './platformer-3d';
 // First Person Controller Module
 export * from './first-person';
 
+// Jumper 3D Module
+export * from './jumper-3d';
+
 // Cooldown Module
 export * from './cooldown';
 

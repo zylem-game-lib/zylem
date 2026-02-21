@@ -1,5 +1,15 @@
 import { proxy } from 'valtio';
 
+export type VelocityIntentMode = 'replace' | 'add';
+
+export interface VelocityIntent {
+	x?: number;
+	y?: number;
+	z?: number;
+	mode: VelocityIntentMode;
+	priority?: number;
+}
+
 /**
  * Transform state managed by Valtio for batched physics updates.
  * 
@@ -24,12 +34,20 @@ export interface TransformState {
 	
 	/** Angular velocity (accumulated) */
 	angularVelocity: { x: number; y: number; z: number };
+
+	/** Per-source velocity intents composed once per frame */
+	velocityChannels: Record<string, VelocityIntent>;
 	
 	/** Dirty flags to track what needs to be applied */
 	dirty: {
 		position: boolean;
 		rotation: boolean;
+		/** @deprecated Use per-axis velocityX/Y/Z flags for new code */
 		velocity: boolean;
+		velocityX: boolean;
+		velocityY: boolean;
+		velocityZ: boolean;
+		velocityChannels: boolean;
 		angularVelocity: boolean;
 	};
 }
@@ -47,10 +65,15 @@ export function createTransformStore(initial?: Partial<TransformState>): Transfo
 		rotation: { x: 0, y: 0, z: 0, w: 1 },
 		velocity: { x: 0, y: 0, z: 0 },
 		angularVelocity: { x: 0, y: 0, z: 0 },
+		velocityChannels: {},
 		dirty: {
 			position: false,
 			rotation: false,
 			velocity: false,
+			velocityX: false,
+			velocityY: false,
+			velocityZ: false,
+			velocityChannels: false,
 			angularVelocity: false,
 		},
 	};
@@ -94,9 +117,18 @@ export function resetTransformStore(store: TransformState): void {
 	store.angularVelocity.y = 0;
 	store.angularVelocity.z = 0;
 
+	// Reset per-source velocity intents
+	for (const sourceId of Object.keys(store.velocityChannels)) {
+		delete store.velocityChannels[sourceId];
+	}
+
 	// Clear all dirty flags
 	store.dirty.position = false;
 	store.dirty.rotation = false;
 	store.dirty.velocity = false;
+	store.dirty.velocityX = false;
+	store.dirty.velocityY = false;
+	store.dirty.velocityZ = false;
+	store.dirty.velocityChannels = false;
 	store.dirty.angularVelocity = false;
 }

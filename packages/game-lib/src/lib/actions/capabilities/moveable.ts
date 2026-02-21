@@ -2,6 +2,7 @@ import { Vector3 } from 'three';
 import { RigidBody, Vector } from '@dimforge/rapier3d-compat';
 import type { TransformState } from './transform-store';
 import { createTransformStore } from './transform-store';
+import { setVelocityIntent } from './velocity-intents';
 
 export interface EntityWithBody {
 	body: RigidBody | null;
@@ -13,8 +14,7 @@ export interface EntityWithBody {
  */
 export function moveX(entity: EntityWithBody, delta: number): void {
 	if (!entity.transformStore) return;
-	entity.transformStore.velocity.x = delta;
-	entity.transformStore.dirty.velocity = true;
+	setVelocityIntent(entity.transformStore, 'actions', { x: delta }, { mode: 'replace' });
 }
 
 /**
@@ -22,8 +22,7 @@ export function moveX(entity: EntityWithBody, delta: number): void {
  */
 export function moveY(entity: EntityWithBody, delta: number): void {
 	if (!entity.transformStore) return;
-	entity.transformStore.velocity.y = delta;
-	entity.transformStore.dirty.velocity = true;
+	setVelocityIntent(entity.transformStore, 'actions', { y: delta }, { mode: 'replace' });
 }
 
 /**
@@ -31,8 +30,7 @@ export function moveY(entity: EntityWithBody, delta: number): void {
  */
 export function moveZ(entity: EntityWithBody, delta: number): void {
 	if (!entity.transformStore) return;
-	entity.transformStore.velocity.z = delta;
-	entity.transformStore.dirty.velocity = true;
+	setVelocityIntent(entity.transformStore, 'actions', { z: delta }, { mode: 'replace' });
 }
 
 /**
@@ -40,9 +38,12 @@ export function moveZ(entity: EntityWithBody, delta: number): void {
  */
 export function moveXY(entity: EntityWithBody, deltaX: number, deltaY: number): void {
 	if (!entity.transformStore) return;
-	entity.transformStore.velocity.x = deltaX;
-	entity.transformStore.velocity.y = deltaY;
-	entity.transformStore.dirty.velocity = true;
+	setVelocityIntent(
+		entity.transformStore,
+		'actions',
+		{ x: deltaX, y: deltaY },
+		{ mode: 'replace' },
+	);
 }
 
 /**
@@ -50,9 +51,12 @@ export function moveXY(entity: EntityWithBody, deltaX: number, deltaY: number): 
  */
 export function moveXZ(entity: EntityWithBody, deltaX: number, deltaZ: number): void {
 	if (!entity.transformStore) return;
-	entity.transformStore.velocity.x = deltaX;
-	entity.transformStore.velocity.z = deltaZ;
-	entity.transformStore.dirty.velocity = true;
+	setVelocityIntent(
+		entity.transformStore,
+		'actions',
+		{ x: deltaX, z: deltaZ },
+		{ mode: 'replace' },
+	);
 }
 
 /**
@@ -60,10 +64,12 @@ export function moveXZ(entity: EntityWithBody, deltaX: number, deltaZ: number): 
  */
 export function move(entity: EntityWithBody, vector: Vector3): void {
 	if (!entity.transformStore) return;
-	entity.transformStore.velocity.x += vector.x;
-	entity.transformStore.velocity.y += vector.y;
-	entity.transformStore.velocity.z += vector.z;
-	entity.transformStore.dirty.velocity = true;
+	setVelocityIntent(
+		entity.transformStore,
+		'actions',
+		{ x: vector.x, y: vector.y, z: vector.z },
+		{ mode: 'add' },
+	);
 }
 
 /**
