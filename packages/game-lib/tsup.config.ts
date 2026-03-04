@@ -27,6 +27,8 @@ export default defineConfig({
 	splitting: false,
 	sourcemap: true,
 	clean: true,
+	// TODO: why does minify break the build
+	// minify: true,
 	outDir: 'dist',
 	external: [
 		'three',

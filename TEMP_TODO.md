@@ -1,0 +1,17 @@
+# Priorities
+- Screen ratio
+- Debug mode works with stage
+- State is sent to debug
+- Game delegates refactor
+- Stage delegates refactor
+- Create coordinators for Platformer + Jumper
+- Create coordinator coordinators (FPS = FirstPerson + Platformer)
+- Optimizations
+    - WebGPU
+        - all objects will be based on custom geometry
+    - Custom Vite based compiler
+    - Input optimizations
+    - FSMs are very slow (bit flag hacks?)
+- Basic mobile controls
+- Instant shaders for effects
+- Particle system

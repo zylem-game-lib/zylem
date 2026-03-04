@@ -21,6 +21,12 @@ export async function createBaseConfig(_env: ConfigEnv): Promise<UserConfig> {
 	};
 
 	return {
+		// build: {
+			// minify: 'terser',
+			// terserOptions: {
+			// 	maxWorkers: 6
+			// },
+		// },
 		resolve: {
 			alias: aliases,
 		},

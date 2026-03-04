@@ -27,10 +27,12 @@ export type { GameLoadingEvent };
 
 type ZylemGameOptions<TGlobals extends BaseGlobals> = ZylemGameConfig<Stage, ZylemGame<TGlobals>, TGlobals> & Partial<GameConfig>
 
+// TODO: need to split this up into delegate classes
 export class ZylemGame<TGlobals extends BaseGlobals> {
 	id: string;
 	initialGlobals = {} as TGlobals;
 
+	// TODO: these should be unecessary given a delegate or inherited from base node
 	customSetup: ((params: SetupContext<ZylemGame<TGlobals>, TGlobals>) => void) | null = null;
 	customUpdate: ((params: UpdateContext<ZylemGame<TGlobals>, TGlobals>) => void) | null = null;
 	customDestroy: ((params: DestroyContext<ZylemGame<TGlobals>, TGlobals>) => void) | null = null;
@@ -231,6 +233,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		const stage = this.currentStage();
 		const delta = this.timer.getDelta();
 		const inputs = this.inputManager.getInputs(delta);
+		// TODO: Reference here should be cached
 		const camera = stage?.wrappedStage?.cameraRef || this.defaultCamera;
 		return {
 			delta,
@@ -322,7 +325,6 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 				globals: state.globals as unknown as TGlobals
 			});
 		}
-
 		resetGlobals();
 	}
 
