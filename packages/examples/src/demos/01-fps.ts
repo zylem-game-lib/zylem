@@ -114,6 +114,10 @@ const myGameConfig = gameConfig({
 	id: 'fps-demo',
 	debug: true,
 	bodyBackground: '#1a1a1a',
+	resolution: {
+		width: 800,
+		height: 600,
+	},
 });
 
 const game = createGame(

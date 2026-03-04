@@ -66,9 +66,11 @@ const game = createGame(
 	{
 		id: 'behaviors-test',
 		debug: true,
-	},
-	stage
-);
+		resolution: {
+			width: 800,
+			height: 600,
+		},
+	}, stage);
 
 let lastMovement = new Vector3();
 player.onSetup(({ me }) => {

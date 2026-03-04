@@ -85,6 +85,7 @@ export class ScreenWrapFSM {
 		return this.machine.getState();
 	}
 
+	// TODO: FSM dispatch event is really slow
 	dispatch(event: ScreenWrapEvent): void {
 		if (this.machine.can(event)) {
 			this.machine.dispatch(event);

@@ -158,6 +158,10 @@ const game = createGame({
 		score: 0,
 		lives: 3,
 		enemies: enemies.length,
+		resolution: {
+			width: 800,
+			height: 600,
+		},
 	},
 }, stage, livesText, scoreText)
 	.onGlobalChange<number>('score', (score, stage) => {
