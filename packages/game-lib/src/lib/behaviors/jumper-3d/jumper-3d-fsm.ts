@@ -11,7 +11,7 @@
  *   Falling   ──Jump──▶  Jumping   (air-jump while falling)
  */
 
-import { StateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from 'typescript-fsm';
 import type { JumpState3D } from './components';
 
 export enum Jumper3DState {
@@ -31,10 +31,10 @@ export interface Jumper3DFSMContext {
 }
 
 export class Jumper3DFSM {
-	machine: StateMachine<Jumper3DState, Jumper3DEvent, never>;
+	machine: SyncStateMachine<Jumper3DState, Jumper3DEvent, never>;
 
 	constructor(private ctx: Jumper3DFSMContext) {
-		this.machine = new StateMachine<Jumper3DState, Jumper3DEvent, never>(
+		this.machine = new SyncStateMachine<Jumper3DState, Jumper3DEvent, never>(
 			Jumper3DState.Grounded,
 			[
 				// Grounded
@@ -61,7 +61,7 @@ export class Jumper3DFSM {
 
 	dispatch(event: Jumper3DEvent): void {
 		if (this.machine.can(event)) {
-			this.machine.dispatch(event);
+			this.machine.syncDispatch(event);
 		}
 	}
 

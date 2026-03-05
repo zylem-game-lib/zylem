@@ -230,29 +230,11 @@ export class Platformer3DBehavior {
 		const buttonReleased = state.jumpReleasedSinceLastJump;
 		const inMultiJumpWindow = state.timeSinceJump >= movement.multiJumpWindowTime;
 		const canMultiJump = !state.grounded && hasJumpsRemaining && buttonReleased && inMultiJumpWindow;
-		
-		// DEBUG: Log jump attempt
-		console.log('[JUMP DEBUG] Attempting jump:', {
-			grounded: state.grounded,
-			jumpCount: state.jumpCount,
-			maxJumps: movement.maxJumps,
-			isFirstJump,
-			canMultiJump,
-			'--- Multi-jump conditions ---': '',
-			'!grounded': !state.grounded,
-			hasJumpsRemaining,
-			buttonReleased,
-			inMultiJumpWindow,
-			timeSinceJump: state.timeSinceJump.toFixed(3),
-			multiJumpWindowTime: movement.multiJumpWindowTime,
-		});
-		
+
 		if (isFirstJump || canMultiJump) {
-			console.log('[JUMP DEBUG] ✅ EXECUTING JUMP #' + (state.jumpCount + 1));
-			
 			// Consume buffered input
 			state.jumpBuffered = false;
-			
+
 			// Increment jump count and reset tracking
 			state.jumpCount++;
 			state.jumpReleasedSinceLastJump = false; // Must release again for next jump
@@ -269,8 +251,6 @@ export class Platformer3DBehavior {
 			// Apply jump force via transform store
 			entity.transformStore.velocity.y = movement.jumpForce;
 			entity.transformStore.dirty.velocity = true;
-		} else {
-			console.log('[JUMP DEBUG] ❌ JUMP BLOCKED - conditions not met');
 		}
 	}
 
@@ -359,30 +339,27 @@ export class Platformer3DBehavior {
 	}
 
 	/**
-	 * Update all platformer entities
+	 * Update one platformer entity.
+	 */
+	updateEntity(entity: any, delta: number): void {
+		if (!entity.platformer || !entity.$platformer || !entity.platformerState) {
+			return;
+		}
+
+		const platformerEntity = entity as Platformer3DEntity;
+		this.updateState(platformerEntity, delta);
+		this.applyMovement(platformerEntity, delta);
+		this.handleJump(platformerEntity, delta);
+		this.applyGravity(platformerEntity, delta);
+	}
+
+	/**
+	 * Update all platformer entities.
 	 */
 	update(delta: number): void {
 		if (!this.world?.collisionMap) return;
-
 		for (const [, entity] of this.world.collisionMap) {
-			const platformerEntity = entity as any;
-
-			// Check if entity has platformer components
-			if (!platformerEntity.platformer || !platformerEntity.$platformer || !platformerEntity.platformerState) {
-				continue;
-			}
-
-			// Update state first
-			this.updateState(platformerEntity, delta);
-
-			// Apply movement
-			this.applyMovement(platformerEntity, delta);
-
-			// Handle jumping
-			this.handleJump(platformerEntity, delta);
-
-			// Apply gravity
-			this.applyGravity(platformerEntity, delta);
+			this.updateEntity(entity, delta);
 		}
 	}
 

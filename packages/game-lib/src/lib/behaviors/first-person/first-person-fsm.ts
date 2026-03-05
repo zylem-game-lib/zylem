@@ -7,7 +7,7 @@
  * - Running: Moving at run/sprint speed
  */
 
-import { StateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from 'typescript-fsm';
 import type { FirstPersonInputComponent, FirstPersonStateComponent } from './components';
 
 /**
@@ -40,10 +40,10 @@ export interface FirstPersonContext {
  * First Person Controller FSM
  */
 export class FirstPersonFSM {
-	machine: StateMachine<FirstPersonState, FirstPersonEvent, never>;
+	machine: SyncStateMachine<FirstPersonState, FirstPersonEvent, never>;
 
 	constructor(private ctx: FirstPersonContext) {
-		this.machine = new StateMachine<FirstPersonState, FirstPersonEvent, never>(
+		this.machine = new SyncStateMachine<FirstPersonState, FirstPersonEvent, never>(
 			FirstPersonState.Idle,
 			[
 				// Idle transitions
@@ -72,7 +72,7 @@ export class FirstPersonFSM {
 	/** Dispatch an event to the FSM */
 	dispatch(event: FirstPersonEvent): void {
 		if (this.machine.can(event)) {
-			this.machine.dispatch(event);
+			this.machine.syncDispatch(event);
 		}
 	}
 

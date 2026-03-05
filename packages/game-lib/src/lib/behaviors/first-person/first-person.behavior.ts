@@ -84,82 +84,87 @@ export class FirstPersonControllerBehavior {
 	}
 
 	/**
+	 * Update one first-person entity.
+	 */
+	updateEntity(entity: any, _delta: number): void {
+		const fpEntity = entity as any;
+		if (!fpEntity.firstPerson || !fpEntity.$fps || !fpEntity.firstPersonState) {
+			return;
+		}
+
+		const input: FirstPersonInputComponent = fpEntity.$fps;
+		const movement: FirstPersonMovementComponent = fpEntity.firstPerson;
+		const state: FirstPersonStateComponent = fpEntity.firstPersonState;
+		const perspective = this.perspectives.get(fpEntity.uuid);
+
+		// 1. Sync camera position from physics body
+		if (perspective?.initialPosition && fpEntity.body) {
+			const pos = fpEntity.body.translation();
+			perspective.initialPosition.set(
+				pos.x,
+				pos.y + movement.eyeHeight,
+				pos.z,
+			);
+		}
+
+		// 2. Apply look
+		if (perspective) {
+			perspective.look(
+				-input.lookX * movement.lookSensitivity,
+				-input.lookY * movement.lookSensitivity,
+			);
+
+			state.yaw = perspective.yaw;
+			state.pitch = perspective.pitch;
+		}
+
+		// 3. Compute velocity-based movement and write to transformStore
+		const speed = input.sprint ? movement.runSpeed : movement.walkSpeed;
+		state.currentSpeed = speed;
+
+		const hasMovement = Math.abs(input.moveX) > 0.1 || Math.abs(input.moveZ) > 0.1;
+
+		if (fpEntity.transformStore) {
+			if (hasMovement) {
+				_forward.set(0, 0, -1).applyAxisAngle(_up, state.yaw);
+				_right.set(1, 0, 0).applyAxisAngle(_up, state.yaw);
+
+				const vx =
+					_right.x * input.moveX * speed +
+					_forward.x * (-input.moveZ) * speed;
+				const vz =
+					_right.z * input.moveX * speed +
+					_forward.z * (-input.moveZ) * speed;
+				setVelocityIntent(
+					fpEntity.transformStore,
+					'first-person',
+					{ x: vx, z: vz },
+					{ mode: 'replace', priority: 10 },
+				);
+			} else {
+				setVelocityIntent(
+					fpEntity.transformStore,
+					'first-person',
+					{ x: 0, z: 0 },
+					{ mode: 'replace', priority: 10 },
+				);
+			}
+		}
+
+		// 4. Position viewmodel
+		const vm = this.viewmodels.get(fpEntity.uuid);
+		if (vm && perspective?.initialPosition) {
+			this.positionViewmodel(vm, perspective, state);
+		}
+	}
+
+	/**
 	 * Update all first-person entities.
 	 */
 	update(delta: number): void {
 		if (!this.world?.collisionMap) return;
-
 		for (const [, entity] of this.world.collisionMap) {
-			const fpEntity = entity as any;
-
-			if (!fpEntity.firstPerson || !fpEntity.$fps || !fpEntity.firstPersonState) {
-				continue;
-			}
-
-			const input: FirstPersonInputComponent = fpEntity.$fps;
-			const movement: FirstPersonMovementComponent = fpEntity.firstPerson;
-			const state: FirstPersonStateComponent = fpEntity.firstPersonState;
-			const perspective = this.perspectives.get(fpEntity.uuid);
-
-			// 1. Sync camera position from physics body
-			if (perspective?.initialPosition && fpEntity.body) {
-				const pos = fpEntity.body.translation();
-				perspective.initialPosition.set(
-					pos.x,
-					pos.y + movement.eyeHeight,
-					pos.z,
-				);
-			}
-
-			// 2. Apply look
-			if (perspective) {
-				perspective.look(
-					-input.lookX * movement.lookSensitivity,
-					-input.lookY * movement.lookSensitivity,
-				);
-
-				state.yaw = perspective.yaw;
-				state.pitch = perspective.pitch;
-			}
-
-			// 3. Compute velocity-based movement and write to transformStore
-			const speed = input.sprint ? movement.runSpeed : movement.walkSpeed;
-			state.currentSpeed = speed;
-
-			const hasMovement = Math.abs(input.moveX) > 0.1 || Math.abs(input.moveZ) > 0.1;
-
-			if (fpEntity.transformStore) {
-				if (hasMovement) {
-					_forward.set(0, 0, -1).applyAxisAngle(_up, state.yaw);
-					_right.set(1, 0, 0).applyAxisAngle(_up, state.yaw);
-
-					const vx =
-						_right.x * input.moveX * speed +
-						_forward.x * (-input.moveZ) * speed;
-					const vz =
-						_right.z * input.moveX * speed +
-						_forward.z * (-input.moveZ) * speed;
-					setVelocityIntent(
-						fpEntity.transformStore,
-						'first-person',
-						{ x: vx, z: vz },
-						{ mode: 'replace', priority: 10 },
-					);
-				} else {
-					setVelocityIntent(
-						fpEntity.transformStore,
-						'first-person',
-						{ x: 0, z: 0 },
-						{ mode: 'replace', priority: 10 },
-					);
-				}
-			}
-
-			// 4. Position viewmodel
-			const vm = this.viewmodels.get(fpEntity.uuid);
-			if (vm && perspective?.initialPosition) {
-				this.positionViewmodel(vm, perspective, state);
-			}
+			this.updateEntity(entity, delta);
 		}
 	}
 

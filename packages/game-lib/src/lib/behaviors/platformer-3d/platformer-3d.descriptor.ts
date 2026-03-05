@@ -7,7 +7,7 @@
 
 import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
-import type { BehaviorSystem } from '../behavior-system';
+import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { Platformer3DBehavior as Platformer3DMovementBehavior, Platformer3DEntity } from './platformer-3d.behavior';
 import { Platformer3DFSM, Platformer3DState, PlatformerCollisionContext } from './platformer-3d-fsm';
 import {
@@ -43,31 +43,30 @@ const defaultOptions: Platformer3DBehaviorOptions = {
 	groundRayLength: 1.0,
 };
 
+const PLATFORMER_BEHAVIOR_KEY = Symbol.for('zylem:behavior:platformer-3d');
+
 /**
  * Adapter that wraps Platformer3DBehavior as a BehaviorSystem
  */
 class Platformer3DBehaviorSystem implements BehaviorSystem {
 	private movementBehavior: Platformer3DMovementBehavior;
 
-	constructor(private world: any, private scene: any) {
+	constructor(
+		private world: any,
+		private scene: any,
+		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
+	) {
 		this.movementBehavior = new Platformer3DMovementBehavior(world, scene);
 	}
 
-	update(ecs: IWorld, delta: number): void {
-		if (!this.world?.collisionMap) return;
+	update(_ecs: IWorld, delta: number): void {
+		const links = this.getBehaviorLinks?.(PLATFORMER_BEHAVIOR_KEY);
+		if (!links) return;
 
-		// Initialize ECS components on entities with platformer behavior refs
-		for (const [, entity] of this.world.collisionMap) {
-			const gameEntity = entity as any;
-
-			if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
-
-			const refs = gameEntity.getBehaviorRefs();
-			const platformerRef = refs.find((r: any) =>
-				r.descriptor.key === Symbol.for('zylem:behavior:platformer-3d')
-			);
-
-			if (!platformerRef || !gameEntity.body) continue;
+		for (const link of links) {
+			const gameEntity = link.entity as any;
+			const platformerRef = link.ref as any;
+			if (!gameEntity.body) continue;
 
 			const options = platformerRef.options as Platformer3DBehaviorOptions;
 
@@ -96,10 +95,9 @@ class Platformer3DBehaviorSystem implements BehaviorSystem {
 			if (platformerRef.fsm && gameEntity.$platformer && gameEntity.platformerState) {
 				platformerRef.fsm.update(gameEntity.$platformer, gameEntity.platformerState);
 			}
-		}
 
-		// Delegate to the movement behavior
-		this.movementBehavior.update(delta);
+			this.movementBehavior.updateEntity(gameEntity, delta);
+		}
 	}
 
 	destroy(_ecs: IWorld): void {
@@ -152,7 +150,12 @@ export const Platformer3DBehavior = defineBehavior<
 >({
 	name: 'platformer-3d',
 	defaultOptions,
-	systemFactory: (ctx) => new Platformer3DBehaviorSystem(ctx.world, ctx.scene),
+	systemFactory: (ctx) =>
+		new Platformer3DBehaviorSystem(
+			ctx.world,
+			ctx.scene,
+			ctx.getBehaviorLinks,
+		),
 	createHandle: (ref) => ({
 		getState: () => ref.fsm?.getState() ?? Platformer3DState.Idle,
 		isGrounded: () => ref.fsm?.isGrounded() ?? false,

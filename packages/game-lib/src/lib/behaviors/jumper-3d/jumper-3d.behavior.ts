@@ -90,16 +90,15 @@ export class Jumper3DBehavior {
 		const hasAirJumps = state.jumpsUsed > 0 && state.jumpsUsed < config.maxJumps;
 		const canJump = isFirstJump || hasAirJumps;
 
-		const cooldownOk =
-			config.minTimeBetweenJumpsMs == null ||
-			now - state.lastJumpTimeMs >= config.minTimeBetweenJumpsMs;
+			const cooldownOk =
+				config.minTimeBetweenJumpsMs == null ||
+				now - state.lastJumpTimeMs >= config.minTimeBetweenJumpsMs;
 
-		if (wantsJump && canJump && cooldownOk) {
-			const vy = jumpVelocityFromHeight(config.gravity, config.jumpHeight);
-			console.log('[JUMPER3D] JUMP vy =', vy.toFixed(3));
+			if (wantsJump && canJump && cooldownOk) {
+				const vy = jumpVelocityFromHeight(config.gravity, config.jumpHeight);
 
-			ctx.setVerticalVelocity(vy);
-			jumpedThisFrame = true;
+				ctx.setVerticalVelocity(vy);
+				jumpedThisFrame = true;
 
 			if (config.planar?.launchPlanarSpeed != null && !config.planar.preservePlanarSpeed) {
 				const dir = input.moveDirWorld;

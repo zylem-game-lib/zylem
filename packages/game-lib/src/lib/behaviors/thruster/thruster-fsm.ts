@@ -5,7 +5,7 @@
  * FSM does NOT touch physics or ThrusterMovementBehavior - it only writes ThrusterInputComponent.
  */
 
-import { StateMachine, t, type ITransition } from 'typescript-fsm';
+import { SyncStateMachine, t, type ITransition } from 'typescript-fsm';
 import type { ThrusterInputComponent } from './components';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,10 +57,10 @@ export interface PlayerInput {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class ThrusterFSM {
-	machine: StateMachine<ThrusterState, ThrusterEvent, never>;
+	machine: SyncStateMachine<ThrusterState, ThrusterEvent, never>;
 
 	constructor(private ctx: ThrusterFSMContext) {
-		this.machine = new StateMachine<ThrusterState, ThrusterEvent, never>(
+		this.machine = new SyncStateMachine<ThrusterState, ThrusterEvent, never>(
 			ThrusterState.Idle,
 			[
 				// Core transitions
@@ -92,7 +92,7 @@ export class ThrusterFSM {
 	 */
 	dispatch(event: ThrusterEvent): void {
 		if (this.machine.can(event)) {
-			this.machine.dispatch(event);
+			this.machine.syncDispatch(event);
 		}
 	}
 

@@ -9,7 +9,7 @@ import { Vector3, BufferGeometry, LineBasicMaterial, Line } from 'three';
 import { Ray } from '@dimforge/rapier3d-compat';
 import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
-import type { BehaviorSystem } from '../behavior-system';
+import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { setVelocityIntent } from '../../actions/capabilities/velocity-intents';
 import { Jumper3DBehavior } from './jumper-3d.behavior';
 import { Jumper3DFSM, Jumper3DState } from './jumper-3d-fsm';
@@ -65,6 +65,8 @@ const defaultOptions: Jumper3DBehaviorOptions = {
 	jumpBufferMs: 80,
 	groundRayLength: 1.0,
 };
+
+const JUMPER_BEHAVIOR_KEY = Symbol.for('zylem:behavior:jumper-3d');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entity shape expected by the system
@@ -209,29 +211,22 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
 	private groundDetector = new GroundDetector();
 	private initializedEntities = new Set<string>();
 	private timeSinceGroundedMs = new Map<string, number>();
-	private wasGrounded = new Map<string, boolean>();
 	private wasJumpHeld = new Map<string, boolean>();
 
 	constructor(
 		private world: any,
 		private scene: any,
+		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {}
 
 	update(_ecs: IWorld, delta: number): void {
-		if (!this.world?.collisionMap) return;
+		const links = this.getBehaviorLinks?.(JUMPER_BEHAVIOR_KEY);
+		if (!links) return;
 
-		for (const [, entity] of this.world.collisionMap) {
-			const gameEntity = entity as any;
-
-			if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
-
-			const refs = gameEntity.getBehaviorRefs();
-			const jumperRef = refs.find(
-				(r: any) =>
-					r.descriptor.key === Symbol.for('zylem:behavior:jumper-3d'),
-			);
-
-			if (!jumperRef || !gameEntity.body) continue;
+		for (const link of links) {
+			const gameEntity = link.entity as any;
+			const jumperRef = link.ref as any;
+			if (!gameEntity.body) continue;
 
 			const options = jumperRef.options as Jumper3DBehaviorOptions;
 
@@ -269,15 +264,6 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
 			);
 
 			const isGrounded = nearGround && bodyVel.y > -2.0 && bodyVel.y < 2.0;
-
-			// Event-based transition logging
-			const prevGrounded = this.wasGrounded.get(gameEntity.uuid) ?? false;
-			if (isGrounded && !prevGrounded) {
-				console.log('[JUMPER3D] GROUNDED');
-			} else if (!isGrounded && prevGrounded) {
-				console.log('[JUMPER3D] AIRBORNE, bodyVel.y:', bodyVel.y.toFixed(3));
-			}
-			this.wasGrounded.set(gameEntity.uuid, isGrounded);
 
 			let tsg = this.timeSinceGroundedMs.get(gameEntity.uuid) ?? 0;
 			if (isGrounded) {
@@ -355,7 +341,6 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
 		this.groundDetector.destroy();
 		this.initializedEntities.clear();
 		this.timeSinceGroundedMs.clear();
-		this.wasGrounded.clear();
 		this.wasJumpHeld.clear();
 	}
 }
@@ -408,7 +393,12 @@ export const Jumper3D = defineBehavior<
 >({
 	name: 'jumper-3d',
 	defaultOptions,
-	systemFactory: (ctx) => new Jumper3DBehaviorSystem(ctx.world, ctx.scene),
+	systemFactory: (ctx) =>
+		new Jumper3DBehaviorSystem(
+			ctx.world,
+			ctx.scene,
+			ctx.getBehaviorLinks,
+		),
 	createHandle: (ref) => ({
 		getState: () =>
 			(ref.fsm as Jumper3DFSM | undefined)?.getState() ??

@@ -69,7 +69,7 @@ function composeVelocity(current: { x: number; y: number; z: number }, intents: 
 }
 
 function clearVelocityChannels(store: TransformState): void {
-	for (const sourceId of Object.keys(store.velocityChannels)) {
+	for (const sourceId in store.velocityChannels) {
 		delete store.velocityChannels[sourceId];
 	}
 	store.dirty.velocityChannels = false;
@@ -103,22 +103,34 @@ export function applyTransformChanges(
 ): void {
 	if (!entity.body) return;
 
+	const hasPosition = store.dirty.position;
+	const hasRotation = store.dirty.rotation;
+	const hasAngularVelocity = store.dirty.angularVelocity;
 	const hasPerAxis = store.dirty.velocityX || store.dirty.velocityY || store.dirty.velocityZ;
+	const hasLegacyVelocity = store.dirty.velocity;
 	const hasChannels = store.dirty.velocityChannels;
 
-	const intents: ResolvedIntent[] = Object.entries(store.velocityChannels).map(
-		([sourceId, intent]) => ({
-			sourceId,
-			mode: intent.mode ?? 'replace',
-			priority: intent.priority ?? 0,
-			x: intent.x,
-			y: intent.y,
-			z: intent.z,
-		}),
-	);
+	if (!hasPosition && !hasRotation && !hasAngularVelocity && !hasPerAxis && !hasLegacyVelocity && !hasChannels) {
+		return;
+	}
+
+	const intents: ResolvedIntent[] = [];
+	if (hasChannels) {
+		for (const sourceId in store.velocityChannels) {
+			const intent = store.velocityChannels[sourceId];
+			intents.push({
+				sourceId,
+				mode: intent.mode ?? 'replace',
+				priority: intent.priority ?? 0,
+				x: intent.x,
+				y: intent.y,
+				z: intent.z,
+			});
+		}
+	}
 
 	// Legacy fallback mapped into the same composition pipeline.
-	if (store.dirty.velocity) {
+	if (hasLegacyVelocity) {
 		intents.push({
 			sourceId: '__legacy_velocity__',
 			mode: 'replace',
@@ -138,9 +150,11 @@ export function applyTransformChanges(
 		});
 	}
 
-	if (hasChannels || store.dirty.velocity || hasPerAxis) {
+	if (intents.length > 0) {
 		const current = entity.body.linvel();
-		intents.sort(sortIntents);
+		if (intents.length > 1) {
+			intents.sort(sortIntents);
+		}
 		const composed = composeVelocity(current, intents);
 
 		entity.body.setLinvel(
@@ -153,15 +167,15 @@ export function applyTransformChanges(
 		);
 	}
 
-	if (store.dirty.rotation) {
+	if (hasRotation) {
 		entity.body.setRotation(store.rotation, true);
 	}
 
-	if (store.dirty.angularVelocity) {
+	if (hasAngularVelocity) {
 		entity.body.setAngvel(store.angularVelocity, true);
 	}
 
-	if (store.dirty.position) {
+	if (hasPosition) {
 		const current = entity.body.translation();
 		entity.body.setTranslation(
 			{
