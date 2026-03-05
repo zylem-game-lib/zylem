@@ -9,7 +9,7 @@
 
 import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
-import type { BehaviorSystem } from '../behavior-system';
+import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { Ricochet2DFSM, type Ricochet2DResult, type Ricochet2DCollisionContext, type RicochetCallback } from './ricochet-2d-fsm';
 export type { Ricochet2DResult };
 
@@ -92,6 +92,8 @@ const defaultOptions: Ricochet2DOptions = {
 	maxAngleDeg: 60,
 };
 
+const RICOCHET_BEHAVIOR_KEY = Symbol.for('zylem:behavior:ricochet-2d');
+
 /**
  * Creates behavior-specific handle methods for Ricochet2DBehavior.
  */
@@ -164,25 +166,20 @@ function createRicochet2DHandle(
 class Ricochet2DSystem implements BehaviorSystem {
 	private elapsedMs: number = 0;
 
-	constructor(private world: any) {}
+	constructor(
+		private world: any,
+		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
+	) {}
 
 	update(_ecs: IWorld, delta: number): void {
 		// Accumulate elapsed time (delta is in seconds)
 		this.elapsedMs += delta * 1000;
 
-		if (!this.world?.collisionMap) return;
+		const links = this.getBehaviorLinks?.(RICOCHET_BEHAVIOR_KEY);
+		if (!links) return;
 
-		for (const [, entity] of this.world.collisionMap) {
-			const gameEntity = entity as any;
-
-			if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
-
-			const refs = gameEntity.getBehaviorRefs();
-			const ricochetRef = refs.find(
-				(r: any) => r.descriptor.key === Symbol.for('zylem:behavior:ricochet-2d')
-			);
-
-			if (!ricochetRef) continue;
+		for (const link of links) {
+			const ricochetRef = link.ref as any;
 
 			// Create FSM lazily on first update after spawn
 			if (!ricochetRef.fsm) {
@@ -204,17 +201,10 @@ class Ricochet2DSystem implements BehaviorSystem {
 	}
 
 	destroy(_ecs: IWorld): void {
-		if (!this.world?.collisionMap) return;
-
-		for (const [, entity] of this.world.collisionMap) {
-			const gameEntity = entity as any;
-			if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
-
-			const refs = gameEntity.getBehaviorRefs();
-			const ricochetRef = refs.find(
-				(r: any) => r.descriptor.key === Symbol.for('zylem:behavior:ricochet-2d')
-			);
-
+		const links = this.getBehaviorLinks?.(RICOCHET_BEHAVIOR_KEY);
+		if (!links) return;
+		for (const link of links) {
+			const ricochetRef = link.ref as any;
 			if (ricochetRef?.fsm) {
 				ricochetRef.fsm.resetCooldown();
 			}
@@ -252,6 +242,7 @@ class Ricochet2DSystem implements BehaviorSystem {
 export const Ricochet2DBehavior = defineBehavior({
 	name: 'ricochet-2d',
 	defaultOptions,
-	systemFactory: (ctx) => new Ricochet2DSystem(ctx.world),
+	systemFactory: (ctx) =>
+		new Ricochet2DSystem(ctx.world, ctx.getBehaviorLinks),
 	createHandle: createRicochet2DHandle,
 });

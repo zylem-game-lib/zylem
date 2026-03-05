@@ -13,7 +13,11 @@ import { BaseEntityInterface } from '../types/entity-types';
 import { StageLoadingDelegate } from './stage-loading-delegate';
 import { StageEntityModelDelegate } from './stage-entity-model-delegate';
 import { isBaseNode, isThenable } from '../core/utility/options-parser';
-import type { BehaviorSystem, BehaviorSystemFactory } from '../behaviors/behavior-system';
+import type {
+	BehaviorEntityLink,
+	BehaviorSystem,
+	BehaviorSystemFactory,
+} from '../behaviors/behavior-system';
 import { Vessel } from '../core/vessel';
 
 type NodeLike = { create: Function };
@@ -38,6 +42,8 @@ export interface EntityDelegateContext {
  * and to external consumers (debug delegate, transform system) via public getters.
  */
 export class StageEntityDelegate {
+	private static readonly EMPTY_BEHAVIOR_LINKS: readonly BehaviorEntityLink[] = [];
+
 	/** Entities queued before load completes. */
 	children: BaseNode[] = [];
 
@@ -59,6 +65,8 @@ export class StageEntityDelegate {
 	/** ECS behavior systems auto-registered from entity refs or manually added. */
 	readonly behaviorSystems: BehaviorSystem[] = [];
 	readonly registeredSystemKeys: Set<symbol> = new Set();
+	readonly behaviorEntityIndex: Map<symbol, Set<BehaviorEntityLink>> = new Map();
+	private readonly behaviorLinksByUuid: Map<string, BehaviorEntityLink[]> = new Map();
 
 	// Runtime context — set via attach() during stage load
 	private scene: ZylemScene | null = null;
@@ -134,21 +142,8 @@ export class StageEntityDelegate {
 		entity.eid = eid;
 		this.scene.addEntity(entity);
 
-		// Auto-register behavior systems from entity refs
-		if (typeof entity.getBehaviorRefs === 'function') {
-			for (const ref of entity.getBehaviorRefs()) {
-				const key = ref.descriptor.key;
-				if (!this.registeredSystemKeys.has(key)) {
-					const system = ref.descriptor.systemFactory({
-						world: this.world,
-						ecs: this.ecs,
-						scene: this.scene,
-					});
-					this.behaviorSystems.push(system);
-					this.registeredSystemKeys.add(key);
-				}
-			}
-		}
+		// Register behavior links and auto-register behavior systems once per key.
+		this.registerBehaviorLinks(entity);
 
 		if (entity.colliderDesc) {
 			this.world.addEntity(entity);
@@ -243,6 +238,7 @@ export class StageEntityDelegate {
 		const mapEntity = this.world.collisionMap.get(uuid) as any | undefined;
 		const entity: any = mapEntity ?? this.debugMap.get(uuid);
 		if (!entity) return false;
+		this.unregisterBehaviorLinks(entity);
 
 		this.entityModelDelegate.unobserve(uuid);
 
@@ -444,7 +440,14 @@ export class StageEntityDelegate {
 		if (!this.world || !this.ecs || !this.scene) return;
 		let system: BehaviorSystem;
 		if (typeof systemOrFactory === 'function') {
-			system = systemOrFactory({ world: this.world, ecs: this.ecs, scene: this.scene });
+			system = systemOrFactory({
+				world: this.world,
+				ecs: this.ecs,
+				scene: this.scene,
+				getBehaviorLinks: (key: symbol) =>
+					this.behaviorEntityIndex.get(key)
+					?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
+			});
 		} else {
 			system = systemOrFactory;
 		}
@@ -463,6 +466,8 @@ export class StageEntityDelegate {
 		}
 		this.behaviorSystems.length = 0;
 		this.registeredSystemKeys.clear();
+		this.behaviorEntityIndex.clear();
+		this.behaviorLinksByUuid.clear();
 
 		this.childrenMap.forEach((child) => {
 			try {
@@ -481,5 +486,62 @@ export class StageEntityDelegate {
 		this.ecs = null;
 		this.instanceManager = null;
 		this.camera = null;
+	}
+
+	private registerBehaviorLinks(entity: any): void {
+		if (!this.world || !this.ecs || !this.scene) return;
+		if (typeof entity?.getBehaviorRefs !== 'function') return;
+
+		const refs = entity.getBehaviorRefs();
+		if (!Array.isArray(refs) || refs.length === 0) return;
+
+		const links: BehaviorEntityLink[] = [];
+
+		for (const ref of refs) {
+			const key = ref.descriptor.key;
+			const link: BehaviorEntityLink = { entity, ref };
+			links.push(link);
+
+			let indexed = this.behaviorEntityIndex.get(key);
+			if (!indexed) {
+				indexed = new Set();
+				this.behaviorEntityIndex.set(key, indexed);
+			}
+			indexed.add(link);
+
+			if (!this.registeredSystemKeys.has(key)) {
+				const system = ref.descriptor.systemFactory({
+					world: this.world,
+					ecs: this.ecs,
+					scene: this.scene,
+					getBehaviorLinks: (behaviorKey: symbol) =>
+						this.behaviorEntityIndex.get(behaviorKey)
+						?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
+				});
+				this.behaviorSystems.push(system);
+				this.registeredSystemKeys.add(key);
+			}
+		}
+
+		this.behaviorLinksByUuid.set(entity.uuid, links);
+	}
+
+	private unregisterBehaviorLinks(entity: any): void {
+		const links = this.behaviorLinksByUuid.get(entity?.uuid);
+		if (!links) return;
+
+		for (const link of links) {
+			const key = link.ref?.descriptor?.key as symbol | undefined;
+			if (!key) continue;
+			const indexed = this.behaviorEntityIndex.get(key);
+			if (!indexed) continue;
+
+			indexed.delete(link);
+			if (indexed.size === 0) {
+				this.behaviorEntityIndex.delete(key);
+			}
+		}
+
+		this.behaviorLinksByUuid.delete(entity.uuid);
 	}
 }

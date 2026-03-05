@@ -5,7 +5,7 @@
  * Reports position relative to bounds edges.
  */
 
-import { StateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from 'typescript-fsm';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FSM State Model
@@ -38,10 +38,10 @@ export enum ScreenWrapEvent {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class ScreenWrapFSM {
-	machine: StateMachine<ScreenWrapState, ScreenWrapEvent, never>;
+	machine: SyncStateMachine<ScreenWrapState, ScreenWrapEvent, never>;
 
 	constructor() {
-		this.machine = new StateMachine<ScreenWrapState, ScreenWrapEvent, never>(
+		this.machine = new SyncStateMachine<ScreenWrapState, ScreenWrapEvent, never>(
 			ScreenWrapState.Center,
 			[
 				// From Center
@@ -85,10 +85,9 @@ export class ScreenWrapFSM {
 		return this.machine.getState();
 	}
 
-	// TODO: FSM dispatch event is really slow
 	dispatch(event: ScreenWrapEvent): void {
 		if (this.machine.can(event)) {
-			this.machine.dispatch(event);
+			this.machine.syncDispatch(event);
 		}
 	}
 

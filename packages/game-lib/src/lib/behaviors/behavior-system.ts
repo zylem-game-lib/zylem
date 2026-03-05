@@ -27,9 +27,32 @@ export interface BehaviorSystem {
 }
 
 /**
+ * Runtime link between a spawned entity and one of its behavior refs.
+ * Systems can iterate these links to avoid scanning all world entities.
+ */
+export interface BehaviorEntityLink {
+	entity: any;
+	ref: any;
+}
+
+/**
+ * Context provided to behavior-system factories.
+ */
+export interface BehaviorSystemContext {
+	world: any;
+	ecs: IWorld;
+	scene: any;
+	/**
+	 * Returns live behavior links for a descriptor key.
+	 * O(1) lookup into a pre-built stage index.
+	 */
+	getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>;
+}
+
+/**
  * Factory function that creates a BehaviorSystem.
  * Receives the stage for access to world, scene, etc.
  */
 export type BehaviorSystemFactory<T extends BehaviorSystem = BehaviorSystem> = (
-	stage: { world: any; ecs: IWorld; scene: any }
+	stage: BehaviorSystemContext
 ) => T;

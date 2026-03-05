@@ -63,6 +63,13 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	private loadingDelegate: GameLoadingDelegate = new GameLoadingDelegate();
 	private rendererObserver: GameRendererObserver = new GameRendererObserver();
 	private eventBusUnsubscribes: (() => void)[] = [];
+	private readonly gameUpdateParams = {} as UpdateContext<
+		ZylemGame<TGlobals>,
+		TGlobals
+	>;
+	private readonly stageSetupParams = {} as SetupContext<ZylemStage, TGlobals>;
+	private readonly stageUpdateParams = {} as UpdateContext<ZylemStage, TGlobals>;
+	private readonly frameCallback = (timestamp: number) => this.loop(timestamp);
 
 	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
@@ -233,21 +240,30 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		const stage = this.currentStage();
 		const delta = this.timer.getDelta();
 		const inputs = this.inputManager.getInputs(delta);
-		// TODO: Reference here should be cached
 		const camera = stage?.wrappedStage?.cameraRef || this.defaultCamera;
-		return {
-			delta,
-			inputs,
-			globals: getGlobals<TGlobals>(),
-			me: this,
-			camera: camera!,
-		};
+
+		const params = this.gameUpdateParams;
+		params.delta = delta;
+		params.inputs = inputs;
+		params.globals = getGlobals<TGlobals>();
+		params.me = this;
+		params.camera = camera!;
+		params.stage = stage as any;
+		params.game = this.wrapperRef;
+		return params;
 	}
 
 	start() {
 		const stage = this.currentStage();
 		const params = this.params();
-		stage!.start({ ...params, me: stage!.wrappedStage as ZylemStage });
+		const setupParams = this.stageSetupParams;
+		setupParams.inputs = params.inputs;
+		setupParams.globals = params.globals;
+		setupParams.camera = params.camera;
+		setupParams.stage = params.stage;
+		setupParams.game = params.game;
+		setupParams.me = stage!.wrappedStage as ZylemStage;
+		stage!.start(setupParams);
 		if (this.customSetup) {
 			this.customSetup(params);
 		}
@@ -266,13 +282,21 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		const params = this.params();
 		const delta = deltaTime !== undefined ? deltaTime : params.delta;
 		const clampedDelta = Math.min(Math.max(delta, 0), ZylemGame.MAX_DELTA_SECONDS);
-		const clampedParams = { ...params, delta: clampedDelta };
+		params.delta = clampedDelta;
 
 		if (this.customUpdate) {
-			this.customUpdate(clampedParams);
+			this.customUpdate(params);
 		}
 
-		stage.wrappedStage?.nodeUpdate({ ...clampedParams, me: stage.wrappedStage as ZylemStage });
+		const stageParams = this.stageUpdateParams;
+		stageParams.delta = params.delta;
+		stageParams.inputs = params.inputs;
+		stageParams.globals = params.globals;
+		stageParams.camera = params.camera;
+		stageParams.stage = params.stage;
+		stageParams.game = params.game;
+		stageParams.me = stage.wrappedStage as ZylemStage;
+		stage.wrappedStage?.nodeUpdate(stageParams);
 
 		this.totalTime += clampedDelta;
 		state.time = this.totalTime;
@@ -288,7 +312,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.debugDelegate?.end();
 		this.outOfLoop();
 		if (!this.isDisposed) {
-			this.animationFrameId = requestAnimationFrame(this.loop.bind(this));
+			this.animationFrameId = requestAnimationFrame(this.frameCallback);
 		}
 	}
 
@@ -461,4 +485,3 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		);
 	}
 }
-

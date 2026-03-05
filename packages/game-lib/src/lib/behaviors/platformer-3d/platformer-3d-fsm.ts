@@ -10,7 +10,7 @@
  * - Landing: Just touched ground
  */
 
-import { StateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from 'typescript-fsm';
 import type { Platformer3DInputComponent, Platformer3DStateComponent } from './components';
 
 /**
@@ -58,10 +58,10 @@ export interface Platformer3DContext {
  * Platformer 3D FSM
  */
 export class Platformer3DFSM {
-	machine: StateMachine<Platformer3DState, Platformer3DEvent, never>;
+	machine: SyncStateMachine<Platformer3DState, Platformer3DEvent, never>;
 
 	constructor(private ctx: Platformer3DContext) {
-		this.machine = new StateMachine<Platformer3DState, Platformer3DEvent, never>(
+		this.machine = new SyncStateMachine<Platformer3DState, Platformer3DEvent, never>(
 			Platformer3DState.Idle,
 			[
 				// Idle transitions
@@ -113,7 +113,7 @@ export class Platformer3DFSM {
 	 */
 	dispatch(event: Platformer3DEvent): void {
 		if (this.machine.can(event)) {
-			this.machine.dispatch(event);
+			this.machine.syncDispatch(event);
 		}
 	}
 

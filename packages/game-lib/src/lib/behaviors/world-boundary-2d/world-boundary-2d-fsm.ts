@@ -9,7 +9,7 @@
  * - The FSM state is still useful for coarse status like "inside" vs "touching".
  */
 
-import { StateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from 'typescript-fsm';
 
 export type WorldBoundary2DHit = 'top' | 'bottom' | 'left' | 'right';
 export type WorldBoundary2DHits = Record<WorldBoundary2DHit, boolean>;
@@ -73,14 +73,14 @@ export function hasAnyWorldBoundary2DHit(hits: WorldBoundary2DHits): boolean {
  * Systems should call `update(...)` once per frame.
  */
 export class WorldBoundary2DFSM {
-	public readonly machine: StateMachine<WorldBoundary2DState, WorldBoundary2DEvent, never>;
+	public readonly machine: SyncStateMachine<WorldBoundary2DState, WorldBoundary2DEvent, never>;
 
 	private lastHits: WorldBoundary2DHits = { top: false, bottom: false, left: false, right: false };
 	private lastPosition: WorldBoundary2DPosition | null = null;
 	private lastUpdatedAtMs: number | null = null;
 
 	constructor() {
-		this.machine = new StateMachine<WorldBoundary2DState, WorldBoundary2DEvent, never>(
+		this.machine = new SyncStateMachine<WorldBoundary2DState, WorldBoundary2DEvent, never>(
 			WorldBoundary2DState.Inside,
 			[
 				t(WorldBoundary2DState.Inside, WorldBoundary2DEvent.TouchBoundary, WorldBoundary2DState.Touching),
@@ -169,7 +169,7 @@ export class WorldBoundary2DFSM {
 
 	private dispatch(event: WorldBoundary2DEvent): void {
 		if (this.machine.can(event)) {
-			this.machine.dispatch(event);
+			this.machine.syncDispatch(event);
 		}
 	}
 }

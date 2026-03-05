@@ -8,7 +8,7 @@
 import { Vector3, Euler } from 'three';
 import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
-import type { BehaviorSystem } from '../behavior-system';
+import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import type { FirstPersonPerspective } from '../../camera/perspectives/first-person-perspective';
 import {
 	FirstPersonControllerBehavior,
@@ -47,30 +47,30 @@ const defaultOptions: FirstPersonControllerOptions = {
 	eyeHeight: 1.7,
 };
 
+const FIRST_PERSON_BEHAVIOR_KEY = Symbol.for(
+	'zylem:behavior:first-person-controller',
+);
+
 /**
  * Adapter that wraps FirstPersonControllerBehavior as a BehaviorSystem.
  */
 class FirstPersonControllerSystem implements BehaviorSystem {
 	private behavior: FirstPersonControllerBehavior;
 
-	constructor(private world: any) {
+	constructor(
+		private world: any,
+		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
+	) {
 		this.behavior = new FirstPersonControllerBehavior(world);
 	}
 
-	update(ecs: IWorld, delta: number): void {
-		if (!this.world?.collisionMap) return;
+	update(_ecs: IWorld, delta: number): void {
+		const links = this.getBehaviorLinks?.(FIRST_PERSON_BEHAVIOR_KEY);
+		if (!links) return;
 
-		for (const [, entity] of this.world.collisionMap) {
-			const gameEntity = entity as any;
-
-			if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
-
-			const refs = gameEntity.getBehaviorRefs();
-			const fpsRef = refs.find((r: any) =>
-				r.descriptor.key === Symbol.for('zylem:behavior:first-person-controller'),
-			);
-
-			if (!fpsRef) continue;
+		for (const link of links) {
+			const gameEntity = link.entity as any;
+			const fpsRef = link.ref as any;
 
 			const options = fpsRef.options as FirstPersonControllerOptions;
 
@@ -109,10 +109,9 @@ class FirstPersonControllerSystem implements BehaviorSystem {
 			if (fpsRef.fsm && gameEntity.$fps && gameEntity.firstPersonState) {
 				fpsRef.fsm.update(gameEntity.$fps, gameEntity.firstPersonState);
 			}
-		}
 
-		// Delegate movement + look to the behavior
-		this.behavior.update(delta);
+			this.behavior.updateEntity(gameEntity, delta);
+		}
 	}
 
 	destroy(_ecs: IWorld): void {
@@ -166,7 +165,8 @@ export const FirstPersonController = defineBehavior<
 >({
 	name: 'first-person-controller',
 	defaultOptions,
-	systemFactory: (ctx) => new FirstPersonControllerSystem(ctx.world),
+	systemFactory: (ctx) =>
+		new FirstPersonControllerSystem(ctx.world, ctx.getBehaviorLinks),
 	createHandle: (ref) => ({
 		getState: () => ref.fsm?.getState() ?? FirstPersonState.Idle,
 		getYaw: () => ref.fsm?.getYaw() ?? 0,

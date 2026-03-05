@@ -5,7 +5,7 @@
  * The FSM state tracks whether a ricochet is currently occurring.
  */
 import { BaseEntityInterface } from "../../types/entity-types";
-import { StateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from 'typescript-fsm';
 
 export interface Ricochet2DResult {
 	/** The reflected velocity vector */
@@ -72,7 +72,7 @@ export type RicochetCallback = (result: Ricochet2DResult) => void;
  * Systems or consumers call `computeRicochet(...)` when a collision occurs.
  */
 export class Ricochet2DFSM {
-	public readonly machine: StateMachine<Ricochet2DState, Ricochet2DEvent, never>;
+	public readonly machine: SyncStateMachine<Ricochet2DState, Ricochet2DEvent, never>;
 
 	private lastResult: Ricochet2DResult | null = null;
 	private lastUpdatedAtMs: number | null = null;
@@ -80,7 +80,7 @@ export class Ricochet2DFSM {
 	private listeners: Set<RicochetCallback> = new Set();
 
 	constructor() {
-		this.machine = new StateMachine<Ricochet2DState, Ricochet2DEvent, never>(
+		this.machine = new SyncStateMachine<Ricochet2DState, Ricochet2DEvent, never>(
 			Ricochet2DState.Idle,
 			[
 				t(Ricochet2DState.Idle, Ricochet2DEvent.StartRicochet, Ricochet2DState.Ricocheting),
@@ -430,7 +430,7 @@ export class Ricochet2DFSM {
 
 	private dispatch(event: Ricochet2DEvent): void {
 		if (this.machine.can(event)) {
-			this.machine.dispatch(event);
+			this.machine.syncDispatch(event);
 		}
 	}
 }

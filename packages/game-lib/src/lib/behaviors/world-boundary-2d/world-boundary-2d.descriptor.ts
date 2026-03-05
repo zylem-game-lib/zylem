@@ -9,7 +9,7 @@
 
 import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
-import type { BehaviorSystem } from '../behavior-system';
+import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import {
 	WorldBoundary2DFSM,
 	type WorldBoundary2DBounds,
@@ -48,6 +48,10 @@ const defaultOptions: WorldBoundary2DOptions = {
 	boundaries: { top: 0, bottom: 0, left: 0, right: 0 },
 };
 
+const WORLD_BOUNDARY_BEHAVIOR_KEY = Symbol.for(
+	'zylem:behavior:world-boundary-2d',
+);
+
 /**
  * Creates behavior-specific handle methods for WorldBoundary2DBehavior.
  */
@@ -74,22 +78,19 @@ function createWorldBoundary2DHandle(
  * - computes and tracks boundary hits using the FSM
  */
 class WorldBoundary2DSystem implements BehaviorSystem {
-	constructor(private world: any) {}
+	constructor(
+		private world: any,
+		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
+	) {}
 
 	update(_ecs: IWorld, _delta: number): void {
-		if (!this.world?.collisionMap) return;
+		const links = this.getBehaviorLinks?.(WORLD_BOUNDARY_BEHAVIOR_KEY);
+		if (!links) return;
 
-		for (const [, entity] of this.world.collisionMap) {
-			const gameEntity = entity as any;
-
-			if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
-
-			const refs = gameEntity.getBehaviorRefs();
-			const boundaryRef = refs.find(
-				(r: any) => r.descriptor.key === Symbol.for('zylem:behavior:world-boundary-2d')
-			);
-
-			if (!boundaryRef || !gameEntity.body) continue;
+		for (const link of links) {
+			const gameEntity = link.entity as any;
+			const boundaryRef = link.ref as any;
+			if (!gameEntity.body) continue;
 
 			const options = boundaryRef.options as WorldBoundary2DOptions;
 
@@ -137,6 +138,7 @@ class WorldBoundary2DSystem implements BehaviorSystem {
 export const WorldBoundary2DBehavior = defineBehavior({
 	name: 'world-boundary-2d',
 	defaultOptions,
-	systemFactory: (ctx) => new WorldBoundary2DSystem(ctx.world),
+	systemFactory: (ctx) =>
+		new WorldBoundary2DSystem(ctx.world, ctx.getBehaviorLinks),
 	createHandle: createWorldBoundary2DHandle,
 });

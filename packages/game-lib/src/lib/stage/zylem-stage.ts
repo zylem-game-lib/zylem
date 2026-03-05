@@ -91,6 +91,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	private cameraDelegate: StageCameraDelegate;
 	private loadingDelegate: StageLoadingDelegate;
 	private entityModelDelegate: StageEntityModelDelegate;
+	private readonly childUpdateParams = {} as UpdateContext<any>;
 
 	/** Entity management delegate — public for external consumers (debug, transform system). */
 	readonly entityDelegate: StageEntityDelegate;
@@ -253,11 +254,16 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			system.update(this.ecs, delta);
 		}
 
-		this.entityDelegate.childrenMap.forEach((child) => {
-			child.nodeUpdate({
-				...params,
-				me: child,
-			});
+		for (const child of this.entityDelegate.childrenMap.values()) {
+			const childParams = this.childUpdateParams;
+			childParams.delta = params.delta;
+			childParams.inputs = params.inputs;
+			childParams.globals = params.globals;
+			childParams.camera = params.camera;
+			childParams.stage = params.stage;
+			childParams.game = params.game;
+			childParams.me = child;
+			child.nodeUpdate(childParams);
 
 			// Apply pending transformations after update callbacks
 			const transformable = child as unknown as TransformableEntity;
@@ -268,7 +274,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			if (child.markedForRemoval) {
 				this.entityDelegate.removeEntityByUuid(child.uuid);
 			}
-		});
+		}
 
 		// Sync physics to rendering AFTER transforms are applied
 		this.transformSystem?.system(this.ecs);

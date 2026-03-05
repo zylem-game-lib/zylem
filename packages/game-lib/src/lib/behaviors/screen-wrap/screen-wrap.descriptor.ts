@@ -7,7 +7,7 @@
 
 import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
-import type { BehaviorSystem } from '../behavior-system';
+import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { ScreenWrapFSM } from './screen-wrap-fsm';
 
 /**
@@ -34,26 +34,25 @@ const defaultOptions: ScreenWrapOptions = {
 	edgeThreshold: 2,
 };
 
+const SCREEN_WRAP_BEHAVIOR_KEY = Symbol.for('zylem:behavior:screen-wrap');
+
 /**
  * ScreenWrapSystem - Wraps entities around 2D bounds
  */
 class ScreenWrapSystem implements BehaviorSystem {
-	constructor(private world: any) {}
+	constructor(
+		private world: any,
+		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
+	) {}
 
-	update(ecs: IWorld, delta: number): void {
-		if (!this.world?.collisionMap) return;
+	update(_ecs: IWorld, delta: number): void {
+		const links = this.getBehaviorLinks?.(SCREEN_WRAP_BEHAVIOR_KEY);
+		if (!links) return;
 
-		for (const [, entity] of this.world.collisionMap) {
-			const gameEntity = entity as any;
-			
-			if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
-			
-			const refs = gameEntity.getBehaviorRefs();
-			const wrapRef = refs.find((r: any) => 
-				r.descriptor.key === Symbol.for('zylem:behavior:screen-wrap')
-			);
-			
-			if (!wrapRef || !gameEntity.body) continue;
+		for (const link of links) {
+			const gameEntity = link.entity as any;
+			const wrapRef = link.ref as any;
+			if (!gameEntity.body) continue;
 
 			const options = wrapRef.options as ScreenWrapOptions;
 
@@ -150,6 +149,6 @@ class ScreenWrapSystem implements BehaviorSystem {
 export const ScreenWrapBehavior = defineBehavior({
 	name: 'screen-wrap',
 	defaultOptions,
-	systemFactory: (ctx) => new ScreenWrapSystem(ctx.world),
+	systemFactory: (ctx) =>
+		new ScreenWrapSystem(ctx.world, ctx.getBehaviorLinks),
 });
-

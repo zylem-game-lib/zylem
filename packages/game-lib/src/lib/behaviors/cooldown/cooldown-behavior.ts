@@ -8,7 +8,7 @@
 
 import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
-import type { BehaviorSystem } from '../behavior-system';
+import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import {
 	registerCooldown,
 	getCooldown,
@@ -36,6 +36,8 @@ export interface CooldownOptions {
 	cooldowns: Record<string, CooldownConfig>;
 }
 
+const COOLDOWN_BEHAVIOR_KEY = Symbol.for('zylem:behavior:cooldown');
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Handle
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,24 +63,22 @@ export interface CooldownHandle {
 class CooldownSystem implements BehaviorSystem {
 	private initialized = false;
 
-	constructor(private world: any) { }
+	constructor(
+		private world: any,
+		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
+	) { }
 
 	update(_ecs: IWorld, delta: number): void {
 		// Register cooldowns from entities on first update
-		if (!this.initialized && this.world?.collisionMap) {
-			for (const [, entity] of this.world.collisionMap) {
-				const gameEntity = entity as any;
-				if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
-
-				const refs = gameEntity.getBehaviorRefs();
-				const cdRef = refs.find(
-					(r: any) => r.descriptor.key === Symbol.for('zylem:behavior:cooldown'),
-				);
-				if (!cdRef) continue;
-
-				const options = cdRef.options as CooldownOptions;
-				for (const [name, config] of Object.entries(options.cooldowns)) {
-					registerCooldown(name, config.duration, config.immediate ?? true);
+		if (!this.initialized) {
+			const links = this.getBehaviorLinks?.(COOLDOWN_BEHAVIOR_KEY);
+			if (links) {
+				for (const link of links) {
+					const cdRef = link.ref as any;
+					const options = cdRef.options as CooldownOptions;
+					for (const [name, config] of Object.entries(options.cooldowns)) {
+						registerCooldown(name, config.duration, config.immediate ?? true);
+					}
 				}
 			}
 			this.initialized = true;
@@ -144,6 +144,7 @@ function createCooldownHandle(ref: BehaviorRef<CooldownOptions>): CooldownHandle
 export const CooldownBehavior = defineBehavior<CooldownOptions, CooldownHandle>({
 	name: 'cooldown',
 	defaultOptions: { cooldowns: {} },
-	systemFactory: (ctx) => new CooldownSystem(ctx.world),
+	systemFactory: (ctx) =>
+		new CooldownSystem(ctx.world, ctx.getBehaviorLinks),
 	createHandle: createCooldownHandle,
 });

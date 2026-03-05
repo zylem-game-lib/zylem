@@ -7,7 +7,7 @@
 
 import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
-import type { BehaviorSystem } from '../behavior-system';
+import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { ThrusterMovementBehavior, ThrusterEntity } from './thruster-movement.behavior';
 import { ThrusterFSM } from './thruster-fsm';
 import type { ThrusterMovementComponent, ThrusterInputComponent } from './components';
@@ -27,6 +27,8 @@ const defaultOptions: ThrusterBehaviorOptions = {
 	angularThrust: 5,
 };
 
+const THRUSTER_BEHAVIOR_KEY = Symbol.for('zylem:behavior:thruster');
+
 /**
  * Adapter that wraps ThrusterMovementBehavior as a BehaviorSystem.
  * 
@@ -41,25 +43,21 @@ const defaultOptions: ThrusterBehaviorOptions = {
 class ThrusterBehaviorSystem implements BehaviorSystem {
 	private movementBehavior: ThrusterMovementBehavior;
 
-	constructor(private world: any) {
+	constructor(
+		private world: any,
+		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
+	) {
 		this.movementBehavior = new ThrusterMovementBehavior(world);
 	}
 
-	update(ecs: IWorld, delta: number): void {
-		if (!this.world?.collisionMap) return;
+	update(_ecs: IWorld, delta: number): void {
+		const links = this.getBehaviorLinks?.(THRUSTER_BEHAVIOR_KEY);
+		if (!links) return;
 
-		// Initialize ECS components on entities with thruster behavior refs
-		for (const [, entity] of this.world.collisionMap) {
-			const gameEntity = entity as any;
-			
-			if (typeof gameEntity.getBehaviorRefs !== 'function') continue;
-			
-			const refs = gameEntity.getBehaviorRefs();
-			const thrusterRef = refs.find((r: any) => 
-				r.descriptor.key === Symbol.for('zylem:behavior:thruster')
-			);
-			
-			if (!thrusterRef || !gameEntity.body) continue;
+		for (const link of links) {
+			const gameEntity = link.entity as any;
+			const thrusterRef = link.ref as any;
+			if (!gameEntity.body) continue;
 
 			const options = thrusterRef.options as ThrusterBehaviorOptions;
 
@@ -94,10 +92,9 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
 					rotate: gameEntity.$thruster.rotate,
 				});
 			}
-		}
 
-		// Delegate to the existing movement behavior
-		this.movementBehavior.update(delta);
+			this.movementBehavior.updateEntity(gameEntity, delta);
+		}
 	}
 
 	destroy(_ecs: IWorld): void {
@@ -121,5 +118,6 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
 export const ThrusterBehavior = defineBehavior<ThrusterBehaviorOptions, Record<string, never>, ThrusterEntity>({
 	name: 'thruster',
 	defaultOptions,
-	systemFactory: (ctx) => new ThrusterBehaviorSystem(ctx.world),
+	systemFactory: (ctx) =>
+		new ThrusterBehaviorSystem(ctx.world, ctx.getBehaviorLinks),
 });
