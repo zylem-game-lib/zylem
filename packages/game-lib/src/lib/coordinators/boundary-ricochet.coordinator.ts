@@ -2,6 +2,7 @@ import { GameEntity } from '../entities/entity';
 import { Ricochet2DHandle } from '../behaviors/ricochet-2d/ricochet-2d.descriptor';
 import { WorldBoundary2DHandle } from '../behaviors/world-boundary-2d/world-boundary-2d.descriptor';
 import { MoveableEntity } from '../actions/capabilities/moveable';
+import { getBounds2DNormalFromHits } from '../behaviors/shared/bounds-2d';
 
 /**
  * Coordinator that bridges WorldBoundary2DBehavior and Ricochet2DBehavior.
@@ -32,18 +33,12 @@ export class BoundaryRicochetCoordinator {
         const anyHit = hits.left || hits.right || hits.top || hits.bottom;
         if (!anyHit) return false;
 
-        // Compute collision normal from boundary hits
-        let normalX = 0;
-        let normalY = 0;
-        if (hits.left) normalX = 1;
-        if (hits.right) normalX = -1;
-        if (hits.bottom) normalY = 1;
-        if (hits.top) normalY = -1;
+        const normal = getBounds2DNormalFromHits(hits);
 
         // Apply ricochet (also emits to listeners)
         return this.ricochet.applyRicochet({
             entity: this.entity,
-            contact: { normal: { x: normalX, y: normalY } },
+            contact: { normal: { x: normal.x, y: normal.y } },
         });
     }
 }

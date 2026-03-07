@@ -88,12 +88,12 @@ class FirstPersonControllerSystem implements BehaviorSystem {
 			}
 
 			// Wire up perspective (once)
-			if (options.perspective && !this.behavior['perspectives'].has(gameEntity.uuid)) {
+			if (options.perspective && !this.behavior.hasPerspective(gameEntity.uuid)) {
 				this.behavior.setPerspective(gameEntity.uuid, options.perspective);
 			}
 
 			// Wire up viewmodel (once)
-			if (options.viewmodel && !this.behavior['viewmodels'].has(gameEntity.uuid)) {
+			if (options.viewmodel && !this.behavior.hasViewmodel(gameEntity.uuid)) {
 				this.behavior.setViewmodel(gameEntity.uuid, options.viewmodel as ViewmodelConfig);
 			}
 

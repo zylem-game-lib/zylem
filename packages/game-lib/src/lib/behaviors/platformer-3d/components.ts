@@ -31,6 +31,8 @@ export interface Platformer3DMovementComponent {
 	jumpCutMultiplier: number;
 	/** Time in seconds before multi-jump becomes available (0 = after button release) */
 	multiJumpWindowTime: number;
+	/** Enable ground-ray debug visualization */
+	debugGroundProbe: boolean;
 }
 
 export function createPlatformer3DMovementComponent(
@@ -47,6 +49,7 @@ export function createPlatformer3DMovementComponent(
 		jumpBufferTime: options.jumpBufferTime ?? 0.1,
 		jumpCutMultiplier: options.jumpCutMultiplier ?? 0.5,
 		multiJumpWindowTime: options.multiJumpWindowTime ?? 0.15, // 150ms default
+		debugGroundProbe: options.debugGroundProbe ?? false,
 	};
 }
 

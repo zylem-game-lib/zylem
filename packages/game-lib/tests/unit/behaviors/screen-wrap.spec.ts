@@ -1,89 +1,56 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { createTestHarness, type BehaviorTestHarness } from './_test-harness';
+import { describe, expect, it } from 'vitest';
+import type { IWorld } from 'bitecs';
+
 import { ScreenWrapBehavior } from '../../../src/lib/behaviors/screen-wrap/screen-wrap.descriptor';
 
-describe.skip('ScreenWrapBehavior', () => {
-  let harness: BehaviorTestHarness;
+function createBody(x: number, y: number) {
+	const position = { x, y, z: 0 };
+	return {
+		translation: () => position,
+		setTranslation: (next: { x: number; y: number; z: number }) => {
+			position.x = next.x;
+			position.y = next.y;
+			position.z = next.z;
+		},
+	};
+}
 
-  beforeEach(() => {
-    harness = createTestHarness();
-  });
+function runWrapUpdate(x: number, y: number) {
+	const entity = { body: createBody(x, y) };
+	const ref: any = {
+		descriptor: ScreenWrapBehavior,
+		options: { width: 20, height: 15, centerX: 0, centerY: 0, edgeThreshold: 2 },
+	};
+	const system = ScreenWrapBehavior.systemFactory({
+		world: {},
+		ecs: {} as IWorld,
+		scene: null,
+		getBehaviorLinks: (key: symbol) =>
+			key === ScreenWrapBehavior.key ? [{ entity, ref }] : [],
+	});
 
-  describe('Wrapping', () => {
-    it('should wrap from right to left', () => {
-      harness.entity.use(ScreenWrapBehavior, {
-        width: 20,
-        height: 15,
-        centerX: 0,
-        centerY: 0,
-      });
+	system.update({} as IWorld, 1 / 60);
+	return { entity, ref };
+}
 
-      harness.game.start();
+describe('ScreenWrapBehavior', () => {
+	it('wraps from right to left', () => {
+		const { entity } = runWrapUpdate(11, 0);
+		expect(entity.body.translation().x).toBeLessThan(0);
+	});
 
-      const physics = (harness.entity as any).physics;
-      physics.body.setTranslation({ x: 11, y: 0, z: 0 }, true);
-      
-      harness.game.step(1/60);
+	it('wraps from left to right', () => {
+		const { entity } = runWrapUpdate(-11, 0);
+		expect(entity.body.translation().x).toBeGreaterThan(0);
+	});
 
-      const pos = physics.body.translation();
-      expect(pos.x).toBeLessThan(0);
-    });
+	it('wraps from top to bottom', () => {
+		const { entity } = runWrapUpdate(0, 8);
+		expect(entity.body.translation().y).toBeLessThan(0);
+	});
 
-    it('should wrap from left to right', () => {
-      harness.entity.use(ScreenWrapBehavior, {
-        width: 20,
-        height: 15,
-        centerX: 0,
-        centerY: 0,
-      });
-
-      harness.game.start();
-
-      const physics = (harness.entity as any).physics;
-      physics.body.setTranslation({ x: -11, y: 0, z: 0 }, true);
-      
-      harness.game.step(1/60);
-
-      const pos = physics.body.translation();
-      expect(pos.x).toBeGreaterThan(0);
-    });
-
-    it('should wrap from top to bottom', () => {
-      harness.entity.use(ScreenWrapBehavior, {
-        width: 20,
-        height: 15,
-        centerX: 0,
-        centerY: 0,
-      });
-
-      harness.game.start();
-
-      const physics = (harness.entity as any).physics;
-      physics.body.setTranslation({ x: 0, y: 8, z: 0 }, true);
-      
-      harness.game.step(1/60);
-
-      const pos = physics.body.translation();
-      expect(pos.y).toBeLessThan(0);
-    });
-
-    it('should wrap from bottom to top', () => {
-      harness.entity.use(ScreenWrapBehavior, {
-        width: 20,
-        height: 15,
-        centerX: 0,
-        centerY: 0,
-      });
-
-      harness.game.start();
-
-      const physics = (harness.entity as any).physics;
-      physics.body.setTranslation({ x: 0, y: -8, z: 0 }, true);
-      
-      harness.game.step(1/60);
-
-      const pos = physics.body.translation();
-      expect(pos.y).toBeGreaterThan(0);
-    });
-  });
+	it('wraps from bottom to top', () => {
+		const { entity } = runWrapUpdate(0, -8);
+		expect(entity.body.translation().y).toBeGreaterThan(0);
+	});
 });

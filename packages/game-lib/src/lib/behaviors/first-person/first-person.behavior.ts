@@ -75,12 +75,20 @@ export class FirstPersonControllerBehavior {
 		this.perspectives.set(entityUuid, perspective);
 	}
 
+	hasPerspective(entityUuid: string): boolean {
+		return this.perspectives.has(entityUuid);
+	}
+
 	/**
 	 * Attach a viewmodel (weapon/item) to an entity.
 	 * The viewmodel entity's group will be positioned relative to the camera each frame.
 	 */
 	setViewmodel(entityUuid: string, config: ViewmodelConfig): void {
 		this.viewmodels.set(entityUuid, config);
+	}
+
+	hasViewmodel(entityUuid: string): boolean {
+		return this.viewmodels.has(entityUuid);
 	}
 
 	/**

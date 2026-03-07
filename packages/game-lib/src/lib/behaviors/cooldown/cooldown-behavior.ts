@@ -36,6 +36,12 @@ export interface CooldownOptions {
 	cooldowns: Record<string, CooldownConfig>;
 }
 
+interface CompiledCooldownEntry {
+	name: string;
+	duration: number;
+	immediate: boolean;
+}
+
 const COOLDOWN_BEHAVIOR_KEY = Symbol.for('zylem:behavior:cooldown');
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,27 +67,17 @@ export interface CooldownHandle {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class CooldownSystem implements BehaviorSystem {
-	private initialized = false;
-
 	constructor(
 		private world: any,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) { }
 
 	update(_ecs: IWorld, delta: number): void {
-		// Register cooldowns from entities on first update
-		if (!this.initialized) {
-			const links = this.getBehaviorLinks?.(COOLDOWN_BEHAVIOR_KEY);
-			if (links) {
-				for (const link of links) {
-					const cdRef = link.ref as any;
-					const options = cdRef.options as CooldownOptions;
-					for (const [name, config] of Object.entries(options.cooldowns)) {
-						registerCooldown(name, config.duration, config.immediate ?? true);
-					}
-				}
+		const links = this.getBehaviorLinks?.(COOLDOWN_BEHAVIOR_KEY);
+		if (links) {
+			for (const link of links) {
+				ensureCooldownEntriesRegistered(link.ref as BehaviorRef<CooldownOptions>);
 			}
-			this.initialized = true;
 		}
 
 		// Tick all active cooldowns
@@ -96,11 +92,7 @@ class CooldownSystem implements BehaviorSystem {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function createCooldownHandle(ref: BehaviorRef<CooldownOptions>): CooldownHandle {
-	// Also register cooldowns eagerly so the handle works before the system initializes
-	const options = ref.options;
-	for (const [name, config] of Object.entries(options.cooldowns)) {
-		registerCooldown(name, config.duration, config.immediate ?? true);
-	}
+	ensureCooldownEntriesRegistered(ref);
 
 	return {
 		isReady: (name: string) => getCooldown(name)?.ready ?? false,
@@ -108,6 +100,31 @@ function createCooldownHandle(ref: BehaviorRef<CooldownOptions>): CooldownHandle
 		reset: (name: string) => resetCooldown(name),
 		getProgress: (name: string) => getCooldown(name)?.progress ?? 1,
 	};
+}
+
+function getCompiledCooldownEntries(
+	ref: BehaviorRef<CooldownOptions>,
+): CompiledCooldownEntry[] {
+	const compiled = (ref as any).__compiledCooldownEntries as CompiledCooldownEntry[] | undefined;
+	if (compiled) return compiled;
+
+	const entries = Object.entries(ref.options.cooldowns).map(([name, config]) => ({
+		name,
+		duration: config.duration,
+		immediate: config.immediate ?? true,
+	}));
+	(ref as any).__compiledCooldownEntries = entries;
+	return entries;
+}
+
+function ensureCooldownEntriesRegistered(ref: BehaviorRef<CooldownOptions>): void {
+	if ((ref as any).__cooldownsRegistered) return;
+
+	for (const entry of getCompiledCooldownEntries(ref)) {
+		registerCooldown(entry.name, entry.duration, entry.immediate);
+	}
+
+	(ref as any).__cooldownsRegistered = true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

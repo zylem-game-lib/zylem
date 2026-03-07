@@ -20,6 +20,8 @@ export default defineConfig({
 		'behavior/screen-visibility': 'src/api/behavior/screen-visibility.ts',
 		'behavior/world-boundary-2d': 'src/api/behavior/world-boundary-2d.ts',
 		'behavior/ricochet-2d': 'src/api/behavior/ricochet-2d.ts',
+		'behavior/ricochet-3d': 'src/api/behavior/ricochet-3d.ts',
+		'behavior/jumper-2d': 'src/api/behavior/jumper-2d.ts',
 		'behavior/platformer-3d': 'src/api/behavior/platformer-3d.ts',
 	},
 	format: ['esm'],

@@ -5,7 +5,7 @@
  * The FSM state tracks whether a ricochet is currently occurring.
  */
 import { BaseEntityInterface } from "../../types/entity-types";
-import { SyncStateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from '../../core/utility/sync-state-machine';
 
 export interface Ricochet2DResult {
 	/** The reflected velocity vector */

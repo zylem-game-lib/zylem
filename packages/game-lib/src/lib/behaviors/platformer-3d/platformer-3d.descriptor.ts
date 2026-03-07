@@ -32,6 +32,8 @@ export interface Platformer3DBehaviorOptions {
 	gravity?: number;
 	/** Ray length for ground detection (default: 1.0) */
 	groundRayLength?: number;
+	/** Enable debug visualization for ground probe rays (default: false) */
+	debugGroundProbe?: boolean;
 }
 
 const defaultOptions: Platformer3DBehaviorOptions = {
@@ -41,6 +43,7 @@ const defaultOptions: Platformer3DBehaviorOptions = {
 	maxJumps: 1,
 	gravity: 9.82,
 	groundRayLength: 1.0,
+	debugGroundProbe: false,
 };
 
 const PLATFORMER_BEHAVIOR_KEY = Symbol.for('zylem:behavior:platformer-3d');

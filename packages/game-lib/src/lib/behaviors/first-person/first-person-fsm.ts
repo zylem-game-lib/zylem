@@ -7,7 +7,7 @@
  * - Running: Moving at run/sprint speed
  */
 
-import { SyncStateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from '../../core/utility/sync-state-machine';
 import type { FirstPersonInputComponent, FirstPersonStateComponent } from './components';
 
 /**

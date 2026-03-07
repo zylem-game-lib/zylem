@@ -4,6 +4,7 @@ exports[`create a basic game > default configuration 1`] = `
 Game {
   "activeGlobalSubscriptions": [],
   "destroyCallbacks": [],
+  "displayRuntime": {},
   "eventDelegate": EventEmitterDelegate {
     "emitter": {
       "all": Map {},

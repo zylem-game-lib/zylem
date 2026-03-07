@@ -1,113 +1,28 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { createTestHarness, type BehaviorTestHarness } from './_test-harness';
-import { WorldBoundary2DBehavior } from '../../../src/lib/behaviors/world-boundary-2d/world-boundary-2d.descriptor';
+import { describe, expect, it } from 'vitest';
 
-describe.skip('WorldBoundary2DBehavior', () => {
-  let harness: BehaviorTestHarness;
+import {
+	WorldBoundary2DFSM,
+	computeWorldBoundary2DHits,
+} from '../../../src/lib/behaviors/world-boundary-2d/world-boundary-2d-fsm';
 
-  beforeEach(() => {
-    harness = createTestHarness();
-  });
+describe('WorldBoundary2DBehavior', () => {
+	const bounds = { left: -10, right: 10, bottom: -7.5, top: 7.5 };
 
-  describe('Boundary Detection', () => {
-    it('should detect left boundary hit', () => {
-      const boundaryHandle = harness.entity.use(WorldBoundary2DBehavior, {
-        boundaries: { left: -10, right: 10, bottom: -7.5, top: 7.5 },
-      });
+	it('detects left and right boundary hits', () => {
+		expect(computeWorldBoundary2DHits({ x: -10, y: 0 }, bounds).left).toBe(true);
+		expect(computeWorldBoundary2DHits({ x: 10, y: 0 }, bounds).right).toBe(true);
+	});
 
-      // Start game to initialize systems
-      harness.game.start();
+	it('detects top and bottom boundary hits', () => {
+		expect(computeWorldBoundary2DHits({ x: 0, y: 7.5 }, bounds).top).toBe(true);
+		expect(computeWorldBoundary2DHits({ x: 0, y: -7.5 }, bounds).bottom).toBe(true);
+	});
 
-      // Move entity to left boundary
-      const physics = (harness.entity as any).physics;
-      if (physics?.body) {
-        physics.body.setTranslation({ x: -10, y: 0, z: 0 }, true);
-      }
+	it('constrains movement against touched boundaries', () => {
+		const fsm = new WorldBoundary2DFSM();
+		fsm.update({ x: -10, y: 7.5 }, bounds);
 
-      // Update game
-      harness.game.step(1/60);
-
-      const hits = boundaryHandle.getLastHits();
-      expect(hits?.left).toBe(true);
-      expect(hits?.right).toBe(false);
-    });
-
-    it('should detect right boundary hit', () => {
-      const boundaryHandle = harness.entity.use(WorldBoundary2DBehavior, {
-        boundaries: { left: -10, right: 10, bottom: -7.5, top: 7.5 },
-      });
-
-      harness.game.start();
-
-      const physics = (harness.entity as any).physics;
-      if (physics?.body) {
-        physics.body.setTranslation({ x: 10, y: 0, z: 0 }, true);
-      }
-
-      harness.game.step(1/60);
-
-      const hits = boundaryHandle.getLastHits();
-      expect(hits?.right).toBe(true);
-      expect(hits?.left).toBe(false);
-    });
-
-    it('should detect top boundary hit', () => {
-      const boundaryHandle = harness.entity.use(WorldBoundary2DBehavior, {
-        boundaries: { left: -10, right: 10, bottom: -7.5, top: 7.5 },
-      });
-
-      harness.game.start();
-
-      const physics = (harness.entity as any).physics;
-      if (physics?.body) {
-        physics.body.setTranslation({ x: 0, y: 7.5, z: 0 }, true);
-      }
-
-      harness.game.step(1/60);
-
-      const hits = boundaryHandle.getLastHits();
-      expect(hits?.top).toBe(true);
-      expect(hits?.bottom).toBe(false);
-    });
-
-    it('should detect bottom boundary hit', () => {
-      const boundaryHandle = harness.entity.use(WorldBoundary2DBehavior, {
-        boundaries: { left: -10, right: 10, bottom: -7.5, top: 7.5 },
-      });
-
-      harness.game.start();
-
-      const physics = (harness.entity as any).physics;
-      if (physics?.body) {
-        physics.body.setTranslation({ x: 0, y: -7.5, z: 0 }, true);
-      }
-
-      harness.game.step(1/60);
-
-      const hits = boundaryHandle.getLastHits();
-      expect(hits?.bottom).toBe(true);
-      expect(hits?.top).toBe(false);
-    });
-
-    it('should not detect hits when inside boundaries', () => {
-      const boundaryHandle = harness.entity.use(WorldBoundary2DBehavior, {
-        boundaries: { left: -10, right: 10, bottom: -7.5, top: 7.5 },
-      });
-
-      harness.game.start();
-
-      const physics = (harness.entity as any).physics;
-      if (physics?.body) {
-        physics.body.setTranslation({ x: 0, y: 0, z: 0 }, true);
-      }
-
-      harness.game.step(1/60);
-
-      const hits = boundaryHandle.getLastHits();
-      expect(hits?.left).toBe(false);
-      expect(hits?.right).toBe(false);
-      expect(hits?.top).toBe(false);
-      expect(hits?.bottom).toBe(false);
-    });
-  });
+		expect(fsm.getMovement(-2, 3)).toEqual({ moveX: 0, moveY: 0 });
+		expect(fsm.getMovement(2, -3)).toEqual({ moveX: 2, moveY: -3 });
+	});
 });

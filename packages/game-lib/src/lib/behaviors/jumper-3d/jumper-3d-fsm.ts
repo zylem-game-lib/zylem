@@ -11,7 +11,7 @@
  *   Falling   ──Jump──▶  Jumping   (air-jump while falling)
  */
 
-import { SyncStateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from '../../core/utility/sync-state-machine';
 import type { JumpState3D } from './components';
 
 export enum Jumper3DState {

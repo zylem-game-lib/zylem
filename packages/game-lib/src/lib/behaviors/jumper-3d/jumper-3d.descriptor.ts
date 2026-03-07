@@ -5,14 +5,13 @@
  * Provides `entity.use()` API for composable 3D jumping.
  */
 
-import { Vector3, BufferGeometry, LineBasicMaterial, Line } from 'three';
-import { Ray } from '@dimforge/rapier3d-compat';
 import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { setVelocityIntent } from '../../actions/capabilities/velocity-intents';
 import { Jumper3DBehavior } from './jumper-3d.behavior';
 import { Jumper3DFSM, Jumper3DState } from './jumper-3d-fsm';
+import { GroundProbe3D } from '../shared/ground-probe-3d';
 import {
 	createJumpConfig3D,
 	createJumpInput3D,
@@ -54,6 +53,8 @@ export interface Jumper3DBehaviorOptions {
 	fall?: JumpConfig3D['fall'];
 	/** Ground-detection ray length (default: 1.0) */
 	groundRayLength?: number;
+	/** Enable debug visualization for ground probe rays (default: false) */
+	debugGroundProbe?: boolean;
 }
 
 const defaultOptions: Jumper3DBehaviorOptions = {
@@ -64,6 +65,7 @@ const defaultOptions: Jumper3DBehaviorOptions = {
 	coyoteTimeMs: 100,
 	jumpBufferMs: 80,
 	groundRayLength: 1.0,
+	debugGroundProbe: false,
 };
 
 const JUMPER_BEHAVIOR_KEY = Symbol.for('zylem:behavior:jumper-3d');
@@ -82,133 +84,12 @@ export interface Jumper3DEntity {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Ground detection helper
-// ─────────────────────────────────────────────────────────────────────────────
-
-const GROUND_RAY_OFFSETS = [
-	{ x: 0, z: 0 },
-	{ x: 0.4, z: 0.4 },
-	{ x: -0.4, z: 0.4 },
-	{ x: 0.4, z: -0.4 },
-	{ x: -0.4, z: -0.4 },
-];
-
-class GroundDetector {
-	private rays = new Map<string, Ray[]>();
-	private debugLines = new Map<string, Line[]>();
-
-	detectGround(
-		entity: Jumper3DEntity,
-		world: any,
-		scene: any,
-		rayLength: number,
-	): boolean {
-		if (!world?.world || !entity.body) return false;
-
-		const translation = entity.body.translation();
-
-		let entityRays = this.rays.get(entity.uuid);
-		if (!entityRays) {
-			entityRays = GROUND_RAY_OFFSETS.map(
-				() => new Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 }),
-			);
-			this.rays.set(entity.uuid, entityRays);
-		}
-
-		let centerHit = false;
-
-		for (let i = 0; i < GROUND_RAY_OFFSETS.length; i++) {
-			const offset = GROUND_RAY_OFFSETS[i];
-			const ray = entityRays[i];
-			let rayHit = false;
-			ray.origin = {
-				x: translation.x + offset.x,
-				y: translation.y + 0.05,
-				z: translation.z + offset.z,
-			};
-			ray.dir = { x: 0, y: -1, z: 0 };
-
-			world.world.castRay(
-				ray,
-				rayLength,
-				true,
-				undefined,
-				undefined,
-				undefined,
-				undefined,
-				(collider: any) => {
-					const ref = collider._parent?.userData?.uuid;
-					if (ref === entity.uuid) return false;
-					rayHit = true;
-					return true;
-				},
-			);
-
-			if (rayHit && i === 0) centerHit = true;
-		}
-
-		// For FPS/platform movement, use center-ray grounding only so
-		// ledge fall starts as soon as the body's center leaves support.
-		// Side rays are still useful for debug visualization.
-		const grounded = centerHit;
-
-		if (scene) {
-			this.updateDebugLines(entity, entityRays, grounded, rayLength, scene);
-		}
-
-		return grounded;
-	}
-
-	private updateDebugLines(
-		entity: Jumper3DEntity,
-		rays: Ray[],
-		hasGround: boolean,
-		length: number,
-		scene: any,
-	): void {
-		let lines = this.debugLines.get(entity.uuid);
-		if (!lines) {
-			lines = rays.map(() => {
-				const geometry = new BufferGeometry().setFromPoints([
-					new Vector3(),
-					new Vector3(),
-				]);
-				const material = new LineBasicMaterial({ color: 0xff0000 });
-				const line = new Line(geometry, material);
-				scene.add(line);
-				return line;
-			});
-			this.debugLines.set(entity.uuid, lines);
-		}
-
-		rays.forEach((ray, i) => {
-			const line = lines![i];
-			const start = new Vector3(ray.origin.x, ray.origin.y, ray.origin.z);
-			const end = new Vector3(
-				ray.origin.x + ray.dir.x * length,
-				ray.origin.y + ray.dir.y * length,
-				ray.origin.z + ray.dir.z * length,
-			);
-			line.geometry.setFromPoints([start, end]);
-			(line.material as LineBasicMaterial).color.setHex(
-				hasGround ? 0x00ff00 : 0xff0000,
-			);
-		});
-	}
-
-	destroy(): void {
-		this.rays.clear();
-		this.debugLines.clear();
-	}
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Behavior System adapter
 // ─────────────────────────────────────────────────────────────────────────────
 
 class Jumper3DBehaviorSystem implements BehaviorSystem {
 	private behavior = new Jumper3DBehavior();
-	private groundDetector = new GroundDetector();
+	private groundProbe: GroundProbe3D;
 	private initializedEntities = new Set<string>();
 	private timeSinceGroundedMs = new Map<string, number>();
 	private wasJumpHeld = new Map<string, boolean>();
@@ -217,7 +98,9 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
 		private world: any,
 		private scene: any,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
-	) {}
+	) {
+		this.groundProbe = new GroundProbe3D(world);
+	}
 
 	update(_ecs: IWorld, delta: number): void {
 		const links = this.getBehaviorLinks?.(JUMPER_BEHAVIOR_KEY);
@@ -256,12 +139,13 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
 			// ── Ground detection ───────────────────────────────────────────
 			const rayLength = options.groundRayLength ?? 1.0;
 			const bodyVel = gameEntity.body.linvel();
-			const nearGround = this.groundDetector.detectGround(
-				gameEntity,
-				this.world,
-				this.scene,
+			const nearGround = this.groundProbe.detect(gameEntity, {
 				rayLength,
-			);
+				mode: 'center',
+				debug: options.debugGroundProbe ?? false,
+				scene: this.scene,
+				originYOffset: 0.05,
+			});
 
 			const isGrounded = nearGround && bodyVel.y > -2.0 && bodyVel.y < 2.0;
 
@@ -338,7 +222,7 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
 	}
 
 	destroy(_ecs: IWorld): void {
-		this.groundDetector.destroy();
+		this.groundProbe.destroy();
 		this.initializedEntities.clear();
 		this.timeSinceGroundedMs.clear();
 		this.wasJumpHeld.clear();
