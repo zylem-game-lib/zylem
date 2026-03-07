@@ -35,34 +35,63 @@ export function EditorProvider(props: EditorProviderProps) {
 
 	// Sync valtio → SolidJS
 	const unsubDebug = subscribe(debugState, () => {
-		setDebug(reconcile({
-			paused: debugState.paused,
-			tool: debugState.tool,
-			selectedEntityId: debugState.selectedEntityId,
-			hoveredEntityId: debugState.hoveredEntityId,
-			flags: debugState.flags,
-		}));
+		if (debug.paused !== debugState.paused) {
+			setDebug('paused', debugState.paused);
+		}
+		if (debug.tool !== debugState.tool) {
+			setDebug('tool', debugState.tool);
+		}
+		if (debug.selectedEntityId !== debugState.selectedEntityId) {
+			setDebug('selectedEntityId', debugState.selectedEntityId);
+		}
+		if (debug.hoveredEntityId !== debugState.hoveredEntityId) {
+			setDebug('hoveredEntityId', debugState.hoveredEntityId);
+		}
+		// Sets are mutated in place, so compare contents and copy only when changed.
+		const nextFlags = debugState.flags;
+		if (
+			debug.flags.size !== nextFlags.size
+			|| [...debug.flags].some((flag) => !nextFlags.has(flag))
+		) {
+			setDebug('flags', new Set(nextFlags));
+		}
 	});
 
 	const unsubGame = subscribe(gameState, () => {
-		setGame(reconcile({
-			id: gameState.id,
-			globals: { ...gameState.globals },
-			time: gameState.time,
-			config: gameState.config ? { ...gameState.config } : null,
-		}));
+		if (game.id !== gameState.id) {
+			setGame('id', gameState.id);
+		}
+		if (game.time !== gameState.time) {
+			setGame('time', gameState.time);
+		}
+		setGame('globals', reconcile(gameState.globals));
+		if (gameState.config === null) {
+			if (game.config !== null) {
+				setGame('config', null);
+			}
+		} else {
+			setGame('config', reconcile(gameState.config));
+		}
 	});
 
 	const unsubStage = subscribe(stageState, () => {
-		setStage(reconcile({
-			config: stageState.config ? { ...stageState.config } : null,
-			backgroundColor: stageState.backgroundColor,
-			backgroundImage: stageState.backgroundImage,
-			inputs: { ...stageState.inputs },
-			variables: { ...stageState.variables },
-			gravity: { ...stageState.gravity },
-			entities: [...stageState.entities],
-		}));
+		if (stageState.config === null) {
+			if (stage.config !== null) {
+				setStage('config', null);
+			}
+		} else {
+			setStage('config', reconcile(stageState.config));
+		}
+		if (stage.backgroundColor !== stageState.backgroundColor) {
+			setStage('backgroundColor', stageState.backgroundColor);
+		}
+		if (stage.backgroundImage !== stageState.backgroundImage) {
+			setStage('backgroundImage', stageState.backgroundImage);
+		}
+		setStage('inputs', reconcile(stageState.inputs));
+		setStage('variables', reconcile(stageState.variables));
+		setStage('gravity', reconcile(stageState.gravity));
+		setStage('entities', reconcile(stageState.entities));
 	});
 
 	onCleanup(() => {

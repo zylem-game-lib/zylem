@@ -2,6 +2,7 @@ import { ZylemCamera } from '../camera/zylem-camera';
 import { RendererManager } from '../camera/renderer-manager';
 import { GameCanvas } from './game-canvas';
 import { GameConfig } from './game-config';
+import type { ZylemStage } from '../stage/zylem-stage';
 
 /**
  * Observer that triggers renderer mounting when container and camera/renderer are both available.
@@ -14,6 +15,7 @@ export class GameRendererObserver {
 	private rendererManager: RendererManager | null = null;
 	private gameCanvas: GameCanvas | null = null;
 	private config: GameConfig | null = null;
+	private stage: ZylemStage | null = null;
 	private mounted = false;
 
 	setGameCanvas(canvas: GameCanvas): void {
@@ -29,6 +31,13 @@ export class GameRendererObserver {
 	setContainer(container: HTMLElement): void {
 		this.container = container;
 		this.tryMount();
+	}
+
+	setStage(stage: ZylemStage | null): void {
+		this.stage = stage;
+		if (this.mounted) {
+			this.gameCanvas?.reapplyLayout();
+		}
 	}
 
 	/**
@@ -69,17 +78,19 @@ export class GameRendererObserver {
 		if (!this.rendererManager || !this.gameCanvas) return;
 
 		const dom = this.rendererManager.getDomElement();
-		const internal = this.config?.internalResolution;
 
 		this.gameCanvas.mountRenderer(dom, (cssW, cssH) => {
 			if (!this.rendererManager) return;
+			const internal = this.config?.internalResolution;
 			if (internal) {
 				this.rendererManager.setPixelRatio(1);
 				this.rendererManager.resize(internal.width, internal.height);
+				this.stage?.resize(internal.width, internal.height);
 			} else {
 				const dpr = window.devicePixelRatio || 1;
 				this.rendererManager.setPixelRatio(dpr);
 				this.rendererManager.resize(cssW, cssH);
+				this.stage?.resize(cssW, cssH);
 			}
 		});
 
@@ -93,10 +104,10 @@ export class GameRendererObserver {
 		if (!this.camera || !this.gameCanvas) return;
 
 		const dom = this.camera.getDomElement();
-		const internal = this.config?.internalResolution;
 		
 		this.gameCanvas.mountRenderer(dom, (cssW, cssH) => {
 			if (!this.camera) return;
+			const internal = this.config?.internalResolution;
 			if (internal) {
 				this.camera.setPixelRatio(1);
 				this.camera.resize(internal.width, internal.height);
@@ -115,6 +126,7 @@ export class GameRendererObserver {
 	 */
 	reset(): void {
 		this.camera = null;
+		this.stage = null;
 		this.mounted = false;
 		// Keep rendererManager -- it persists across stages
 	}
@@ -125,6 +137,7 @@ export class GameRendererObserver {
 		this.rendererManager = null;
 		this.gameCanvas = null;
 		this.config = null;
+		this.stage = null;
 		this.mounted = false;
 	}
 }

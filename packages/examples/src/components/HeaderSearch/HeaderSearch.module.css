@@ -29,3 +29,18 @@
 .searchInput::placeholder {
     color: var(--zylem-color-text-secondary);
 }
+
+@media (max-width: 900px) {
+    .header {
+        padding: 1rem 4rem 1rem 1rem;
+    }
+
+    .title {
+        font-size: 1.1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .searchInput {
+        font-size: 1rem;
+    }
+}

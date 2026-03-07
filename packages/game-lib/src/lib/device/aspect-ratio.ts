@@ -1,6 +1,7 @@
 export const AspectRatio = {
 	FourByThree: 4 / 3,
 	SixteenByNine: 16 / 9,
+	NineBySixteen: 9 / 16,
 	TwentyOneByNine: 21 / 9,
 	OneByOne: 1 / 1,
 } as const;
@@ -19,6 +20,7 @@ export class AspectRatioDelegate {
 	aspectRatio: number;
 	onResize?: (width: number, height: number) => void;
 	private handleResizeBound: () => void;
+	private resizeObserver: ResizeObserver | null = null;
 
 	constructor(params: {
 		container: HTMLElement;
@@ -36,31 +38,56 @@ export class AspectRatioDelegate {
 	/** Attach window resize listener and apply once. */
 	attach() {
 		window.addEventListener('resize', this.handleResizeBound);
+		if (typeof ResizeObserver !== 'undefined') {
+			this.resizeObserver = new ResizeObserver(this.handleResizeBound);
+			this.resizeObserver.observe(this.container);
+		}
 		this.apply();
 	}
 
 	/** Detach window resize listener. */
 	detach() {
 		window.removeEventListener('resize', this.handleResizeBound);
+		this.resizeObserver?.disconnect();
+		this.resizeObserver = null;
 	}
 
 	/** Compute the largest size that fits container while preserving aspect. */
 	measure(): { width: number; height: number } {
-		const containerWidth = this.container.clientWidth || window.innerWidth;
-		const containerHeight = this.container.clientHeight || window.innerHeight;
+		const rect = this.container.getBoundingClientRect();
+		const measuredWidth = Math.round(rect.width || this.container.clientWidth || 0);
+		const measuredHeight = Math.round(rect.height || this.container.clientHeight || 0);
 
-		const containerRatio = containerWidth / containerHeight;
-		if (containerRatio > this.aspectRatio) {
-			// container is wider than target; limit by height
-			const height = containerHeight;
-			const width = Math.round(height * this.aspectRatio);
-			return { width, height };
-		} else {
+		if (measuredWidth > 0 && measuredHeight > 0) {
+			const containerRatio = measuredWidth / measuredHeight;
+			if (containerRatio > this.aspectRatio) {
+				// container is wider than target; limit by height
+				const height = measuredHeight;
+				const width = Math.round(height * this.aspectRatio);
+				return { width, height };
+			}
+
 			// container is taller/narrower; limit by width
-			const width = containerWidth;
+			const width = measuredWidth;
 			const height = Math.round(width / this.aspectRatio);
 			return { width, height };
 		}
+
+		if (measuredWidth > 0) {
+			const width = measuredWidth;
+			const height = Math.round(width / this.aspectRatio);
+			return { width, height };
+		}
+
+		if (measuredHeight > 0) {
+			const height = measuredHeight;
+			const width = Math.round(height * this.aspectRatio);
+			return { width, height };
+		}
+
+		const width = window.innerWidth;
+		const height = Math.round(width / this.aspectRatio);
+		return { width, height };
 	}
 
 	/** Apply measured size to canvas and notify. */

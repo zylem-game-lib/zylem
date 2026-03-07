@@ -3,6 +3,7 @@ import { ZylemGameElement } from '@zylem/game-lib';
 import { registerZylemEditor } from '@zylem/editor';
 import SidePanel from './components/SidePanel/SidePanel';
 import DemoViewer from './components/DemoViewer/DemoViewer';
+import styles from './App.module.css';
 
 if (!customElements.get('zylem-game')) {
   customElements.define('zylem-game', ZylemGameElement);
@@ -20,7 +21,7 @@ declare module 'solid-js' {
 const App: Component = () => {
   return (
     <>
-      <div class="flex h-screen w-screen bg-zylem-background text-zylem-text font-zylem overflow-hidden relative">
+      <div class={`bg-zylem-background text-zylem-text font-zylem ${styles.appShell}`}>
         <SidePanel />
         <DemoViewer />
       </div>

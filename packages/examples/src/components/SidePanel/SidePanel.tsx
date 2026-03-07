@@ -10,11 +10,19 @@ const SidePanel: Component = () => {
             class={`${styles.sidePanel} ${!appStore.sidePanelOpen ? styles.sidePanelClosed : ''} sidebar`}
         >
             <HeaderSearch />
-            <DemosList />
+            <div
+                id="examples-list-panel"
+                class={`${styles.panelContent} ${!appStore.sidePanelOpen ? styles.panelContentClosed : ''}`}
+            >
+                <DemosList />
+            </div>
             <button
+                type="button"
                 class={styles.toggleButton}
                 onClick={() => toggleSidePanel()}
                 aria-label={appStore.sidePanelOpen ? 'Close sidebar' : 'Open sidebar'}
+                aria-controls="examples-list-panel"
+                aria-expanded={appStore.sidePanelOpen}
             >
                 <svg
                     class={`${styles.toggleIcon} ${!appStore.sidePanelOpen ? styles.toggleIconClosed : ''}`}

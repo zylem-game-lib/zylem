@@ -1,7 +1,25 @@
 import { StageInterface } from "../types";
 import { GameInputConfig } from "./game-interfaces";
 import { AspectRatio, AspectRatioValue } from "../device/aspect-ratio";
+import { isMobile, type ViewportSize } from "../device/mobile";
 import { getDisplayAspect, getPresetResolution, parseResolution, RetroPresetKey } from "./game-retro-resolutions";
+
+export type ResolutionInput = string | { width: number; height: number };
+export type DeviceProfile = 'auto' | 'desktop' | 'mobile';
+
+export interface ResolveGameConfigRuntime {
+	deviceProfile?: DeviceProfile;
+	viewportSize?: ViewportSize;
+}
+
+export type GameDeviceConfig = Partial<{
+	/** numeric value or key in AspectRatio */
+	aspectRatio: AspectRatioValue | keyof typeof AspectRatio;
+	/** console/display preset to derive aspect ratio */
+	preset: RetroPresetKey;
+	/** lock internal render buffer for this device profile */
+	resolution: ResolutionInput;
+}>;
 
 export type GameConfigLike = Partial<{
 	id: string;
@@ -14,8 +32,10 @@ export type GameConfigLike = Partial<{
 	aspectRatio: AspectRatioValue | keyof typeof AspectRatio;
 	/** console/display preset to derive aspect ratio */
 	preset: RetroPresetKey;
-	/** lock internal render buffer to this resolution (e.g., '256x240' or { width, height }) */
-	resolution: string | { width: number; height: number };
+	/** lock internal render buffer to this desktop/default resolution */
+	resolution: ResolutionInput;
+	/** mobile-specific aspect/preset/resolution overrides */
+	mobile: GameDeviceConfig;
 	fullscreen: boolean;
 	/** CSS background value for document body */
 	bodyBackground: string;
@@ -43,6 +63,25 @@ export class GameConfig {
 		public containerId?: string,
 		public canvas?: HTMLCanvasElement,
 	) { }
+}
+
+function usesMobileProfile(runtime: ResolveGameConfigRuntime = {}): boolean {
+	if (runtime.deviceProfile === 'mobile') {
+		return true;
+	}
+
+	if (runtime.deviceProfile === 'desktop') {
+		return false;
+	}
+
+	if (runtime.viewportSize) {
+		return isMobile({
+			viewportSize: runtime.viewportSize,
+			allowViewportOnly: true,
+		});
+	}
+
+	return isMobile();
 }
 
 function ensureContainer(containerId?: string, existing?: HTMLElement | null): HTMLElement {
@@ -81,7 +120,86 @@ function createDefaultGameConfig(base?: Partial<Pick<GameConfig, 'id' | 'debug' 
 	);
 }
 
-export function resolveGameConfig(user?: GameConfigLike): GameConfig {
+const DEFAULT_MOBILE_BASE_EDGE = 360;
+
+function normalizeResolutionInput(
+	input?: ResolutionInput,
+	preset?: RetroPresetKey,
+): { width: number; height: number } | undefined {
+	if (!input) return undefined;
+
+	if (typeof input === 'string') {
+		const parsed = parseResolution(input);
+		if (parsed) return parsed;
+
+		if (preset) {
+			const res = getPresetResolution(preset, input);
+			if (res) {
+				return { width: res.width, height: res.height };
+			}
+		}
+
+		return undefined;
+	}
+
+	const width = (input as any).width;
+	const height = (input as any).height;
+	if (Number.isFinite(width) && Number.isFinite(height)) {
+		return { width, height };
+	}
+
+	return undefined;
+}
+
+function resolveAspectRatioValue(
+	aspectInput: GameDeviceConfig['aspectRatio'],
+	preset: RetroPresetKey | undefined,
+	fallbackAspect: number,
+	fallbackResolution?: { width: number; height: number },
+): number {
+	if (typeof aspectInput === 'number') {
+		return aspectInput;
+	}
+
+	if (typeof aspectInput === 'string') {
+		return (AspectRatio as any)[aspectInput] ?? fallbackAspect;
+	}
+
+	if (preset) {
+		try {
+			return getDisplayAspect(preset) || fallbackAspect;
+		} catch {
+			return fallbackAspect;
+		}
+	}
+
+	if (fallbackResolution) {
+		return fallbackResolution.width / fallbackResolution.height;
+	}
+
+	return fallbackAspect;
+}
+
+function createDefaultMobileResolution(aspectRatio: number): { width: number; height: number } {
+	const safeAspect = Number.isFinite(aspectRatio) && aspectRatio > 0
+		? aspectRatio
+		: AspectRatio.SixteenByNine;
+
+	if (safeAspect >= 1) {
+		const height = DEFAULT_MOBILE_BASE_EDGE;
+		const width = Math.round(height * safeAspect);
+		return { width, height };
+	}
+
+	const width = DEFAULT_MOBILE_BASE_EDGE;
+	const height = Math.round(width / safeAspect);
+	return { width, height };
+}
+
+export function resolveGameConfig(
+	user?: GameConfigLike,
+	runtime: ResolveGameConfigRuntime = {},
+): GameConfig {
 	const defaults = createDefaultGameConfig({
 		id: user?.id ?? 'zylem',
 		debug: Boolean(user?.debug),
@@ -94,42 +212,34 @@ export function resolveGameConfig(user?: GameConfigLike): GameConfig {
 	// Resolve container
 	const containerId = (user?.containerId as string) ?? defaults.containerId;
 	const container = ensureContainer(containerId, user?.container ?? null);
-
-	// Derive aspect ratio: explicit numeric -> preset -> default
-	const explicitAspect = user?.aspectRatio as any;
-	let aspectRatio = defaults.aspectRatio;
-	if (typeof explicitAspect === 'number' || (explicitAspect && typeof explicitAspect === 'string')) {
-		aspectRatio = typeof explicitAspect === 'number' ? explicitAspect : (AspectRatio as any)[explicitAspect] ?? defaults.aspectRatio;
-	} else if (user?.preset) {
-		try {
-			aspectRatio = getDisplayAspect(user.preset as RetroPresetKey) || defaults.aspectRatio;
-		} catch {
-			aspectRatio = defaults.aspectRatio;
-		}
-	}
+	const mobileConfig = user?.mobile;
+	const useMobileProfile = usesMobileProfile(runtime);
+	const activePreset = useMobileProfile
+		? mobileConfig?.preset ?? user?.preset
+		: user?.preset;
+	const desktopResolution = normalizeResolutionInput(user?.resolution, user?.preset);
+	const mobileResolution = normalizeResolutionInput(
+		mobileConfig?.resolution,
+		mobileConfig?.preset ?? user?.preset,
+	);
+	const aspectFallbackResolution = useMobileProfile
+		? mobileResolution ?? desktopResolution
+		: desktopResolution;
+	const activeAspectInput = useMobileProfile
+		? mobileConfig?.aspectRatio ?? user?.aspectRatio
+		: user?.aspectRatio;
+	const aspectRatio = resolveAspectRatioValue(
+		activeAspectInput,
+		activePreset,
+		defaults.aspectRatio,
+		aspectFallbackResolution,
+	);
+	const internalResolution = useMobileProfile
+		? mobileResolution ?? createDefaultMobileResolution(aspectRatio)
+		: desktopResolution;
 
 	const fullscreen = (user?.fullscreen as boolean) ?? defaults.fullscreen;
 	const bodyBackground = (user?.bodyBackground as string) ?? defaults.bodyBackground;
-
-	// Normalize internal resolution lock
-	let internalResolution: { width: number; height: number } | undefined;
-	if (user?.resolution) {
-		if (typeof user.resolution === 'string') {
-			const parsed = parseResolution(user.resolution);
-			if (parsed) internalResolution = parsed;
-			// fallback: allow preset resolution keys like '256x240' under a preset
-			if (!internalResolution && user.preset) {
-				const res = getPresetResolution(user.preset as RetroPresetKey, user.resolution);
-				if (res) internalResolution = { width: res.width, height: res.height };
-			}
-		} else if (typeof user.resolution === 'object') {
-			const w = (user.resolution as any).width;
-			const h = (user.resolution as any).height;
-			if (Number.isFinite(w) && Number.isFinite(h)) {
-				internalResolution = { width: w, height: h };
-			}
-		}
-	}
 
 	// Prefer provided canvas if any
 	const canvas = user?.canvas ?? undefined;

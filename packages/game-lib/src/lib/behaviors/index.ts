@@ -32,6 +32,9 @@ export * from './thruster';
 // Screen Wrap Module
 export * from './screen-wrap';
 
+// Screen Visibility Module
+export * from './screen-visibility';
+
 // World Boundary 2D Module
 export * from './world-boundary-2d';
 
