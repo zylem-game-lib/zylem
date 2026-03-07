@@ -13,8 +13,19 @@
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.panelContent {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 .sidePanelClosed {
     transform: translateX(-100%);
+}
+
+.panelContentClosed {
 }
 
 .toggleButton {
@@ -47,4 +58,50 @@
 
 .toggleIconClosed {
     transform: rotate(180deg);
+}
+
+@media (max-width: 900px) {
+    .sidePanel {
+        position: relative;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        left: auto;
+        width: 100%;
+        max-height: min(32rem, 56dvh);
+        border-right: none;
+        border-bottom: 1px solid var(--zylem-color-border);
+        overflow: hidden;
+        transform: none;
+    }
+
+    .sidePanelClosed {
+        transform: none;
+        max-height: none;
+    }
+
+    .panelContentClosed {
+        display: none;
+    }
+
+    .toggleButton {
+        left: auto;
+        right: 1rem;
+        top: 1rem;
+        transform: none;
+        width: 2.25rem;
+        height: 2.25rem;
+        border: 1px solid color-mix(in srgb, var(--zylem-color-border) 85%, transparent);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--zylem-color-surface) 92%, black 8%);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    }
+
+    .toggleIcon {
+        transform: rotate(-90deg);
+    }
+
+    .toggleIconClosed {
+        transform: rotate(90deg);
+    }
 }

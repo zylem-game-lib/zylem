@@ -84,6 +84,18 @@ export class GameCanvas {
 		}
 	}
 
+	setAspectRatio(aspectRatio: number): void {
+		this.aspectRatio = aspectRatio;
+		if (this.ratioDelegate) {
+			this.ratioDelegate.aspectRatio = aspectRatio;
+			this.ratioDelegate.apply();
+		}
+	}
+
+	reapplyLayout(): void {
+		this.ratioDelegate?.apply();
+	}
+
 	destroy() {
 		this.ratioDelegate?.detach();
 		this.ratioDelegate = null;

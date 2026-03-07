@@ -4,7 +4,11 @@ import { IGame } from '../core/interfaces';
 import { setPaused } from '../debug/debug-state';
 import { BaseGlobals, GameInputConfig } from './game-interfaces';
 import { convertNodes, GameOptions, hasStages, extractGlobalsFromOptions } from '../core/utility/nodes';
-import { resolveGameConfig } from './game-config';
+import {
+	resolveGameConfig,
+	type DeviceProfile,
+	type ResolveGameConfigRuntime,
+} from './game-config';
 import { mergeInputConfigs } from '../input/input-presets';
 import { createStage, Stage } from '../stage/stage';
 import { StageManager, stageState } from '../stage/stage-manager';
@@ -33,6 +37,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 
 	/** Pending global input config set before the game starts. */
 	private pendingInputConfig: GameInputConfig | null = null;
+	private displayRuntime: ResolveGameConfigRuntime = {};
 
 	refErrorMessage = 'lost reference to game';
 
@@ -96,9 +101,30 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		return this;
 	}
 
+	setDisplayRuntime(runtime: Partial<ResolveGameConfigRuntime>): this {
+		this.displayRuntime = {
+			...this.displayRuntime,
+			...runtime,
+		};
+		if (this.wrappedGame) {
+			this.wrappedGame.setDisplayRuntime(this.displayRuntime);
+		}
+		return this;
+	}
+
+	setDeviceProfile(profile: DeviceProfile): this {
+		return this.setDisplayRuntime({ deviceProfile: profile });
+	}
+
+	setViewportSize(width: number, height: number): this {
+		return this.setDisplayRuntime({
+			viewportSize: { width, height },
+		});
+	}
+
 	private async load(): Promise<ZylemGame<TGlobals>> {
 		const options = await convertNodes<TGlobals>(this.options);
-		const resolved = resolveGameConfig(options as any);
+		const resolved = resolveGameConfig(options as any, this.displayRuntime);
 
 		// Merge any pending input configuration set via setInputConfiguration() before start
 		if (this.pendingInputConfig) {
@@ -108,7 +134,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		const game = new ZylemGame<TGlobals>({
 			...options as any,
 			...resolved as any,
-		} as any, this);
+		} as any, this, this.displayRuntime);
 		
 		// Apply pending loading callbacks BEFORE loadStage so events are captured
 		for (const callback of this.pendingLoadingCallbacks) {
@@ -296,6 +322,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		
 		if (this.wrappedGame) {
 			this.wrappedGame.dispose();
+			this.wrappedGame = null;
 		}
 		// Clear all remaining global subscriptions and reset globals
 		clearGlobalSubscriptions();

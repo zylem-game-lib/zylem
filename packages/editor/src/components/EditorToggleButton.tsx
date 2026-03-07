@@ -7,6 +7,7 @@ const SNAP_THRESHOLD = 50;
 const DRAG_THRESHOLD = 5;
 // Button size matches --zylem-size-icon-lg in CSS
 const BUTTON_SIZE = 96;
+const BUTTON_MARGIN = 20;
 
 interface EditorToggleButtonProps {
     onToggle: () => void;
@@ -20,6 +21,7 @@ interface EditorToggleButtonProps {
 export const EditorToggleButton: Component<EditorToggleButtonProps> = (props) => {
     // Initial position will be set on mount to top-right corner
     const [position, setPosition] = createSignal({ x: 0, y: 0 });
+    let resizeRaf: number | undefined;
 
     let isDragging = false;
     let dragStartPos = { x: 0, y: 0 };
@@ -35,23 +37,32 @@ export const EditorToggleButton: Component<EditorToggleButtonProps> = (props) =>
 
         // Snap to left edge
         if (x < SNAP_THRESHOLD) {
-            snappedX = 20;
+            snappedX = BUTTON_MARGIN;
         }
         // Snap to right edge
         else if (x > windowWidth - BUTTON_SIZE - SNAP_THRESHOLD) {
-            snappedX = windowWidth - BUTTON_SIZE - 20;
+            snappedX = windowWidth - BUTTON_SIZE - BUTTON_MARGIN;
         }
 
         // Snap to top edge
         if (y < SNAP_THRESHOLD) {
-            snappedY = 20;
+            snappedY = BUTTON_MARGIN;
         }
         // Snap to bottom edge
         else if (y > windowHeight - BUTTON_SIZE - SNAP_THRESHOLD) {
-            snappedY = windowHeight - BUTTON_SIZE - 20;
+            snappedY = windowHeight - BUTTON_SIZE - BUTTON_MARGIN;
         }
 
         return { x: snappedX, y: snappedY };
+    };
+
+    const clampToViewport = (x: number, y: number) => {
+        const maxX = Math.max(0, window.innerWidth - BUTTON_SIZE);
+        const maxY = Math.max(0, window.innerHeight - BUTTON_SIZE);
+        return {
+            x: Math.max(0, Math.min(x, maxX)),
+            y: Math.max(0, Math.min(y, maxY)),
+        };
     };
 
     const handlePointerDown = (e: PointerEvent) => {
@@ -110,21 +121,42 @@ export const EditorToggleButton: Component<EditorToggleButtonProps> = (props) =>
         }
     };
 
+    const handleResize = () => {
+        if (resizeRaf !== undefined) {
+            cancelAnimationFrame(resizeRaf);
+        }
+        resizeRaf = requestAnimationFrame(() => {
+            const currentPos = position();
+            const clampedPos = clampToViewport(currentPos.x, currentPos.y);
+            if (clampedPos.x !== currentPos.x || clampedPos.y !== currentPos.y) {
+                setPosition(clampedPos);
+                setToggleButtonPosition(clampedPos);
+            }
+            resizeRaf = undefined;
+        });
+    };
+
     onMount(() => {
         // Set initial position to top-right corner
-        const initialX = window.innerWidth - BUTTON_SIZE - 20;
-        const initialY = 20;
-        const initialPos = { x: initialX, y: initialY };
+        const initialPos = clampToViewport(
+            window.innerWidth - BUTTON_SIZE - BUTTON_MARGIN,
+            BUTTON_MARGIN,
+        );
         setPosition(initialPos);
         setToggleButtonPosition(initialPos);
 
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
+        window.addEventListener('resize', handleResize);
     });
 
     onCleanup(() => {
         window.removeEventListener('pointermove', handlePointerMove);
         window.removeEventListener('pointerup', handlePointerUp);
+        window.removeEventListener('resize', handleResize);
+        if (resizeRaf !== undefined) {
+            cancelAnimationFrame(resizeRaf);
+        }
     });
 
     return (

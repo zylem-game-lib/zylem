@@ -1,130 +1,220 @@
 import {
-    Component,
-    createSignal,
-    createEffect,
-    onMount,
-    onCleanup,
-    Show,
+  Component,
+  Show,
+  createEffect,
+  createSignal,
+  onCleanup,
+  onMount,
 } from 'solid-js';
-import { ZylemGameElement, zylemEventBus, type GameLoadingPayload } from '@zylem/game-lib';
+import {
+  ZylemGameElement,
+  zylemEventBus,
+  type GameLoadingPayload,
+} from '@zylem/game-lib';
 import { editorEvents } from '@zylem/editor';
 import { appStore } from '../../store/appStore';
-// editorStateStore is imported for side effects (sets up event listener)
 import '../../store/editorStateStore';
+import ViewportControls from '../ViewportControls/ViewportControls';
+import {
+  PHONE_VIEWPORT_PRESET,
+  demoViewportStore,
+  setBrowserViewportSize,
+  setMeasuredViewportSize,
+} from '../../store/demoViewportStore';
 import styles from './DemoViewer.module.css';
 
-// TypeScript declarations for custom elements
 declare module 'solid-js' {
-    namespace JSX {
-        interface IntrinsicElements {
-            'zylem-game': any;
-        }
+  namespace JSX {
+    interface IntrinsicElements {
+      'zylem-game': any;
     }
+  }
 }
 
 const DemoViewer: Component = () => {
-    return (
-        <main class={styles.viewer}>
-            <Show
-                when={appStore.activeExample}
-                fallback={
-                    <div class={styles.placeholder}>
-                        <div class={styles.placeholderContent}>
-                            <p class={styles.placeholderTitle}>Select an example</p>
-                            <p class={styles.placeholderSubtitle}>
-                                Use the sidebar to select an example
-                            </p>
-                        </div>
-                    </div>
-                }
-            >
-                <ExampleRunner />
-            </Show>
-        </main>
-    );
+  return (
+    <main class={styles.viewer}>
+      <Show
+        when={appStore.activeExample}
+        fallback={
+          <div class={styles.placeholder}>
+            <div class={styles.placeholderContent}>
+              <p class={styles.placeholderTitle}>Select an example</p>
+              <p class={styles.placeholderSubtitle}>
+                Use the sidebar to select an example
+              </p>
+            </div>
+          </div>
+        }
+      >
+        <ExampleRunner />
+      </Show>
+    </main>
+  );
 };
 
 const ExampleRunner: Component = () => {
-    let gameRef: ZylemGameElement | undefined;
-    const [example, setExample] = createSignal<any>(null);
-    const [loading, setLoading] = createSignal(false);
-    const [progress, setProgress] = createSignal(0);
-    const [message, setMessage] = createSignal('');
+  let gameRef: ZylemGameElement | undefined;
+  let viewportFrameRef: HTMLDivElement | undefined;
+  let stageAreaRef: HTMLDivElement | undefined;
 
-    // Listen for game loading events via zylemEventBus
-    const handleLoadingEvent = (event: GameLoadingPayload) => {
-        setProgress(event.progress ?? 0);
-        setMessage(event.message ?? '');
-        if (event.type === 'start') {
-            setLoading(true);
-        } else if (event.type === 'complete') {
-            setLoading(false);
-            gameRef?.focus();
-        }
+  const [example, setExample] = createSignal<any>(null);
+  const [loading, setLoading] = createSignal(false);
+  const [progress, setProgress] = createSignal(0);
+  const [message, setMessage] = createSignal('');
+  const [stageAreaSize, setStageAreaSize] = createSignal({
+    width: PHONE_VIEWPORT_PRESET.width,
+    height: PHONE_VIEWPORT_PRESET.height,
+  });
+
+  const controlsHidden = () => demoViewportStore.viewportControlsMode === 'hidden';
+  const activeViewportProfile = () =>
+    controlsHidden() ? 'mobile' : demoViewportStore.viewportProfile;
+  const viewportFrameStyle = () => {
+    if (!controlsHidden()) {
+      return {
+        width: `${demoViewportStore.viewportSize.width}px`,
+        height: `${demoViewportStore.viewportSize.height}px`,
+      };
+    }
+
+    const availableWidth = stageAreaSize().width;
+    const availableHeight = stageAreaSize().height;
+    const widthScale = availableWidth / PHONE_VIEWPORT_PRESET.width;
+    const heightScale = availableHeight / PHONE_VIEWPORT_PRESET.height;
+    const scale = Math.min(widthScale, heightScale, 1);
+    const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+
+    return {
+      width: `${Math.round(PHONE_VIEWPORT_PRESET.width * safeScale)}px`,
+      height: `${Math.round(PHONE_VIEWPORT_PRESET.height * safeScale)}px`,
     };
+  };
 
-    onMount(() => {
-        // Subscribe to all loading event types
-        zylemEventBus.on('loading:start', handleLoadingEvent);
-        zylemEventBus.on('loading:progress', handleLoadingEvent);
-        zylemEventBus.on('loading:complete', handleLoadingEvent);
-    });
+  const handleLoadingEvent = (event: GameLoadingPayload) => {
+    setProgress(event.progress ?? 0);
+    setMessage(event.message ?? '');
+    if (event.type === 'start') {
+      setLoading(true);
+    } else if (event.type === 'complete') {
+      setLoading(false);
+      gameRef?.focus();
+    }
+  };
+
+  onMount(() => {
+    zylemEventBus.on('loading:start', handleLoadingEvent);
+    zylemEventBus.on('loading:progress', handleLoadingEvent);
+    zylemEventBus.on('loading:complete', handleLoadingEvent);
+
+    const syncBrowserViewport = () => {
+      setBrowserViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    syncBrowserViewport();
+    window.addEventListener('resize', syncBrowserViewport);
+
+    let frameObserver: ResizeObserver | null = null;
+    let stageObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && viewportFrameRef) {
+      frameObserver = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        setMeasuredViewportSize({
+          width: Math.round(entry.contentRect.width),
+          height: Math.round(entry.contentRect.height),
+        });
+      });
+      frameObserver.observe(viewportFrameRef);
+    }
+
+    if (typeof ResizeObserver !== 'undefined' && stageAreaRef) {
+      stageObserver = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        setStageAreaSize({
+          width: Math.round(entry.contentRect.width),
+          height: Math.round(entry.contentRect.height),
+        });
+      });
+      stageObserver.observe(stageAreaRef);
+    }
 
     onCleanup(() => {
-        zylemEventBus.off('loading:start', handleLoadingEvent);
-        zylemEventBus.off('loading:progress', handleLoadingEvent);
-        zylemEventBus.off('loading:complete', handleLoadingEvent);
-        editorEvents.emit({ type: 'debug', payload: { enabled: false } });
+      frameObserver?.disconnect();
+      stageObserver?.disconnect();
+      window.removeEventListener('resize', syncBrowserViewport);
     });
+  });
 
-    createEffect(() => {
-        const activeExample = appStore.activeExample;
-        if (!activeExample) return;
+  onCleanup(() => {
+    zylemEventBus.off('loading:start', handleLoadingEvent);
+    zylemEventBus.off('loading:progress', handleLoadingEvent);
+    zylemEventBus.off('loading:complete', handleLoadingEvent);
+    editorEvents.emit({ type: 'debug', payload: { enabled: false } });
+  });
 
-        setLoading(true);
-        setProgress(0);
-        setMessage('Loading...');
-        setExample(null);
-        
-        activeExample.load().then((gameModule) => {
-            const game = gameModule.default;
-            setExample(game);
+  createEffect(() => {
+    const activeExample = appStore.activeExample;
+    if (!activeExample) return;
 
-            // Enable debug mode for the editor when game loads
-            editorEvents.emit({ type: 'debug', payload: { enabled: true } });
-        });
+    setLoading(true);
+    setProgress(0);
+    setMessage('Loading...');
+    setExample(null);
+
+    activeExample.load().then((gameModule) => {
+      setExample(gameModule.default);
+      editorEvents.emit({ type: 'debug', payload: { enabled: true } });
     });
+  });
 
-    // Note: debug state sync happens directly in editorStateStore via valtio mutation
-    // This avoids any re-renders of the game component
-
-    return (
-        <div class={styles.container}>
+  return (
+    <div class={styles.container}>
+      <Show when={!controlsHidden()}>
+        <ViewportControls />
+      </Show>
+      <div ref={stageAreaRef} class={styles.stageArea}>
+        <div class={styles.viewportShell}>
+          <div
+            ref={viewportFrameRef}
+            class={`${styles.viewportFrame} ${controlsHidden() ? styles.viewportFrameFixed : ''}`}
+            style={viewportFrameStyle()}
+          >
             <div class={styles.gameContainer}>
-                <Show when={example()}>
-                    <zylem-game
-                        ref={gameRef}
-                        class="block h-full w-full"
-                        game={example()}
-                    />
-                </Show>
-                <Show when={loading()}>
-                    <div class={styles.loadingOverlay}>
-                        <div class={styles.loadingContent}>
-                            <div class={styles.loadingTitle}>Loading...</div>
-                            <div class={styles.progressBar}>
-                                <div
-                                    class={styles.progressFill}
-                                    style={{ width: `${progress() * 100}%` }}
-                                />
-                            </div>
-                            <div class={styles.loadingMessage}>{message()}</div>
-                        </div>
+              <Show when={example()}>
+                <zylem-game
+                  ref={gameRef}
+                  class="block h-full w-full"
+                  game={example()}
+                  viewport-profile={activeViewportProfile()}
+                />
+              </Show>
+              <Show when={loading()}>
+                <div class={styles.loadingOverlay}>
+                  <div class={styles.loadingContent}>
+                    <div class={styles.loadingTitle}>Loading...</div>
+                    <div class={styles.progressBar}>
+                      <div
+                        class={styles.progressFill}
+                        style={{ width: `${progress() * 100}%` }}
+                      />
                     </div>
-                </Show>
+                    <div class={styles.loadingMessage}>{message()}</div>
+                  </div>
+                </div>
+              </Show>
             </div>
+            <div class={styles.viewportHint}>
+              Drag the lower-right corner to resize
+            </div>
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default DemoViewer;

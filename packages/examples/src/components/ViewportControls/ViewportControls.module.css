@@ -1,0 +1,144 @@
+.toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.75rem 1rem 0;
+	flex-wrap: wrap;
+}
+
+.toolbarGroup {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.toolbarLabel {
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	opacity: 0.6;
+}
+
+.toolbarButton {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.4rem;
+	height: 2.4rem;
+	border: 1px solid color-mix(in srgb, var(--zylem-color-border) 80%, transparent);
+	background: color-mix(in srgb, var(--zylem-color-surface) 88%, black 12%);
+	color: var(--zylem-color-text);
+	border-radius: 999px;
+	padding: 0;
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+
+.buttonText {
+	display: none;
+	line-height: 1;
+}
+
+.buttonIcon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.1rem;
+	height: 1.1rem;
+	line-height: 0;
+}
+
+.buttonIcon svg {
+	width: 100%;
+	height: 100%;
+}
+
+.toolbarButtonActive {
+	background: var(--zylem-color-primary);
+	border-color: var(--zylem-color-primary);
+	color: white;
+}
+
+.viewportMeta {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-size: 0.8rem;
+	opacity: 0.72;
+}
+
+.toolbarCompact {
+	gap: 0.5rem;
+	padding: 0.75rem 0.75rem 0;
+}
+
+.toolbarCompact .toolbarGroup {
+	gap: 0.35rem;
+}
+
+.toolbarCompact .toolbarLabel {
+	display: none;
+}
+
+.toolbarCompact .toolbarButton {
+	padding: 0;
+	width: 2.4rem;
+	height: 2.4rem;
+}
+
+.toolbarCompact .buttonText {
+	display: none;
+}
+
+.toolbarCompact .buttonIcon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.toolbarCompact .viewportMeta {
+	width: 100%;
+	justify-content: space-between;
+	font-size: 0.75rem;
+	padding-inline: 0.2rem;
+}
+
+@media (max-width: 720px) {
+	.toolbar {
+		gap: 0.5rem;
+		padding: 0.75rem 0.75rem 0;
+	}
+
+	.toolbarGroup {
+		gap: 0.35rem;
+	}
+
+	.toolbarLabel {
+		display: none;
+	}
+
+	.toolbarButton {
+		padding: 0;
+		width: 2.4rem;
+		height: 2.4rem;
+	}
+
+	.buttonText {
+		display: none;
+	}
+
+	.buttonIcon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.viewportMeta {
+		width: 100%;
+		justify-content: space-between;
+		font-size: 0.75rem;
+		padding-inline: 0.2rem;
+	}
+}

@@ -13,7 +13,11 @@ import { CameraWrapper } from '../camera/camera';
 import { isCameraWrapper } from '../core/utility/options-parser';
 import { Stage } from '../stage/stage';
 import { BaseGlobals, GameInputConfig, ZylemGameConfig } from './game-interfaces';
-import { GameConfig, resolveGameConfig } from './game-config';
+import {
+	GameConfig,
+	resolveGameConfig,
+	type ResolveGameConfigRuntime,
+} from './game-config';
 import { AspectRatioDelegate } from '../device/aspect-ratio';
 import { GameCanvas } from './game-canvas';
 import { GameDebugDelegate } from './game-debug-delegate';
@@ -70,17 +74,25 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	private readonly stageSetupParams = {} as SetupContext<ZylemStage, TGlobals>;
 	private readonly stageUpdateParams = {} as UpdateContext<ZylemStage, TGlobals>;
 	private readonly frameCallback = (timestamp: number) => this.loop(timestamp);
+	private readonly sourceOptions: ZylemGameOptions<TGlobals>;
+	private displayRuntime: ResolveGameConfigRuntime;
 
 	static FRAME_LIMIT = 120;
 	static FRAME_DURATION = 1000 / ZylemGame.FRAME_LIMIT;
 	static MAX_DELTA_SECONDS = 1 / 30;
 
-	constructor(options: ZylemGameOptions<TGlobals>, wrapperRef: Game<TGlobals>) {
+	constructor(
+		options: ZylemGameOptions<TGlobals>,
+		wrapperRef: Game<TGlobals>,
+		displayRuntime: ResolveGameConfigRuntime = {},
+	) {
 		this.wrapperRef = wrapperRef;
 		this.timer = new Timer();
 		this.timer.connect(document);
+		this.sourceOptions = { ...options };
+		this.displayRuntime = { ...displayRuntime };
 
-		const config = resolveGameConfig(options as any);
+		const config = resolveGameConfig(options as any, this.displayRuntime);
 
 		this.globalInputConfig = config.input;
 		this.inputManager = new InputManager(config.input);
@@ -93,6 +105,15 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.loadGameCanvas(config);
 		this.loadDebugOptions(options);
 		this.setGlobals(options);
+	}
+
+	setDisplayRuntime(runtime: ResolveGameConfigRuntime): void {
+		this.displayRuntime = { ...runtime };
+		const nextConfig = resolveGameConfig(this.sourceOptions as any, this.displayRuntime);
+		this.resolvedConfig = nextConfig;
+		this.rendererObserver.setConfig(nextConfig);
+		this.gameCanvas?.setAspectRatio(nextConfig.aspectRatio);
+		this.emitStateDispatch('@game:display-config');
 	}
 
 	loadGameCanvas(config: GameConfig) {
@@ -153,6 +174,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.defaultCamera = stage.wrappedStage!.cameraRef!;
 		
 		// Trigger renderer observer with renderer manager
+		this.rendererObserver.setStage(stage.wrappedStage ?? null);
 		if (this.rendererManager) {
 			this.rendererObserver.setRendererManager(this.rendererManager);
 		}

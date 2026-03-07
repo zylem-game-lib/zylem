@@ -50,6 +50,10 @@
       "types": "./dist/behavior/screen-wrap.d.ts",
       "import": "./dist/behavior/screen-wrap.js"
     },
+    "./behavior/screen-visibility": {
+      "types": "./dist/behavior/screen-visibility.d.ts",
+      "import": "./dist/behavior/screen-visibility.js"
+    },
     "./behavior/world-boundary-2d": {
       "types": "./dist/behavior/world-boundary-2d.d.ts",
       "import": "./dist/behavior/world-boundary-2d.js"

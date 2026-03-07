@@ -6,7 +6,7 @@ export type RetroPreset = {
 };
 
 /**
- * Retro and console display presets.
+ * Retro, console, and device display presets.
  * displayAspect represents the intended display aspect (letterboxing target),
  * not necessarily the raw pixel aspect of internal buffers.
  */
@@ -65,6 +65,14 @@ const RetroPresets: Record<string, RetroPreset> = {
 			{ key: '3840x2160', width: 3840, height: 2160, notes: '4K UHD (S/X models).' },
 		],
 	},
+	MobilePortrait: {
+		displayAspect: 9 / 16,
+		resolutions: [
+			{ key: '360x640', width: 360, height: 640, notes: 'Low-density phone portrait baseline.' },
+			{ key: '720x1280', width: 720, height: 1280, notes: 'HD phone portrait.' },
+			{ key: '1080x1920', width: 1080, height: 1920, notes: 'Full HD phone portrait.' },
+		],
+	},
 };
 
 export type RetroPresetKey = keyof typeof RetroPresets;
@@ -90,5 +98,4 @@ export function parseResolution(text: string): { width: number; height: number }
 	if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
 	return { width, height };
 }
-
 

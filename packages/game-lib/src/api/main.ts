@@ -2,6 +2,17 @@
 export { createGame, Game } from '../lib/game/game';
 export type { ZylemGameConfig } from '../lib/game/game-interfaces';
 export { gameConfig } from '../lib/game/game-config';
+export type {
+	GameConfigLike,
+	GameDeviceConfig,
+	ResolutionInput,
+	DeviceProfile,
+	ResolveGameConfigRuntime,
+} from '../lib/game/game-config';
+export { AspectRatio } from '../lib/device/aspect-ratio';
+export type { AspectRatioValue } from '../lib/device/aspect-ratio';
+export { getDisplayAspect, getPresetResolution, parseResolution } from '../lib/game/game-retro-resolutions';
+export type { RetroPreset, RetroPresetKey, RetroResolution } from '../lib/game/game-retro-resolutions';
 
 export { createStage } from '../lib/stage/stage';
 export { entitySpawner } from '../lib/stage/entity-spawner';
