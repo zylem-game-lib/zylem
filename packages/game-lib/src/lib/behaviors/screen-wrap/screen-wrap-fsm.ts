@@ -5,7 +5,7 @@
  * Reports position relative to bounds edges.
  */
 
-import { SyncStateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from '../../core/utility/sync-state-machine';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FSM State Model

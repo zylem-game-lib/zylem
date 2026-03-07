@@ -9,7 +9,12 @@
  * - The FSM state is still useful for coarse status like "inside" vs "touching".
  */
 
-import { SyncStateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from '../../core/utility/sync-state-machine';
+import {
+	computeBounds2DHits,
+	constrainMovementToBounds2D,
+	hasAnyBounds2DHit,
+} from '../shared/bounds-2d';
 
 export type WorldBoundary2DHit = 'top' | 'bottom' | 'left' | 'right';
 export type WorldBoundary2DHits = Record<WorldBoundary2DHit, boolean>;
@@ -48,24 +53,16 @@ export function computeWorldBoundary2DHits(
 	position: WorldBoundary2DPosition,
 	bounds: WorldBoundary2DBounds
 ): WorldBoundary2DHits {
-	const hits: WorldBoundary2DHits = {
-		top: false,
-		bottom: false,
-		left: false,
-		right: false,
-	};
-
-	if (position.x <= bounds.left) hits.left = true;
-	else if (position.x >= bounds.right) hits.right = true;
-
-	if (position.y <= bounds.bottom) hits.bottom = true;
-	else if (position.y >= bounds.top) hits.top = true;
-
-	return hits;
+	return computeBounds2DHits(position, {
+		minX: bounds.left,
+		maxX: bounds.right,
+		minY: bounds.bottom,
+		maxY: bounds.top,
+	});
 }
 
 export function hasAnyWorldBoundary2DHit(hits: WorldBoundary2DHits): boolean {
-	return !!(hits.left || hits.right || hits.top || hits.bottom);
+	return hasAnyBounds2DHit(hits);
 }
 
 /**
@@ -114,22 +111,7 @@ export class WorldBoundary2DFSM {
 	 * @returns Adjusted { moveX, moveY } with boundary-blocked axes zeroed
 	 */
 	getMovement(moveX: number, moveY: number): { moveX: number; moveY: number } {
-		const hits = this.lastHits;
-
-		let adjustedX = moveX;
-		let adjustedY = moveY;
-
-		// If moving left and hitting left, or moving right and hitting right, zero X
-		if ((hits.left && moveX < 0) || (hits.right && moveX > 0)) {
-			adjustedX = 0;
-		}
-
-		// If moving down and hitting bottom, or moving up and hitting top, zero Y
-		if ((hits.bottom && moveY < 0) || (hits.top && moveY > 0)) {
-			adjustedY = 0;
-		}
-
-		return { moveX: adjustedX, moveY: adjustedY };
+		return constrainMovementToBounds2D(this.lastHits, moveX, moveY);
 	}
 
 	/**

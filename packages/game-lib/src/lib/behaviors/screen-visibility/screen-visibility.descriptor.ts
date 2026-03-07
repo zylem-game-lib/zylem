@@ -89,6 +89,10 @@ class ScreenVisibilitySystem implements BehaviorSystem {
 	private readonly fallbackMin = new Vector3();
 	private readonly fallbackMax = new Vector3();
 	private readonly corners = Array.from({ length: 8 }, () => new Vector3());
+	private readonly boundsCache = new Map<string, {
+		bounds: Box3;
+		key: string;
+	}>();
 
 	constructor(
 		private scene: any,
@@ -113,7 +117,7 @@ class ScreenVisibilitySystem implements BehaviorSystem {
 			const cameras = this.resolveActiveCameras(options.cameraName);
 			const visibleCameraNames: string[] = [];
 
-			const bounds = this.computeWorldBounds(entity, options);
+			const bounds = this.computeWorldBounds(entity, visibilityRef, options);
 			if (bounds) {
 				for (let index = 0; index < cameras.length; index++) {
 					const cameraRef = cameras[index];
@@ -144,8 +148,15 @@ class ScreenVisibilitySystem implements BehaviorSystem {
 
 	private computeWorldBounds(
 		entity: GameEntity<any>,
+		ref: BehaviorRef<ScreenVisibilityOptions>,
 		options: ScreenVisibilityOptions,
 	): Box3 | null {
+		const cacheKey = this.getBoundsCacheKey(entity, options);
+		const cached = this.boundsCache.get(entity.uuid);
+		if (cached && cached.key === cacheKey) {
+			return cached.bounds;
+		}
+
 		const target = (entity.group ?? entity.mesh) as Object3D | undefined;
 		this.worldBounds.makeEmpty();
 
@@ -201,7 +212,87 @@ class ScreenVisibilitySystem implements BehaviorSystem {
 			this.worldBounds.expandByScalar(options.padding);
 		}
 
-		return this.worldBounds.isEmpty() ? null : this.worldBounds;
+		if (this.worldBounds.isEmpty()) {
+			this.boundsCache.delete(entity.uuid);
+			return null;
+		}
+
+		const cachedBounds = cached?.bounds ?? new Box3();
+		cachedBounds.copy(this.worldBounds);
+		this.boundsCache.set(entity.uuid, {
+			bounds: cachedBounds,
+			key: cacheKey,
+		});
+		(ref as any).__screenVisibilityBoundsKey = cacheKey;
+		return cachedBounds;
+	}
+
+	private getBoundsCacheKey(
+		entity: GameEntity<any>,
+		options: ScreenVisibilityOptions,
+	): string {
+		const body = (entity as any).body;
+		if (body) {
+			const translation = body.translation();
+			const rotation = body.rotation();
+			return [
+				'b',
+				translation.x.toFixed(3),
+				translation.y.toFixed(3),
+				translation.z.toFixed(3),
+				rotation.x.toFixed(3),
+				rotation.y.toFixed(3),
+				rotation.z.toFixed(3),
+				rotation.w.toFixed(3),
+				options.padding,
+				options.requireFullyVisible,
+				options.fallbackSize?.x ?? '',
+				options.fallbackSize?.y ?? '',
+				options.fallbackSize?.z ?? '',
+			].join('|');
+		}
+
+		const target = (entity.group ?? entity.mesh) as Object3D | undefined;
+		if (target) {
+			const position = target.position;
+			const quaternion = target.quaternion;
+			const scale = target.scale;
+			return [
+				'o',
+				position.x.toFixed(3),
+				position.y.toFixed(3),
+				position.z.toFixed(3),
+				quaternion.x.toFixed(3),
+				quaternion.y.toFixed(3),
+				quaternion.z.toFixed(3),
+				quaternion.w.toFixed(3),
+				scale.x.toFixed(3),
+				scale.y.toFixed(3),
+				scale.z.toFixed(3),
+				options.padding,
+				options.requireFullyVisible,
+				options.fallbackSize?.x ?? '',
+				options.fallbackSize?.y ?? '',
+				options.fallbackSize?.z ?? '',
+			].join('|');
+		}
+
+		const position = entity.options?.position ?? { x: 0, y: 0, z: 0 };
+		const size = entity.options?.size ?? { x: 0, y: 0, z: 0 };
+		return [
+			's',
+			position.x,
+			position.y,
+			position.z,
+			size.x,
+			size.y,
+			size.z,
+			options.padding,
+			options.requireFullyVisible,
+			options.fallbackSize?.x ?? '',
+			options.fallbackSize?.y ?? '',
+			options.fallbackSize?.z ?? '',
+		].join('|');
 	}
 
 	private resolveFallbackCenter(
@@ -291,6 +382,10 @@ class ScreenVisibilitySystem implements BehaviorSystem {
 		}
 
 		options.onChange?.(context);
+	}
+
+	destroy(_ecs: IWorld): void {
+		this.boundsCache.clear();
 	}
 }
 

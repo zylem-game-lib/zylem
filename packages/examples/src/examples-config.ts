@@ -23,6 +23,9 @@ export type GameModule = {
 const PREDEFINED_ORDER = [
   '00-readme-example',
   '00-screen-wrap',
+  '00-ricochet',
+  '00-ricochet-3d',
+  '00-jumper-2d',
   '00-input',
   '00-pong',
   '00-breakout',

@@ -9,8 +9,7 @@
  * - State synchronization with FSM
  */
 
-import { Vector3, BufferGeometry, LineBasicMaterial, Line } from 'three';
-import { Ray } from '@dimforge/rapier3d-compat';
+import { GroundProbe3D } from '../shared/ground-probe-3d';
 import type {
 	Platformer3DMovementComponent,
 	Platformer3DInputComponent,
@@ -37,106 +36,12 @@ export interface Platformer3DEntity {
 export class Platformer3DBehavior {
 	private world: any;
 	private scene: any;
-	private rays: Map<string, Ray[]> = new Map();
-	private debugLines: Map<string, any[]> = new Map(); // Store Line objects for debug visualization
+	private groundProbe: GroundProbe3D;
 
 	constructor(world: any, scene: any) {
 		this.world = world;
 		this.scene = scene;
-	}
-
-	/**
-	 * Detect if entity is on the ground using raycasting
-	 */
-	/**
-	 * Detect if entity is on the ground using raycasting (multi-sample: center + 4 corners)
-	 */
-	private detectGround(entity: Platformer3DEntity): boolean {
-		if (!this.world?.world || !entity.body) return false;
-
-		const translation = entity.body.translation();
-		const rayLength = entity.platformer.groundRayLength;
-		const radius = 0.4; // Sample radius (approx 80% of typical character collider radius)
-
-		// Define ray offsets (center + 4 corners)
-		const offsets = [
-			{ x: 0, z: 0 },
-			{ x: radius, z: radius },
-			{ x: -radius, z: radius },
-			{ x: radius, z: -radius },
-			{ x: -radius, z: -radius },
-		];
-
-		// Get or create rays for this entity
-		let entityRays = this.rays.get(entity.uuid);
-		if (!entityRays) {
-			entityRays = offsets.map(() => new Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 }));
-			this.rays.set(entity.uuid, entityRays);
-		}
-
-		let grounded = false;
-		
-		// Cast all rays
-		offsets.forEach((offset, i) => {
-			if (grounded) return; // Optimization: stop if already grounded (comment out for full debug viz)
-
-			const ray = entityRays![i];
-			ray.origin = { 
-				x: translation.x + offset.x, 
-				y: translation.y, 
-				z: translation.z + offset.z 
-			};
-			ray.dir = { x: 0, y: -1, z: 0 };
-
-			const hit = this.world.world.castRay(
-				ray,
-				rayLength,
-				true,
-				undefined,
-				undefined,
-				undefined,
-				undefined,
-				(collider: any) => {
-					const ref = collider._parent?.userData?.uuid;
-					if (ref === entity.uuid) return false;
-					grounded = true;
-					return true;
-				}
-			);
-		});
-
-		// Visualization logic omitted for brevity/performance (restore if needed)
-		if (this.scene) {
-			this.updateDebugLines(entity, entityRays, grounded, rayLength);
-		}
-
-		return grounded;
-	}
-
-	private updateDebugLines(entity: Platformer3DEntity, rays: Ray[], hasGround: boolean, length: number) {
-		let lines = this.debugLines.get(entity.uuid);
-		if (!lines) {
-			lines = rays.map(() => {
-				const geometry = new BufferGeometry().setFromPoints([new Vector3(), new Vector3()]);
-				const material = new LineBasicMaterial({ color: 0xff0000 });
-				const line = new Line(geometry, material);
-				this.scene.add(line);
-				return line;
-			});
-			this.debugLines.set(entity.uuid, lines);
-		}
-
-		rays.forEach((ray, i) => {
-			const line = lines![i];
-			const start = new Vector3(ray.origin.x, ray.origin.y, ray.origin.z);
-			const end = new Vector3(
-				ray.origin.x + ray.dir.x * length,
-				ray.origin.y + ray.dir.y * length,
-				ray.origin.z + ray.dir.z * length
-			);
-			line.geometry.setFromPoints([start, end]);
-			line.material.color.setHex(hasGround ? 0x00ff00 : 0xff0000);
-		});
+		this.groundProbe = new GroundProbe3D(world);
 	}
 
 	/**
@@ -298,13 +203,23 @@ export class Platformer3DBehavior {
 		if (isAirborne) {
 			// Airborne: Must be FALLING (not jumping) with very low velocity to land
 			// This prevents false grounding at jump apex or during descent
-			const nearGround = this.detectGround(entity);
+			const nearGround = this.groundProbe.detect(entity, {
+				rayLength: entity.platformer.groundRayLength,
+				mode: 'any',
+				debug: entity.platformer.debugGroundProbe,
+				scene: this.scene,
+			});
 			const canLand = state.falling && !state.jumping; // Only land when falling, not jumping
 			const hasLanded = Math.abs(velocity.y) < 0.5; // Very strict threshold for landing
 			isGrounded = nearGround && canLand && hasLanded;
 		} else {
 			// On ground (walking/idle): Normal raycast detection with lenient threshold
-			const nearGround = this.detectGround(entity);
+			const nearGround = this.groundProbe.detect(entity, {
+				rayLength: entity.platformer.groundRayLength,
+				mode: 'any',
+				debug: entity.platformer.debugGroundProbe,
+				scene: this.scene,
+			});
 			const notFallingFast = velocity.y > -2.0; // Lenient - don't ground while falling fast
 			isGrounded = nearGround && notFallingFast;
 		}
@@ -367,6 +282,6 @@ export class Platformer3DBehavior {
 	 * Cleanup
 	 */
 	destroy(): void {
-		this.rays.clear();
+		this.groundProbe.destroy();
 	}
 }

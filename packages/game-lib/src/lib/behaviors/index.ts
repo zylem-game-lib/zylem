@@ -41,6 +41,9 @@ export * from './world-boundary-2d';
 // Ricochet 2D Module
 export * from './ricochet-2d';
 
+// Ricochet 3D Module
+export * from './ricochet-3d';
+
 // Platformer 3D Module
 export * from './platformer-3d';
 
@@ -49,6 +52,9 @@ export * from './first-person';
 
 // Jumper 3D Module
 export * from './jumper-3d';
+
+// Jumper 2D Module
+export * from './jumper-2d';
 
 // Cooldown Module
 export * from './cooldown';

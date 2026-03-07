@@ -9,6 +9,7 @@ import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { ScreenWrapFSM } from './screen-wrap-fsm';
+import { createBounds2DRect, wrapPoint2D } from '../shared/bounds-2d';
 
 /**
  * Screen wrap options (typed for entity.use() autocomplete)
@@ -65,17 +66,16 @@ class ScreenWrapSystem implements BehaviorSystem {
 
 			// Update FSM with position and wrap state
 			const pos = gameEntity.body.translation();
-			const { width, height, centerX, centerY, edgeThreshold } = options;
-			const halfWidth = width / 2;
-			const halfHeight = height / 2;
+			const { edgeThreshold } = options;
+			const bounds = createBounds2DRect(options);
 
 			wrapRef.fsm.update(
 				{ x: pos.x, y: pos.y },
 				{
-					minX: centerX - halfWidth,
-					maxX: centerX + halfWidth,
-					minY: centerY - halfHeight,
-					maxY: centerY + halfHeight,
+					minX: bounds.minX,
+					maxX: bounds.maxX,
+					minY: bounds.minY,
+					maxY: bounds.maxY,
 					edgeThreshold,
 				},
 				wrapped
@@ -87,43 +87,15 @@ class ScreenWrapSystem implements BehaviorSystem {
 		const body = entity.body;
 		if (!body) return false;
 
-		const { width, height, centerX, centerY } = options;
-		const halfWidth = width / 2;
-		const halfHeight = height / 2;
-
-		const minX = centerX - halfWidth;
-		const maxX = centerX + halfWidth;
-		const minY = centerY - halfHeight;
-		const maxY = centerY + halfHeight;
-
 		const pos = body.translation();
-		let newX = pos.x;
-		let newY = pos.y;
-		let wrapped = false;
+		const bounds = createBounds2DRect(options);
+		const result = wrapPoint2D({ x: pos.x, y: pos.y }, bounds);
 
-		// Wrap X
-		if (pos.x < minX) {
-			newX = maxX - (minX - pos.x);
-			wrapped = true;
-		} else if (pos.x > maxX) {
-			newX = minX + (pos.x - maxX);
-			wrapped = true;
+		if (result.wrapped) {
+			body.setTranslation({ x: result.x, y: result.y, z: pos.z }, true);
 		}
 
-		// Wrap Y
-		if (pos.y < minY) {
-			newY = maxY - (minY - pos.y);
-			wrapped = true;
-		} else if (pos.y > maxY) {
-			newY = minY + (pos.y - maxY);
-			wrapped = true;
-		}
-
-		if (wrapped) {
-			body.setTranslation({ x: newX, y: newY, z: pos.z }, true);
-		}
-
-		return wrapped;
+		return result.wrapped;
 	}
 
 	destroy(_ecs: IWorld): void {

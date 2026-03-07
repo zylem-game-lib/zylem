@@ -5,7 +5,7 @@
  * FSM does NOT touch physics or ThrusterMovementBehavior - it only writes ThrusterInputComponent.
  */
 
-import { SyncStateMachine, t, type ITransition } from 'typescript-fsm';
+import { SyncStateMachine, t } from '../../core/utility/sync-state-machine';
 import type { ThrusterInputComponent } from './components';
 
 // ─────────────────────────────────────────────────────────────────────────────

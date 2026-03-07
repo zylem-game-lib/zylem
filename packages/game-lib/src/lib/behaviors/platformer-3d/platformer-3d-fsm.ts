@@ -10,7 +10,7 @@
  * - Landing: Just touched ground
  */
 
-import { SyncStateMachine, t } from 'typescript-fsm';
+import { SyncStateMachine, t } from '../../core/utility/sync-state-machine';
 import type { Platformer3DInputComponent, Platformer3DStateComponent } from './components';
 
 /**
