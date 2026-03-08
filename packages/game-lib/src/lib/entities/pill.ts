@@ -1,5 +1,5 @@
 import { BaseNode } from '../core/base-node';
-import { GameEntityOptions, GameEntity } from './entity';
+import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from './entity';
 import { DebugDelegate } from './delegates/debug';
 import { commonDefaults, mergeArgs } from './common';
 import { pillMesh } from './parts/mesh-factories';
@@ -79,5 +79,8 @@ export function createPill(...args: Array<PillOptions>): ZylemPill {
 			collisionFilter: options.collisionFilter,
 		}),
 	);
-	return entity;
+	return finalizeEntityCloneSupport(
+		entity,
+		(cloneOptions) => createPill(cloneOptions ?? {}),
+	);
 }

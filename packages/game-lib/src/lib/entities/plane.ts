@@ -147,6 +147,7 @@ export function createPlane(...args: Array<PlaneOptions>): ZylemPlane {
 		BuilderClass: PlaneBuilder,
 		MeshBuilderClass: PlaneMeshBuilder,
 		CollisionBuilderClass: PlaneCollisionBuilder,
-		entityType: ZylemPlane.type
+		entityType: ZylemPlane.type,
+		cloneFactory: (options) => createPlane(options ?? {}),
 	});
 }

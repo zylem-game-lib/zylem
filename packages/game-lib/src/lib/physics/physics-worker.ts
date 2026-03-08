@@ -145,9 +145,10 @@ function handleStep(delta: number, commands: BodyCommand[]) {
 
 	while (accumulator >= fixedTimestep) {
 		world.step();
-		collectCollisions(collisions);
 		accumulator -= fixedTimestep;
 	}
+
+	collectCollisions(collisions);
 
 	const interpolationAlpha = accumulator / fixedTimestep;
 

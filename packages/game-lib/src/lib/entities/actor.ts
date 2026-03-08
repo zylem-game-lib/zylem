@@ -1,5 +1,5 @@
 import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
-import { BufferGeometry, Object3D, SkinnedMesh, Mesh, MeshStandardMaterial, Group, Vector3 } from 'three';
+import { BufferGeometry, Object3D, SkinnedMesh, Mesh, MeshStandardMaterial, Group, Vector3, Material } from 'three';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
@@ -29,6 +29,12 @@ type ZylemActorOptions = GameEntityOptions & {
 	scale?: Vec3;
 	material?: MaterialOptions;
 	collisionShape?: CollisionShapeType;
+};
+
+type TransparentMaterial = Material & {
+	opacity: number;
+	transparent: boolean;
+	needsUpdate: boolean;
 };
 
 const actorDefaults: ZylemActorOptions = {
@@ -295,7 +301,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 	private applyMaterialOverrides(): void {
 		const materialOptions = this.options.material;
 		// Only apply if user specified material options beyond defaults
-		if (!materialOptions || (!materialOptions.color && !materialOptions.path)) {
+		if (!materialOptions || (!materialOptions.color && !materialOptions.path && materialOptions.opacity === undefined)) {
 			return;
 		}
 
@@ -311,10 +317,26 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 						emissiveIntensity: 0.5,
 						lightMapIntensity: 0.5,
 						fog: true,
+						opacity: materialOptions.opacity ?? 1,
+						transparent: materialOptions.opacity !== undefined && materialOptions.opacity < 1,
 					});
 					mesh.castShadow = true;
 					mesh.receiveShadow = true;
 					mesh.material = newMaterial;
+				} else if (materialOptions.opacity !== undefined) {
+					const applyOpacity = (material: Material): Material => {
+						const clonedMaterial = material.clone();
+						if ('opacity' in clonedMaterial && 'transparent' in clonedMaterial) {
+							const transparentMaterial = clonedMaterial as TransparentMaterial;
+							transparentMaterial.opacity = materialOptions.opacity!;
+							transparentMaterial.transparent = materialOptions.opacity! < 1;
+							transparentMaterial.needsUpdate = true;
+						}
+						return clonedMaterial;
+					};
+					mesh.material = Array.isArray(mesh.material)
+						? mesh.material.map(applyOpacity)
+						: applyOpacity(mesh.material);
 				}
 			}
 		});
@@ -374,6 +396,7 @@ export function createActor(...args: Array<ActorOptions>): ZylemActor {
 		EntityClass: ZylemActor,
 		BuilderClass: ActorBuilder,
 		CollisionBuilderClass: ActorCollisionBuilder,
-		entityType: ZylemActor.type
+		entityType: ZylemActor.type,
+		cloneFactory: (options) => createActor(options ?? {}),
 	});
 }

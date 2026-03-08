@@ -22,7 +22,7 @@ import {
 	ClampToEdgeWrapping,
 } from 'three';
 import { BaseNode } from '../core/base-node';
-import { GameEntityOptions, GameEntity } from './entity';
+import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from './entity';
 import { UpdateContext, SetupContext } from '../core/base-node-life-cycle';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { getCooldown } from '../behaviors/cooldown/cooldown-store';
@@ -454,5 +454,8 @@ export function createCooldownIcon(...args: Array<CooldownIconOptions>): ZylemCo
 	for (const opt of configArgs) {
 		options = { ...options, ...opt };
 	}
-	return new ZylemCooldownIcon(options as ZylemCooldownIconOptions);
+	return finalizeEntityCloneSupport(
+		new ZylemCooldownIcon(options as ZylemCooldownIconOptions),
+		(cloneOptions) => createCooldownIcon(cloneOptions ?? {}),
+	);
 }

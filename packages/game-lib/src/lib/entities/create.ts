@@ -1,4 +1,8 @@
-import { GameEntityOptions, GameEntity } from "./entity";
+import {
+	finalizeEntityCloneSupport,
+	GameEntityOptions,
+	GameEntity,
+} from "./entity";
 import { BaseNode } from "../core/base-node";
 import { EntityBuilder } from "./builder";
 import { EntityCollisionBuilder } from "./builder";
@@ -13,6 +17,7 @@ export interface CreateGameEntityOptions<T extends GameEntity<any>, CreateOption
 	MeshBuilderClass?: new (data: any) => EntityMeshBuilder;
 	CollisionBuilderClass?: new (data: any) => EntityCollisionBuilder;
 	entityType: symbol;
+	cloneFactory: (options?: Partial<CreateOptions>) => T;
 };
 
 export function createEntity<T extends GameEntity<any>, CreateOptions extends GameEntityOptions>(params: CreateGameEntityOptions<T, CreateOptions>): T {
@@ -24,6 +29,7 @@ export function createEntity<T extends GameEntity<any>, CreateOptions extends Ga
 		entityType,
 		MeshBuilderClass,
 		CollisionBuilderClass,
+		cloneFactory,
 	} = params;
 
 	let builder: EntityBuilder<T, CreateOptions> | null = null;
@@ -68,6 +74,8 @@ export function createEntity<T extends GameEntity<any>, CreateOptions extends Ga
 		throw new Error(`missing options for ${String(entityType)}, builder is not initialized.`);
 	}
 
-	return builder.build();
+	return finalizeEntityCloneSupport(
+		builder.build(),
+		(options) => cloneFactory(options as Partial<CreateOptions> | undefined),
+	);
 }
-

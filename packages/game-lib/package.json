@@ -58,6 +58,10 @@
       "types": "./dist/behavior/world-boundary-2d.d.ts",
       "import": "./dist/behavior/world-boundary-2d.js"
     },
+    "./behavior/world-boundary-3d": {
+      "types": "./dist/behavior/world-boundary-3d.d.ts",
+      "import": "./dist/behavior/world-boundary-3d.js"
+    },
     "./behavior/ricochet-2d": {
       "types": "./dist/behavior/ricochet-2d.d.ts",
       "import": "./dist/behavior/ricochet-2d.js"

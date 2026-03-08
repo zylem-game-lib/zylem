@@ -50,6 +50,13 @@ const JUMPER_2D_OFFSETS = [
 	{ x: -0.35, z: 0 },
 ] as const;
 
+export function isJumper2DGrounded(params: {
+	nearGround: boolean;
+	velocityY: number;
+}): boolean {
+	return params.nearGround && params.velocityY <= 0;
+}
+
 export interface Jumper2DEntity {
 	uuid: string;
 	body: any;
@@ -114,7 +121,10 @@ class Jumper2DBehaviorSystem implements BehaviorSystem {
 				scene: this.scene,
 				originYOffset: 0.05,
 			});
-			const isGrounded = nearGround && bodyVelocity.y > -2 && bodyVelocity.y < 2;
+			const isGrounded = isJumper2DGrounded({
+				nearGround,
+				velocityY: bodyVelocity.y,
+			});
 
 			let timeSinceGroundedMs = this.timeSinceGroundedMs.get(gameEntity.uuid) ?? 0;
 			if (isGrounded) {

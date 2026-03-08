@@ -35,6 +35,13 @@ export class Vessel extends BaseNode<{}, Vessel> {
 		return this;
 	}
 
+	public clone(): this {
+		const cloned = vessel() as this;
+		this.replayUserLifecycleRegistrationsTo(cloned);
+		this.cloneChildrenInto(cloned);
+		return cloned;
+	}
+
 	/**
 	 * Add one or more child entities to this vessel.
 	 * Overrides parent to support multiple arguments.
@@ -56,5 +63,6 @@ export class Vessel extends BaseNode<{}, Vessel> {
 export function vessel(...args: Array<BaseNode>): Vessel {
 	const instance = new Vessel();
 	args.forEach(arg => instance.add(arg));
+	instance.enableUserLifecycleTracking();
 	return instance;
 }

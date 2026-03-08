@@ -52,6 +52,8 @@ export interface MaterialOptions {
 	repeat?: Vector2;
 	shader?: ZylemShader;
 	color?: Color;
+	/** Opacity from 0 (fully transparent) to 1 (fully opaque). */
+	opacity?: number;
 	/**
 	 * When true, prefer TSL/NodeMaterial (for WebGPU)
 	 * When false, prefer GLSL/ShaderMaterial (for WebGL)
@@ -69,6 +71,12 @@ interface BatchMaterialMapObject {
 type BatchKey = ReturnType<typeof shortHash>;
 
 export type TexturePath = string | null;
+
+type OpacityCapableMaterial = Material & {
+	opacity: number;
+	transparent: boolean;
+	needsUpdate: boolean;
+};
 
 export class MaterialBuilder {
 	static batchMaterialMap: Map<BatchKey, BatchMaterialMapObject> = new Map();
@@ -110,7 +118,7 @@ export class MaterialBuilder {
 	}
 
 	build(options: Partial<MaterialOptions>, entityType: symbol): void {
-		const { path, normalMap, repeat, color, shader, useTSL } = options;
+		const { path, normalMap, repeat, color, shader, opacity, useTSL } = options;
 		
 		// Override TSL preference if specified in options
 		const shouldUseTSL = useTSL ?? this.useTSL;
@@ -119,25 +127,25 @@ export class MaterialBuilder {
 		if (shader) {
 			if (isTSLShader(shader)) {
 				// TSL shader provided directly
-				this.setTSLShader(shader);
+				this.setTSLShader(shader, opacity);
 			} else if (isGLSLShader(shader)) {
 				// GLSL shader provided
 				if (shouldUseTSL) {
 					console.warn('MaterialBuilder: GLSL shader provided but TSL mode requested. Using GLSL.');
 				}
-				this.setShader(shader);
+				this.setShader(shader, opacity);
 			}
 		} else if (path) {
 			// Texture path provided
-			this.setTexture(path, repeat, shouldUseTSL);
+			this.setTexture(path, repeat, shouldUseTSL, opacity);
 		}
 
 		if (color) {
-			this.withColor(color, shouldUseTSL);
+			this.withColor(color, shouldUseTSL, opacity);
 		}
 
 		if (this.materials.length === 0) {
-			this.setColor(new Color('#ffffff'), shouldUseTSL);
+			this.setColor(new Color('#ffffff'), shouldUseTSL, opacity);
 		}
 
 		// Apply normal map if present (to the last added material)
@@ -148,26 +156,39 @@ export class MaterialBuilder {
 		this.batchMaterial(options, entityType);
 	}
 
-	withColor(color: Color, useTSL: boolean = false): this {
-		this.setColor(color, useTSL);
+	withColor(color: Color, useTSL: boolean = false, opacity?: number): this {
+		this.setColor(color, useTSL, opacity);
 		return this;
 	}
 
-	withShader(shader: ZylemShaderObject): this {
-		this.setShader(shader);
+	withShader(shader: ZylemShaderObject, opacity?: number): this {
+		this.setShader(shader, opacity);
 		return this;
 	}
 
-	withTSLShader(shader: ZylemTSLShader): this {
-		this.setTSLShader(shader);
+	withTSLShader(shader: ZylemTSLShader, opacity?: number): this {
+		this.setTSLShader(shader, opacity);
 		return this;
+	}
+
+	private applyOpacity(material: OpacityCapableMaterial, opacity?: number, forceTransparent: boolean = false): void {
+		if (opacity !== undefined) {
+			material.opacity = opacity;
+		}
+		material.transparent = forceTransparent || opacity !== undefined && opacity < 1;
+		material.needsUpdate = true;
 	}
 
 	/**
 	 * Set texture - loads in background (deferred).
 	 * Material is created immediately with null map, texture applies when loaded.
 	 */
-	setTexture(texturePath: TexturePath = null, repeat: Vector2 = new Vector2(1, 1), useTSL: boolean = false): void {
+	setTexture(
+		texturePath: TexturePath = null,
+		repeat: Vector2 = new Vector2(1, 1),
+		useTSL: boolean = false,
+		opacity?: number,
+	): void {
 		if (!texturePath) {
 			return;
 		}
@@ -175,6 +196,7 @@ export class MaterialBuilder {
 		if (useTSL) {
 			// For TSL/WebGPU, use NodeMaterial
 			const material = new MeshStandardNodeMaterial();
+			this.applyOpacity(material as OpacityCapableMaterial, opacity);
 			this.materials.push(material);
 
 			// Load texture in background and apply when ready
@@ -191,6 +213,8 @@ export class MaterialBuilder {
 			// For WebGL, use traditional material
 			const material = new MeshPhongMaterial({
 				map: null,
+				opacity: opacity ?? 1,
+				transparent: opacity !== undefined && opacity < 1,
 			});
 			this.materials.push(material);
 
@@ -244,11 +268,12 @@ export class MaterialBuilder {
 			});
 	}
 
-	setColor(color: Color, useTSL: boolean = false) {
+	setColor(color: Color, useTSL: boolean = false, opacity?: number) {
 		if (useTSL) {
 			// TSL/WebGPU compatible material
 			const material = new MeshStandardNodeMaterial();
 			material.color = color;
+			this.applyOpacity(material as OpacityCapableMaterial, opacity);
 			this.materials.push(material);
 		} else {
 			// WebGL compatible material
@@ -257,6 +282,8 @@ export class MaterialBuilder {
 				emissiveIntensity: 0.5,
 				lightMapIntensity: 0.5,
 				fog: true,
+				opacity: opacity ?? 1,
+				transparent: opacity !== undefined && opacity < 1,
 			});
 			this.materials.push(material);
 		}
@@ -265,7 +292,7 @@ export class MaterialBuilder {
 	/**
 	 * Set GLSL shader (WebGL only)
 	 */
-	setShader(customShader: ZylemShaderObject) {
+	setShader(customShader: ZylemShaderObject, opacity?: number) {
 		const { fragment, vertex } = customShader ?? standardShader;
 
 		const shader = new ShaderMaterial({
@@ -282,6 +309,7 @@ export class MaterialBuilder {
 			vertexShader: vertex,
 			fragmentShader: fragment,
 			transparent: true,
+			opacity: opacity ?? 1,
 		});
 		this.materials.push(shader);
 	}
@@ -289,12 +317,14 @@ export class MaterialBuilder {
 	/**
 	 * Set TSL shader (WebGPU compatible)
 	 */
-	setTSLShader(tslShader: ZylemTSLShader) {
+	setTSLShader(tslShader: ZylemTSLShader, opacity?: number) {
 		const material = new MeshBasicNodeMaterial();
 		material.colorNode = tslShader.colorNode;
-		if (tslShader.transparent) {
-			material.transparent = true;
-		}
+		this.applyOpacity(
+			material as OpacityCapableMaterial,
+			opacity,
+			tslShader.transparent,
+		);
 		this.materials.push(material);
 	}
 }

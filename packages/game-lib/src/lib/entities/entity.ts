@@ -36,10 +36,15 @@ import { makeTransformable } from '../actions/capabilities/transformable';
 import { clearVelocityIntent } from '../actions/capabilities/velocity-intents';
 import type { MoveableEntity } from '../actions/capabilities/moveable';
 import type { RotatableEntityAPI } from '../actions/capabilities/rotatable';
-import { isCollisionComponent, type CollisionComponent } from './parts/collision-factories';
+import {
+	cloneCollisionComponent,
+	isCollisionComponent,
+	type CollisionComponent,
+} from './parts/collision-factories';
 import type { NodeInterface } from '../core/node-interface';
 import { commonDefaults } from './common';
 import type { Action } from '../actions/action';
+import { deepCloneValue, deepMergeValues } from '../core/clone-utils';
 
 export interface CollisionContext<
 	T,
@@ -52,10 +57,35 @@ export interface CollisionContext<
 	globals: TGlobals;
 }
 
+export type CollisionPhase = 'enter' | 'stay';
+
+export interface CollisionRegistrationOptions {
+	phase?: CollisionPhase;
+	cooldownMs?: number;
+}
+
+interface NormalizedCollisionRegistrationOptions {
+	phase: CollisionPhase;
+	cooldownMs?: number;
+}
+
+export interface CollisionRegistration<T, O extends GameEntityOptions> {
+	id: number;
+	callback: (params: CollisionContext<T, O>) => void;
+	options: NormalizedCollisionRegistrationOptions;
+}
+
+export interface CollisionDispatchMetadata {
+	phase: CollisionPhase;
+	nowMs: number;
+}
+
 export interface CollisionDelegate<T, O extends GameEntityOptions> {
 	// Use 'any' for entity and options types to avoid contravariance issues
 	// with function parameters. Type safety is still enforced at the call site via onCollision()
-	collision?: ((params: CollisionContext<any, any>) => void)[];
+	collision?: CollisionRegistration<any, any>[];
+	cooldowns?: Map<string, number>;
+	nextId?: number;
 }
 
 export type IBuilder<BuilderOptions = any> = {
@@ -93,6 +123,36 @@ export interface EntityDebugInfo {
 	buildInfo: () => Record<string, string>;
 }
 
+type EntityCloneFactory<O extends GameEntityOptions, E extends GameEntity<O>> = (
+	options?: Partial<O>,
+) => E;
+
+type TrackedEntityComponent =
+	| { kind: 'mesh'; component: Mesh }
+	| { kind: 'collision'; component: CollisionComponent };
+
+function isCollisionRegistrationOptions(
+	value: unknown,
+): value is CollisionRegistrationOptions {
+	return value != null && typeof value === 'object';
+}
+
+function normalizeCollisionRegistrationOptions(
+	options?: CollisionRegistrationOptions,
+): NormalizedCollisionRegistrationOptions {
+	return {
+		phase: options?.phase ?? 'stay',
+		cooldownMs: options?.cooldownMs,
+	};
+}
+
+function getCollisionNowMs(): number {
+	if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+		return performance.now();
+	}
+	return Date.now();
+}
+
 export class GameEntity<O extends GameEntityOptions>
 	extends BaseNode<O>
 	implements GameEntityLifeCycle, EntityDebugInfo, MoveableEntity, RotatableEntityAPI {
@@ -119,6 +179,8 @@ export class GameEntity<O extends GameEntityOptions>
 
 	public collisionDelegate: CollisionDelegate<this, O> = {
 		collision: [],
+		cooldowns: new Map(),
+		nextId: 0,
 	};
 	public collisionType?: string;
 
@@ -135,6 +197,9 @@ export class GameEntity<O extends GameEntityOptions>
 
 	// Behavior references (new ECS pattern)
 	private behaviorRefs: BehaviorRef[] = [];
+	private cloneFactory: EntityCloneFactory<O, this> | null = null;
+	private trackAddedComponents: boolean = false;
+	private trackedComponents: TrackedEntityComponent[] = [];
 
 	// Transform store for batched physics updates (auto-created in create())
 	public transformStore: TransformState;
@@ -198,8 +263,10 @@ export class GameEntity<O extends GameEntityOptions>
 		for (const component of components) {
 			if (component instanceof Mesh) {
 				this.addMeshComponent(component);
+				this.trackComponent(component);
 			} else if (isCollisionComponent(component)) {
 				this.addCollisionComponent(component);
+				this.trackComponent(component);
 			} else {
 				super.add(component as NodeInterface);
 			}
@@ -247,6 +314,25 @@ export class GameEntity<O extends GameEntityOptions>
 			// Subsequent collisions add extra colliders to the same body
 			this.colliderDescs.push(collision.colliderDesc);
 		}
+	}
+
+	private trackComponent(component: Mesh | CollisionComponent): void {
+		if (!this.trackAddedComponents) {
+			return;
+		}
+
+		if (component instanceof Mesh) {
+			this.trackedComponents.push({
+				kind: 'mesh',
+				component: cloneMeshComponent(component),
+			});
+			return;
+		}
+
+		this.trackedComponents.push({
+			kind: 'collision',
+			component: cloneCollisionComponent(component),
+		});
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────
@@ -329,14 +415,107 @@ export class GameEntity<O extends GameEntityOptions>
 		return this;
 	}
 
+	public clone(overrides?: Partial<O>): this {
+		if (!this.cloneFactory) {
+			throw new Error(
+				`Cannot clone ${this.constructor.name}: clone() is only supported for entities created by official factory helpers.`,
+			);
+		}
+
+		const clone = this.cloneFactory(
+			deepMergeValues(this.options, overrides),
+		) as this;
+
+		const behaviorAliases = this.copyBehaviorRefsTo(clone);
+		const wrapCallback = <T extends Function>(callback: T): T =>
+			wrapBehaviorCallback(callback, behaviorAliases);
+
+		this.replayUserLifecycleRegistrationsTo(clone, wrapCallback);
+
+		const collisionRegistrations = this.getCollisionRegistrations();
+		if (collisionRegistrations.length > 0) {
+			for (const registration of collisionRegistrations) {
+				clone.onCollision(
+					wrapCallback(registration.callback),
+					registration.options,
+				);
+			}
+		}
+
+		for (const trackedComponent of this.trackedComponents) {
+			if (trackedComponent.kind === 'mesh') {
+				clone.add(cloneMeshComponent(trackedComponent.component));
+				continue;
+			}
+			clone.add(cloneCollisionComponent(trackedComponent.component));
+		}
+
+		this.cloneChildrenInto(clone);
+
+		return clone;
+	}
+
+	public finalizeCloneSupport(factory: (options?: Partial<O>) => GameEntity<O>): this {
+		this.cloneFactory = factory as EntityCloneFactory<O, this>;
+		this.enableUserLifecycleTracking();
+		this.trackAddedComponents = true;
+		return this;
+	}
+
 	/**
 	 * Add collision callbacks
 	 */
 	public onCollision(
+		callback: (params: CollisionContext<this, O>) => void,
+		options?: CollisionRegistrationOptions,
+	): this;
+	public onCollision(
 		...callbacks: ((params: CollisionContext<this, O>) => void)[]
+	): this;
+	public onCollision(
+		...args: Array<((params: CollisionContext<this, O>) => void) | CollisionRegistrationOptions | undefined>
 	): this {
-		const existing = this.collisionDelegate.collision ?? [];
-		this.collisionDelegate.collision = [...existing, ...callbacks];
+		const existing = [...(this.collisionDelegate.collision ?? [])];
+		let nextId = this.collisionDelegate.nextId ?? 0;
+
+		if (
+			args.length === 1
+			|| (
+				args.length === 2
+				&& (
+					args[1] == null
+					|| isCollisionRegistrationOptions(args[1])
+				)
+			)
+		) {
+			const callback = args[0] as ((params: CollisionContext<this, O>) => void) | undefined;
+			if (!callback) {
+				return this;
+			}
+
+			const options = args[1] as CollisionRegistrationOptions | undefined;
+			existing.push({
+				id: nextId,
+				callback,
+				options: normalizeCollisionRegistrationOptions(options),
+			});
+			nextId += 1;
+			this.collisionDelegate.collision = existing;
+			this.collisionDelegate.nextId = nextId;
+			return this;
+		}
+
+		for (const callback of args as Array<(params: CollisionContext<this, O>) => void>) {
+			existing.push({
+				id: nextId,
+				callback,
+				options: normalizeCollisionRegistrationOptions(),
+			});
+			nextId += 1;
+		}
+
+		this.collisionDelegate.collision = existing;
+		this.collisionDelegate.nextId = nextId;
 		return this;
 	}
 
@@ -382,6 +561,32 @@ export class GameEntity<O extends GameEntityOptions>
 	 */
 	public getBehaviorRefs(): BehaviorRef[] {
 		return this.behaviorRefs;
+	}
+
+	public getCollisionCallbacks(): Array<(params: CollisionContext<this, O>) => void> {
+		return this.getCollisionRegistrations().map((registration) => registration.callback);
+	}
+
+	public getCollisionRegistrations(): Array<CollisionRegistration<this, O>> {
+		return (this.collisionDelegate.collision ?? []).map((registration) => ({
+			id: registration.id,
+			callback: registration.callback,
+			options: { ...registration.options },
+		}));
+	}
+
+	private copyBehaviorRefsTo(target: GameEntity<any>): Map<BehaviorRef, BehaviorRef> {
+		const aliases = new Map<BehaviorRef, BehaviorRef>();
+
+		for (const ref of this.behaviorRefs) {
+			target.use(ref.descriptor, deepCloneValue(ref.options));
+			const targetRef = target.getBehaviorRefs().at(-1);
+			if (targetRef) {
+				aliases.set(ref, targetRef);
+			}
+		}
+
+		return aliases;
 	}
 
 	/**
@@ -454,12 +659,40 @@ export class GameEntity<O extends GameEntityOptions>
 		// which runs later when the stage processes markedForRemoval entities.
 	}
 
-	public _collision(other: GameEntity<O>, globals?: any): void {
-		if (this.collisionDelegate.collision?.length) {
-			const callbacks = this.collisionDelegate.collision;
-			callbacks.forEach((callback) => {
-				callback({ entity: this, other, globals });
-			});
+	public _collision(
+		other: GameEntity<O>,
+		globals?: any,
+		dispatch: CollisionDispatchMetadata = {
+			phase: 'stay',
+			nowMs: getCollisionNowMs(),
+		},
+	): void {
+		if (!this.collisionDelegate.collision?.length) {
+			return;
+		}
+
+		const cooldowns = this.collisionDelegate.cooldowns ?? new Map<string, number>();
+		this.collisionDelegate.cooldowns = cooldowns;
+
+		for (const registration of this.collisionDelegate.collision) {
+			if (registration.options.phase !== dispatch.phase) {
+				continue;
+			}
+
+			const cooldownMs = registration.options.cooldownMs;
+			if (cooldownMs != null) {
+				const cooldownKey = `${registration.id}:${other.uuid}`;
+				const lastTriggeredAt = cooldowns.get(cooldownKey);
+				if (
+					lastTriggeredAt != null
+					&& (dispatch.nowMs - lastTriggeredAt) < cooldownMs
+				) {
+					continue;
+				}
+				cooldowns.set(cooldownKey, dispatch.nowMs);
+			}
+
+			registration.callback({ entity: this, other, globals });
 		}
 	}
 
@@ -538,5 +771,84 @@ export class GameEntity<O extends GameEntityOptions>
 export function create(options?: Partial<GameEntityOptions>): GameEntity<GameEntityOptions> {
 	const entity = new (GameEntity as any)() as GameEntity<GameEntityOptions>;
 	entity.options = { ...commonDefaults, ...options } as GameEntityOptions;
+	return finalizeEntityCloneSupport(
+		entity,
+		(cloneOptions) => create(cloneOptions ?? {}),
+	);
+}
+
+function cloneMeshComponent(mesh: Mesh): Mesh {
+	const clonedMesh = mesh.clone(true);
+	const originalNodes: any[] = [];
+	const clonedNodes: any[] = [];
+
+	mesh.traverse((node) => originalNodes.push(node));
+	clonedMesh.traverse((node) => clonedNodes.push(node));
+
+	for (let i = 0; i < originalNodes.length; i++) {
+		const originalNode = originalNodes[i];
+		const clonedNode = clonedNodes[i];
+
+		if (originalNode?.geometry?.clone) {
+			clonedNode.geometry = originalNode.geometry.clone();
+		}
+
+		if (originalNode?.material) {
+			clonedNode.material = Array.isArray(originalNode.material)
+				? originalNode.material.map((material: Material) => material.clone())
+				: originalNode.material.clone();
+		}
+	}
+
+	return clonedMesh;
+}
+
+function wrapBehaviorCallback<T extends Function>(
+	callback: T,
+	aliases: Map<BehaviorRef, BehaviorRef>,
+): T {
+	if (aliases.size === 0) {
+		return callback;
+	}
+
+	return ((...args: any[]) => {
+		const previousValues = Array.from(aliases.entries()).map(([sourceRef, targetRef]) => ({
+			sourceRef,
+			options: sourceRef.options,
+			fsm: sourceRef.fsm,
+			hasFSM: Object.prototype.hasOwnProperty.call(sourceRef, 'fsm'),
+			targetRef,
+		}));
+
+		for (const entry of previousValues) {
+			entry.sourceRef.options = entry.targetRef.options;
+			if (entry.targetRef.fsm === undefined) {
+				delete entry.sourceRef.fsm;
+			} else {
+				entry.sourceRef.fsm = entry.targetRef.fsm;
+			}
+		}
+
+		try {
+			return callback(...args);
+		} finally {
+			for (let i = previousValues.length - 1; i >= 0; i--) {
+				const entry = previousValues[i];
+				entry.sourceRef.options = entry.options;
+				if (!entry.hasFSM) {
+					delete entry.sourceRef.fsm;
+				} else {
+					entry.sourceRef.fsm = entry.fsm;
+				}
+			}
+		}
+	}) as unknown as T;
+}
+
+export function finalizeEntityCloneSupport<E extends GameEntity<any>>(
+	entity: E,
+	factory: (options?: Partial<E['options']>) => E,
+): E {
+	entity.finalizeCloneSupport(factory as any);
 	return entity;
 }
