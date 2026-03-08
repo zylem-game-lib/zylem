@@ -67,7 +67,8 @@ const ExampleRunner: Component = () => {
     height: PHONE_VIEWPORT_PRESET.height,
   });
 
-  const controlsHidden = () => demoViewportStore.viewportControlsMode === 'hidden';
+  const controlsHidden = () =>
+    demoViewportStore.viewportControlsMode === 'hidden';
   const activeViewportProfile = () =>
     controlsHidden() ? 'mobile' : demoViewportStore.viewportProfile;
   const viewportFrameStyle = () => {
@@ -206,9 +207,6 @@ const ExampleRunner: Component = () => {
                   </div>
                 </div>
               </Show>
-            </div>
-            <div class={styles.viewportHint}>
-              Drag the lower-right corner to resize
             </div>
           </div>
         </div>
