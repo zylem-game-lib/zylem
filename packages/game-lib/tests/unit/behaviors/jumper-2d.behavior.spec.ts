@@ -68,13 +68,41 @@ describe('Jumper2DBehavior', () => {
 	});
 
 	it('treats a falling sprite as grounded when it reaches the floor after a jump arc', () => {
-		expect(isJumper2DGrounded({ nearGround: true, velocityY: -6 })).toBe(true);
-		expect(isJumper2DGrounded({ nearGround: true, velocityY: 0 })).toBe(true);
+		expect(
+			isJumper2DGrounded({
+				nearGround: true,
+				velocityY: -6,
+				supportToi: 0.1,
+				snapToGroundDistance: 0.15,
+			}),
+		).toBe(true);
+		expect(
+			isJumper2DGrounded({
+				nearGround: true,
+				velocityY: 0,
+				supportToi: 0.1,
+				snapToGroundDistance: 0.15,
+			}),
+		).toBe(true);
 	});
 
 	it('treats a raised platform as support while descending or resting on it', () => {
-		expect(isJumper2DGrounded({ nearGround: true, velocityY: -1.25 })).toBe(true);
-		expect(isJumper2DGrounded({ nearGround: true, velocityY: 0 })).toBe(true);
+		expect(
+			isJumper2DGrounded({
+				nearGround: true,
+				velocityY: -1.25,
+				supportToi: 0.12,
+				snapToGroundDistance: 0.15,
+			}),
+		).toBe(true);
+		expect(
+			isJumper2DGrounded({
+				nearGround: true,
+				velocityY: 0,
+				supportToi: 0.12,
+				snapToGroundDistance: 0.15,
+			}),
+		).toBe(true);
 	});
 
 	it('does not ground a rising sprite near support or reset jumps early', () => {
@@ -89,7 +117,12 @@ describe('Jumper2DBehavior', () => {
 		const ctx: JumpContext2D = {
 			dt: 1 / 60,
 			velocityY: 2.5,
-			isGrounded: isJumper2DGrounded({ nearGround: true, velocityY: 2.5 }),
+			isGrounded: isJumper2DGrounded({
+				nearGround: true,
+				velocityY: 2.5,
+				supportToi: 0.05,
+				snapToGroundDistance: 0.15,
+			}),
 			timeSinceGroundedMs: 120,
 			setVerticalVelocity: (y: number) => {
 				ctx.velocityY = y;
@@ -100,5 +133,16 @@ describe('Jumper2DBehavior', () => {
 
 		expect(ctx.isGrounded).toBe(false);
 		expect(state.jumpsUsed).toBe(1);
+	});
+
+	it('does not ground when support is farther than the snap distance', () => {
+		expect(
+			isJumper2DGrounded({
+				nearGround: true,
+				velocityY: -0.5,
+				supportToi: 0.3,
+				snapToGroundDistance: 0.15,
+			}),
+		).toBe(false);
 	});
 });

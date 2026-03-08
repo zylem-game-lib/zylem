@@ -11,7 +11,12 @@ import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { setVelocityIntent } from '../../actions/capabilities/velocity-intents';
 import { Jumper3DBehavior } from './jumper-3d.behavior';
 import { Jumper3DFSM, Jumper3DState } from './jumper-3d-fsm';
-import { GroundProbe3D } from '../shared/ground-probe-3d';
+import {
+	GroundProbe3D,
+	getGroundAnchorOffsetY,
+	getGroundSnapTargetY,
+	type GroundProbeSupportHit,
+} from '../shared/ground-probe-3d';
 import {
 	createJumpConfig3D,
 	createJumpInput3D,
@@ -53,6 +58,8 @@ export interface Jumper3DBehaviorOptions {
 	fall?: JumpConfig3D['fall'];
 	/** Ground-detection ray length (default: 1.0) */
 	groundRayLength?: number;
+	/** Max support distance that counts as grounded and can snap to ground */
+	snapToGroundDistance?: number;
 	/** Enable debug visualization for ground probe rays (default: false) */
 	debugGroundProbe?: boolean;
 }
@@ -81,6 +88,39 @@ export interface Jumper3DEntity {
 	jumper: JumpConfig3D;
 	$jumper: JumpInput3D;
 	jumperState: JumpState3D;
+}
+
+export function isJumper3DGrounded(params: {
+	supportToi?: number | null;
+	velocityY: number;
+	snapToGroundDistance?: number;
+}): boolean {
+	if (params.snapToGroundDistance != null) {
+		return (
+			params.supportToi != null &&
+			params.supportToi <= params.snapToGroundDistance &&
+			params.velocityY <= 0.25
+		);
+	}
+
+	return (
+		params.supportToi != null &&
+		params.velocityY > -2.0 &&
+		params.velocityY < 2.0
+	);
+}
+
+function shouldSnapJumper3DToGround(
+	support: GroundProbeSupportHit | null,
+	options: Jumper3DBehaviorOptions,
+	velocityY: number,
+): support is GroundProbeSupportHit {
+	return (
+		support != null &&
+		options.snapToGroundDistance != null &&
+		velocityY <= 0.25 &&
+		support.toi <= options.snapToGroundDistance
+	);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -139,15 +179,30 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
 			// ── Ground detection ───────────────────────────────────────────
 			const rayLength = options.groundRayLength ?? 1.0;
 			const bodyVel = gameEntity.body.linvel();
-			const nearGround = this.groundProbe.detect(gameEntity, {
+			const probeOriginYOffset = 0.05 - getGroundAnchorOffsetY(gameEntity);
+			const support = this.groundProbe.probeSupport(gameEntity, {
 				rayLength,
 				mode: 'center',
 				debug: options.debugGroundProbe ?? false,
 				scene: this.scene,
-				originYOffset: 0.05,
+				originYOffset: probeOriginYOffset,
 			});
-
-			const isGrounded = nearGround && bodyVel.y > -2.0 && bodyVel.y < 2.0;
+			const isGrounded = isJumper3DGrounded({
+				supportToi: support?.toi ?? null,
+				velocityY: bodyVel.y,
+				snapToGroundDistance: options.snapToGroundDistance,
+			});
+			if (shouldSnapJumper3DToGround(support, options, bodyVel.y)) {
+				const currentPosition = gameEntity.body.translation();
+				gameEntity.body.setTranslation(
+					{
+						x: currentPosition.x,
+						y: getGroundSnapTargetY(gameEntity, support),
+						z: currentPosition.z,
+					},
+					true,
+				);
+			}
 
 			let tsg = this.timeSinceGroundedMs.get(gameEntity.uuid) ?? 0;
 			if (isGrounded) {

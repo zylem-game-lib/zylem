@@ -10,6 +10,7 @@ import {
 	Perspectives,
 	useWASDForAxes,
 	useMouseLook,
+	FirstPersonShooterCoordinator,
 	FirstPersonPerspective,
 	FirstPersonController,
 	Jumper3D,
@@ -77,9 +78,16 @@ const jumper = player.use(Jumper3D, {
 	maxJumps: 2,
 	coyoteTimeMs: 100,
 	jumpBufferMs: 80,
+	snapToGroundDistance: 0.15,
 	variableJump: { enabled: true, cutGravityMultiplier: 3 },
 	fall: { fallGravityMultiplier: 1.5 },
 });
+
+const fpsShooter = new FirstPersonShooterCoordinator(
+	player,
+	fpsController,
+	jumper,
+);
 
 // --- Stage + input ---
 
@@ -129,22 +137,16 @@ const game = createGame(
 	pistol,
 ).onUpdate(({ inputs }) => {
 	const { p1 } = inputs;
-
-	const fpsInput = (player as any).$fps;
-	if (!fpsInput) return;
-
-	fpsInput.moveX = p1.axes.Horizontal.value;
-	fpsInput.moveZ = p1.axes.Vertical.value;
-	fpsInput.lookX = p1.axes.SecondaryHorizontal.value;
-	fpsInput.lookY = p1.axes.SecondaryVertical.value;
-	fpsInput.sprint = p1.shoulders.LTrigger.held > 0;
-
-	const jumpInput = (player as any).$jumper;
-	if (!jumpInput) return;
-
-	jumpInput.jumpPressed = p1.buttons.A.pressed;
-	jumpInput.jumpHeld = p1.buttons.A.held > 0;
-	jumpInput.jumpReleased = p1.buttons.A.released;
+	fpsShooter.update({
+		moveX: p1.axes.Horizontal.value,
+		moveZ: p1.axes.Vertical.value,
+		lookX: p1.axes.SecondaryHorizontal.value,
+		lookY: p1.axes.SecondaryVertical.value,
+		sprint: p1.shoulders.LTrigger.held > 0,
+		jumpPressed: p1.buttons.A.pressed,
+		jumpHeld: p1.buttons.A.held > 0,
+		jumpReleased: p1.buttons.A.released,
+	});
 });
 
 export default game;

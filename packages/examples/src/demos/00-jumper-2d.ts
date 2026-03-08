@@ -11,7 +11,7 @@ import {
 	useArrowsForAxes,
 	useWASDForAxes,
 } from '@zylem/game-lib';
-import rainManPath from '@zylem/assets/2d/rain-man.png';
+import zylemManSprite from '../assets/zylem-man-2d-sprite.png';
 
 const floor = createBox({
 	name: 'floor',
@@ -39,10 +39,10 @@ const platforms = [
 ] as const;
 
 const player = createSprite({
-	name: 'rain-man-jumper',
+	name: 'zylem-man-jumper',
 	position: new Vector3(-8, -3, 0),
-	size: new Vector3(2.1, 2.8, 1),
-	images: [{ name: 'rain-man', file: rainManPath }],
+	size: new Vector3(2, 2, 1),
+	images: [{ name: 'zylem-man', file: zylemManSprite }],
 });
 
 player.onSetup(({ me }) => {
@@ -60,7 +60,8 @@ player.use(Jumper2D, {
 		enabled: true,
 		cutGravityMultiplier: 2.2,
 	},
-	groundRayLength: 1.55,
+	groundRayLength: 1,
+	snapToGroundDistance: 0.15,
 });
 
 player.onUpdate(({ me, inputs }) => {
@@ -75,7 +76,7 @@ player.onUpdate(({ me, inputs }) => {
 	jumperInput.jumpHeld = p1.buttons.A.held > 0;
 	jumperInput.jumpReleased = p1.buttons.A.released;
 	jumperInput.fastFall = p1.axes.Vertical.value > 0.5;
-	(me as any).setSprite?.('rain-man');
+	(me as any).setSprite?.('zylem-man');
 });
 
 const camera = createCamera({
