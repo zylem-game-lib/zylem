@@ -1,27 +1,13 @@
 import { createSignal, onCleanup, onMount, Show, type JSX, type Component, type Accessor } from 'solid-js';
-import { Portal } from 'solid-js/web';
 import PanelBottomOpen from 'lucide-solid/icons/panel-bottom-open';
 import PanelBottomClose from 'lucide-solid/icons/panel-bottom-close';
 import X from 'lucide-solid/icons/x';
+import { createPanelDocking, DockPreviewOverlay } from './panel-docking';
 
 // Minimum drag threshold to distinguish from clicks
 const DRAG_THRESHOLD = 3;
-const SNAP_PREVIEW_THRESHOLD = 24;
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null;
-type DockSide = 'left' | 'right';
-
-interface DockRect {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
-
-interface DockPreviewState {
-    visible: boolean;
-    side: DockSide | null;
-}
 
 export interface FloatingPanelProps {
     title?: string;
@@ -48,14 +34,7 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
     const [size, setSize] = createSignal(
         initialPanelSize
     );
-    const [undockedSize, setUndockedSize] = createSignal(initialPanelSize);
-    const [isAutoHeight, setIsAutoHeight] = createSignal(true);
     const [isCollapsed, setIsCollapsed] = createSignal(false);
-    const [dockedSide, setDockedSide] = createSignal<DockSide | null>(null);
-    const [dockPreview, setDockPreview] = createSignal<DockPreviewState>({
-        visible: false,
-        side: null,
-    });
 
     const toggleCollapse = () => setIsCollapsed(!isCollapsed());
 
@@ -66,8 +45,35 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
     let panelStartPos = { x: 0, y: 0 };
     let panelStartSize = { width: 0, height: 0 };
     let hasMoved = false;
-    let resizeRaf: number | undefined;
     let panelRef: HTMLDivElement | undefined;
+
+    const {
+        dockedSide,
+        isAutoHeight,
+        showDockPreview,
+        hideDockPreview,
+        rememberUndockedSize,
+        getLiveSize,
+        getDockPreviewRect,
+        detectDockSide,
+        undockFromDrag,
+        clampSizeToViewport,
+        beginResize,
+        clearDockedSide,
+        applyDockPreview,
+        restoreUndockedPanel,
+        handleWindowResize,
+        cleanupWindowResize,
+    } = createPanelDocking({
+        initialSize: initialPanelSize,
+        minSize,
+        position,
+        setPosition,
+        size,
+        setSize,
+        panelRef: () => panelRef,
+        onPositionCommit: (nextPosition) => props.onMove?.(nextPosition),
+    });
 
     // Clamp position to keep panel visible in viewport
     const clampPosition = (x: number, y: number, width: number, height: number) => {
@@ -78,128 +84,8 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
         };
     };
 
-    const clampSizeToViewport = (width: number, height: number) => {
-        const maxWidth = Math.max(1, window.innerWidth);
-        const maxHeight = Math.max(1, window.innerHeight);
-        const minWidth = Math.min(minSize.width, maxWidth);
-        const minHeight = Math.min(minSize.height, maxHeight);
-        return {
-            width: Math.min(maxWidth, Math.max(minWidth, width)),
-            height: Math.min(maxHeight, Math.max(minHeight, height)),
-        };
-    };
-
     // Clamp size to minimum and viewport bounds
     const clampSize = (width: number, height: number) => clampSizeToViewport(width, height);
-
-    const showDockPreview = (side: DockSide) => {
-        setDockPreview({ visible: true, side });
-    };
-
-    const hideDockPreview = () => {
-        setDockPreview({ visible: false, side: null });
-    };
-
-    const rememberUndockedSize = (nextSize: { width: number; height: number }) => {
-        setUndockedSize({ width: nextSize.width, height: nextSize.height });
-    };
-
-    const getLiveSize = () => {
-        if (panelRef) {
-            const rect = panelRef.getBoundingClientRect();
-            return { width: rect.width, height: rect.height };
-        }
-        return size();
-    };
-
-    const getDockRect = (side: DockSide): DockRect => {
-        const quarterWidth = Math.max(1, Math.round(window.innerWidth / 4));
-
-        switch (side) {
-            case 'left':
-                return { x: 0, y: 0, width: quarterWidth, height: window.innerHeight };
-            case 'right':
-                return {
-                    x: Math.max(0, window.innerWidth - quarterWidth),
-                    y: 0,
-                    width: quarterWidth,
-                    height: window.innerHeight,
-                };
-        }
-    };
-
-    const getDockPreviewRect = (): DockRect | null => {
-        const preview = dockPreview();
-        if (!preview.visible || !preview.side) return null;
-        return getDockRect(preview.side);
-    };
-
-    const fitPanelToViewport = (
-        currentX: number,
-        currentY: number,
-        currentWidth: number,
-        currentHeight: number,
-    ) => {
-        const fittedSize = clampSizeToViewport(currentWidth, currentHeight);
-        const maxX = Math.max(0, window.innerWidth - fittedSize.width);
-        const maxY = Math.max(0, window.innerHeight - fittedSize.height);
-        return {
-            position: {
-                x: Math.max(0, Math.min(currentX, maxX)),
-                y: Math.max(0, Math.min(currentY, maxY)),
-            },
-            size: fittedSize,
-        };
-    };
-
-    const detectDockSide = (
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-    ): DockSide | null => {
-        const leftOverflow = Math.max(0, -x);
-        const rightOverflow = Math.max(0, x + width - window.innerWidth);
-        const topOverflow = Math.max(0, -y);
-        const bottomOverflow = Math.max(0, y + height - window.innerHeight);
-
-        // Direct side docking when dragging off left/right edges.
-        if (leftOverflow >= SNAP_PREVIEW_THRESHOLD || rightOverflow >= SNAP_PREVIEW_THRESHOLD) {
-            return leftOverflow >= rightOverflow ? 'left' : 'right';
-        }
-
-        // No horizontal docking mode for top/bottom; route to nearest side instead.
-        if (topOverflow >= SNAP_PREVIEW_THRESHOLD || bottomOverflow >= SNAP_PREVIEW_THRESHOLD) {
-            const panelCenterX = x + width / 2;
-            return panelCenterX <= window.innerWidth / 2 ? 'left' : 'right';
-        }
-
-        return null;
-    };
-
-    const undockFromDrag = (pointerX: number, pointerY: number) => {
-        const preferred = undockedSize();
-        const restored = clampSizeToViewport(preferred.width, preferred.height);
-        const currentPos = position();
-        const pointerOffsetX = pointerX - currentPos.x;
-        const pointerOffsetY = pointerY - currentPos.y;
-        const fitted = fitPanelToViewport(
-            pointerX - pointerOffsetX,
-            pointerY - pointerOffsetY,
-            restored.width,
-            restored.height,
-        );
-
-        setSize(fitted.size);
-        setPosition(fitted.position);
-        setDockedSide(null);
-        setIsAutoHeight(true);
-        hideDockPreview();
-
-        dragStartPos = { x: pointerX, y: pointerY };
-        panelStartPos = { ...fitted.position };
-        panelStartSize = { ...fitted.size };
-    };
 
     const handleTitleBarPointerDown = (e: PointerEvent) => {
         isDragging = true;
@@ -218,12 +104,10 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
     const handleResizePointerDown = (direction: ResizeDirection) => (e: PointerEvent) => {
         isResizing = true;
         resizeDirection = direction;
-        hideDockPreview();
-        setDockedSide(null);
-        setIsAutoHeight(false);
+        const currentSize = beginResize();
         dragStartPos = { x: e.clientX, y: e.clientY };
         panelStartPos = { ...position() };
-        panelStartSize = { ...size() };
+        panelStartSize = { ...currentSize };
         
         if (e.pointerType === 'mouse') {
             e.preventDefault();
@@ -240,7 +124,10 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                 if (!hasMoved) {
                     hasMoved = true;
                     if (dockedSide() !== null) {
-                        undockFromDrag(e.clientX, e.clientY);
+                        const fitted = undockFromDrag(e.clientX, e.clientY);
+                        dragStartPos = { x: e.clientX, y: e.clientY };
+                        panelStartPos = { ...fitted.position };
+                        panelStartSize = { ...fitted.size };
                         deltaX = 0;
                         deltaY = 0;
                     }
@@ -317,42 +204,21 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
         const wasDocked = dockedSide() !== null;
 
         if (isDragging && hasMoved) {
-            const previewRect = getDockPreviewRect();
-            if (previewRect) {
-                if (!wasDocked) {
-                    rememberUndockedSize(size());
-                }
-                const snappedRect = previewRect;
-                setPosition({ x: snappedRect.x, y: snappedRect.y });
-                setSize({ width: snappedRect.width, height: snappedRect.height });
-                setDockedSide(dockPreview().side);
-                setIsAutoHeight(false);
-                props.onMove?.({ x: snappedRect.x, y: snappedRect.y });
+            if (applyDockPreview()) {
+                // Docking state and callbacks are handled by the shared controller.
             } else {
                 if (wasDocked) {
-                    const preferred = undockedSize();
-                    const restored = clampSizeToViewport(preferred.width, preferred.height);
-                    const currentPos = position();
-                    const fitted = fitPanelToViewport(
-                        currentPos.x,
-                        currentPos.y,
-                        restored.width,
-                        restored.height,
-                    );
-                    setSize(fitted.size);
-                    setPosition(fitted.position);
-                    props.onMove?.(fitted.position);
-                    setIsAutoHeight(true);
+                    restoreUndockedPanel();
                 } else {
                     // Notify parent of new position
                     props.onMove?.(position());
                 }
-                setDockedSide(null);
+                clearDockedSide();
             }
         }
 
         if (isResizing) {
-            setDockedSide(null);
+            clearDockedSide();
             rememberUndockedSize(size());
         }
 
@@ -361,54 +227,6 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
         resizeDirection = null;
         hasMoved = false;
         hideDockPreview();
-    };
-
-    const handleWindowResize = () => {
-        if (resizeRaf !== undefined) {
-            cancelAnimationFrame(resizeRaf);
-        }
-        resizeRaf = requestAnimationFrame(() => {
-            const side = dockedSide();
-            if (side) {
-                const dockRect = getDockRect(side);
-                const currentPos = position();
-                const currentSize = size();
-                if (
-                    currentPos.x !== dockRect.x
-                    || currentPos.y !== dockRect.y
-                    || currentSize.width !== dockRect.width
-                    || currentSize.height !== dockRect.height
-                ) {
-                    setPosition({ x: dockRect.x, y: dockRect.y });
-                    setSize({ width: dockRect.width, height: dockRect.height });
-                    props.onMove?.({ x: dockRect.x, y: dockRect.y });
-                }
-            } else {
-                const currentPos = position();
-                const currentSize = isAutoHeight() ? getLiveSize() : size();
-                const fitted = fitPanelToViewport(
-                    currentPos.x,
-                    currentPos.y,
-                    currentSize.width,
-                    currentSize.height,
-                );
-
-                const sizeChanged =
-                    currentSize.width !== fitted.size.width
-                    || currentSize.height !== fitted.size.height;
-                const posChanged =
-                    currentPos.x !== fitted.position.x || currentPos.y !== fitted.position.y;
-
-                if (sizeChanged) {
-                    setSize(fitted.size);
-                }
-                if (posChanged) {
-                    setPosition(fitted.position);
-                    props.onMove?.(fitted.position);
-                }
-            }
-            resizeRaf = undefined;
-        });
     };
 
     onMount(() => {
@@ -421,9 +239,7 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
         window.removeEventListener('pointermove', handlePointerMove);
         window.removeEventListener('pointerup', handlePointerUp);
         window.removeEventListener('resize', handleWindowResize);
-        if (resizeRaf !== undefined) {
-            cancelAnimationFrame(resizeRaf);
-        }
+        cleanupWindowResize();
     });
 
     const resizeHandleStyle = (cursor: string): JSX.CSSProperties => ({
@@ -449,27 +265,7 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                 'border-radius': dockedSide() ? '0' : undefined,
             }}
         >
-            <Show when={getDockPreviewRect()}>
-                {(previewRect) => (
-                    <Portal>
-                        <div
-                            style={{
-                                position: 'fixed',
-                                left: `${previewRect().x}px`,
-                                top: `${previewRect().y}px`,
-                                width: `${previewRect().width}px`,
-                                height: `${previewRect().height}px`,
-                                'z-index': 1004,
-                                'pointer-events': 'none',
-                                'box-sizing': 'border-box',
-                                border: '2px dashed var(--zylem-color-primary)',
-                                background: 'rgba(10, 20, 30, 0.2)',
-                                'border-radius': '0',
-                            }}
-                        />
-                    </Portal>
-                )}
-            </Show>
+            <DockPreviewOverlay rect={getDockPreviewRect()} zIndex={1004} />
 
             {/* Title bar */}
             <div
