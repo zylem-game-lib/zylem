@@ -6,7 +6,7 @@ button {
 
 #zylem-editor-container {
   position: fixed;
-  top: 0;
+  bottom: 0;
   left: 0;
   width: 100%;
   height: 100%;
@@ -75,7 +75,9 @@ button {
   cursor: pointer;
   padding: var(--zylem-spacing-sm) var(--zylem-spacing-md);
   font-size: var(--zylem-font-size);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .zylem-button:hover {
@@ -231,7 +233,10 @@ button {
   border: 1px solid var(--zylem-color-border);
   border-radius: calc(var(--zylem-radius) / 2);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.1s;
 }
 
 .entity-grid-item:hover {
