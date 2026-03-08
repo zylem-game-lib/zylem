@@ -9,8 +9,7 @@
  * - Close button reattaches to accordion
  */
 
-import { createSignal, onCleanup, onMount, Show, type Component, type JSX } from 'solid-js';
-import { Portal } from 'solid-js/web';
+import { createSignal, onCleanup, onMount, type Component, type JSX } from 'solid-js';
 import {
     reattachPanel,
     updateDetachedPanelPosition,
@@ -22,27 +21,14 @@ import {
     bringPanelToFront,
 } from '../editor-store';
 import { getPanelTitle, renderPanelContent } from './panel-config';
+import { createPanelDocking, DockPreviewOverlay } from '../common/panel-docking';
 
 // Minimum drag threshold to distinguish from clicks
 const DRAG_THRESHOLD = 3;
-const SNAP_PREVIEW_THRESHOLD = 24;
 const MIN_WIDTH = 250;
 const MIN_HEIGHT = 150;
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null;
-type DockSide = 'left' | 'right';
-
-interface DockRect {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
-
-interface DockPreviewState {
-    visible: boolean;
-    side: DockSide | null;
-}
 
 export interface DetachedPanelProps {
     panelId: string;
@@ -62,13 +48,6 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
     const [size, setSize] = createSignal(
         initialPanelSize
     );
-    const [undockedSize, setUndockedSize] = createSignal(initialPanelSize);
-    const [isAutoHeight, setIsAutoHeight] = createSignal(true);
-    const [dockedSide, setDockedSide] = createSignal<DockSide | null>(null);
-    const [dockPreview, setDockPreview] = createSignal<DockPreviewState>({
-        visible: false,
-        side: null,
-    });
 
     let isDragging = false;
     let isResizing = false;
@@ -77,123 +56,36 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
     let panelStartPos = { x: 0, y: 0 };
     let panelStartSize = { width: 0, height: 0 };
     let hasMoved = false;
-    let resizeRaf: number | undefined;
     let panelRef: HTMLDivElement | undefined;
 
-    const showDockPreview = (side: DockSide) => {
-        setDockPreview({ visible: true, side });
-    };
-
-    const hideDockPreview = () => {
-        setDockPreview({ visible: false, side: null });
-    };
-
-    const rememberUndockedSize = (nextSize: { width: number; height: number }) => {
-        setUndockedSize({ width: nextSize.width, height: nextSize.height });
-    };
-
-    const getLiveSize = () => {
-        if (panelRef) {
-            const rect = panelRef.getBoundingClientRect();
-            return { width: rect.width, height: rect.height };
-        }
-        return size();
-    };
-
-    const getDockRect = (side: DockSide): DockRect => {
-        const quarterWidth = Math.max(1, Math.round(window.innerWidth / 4));
-        if (side === 'left') {
-            return { x: 0, y: 0, width: quarterWidth, height: window.innerHeight };
-        }
-        return {
-            x: Math.max(0, window.innerWidth - quarterWidth),
-            y: 0,
-            width: quarterWidth,
-            height: window.innerHeight,
-        };
-    };
-
-    const getDockPreviewRect = (): DockRect | null => {
-        const preview = dockPreview();
-        if (!preview.visible || !preview.side) return null;
-        return getDockRect(preview.side);
-    };
-
-    const detectDockSide = (
-        x: number,
-        y: number,
-        width: number,
-        height: number,
-    ): DockSide | null => {
-        const leftOverflow = Math.max(0, -x);
-        const rightOverflow = Math.max(0, x + width - window.innerWidth);
-        const topOverflow = Math.max(0, -y);
-        const bottomOverflow = Math.max(0, y + height - window.innerHeight);
-
-        if (leftOverflow >= SNAP_PREVIEW_THRESHOLD || rightOverflow >= SNAP_PREVIEW_THRESHOLD) {
-            return leftOverflow >= rightOverflow ? 'left' : 'right';
-        }
-
-        if (topOverflow >= SNAP_PREVIEW_THRESHOLD || bottomOverflow >= SNAP_PREVIEW_THRESHOLD) {
-            const panelCenterX = x + width / 2;
-            return panelCenterX <= window.innerWidth / 2 ? 'left' : 'right';
-        }
-
-        return null;
-    };
-
-    const undockFromDrag = (pointerX: number, pointerY: number) => {
-        const preferred = undockedSize();
-        const restored = clampSizeToViewport(preferred.width, preferred.height);
-        const currentPos = position();
-        const pointerOffsetX = pointerX - currentPos.x;
-        const pointerOffsetY = pointerY - currentPos.y;
-        const fitted = fitPanelToViewport(
-            pointerX - pointerOffsetX,
-            pointerY - pointerOffsetY,
-            restored.width,
-            restored.height,
-        );
-
-        setSize(fitted.size);
-        setPosition(fitted.position);
-        setDockedSide(null);
-        setIsAutoHeight(true);
-        hideDockPreview();
-
-        dragStartPos = { x: pointerX, y: pointerY };
-        panelStartPos = { ...fitted.position };
-        panelStartSize = { ...fitted.size };
-    };
-
-    const clampSizeToViewport = (width: number, height: number) => {
-        const maxWidth = Math.max(1, window.innerWidth);
-        const maxHeight = Math.max(1, window.innerHeight);
-        const minWidth = Math.min(MIN_WIDTH, maxWidth);
-        const minHeight = Math.min(MIN_HEIGHT, maxHeight);
-        return {
-            width: Math.min(maxWidth, Math.max(minWidth, width)),
-            height: Math.min(maxHeight, Math.max(minHeight, height)),
-        };
-    };
-
-    const fitPanelToViewport = (
-        currentX: number,
-        currentY: number,
-        currentWidth: number,
-        currentHeight: number,
-    ) => {
-        const fittedSize = clampSizeToViewport(currentWidth, currentHeight);
-        const maxX = Math.max(0, window.innerWidth - fittedSize.width);
-        const maxY = Math.max(0, window.innerHeight - fittedSize.height);
-        return {
-            position: {
-                x: Math.max(0, Math.min(currentX, maxX)),
-                y: Math.max(0, Math.min(currentY, maxY)),
-            },
-            size: fittedSize,
-        };
-    };
+    const {
+        dockedSide,
+        isAutoHeight,
+        showDockPreview,
+        hideDockPreview,
+        rememberUndockedSize,
+        getLiveSize,
+        getDockPreviewRect,
+        detectDockSide,
+        undockFromDrag,
+        clampSizeToViewport,
+        beginResize,
+        clearDockedSide,
+        applyDockPreview,
+        restoreUndockedPanel,
+        handleWindowResize,
+        cleanupWindowResize,
+    } = createPanelDocking({
+        initialSize: initialPanelSize,
+        minSize: { width: MIN_WIDTH, height: MIN_HEIGHT },
+        position,
+        setPosition,
+        size,
+        setSize,
+        panelRef: () => panelRef,
+        onPositionCommit: (nextPosition) => updateDetachedPanelPosition(props.panelId, nextPosition),
+        onSizeCommit: (nextSize) => updateDetachedPanelSize(props.panelId, nextSize),
+    });
 
     const handlePanelPointerDown = () => {
         // Bring to front on any click/touch
@@ -218,12 +110,10 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
     const handleResizePointerDown = (direction: ResizeDirection) => (e: PointerEvent) => {
         isResizing = true;
         resizeDirection = direction;
-        hideDockPreview();
-        setDockedSide(null);
-        setIsAutoHeight(false);
+        const currentSize = beginResize();
         dragStartPos = { x: e.clientX, y: e.clientY };
         panelStartPos = { ...position() };
-        panelStartSize = { ...size() };
+        panelStartSize = { ...currentSize };
         bringPanelToFront(props.panelId);
         
         if (e.pointerType === 'mouse') {
@@ -242,7 +132,10 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
                     hasMoved = true;
                     setDraggingPanel(props.panelId);
                     if (dockedSide() !== null) {
-                        undockFromDrag(e.clientX, e.clientY);
+                        const fitted = undockFromDrag(e.clientX, e.clientY);
+                        dragStartPos = { x: e.clientX, y: e.clientY };
+                        panelStartPos = { ...fitted.position };
+                        panelStartSize = { ...fitted.size };
                         deltaX = 0;
                         deltaY = 0;
                     }
@@ -350,47 +243,25 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
         const wasDocked = dockedSide() !== null;
 
         if (isDragging && hasMoved) {
-            const preview = dockPreview();
-            if (preview.visible && preview.side) {
-                if (!wasDocked) {
-                    rememberUndockedSize(size());
-                }
-                const dockRect = getDockRect(preview.side);
-                setPosition({ x: dockRect.x, y: dockRect.y });
-                setSize({ width: dockRect.width, height: dockRect.height });
-                setDockedSide(preview.side);
-                setIsAutoHeight(false);
-                updateDetachedPanelPosition(props.panelId, { x: dockRect.x, y: dockRect.y });
-                updateDetachedPanelSize(props.panelId, { width: dockRect.width, height: dockRect.height });
+            if (applyDockPreview()) {
+                // Docking state and store updates are handled by the shared controller.
             } else {
                 const dropIndex = debugStore.dropTargetIndex;
                 if (dropIndex !== null) {
                     reattachPanel(props.panelId, dropIndex);
                 } else {
-                    let nextPosition = position();
                     if (wasDocked) {
-                        const preferred = undockedSize();
-                        const restored = clampSizeToViewport(preferred.width, preferred.height);
-                        const fitted = fitPanelToViewport(
-                            nextPosition.x,
-                            nextPosition.y,
-                            restored.width,
-                            restored.height,
-                        );
-                        setSize(fitted.size);
-                        setPosition(fitted.position);
-                        updateDetachedPanelSize(props.panelId, fitted.size);
-                        nextPosition = fitted.position;
-                        setIsAutoHeight(true);
+                        restoreUndockedPanel();
+                    } else {
+                        updateDetachedPanelPosition(props.panelId, position());
                     }
-                    updateDetachedPanelPosition(props.panelId, nextPosition);
                 }
-                setDockedSide(null);
+                clearDockedSide();
             }
         }
 
         if (isResizing) {
-            setDockedSide(null);
+            clearDockedSide();
             rememberUndockedSize(size());
             updateDetachedPanelSize(props.panelId, size());
             updateDetachedPanelPosition(props.panelId, position());
@@ -402,58 +273,6 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
         hasMoved = false;
         hideDockPreview();
         clearDragState();
-    };
-
-    const handleWindowResize = () => {
-        if (resizeRaf !== undefined) {
-            cancelAnimationFrame(resizeRaf);
-        }
-
-        resizeRaf = requestAnimationFrame(() => {
-            const side = dockedSide();
-            if (side) {
-                const dockRect = getDockRect(side);
-                const currentPos = position();
-                const currentSize = size();
-                if (
-                    currentPos.x !== dockRect.x
-                    || currentPos.y !== dockRect.y
-                    || currentSize.width !== dockRect.width
-                    || currentSize.height !== dockRect.height
-                ) {
-                    setPosition({ x: dockRect.x, y: dockRect.y });
-                    setSize({ width: dockRect.width, height: dockRect.height });
-                    updateDetachedPanelPosition(props.panelId, { x: dockRect.x, y: dockRect.y });
-                    updateDetachedPanelSize(props.panelId, { width: dockRect.width, height: dockRect.height });
-                }
-            } else {
-                const currentPos = position();
-                const currentSize = isAutoHeight() ? getLiveSize() : size();
-                const fitted = fitPanelToViewport(
-                    currentPos.x,
-                    currentPos.y,
-                    currentSize.width,
-                    currentSize.height,
-                );
-
-                const sizeChanged =
-                    currentSize.width !== fitted.size.width
-                    || currentSize.height !== fitted.size.height;
-                const posChanged =
-                    currentPos.x !== fitted.position.x || currentPos.y !== fitted.position.y;
-
-                if (sizeChanged) {
-                    setSize(fitted.size);
-                    updateDetachedPanelSize(props.panelId, fitted.size);
-                }
-                if (posChanged) {
-                    setPosition(fitted.position);
-                    updateDetachedPanelPosition(props.panelId, fitted.position);
-                }
-            }
-
-            resizeRaf = undefined;
-        });
     };
 
     const handleClose = () => {
@@ -470,9 +289,7 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
         window.removeEventListener('pointermove', handlePointerMove);
         window.removeEventListener('pointerup', handlePointerUp);
         window.removeEventListener('resize', handleWindowResize);
-        if (resizeRaf !== undefined) {
-            cancelAnimationFrame(resizeRaf);
-        }
+        cleanupWindowResize();
     });
 
     const resizeHandleStyle = (cursor: string): JSX.CSSProperties => ({
@@ -496,27 +313,7 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
                 'border-radius': dockedSide() ? '0' : undefined,
             }}
         >
-            <Show when={getDockPreviewRect()}>
-                {(previewRect) => (
-                    <Portal>
-                        <div
-                            style={{
-                                position: 'fixed',
-                                left: `${previewRect().x}px`,
-                                top: `${previewRect().y}px`,
-                                width: `${previewRect().width}px`,
-                                height: `${previewRect().height}px`,
-                                'z-index': zIndex() + 1,
-                                'pointer-events': 'none',
-                                'box-sizing': 'border-box',
-                                border: '2px dashed var(--zylem-color-primary)',
-                                background: 'rgba(10, 20, 30, 0.2)',
-                                'border-radius': '0',
-                            }}
-                        />
-                    </Portal>
-                )}
-            </Show>
+            <DockPreviewOverlay rect={getDockPreviewRect()} zIndex={zIndex() + 1} />
 
             {/* Title bar */}
             <div
