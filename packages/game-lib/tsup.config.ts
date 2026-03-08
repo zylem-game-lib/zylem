@@ -19,6 +19,7 @@ export default defineConfig({
 		'behavior/screen-wrap': 'src/api/behavior/screen-wrap.ts',
 		'behavior/screen-visibility': 'src/api/behavior/screen-visibility.ts',
 		'behavior/world-boundary-2d': 'src/api/behavior/world-boundary-2d.ts',
+		'behavior/world-boundary-3d': 'src/api/behavior/world-boundary-3d.ts',
 		'behavior/ricochet-2d': 'src/api/behavior/ricochet-2d.ts',
 		'behavior/ricochet-3d': 'src/api/behavior/ricochet-3d.ts',
 		'behavior/jumper-2d': 'src/api/behavior/jumper-2d.ts',

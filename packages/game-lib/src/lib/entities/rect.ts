@@ -353,7 +353,7 @@ export function createRect(...args: Array<RectOptions>): ZylemRect {
 		EntityClass: ZylemRect,
 		BuilderClass: RectBuilder,
 		entityType: ZylemRect.type,
+		cloneFactory: (options) => createRect(options ?? {}),
 	});
 }
-
 

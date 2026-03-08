@@ -38,6 +38,9 @@ export * from './screen-visibility';
 // World Boundary 2D Module
 export * from './world-boundary-2d';
 
+// World Boundary 3D Module
+export * from './world-boundary-3d';
+
 // Ricochet 2D Module
 export * from './ricochet-2d';
 
@@ -61,3 +64,4 @@ export * from './cooldown';
 
 // Coordinators
 export * from '../coordinators/boundary-ricochet.coordinator';
+export * from '../coordinators/boundary-ricochet-3d.coordinator';

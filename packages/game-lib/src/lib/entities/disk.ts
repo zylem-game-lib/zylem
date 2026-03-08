@@ -94,6 +94,7 @@ export function createDisk(...args: Array<DiskOptions>): ZylemDisk {
 		BuilderClass: DiskBuilder,
 		MeshBuilderClass: DiskMeshBuilder,
 		CollisionBuilderClass: DiskCollisionBuilder,
-		entityType: ZylemDisk.type
+		entityType: ZylemDisk.type,
+		cloneFactory: (options) => createDisk(options ?? {}),
 	});
 }

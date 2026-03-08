@@ -15,6 +15,19 @@ import { nanoid } from "nanoid";
 import { NodeInterface } from "./node-interface";
 
 export type BaseNodeOptions<T = any> = BaseNode | Partial<T>;
+export type LifecycleRegistrationMethod =
+	| 'onSetup'
+	| 'onLoaded'
+	| 'onUpdate'
+	| 'onDestroy'
+	| 'onCleanup'
+	| 'prependSetup'
+	| 'prependUpdate';
+
+export interface LifecycleRegistration {
+	method: LifecycleRegistrationMethod;
+	callbacks: Function[];
+}
 
 /**
  * Lifecycle callback arrays - each lifecycle event can have multiple callbacks
@@ -50,6 +63,8 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 		destroy: [],
 		cleanup: [],
 	};
+	private trackLifecycleRegistrations: boolean = false;
+	private userLifecycleRegistrations: LifecycleRegistration[] = [];
 
 	constructor(args: BaseNodeOptions[] = []) {
 		const options = args
@@ -68,6 +83,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 */
 	public onSetup(...callbacks: Array<SetupFunction<this>>): this {
 		this.lifecycleCallbacks.setup.push(...callbacks);
+		this.recordLifecycleRegistration('onSetup', callbacks);
 		return this;
 	}
 
@@ -76,6 +92,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 */
 	public onLoaded(...callbacks: Array<LoadedFunction<this>>): this {
 		this.lifecycleCallbacks.loaded.push(...callbacks);
+		this.recordLifecycleRegistration('onLoaded', callbacks);
 		return this;
 	}
 
@@ -84,6 +101,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 */
 	public onUpdate(...callbacks: Array<UpdateFunction<this>>): this {
 		this.lifecycleCallbacks.update.push(...callbacks);
+		this.recordLifecycleRegistration('onUpdate', callbacks);
 		return this;
 	}
 
@@ -92,6 +110,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 */
 	public onDestroy(...callbacks: Array<DestroyFunction<this>>): this {
 		this.lifecycleCallbacks.destroy.push(...callbacks);
+		this.recordLifecycleRegistration('onDestroy', callbacks);
 		return this;
 	}
 
@@ -100,6 +119,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 */
 	public onCleanup(...callbacks: Array<CleanupFunction<this>>): this {
 		this.lifecycleCallbacks.cleanup.push(...callbacks);
+		this.recordLifecycleRegistration('onCleanup', callbacks);
 		return this;
 	}
 
@@ -108,6 +128,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 */
 	public prependSetup(...callbacks: Array<SetupFunction<this>>): this {
 		this.lifecycleCallbacks.setup.unshift(...callbacks);
+		this.recordLifecycleRegistration('prependSetup', callbacks);
 		return this;
 	}
 
@@ -116,6 +137,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 */
 	public prependUpdate(...callbacks: Array<UpdateFunction<this>>): this {
 		this.lifecycleCallbacks.update.unshift(...callbacks);
+		this.recordLifecycleRegistration('prependUpdate', callbacks);
 		return this;
 	}
 
@@ -150,6 +172,51 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 
 	public isComposite(): boolean {
 		return this.children.length > 0;
+	}
+
+	public enableUserLifecycleTracking(): void {
+		this.trackLifecycleRegistrations = true;
+	}
+
+	protected replayUserLifecycleRegistrationsTo(
+		target: BaseNode<any, any>,
+		wrap?: <T extends Function>(callback: T) => T,
+	): void {
+		for (const registration of this.userLifecycleRegistrations) {
+			const callbacks = wrap
+				? registration.callbacks.map((callback) => wrap(callback as never))
+				: [...registration.callbacks];
+
+			switch (registration.method) {
+				case 'onSetup':
+					target.onSetup(...callbacks as Array<SetupFunction<any>>);
+					break;
+				case 'onLoaded':
+					target.onLoaded(...callbacks as Array<LoadedFunction<any>>);
+					break;
+				case 'onUpdate':
+					target.onUpdate(...callbacks as Array<UpdateFunction<any>>);
+					break;
+				case 'onDestroy':
+					target.onDestroy(...callbacks as Array<DestroyFunction<any>>);
+					break;
+				case 'onCleanup':
+					target.onCleanup(...callbacks as Array<CleanupFunction<any>>);
+					break;
+				case 'prependSetup':
+					target.prependSetup(...callbacks as Array<SetupFunction<any>>);
+					break;
+				case 'prependUpdate':
+					target.prependUpdate(...callbacks as Array<UpdateFunction<any>>);
+					break;
+			}
+		}
+	}
+
+	protected cloneChildrenInto(target: BaseNode<any, any>): void {
+		for (const child of this.children) {
+			target.add(cloneNode(child));
+		}
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────
@@ -255,4 +322,28 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	public setOptions(options: Partial<Options>): void {
 		this.options = { ...this.options, ...options };
 	}
+
+	private recordLifecycleRegistration(
+		method: LifecycleRegistrationMethod,
+		callbacks: Function[],
+	): void {
+		if (!this.trackLifecycleRegistrations || callbacks.length === 0) {
+			return;
+		}
+
+		this.userLifecycleRegistrations.push({
+			method,
+			callbacks: [...callbacks],
+		});
+	}
+}
+
+export function cloneNode(node: NodeInterface): NodeInterface {
+	const maybeClone = (node as any)?.clone;
+	if (typeof maybeClone !== 'function') {
+		throw new Error(
+			`Cannot clone child node "${node.name || node.uuid || 'unknown'}": missing clone() support.`,
+		);
+	}
+	return maybeClone.call(node);
 }

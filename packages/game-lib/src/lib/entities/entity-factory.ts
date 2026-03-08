@@ -76,29 +76,7 @@ export function createEntityFactory<E extends GameEntity<O>, O extends GameEntit
 			const entities: E[] = [];
 			
 			for (let i = 0; i < count; i++) {
-				// Clone the template entity using its constructor and options
-				const EntityClass = template.constructor as new (options: O) => E;
-				const options = { ...template.options } as O;
-				const clone = new EntityClass(options).create() as E;
-				
-				// Copy behavior refs from template
-				const templateRefs = template.getBehaviorRefs();
-				for (const ref of templateRefs) {
-					clone.use(ref.descriptor, ref.options);
-				}
-				
-				// Copy lifecycle callbacks from template
-				const templateCallbacks = (template as any).lifecycleCallbacks;
-				if (templateCallbacks) {
-					const cloneCallbacks = (clone as any).lifecycleCallbacks;
-					if (cloneCallbacks) {
-						cloneCallbacks.setup.push(...templateCallbacks.setup);
-						cloneCallbacks.update.push(...templateCallbacks.update);
-						cloneCallbacks.destroy.push(...templateCallbacks.destroy);
-					}
-				}
-				
-				entities.push(clone);
+				entities.push(template.clone());
 			}
 			
 			return entities;

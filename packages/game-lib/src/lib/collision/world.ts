@@ -5,9 +5,12 @@ import { Entity } from '../interfaces/entity';
 import { state } from '../game/game-state';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { ZylemActor } from '../entities/actor';
-import { GameEntity } from '../entities/entity';
+import {
+	GameEntity,
+	type CollisionDispatchMetadata,
+	type CollisionPhase,
+} from '../entities/entity';
 import { PhysicsProxy } from '../physics/physics-proxy';
-import { PhysicsBodyHandle } from '../physics/physics-body-handle';
 import { serializeBodyDesc, serializeColliderDesc, serializeCharacterController } from '../physics/serialize-descriptors';
 import type { CollisionPair } from '../physics/physics-protocol';
 
@@ -24,6 +27,52 @@ export interface CollisionHandlerDelegate {
  */
 export function isCollisionHandlerDelegate(obj: any): obj is CollisionHandlerDelegate {
 	return typeof obj?.handlePostCollision === "function" && typeof obj?.handleIntersectionEvent === "function";
+}
+
+export interface CollisionSnapshotEntry {
+	uuidA: string;
+	uuidB: string;
+	hasContact: boolean;
+	hasIntersection: boolean;
+}
+
+function createCollisionSnapshotKey(uuidA: string, uuidB: string): string {
+	return uuidA < uuidB ? `${uuidA}|${uuidB}` : `${uuidB}|${uuidA}`;
+}
+
+export function buildCollisionSnapshot(
+	pairs: CollisionPair[],
+): Map<string, CollisionSnapshotEntry> {
+	const snapshot = new Map<string, CollisionSnapshotEntry>();
+
+	for (const pair of pairs) {
+		if (pair.uuidA === pair.uuidB) {
+			continue;
+		}
+
+		const key = createCollisionSnapshotKey(pair.uuidA, pair.uuidB);
+		const uuidA = pair.uuidA < pair.uuidB ? pair.uuidA : pair.uuidB;
+		const uuidB = pair.uuidA < pair.uuidB ? pair.uuidB : pair.uuidA;
+		const existing = snapshot.get(key);
+
+		if (existing) {
+			if (pair.contactType === 'contact') {
+				existing.hasContact = true;
+			} else {
+				existing.hasIntersection = true;
+			}
+			continue;
+		}
+
+		snapshot.set(key, {
+			uuidA,
+			uuidB,
+			hasContact: pair.contactType === 'contact',
+			hasIntersection: pair.contactType === 'intersection',
+		});
+	}
+
+	return snapshot;
 }
 
 /**
@@ -46,6 +95,8 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	collisionMap: Map<string, GameEntity<any>> = new Map();
 	collisionBehaviorMap: Map<string, GameEntity<any>> = new Map();
 	_removalMap: Map<string, GameEntity<any>> = new Map();
+	private activeCollisionPairs: Map<string, CollisionSnapshotEntry> = new Map();
+	private currentCollisionTimeMs = 0;
 
 	/** Fixed timestep in seconds used for each physics step. */
 	readonly fixedTimestep: number;
@@ -97,10 +148,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 
 		const zw = new ZylemWorld(null as unknown as World, physicsRate, true);
 		zw.proxy = proxy;
-
-		proxy.onCollision((pair) => {
-			zw.handleWorkerCollision(pair);
-		});
 
 		return zw;
 	}
@@ -221,8 +268,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		}
 		if (entity.body) {
 			this.world.removeRigidBody(entity.body);
-			this.collisionMap.delete(entity.uuid);
-			this._removalMap.delete(entity.uuid);
+			this.removeEntityFromTracking(entity.uuid);
 		}
 	}
 
@@ -232,18 +278,23 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			return;
 		}
 
+		this.currentCollisionTimeMs += delta * 1000;
+		this.processPendingRemovals();
 		this.accumulator += delta;
 
 		const maxAccumulator = this.fixedTimestep * ZylemWorld.MAX_STEPS_PER_FRAME;
 		this.accumulator = Math.min(this.accumulator, maxAccumulator);
 
 		while (this.accumulator >= this.fixedTimestep) {
-			this.updateColliders(this.fixedTimestep);
-			this.updatePostCollisionBehaviors(this.fixedTimestep);
 			this.world.step();
 			this.accumulator -= this.fixedTimestep;
 		}
 
+		this.processCollisionPairs(
+			this.collectCollisionPairsFromWorld(),
+			delta,
+			this.currentCollisionTimeMs,
+		);
 		this.interpolationAlpha = this.accumulator / this.fixedTimestep;
 	}
 
@@ -275,47 +326,20 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	private destroyEntityWorker(entity: GameEntity<any>) {
 		if (!this.proxy) return;
 		this.proxy.removeBody(entity.uuid);
-		this.collisionMap.delete(entity.uuid);
-		this._removalMap.delete(entity.uuid);
+		this.removeEntityFromTracking(entity.uuid);
 	}
 
 	private updateWorker(params: UpdateContext<any>) {
 		if (!this.proxy) return;
 
-		// Process removals before stepping
-		for (const [uuid, entity] of this._removalMap) {
-			this.destroyEntityWorker(entity);
-		}
-		this._removalMap.clear();
-
 		const { delta } = params;
+		this.currentCollisionTimeMs += delta * 1000;
+		this.processPendingRemovals();
+		const collisionTimeMs = this.currentCollisionTimeMs;
 		this._pendingStep = this.proxy.step(delta).then((result) => {
 			this.interpolationAlpha = result.interpolationAlpha;
+			this.processCollisionPairs(result.collisions, delta, collisionTimeMs);
 		});
-	}
-
-	/**
-	 * Handle a collision pair reported by the worker.
-	 * Looks up entities by UUID and fires their collision callbacks.
-	 */
-	private handleWorkerCollision(pair: CollisionPair) {
-		const entityA = this.collisionMap.get(pair.uuidA);
-		const entityB = this.collisionMap.get(pair.uuidB);
-
-		if (entityA?._collision && entityB) {
-			entityA._collision(entityB, state.globals);
-		}
-
-		if (pair.contactType === 'intersection' && entityB) {
-			if (isCollisionHandlerDelegate(entityB)) {
-				entityB.handleIntersectionEvent({
-					entity: entityB,
-					other: entityA,
-					delta: this.fixedTimestep,
-				});
-				this.collisionBehaviorMap.set(pair.uuidB, entityB);
-			}
-		}
 	}
 
 	// ─── Shared collision behavior processing ────────────────────────────
@@ -325,7 +349,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		for (let [id, collider] of dictionaryRef) {
 			const gameEntity = collider as any;
 			if (!isCollisionHandlerDelegate(gameEntity)) {
-				return;
+				continue;
 			}
 			const active = gameEntity.handlePostCollision({ entity: gameEntity, delta });
 			if (!active) {
@@ -334,53 +358,145 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		}
 	}
 
-	updateColliders(delta: number) {
-		const dictionaryRef = this.collisionMap;
-		for (let [id, collider] of dictionaryRef) {
-			const gameEntity = collider as GameEntity<any>;
-			if (!gameEntity.body) {
-				continue;
-			}
-			if (this._removalMap.get(gameEntity.uuid)) {
-				this.destroyEntity(gameEntity);
-				continue;
-			}
-		this.world.contactsWith(gameEntity.body.collider(0), (otherCollider) => {
-			if (!otherCollider) {
-				return;
-			}
-			// @ts-ignore
-			const uuid = otherCollider._parent.userData.uuid;
-			const entity = dictionaryRef.get(uuid);
-			if (!entity) {
-				return;
-			}
-			if (gameEntity._collision) {
-				gameEntity._collision(entity, state.globals);
-			}
-		});
-		// Body may have been invalidated by a destroy() call inside a collision callback
-		if (!gameEntity.body || gameEntity.markedForRemoval) {
-			continue;
+	private processPendingRemovals() {
+		if (this._removalMap.size === 0) {
+			return;
 		}
-		this.world.intersectionsWith(gameEntity.body.collider(0), (otherCollider) => {
-				if (!otherCollider) {
-					return;
-				}
-				// @ts-ignore
-				const uuid = otherCollider._parent.userData.uuid;
-				const entity = dictionaryRef.get(uuid);
-				if (!entity) {
-					return;
-				}
-				if (gameEntity._collision) {
-					gameEntity._collision(entity, state.globals);
-				}
-				if (isCollisionHandlerDelegate(entity)) {
-					entity.handleIntersectionEvent({ entity, other: gameEntity, delta });
-					this.collisionBehaviorMap.set(uuid, entity);
+
+		for (const [, entity] of this._removalMap) {
+			this.destroyEntity(entity);
+		}
+		this._removalMap.clear();
+	}
+
+	private removeEntityFromTracking(uuid: string) {
+		this.collisionMap.delete(uuid);
+		this._removalMap.delete(uuid);
+		this.pruneActiveCollisionPairs(uuid);
+	}
+
+	private pruneActiveCollisionPairs(uuid: string) {
+		for (const [key, pair] of this.activeCollisionPairs) {
+			if (pair.uuidA === uuid || pair.uuidB === uuid) {
+				this.activeCollisionPairs.delete(key);
+			}
+		}
+	}
+
+	private collectCollisionPairsFromWorld(): CollisionPair[] {
+		const pairs: CollisionPair[] = [];
+		if (!this.world) {
+			return pairs;
+		}
+
+		for (const [, collider] of this.collisionMap) {
+			const gameEntity = collider as GameEntity<any>;
+			const body = gameEntity.body as RAPIER.RigidBody | null;
+			if (!body) {
+				continue;
+			}
+
+			const primaryCollider = body.collider(0);
+			if (!primaryCollider) {
+				continue;
+			}
+
+			this.world.contactsWith(primaryCollider, (otherCollider) => {
+				const otherBody = otherCollider.parent();
+				const otherUuid = (otherBody?.userData as any)?.uuid as string | undefined;
+				if (otherUuid) {
+					pairs.push({
+						uuidA: gameEntity.uuid,
+						uuidB: otherUuid,
+						contactType: 'contact',
+					});
 				}
 			});
+
+			this.world.intersectionsWith(primaryCollider, (otherCollider) => {
+				const otherBody = otherCollider.parent();
+				const otherUuid = (otherBody?.userData as any)?.uuid as string | undefined;
+				if (otherUuid) {
+					pairs.push({
+						uuidA: gameEntity.uuid,
+						uuidB: otherUuid,
+						contactType: 'intersection',
+					});
+				}
+			});
+		}
+
+		return pairs;
+	}
+
+	private processCollisionPairs(
+		pairs: CollisionPair[],
+		delta: number,
+		nowMs: number = this.currentCollisionTimeMs,
+	) {
+		const snapshot = buildCollisionSnapshot(pairs);
+
+		for (const [key, pair] of snapshot) {
+			const wasActive = this.activeCollisionPairs.has(key);
+			if (!wasActive) {
+				this.dispatchCollisionPhase(pair, 'enter', nowMs);
+			}
+			this.dispatchCollisionPhase(pair, 'stay', nowMs);
+
+			if (pair.hasIntersection) {
+				this.dispatchIntersectionDelegates(pair, delta);
+			}
+		}
+
+		this.updatePostCollisionBehaviors(delta);
+		this.activeCollisionPairs = snapshot;
+	}
+
+	private dispatchCollisionPhase(
+		pair: CollisionSnapshotEntry,
+		phase: CollisionPhase,
+		nowMs: number,
+	) {
+		const dispatch: CollisionDispatchMetadata = { phase, nowMs };
+		const entityA = this.collisionMap.get(pair.uuidA);
+		const entityB = this.collisionMap.get(pair.uuidB);
+
+		if (entityA && entityB) {
+			entityA._collision(entityB, state.globals, dispatch);
+		}
+
+		const refreshedA = this.collisionMap.get(pair.uuidA);
+		const refreshedB = this.collisionMap.get(pair.uuidB);
+		if (refreshedA && refreshedB) {
+			refreshedB._collision(refreshedA, state.globals, dispatch);
+		}
+	}
+
+	private dispatchIntersectionDelegates(
+		pair: CollisionSnapshotEntry,
+		delta: number,
+	) {
+		const entityA = this.collisionMap.get(pair.uuidA);
+		const entityB = this.collisionMap.get(pair.uuidB);
+
+		if (entityA && entityB && isCollisionHandlerDelegate(entityA)) {
+			entityA.handleIntersectionEvent({
+				entity: entityA,
+				other: entityB,
+				delta,
+			});
+			this.collisionBehaviorMap.set(entityA.uuid, entityA);
+		}
+
+		const refreshedA = this.collisionMap.get(pair.uuidA);
+		const refreshedB = this.collisionMap.get(pair.uuidB);
+		if (refreshedA && refreshedB && isCollisionHandlerDelegate(refreshedB)) {
+			refreshedB.handleIntersectionEvent({
+				entity: refreshedB,
+				other: refreshedA,
+				delta,
+			});
+			this.collisionBehaviorMap.set(refreshedB.uuid, refreshedB);
 		}
 	}
 
@@ -402,6 +518,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			this.collisionMap.clear();
 			this.collisionBehaviorMap.clear();
 			this._removalMap.clear();
+			this.activeCollisionPairs.clear();
 		} catch { /* noop */ }
 	}
 

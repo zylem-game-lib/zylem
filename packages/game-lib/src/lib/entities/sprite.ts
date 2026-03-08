@@ -208,6 +208,7 @@ export function createSprite(...args: Array<SpriteOptions>): ZylemSprite {
 		EntityClass: ZylemSprite,
 		BuilderClass: SpriteBuilder,
 		CollisionBuilderClass: SpriteCollisionBuilder,
-		entityType: ZylemSprite.type
+		entityType: ZylemSprite.type,
+		cloneFactory: (options) => createSprite(options ?? {}),
 	});
 }

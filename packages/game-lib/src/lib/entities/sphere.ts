@@ -1,5 +1,5 @@
 import { BaseNode } from '../core/base-node';
-import { GameEntityOptions, GameEntity } from './entity';
+import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from './entity';
 import { DebugDelegate } from './delegates/debug';
 import { commonDefaults, mergeArgs } from './common';
 import { sphereMesh } from './parts/mesh-factories';
@@ -51,5 +51,8 @@ export function createSphere(...args: Array<SphereOptions>): ZylemSphere {
 			collisionFilter: options.collisionFilter,
 		}),
 	);
-	return entity;
+	return finalizeEntityCloneSupport(
+		entity,
+		(cloneOptions) => createSphere(cloneOptions ?? {}),
+	);
 }

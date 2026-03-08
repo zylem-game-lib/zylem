@@ -69,8 +69,7 @@ player.onUpdate(({ me, inputs }) => {
 	if (!jumperInput || !me.body) return;
 
 	const horizontal = p1.axes.Horizontal.value * 6.5;
-	const current = me.body.linvel();
-	me.body.setLinvel({ x: horizontal, y: current.y, z: 0 }, true);
+	me.moveX(horizontal);
 
 	jumperInput.jumpPressed = p1.buttons.A.pressed;
 	jumperInput.jumpHeld = p1.buttons.A.held > 0;

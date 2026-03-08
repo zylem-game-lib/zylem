@@ -298,7 +298,7 @@ export function createText(...args: Array<TextOptions>): ZylemText {
 		EntityClass: ZylemText,
 		BuilderClass: TextBuilder,
 		entityType: ZylemText.type,
+		cloneFactory: (options) => createText(options ?? {}),
 	});
 }
-
 

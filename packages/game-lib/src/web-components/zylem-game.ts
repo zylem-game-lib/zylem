@@ -1,5 +1,10 @@
 import { Game } from '../lib/game/game';
-import { debugState, setDebugTool, setPaused, type DebugTools } from '../lib/debug/debug-state';
+import {
+  debugState,
+  setDebugTool,
+  setPaused,
+  type DebugTools,
+} from '../lib/debug/debug-state';
 import type { DeviceProfile } from '../lib/game/game-config';
 
 /**
@@ -69,7 +74,7 @@ export class ZylemGameElement extends HTMLElement {
     if (this._game) {
       this._game.dispose();
     }
-    
+
     this._game = game;
     this.attachHostContainer(game);
     this.syncDisplayRuntime();
@@ -91,9 +96,8 @@ export class ZylemGameElement extends HTMLElement {
   }
 
   set viewportProfile(value: DeviceProfile) {
-    const normalized: DeviceProfile = value === 'mobile' || value === 'desktop'
-      ? value
-      : 'auto';
+    const normalized: DeviceProfile =
+      value === 'mobile' || value === 'desktop' ? value : 'auto';
     if (this._viewportProfile === normalized) {
       return;
     }
@@ -109,7 +113,11 @@ export class ZylemGameElement extends HTMLElement {
     return ['viewport-profile'];
   }
 
-  attributeChangedCallback(name: string, _oldValue: string | null, newValue: string | null): void {
+  attributeChangedCallback(
+    name: string,
+    _oldValue: string | null,
+    newValue: string | null,
+  ): void {
     if (name === 'viewport-profile') {
       this.viewportProfile = (newValue ?? 'auto') as DeviceProfile;
     }
@@ -149,8 +157,8 @@ export class ZylemGameElement extends HTMLElement {
 
   private attachHostContainer(game: Game<any>): void {
     const marker = ZylemGameElement.HOST_CONFIG_MARKER;
-    const existing = game.options.find(
-      (option) => Boolean((option as Record<symbol, unknown>)?.[marker]),
+    const existing = game.options.find((option) =>
+      Boolean((option as Record<symbol, unknown>)?.[marker]),
     ) as ({ container: HTMLElement } & Record<symbol, boolean>) | undefined;
 
     if (existing) {
@@ -175,9 +183,7 @@ export class ZylemGameElement extends HTMLElement {
 
     this._game.setDisplayRuntime({
       deviceProfile: this._viewportProfile,
-      viewportSize: width > 0 && height > 0
-        ? { width, height }
-        : undefined,
+      viewportSize: width > 0 && height > 0 ? { width, height } : undefined,
     });
   }
 }

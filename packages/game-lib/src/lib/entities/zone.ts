@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
-import { GameEntityOptions, GameEntity } from './entity';
+import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from './entity';
 import { CollisionHandlerDelegate } from '../collision/world';
 import { state } from '../game/game-state';
 import { commonDefaults, mergeArgs } from './common';
@@ -137,5 +137,8 @@ export function createZone(...args: Array<ZoneOptions>): ZylemZone {
 			collisionFilter: options.collisionFilter,
 		}),
 	);
-	return entity;
+	return finalizeEntityCloneSupport(
+		entity,
+		(cloneOptions) => createZone(cloneOptions ?? {}),
+	);
 }
