@@ -6,6 +6,7 @@ import {
 	type JumpContext3D,
 } from '../../../src/lib/behaviors/jumper-3d/components';
 import { Jumper3DBehavior, JumperTickEvent } from '../../../src/lib/behaviors/jumper-3d/jumper-3d.behavior';
+import { isJumper3DGrounded } from '../../../src/lib/behaviors/jumper-3d/jumper-3d.descriptor';
 
 describe('Jumper3DBehavior', () => {
 	it('does not clamp jump launch velocity to zero on grounded jump frame', () => {
@@ -186,5 +187,25 @@ describe('Jumper3DBehavior', () => {
 		expect(third.event).not.toBe(JumperTickEvent.Jump);
 		expect(state.jumpsUsed).toBe(2);
 		expect(ctx.velocityY).toBeLessThanOrEqual(beforeThirdAttempt);
+	});
+
+	it('does not ground when support is farther than snap distance', () => {
+		expect(
+			isJumper3DGrounded({
+				supportToi: 0.3,
+				velocityY: 0,
+				snapToGroundDistance: 0.15,
+			}),
+		).toBe(false);
+	});
+
+	it('grounds when descending onto nearby support within snap distance', () => {
+		expect(
+			isJumper3DGrounded({
+				supportToi: 0.08,
+				velocityY: -1.5,
+				snapToGroundDistance: 0.15,
+			}),
+		).toBe(true);
 	});
 });

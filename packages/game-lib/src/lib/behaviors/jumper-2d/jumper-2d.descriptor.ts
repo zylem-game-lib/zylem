@@ -2,7 +2,12 @@ import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { setVelocityIntent } from '../../actions/capabilities/velocity-intents';
-import { GroundProbe3D } from '../shared/ground-probe-3d';
+import {
+	GroundProbe3D,
+	getGroundAnchorOffsetY,
+	getGroundSnapTargetY,
+	type GroundProbeSupportHit,
+} from '../shared/ground-probe-3d';
 import {
 	createJumpConfig2D,
 	createJumpInput2D,
@@ -29,6 +34,7 @@ export interface Jumper2DBehaviorOptions {
 	minTimeBetweenJumpsMs?: number;
 	variableJump?: JumpConfig2D['variableJump'];
 	groundRayLength?: number;
+	snapToGroundDistance?: number;
 	debugGroundProbe?: boolean;
 }
 
@@ -51,10 +57,36 @@ const JUMPER_2D_OFFSETS = [
 ] as const;
 
 export function isJumper2DGrounded(params: {
-	nearGround: boolean;
+	nearGround?: boolean;
 	velocityY: number;
+	supportToi?: number | null;
+	snapToGroundDistance?: number;
 }): boolean {
-	return params.nearGround && params.velocityY <= 0;
+	if (params.velocityY > 0) {
+		return false;
+	}
+
+	if (params.snapToGroundDistance != null) {
+		return (
+			params.supportToi != null &&
+			params.supportToi <= params.snapToGroundDistance
+		);
+	}
+
+	return params.nearGround === true;
+}
+
+function shouldSnapJumper2DToGround(
+	support: GroundProbeSupportHit | null,
+	options: Jumper2DBehaviorOptions,
+	velocityY: number,
+): support is GroundProbeSupportHit {
+	return (
+		support != null &&
+		options.snapToGroundDistance != null &&
+		velocityY <= 0 &&
+		support.toi <= options.snapToGroundDistance
+	);
 }
 
 export interface Jumper2DEntity {
@@ -113,18 +145,33 @@ class Jumper2DBehaviorSystem implements BehaviorSystem {
 
 			const rayLength = options.groundRayLength ?? 1;
 			const bodyVelocity = gameEntity.body.linvel();
-			const nearGround = this.groundProbe.detect(gameEntity, {
+			const probeOriginYOffset = 0.05 - getGroundAnchorOffsetY(gameEntity);
+			const support = this.groundProbe.probeSupport(gameEntity, {
 				rayLength,
 				offsets: JUMPER_2D_OFFSETS,
 				mode: 'any',
 				debug: options.debugGroundProbe ?? false,
 				scene: this.scene,
-				originYOffset: 0.05,
+				originYOffset: probeOriginYOffset,
 			});
+			const nearGround = support != null;
 			const isGrounded = isJumper2DGrounded({
 				nearGround,
 				velocityY: bodyVelocity.y,
+				supportToi: support?.toi ?? null,
+				snapToGroundDistance: options.snapToGroundDistance,
 			});
+			if (shouldSnapJumper2DToGround(support, options, bodyVelocity.y)) {
+				const currentPosition = gameEntity.body.translation();
+				gameEntity.body.setTranslation(
+					{
+						x: currentPosition.x,
+						y: getGroundSnapTargetY(gameEntity, support),
+						z: currentPosition.z,
+					},
+					true,
+				);
+			}
 
 			let timeSinceGroundedMs = this.timeSinceGroundedMs.get(gameEntity.uuid) ?? 0;
 			if (isGrounded) {

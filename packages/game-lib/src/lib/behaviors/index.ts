@@ -65,3 +65,4 @@ export * from './cooldown';
 // Coordinators
 export * from '../coordinators/boundary-ricochet.coordinator';
 export * from '../coordinators/boundary-ricochet-3d.coordinator';
+export * from '../coordinators/first-person-shooter.coordinator';
