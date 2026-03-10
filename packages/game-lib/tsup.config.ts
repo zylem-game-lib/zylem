@@ -16,6 +16,8 @@ export default defineConfig({
 
 		// Individual behavior exports (tree-shakeable deep imports)
 		'behavior/thruster': 'src/api/behavior/thruster.ts',
+		'behavior/top-down-movement': 'src/api/behavior/top-down-movement.ts',
+		'behavior/shooter-2d': 'src/api/behavior/shooter-2d.ts',
 		'behavior/screen-wrap': 'src/api/behavior/screen-wrap.ts',
 		'behavior/screen-visibility': 'src/api/behavior/screen-visibility.ts',
 		'behavior/world-boundary-2d': 'src/api/behavior/world-boundary-2d.ts',

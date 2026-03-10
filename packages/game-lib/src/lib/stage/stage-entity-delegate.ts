@@ -140,7 +140,6 @@ export class StageEntityDelegate {
 		const entity = child.create();
 		const eid = addEntity(this.ecs);
 		entity.eid = eid;
-		this.scene.addEntity(entity);
 
 		// Register behavior links and auto-register behavior systems once per key.
 		this.registerBehaviorLinks(entity);
@@ -161,6 +160,7 @@ export class StageEntityDelegate {
 			camera: this.camera!,
 		});
 
+		this.scene.addEntityGroup(entity);
 		this.tryRegisterInstance(entity);
 		this.addEntityToStage(entity);
 		this.entityModelDelegate.observe(entity);

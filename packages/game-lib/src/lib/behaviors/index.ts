@@ -29,6 +29,12 @@ export {
 // Thruster Module (components, FSM, and behaviors)
 export * from './thruster';
 
+// Top-down Movement Module
+export * from './top-down-movement';
+
+// Shooter 2D Module
+export * from './shooter-2d';
+
 // Screen Wrap Module
 export * from './screen-wrap';
 
@@ -66,3 +72,5 @@ export * from './cooldown';
 export * from '../coordinators/boundary-ricochet.coordinator';
 export * from '../coordinators/boundary-ricochet-3d.coordinator';
 export * from '../coordinators/first-person-shooter.coordinator';
+export * from '../coordinators/top-down-shooter.coordinator';
+export * from '../coordinators/multidirectional-space-shooter.coordinator';

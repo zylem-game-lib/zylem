@@ -9,6 +9,19 @@ export interface RotatableEntity {
 	transformStore?: TransformState;
 }
 
+function syncImmediateRotation(entity: RotatableEntity): void {
+	if (!entity.group || !entity.transformStore) return;
+
+	entity.group.setRotationFromQuaternion(
+		new Quaternion(
+			entity.transformStore.rotation.x,
+			entity.transformStore.rotation.y,
+			entity.transformStore.rotation.z,
+			entity.transformStore.rotation.w,
+		),
+	);
+}
+
 /**
  * Rotate an entity in the direction of a movement vector
  */
@@ -60,6 +73,7 @@ export function rotateY(entity: RotatableEntity, delta: number): void {
 	entity.transformStore.rotation.y = newY;
 	entity.transformStore.rotation.z = newZ;
 	entity.transformStore.dirty.rotation = true;
+	syncImmediateRotation(entity);
 }
 
 /**
@@ -88,6 +102,7 @@ export function rotateX(entity: RotatableEntity, delta: number): void {
 	entity.transformStore.rotation.y = newY;
 	entity.transformStore.rotation.z = newZ;
 	entity.transformStore.dirty.rotation = true;
+	syncImmediateRotation(entity);
 }
 
 /**
@@ -116,6 +131,8 @@ export function rotateZ(entity: RotatableEntity, delta: number): void {
 	entity.transformStore.rotation.y = newY;
 	entity.transformStore.rotation.z = newZ;
 	entity.transformStore.dirty.rotation = true;
+	(entity as any)._rotation2DAngle = ((entity as any)._rotation2DAngle ?? 0) + delta;
+	syncImmediateRotation(entity);
 }
 
 /**
@@ -131,6 +148,7 @@ export function setRotationY(entity: RotatableEntity, y: number): void {
 	entity.transformStore.rotation.y = yComponent;
 	entity.transformStore.rotation.z = 0;
 	entity.transformStore.dirty.rotation = true;
+	syncImmediateRotation(entity);
 }
 
 /**
@@ -154,6 +172,7 @@ export function setRotationX(entity: RotatableEntity, x: number): void {
 	entity.transformStore.rotation.y = 0;
 	entity.transformStore.rotation.z = 0;
 	entity.transformStore.dirty.rotation = true;
+	syncImmediateRotation(entity);
 }
 
 /**
@@ -177,6 +196,8 @@ export function setRotationZ(entity: RotatableEntity, z: number): void {
 	entity.transformStore.rotation.y = 0;
 	entity.transformStore.rotation.z = zComponent;
 	entity.transformStore.dirty.rotation = true;
+	(entity as any)._rotation2DAngle = z;
+	syncImmediateRotation(entity);
 }
 
 /**
@@ -198,6 +219,8 @@ export function setRotation(entity: RotatableEntity, x: number, y: number, z: nu
 	entity.transformStore.rotation.y = quat.y;
 	entity.transformStore.rotation.z = quat.z;
 	entity.transformStore.dirty.rotation = true;
+	(entity as any)._rotation2DAngle = z;
+	syncImmediateRotation(entity);
 }
 
 /**

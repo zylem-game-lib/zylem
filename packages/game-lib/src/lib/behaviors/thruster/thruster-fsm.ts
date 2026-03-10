@@ -50,6 +50,8 @@ export interface ThrusterFSMContext {
 export interface PlayerInput {
 	thrust: number;
 	rotate: number;
+	thrustX?: number;
+	thrustY?: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,7 +105,11 @@ export class ThrusterFSM {
 	 */
 	update(playerInput: PlayerInput): void {
 		const state = this.machine.getState();
-		const hasInput = Math.abs(playerInput.thrust) > 0.01 || Math.abs(playerInput.rotate) > 0.01;
+		const hasInput =
+			Math.abs(playerInput.thrust) > 0.01
+			|| Math.abs(playerInput.rotate) > 0.01
+			|| Math.abs(playerInput.thrustX ?? 0) > 0.01
+			|| Math.abs(playerInput.thrustY ?? 0) > 0.01;
 
 		// Auto-transition to report state based on input
 		if (hasInput && state === ThrusterState.Idle) {

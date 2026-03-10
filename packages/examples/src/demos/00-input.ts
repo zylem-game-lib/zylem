@@ -18,14 +18,16 @@ stage1.setInputConfiguration(
 const inputText = createText({
 	name: 'inputText',
 	text: 'Use a gamepad or keyboard to control the game',
-	fontSize: 36,
+	fontSize: 24,
+	stickToViewport: true,
 	screenPosition: new Vector2(0.5, 0.5),
 });
 
 const mouseInputText = createText({
 	name: 'mouseInputText',
 	text: '<mouse input>',
-	fontSize: 36,
+	fontSize: 24,
+	stickToViewport: true,
 	screenPosition: new Vector2(0.5, 0.25),
 });
 

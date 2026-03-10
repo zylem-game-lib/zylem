@@ -44,12 +44,18 @@ export interface ThrusterInputComponent {
 	thrust: number;
 	/** Rotation intent: -1..1 */
 	rotate: number;
+	/** World-space X thrust intent: -1..1 */
+	thrustX: number;
+	/** World-space Y thrust intent: -1..1 */
+	thrustY: number;
 }
 
 export function createThrusterInputComponent(): ThrusterInputComponent {
 	return {
 		thrust: 0,
 		rotate: 0,
+		thrustX: 0,
+		thrustY: 0,
 	};
 }
 

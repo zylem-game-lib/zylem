@@ -46,6 +46,14 @@
       "types": "./dist/behavior/thruster.d.ts",
       "import": "./dist/behavior/thruster.js"
     },
+    "./behavior/top-down-movement": {
+      "types": "./dist/behavior/top-down-movement.d.ts",
+      "import": "./dist/behavior/top-down-movement.js"
+    },
+    "./behavior/shooter-2d": {
+      "types": "./dist/behavior/shooter-2d.d.ts",
+      "import": "./dist/behavior/shooter-2d.js"
+    },
     "./behavior/screen-wrap": {
       "types": "./dist/behavior/screen-wrap.d.ts",
       "import": "./dist/behavior/screen-wrap.js"

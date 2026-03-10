@@ -36,7 +36,9 @@ the consumer needs to observe. `screen-visibility` and `ricochet-*` use FSMs.
 - `ricochet-2d`
 - `ricochet-3d`
 - `screen-visibility`
+- `shooter-2d`
 - `screen-wrap`
+- `top-down-movement`
 - `thruster`
 - `world-boundary-2d`
 
@@ -72,7 +74,9 @@ behaviors/
   ricochet-2d/
   ricochet-3d/
   screen-visibility/
+  shooter-2d/
   screen-wrap/
+  top-down-movement/
   thruster/
   world-boundary-2d/
 ```
@@ -139,6 +143,8 @@ Each behavior folder should also include a `README.md` covering:
 - [ricochet-2d](./ricochet-2d/README.md)
 - [ricochet-3d](./ricochet-3d/README.md)
 - [screen-visibility](./screen-visibility/README.md)
+- [shooter-2d](./shooter-2d/README.md)
 - [screen-wrap](./screen-wrap/README.md)
+- [top-down-movement](./top-down-movement/README.md)
 - [thruster](./thruster/README.md)
 - [world-boundary-2d](./world-boundary-2d/README.md)

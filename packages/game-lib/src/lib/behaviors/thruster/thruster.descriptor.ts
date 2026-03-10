@@ -10,7 +10,12 @@ import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { ThrusterMovementBehavior, ThrusterEntity } from './thruster-movement.behavior';
 import { ThrusterFSM } from './thruster-fsm';
-import type { ThrusterMovementComponent, ThrusterInputComponent } from './components';
+import {
+	createThrusterInputComponent,
+	createThrusterMovementComponent,
+	type ThrusterMovementComponent,
+	type ThrusterInputComponent,
+} from './components';
 
 /**
  * Thruster behavior options (typed for entity.use() autocomplete)
@@ -20,11 +25,14 @@ export interface ThrusterBehaviorOptions {
 	linearThrust: number;
 	/** Rotation torque (default: 5) */
 	angularThrust: number;
+	/** Optional linear damping override */
+	linearDamping?: number;
 }
 
 const defaultOptions: ThrusterBehaviorOptions = {
 	linearThrust: 10,
 	angularThrust: 5,
+	linearDamping: undefined,
 };
 
 const THRUSTER_BEHAVIOR_KEY = Symbol.for('zylem:behavior:thruster');
@@ -63,17 +71,15 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
 
 			// Ensure entity has thruster components (initialized once)
 			if (!gameEntity.thruster) {
-				gameEntity.thruster = {
-					linearThrust: options.linearThrust,
-					angularThrust: options.angularThrust,
-				} as ThrusterMovementComponent;
+				gameEntity.thruster = createThrusterMovementComponent(
+					options.linearThrust,
+					options.angularThrust,
+					{ linearDamping: options.linearDamping },
+				) as ThrusterMovementComponent;
 			}
 
 			if (!gameEntity.$thruster) {
-				gameEntity.$thruster = {
-					thrust: 0,
-					rotate: 0,
-				} as ThrusterInputComponent;
+				gameEntity.$thruster = createThrusterInputComponent() as ThrusterInputComponent;
 			}
 
 			if (!gameEntity.physics) {
@@ -90,6 +96,8 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
 				thrusterRef.fsm.update({
 					thrust: gameEntity.$thruster.thrust,
 					rotate: gameEntity.$thruster.rotate,
+					thrustX: gameEntity.$thruster.thrustX,
+					thrustY: gameEntity.$thruster.thrustY,
 				});
 			}
 

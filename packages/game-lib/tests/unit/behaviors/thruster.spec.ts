@@ -20,17 +20,18 @@ function createBody() {
 			angularVelocity.y = next.y;
 			angularVelocity.z = next.z;
 		},
+		setLinearDamping: () => {},
 	};
 }
 
 describe('ThrusterBehavior', () => {
-	it('applies forward thrust and braking', () => {
+	it('applies forward thrust and reverse thrust along facing', () => {
 		const body = createBody();
 		const behavior = new ThrusterMovementBehavior({} as any);
 		const entity = {
 			physics: { body },
 			thruster: { linearThrust: 10, angularThrust: 5 },
-			$thruster: { thrust: 1, rotate: 0 },
+			$thruster: { thrust: 1, rotate: 0, thrustX: 0, thrustY: 0 },
 		};
 
 		behavior.updateEntity(entity, 1 / 60);
@@ -39,9 +40,7 @@ describe('ThrusterBehavior', () => {
 		const boostedSpeed = Math.hypot(body.linvel().x, body.linvel().y);
 		entity.$thruster.thrust = -1;
 		behavior.updateEntity(entity, 1 / 60);
-		const brakedSpeed = Math.hypot(body.linvel().x, body.linvel().y);
-
-		expect(brakedSpeed).toBeLessThan(boostedSpeed);
+		expect(body.linvel().y).toBeLessThan(boostedSpeed);
 	});
 
 	it('applies angular thrust from rotate input', () => {
@@ -50,21 +49,35 @@ describe('ThrusterBehavior', () => {
 		const entity = {
 			physics: { body },
 			thruster: { linearThrust: 10, angularThrust: 5 },
-			$thruster: { thrust: 0, rotate: 1 },
+			$thruster: { thrust: 0, rotate: 1, thrustX: 0, thrustY: 0 },
 		};
 
 		behavior.updateEntity(entity, 1 / 60);
 		expect(body.angvel().z).toBeLessThan(0);
 	});
 
+	it('applies world-space vector thrust', () => {
+		const body = createBody();
+		const behavior = new ThrusterMovementBehavior({} as any);
+		const entity = {
+			physics: { body },
+			thruster: { linearThrust: 10, angularThrust: 5 },
+			$thruster: { thrust: 0, rotate: 0, thrustX: 1, thrustY: 1 },
+		};
+
+		behavior.updateEntity(entity, 1 / 60);
+		expect(body.linvel().x).toBeCloseTo(0.7071067811865475);
+		expect(body.linvel().y).toBeCloseTo(0.7071067811865475);
+	});
+
 	it('tracks idle and active FSM states from player input', () => {
-		const input = { thrust: 0, rotate: 0 };
+		const input = { thrust: 0, rotate: 0, thrustX: 0, thrustY: 0 };
 		const fsm = new ThrusterFSM({ input });
 
 		expect(fsm.getState()).toBe(ThrusterState.Idle);
-		fsm.update({ thrust: 1, rotate: 0 });
+		fsm.update({ thrust: 1, rotate: 0, thrustX: 0, thrustY: 0 });
 		expect(fsm.getState()).toBe(ThrusterState.Active);
-		fsm.update({ thrust: 0, rotate: 0 });
+		fsm.update({ thrust: 0, rotate: 0, thrustX: 0, thrustY: 0 });
 		expect(fsm.getState()).toBe(ThrusterState.Idle);
 	});
 });

@@ -2,12 +2,13 @@
 
 ## Purpose
 
-Applies Asteroids-style thrust and turn control to a physics body.
+Applies thrust and optional turn control to a physics body.
 
 ## Options
 
 - `linearThrust`
 - `angularThrust`
+- `linearDamping`
 
 ## Runtime components
 
@@ -31,4 +32,5 @@ ship.use(ThrusterBehavior, {
 ## Composition notes
 
 This behavior is motion-focused and works well with `ScreenWrapBehavior`.
-Write input to `entity.$thruster.thrust` and `entity.$thruster.rotate`.
+Write input to `entity.$thruster.thrust`/`rotate` for facing-relative thrust or
+`entity.$thruster.thrustX`/`thrustY` for world-space thrust.

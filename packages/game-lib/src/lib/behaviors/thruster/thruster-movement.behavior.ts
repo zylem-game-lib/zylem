@@ -8,6 +8,10 @@
 import type { ZylemWorld } from '../../collision/world';
 import type { PhysicsBodyComponent } from '../components';
 import type { ThrusterMovementComponent, ThrusterInputComponent } from './components';
+import {
+	getRotationAngle2D,
+	normalizeDirection2D,
+} from '../shared/direction-2d';
 
 /**
  * Zylem-style Behavior interface
@@ -54,33 +58,33 @@ export class ThrusterMovementBehavior implements Behavior {
 		const thruster = e.thruster;
 		const input = e.$thruster;
 
+		if (thruster.linearDamping != null && typeof body.setLinearDamping === 'function') {
+			body.setLinearDamping(thruster.linearDamping);
+		}
+
 		// Get Z rotation from quaternion (for 2D sprites)
-		const q = body.rotation();
-		const rotationZ = Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+		const rotationZ = getRotationAngle2D(body.rotation());
+		const currentVel = body.linvel();
+		const vectorThrust = normalizeDirection2D(input.thrustX, input.thrustY);
 
-		// --- Linear thrust (Asteroids-style: adds velocity in forward direction) ---
-		if (input.thrust !== 0) {
-			const currentVel = body.linvel();
-
-			if (input.thrust > 0) {
-				// Forward thrust: add velocity in facing direction
-				const forwardX = Math.sin(-rotationZ);
-				const forwardY = Math.cos(-rotationZ);
-				const thrustAmount = thruster.linearThrust * input.thrust * 0.1;
-				body.setLinvel({
-					x: currentVel.x + forwardX * thrustAmount,
-					y: currentVel.y + forwardY * thrustAmount,
-					z: currentVel.z
-				}, true);
-			} else {
-				// Brake: reduce current velocity (slow down)
-				const brakeAmount = 0.9; // 10% reduction per frame
-				body.setLinvel({
-					x: currentVel.x * brakeAmount,
-					y: currentVel.y * brakeAmount,
-					z: currentVel.z
-				}, true);
-			}
+		// --- Linear thrust ---
+		if (vectorThrust) {
+			const thrustScale = Math.min(1, Math.hypot(input.thrustX, input.thrustY));
+			const thrustAmount = thruster.linearThrust * thrustScale * 0.1;
+			body.setLinvel({
+				x: currentVel.x + vectorThrust.x * thrustAmount,
+				y: currentVel.y + vectorThrust.y * thrustAmount,
+				z: currentVel.z,
+			}, true);
+		} else if (input.thrust !== 0) {
+			const forwardX = Math.sin(-rotationZ);
+			const forwardY = Math.cos(-rotationZ);
+			const thrustAmount = thruster.linearThrust * input.thrust * 0.1;
+			body.setLinvel({
+				x: currentVel.x + forwardX * thrustAmount,
+				y: currentVel.y + forwardY * thrustAmount,
+				z: currentVel.z
+			}, true);
 		}
 
 		// --- Angular thrust (Z-axis for 2D) ---

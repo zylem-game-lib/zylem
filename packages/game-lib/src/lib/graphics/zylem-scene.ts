@@ -279,11 +279,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 	 * Add game entity to scene
 	 */
 	addEntity(entity: GameEntity<any>) {
-		if (entity.group) {
-			this.add(entity.group, entity.options.position);
-		} else if (entity.mesh) {
-			this.add(entity.mesh, entity.options.position);
-		}
+		const target = entity.group ?? entity.mesh;
+		if (!target || this.isAttachedOutsideScene(target)) return;
+		this.add(target, entity.options.position);
 	}
 
 	/**
@@ -291,6 +289,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 	 * Uses entity's current body position if physics is active.
 	 */
 	addEntityGroup(entity: GameEntity<any>): void {
+		const target = entity.group ?? entity.mesh;
+		if (!target || this.isAttachedOutsideScene(target)) return;
+
 		const position = entity.body
 			? new Vector3(
 				entity.body.translation().x,
@@ -299,11 +300,11 @@ export class ZylemScene implements Entity<ZylemScene> {
 			  )
 			: entity.options.position;
 
-		if (entity.group) {
-			this.add(entity.group, position);
-		} else if (entity.mesh) {
-			this.add(entity.mesh, position);
-		}
+		this.add(target, position);
+	}
+
+	private isAttachedOutsideScene(object: Object3D): boolean {
+		return object.parent != null && object.parent !== this.scene;
 	}
 
 	/**

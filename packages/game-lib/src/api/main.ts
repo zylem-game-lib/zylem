@@ -118,6 +118,7 @@ export { globalChange, globalChanges, variableChange, variableChanges } from '..
 // Input presets
 export {
 	useArrowsForAxes,
+	useArrowsForSecondaryAxes,
 	useArrowsForDirections,
 	useWASDForDirections,
 	useWASDForAxes,

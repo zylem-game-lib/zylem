@@ -22,6 +22,19 @@ export function useArrowsForAxes(player: InputPlayer): GameInputConfig {
 }
 
 /**
+ * Maps arrow keys to secondary axes for the given player.
+ * @example stage.setInputConfiguration(useArrowsForSecondaryAxes('p1'));
+ */
+export function useArrowsForSecondaryAxes(player: InputPlayer): GameInputConfig {
+	return playerKeyMapping(player, {
+		'ArrowLeft': ['axes.SecondaryLeft'],
+		'ArrowRight': ['axes.SecondaryRight'],
+		'ArrowUp': ['axes.SecondaryUp'],
+		'ArrowDown': ['axes.SecondaryDown'],
+	});
+}
+
+/**
  * Maps arrow keys to directions (Up/Down/Left/Right) for the given player.
  * Useful when `includeDefaults` is false and you still want arrow-key directions.
  * @example stage.setInputConfiguration(useArrowsForDirections('p1'));

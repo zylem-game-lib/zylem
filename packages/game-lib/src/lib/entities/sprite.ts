@@ -10,7 +10,11 @@ import { GameEntityOptions, GameEntity } from './entity';
 import { EntityBuilder } from './builder';
 import { EntityCollisionBuilder } from './builder';
 import { createEntity } from './create';
-import { DestroyContext, DestroyFunction, UpdateContext, UpdateFunction } from '../core/base-node-life-cycle';
+import {
+	DestroyContext,
+	SetupContext,
+	UpdateContext,
+} from '../core/base-node-life-cycle';
 import { DebugDelegate } from './delegates/debug';
 import { standardShader } from '../graphics/shaders/standard.shader';
 
@@ -71,6 +75,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		super();
 		this.options = { ...spriteDefaults, ...options };
 		// Add sprite-specific lifecycle callbacks (only registered once)
+		this.prependSetup(this.spriteSetup.bind(this) as any);
 		this.prependUpdate(this.spriteUpdate.bind(this) as any);
 		this.onCleanup(this.spriteDestroy.bind(this) as any);
 	}
@@ -98,6 +103,7 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		// Use synchronous load() which returns a texture that updates when ready
 		// This maintains compatibility with the synchronous create() method
 		const textureLoader = new TextureLoader();
+		const size = this.options.size ?? new Vector3(1, 1, 1);
 		images.forEach((image, index) => {
 			const spriteMap = textureLoader.load(image.file);
 			const material = new SpriteMaterial({
@@ -106,6 +112,8 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 			});
 			const _sprite = new ThreeSprite(material);
 			_sprite.position.normalize();
+			_sprite.scale.set(size.x, size.y, size.z);
+			_sprite.visible = index === 0;
 			this.sprites.push(_sprite);
 			this.spriteMap.set(image.name, index);
 		});
@@ -167,18 +175,35 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
 		}
 	}
 
-	spriteUpdate(params: UpdateContext<ZylemSpriteOptions>): void {
+	private getCurrentRotationQuaternion():
+		| { x: number; y: number; z: number; w: number }
+		| null {
+		if (this.transformStore?.dirty.rotation) {
+			return this.transformStore.rotation;
+		}
+
+		return this.body?.rotation?.() ?? null;
+	}
+
+	private syncSpriteMaterials(): void {
+		const q = this.getCurrentRotationQuaternion();
+
 		this.sprites.forEach(_sprite => {
-			if (_sprite.material) {
-				const q = this.body?.rotation();
-				if (q) {
-					const quat = new Quaternion(q.x, q.y, q.z, q.w);
-					const euler = new Euler().setFromQuaternion(quat, 'XYZ');
-					_sprite.material.rotation = euler.z;
-				}
-				_sprite.scale.set(this.options.size?.x ?? 1, this.options.size?.y ?? 1, this.options.size?.z ?? 1);
+			if (_sprite.material && q) {
+				const quat = new Quaternion(q.x, q.y, q.z, q.w);
+				const euler = new Euler().setFromQuaternion(quat, 'XYZ');
+				_sprite.material.rotation = euler.z;
 			}
+			_sprite.scale.set(this.options.size?.x ?? 1, this.options.size?.y ?? 1, this.options.size?.z ?? 1);
 		});
+	}
+
+	spriteSetup(_params: SetupContext<ZylemSpriteOptions>): void {
+		this.syncSpriteMaterials();
+	}
+
+	spriteUpdate(params: UpdateContext<ZylemSpriteOptions>): void {
+		this.syncSpriteMaterials();
 	}
 
 	spriteDestroy(params: DestroyContext<ZylemSpriteOptions>): void {
