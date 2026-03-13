@@ -162,6 +162,7 @@ export class GameEntity<O extends GameEntityOptions>
 	public materials: Material[] | undefined;
 	public bodyDesc: RigidBodyDesc | null = null;
 	public body: RigidBody | null = null;
+	public physicsAttached = false;
 	public colliderDesc: ColliderDesc | undefined;
 	public collider: Collider | undefined;
 	public custom: Record<string, any> = {};

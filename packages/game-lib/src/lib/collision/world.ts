@@ -13,6 +13,12 @@ import {
 import { PhysicsProxy } from '../physics/physics-proxy';
 import { serializeBodyDesc, serializeColliderDesc, serializeCharacterController } from '../physics/serialize-descriptors';
 import type { CollisionPair } from '../physics/physics-protocol';
+import {
+	commitDirectBodyPoseHistoryStep,
+	collapseDirectBodyPoseHistory,
+	prepareDirectBodyPoseHistoryStep,
+	registerDirectBodyPoseHistory,
+} from '../physics/physics-pose';
 
 /**
  * Interface for entities that handle collision events.
@@ -119,6 +125,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	private proxy: PhysicsProxy | null = null;
 	/** Pending step promise (worker mode). */
 	private _pendingStep: Promise<void> | null = null;
+	private readonly trackedDirectBodies = new WeakSet<RAPIER.RigidBody>();
 
 	static async loadPhysics(gravity: Vector3) {
 		await RAPIER.init();
@@ -177,7 +184,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	setForRemoval(entity: any) {
-		if (entity.body) {
+		if (entity.physicsAttached) {
 			this._removalMap.set(entity.uuid, entity);
 		}
 	}
@@ -224,7 +231,10 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	private addEntityDirect(entity: any) {
 		const rigidBody = this.world.createRigidBody(entity.bodyDesc);
 		entity.body = rigidBody;
+		entity.physicsAttached = true;
 		entity.body.userData = { uuid: entity.uuid, ref: entity };
+		registerDirectBodyPoseHistory(rigidBody);
+		this.patchDirectBodyPoseTracking(rigidBody);
 		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
 			entity.body.lockTranslations(true, true);
 			entity.body.lockRotations(true, true);
@@ -261,15 +271,16 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		}
 		if (entity.colliders?.length) {
 			for (const collider of entity.colliders) {
-				this.world.removeCollider(collider, true);
+				try { this.world.removeCollider(collider, true); } catch { /* noop */ }
 			}
 		} else if (entity.collider) {
-			this.world.removeCollider(entity.collider, true);
+			try { this.world.removeCollider(entity.collider, true); } catch { /* noop */ }
 		}
 		if (entity.body) {
-			this.world.removeRigidBody(entity.body);
+			try { this.world.removeRigidBody(entity.body); } catch { /* noop */ }
 			this.removeEntityFromTracking(entity.uuid);
 		}
+		this.clearEntityPhysicsState(entity);
 	}
 
 	private updateDirect(params: UpdateContext<any>) {
@@ -286,7 +297,9 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		this.accumulator = Math.min(this.accumulator, maxAccumulator);
 
 		while (this.accumulator >= this.fixedTimestep) {
+			this.captureDirectBodyPreviousPoses();
 			this.world.step();
+			this.captureDirectBodyCurrentPoses();
 			this.accumulator -= this.fixedTimestep;
 		}
 
@@ -296,6 +309,54 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			this.currentCollisionTimeMs,
 		);
 		this.interpolationAlpha = this.accumulator / this.fixedTimestep;
+	}
+
+	private captureDirectBodyPreviousPoses() {
+		for (const [, collider] of this.collisionMap) {
+			const body = (collider as GameEntity<any>).body as RAPIER.RigidBody | null;
+			if (body) {
+				prepareDirectBodyPoseHistoryStep(body);
+			}
+		}
+	}
+
+	private captureDirectBodyCurrentPoses() {
+		for (const [, collider] of this.collisionMap) {
+			const body = (collider as GameEntity<any>).body as RAPIER.RigidBody | null;
+			if (body) {
+				commitDirectBodyPoseHistoryStep(body);
+			}
+		}
+	}
+
+	private patchDirectBodyPoseTracking(body: RAPIER.RigidBody) {
+		if (this.trackedDirectBodies.has(body)) {
+			return;
+		}
+
+		const trackedBody = body as RAPIER.RigidBody & {
+			setTranslation: (
+				translation: { x: number; y: number; z: number },
+				wakeUp: boolean,
+			) => void;
+			setRotation: (
+				rotation: { x: number; y: number; z: number; w: number },
+				wakeUp: boolean,
+			) => void;
+		};
+		const originalSetTranslation = body.setTranslation.bind(body);
+		const originalSetRotation = body.setRotation.bind(body);
+
+		trackedBody.setTranslation = (translation, wakeUp) => {
+			originalSetTranslation(translation, wakeUp);
+			collapseDirectBodyPoseHistory(body);
+		};
+		trackedBody.setRotation = (rotation, wakeUp) => {
+			originalSetRotation(rotation, wakeUp);
+			collapseDirectBodyPoseHistory(body);
+		};
+
+		this.trackedDirectBodies.add(body);
 	}
 
 	// ─── Worker Mode Implementation ──────────────────────────────────────
@@ -317,6 +378,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		// read API (translation(), rotation(), linvel(), angvel()) and queues
 		// write operations as commands for the worker.
 		entity.body = handle as any;
+		entity.physicsAttached = true;
 		entity.collider = null;
 		entity.colliders = [];
 
@@ -327,6 +389,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		if (!this.proxy) return;
 		this.proxy.removeBody(entity.uuid);
 		this.removeEntityFromTracking(entity.uuid);
+		this.clearEntityPhysicsState(entity);
 	}
 
 	private updateWorker(params: UpdateContext<any>) {
@@ -505,6 +568,9 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	destroy() {
 		try {
 			if (this.workerMode) {
+				for (const [, entity] of this.collisionMap) {
+					this.clearEntityPhysicsState(entity);
+				}
 				this.proxy?.dispose();
 				this.proxy = null;
 			} else {
@@ -520,6 +586,14 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			this._removalMap.clear();
 			this.activeCollisionPairs.clear();
 		} catch { /* noop */ }
+	}
+
+	private clearEntityPhysicsState(entity: GameEntity<any>): void {
+		entity.physicsAttached = false;
+		entity.body = null;
+		entity.collider = undefined;
+		entity.colliders = [];
+		(entity as any).characterController = null;
 	}
 
 }

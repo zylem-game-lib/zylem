@@ -292,13 +292,19 @@ export class ZylemScene implements Entity<ZylemScene> {
 		const target = entity.group ?? entity.mesh;
 		if (!target || this.isAttachedOutsideScene(target)) return;
 
-		const position = entity.body
-			? new Vector3(
-				entity.body.translation().x,
-				entity.body.translation().y,
-				entity.body.translation().z
-			  )
-			: entity.options.position;
+		let position = entity.options.position ?? new Vector3(0, 0, 0);
+		if (entity.physicsAttached && entity.body) {
+			try {
+				const translation = entity.body.translation();
+				position = new Vector3(
+					translation.x,
+					translation.y,
+					translation.z,
+				);
+			} catch {
+				position = entity.options.position ?? new Vector3(0, 0, 0);
+			}
+		}
 
 		this.add(target, position);
 	}

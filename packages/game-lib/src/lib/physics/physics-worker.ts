@@ -43,26 +43,28 @@ const controllerMap = new Map<string, RAPIER.KinematicCharacterController>();
 
 // ─── Message Handler ───────────────────────────────────────────────────────
 
-self.onmessage = (e: MessageEvent<PhysicsCommand>) => {
-	const cmd = e.data;
-	switch (cmd.type) {
-		case 'init':
-			handleInit(cmd.gravity, cmd.physicsRate);
-			break;
-		case 'addBody':
-			handleAddBody(cmd.uuid, cmd.body, cmd.colliders, cmd.characterController);
-			break;
-		case 'removeBody':
-			handleRemoveBody(cmd.uuid);
-			break;
-		case 'step':
-			handleStep(cmd.delta, cmd.commands);
-			break;
-		case 'dispose':
-			handleDispose();
-			break;
-	}
-};
+if (typeof self !== 'undefined') {
+	self.onmessage = (e: MessageEvent<PhysicsCommand>) => {
+		const cmd = e.data;
+		switch (cmd.type) {
+			case 'init':
+				handleInit(cmd.gravity, cmd.physicsRate);
+				break;
+			case 'addBody':
+				handleAddBody(cmd.uuid, cmd.body, cmd.colliders, cmd.characterController);
+				break;
+			case 'removeBody':
+				handleRemoveBody(cmd.uuid);
+				break;
+			case 'step':
+				handleStep(cmd.delta, cmd.commands);
+				break;
+			case 'dispose':
+				handleDispose();
+				break;
+		}
+	};
+}
 
 // ─── Command Handlers ──────────────────────────────────────────────────────
 
@@ -310,7 +312,7 @@ function reconstructBodyDesc(desc: SerializableBodyDesc): RigidBodyDesc {
 	return bodyDesc;
 }
 
-function reconstructColliderDesc(desc: SerializableColliderDesc): ColliderDesc {
+export function reconstructColliderDesc(desc: SerializableColliderDesc): ColliderDesc {
 	let colliderDesc: ColliderDesc;
 	const d = desc.dimensions;
 
@@ -329,6 +331,17 @@ function reconstructColliderDesc(desc: SerializableColliderDesc): ColliderDesc {
 			break;
 		case 'cylinder':
 			colliderDesc = ColliderDesc.cylinder(d[0], d[1]);
+			break;
+		case 'trimesh':
+			colliderDesc = ColliderDesc.trimesh(
+				new Float32Array(desc.vertices ?? []),
+				new Uint32Array(desc.indices ?? []),
+			);
+			(colliderDesc as any).__zylemShapeData = {
+				shape: 'trimesh',
+				vertices: [...(desc.vertices ?? [])],
+				indices: [...(desc.indices ?? [])],
+			};
 			break;
 		case 'heightfield': {
 			const meta = desc.heightfieldMeta!;

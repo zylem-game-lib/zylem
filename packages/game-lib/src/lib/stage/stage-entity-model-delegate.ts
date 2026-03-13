@@ -9,14 +9,16 @@ import { GameEntity } from '../entities/entity';
  */
 export class StageEntityModelDelegate {
 	private scene: ZylemScene | null = null;
+	private onEntityReady: ((entity: GameEntity<any>) => void) | null = null;
 	private pendingEntities: Map<string, GameEntity<any>> = new Map();
 	private modelLoadedHandler: ((payload: { entityId: string; success: boolean }) => void) | null = null;
 
 	/**
 	 * Initialize the delegate with the scene reference and start listening.
 	 */
-	attach(scene: ZylemScene): void {
+	attach(scene: ZylemScene, onEntityReady?: (entity: GameEntity<any>) => void): void {
 		this.scene = scene;
+		this.onEntityReady = onEntityReady ?? null;
 		this.modelLoadedHandler = (payload) => {
 			this.handleModelLoaded(payload.entityId, payload.success);
 		};
@@ -28,6 +30,9 @@ export class StageEntityModelDelegate {
 	 * When its model loads, the group will be added to the scene.
 	 */
 	observe(entity: GameEntity<any>): void {
+		if (entity.group || entity.mesh) {
+			return;
+		}
 		this.pendingEntities.set(entity.uuid, entity);
 	}
 
@@ -49,6 +54,7 @@ export class StageEntityModelDelegate {
 		}
 
 		this.scene?.addEntityGroup(entity);
+		this.onEntityReady?.(entity);
 		this.pendingEntities.delete(entityId);
 	}
 
@@ -61,6 +67,7 @@ export class StageEntityModelDelegate {
 			this.modelLoadedHandler = null;
 		}
 		this.pendingEntities.clear();
+		this.onEntityReady = null;
 		this.scene = null;
 	}
 }

@@ -7,6 +7,7 @@
 import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { LoaderAdapter, AssetLoadOptions, ModelLoadResult } from '../asset-types';
+import { cloneModelObject } from './model-clone';
 
 const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/v1/decoders/';
 
@@ -96,7 +97,7 @@ export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 	 */
 	clone(result: ModelLoadResult): ModelLoadResult {
 		return {
-			object: result.object.clone(),
+			object: cloneModelObject(result.object),
 			animations: result.animations?.map(anim => anim.clone()),
 			gltf: result.gltf
 		};

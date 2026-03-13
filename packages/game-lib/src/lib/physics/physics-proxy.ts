@@ -111,7 +111,7 @@ export class PhysicsProxy {
 		this.send(cmd);
 
 		const handle = new PhysicsBodyHandle(uuid, this.commandQueue);
-		handle._updateSnapshot(
+		handle._seedSnapshot(
 			body.translation[0], body.translation[1], body.translation[2],
 			0, 0, 0, 1,
 			0, 0, 0,

@@ -36,6 +36,7 @@ export type ColliderShapeKind =
 	| 'capsule'
 	| 'cone'
 	| 'cylinder'
+	| 'trimesh'
 	| 'heightfield';
 
 /**
@@ -46,6 +47,10 @@ export interface SerializableColliderDesc {
 	shape: ColliderShapeKind;
 	/** Shape-specific numeric dimensions (e.g. halfExtents, radius, halfHeight). */
 	dimensions: number[];
+	/** For trimesh: flattened xyz vertex array. */
+	vertices?: number[];
+	/** For trimesh: triangle indices referencing {@link vertices}. */
+	indices?: number[];
 	/** Collider offset translation relative to the body. */
 	translation?: [number, number, number];
 	sensor?: boolean;

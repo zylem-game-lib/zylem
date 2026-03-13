@@ -6,6 +6,7 @@
 import { Object3D } from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { LoaderAdapter, AssetLoadOptions, ModelLoadResult } from '../asset-types';
+import { cloneModelObject } from './model-clone';
 
 export interface FBXLoadOptions extends AssetLoadOptions {
 	/** 
@@ -83,7 +84,7 @@ export class FBXLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 	 */
 	clone(result: ModelLoadResult): ModelLoadResult {
 		return {
-			object: result.object.clone(),
+			object: cloneModelObject(result.object),
 			animations: result.animations?.map(anim => anim.clone())
 		};
 	}

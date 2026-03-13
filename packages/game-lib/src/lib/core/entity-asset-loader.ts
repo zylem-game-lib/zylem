@@ -8,6 +8,7 @@
 import { AnimationClip, Object3D } from 'three';
 import { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { assetManager } from './asset-manager';
+import type { AssetLoadOptions } from './asset-types';
 
 export interface AssetLoaderResult {
 	object?: Object3D;
@@ -25,12 +26,12 @@ export class EntityAssetLoader {
 	/**
 	 * Load a model file (FBX, GLTF, GLB, OBJ) using the asset manager
 	 */
-	async loadFile(file: string): Promise<AssetLoaderResult> {
+	async loadFile(file: string, options?: AssetLoadOptions): Promise<AssetLoaderResult> {
 		const ext = file.split('.').pop()?.toLowerCase();
 
 		switch (ext) {
 			case 'fbx': {
-				const result = await assetManager.loadFBX(file);
+				const result = await assetManager.loadFBX(file, options);
 				return {
 					object: result.object,
 					animation: result.animations?.[0]
@@ -38,14 +39,14 @@ export class EntityAssetLoader {
 			}
 			case 'gltf':
 			case 'glb': {
-				const result = await assetManager.loadGLTF(file);
+				const result = await assetManager.loadGLTF(file, options);
 				return {
 					object: result.object,
 					gltf: result.gltf
 				};
 			}
 			case 'obj': {
-				const result = await assetManager.loadOBJ(file);
+				const result = await assetManager.loadOBJ(file, options);
 				return {
 					object: result.object
 				};

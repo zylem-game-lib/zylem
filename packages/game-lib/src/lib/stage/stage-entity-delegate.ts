@@ -9,6 +9,7 @@ import { debugState } from '../debug/debug-state';
 import { getGlobals } from '../game/game-state';
 import { BaseNode } from '../core/base-node';
 import { GameEntity } from '../entities/entity';
+import { ZylemActor } from '../entities/actor';
 import { BaseEntityInterface } from '../types/entity-types';
 import { StageLoadingDelegate } from './stage-loading-delegate';
 import { StageEntityModelDelegate } from './stage-entity-model-delegate';
@@ -144,9 +145,7 @@ export class StageEntityDelegate {
 		// Register behavior links and auto-register behavior systems once per key.
 		this.registerBehaviorLinks(entity);
 
-		if (entity.colliderDesc) {
-			this.world.addEntity(entity);
-		}
+		this.maybeAttachEntityPhysics(entity);
 
 		for (const childNode of child.getChildren()) {
 			if (childNode instanceof BaseNode) {
@@ -166,6 +165,14 @@ export class StageEntityDelegate {
 		this.entityModelDelegate.observe(entity);
 	}
 
+	handleLateModelReady(entity: GameEntity<any>): void {
+		if (!this.world || !this.scene || !this.uuidToEid.has(entity.uuid)) {
+			return;
+		}
+		this.maybeAttachEntityPhysics(entity);
+		this.tryRegisterInstance(entity);
+	}
+
 	// ─── Instance batching ───────────────────────────────────────────────────
 
 	/**
@@ -173,6 +180,7 @@ export class StageEntityDelegate {
 	 */
 	private tryRegisterInstance(entity: GameEntity<any>): void {
 		if (!this.instanceManager) return;
+		if (entity.isInstanced) return;
 
 		const options = entity.options as any;
 		if (options?.batched !== true) return;
@@ -204,6 +212,21 @@ export class StageEntityDelegate {
 				entity.mesh.visible = false;
 			}
 		}
+	}
+
+	private maybeAttachEntityPhysics(entity: GameEntity<any>): void {
+		if (!this.world || entity.physicsAttached || !entity.colliderDesc) {
+			return;
+		}
+
+		if (entity instanceof ZylemActor) {
+			if (entity.needsDeferredModelCollision()) {
+				return;
+			}
+			entity.synchronizeRuntimeCollider();
+		}
+
+		this.world.addEntity(entity);
 	}
 
 	// ─── Stage registration ──────────────────────────────────────────────────

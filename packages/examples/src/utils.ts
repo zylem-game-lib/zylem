@@ -1,5 +1,5 @@
 /// <reference types="@zylem/assets" />
-// import type { CollisionOptions } from "@zylem/game-lib";
+
 import type { ZylemBox } from "@zylem/game-lib";
 import { createActor, createBox, createPlane } from "@zylem/game-lib";
 import { Color, Vector2, Vector3 } from "three";
@@ -79,7 +79,7 @@ const actorTypeToScale: Record<PlaygroundActorType, Vector3> = {
 
 const actorTypeToCollision: Record<PlaygroundActorType, any> = {
 	player: { size: new Vector3(0.8, 0.8, 0.8), position: new Vector3(0, 0, 0), static: false },
-	mascot: { size: new Vector3(0.5, 0.5, 0.5), position: new Vector3(0, 0, 0), static: false }
+	mascot: { static: false }
 };
 
 export const playgroundActor: any = (type: PlaygroundActorType) => {
@@ -92,7 +92,12 @@ export const playgroundActor: any = (type: PlaygroundActorType) => {
 			color: new Color(Color.NAMES.lightgreen),
 		},
 		collision: actorTypeToCollision[type],
+		collisionShape: 'capsule',
 	});
+}
+
+export const playgroundActorFactory = (type: PlaygroundActorType) => {
+	return () => playgroundActor(type);
 }
 
 /**
@@ -190,12 +195,3 @@ export const playgroundPlatforms = () => {
 	boxes.push(startPlatform);
 	return boxes;
 };
-
-// const cargoContainer = await actor({
-// 	position: { x: 20, y: 10, z: 4 },
-// 	scale: { x: 0.02, y: 0.02, z: 0.02 },
-// 	models: ['playground/cargo-container/Cargo-Container.gltf'],
-// 	animations: [
-// 		{ key: 'idle', path: 'playground/cargo-container/Cargo-Container.gltf' },
-// 	],
-// });

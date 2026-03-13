@@ -1,4 +1,12 @@
 import type { BodyCommand } from './physics-protocol';
+import {
+	createPhysicsPose,
+	interpolatePhysicsPose,
+	type PhysicsPose,
+	type PhysicsPoseHistory,
+	type PhysicsQuaternion,
+	type PhysicsVector3,
+} from './physics-pose';
 
 /**
  * Lightweight read-only view of a physics body's state.
@@ -7,8 +15,8 @@ import type { BodyCommand } from './physics-protocol';
  * the body's state after the latest physics step.
  */
 export interface PhysicsSnapshot {
-	position: { x: number; y: number; z: number };
-	rotation: { x: number; y: number; z: number; w: number };
+	previous: PhysicsPose;
+	current: PhysicsPose;
 	linvel: { x: number; y: number; z: number };
 	angvel: { x: number; y: number; z: number };
 }
@@ -28,8 +36,8 @@ export class PhysicsBodyHandle {
 
 	/** Last-known physics state, updated from worker each frame. */
 	private _snapshot: PhysicsSnapshot = {
-		position: { x: 0, y: 0, z: 0 },
-		rotation: { x: 0, y: 0, z: 0, w: 1 },
+		previous: createPhysicsPose(),
+		current: createPhysicsPose(),
 		linvel: { x: 0, y: 0, z: 0 },
 		angvel: { x: 0, y: 0, z: 0 },
 	};
@@ -49,12 +57,12 @@ export class PhysicsBodyHandle {
 
 	/** Cached position from last physics step. */
 	translation(): { x: number; y: number; z: number } {
-		return this._snapshot.position;
+		return this._snapshot.current.position;
 	}
 
 	/** Cached rotation quaternion from last physics step. */
 	rotation(): { x: number; y: number; z: number; w: number } {
-		return this._snapshot.rotation;
+		return this._snapshot.current.rotation;
 	}
 
 	/** Cached linear velocity from last physics step. */
@@ -65,6 +73,18 @@ export class PhysicsBodyHandle {
 	/** Cached angular velocity from last physics step. */
 	angvel(): { x: number; y: number; z: number } {
 		return this._snapshot.angvel;
+	}
+
+	getPoseHistory(): PhysicsPoseHistory {
+		return this._snapshot;
+	}
+
+	getRenderPose(alpha: number): PhysicsPose {
+		return interpolatePhysicsPose(
+			this._snapshot.previous,
+			this._snapshot.current,
+			alpha,
+		);
 	}
 
 	// ─── Write API (queues commands) ─────────────────────────────────────
@@ -81,12 +101,12 @@ export class PhysicsBodyHandle {
 
 	setTranslation(v: { x: number; y: number; z: number }, _wakeUp?: boolean): void {
 		this.enqueue({ kind: 'setTranslation', uuid: this.uuid, x: v.x, y: v.y, z: v.z });
-		this._snapshot.position = { ...v };
+		this.setCollapsedTranslation(v);
 	}
 
 	setRotation(q: { x: number; y: number; z: number; w: number }, _wakeUp?: boolean): void {
 		this.enqueue({ kind: 'setRotation', uuid: this.uuid, x: q.x, y: q.y, z: q.z, w: q.w });
-		this._snapshot.rotation = { ...q };
+		this.setCollapsedRotation(q);
 	}
 
 	applyImpulse(v: { x: number; y: number; z: number }, _wakeUp?: boolean): void {
@@ -143,19 +163,39 @@ export class PhysicsBodyHandle {
 	 * Update the cached snapshot from worker data.
 	 * Called by the PhysicsProxy after receiving a stepResult.
 	 */
+	_seedSnapshot(
+		px: number,
+		py: number,
+		pz: number,
+		rx: number,
+		ry: number,
+		rz: number,
+		rw: number,
+		lvx: number,
+		lvy: number,
+		lvz: number,
+		avx: number,
+		avy: number,
+		avz: number,
+	): void {
+		this.writePose(this._snapshot.previous, px, py, pz, rx, ry, rz, rw);
+		this.writePose(this._snapshot.current, px, py, pz, rx, ry, rz, rw);
+		this._snapshot.linvel.x = lvx;
+		this._snapshot.linvel.y = lvy;
+		this._snapshot.linvel.z = lvz;
+		this._snapshot.angvel.x = avx;
+		this._snapshot.angvel.y = avy;
+		this._snapshot.angvel.z = avz;
+	}
+
 	_updateSnapshot(
 		px: number, py: number, pz: number,
 		rx: number, ry: number, rz: number, rw: number,
 		lvx: number, lvy: number, lvz: number,
 		avx: number, avy: number, avz: number,
 	): void {
-		this._snapshot.position.x = px;
-		this._snapshot.position.y = py;
-		this._snapshot.position.z = pz;
-		this._snapshot.rotation.x = rx;
-		this._snapshot.rotation.y = ry;
-		this._snapshot.rotation.z = rz;
-		this._snapshot.rotation.w = rw;
+		this.copyPose(this._snapshot.current, this._snapshot.previous);
+		this.writePose(this._snapshot.current, px, py, pz, rx, ry, rz, rw);
 		this._snapshot.linvel.x = lvx;
 		this._snapshot.linvel.y = lvy;
 		this._snapshot.linvel.z = lvz;
@@ -177,5 +217,54 @@ export class PhysicsBodyHandle {
 		} else {
 			this._pendingCommands.push(cmd);
 		}
+	}
+
+	private copyPose(source: PhysicsPose, target: PhysicsPose): void {
+		target.position.x = source.position.x;
+		target.position.y = source.position.y;
+		target.position.z = source.position.z;
+		target.rotation.x = source.rotation.x;
+		target.rotation.y = source.rotation.y;
+		target.rotation.z = source.rotation.z;
+		target.rotation.w = source.rotation.w;
+	}
+
+	private writePose(
+		target: PhysicsPose,
+		px: number,
+		py: number,
+		pz: number,
+		rx: number,
+		ry: number,
+		rz: number,
+		rw: number,
+	): void {
+		target.position.x = px;
+		target.position.y = py;
+		target.position.z = pz;
+		target.rotation.x = rx;
+		target.rotation.y = ry;
+		target.rotation.z = rz;
+		target.rotation.w = rw;
+	}
+
+	private setCollapsedTranslation(translation: PhysicsVector3): void {
+		this._snapshot.previous.position.x = translation.x;
+		this._snapshot.previous.position.y = translation.y;
+		this._snapshot.previous.position.z = translation.z;
+		this._snapshot.current.position.x = translation.x;
+		this._snapshot.current.position.y = translation.y;
+		this._snapshot.current.position.z = translation.z;
+	}
+
+	private setCollapsedRotation(rotation: PhysicsQuaternion): void {
+		this._snapshot.previous.rotation.x = rotation.x;
+		this._snapshot.previous.rotation.y = rotation.y;
+		this._snapshot.previous.rotation.z = rotation.z;
+		this._snapshot.previous.rotation.w = rotation.w;
+		this._snapshot.current.rotation.x = rotation.x;
+		this._snapshot.current.rotation.y = rotation.y;
+		this._snapshot.current.rotation.z = rotation.z;
+		this._snapshot.current.rotation.w = rotation.w;
 	}
 }

@@ -8,131 +8,127 @@ import wood from '@zylem/assets/3d/textures/wood-box.jpg';
 
 // Floor
 export const createFloor = () => {
-	return createPlane({
-		tile: new Vector2(50, 50),
-		position: { x: 0, y: 0, z: 0 },
-		collision: { static: true },
-		material: {
-			path: steel,
-			repeat: new Vector2(10, 10),
-		},
-	});
+  return createPlane({
+    tile: new Vector2(50, 50),
+    position: { x: 0, y: 0, z: 0 },
+    collision: { static: true },
+    material: {
+      path: steel,
+      repeat: new Vector2(10, 10),
+    },
+  });
 };
 
 // Wall segment
 export const createWall = (
-	position: Vector3,
-	size: Vector3,
-	rotation: number = 0
+  position: Vector3,
+  size: Vector3,
+  rotation: number = 0,
 ) => {
-	return createBox({
-		name: 'wall',
-		position: { x: position.x, y: position.y, z: position.z },
-		size,
-		collision: { static: true },
-		material: {
-			path: wood,
-			repeat: new Vector2(size.x / 2, size.y / 2),
-		},
-	});
+  return createBox({
+    name: 'wall',
+    position: { x: position.x, y: position.y, z: position.z },
+    size,
+    collision: { static: true },
+    material: {
+      path: wood,
+      repeat: new Vector2(size.x / 2, size.y / 2),
+    },
+  });
 };
 
 // Create a simple arena-style level
 export const createArenaLevel = () => {
-	const walls: any[] = [];
-	const wallHeight = 4;
-	const wallThickness = 0.5;
-	const arenaSize = 25;
+  const walls: any[] = [];
+  const wallHeight = 4;
+  const wallThickness = 0.5;
+  const arenaSize = 25;
 
-	// North wall
-	walls.push(createWall(
-		new Vector3(0, wallHeight / 2, arenaSize),
-		new Vector3(arenaSize * 2, wallHeight, wallThickness)
-	));
+  // North wall
+  walls.push(
+    createWall(
+      new Vector3(0, wallHeight / 2, arenaSize),
+      new Vector3(arenaSize * 2, wallHeight, wallThickness),
+    ),
+  );
 
-	// South wall
-	walls.push(createWall(
-		new Vector3(0, wallHeight / 2, -arenaSize),
-		new Vector3(arenaSize * 2, wallHeight, wallThickness)
-	));
+  // South wall
+  walls.push(
+    createWall(
+      new Vector3(0, wallHeight / 2, -arenaSize),
+      new Vector3(arenaSize * 2, wallHeight, wallThickness),
+    ),
+  );
 
-	// East wall
-	walls.push(createWall(
-		new Vector3(arenaSize, wallHeight / 2, 0),
-		new Vector3(wallThickness, wallHeight, arenaSize * 2)
-	));
+  // East wall
+  walls.push(
+    createWall(
+      new Vector3(arenaSize, wallHeight / 2, 0),
+      new Vector3(wallThickness, wallHeight, arenaSize * 2),
+    ),
+  );
 
-	// West wall
-	walls.push(createWall(
-		new Vector3(-arenaSize, wallHeight / 2, 0),
-		new Vector3(wallThickness, wallHeight, arenaSize * 2)
-	));
+  // West wall
+  walls.push(
+    createWall(
+      new Vector3(-arenaSize, wallHeight / 2, 0),
+      new Vector3(wallThickness, wallHeight, arenaSize * 2),
+    ),
+  );
 
-	// Some cover obstacles in the arena
-	walls.push(createWall(
-		new Vector3(5, 0, 5),
-		new Vector3(3, 2, 3)
-	));
+  // Some cover obstacles in the arena
+  walls.push(createWall(new Vector3(5, 0, 5), new Vector3(3, 2, 3)));
 
-	walls.push(createWall(
-		new Vector3(-8, 0, -3),
-		new Vector3(4, 2, 2)
-	));
+  walls.push(createWall(new Vector3(-8, 0, -3), new Vector3(4, 2, 2)));
 
-	walls.push(createWall(
-		new Vector3(10, 0, -10),
-		new Vector3(2, 2, 5)
-	));
+  walls.push(createWall(new Vector3(10, 0, -10), new Vector3(2, 2, 5)));
 
-	walls.push(createWall(
-		new Vector3(-12, 0, 8),
-		new Vector3(5, 2, 2)
-	));
+  walls.push(createWall(new Vector3(-12, 0, 8), new Vector3(5, 2, 2)));
 
-	return walls;
+  return walls;
 };
 
 // Spawn point zone
 export const createSpawnZone = (position: Vector3, name: string) => {
-	return createZone({
-		position: { x: position.x, y: position.y, z: position.z },
-		size: new Vector3(3, 3, 3),
-		onEnter: ({ self, visitor, globals }) => {
-			console.log(`${visitor.uuid} entered spawn zone: ${name}`);
-		},
-		onExit: ({ self, visitor, globals }) => {
-			console.log(`${visitor.uuid} exited spawn zone: ${name}`);
-		},
-	});
+  return createZone({
+    position: { x: position.x, y: position.y, z: position.z },
+    size: new Vector3(3, 3, 3),
+    onEnter: ({ self, visitor, globals }) => {
+      console.log(`${visitor.uuid} entered spawn zone: ${name}`);
+    },
+    onExit: ({ self, visitor, globals }) => {
+      console.log(`${visitor.uuid} exited spawn zone: ${name}`);
+    },
+  });
 };
 
 // Pickup zone (for ammo/health)
 export type PickupType = 'health' | 'ammo';
 
 export const createPickupZone = (
-	position: Vector3,
-	type: PickupType,
-	amount: number
+  position: Vector3,
+  type: PickupType,
+  amount: number,
 ) => {
-	return createZone({
-		position: { x: position.x, y: position.y, z: position.z },
-		size: new Vector3(2, 2, 2),
-		onEnter: ({ self, visitor, globals }) => {
-			console.log(`Pickup: ${type} +${amount}`);
-			// Could emit event to add health/ammo to player
-		},
-		onExit: () => {},
-	});
+  return createZone({
+    position: { x: position.x, y: position.y, z: position.z },
+    size: new Vector3(2, 2, 2),
+    onEnter: ({ self, visitor, globals }) => {
+      console.log(`Pickup: ${type} +${amount}`);
+      // Could emit event to add health/ammo to player
+    },
+    onExit: () => {},
+  });
 };
 
 // Enemy spawn positions
 export const enemySpawnPositions = [
-	new Vector3(15, 1, 15),
-	new Vector3(-15, 1, 15),
-	new Vector3(15, 1, -15),
-	new Vector3(-15, 1, -15),
-	new Vector3(0, 1, 20),
-	new Vector3(0, 1, -20),
-	new Vector3(20, 1, 0),
-	new Vector3(-20, 1, 0),
+  new Vector3(15, 1, 15),
+  new Vector3(-15, 1, 15),
+  new Vector3(15, 1, -15),
+  new Vector3(-15, 1, -15),
+  new Vector3(0, 1, 20),
+  new Vector3(0, 1, -20),
+  new Vector3(20, 1, 0),
+  new Vector3(-20, 1, 0),
 ];

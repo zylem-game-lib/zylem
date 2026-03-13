@@ -1,10 +1,11 @@
+import { createGame } from '@zylem/game-lib';
 
-import { createGame } from "@zylem/game-lib";
+export default function createDemo() {
+  const game = createGame();
 
-const game = createGame();
-
-game.onLoading((event) => {
+  game.onLoading((event) => {
     console.log('my loading event: ', event);
-});
+  });
 
-export default game;
+  return game;
+}

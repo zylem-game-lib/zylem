@@ -42,6 +42,40 @@ export function serializeBodyDesc(desc: RigidBodyDesc): SerializableBodyDesc {
  */
 export function serializeColliderDesc(desc: ColliderDesc): SerializableColliderDesc {
 	const internal = desc as any;
+	const customShapeData = internal.__zylemShapeData as
+		| { shape: 'trimesh'; vertices: number[]; indices: number[] }
+		| undefined;
+	if (customShapeData?.shape === 'trimesh') {
+		const result: SerializableColliderDesc = {
+			shape: 'trimesh',
+			dimensions: [],
+			vertices: [...customShapeData.vertices],
+			indices: [...customShapeData.indices],
+		};
+
+		const translation = internal.translation;
+		if (
+			translation
+			&& (translation.x !== 0 || translation.y !== 0 || translation.z !== 0)
+		) {
+			result.translation = [translation.x, translation.y, translation.z];
+		}
+
+		if (internal.isSensor) {
+			result.sensor = true;
+		}
+
+		if (internal.collisionGroups !== undefined && internal.collisionGroups !== 0xFFFFFFFF) {
+			result.collisionGroups = internal.collisionGroups;
+		}
+
+		if (internal.activeCollisionTypes !== undefined) {
+			result.activeCollisionTypes = internal.activeCollisionTypes;
+		}
+
+		return result;
+	}
+
 	const shapeType = internal.shape?.type ?? internal.shapeType ?? 0;
 
 	const { shape, dimensions, heightfieldMeta } = extractShapeData(shapeType, internal);

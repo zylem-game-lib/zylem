@@ -58,6 +58,7 @@ export class RendererManager {
 	private _isWebGPU = false;
 	private _initialized = false;
 	private _sceneRef: Scene | null = null;
+	private _lastAnimationTimestamp: number | null = null;
 
 	constructor(screenResolution?: Vector2, rendererType: RendererType = 'webgl') {
 		this.screenResolution = screenResolution || new Vector2(window.innerWidth, window.innerHeight);
@@ -153,8 +154,13 @@ export class RendererManager {
 	 * Start the render loop. Calls the provided callback each frame.
 	 */
 	startRenderLoop(onFrame: (delta: number) => void): void {
-		this.renderer.setAnimationLoop((delta: number) => {
-			onFrame(delta || 0);
+		this._lastAnimationTimestamp = null;
+		this.renderer.setAnimationLoop((timestamp: number) => {
+			const deltaSeconds = this._lastAnimationTimestamp === null
+				? 0
+				: Math.max(0, (timestamp - this._lastAnimationTimestamp) / 1000);
+			this._lastAnimationTimestamp = timestamp;
+			onFrame(deltaSeconds);
 		});
 	}
 
@@ -162,6 +168,7 @@ export class RendererManager {
 	 * Stop the render loop.
 	 */
 	stopRenderLoop(): void {
+		this._lastAnimationTimestamp = null;
 		try {
 			this.renderer.setAnimationLoop(null as any);
 		} catch { /* noop */ }

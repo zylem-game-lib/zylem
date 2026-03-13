@@ -206,7 +206,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			this.scene.setupCamera(this.scene.scene, zylemCamera);
 		}
 
-		this.entityModelDelegate.attach(this.scene);
+		this.entityModelDelegate.attach(
+			this.scene,
+			(entity) => this.entityDelegate.handleLateModelReady(entity),
+		);
 
 		// Initialize instance manager for mesh batching
 		this.instanceManager = new InstanceManager();
@@ -226,6 +229,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 		this.transformSystem = createTransformSystem({
 			_childrenMap: this.entityDelegate.childrenMap,
+			_world: this.world,
 		} as unknown as StageSystem);
 		this.entityDelegate.isLoaded = true;
 		this.loadingDelegate.emitComplete();

@@ -8,10 +8,14 @@ import {
 } from 'bitecs';
 import { Quaternion } from 'three';
 import { StageEntity } from '../interfaces/entity';
-import RAPIER from '@dimforge/rapier3d-compat';
+import {
+	getBodyRenderPose,
+	type PhysicsPoseReadable,
+} from '../physics/physics-pose';
 
 export type StageSystem = {
-	_childrenMap: Map<number, StageEntity & { body: RAPIER.RigidBody }>;
+	_childrenMap: Map<number, StageEntity & { body: PhysicsPoseReadable | null }>;
+	_world: { interpolationAlpha: number } | null;
 }
 
 export const position = defineComponent({
@@ -45,6 +49,7 @@ export default function createTransformSystem(stage: StageSystem): TransformSyst
 	const queryTerms = [position, rotation];
 	const transformQuery = defineQuery(queryTerms);
 	const stageEntities = stage._childrenMap;
+	const interpolationSource = stage._world;
 
 	const system = defineSystem((world) => {
 		const entities = transformQuery(world);
@@ -61,6 +66,9 @@ export default function createTransformSystem(stage: StageSystem): TransformSyst
 			const id = entities[key];
 			const body = stageEntity.body;
 			const target = stageEntity.group ?? stageEntity.mesh;
+			const renderPose = target
+				? getBodyRenderPose(body, interpolationSource?.interpolationAlpha ?? 0)
+				: null;
 
 			// Position sync
 			const translation = body.translation();
@@ -68,8 +76,12 @@ export default function createTransformSystem(stage: StageSystem): TransformSyst
 			position.y[id] = translation.y;
 			position.z[id] = translation.z;
 
-			if (target) {
-				target.position.set(translation.x, translation.y, translation.z);
+			if (target && renderPose) {
+				target.position.set(
+					renderPose.position.x,
+					renderPose.position.y,
+					renderPose.position.z,
+				);
 			}
 
 			// Skip rotation if controlled externally
@@ -84,8 +96,13 @@ export default function createTransformSystem(stage: StageSystem): TransformSyst
 			rotation.z[id] = rot.z;
 			rotation.w[id] = rot.w;
 
-			if (target) {
-				_tempQuaternion.set(rot.x, rot.y, rot.z, rot.w);
+			if (target && renderPose) {
+				_tempQuaternion.set(
+					renderPose.rotation.x,
+					renderPose.rotation.y,
+					renderPose.rotation.z,
+					renderPose.rotation.w,
+				);
 				target.setRotationFromQuaternion(_tempQuaternion);
 			}
 		}

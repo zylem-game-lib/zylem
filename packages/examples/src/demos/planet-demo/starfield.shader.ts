@@ -94,6 +94,6 @@ void main() {
 `;
 
 export const starfieldShader = {
-    vertex: objectVertexShader,
-    fragment
+  vertex: objectVertexShader,
+  fragment,
 };

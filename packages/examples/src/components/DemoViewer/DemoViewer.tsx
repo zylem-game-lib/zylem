@@ -167,7 +167,7 @@ const ExampleRunner: Component = () => {
     setExample(null);
 
     activeExample.load().then((gameModule) => {
-      setExample(gameModule.default);
+      setExample(gameModule.default());
       editorEvents.emit({ type: 'debug', payload: { enabled: true } });
     });
   });

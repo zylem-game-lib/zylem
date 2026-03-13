@@ -15,7 +15,7 @@ const stageTestModules = import.meta.glob('./demos/03-stage-test/03-stage-test.t
 const allModules = { ...demoModules, ...stageTestModules };
 
 export type GameModule = {
-	default: Game<any>;
+	default: () => Game<any>;
 };
 
 // Define the predefined order for specific examples

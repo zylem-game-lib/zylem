@@ -113,6 +113,6 @@ void main() {
 `;
 
 export const planetShader = {
-    vertex: objectVertexShader,
-    fragment
+  vertex: objectVertexShader,
+  fragment,
 };

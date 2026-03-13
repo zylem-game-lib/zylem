@@ -136,6 +136,6 @@ void main() {
 `;
 
 export const ringShader = {
-    vertex: objectVertexShader,
-    fragment
+  vertex: objectVertexShader,
+  fragment,
 };
