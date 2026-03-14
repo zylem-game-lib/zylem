@@ -9,7 +9,7 @@
  * - State synchronization with FSM
  */
 
-import { GroundProbe3D } from '../shared/ground-probe-3d';
+import { GroundProbe3D, getGroundAnchorOffsetY } from '../shared/ground-probe-3d';
 import type {
 	Platformer3DMovementComponent,
 	Platformer3DInputComponent,
@@ -203,22 +203,26 @@ export class Platformer3DBehavior {
 		if (isAirborne) {
 			// Airborne: Must be FALLING (not jumping) with very low velocity to land
 			// This prevents false grounding at jump apex or during descent
+			const probeOriginYOffset = 0.05 - getGroundAnchorOffsetY(entity);
 			const nearGround = this.groundProbe.detect(entity, {
 				rayLength: entity.platformer.groundRayLength,
 				mode: 'any',
 				debug: entity.platformer.debugGroundProbe,
 				scene: this.scene,
+				originYOffset: probeOriginYOffset,
 			});
 			const canLand = state.falling && !state.jumping; // Only land when falling, not jumping
 			const hasLanded = Math.abs(velocity.y) < 0.5; // Very strict threshold for landing
 			isGrounded = nearGround && canLand && hasLanded;
 		} else {
 			// On ground (walking/idle): Normal raycast detection with lenient threshold
+			const probeOriginYOffset = 0.05 - getGroundAnchorOffsetY(entity);
 			const nearGround = this.groundProbe.detect(entity, {
 				rayLength: entity.platformer.groundRayLength,
 				mode: 'any',
 				debug: entity.platformer.debugGroundProbe,
 				scene: this.scene,
+				originYOffset: probeOriginYOffset,
 			});
 			const notFallingFast = velocity.y > -2.0; // Lenient - don't ground while falling fast
 			isGrounded = nearGround && notFallingFast;

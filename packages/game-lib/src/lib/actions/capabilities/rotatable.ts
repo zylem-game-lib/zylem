@@ -42,9 +42,16 @@ export function rotateYEuler(entity: RotatableEntity, amount: number): void {
  * Rotate an entity using Euler angles
  */
 export function rotateEuler(entity: RotatableEntity, rotation: Vector3): void {
-	if (!entity.group) return;
-	const euler = new Euler(rotation.x, rotation.y, rotation.z);
-	entity.group.setRotationFromEuler(euler);
+	if (!entity.transformStore) return;
+	const quat = new Quaternion().setFromEuler(
+		new Euler(rotation.x, rotation.y, rotation.z),
+	);
+	entity.transformStore.rotation.w = quat.w;
+	entity.transformStore.rotation.x = quat.x;
+	entity.transformStore.rotation.y = quat.y;
+	entity.transformStore.rotation.z = quat.z;
+	entity.transformStore.dirty.rotation = true;
+	syncImmediateRotation(entity);
 }
 
 /**

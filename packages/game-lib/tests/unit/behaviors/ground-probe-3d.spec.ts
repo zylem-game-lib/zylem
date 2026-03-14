@@ -1,7 +1,9 @@
+import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
 	GroundProbe3D,
+	getGroundAnchorOffsetY,
 	getGroundSnapTargetY,
 } from '../../../src/lib/behaviors/shared/ground-probe-3d';
 
@@ -97,13 +99,48 @@ describe('GroundProbe3D', () => {
 		expect(support?.toi).toBe(0.2);
 		expect(support?.colliderUuid).toBe('near-ground');
 		expect(support?.point.y).toBeCloseTo(2.8);
-		expect(getGroundSnapTargetY(entity, support!)).toBeCloseTo(3.801);
+		expect(getGroundSnapTargetY(entity, support!)).toBeCloseTo(2.801);
 		expect(
 			getGroundSnapTargetY(
 				{ controlledRotation: true },
 				support!,
 			),
 		).toBeCloseTo(2.801);
+	});
+
+	it('derives ground-anchor offsets from explicit collider centers', () => {
+		expect(
+			getGroundAnchorOffsetY({
+				options: {
+					collision: {
+						size: { x: 0.8, y: 0.8, z: 0.8 },
+						position: { x: 0, y: 0, z: 0 },
+					},
+				},
+			}),
+		).toBeCloseTo(0.4);
+
+		expect(
+			getGroundAnchorOffsetY({
+				options: {
+					collision: {
+						size: { x: 2.9, y: 4.9, z: 0.1 },
+						position: { x: 3.15, y: 3.25, z: 0 },
+					},
+				},
+			}),
+		).toBeCloseTo(-0.8);
+	});
+
+	it('derives ground-anchor offsets from runtime-generated collider descriptors', () => {
+		const colliderDesc = ColliderDesc.capsule(1, 1.45);
+		colliderDesc.setTranslation(3.15, 3.25, 0);
+
+		expect(
+			getGroundAnchorOffsetY({
+				colliderDesc,
+			}),
+		).toBeCloseTo(-0.8);
 	});
 
 	it('creates debug lines only when debug output is enabled', () => {

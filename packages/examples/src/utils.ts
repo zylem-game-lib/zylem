@@ -78,8 +78,8 @@ const actorTypeToScale: Record<PlaygroundActorType, Vector3> = {
 };
 
 const actorTypeToCollision: Record<PlaygroundActorType, any> = {
-	player: { size: new Vector3(0.8, 0.8, 0.8), position: new Vector3(0, 0, 0), static: false },
-	mascot: { static: false }
+	player: { size: new Vector3(1, 3.8, 0.5), static: false },
+	mascot: { size: new Vector3(2, 3, 0), position: new Vector3(0, 1.2, 0), static: false }
 };
 
 export const playgroundActor: any = (type: PlaygroundActorType) => {

@@ -1,5 +1,6 @@
 import { Ray } from '@dimforge/rapier3d-compat';
 import { BufferGeometry, Line, LineBasicMaterial, Vector3 } from 'three';
+import { serializeColliderDesc } from '../../physics/serialize-descriptors';
 
 export interface GroundProbeOffset {
 	x: number;
@@ -215,8 +216,19 @@ export class GroundProbe3D {
 }
 
 export function getGroundAnchorOffsetY(entity: any): number {
-	if ((entity as any)?.controlledRotation) {
-		return 0;
+	const runtimeColliderDesc = entity?.colliderDesc;
+	if (runtimeColliderDesc) {
+		const serialized = serializeColliderDesc(runtimeColliderDesc);
+		const centerY = serialized.translation?.[1] ?? 0;
+		if (serialized.shape === 'capsule' && serialized.dimensions.length >= 2) {
+			const halfCylinder = serialized.dimensions[0] ?? 0;
+			const radius = serialized.dimensions[1] ?? 0;
+			return halfCylinder + radius - centerY;
+		}
+		if (serialized.shape === 'cuboid' && serialized.dimensions.length >= 2) {
+			const halfHeight = serialized.dimensions[1] ?? 0;
+			return halfHeight - centerY;
+		}
 	}
 
 	const collisionSize =
@@ -224,7 +236,15 @@ export function getGroundAnchorOffsetY(entity: any): number {
 		entity?.options?.collisionSize ??
 		entity?.options?.size;
 	const height = collisionSize?.y ?? 0;
-	return height > 0 ? height / 2 : 0;
+	if (height <= 0) {
+		return 0;
+	}
+
+	const collisionPosition =
+		entity?.options?.collision?.position ??
+		entity?.options?.collisionPosition;
+	const centerY = collisionPosition?.y ?? height / 2;
+	return (height / 2) - centerY;
 }
 
 export function getGroundSnapTargetY(

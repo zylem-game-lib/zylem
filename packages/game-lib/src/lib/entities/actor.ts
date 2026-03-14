@@ -372,35 +372,55 @@ function createBoundsColliderFromModel(
 }
 
 function createCapsuleColliderFromModel(
-	modelRoot: Object3D | null,
-	actorRoot: Object3D | null,
+	sizingRoot: Object3D | null,
+	sizingActorRoot: Object3D | null,
+	alignmentRoot: Object3D | null,
+	alignmentActorRoot: Object3D | null,
 	options: ZylemActorOptions,
 ): ColliderDesc {
 	if (hasExplicitCollisionSize(options)) {
 		return createCapsuleCollider(options);
 	}
 
-	if (!modelRoot || !actorRoot) {
+	if (!sizingRoot || !sizingActorRoot) {
 		return createCapsuleCollider(options);
 	}
 
-	const bounds = computeModelBounds(modelRoot, actorRoot, getActorScale(options));
-	if (!bounds) {
+	const sizingBounds = computeModelBounds(
+		sizingRoot,
+		sizingActorRoot,
+		getActorScale(options),
+	);
+	if (!sizingBounds) {
 		return createCapsuleCollider(options);
 	}
 
 	const collisionPosition = getCollisionPosition(options);
+	let translation = collisionPosition;
+	if (!translation) {
+		const alignmentBounds = alignmentRoot && alignmentActorRoot
+			? computeModelBounds(alignmentRoot, alignmentActorRoot, getActorScale(options))
+			: null;
+		translation = alignmentBounds
+			? {
+				x: alignmentBounds.center.x,
+				y: alignmentBounds.center.y,
+				z: alignmentBounds.center.z,
+			}
+			: {
+				x: sizingBounds.center.x,
+				y: sizingBounds.center.y,
+				z: sizingBounds.center.z,
+			};
+	}
+
 	return createCapsuleColliderFromDimensions(
 		{
-			x: bounds.size.x,
-			y: bounds.size.y,
-			z: bounds.size.z,
+			x: sizingBounds.size.x,
+			y: sizingBounds.size.y,
+			z: sizingBounds.size.z,
 		},
-		collisionPosition ?? {
-			x: bounds.center.x,
-			y: bounds.center.y,
-			z: bounds.center.z,
-		},
+		translation,
 	);
 }
 
@@ -490,6 +510,8 @@ class ActorCollisionBuilder extends EntityCollisionBuilder {
 		return createCapsuleColliderFromModel(
 			this.collisionSource,
 			this.collisionSource,
+			this.objectModel,
+			this.objectModel,
 			options,
 		);
 	}
@@ -584,6 +606,8 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 			colliderDesc = createCapsuleColliderFromModel(
 				collisionSource,
 				collisionSource,
+				this._object,
+				this._object,
 				this.options,
 			);
 		}

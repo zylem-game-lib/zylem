@@ -2,6 +2,7 @@ import {
 	AnimationAction,
 	AnimationClip,
 	AnimationMixer,
+	Bone,
 	LoopOnce,
 	LoopRepeat,
 	Object3D,
@@ -20,6 +21,49 @@ type AnimationObject = {
 	key?: string;
 	path: string;
 };
+
+function getTrackTargetName(trackName: string): string {
+	const propertyIndex = trackName.lastIndexOf('.');
+	return propertyIndex >= 0 ? trackName.slice(0, propertyIndex) : trackName;
+}
+
+function shouldStripRootMotion(track: any, targetByName: Map<string, Object3D>): boolean {
+	if (!track?.name?.endsWith('.position')) {
+		return false;
+	}
+
+	const targetName = getTrackTargetName(track.name);
+	const target = targetByName.get(targetName);
+	if (target instanceof Bone) {
+		return !(target.parent instanceof Bone);
+	}
+
+	return /hips\.position$/i.test(track.name) || /root\.position$/i.test(track.name);
+}
+
+function stripClipRootMotion(
+	clip: AnimationClip,
+	targetByName: Map<string, Object3D>,
+): AnimationClip {
+	for (const track of clip.tracks) {
+		if (!shouldStripRootMotion(track, targetByName)) {
+			continue;
+		}
+
+		if (!track.values || track.values.length < 3) {
+			continue;
+		}
+
+		const baseX = track.values[0];
+		const baseZ = track.values[2];
+		for (let i = 0; i < track.values.length; i += 3) {
+			track.values[i] = baseX;
+			track.values[i + 2] = baseZ;
+		}
+	}
+
+	return clip;
+}
 
 export class AnimationDelegate {
 	private _mixer: AnimationMixer | null = null;
@@ -41,6 +85,12 @@ export class AnimationDelegate {
 		if (!animations.length) return;
 
 		const results = await Promise.all(animations.map(a => this._assetLoader.loadFile(a.path)));
+		const targetByName = new Map<string, Object3D>();
+		this.target.traverse((node) => {
+			if (node.name) {
+				targetByName.set(node.name, node);
+			}
+		});
 		
 		// Build animations list while preserving original key mapping
 		// Filter to only successful loads and pair with their original keys
@@ -49,7 +99,7 @@ export class AnimationDelegate {
 			if (result.animation) {
 				loadedAnimations.push({
 					key: animations[i].key || i.toString(),
-					clip: result.animation
+					clip: stripClipRootMotion(result.animation, targetByName),
 				});
 			}
 		});

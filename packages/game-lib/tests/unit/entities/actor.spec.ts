@@ -31,6 +31,14 @@ function createSingleMeshModel(): Group {
 	return root;
 }
 
+function createVisibleModelWithShiftedOrigin(): Group {
+	const root = new Group();
+	const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial());
+	mesh.position.set(5, 2, 1);
+	root.add(mesh);
+	return root;
+}
+
 function flushPromises(): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -54,7 +62,7 @@ describe('ZylemActor', () => {
 		vi.spyOn(EntityAssetLoader.prototype, 'loadFile').mockImplementation(async (file) => ({
 			object: file === 'mascot-idle.fbx'
 				? createModelWithOffsetMeshes()
-				: createSingleMeshModel(),
+				: createVisibleModelWithShiftedOrigin(),
 		}));
 
 		const actor = createActor({
@@ -74,9 +82,9 @@ describe('ZylemActor', () => {
 		expect(serialized.shape).toBe('capsule');
 		expect(serialized.dimensions[0]).toBeCloseTo(0, 5);
 		expect(serialized.dimensions[1]).toBeCloseTo(3.5, 5);
-		expect(serialized.translation?.[0]).toBeCloseTo(2.5, 5);
-		expect(serialized.translation?.[1]).toBeCloseTo(3, 5);
-		expect(serialized.translation?.[2]).toBeCloseTo(0, 5);
+		expect(serialized.translation?.[0]).toBeCloseTo(10, 5);
+		expect(serialized.translation?.[1]).toBeCloseTo(6, 5);
+		expect(serialized.translation?.[2]).toBeCloseTo(4, 5);
 	});
 
 	it('falls back to the model asset for capsule sizing when no animations exist', async () => {
@@ -107,7 +115,7 @@ describe('ZylemActor', () => {
 		vi.spyOn(EntityAssetLoader.prototype, 'loadFile').mockImplementation(async (file) => ({
 			object: file === 'mascot-idle.fbx'
 				? createModelWithOffsetMeshes()
-				: createSingleMeshModel(),
+				: createVisibleModelWithShiftedOrigin(),
 		}));
 
 		const actor = createActor({
@@ -129,6 +137,29 @@ describe('ZylemActor', () => {
 		expect(serialized.dimensions[0]).toBeCloseTo(2, 5);
 		expect(serialized.dimensions[1]).toBeCloseTo(1, 5);
 		expect(serialized.translation).toEqual([0, 4, 0]);
+	});
+
+	it('aligns animated auto capsules to the visible model center when origins differ', async () => {
+		vi.spyOn(EntityAssetLoader.prototype, 'loadFile').mockImplementation(async (file) => ({
+			object: file === 'mascot-idle.fbx'
+				? createModelWithOffsetMeshes()
+				: createVisibleModelWithShiftedOrigin(),
+		}));
+
+		const actor = createActor({
+			models: ['mascot.fbx'],
+			animations: [{ key: 'idle', path: 'mascot-idle.fbx' }],
+			scale: new Vector3(1, 1, 1),
+			collision: { static: false },
+			collisionShape: 'capsule',
+		});
+
+		await flushPromises();
+		actor.synchronizeRuntimeCollider();
+
+		const serialized = serializeColliderDesc(actor.colliderDesc!);
+		expect(serialized.translation).toEqual([5, 2, 1]);
+		expect(serialized.dimensions[1]).toBeCloseTo(1.75, 5);
 	});
 
 	it('ignores stale load completions after the actor is destroyed and re-created', async () => {
