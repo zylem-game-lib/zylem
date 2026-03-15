@@ -4,7 +4,12 @@
  */
 
 import { createStore } from 'solid-js/store';
-import { ExampleConfig, examples } from '../examples-config';
+import {
+    ExampleConfig,
+    ExampleSection,
+    exampleSections,
+    examples,
+} from '../examples-config';
 
 export const [appStore, setAppStore] = createStore({
     activeExample: null as ExampleConfig | null,
@@ -31,7 +36,30 @@ export const setSidePanelOpen = (open: boolean) => {
 
 // Derived state helper
 export const getFilteredExamples = () => {
-    return examples.filter((e) =>
-        e.name.toLowerCase().includes(appStore.searchTerm.toLowerCase())
+    const searchTerm = appStore.searchTerm.trim().toLowerCase();
+
+    if (!searchTerm) {
+        return examples;
+    }
+
+    return examples.filter((example) =>
+        example.name.toLowerCase().includes(searchTerm)
     );
+};
+
+export const getFilteredExampleSections = (): ExampleSection[] => {
+    const searchTerm = appStore.searchTerm.trim().toLowerCase();
+
+    if (!searchTerm) {
+        return exampleSections;
+    }
+
+    return exampleSections
+        .map((section) => ({
+            ...section,
+            examples: section.examples.filter((example) =>
+                example.name.toLowerCase().includes(searchTerm)
+            ),
+        }))
+        .filter((section) => section.examples.length > 0);
 };

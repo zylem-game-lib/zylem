@@ -1,5 +1,6 @@
 import { Component } from 'solid-js';
 import { ExampleConfig } from '../../examples-config';
+import DemoPreviewImage from '../DemoPreviewImage/DemoPreviewImage';
 import styles from './DemoListItem.module.css';
 
 interface DemoListItemProps {
@@ -11,11 +12,16 @@ interface DemoListItemProps {
 const DemoListItem: Component<DemoListItemProps> = (props) => {
     return (
         <button
-            class={`${styles.listItem} sidebar-item`}
-            classList={{ 'is-active': props.isActive }}
+            type="button"
+            class={`${styles.listItem} sidebar-item ${props.isActive ? styles.isActive : ''}`}
             onClick={props.onClick}
+            aria-label={props.example.name}
         >
-            {props.example.name}
+            <DemoPreviewImage
+                exampleId={props.example.id}
+                name={props.example.name}
+                isActive={props.isActive}
+            />
         </button>
     );
 };

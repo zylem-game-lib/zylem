@@ -2,10 +2,12 @@ import {
   Component,
   Show,
   createEffect,
+  createMemo,
   createSignal,
   onCleanup,
   onMount,
 } from 'solid-js';
+import { useLocation } from '@solidjs/router';
 import {
   ZylemGameElement,
   zylemEventBus,
@@ -21,6 +23,7 @@ import {
   setBrowserViewportSize,
   setMeasuredViewportSize,
 } from '../../store/demoViewportStore';
+import { isScreenshotModeSearch } from '../../screenshot-mode';
 import styles from './DemoViewer.module.css';
 
 declare module 'solid-js' {
@@ -33,7 +36,7 @@ declare module 'solid-js' {
 
 const DemoViewer: Component = () => {
   return (
-    <main class={styles.viewer}>
+    <main class={styles.viewer} data-demo-viewer>
       <Show
         when={appStore.activeExample}
         fallback={
@@ -54,6 +57,7 @@ const DemoViewer: Component = () => {
 };
 
 const ExampleRunner: Component = () => {
+  const location = useLocation();
   let gameRef: ZylemGameElement | undefined;
   let viewportFrameRef: HTMLDivElement | undefined;
   let stageAreaRef: HTMLDivElement | undefined;
@@ -69,8 +73,15 @@ const ExampleRunner: Component = () => {
 
   const controlsHidden = () =>
     demoViewportStore.viewportControlsMode === 'hidden';
+  const screenshotMode = createMemo(() =>
+    isScreenshotModeSearch(location.search)
+  );
   const activeViewportProfile = () =>
     controlsHidden() ? 'mobile' : demoViewportStore.viewportProfile;
+  const screenshotGameStyle = () => ({
+    width: `${demoViewportStore.viewportSize.width}px`,
+    height: `${demoViewportStore.viewportSize.height}px`,
+  });
   const viewportFrameStyle = () => {
     if (!controlsHidden()) {
       return {
@@ -173,28 +184,30 @@ const ExampleRunner: Component = () => {
   });
 
   return (
-    <div class={styles.container}>
-      <Show when={!controlsHidden()}>
+    <div
+      class={`${styles.container} ${screenshotMode() ? styles.containerScreenshot : ''}`}
+    >
+      <Show when={!controlsHidden() && !screenshotMode()}>
         <ViewportControls />
       </Show>
-      <div ref={stageAreaRef} class={styles.stageArea}>
-        <div class={styles.viewportShell}>
-          <div
-            ref={viewportFrameRef}
-            class={`${styles.viewportFrame} ${controlsHidden() ? styles.viewportFrameFixed : ''}`}
-            style={viewportFrameStyle()}
-          >
-            <div class={styles.gameContainer}>
+      <Show
+        when={!screenshotMode()}
+        fallback={
+          <div class={styles.screenshotStage}>
+            <div class={styles.screenshotGameFrame}>
               <Show when={example()}>
                 <zylem-game
                   ref={gameRef}
-                  class="block h-full w-full"
+                  class={styles.screenshotGame}
+                  data-demo-screenshot-target
+                  data-demo-id={appStore.activeExample?.id ?? ''}
+                  style={screenshotGameStyle()}
                   game={example()}
-                  viewport-profile={activeViewportProfile()}
+                  viewport-profile={demoViewportStore.viewportProfile}
                 />
               </Show>
               <Show when={loading()}>
-                <div class={styles.loadingOverlay}>
+                <div class={styles.loadingOverlay} data-demo-loading-overlay>
                   <div class={styles.loadingContent}>
                     <div class={styles.loadingTitle}>Loading...</div>
                     <div class={styles.progressBar}>
@@ -209,8 +222,44 @@ const ExampleRunner: Component = () => {
               </Show>
             </div>
           </div>
+        }
+      >
+        <div ref={stageAreaRef} class={styles.stageArea}>
+          <div class={styles.viewportShell}>
+            <div
+              ref={viewportFrameRef}
+              class={`${styles.viewportFrame} ${controlsHidden() ? styles.viewportFrameFixed : ''}`}
+              style={viewportFrameStyle()}
+            >
+              <div class={styles.gameContainer}>
+                <Show when={example()}>
+                  <zylem-game
+                    ref={gameRef}
+                    class="block h-full w-full"
+                    data-demo-id={appStore.activeExample?.id ?? ''}
+                    game={example()}
+                    viewport-profile={activeViewportProfile()}
+                  />
+                </Show>
+                <Show when={loading()}>
+                  <div class={styles.loadingOverlay} data-demo-loading-overlay>
+                    <div class={styles.loadingContent}>
+                      <div class={styles.loadingTitle}>Loading...</div>
+                      <div class={styles.progressBar}>
+                        <div
+                          class={styles.progressFill}
+                          style={{ width: `${progress() * 100}%` }}
+                        />
+                      </div>
+                      <div class={styles.loadingMessage}>{message()}</div>
+                    </div>
+                  </div>
+                </Show>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </Show>
     </div>
   );
 };

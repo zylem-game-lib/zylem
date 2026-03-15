@@ -1,11 +1,9 @@
-import { Game } from "@zylem/game-lib";
-
-export interface ExampleConfig {
-	id: string;
-	name: string;
-	path: string;
-	load: () => Promise<any>;
-}
+import { Game } from '@zylem/game-lib';
+import {
+	getDemoRoutePath,
+	getDemoRouteSlug,
+	normalizePathname,
+} from './router-config';
 
 // Use Vite's import.meta.glob to find all example files
 const demoModules = import.meta.glob('./demos/*.ts');
@@ -18,22 +16,77 @@ export type GameModule = {
 	default: () => Game<any>;
 };
 
-// Define the predefined order for specific examples
-// Examples not in this list will be sorted alphabetically after these
-const PREDEFINED_ORDER = [
-	'00-readme-example',
-	'00-ricochet',
-	'00-ricochet-3d',
-	'00-jumper-2d',
-	'00-input',
-	'00-pong',
-	'00-breakout',
-	'00-space-invaders',
-	'00-screen-wrap',
-	'00-asteroids',
-	'00-robotron',
-	'00-third-person-test',
-];
+export const EXAMPLE_SECTION_ORDER = [
+	'Basic',
+	'Advanced',
+	'Game Demos',
+	'Classic Remakes',
+	'Misc',
+] as const;
+
+export type ExampleSectionName = (typeof EXAMPLE_SECTION_ORDER)[number];
+
+export interface ExampleConfig {
+	id: string;
+	name: string;
+	path: string;
+	section: ExampleSectionName;
+	routeSlug: string;
+	routePath: string;
+	load: () => Promise<GameModule>;
+}
+
+export interface ExampleSection {
+	name: ExampleSectionName;
+	examples: ExampleConfig[];
+}
+
+type UnsectionedExampleConfig = Omit<ExampleConfig, 'section'>;
+
+// Define the sections and the order of demos within each section.
+// Any demos omitted here fall back to the Misc section alphabetically.
+const PREDEFINED_ORDER = {
+	Basic: [
+		'00-readme-example',
+		'00-input',
+		'03-rect',
+		'03-variable-test',
+		'20-empty-game',
+		'20-basic-ball',
+	],
+	Advanced: [
+		'00-stage-test',
+		'01-fps',
+		'04-vessel-test',
+		'05-camera-test',
+		'06-entity-test',
+		'07-actions-test',
+		'08-jumbotron-test',
+		'15-zylem-planet-demo',
+		'16-zylem-planet-demo-webGPU',
+		'17-simple-instancing',
+		'17-massive-instancing',
+		'17-stress-test',
+		'20-architecture-test',
+	],
+	'Game Demos': [
+		'00-ricochet',
+		'00-ricochet-3d',
+		'00-jumper-2d',
+		'00-screen-wrap',
+		'00-third-person-test',
+		'00-zoo',
+		'18-baileys-world',
+	],
+	'Classic Remakes': [
+		'00-pong',
+		'00-breakout',
+		'00-space-invaders',
+		'00-asteroids',
+		'00-robotron',
+	],
+	Misc: ['00-physics-worker'],
+} as const satisfies Record<ExampleSectionName, readonly string[]>;
 
 // Create a map of all examples
 const allExamples = Object.entries(allModules)
@@ -54,27 +107,84 @@ const allExamples = Object.entries(allModules)
 			.split('-')
 			.map(word => word.charAt(0).toUpperCase() + word.slice(1))
 			.join(' ');
+		const routeSlug = getDemoRouteSlug(id);
+		const routePath = getDemoRoutePath(id);
 
 		return {
 			id,
 			name,
 			path,
+			routeSlug,
+			routePath,
 			load: load as () => Promise<GameModule>
 		};
 	})
-	.filter((config): config is ExampleConfig => config !== null);
+	.filter((config): config is UnsectionedExampleConfig => config !== null);
 
 // Create a map for quick lookup
 const examplesMap = new Map(allExamples.map(ex => [ex.id, ex]));
-console.log(examplesMap);
-// Separate predefined examples (in order) and remaining examples (alphabetically sorted)
-const predefinedExamples = PREDEFINED_ORDER
-	.map(id => examplesMap.get(id))
-	.filter((config): config is ExampleConfig => config !== undefined);
+const assignedExampleIds = new Set<string>();
 
-const remainingExamples = allExamples
-	.filter(ex => !PREDEFINED_ORDER.includes(ex.id))
-	.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+const warnInvalidSectionConfig = (message: string) => {
+	if (import.meta.env.DEV) {
+		console.warn(message);
+	}
+};
 
-// Combine predefined examples first, then alphabetically sorted remaining examples
-export const examples: ExampleConfig[] = [...predefinedExamples, ...remainingExamples];
+const assignExampleToSection = (
+	id: string,
+	section: ExampleSectionName
+): ExampleConfig | null => {
+	if (assignedExampleIds.has(id)) {
+		warnInvalidSectionConfig(
+			`[examples-config] Duplicate demo id "${id}" in PREDEFINED_ORDER.`
+		);
+		return null;
+	}
+
+	const example = examplesMap.get(id);
+	if (!example) {
+		warnInvalidSectionConfig(
+			`[examples-config] Demo id "${id}" in PREDEFINED_ORDER was not found.`
+		);
+		return null;
+	}
+
+	assignedExampleIds.add(id);
+	return { ...example, section };
+};
+
+export const exampleSections: ExampleSection[] = EXAMPLE_SECTION_ORDER.map(
+	(sectionName) => {
+		const configuredExamples = PREDEFINED_ORDER[sectionName]
+			.map((id) => assignExampleToSection(id, sectionName))
+			.filter((example): example is ExampleConfig => example !== null);
+
+		const unassignedExamples =
+			sectionName === 'Misc'
+				? allExamples
+						.filter((example) => !assignedExampleIds.has(example.id))
+						.sort((a, b) =>
+							a.id.localeCompare(b.id, undefined, { numeric: true })
+						)
+						.map((example) => ({ ...example, section: sectionName }))
+				: [];
+
+		return {
+			name: sectionName,
+			examples: [...configuredExamples, ...unassignedExamples],
+		};
+	}
+);
+
+export const examples: ExampleConfig[] = exampleSections.flatMap(
+	(section) => section.examples
+);
+
+const examplesByRoutePath = new Map(
+	examples.map((example) => [normalizePathname(example.routePath), example])
+);
+
+export const getExampleByRoutePath = (pathname: string) => {
+	return examplesByRoutePath.get(normalizePathname(pathname)) ?? null;
+};

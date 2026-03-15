@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test",
+    "screenshot": "node --experimental-strip-types ./repo-actions/screenshot.ts",
+    "screenshot:local": "node --experimental-strip-types ./repo-actions/screenshot-local.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.11.2",
@@ -24,6 +27,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "@types/node": "^20.19.13",
     "@types/three": "0.171.0",
     "autoprefixer": "^10.4.22",
     "postcss": "^8.5.6",
