@@ -7,11 +7,11 @@ export function createStageTwo() {
       backgroundColor: new Color(Color.NAMES.orange),
     },
     createCamera({
-      position: new Vector3(0, 10, 25),
+      position: { x: 0, y: 10, z: 25 },
     }),
     () =>
       createBox({
-        size: new Vector3(10, 10, 10),
+        size: { x: 10, y: 10, z: 10 },
         material: { color: new Color(Color.NAMES.red) },
       }),
   );

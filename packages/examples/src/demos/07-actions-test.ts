@@ -37,7 +37,7 @@ export default function createDemo() {
   // ─── Stage ───────────────────────────────────────────────────────────
 
   const stage = createStage({
-    gravity: new Vector3(0, -9.82, 0),
+    gravity: { x: 0, y: -9.82, z: 0 },
     inputs: { p1: ['gamepad-1', 'keyboard-1'] },
     backgroundColor: new Color(0x222233),
   }).onSetup(({ camera }: any) => {
@@ -50,15 +50,15 @@ export default function createDemo() {
   // ─── Ground ──────────────────────────────────────────────────────────
 
   const ground = createPlane({
-    tile: new Vector2(100, 100),
+    tile: { x: 100, y: 100 },
     collision: { static: true },
-    material: { path: grassPath, repeat: new Vector2(10, 10) },
+    material: { path: grassPath, repeat: { x: 10, y: 10 } },
   });
 
   // ─── Patrol box (repeatForever + sequence + moveBy) ──────────────────
 
   const patrolBox = createBox({
-    size: new Vector3(1.5, 1.5, 1.5),
+    size: { x: 1.5, y: 1.5, z: 1.5 },
     position: { x: -8, y: 2, z: 0 },
     collision: { static: false },
     material: { path: woodPath },
@@ -79,7 +79,7 @@ export default function createDemo() {
   // ─── Spinning sphere (rotateBy) ──────────────────────────────────────
 
   const spinner = createSphere({
-    size: new Vector3(1.5, 1.5, 1.5),
+    size: { x: 1.5, y: 1.5, z: 1.5 },
     position: { x: 0, y: 4, z: -5 },
     collision: { static: true },
     color: new Color(0x44aaff),
@@ -90,7 +90,7 @@ export default function createDemo() {
   // ─── Choreography box (sequence of moves + callFunc) ─────────────────
 
   const choreographyBox = createBox({
-    size: new Vector3(1, 1, 1),
+    size: { x: 1, y: 1, z: 1 },
     position: { x: 6, y: 2, z: 0 },
     collision: { static: false },
     color: new Color(0xff6644),
@@ -112,7 +112,7 @@ export default function createDemo() {
   // ─── Player box with cooldown + throttle ─────────────────────────────
 
   const player = createBox({
-    size: new Vector3(2, 2, 2),
+    size: { x: 2, y: 2, z: 2 },
     position: { x: 0, y: 2, z: 5 },
     collision: { static: false },
     color: new Color(0x44ff44),

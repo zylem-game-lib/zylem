@@ -21,9 +21,9 @@ export default function createDemo() {
   // 1. Ground
   const ground = createPlane({
     collision: { static: true },
-    tile: new Vector2(50, 50),
-    size: new Vector3(50, 50, 1),
-    position: new Vector3(0, 0, 0),
+    tile: { x: 50, y: 50 },
+    size: { x: 50, y: 50, z: 1 },
+    position: { x: 0, y: 0, z: 0 },
     randomizeHeight: true,
     color: new Color(0x333333),
   });
@@ -44,8 +44,8 @@ export default function createDemo() {
     const z = (Math.random() - 0.5) * SPREAD;
 
     const box = createBox({
-      position: new Vector3(x, y, z),
-      size: new Vector3(0.5, 0.5, 0.5),
+      position: { x: x, y: y, z: z },
+      size: { x: 0.5, y: 0.5, z: 0.5 },
       material: { color },
       name: `box-${i}`,
       // Enable instancing
@@ -57,8 +57,8 @@ export default function createDemo() {
   const game = createGame(
     { id: 'massive-instancing', debug: true },
     createStage(
-      { gravity: new Vector3(0, -9.81, 0), backgroundImage: skybox },
-      createCamera({ position: new Vector3(0, 14, 23) }),
+      { gravity: { x: 0, y: -9.81, z: 0 }, backgroundImage: skybox },
+      createCamera({ position: { x: 0, y: 14, z: 23 } }),
     ),
     ...entities,
   );

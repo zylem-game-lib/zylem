@@ -5,7 +5,15 @@ import {
 	RigidBodyType,
 } from '@dimforge/rapier3d-compat';
 import { Vector3 } from 'three';
-import type { Vec3 } from '../../core/vector';
+import {
+	VEC2_ZERO,
+	VEC3_ONE,
+	VEC3_ZERO,
+	type Vec2Input,
+	type Vec3Input,
+	normalizeVec2,
+	normalizeVec3,
+} from '../../core/vector';
 import {
 	getOrCreateCollisionGroupId,
 	createCollisionFilter,
@@ -50,7 +58,7 @@ interface BaseCollisionOptions {
 	/** Whether this collider is a sensor */
 	sensor?: boolean;
 	/** Position offset relative to the entity origin */
-	offset?: Vec3;
+	offset?: Vec3Input;
 	/** Collision type string for group filtering */
 	collisionType?: string;
 	/** Allowed collision types for filtering */
@@ -71,7 +79,8 @@ function applyCollisionOptions(
 	opts: BaseCollisionOptions,
 ): void {
 	if (opts.offset) {
-		colliderDesc.setTranslation(opts.offset.x, opts.offset.y, opts.offset.z);
+		const offset = normalizeVec3(opts.offset, VEC3_ZERO);
+		colliderDesc.setTranslation(offset.x, offset.y, offset.z);
 	}
 	if (opts.sensor) {
 		colliderDesc.setSensor(true);
@@ -107,14 +116,14 @@ function makeComponent(
 
 export interface BoxCollisionOptions extends BaseCollisionOptions {
 	/** Box dimensions (default: 1x1x1) */
-	size?: Vec3;
+	size?: Vec3Input;
 }
 
 /**
  * Create a box (cuboid) collision component.
  */
 export function boxCollision(opts: BoxCollisionOptions = {}): CollisionComponent {
-	const size = opts.size ?? { x: 1, y: 1, z: 1 };
+	const size = normalizeVec3(opts.size, VEC3_ONE);
 	const desc = ColliderDesc.cuboid(size.x / 2, size.y / 2, size.z / 2);
 	const clonedOpts = deepCloneValue(opts);
 	return makeComponent(desc, opts, () => boxCollision(clonedOpts));
@@ -234,7 +243,7 @@ export function pillCollision(opts: PillCollisionOptions = {}): CollisionCompone
 
 export interface PlaneCollisionOptions extends BaseCollisionOptions {
 	/** Tile dimensions (default: 10x10) */
-	tile?: { x: number; y: number };
+	tile?: Vec2Input;
 	/** Number of subdivisions per axis (default: 10) */
 	subdivisions?: number;
 	/** Pre-computed height data for the heightfield */
@@ -246,7 +255,7 @@ export interface PlaneCollisionOptions extends BaseCollisionOptions {
  * For flat planes, pass no heightData — a zeroed heightfield is used.
  */
 export function planeCollision(opts: PlaneCollisionOptions = {}): CollisionComponent {
-	const tile = opts.tile ?? { x: 10, y: 10 };
+	const tile = normalizeVec2(opts.tile, { x: 10, y: 10 });
 	const subdivisions = opts.subdivisions ?? 10;
 	const size = new Vector3(tile.x, 1, tile.y);
 
@@ -271,7 +280,7 @@ export function planeCollision(opts: PlaneCollisionOptions = {}): CollisionCompo
 
 export interface ZoneCollisionOptions extends BaseCollisionOptions {
 	/** Zone dimensions (default: 1x1x1) */
-	size?: Vec3;
+	size?: Vec3Input;
 }
 
 /**
@@ -279,7 +288,7 @@ export interface ZoneCollisionOptions extends BaseCollisionOptions {
  * Always a sensor; static by default.
  */
 export function zoneCollision(opts: ZoneCollisionOptions = {}): CollisionComponent {
-	const size = opts.size ?? { x: 1, y: 1, z: 1 };
+	const size = normalizeVec3(opts.size, VEC3_ONE);
 	const desc = ColliderDesc.cuboid(size.x / 2, size.y / 2, size.z / 2);
 	desc.setSensor(true);
 	desc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;

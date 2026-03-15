@@ -18,19 +18,19 @@ export default function createDemo() {
   const boxes = [
     createBox({
       position: { x: -6, y: 1, z: 0 },
-      size: new Vector3(2, 2, 2),
+      size: { x: 2, y: 2, z: 2 },
       collision: { static: false },
       material: { color: new Color(Color.NAMES.tomato) },
     }),
     createBox({
       position: { x: 6, y: 1, z: 2 },
-      size: new Vector3(2, 4, 2),
+      size: { x: 2, y: 4, z: 2 },
       collision: { static: false },
       material: { color: new Color(Color.NAMES.royalblue) },
     }),
     createBox({
       position: { x: 0, y: 1, z: -5 },
-      size: new Vector3(3, 3, 3),
+      size: { x: 3, y: 3, z: 3 },
       collision: { static: false },
       material: { color: new Color(Color.NAMES.gold) },
     }),
@@ -47,7 +47,7 @@ export default function createDemo() {
   const jumbotronScreen = createBox({
     name: 'jumbotron',
     position: { x: 0, y: 12, z: -20 },
-    size: new Vector3(screenWidth, screenHeight, screenDepth),
+    size: { x: screenWidth, y: screenHeight, z: screenDepth },
     collision: { static: true },
     material: { color: new Color(0x111111) },
   });
@@ -55,7 +55,7 @@ export default function createDemo() {
   const jumbotronFrame = createBox({
     name: 'jumbotron-frame',
     position: { x: 0, y: 12, z: -20.3 },
-    size: new Vector3(screenWidth + 0.6, screenHeight + 0.6, screenDepth + 0.1),
+    size: { x: screenWidth + 0.6, y: screenHeight + 0.6, z: screenDepth + 0.1 },
     collision: { static: true },
     material: { color: new Color(0x333333) },
   });
@@ -63,7 +63,7 @@ export default function createDemo() {
   const jumbotronPost = createBox({
     name: 'jumbotron-post',
     position: { x: 0, y: 2, z: -20.3 },
-    size: new Vector3(1.5, 6, 1),
+    size: { x: 1.5, y: 6, z: 1 },
     collision: { static: true },
     material: { color: new Color(0x555555) },
   });
@@ -71,15 +71,15 @@ export default function createDemo() {
   // ─── Cameras ─────────────────────────────────────────────────────────────
 
   const mainCamera = createCamera({
-    position: new Vector3(0, 10, 30),
-    target: new Vector3(0, 0, 0),
+    position: { x: 0, y: 10, z: 30 },
+    target: { x: 0, y: 0, z: 0 },
     perspective: Perspectives.ThirdPerson,
     name: 'main',
   });
 
   const jumbotronCamera = createCamera({
-    position: new Vector3(30, 0, 30),
-    target: new Vector3(20, 20, 0),
+    position: { x: 30, y: 0, z: 30 },
+    target: { x: 20, y: 20, z: 0 },
     perspective: Perspectives.ThirdPerson,
     name: 'jumbotron-cam',
     renderToTexture: { width: 1024, height: 576 },
@@ -99,7 +99,7 @@ export default function createDemo() {
   // ─── Stage ───────────────────────────────────────────────────────────────
 
   const stage = createStage(
-    { gravity: new Vector3(0, -9.82, 0) },
+    { gravity: { x: 0, y: -9.82, z: 0 } },
     mainCamera,
     jumbotronCamera,
   );

@@ -128,20 +128,20 @@ export default function createDemo() {
     name: 'activeText',
     text: 'Bodies: 0',
     fontSize: 18,
-    screenPosition: new Vector2(0.85, 0.05),
+    screenPosition: { x: 0.85, y: 0.05 },
   });
 
   const titleText = createText({
     name: 'titleText',
     text: 'Physics Worker Demo',
     fontSize: 14,
-    screenPosition: new Vector2(0.5, 0.05),
+    screenPosition: { x: 0.5, y: 0.05 },
   });
 
   // ─── Camera ────────────────────────────────────────────────────────────────
 
   const camera = createCamera({
-    position: new Vector3(0, 0, 0),
+    position: { x: 0, y: 0, z: 0 },
     perspective: 'fixed-2d',
     zoom: 10,
   });
@@ -156,7 +156,7 @@ export default function createDemo() {
   const stage = createStage(
     {
       backgroundColor: new Color(0x111122),
-      gravity: new Vector3(0, -9.82, 0),
+      gravity: { x: 0, y: -9.82, z: 0 },
       usePhysicsWorker: true,
       physicsWorkerUrl,
     },
@@ -181,7 +181,7 @@ export default function createDemo() {
 
   game.setInputConfiguration(useArrowsForAxes('p1'));
 
-  game.onGlobalChange<number>('active', (value) => {
+  game.onGlobalChange<number>('active', value => {
     activeText.updateText(`Bodies: ${value}`);
   });
 

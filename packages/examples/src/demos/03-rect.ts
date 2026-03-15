@@ -1,8 +1,8 @@
 import { createGame, createRect, createStage } from '@zylem/game-lib';
-import { Color, Vector2 } from 'three';
+import { Color } from 'three';
 
 export default function createDemo() {
-  const position = new Vector2(650, 400);
+  const position = { x: 650, y: 400 };
 
   const foregroundRect = createRect({
     width: 0,

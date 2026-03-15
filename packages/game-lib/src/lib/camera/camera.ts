@@ -6,13 +6,14 @@ import { StageEntity } from "../interfaces/entity";
 import type { CameraBehavior, CameraAction, CameraPerspective, CameraPipelineState } from "./types";
 import { createPerspective } from "./perspectives";
 import type { PerspectiveOptions } from "./perspectives";
+import { Vec2Input, Vec3Input, VEC2_ZERO, VEC3_ZERO, toThreeVector2, toThreeVector3 } from "../core/vector";
 
 export interface CameraOptions {
 	perspective?: PerspectiveType;
-	position?: Vector3 | { x: number; y: number; z: number };
-	target?: Vector3 | { x: number; y: number; z: number } | any;
+	position?: Vec3Input;
+	target?: Vec3Input;
 	zoom?: number;
-	screenResolution?: Vector2;
+	screenResolution?: Vec2Input;
 	/**
 	 * Renderer type: 'auto' | 'webgpu' | 'webgl'
 	 * Use 'webgpu' for TSL shaders
@@ -217,7 +218,10 @@ export class CameraWrapper {
  * Returns a CameraWrapper for convenient access to camera features.
  */
 export function createCamera(options: CameraOptions): CameraWrapper {
-	const screenResolution = options.screenResolution || new Vector2(window.innerWidth, window.innerHeight);
+	const screenResolution = toThreeVector2(options.screenResolution, {
+		x: window.innerWidth,
+		y: window.innerHeight,
+	});
 	let frustumSize = 10;
 	if (options.perspective === 'fixed-2d') {
 		frustumSize = options.zoom || 10;
@@ -235,13 +239,8 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 	}
 
 	// Set initial position and target
-	const position = options.position 
-		? (options.position instanceof Vector3 ? options.position : new Vector3(options.position.x, options.position.y, options.position.z))
-		: new Vector3(0, 0, 0);
-	
-	const target = options.target
-		? (options.target instanceof Vector3 ? options.target : new Vector3(options.target.x, options.target.y, options.target.z))
-		: new Vector3(0, 0, 0);
+	const position = toThreeVector3(options.position, VEC3_ZERO);
+	const target = toThreeVector3(options.target, VEC3_ZERO);
 	
 	zylemCamera.move(position);
 	zylemCamera.camera.lookAt(target);

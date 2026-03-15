@@ -9,7 +9,12 @@ import {
 	type Color,
 } from 'three';
 import { MaterialBuilder, type MaterialOptions } from '../../graphics/material';
-import type { Vec3 } from '../../core/vector';
+import {
+	VEC3_ONE,
+	VEC3_ZERO,
+	type Vec3Input,
+	normalizeVec3,
+} from '../../core/vector';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helpers
@@ -18,7 +23,7 @@ import type { Vec3 } from '../../core/vector';
 /** Shared options that every mesh factory accepts. */
 interface BaseMeshOptions {
 	/** Offset position relative to the entity origin */
-	position?: Vec3;
+	position?: Vec3Input;
 	/** Material options (texture, shader, etc.) */
 	material?: Partial<MaterialOptions>;
 	/** Convenience color override */
@@ -48,7 +53,8 @@ function buildMaterial(
 
 function finalizeMesh(mesh: Mesh, opts: BaseMeshOptions): Mesh {
 	if (opts.position) {
-		mesh.position.set(opts.position.x, opts.position.y, opts.position.z);
+		const position = normalizeVec3(opts.position, VEC3_ZERO);
+		mesh.position.set(position.x, position.y, position.z);
 	}
 	mesh.castShadow = true;
 	mesh.receiveShadow = true;
@@ -61,14 +67,14 @@ function finalizeMesh(mesh: Mesh, opts: BaseMeshOptions): Mesh {
 
 export interface BoxMeshOptions extends BaseMeshOptions {
 	/** Box dimensions (default: 1x1x1) */
-	size?: Vec3;
+	size?: Vec3Input;
 }
 
 /**
  * Create a box mesh.
  */
 export function boxMesh(opts: BoxMeshOptions = {}): Mesh {
-	const size = opts.size ?? { x: 1, y: 1, z: 1 };
+	const size = normalizeVec3(opts.size, VEC3_ONE);
 	const geometry = new BoxGeometry(size.x, size.y, size.z);
 	const materials = buildMaterial(opts);
 	return finalizeMesh(new Mesh(geometry, materials.at(-1)), opts);

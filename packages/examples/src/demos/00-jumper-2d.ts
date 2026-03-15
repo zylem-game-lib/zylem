@@ -16,8 +16,8 @@ import zylemManSprite from '../assets/zylem-man-2d-sprite.png';
 export default function createDemo() {
   const floor = createBox({
     name: 'floor',
-    size: new Vector3(22, 1, 1),
-    position: new Vector3(0, -5, 0),
+    size: { x: 22, y: 1, z: 1 },
+    position: { x: 0, y: -5, z: 0 },
     collision: { static: true },
     material: { color: new Color('#4c956c') },
   });
@@ -25,15 +25,15 @@ export default function createDemo() {
   const platforms = [
     createBox({
       name: 'platform-left',
-      size: new Vector3(4, 0.75, 1),
-      position: new Vector3(-5, -1.5, 0),
+      size: { x: 4, y: 0.75, z: 1 },
+      position: { x: -5, y: -1.5, z: 0 },
       collision: { static: true },
       material: { color: new Color('#f4a259') },
     }),
     createBox({
       name: 'platform-right',
-      size: new Vector3(4, 0.75, 1),
-      position: new Vector3(4.5, 1.25, 0),
+      size: { x: 4, y: 0.75, z: 1 },
+      position: { x: 4.5, y: 1.25, z: 0 },
       collision: { static: true },
       material: { color: new Color('#f4a259') },
     }),
@@ -41,8 +41,8 @@ export default function createDemo() {
 
   const player = createSprite({
     name: 'zylem-man-jumper',
-    position: new Vector3(-8, -3, 0),
-    size: new Vector3(2, 2, 1),
+    position: { x: -8, y: -3, z: 0 },
+    size: { x: 2, y: 2, z: 1 },
     images: [{ name: 'zylem-man', file: zylemManSprite }],
   });
 
@@ -81,8 +81,8 @@ export default function createDemo() {
   });
 
   const camera = createCamera({
-    position: new Vector3(0, 0, 12),
-    target: new Vector3(0, 0, 0),
+    position: { x: 0, y: 0, z: 12 },
+    target: { x: 0, y: 0, z: 0 },
     zoom: 18,
     perspective: Perspectives.Fixed2D,
   });

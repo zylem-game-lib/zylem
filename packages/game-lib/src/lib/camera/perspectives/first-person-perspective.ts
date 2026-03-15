@@ -1,5 +1,6 @@
 import { Vector3, Quaternion, Euler, MathUtils } from 'three';
 import type { CameraPerspective, CameraContext, CameraPose } from '../types';
+import { Vec3Input, VEC3_ZERO, toThreeVector3 } from '../../core/vector';
 
 /**
  * Configuration for the first-person perspective.
@@ -18,9 +19,9 @@ export interface FirstPersonOptions {
 	/** Key in CameraContext.targets to follow. @default 'primary' */
 	targetKey?: string;
 	/** Fallback position when no target entity is attached. */
-	initialPosition?: Vector3;
+	initialPosition?: Vec3Input;
 	/** Fallback look-at point used to derive initial yaw/pitch when no target. */
-	initialLookAt?: Vector3;
+	initialLookAt?: Vec3Input;
 }
 
 interface Defaults {
@@ -74,15 +75,19 @@ export class FirstPersonPerspective implements CameraPerspective {
 	constructor(options?: FirstPersonOptions) {
 		const { initialPosition, initialLookAt, ...rest } = options ?? {};
 		this.opts = { ...DEFAULTS, ...rest };
-		this.initialPosition = initialPosition;
-		this.initialLookAt = initialLookAt;
+		this.initialPosition = initialPosition
+			? toThreeVector3(initialPosition, VEC3_ZERO)
+			: undefined;
+		this.initialLookAt = initialLookAt
+			? toThreeVector3(initialLookAt, VEC3_ZERO)
+			: undefined;
 
 		this._currentFov = this.opts.defaultFov;
 		this._targetFov = this.opts.defaultFov;
 		this._lookAtLerpSpeed = this.opts.lookAtLerpSpeed;
 
-		if (initialPosition && initialLookAt) {
-			this.deriveYawPitchFromLookAt(initialPosition, initialLookAt);
+		if (this.initialPosition && this.initialLookAt) {
+			this.deriveYawPitchFromLookAt(this.initialPosition, this.initialLookAt);
 		}
 	}
 

@@ -30,8 +30,8 @@ export default function createDemo() {
 
   const camera = createCamera({
     perspective: Perspectives.ThirdPerson,
-    position: new Vector3(0, 30, -80),
-    target: new Vector3(0, 0, 0),
+    position: { x: 0, y: 30, z: -80 },
+    target: { x: 0, y: 0, z: 0 },
     rendererType: 'webgpu',
   });
 

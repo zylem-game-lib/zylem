@@ -21,17 +21,17 @@ export function createStageThree() {
   return createStage(
     {
       backgroundColor: new Color(Color.NAMES.green),
-      gravity: new Vector3(0, -9.82, 0),
+      gravity: { x: 0, y: -9.82, z: 0 },
     },
     createCamera({
-      position: new Vector3(0, 10, 30),
+      position: { x: 0, y: 10, z: 30 },
     }),
     () => {
       const myBox = createBox({
-        size: new Vector3(4, 2, 1),
+        size: { x: 4, y: 2, z: 1 },
         position: { x: -10, y: 4, z: 4 },
         collision: { static: false },
-        material: { path: woodPath, repeat: new Vector2(2, 2) },
+        material: { path: woodPath, repeat: { x: 2, y: 2 } },
       });
 
       let counter = 0;
@@ -51,14 +51,14 @@ export function createStageThree() {
     },
     () =>
       createPlane({
-        tile: new Vector2(200, 200),
+        tile: { x: 200, y: 200 },
         position: { x: 0, y: 0, z: 0 },
         collision: { static: true },
-        material: { path: grassPath, repeat: new Vector2(20, 20) },
+        material: { path: grassPath, repeat: { x: 20, y: 20 } },
       }),
     () =>
       createSphere({
-        size: new Vector3(4, 4, 4),
+        size: { x: 4, y: 4, z: 4 },
         position: { x: -5, y: 4, z: 0 },
         collision: { static: false },
         material: { path: marsSurfacePath },
@@ -73,7 +73,7 @@ export function createStageThree() {
     () =>
       createZone({
         position: { x: 14, y: 3, z: 3 },
-        size: new Vector3(5, 5, 10),
+        size: { x: 5, y: 5, z: 10 },
         onEnter: ({ self, visitor, globals }) => {
           console.log('entered', visitor, globals);
         },

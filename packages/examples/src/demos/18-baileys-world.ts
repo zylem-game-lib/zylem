@@ -21,35 +21,35 @@ import starby from './baileys-world/starby.gltf';
 
 export default function createDemo() {
   const camera = createCamera({
-    position: new Vector3(2, 2, 1),
-    target: new Vector3(0, 0, 0),
+    position: { x: 2, y: 2, z: 1 },
+    target: { x: 0, y: 0, z: 0 },
   });
 
   const stage = createStage(
     {
-      gravity: new Vector3(0, -20, 0),
+      gravity: { x: 0, y: -20, z: 0 },
     },
     camera,
   );
 
   const floorEntity = createPlane({
-    tile: new Vector2(10, 10),
+    tile: { x: 10, y: 10 },
     position: { x: 0, y: -1, z: 0 },
     collision: { static: true },
     material: {
       path: floor,
-      repeat: new Vector2(4, 4),
+      repeat: { x: 4, y: 4 },
     },
   });
 
   const purpleBedEntity = createActor({
     name: 'purple-bed',
-    scale: new Vector3(4, 4, 4),
+    scale: { x: 4, y: 4, z: 4 },
     models: [purpleBed],
     collision: {
       static: true,
-      size: new Vector3(3, 0.5, 3),
-      position: new Vector3(0, 0, 0),
+      size: { x: 3, y: 0.5, z: 3 },
+      position: { x: 0, y: 0, z: 0 },
     },
     collisionShape: 'model',
     position: { x: 0, y: 0, z: 0 },
@@ -58,11 +58,11 @@ export default function createDemo() {
   // Cozy bed placed next to the purple bed
   const cozyBedEntity = createActor({
     name: 'cozy-bed',
-    scale: new Vector3(1, 1, 1),
+    scale: { x: 1, y: 1, z: 1 },
     models: [cozyBed],
     collision: {
-      size: new Vector3(1, 0.25, 1),
-      position: new Vector3(0, 0, 0),
+      size: { x: 1, y: 0.25, z: 1 },
+      position: { x: 0, y: 0, z: 0 },
     },
     collisionShape: 'model',
     position: { x: 2.75, y: 0, z: -2 },
@@ -71,7 +71,7 @@ export default function createDemo() {
   // Toys scattered on the floor
   const avocadoEntity = createActor({
     name: 'avocado',
-    scale: new Vector3(0.5, 0.5, 0.5),
+    scale: { x: 0.5, y: 0.5, z: 0.5 },
     models: [avocado],
     collisionShape: 'model',
     position: { x: 2, y: 1, z: -2.5 },
@@ -79,7 +79,7 @@ export default function createDemo() {
 
   const starbyEntity = createActor({
     name: 'starby',
-    scale: new Vector3(0.5, 0.5, 0.5),
+    scale: { x: 0.5, y: 0.5, z: 0.5 },
     models: [starby],
     collisionShape: 'model',
     position: { x: 2.75, y: 1, z: -1.5 },
@@ -87,7 +87,7 @@ export default function createDemo() {
 
   const bananaEntity = createActor({
     name: 'banana',
-    scale: new Vector3(0.5, 0.5, 0.5),
+    scale: { x: 0.5, y: 0.5, z: 0.5 },
     models: [banana],
     collisionShape: 'model',
     position: { x: 3.5, y: 1, z: -1 },
@@ -95,7 +95,7 @@ export default function createDemo() {
 
   const playRopeEntity = createActor({
     name: 'play-rope',
-    scale: new Vector3(0.6, 0.6, 0.6),
+    scale: { x: 0.6, y: 0.6, z: 0.6 },
     models: [playRope],
     collisionShape: 'model',
     position: { x: 2.5, y: 4, z: -1 },
@@ -103,7 +103,7 @@ export default function createDemo() {
 
   const redBoneEntity = createActor({
     name: 'red-bone',
-    scale: new Vector3(0.4, 0.4, 0.4),
+    scale: { x: 0.4, y: 0.4, z: 0.4 },
     models: [redBone],
     collisionShape: 'model',
     position: { x: 1, y: 1, z: -1 },
@@ -111,7 +111,7 @@ export default function createDemo() {
 
   const spikeyBallEntity = createActor({
     name: 'spikey-ball',
-    scale: new Vector3(0.5, 0.5, 0.5),
+    scale: { x: 0.5, y: 0.5, z: 0.5 },
     models: [spikeyBall],
     collisionShape: 'model',
     position: { x: 3, y: 1, z: -0.5 },
@@ -119,26 +119,26 @@ export default function createDemo() {
 
   const wallEntity = createBox({
     position: { x: 0, y: 1.5, z: -3 },
-    size: new Vector3(10, 5, 1),
+    size: { x: 10, y: 5, z: 1 },
     collision: { static: true },
     material: {
       path: wall,
-      repeat: new Vector2(1, 1),
+      repeat: { x: 1, y: 1 },
     },
   });
   const wall2Entity = createBox({
     position: { x: -5, y: 1.5, z: 0 },
-    size: new Vector3(1, 5, 10),
+    size: { x: 1, y: 5, z: 10 },
     collision: { static: true },
     material: {
       path: wall,
-      repeat: new Vector2(1, 1),
+      repeat: { x: 1, y: 1 },
     },
   });
 
   const player = createActor({
     name: 'player',
-    size: new Vector3(1, 1, 1),
+    size: { x: 1, y: 1, z: 1 },
     models: [bailey],
     animations: [
       {

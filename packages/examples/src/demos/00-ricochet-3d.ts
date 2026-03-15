@@ -19,33 +19,33 @@ export default function createDemo() {
   const wallDefinitions = [
     {
       name: 'wall-left',
-      position: new Vector3(-cubeHalfSize, 0, 0),
-      size: new Vector3(wallThickness, cubeHalfSize * 2, cubeHalfSize * 2),
+      position: { x: -cubeHalfSize, y: 0, z: 0 },
+      size: { x: wallThickness, y: cubeHalfSize * 2, z: cubeHalfSize * 2 },
     },
     {
       name: 'wall-right',
-      position: new Vector3(cubeHalfSize, 0, 0),
-      size: new Vector3(wallThickness, cubeHalfSize * 2, cubeHalfSize * 2),
+      position: { x: cubeHalfSize, y: 0, z: 0 },
+      size: { x: wallThickness, y: cubeHalfSize * 2, z: cubeHalfSize * 2 },
     },
     {
       name: 'wall-bottom',
-      position: new Vector3(0, -cubeHalfSize, 0),
-      size: new Vector3(cubeHalfSize * 2, wallThickness, cubeHalfSize * 2),
+      position: { x: 0, y: -cubeHalfSize, z: 0 },
+      size: { x: cubeHalfSize * 2, y: wallThickness, z: cubeHalfSize * 2 },
     },
     {
       name: 'wall-top',
-      position: new Vector3(0, cubeHalfSize, 0),
-      size: new Vector3(cubeHalfSize * 2, wallThickness, cubeHalfSize * 2),
+      position: { x: 0, y: cubeHalfSize, z: 0 },
+      size: { x: cubeHalfSize * 2, y: wallThickness, z: cubeHalfSize * 2 },
     },
     {
       name: 'wall-back',
-      position: new Vector3(0, 0, -cubeHalfSize),
-      size: new Vector3(cubeHalfSize * 2, cubeHalfSize * 2, wallThickness),
+      position: { x: 0, y: 0, z: -cubeHalfSize },
+      size: { x: cubeHalfSize * 2, y: cubeHalfSize * 2, z: wallThickness },
     },
     {
       name: 'wall-front',
-      position: new Vector3(0, 0, cubeHalfSize),
-      size: new Vector3(cubeHalfSize * 2, cubeHalfSize * 2, wallThickness),
+      position: { x: 0, y: 0, z: cubeHalfSize },
+      size: { x: cubeHalfSize * 2, y: cubeHalfSize * 2, z: wallThickness },
     },
   ] as const;
 
@@ -59,7 +59,7 @@ export default function createDemo() {
     front: cubeHalfSize - boundaryInset,
   } as const;
 
-  const walls = wallDefinitions.map((wall) =>
+  const walls = wallDefinitions.map(wall =>
     createBox({
       name: wall.name,
       position: wall.position,
@@ -75,13 +75,13 @@ export default function createDemo() {
   const ball = createSphere({
     name: 'ricochet-ball',
     radius: ballRadius,
-    position: new Vector3(0, 0, 0),
+    position: { x: 0, y: 0, z: 0 },
     material: { color: new Color('#ff6f61') },
   });
 
   const ball2 = ball.clone({
     name: 'ricochet-ball-2',
-    position: new Vector3(1.75, -1.25, 1.2),
+    position: { x: 1.75, y: -1.25, z: 1.2 },
     material: { color: new Color('#ffd166') },
   });
 
@@ -120,8 +120,8 @@ export default function createDemo() {
   attachBoundaryRicochet(ball2, { x: -9.25, y: 4.25, z: -7.5 });
 
   const camera = createCamera({
-    position: new Vector3(16, 12, 16),
-    target: new Vector3(0, 0, 0),
+    position: { x: 16, y: 12, z: 16 },
+    target: { x: 0, y: 0, z: 0 },
   });
 
   const stage = createStage(

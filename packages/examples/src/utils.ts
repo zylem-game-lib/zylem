@@ -2,7 +2,7 @@
 
 import type { ZylemBox } from "@zylem/game-lib";
 import { createActor, createBox, createPlane } from "@zylem/game-lib";
-import { Color, Vector2, Vector3 } from "three";
+import { Color } from "three";
 
 import grass from '@zylem/assets/3d/textures/grass.jpg';
 import dirt from '@zylem/assets/3d/textures/dirt.png';
@@ -30,7 +30,10 @@ const planeTypeToPath: Record<PlaygroundPlaneType, string> = {
 	steel: steel
 };
 
-export const playgroundPlane: any = (type: PlaygroundPlaneType, size: Vector2 = new Vector2(100, 100)) => {
+export const playgroundPlane: any = (
+	type: PlaygroundPlaneType,
+	size: { x: number; y: number } = { x: 100, y: 100 },
+) => {
 	const repeatX = size.x / 40;
 	const repeatY = size.y / 40;
 
@@ -39,7 +42,7 @@ export const playgroundPlane: any = (type: PlaygroundPlaneType, size: Vector2 = 
 		collision: { static: true },
 		material: {
 			path: planeTypeToPath[type],
-			repeat: new Vector2(repeatX, repeatY)
+			repeat: { x: repeatX, y: repeatY }
 		},
 		position: { x: 0, y: -4, z: 0 },
 		randomizeHeight: true,
@@ -72,14 +75,14 @@ const animationMap: Record<PlaygroundActorType, Record<string, string>> = {
 	}
 };
 
-const actorTypeToScale: Record<PlaygroundActorType, Vector3> = {
-	player: new Vector3(0.02, 0.02, 0.02),
-	mascot: new Vector3(1, 1, 1)
+const actorTypeToScale: Record<PlaygroundActorType, { x: number; y: number; z: number }> = {
+	player: { x: 0.02, y: 0.02, z: 0.02 },
+	mascot: { x: 1, y: 1, z: 1 }
 };
 
 const actorTypeToCollision: Record<PlaygroundActorType, any> = {
-	player: { size: new Vector3(1, 3.8, 0.5), static: false },
-	mascot: { size: new Vector3(2, 3, 0), position: new Vector3(0, 1.2, 0), static: false }
+	player: { size: { x: 1, y: 3.8, z: 0.5 }, static: false },
+	mascot: { size: { x: 2, y: 3, z: 0 }, position: { x: 0, y: 1.2, z: 0 }, static: false }
 };
 
 export const playgroundActor: any = (type: PlaygroundActorType) => {

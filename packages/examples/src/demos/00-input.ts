@@ -28,7 +28,7 @@ export default function createDemo() {
     text: 'Use a gamepad or keyboard to control the game',
     fontSize: 24,
     stickToViewport: true,
-    screenPosition: new Vector2(0.5, 0.5),
+    screenPosition: { x: 0.5, y: 0.5 },
   });
 
   const mouseInputText = createText({
@@ -36,7 +36,7 @@ export default function createDemo() {
     text: '<mouse input>',
     fontSize: 24,
     stickToViewport: true,
-    screenPosition: new Vector2(0.5, 0.25),
+    screenPosition: { x: 0.5, y: 0.25 },
   });
 
   stage1.add(inputText);

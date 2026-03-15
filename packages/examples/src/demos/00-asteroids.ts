@@ -63,7 +63,7 @@ export default function createDemo() {
     const bullet = createSprite({
       name: 'player-bullet',
       images: [{ name: 'player-bullet', file: playerLaserImg }],
-      size: new Vector3(0.35, 0.75, 1),
+      size: { x: 0.35, y: 0.75, z: 1 },
     });
 
     bullet.onUpdate(({ me }) => {
@@ -100,8 +100,8 @@ export default function createDemo() {
           file: asteroidImages[index % asteroidImages.length]!,
         },
       ],
-      size: new Vector3(1.6, 1.6, 1),
-      position: new Vector3(-10 + index * 4.5, index % 2 === 0 ? 5 : -4, 0),
+      size: { x: 1.6, y: 1.6, z: 1 },
+      position: { x: -10 + index * 4.5, y: index % 2 === 0 ? 5 : -4, z: 0 },
     });
 
     asteroid.use(ScreenWrapBehavior, {
@@ -129,8 +129,8 @@ export default function createDemo() {
   const baseShip = createSprite({
     name: 'player-ship',
     images: [{ name: 'player-ship', file: playerShipImg }],
-    size: new Vector3(1, 1, 1),
-    position: new Vector3(0, 0, 0),
+    size: { x: 1, y: 1, z: 1 },
+    position: { x: 0, y: 0, z: 0 },
   });
 
   const playerShip = useBehavior(baseShip, ThrusterBehavior, {
@@ -153,8 +153,8 @@ export default function createDemo() {
   });
 
   const camera = createCamera({
-    position: new Vector3(0, 0, 12),
-    target: new Vector3(0, 0, 0),
+    position: { x: 0, y: 0, z: 12 },
+    target: { x: 0, y: 0, z: 0 },
     zoom: 18,
     perspective: Perspectives.Fixed2D,
   });
@@ -221,7 +221,7 @@ export default function createDemo() {
     text: 'Score: 0',
     fontSize: 20,
     stickToViewport: true,
-    screenPosition: new Vector2(0.88, 0.05),
+    screenPosition: { x: 0.88, y: 0.05 },
   });
 
   const asteroids = Array.from({ length: 5 }, (_, index) =>

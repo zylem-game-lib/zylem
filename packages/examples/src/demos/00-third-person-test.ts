@@ -52,7 +52,7 @@ export default function createDemo() {
 
   const startingZone = createZone({
     position: { x: 0, y: 0, z: 0 },
-    size: new Vector3(10, 10, 10),
+    size: { x: 10, y: 10, z: 10 },
     onEnter: ({ self, visitor, globals }) => {
       // testGame.log(`${visitor.uuid} entered the starting zone 🚶♂️`);
     },
@@ -63,7 +63,7 @@ export default function createDemo() {
 
   const endingZone = createZone({
     position: { x: 0, y: 30, z: 0 },
-    size: new Vector3(10, 10, 10),
+    size: { x: 10, y: 10, z: 10 },
     onEnter: ({ self, visitor, globals }) => {
       // testGame.log(`${visitor.uuid} entered the ending zone ⛳️`);
     },

@@ -21,7 +21,7 @@ export default function createDemo() {
 
   const ball = createSphere({
     name: 'ball',
-    position: new Vector3(0, 0, 0),
+    position: { x: 0, y: 0, z: 0 },
     radius: 0.1,
     color: new Color(Color.NAMES.white),
   });
@@ -134,7 +134,7 @@ export default function createDemo() {
   const p1Goal = createZone({
     name: 'p1Goal',
     position: { x: 12, y: 0, z: 0 },
-    size: new Vector3(2, 10, 1),
+    size: { x: 2, y: 10, z: 1 },
   });
   p1Goal.onEnter(({ visitor }) => {
     const p1Score = getGlobal<number>('p1Score') ?? 0;
@@ -148,7 +148,7 @@ export default function createDemo() {
   const p2Goal = createZone({
     name: 'p2Goal',
     position: { x: -12, y: 0, z: 0 },
-    size: new Vector3(2, 10, 1),
+    size: { x: 2, y: 10, z: 1 },
   });
   p2Goal.onEnter(({ visitor }) => {
     const p2Score = getGlobal<number>('p2Score') ?? 0;
@@ -160,7 +160,7 @@ export default function createDemo() {
   });
 
   const camera = createCamera({
-    position: new Vector3(0, 0, 0),
+    position: { x: 0, y: 0, z: 0 },
     perspective: 'fixed-2d',
     zoom: 12,
   });
@@ -169,21 +169,21 @@ export default function createDemo() {
     name: 'p1Text',
     text: '0',
     fontSize: 24,
-    screenPosition: new Vector2(0.45, 0.05),
+    screenPosition: { x: 0.45, y: 0.05 },
   });
 
   const p2Text = createText({
     name: 'p2Text',
     text: '0',
     fontSize: 24,
-    screenPosition: new Vector2(0.55, 0.05),
+    screenPosition: { x: 0.55, y: 0.05 },
   });
 
   const winnerText = createText({
     name: 'winnerText',
     text: '',
     fontSize: 36,
-    screenPosition: new Vector2(0.5, 0.5),
+    screenPosition: { x: 0.5, y: 0.5 },
   });
 
   const stage1 = createStage(
@@ -235,7 +235,7 @@ export default function createDemo() {
     }
   });
 
-  game.onGlobalChange<string>('winner', (value) => {
+  game.onGlobalChange<string>('winner', value => {
     console.log('Winner:', value);
     if (value === 'p1') {
       winnerText.updateText('P1 Wins!');
@@ -246,11 +246,11 @@ export default function createDemo() {
     }
   });
 
-  game.onGlobalChange<number>('p1Score', (value) => {
+  game.onGlobalChange<number>('p1Score', value => {
     p1Text.updateText(String(value));
   });
 
-  game.onGlobalChange<number>('p2Score', (value) => {
+  game.onGlobalChange<number>('p2Score', value => {
     p2Text.updateText(String(value));
   });
 

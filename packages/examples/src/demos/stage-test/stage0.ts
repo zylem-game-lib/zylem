@@ -12,7 +12,7 @@ export function createStageZero() {
         text: 'Press A ("z" on keyboard) to start the game',
         fontSize: 20,
         stickToViewport: true,
-        screenPosition: new Vector2(0.5, 0.5),
+        screenPosition: { x: 0.5, y: 0.5 },
       }),
   );
 }

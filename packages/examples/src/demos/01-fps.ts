@@ -26,8 +26,8 @@ export default function createDemo() {
 
   const fpsCamera = createCamera({
     perspective: Perspectives.FirstPerson,
-    position: new Vector3(0, 2, 5),
-    target: new Vector3(0, 2, 0),
+    position: { x: 0, y: 2, z: 5 },
+    target: { x: 0, y: 2, z: 0 },
     name: 'fps',
     damping: 0.15,
     skipDebugOrbit: true,
@@ -41,7 +41,7 @@ export default function createDemo() {
     name: 'player',
     collision: {
       static: false,
-      size: new Vector3(0.6, 1.8, 0.6),
+      size: { x: 0.6, y: 1.8, z: 0.6 },
     },
     position: { x: 0, y: 2, z: 5 },
   });
@@ -51,10 +51,10 @@ export default function createDemo() {
   const pistol = createActor({
     name: 'pistol',
     models: [pistolGlb],
-    scale: new Vector3(1, 1, 1),
+    scale: { x: 1, y: 1, z: 1 },
     collision: {
       static: true,
-      size: new Vector3(0.1, 0.1, 0.1),
+      size: { x: 0.1, y: 0.1, z: 0.1 },
     },
     position: { x: 0, y: 0, z: 0 },
   });
@@ -68,7 +68,7 @@ export default function createDemo() {
     lookSensitivity: 2,
     viewmodel: {
       entity: pistol,
-      offset: new Vector3(-1.4, -0.85, -0.5),
+      offset: { x: -1.4, y: -0.85, z: -0.5 },
       rotation: new Euler(0, -1.8, -0.1),
     },
   });
@@ -94,7 +94,7 @@ export default function createDemo() {
 
   const stage = createStage(
     {
-      gravity: new Vector3(0, -20, 0),
+      gravity: { x: 0, y: -20, z: 0 },
       backgroundImage: skybox,
     },
     fpsCamera,

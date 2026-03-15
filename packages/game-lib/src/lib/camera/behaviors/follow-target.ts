@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 import type { CameraBehavior, CameraContext, CameraPose } from '../types';
 import { clonePose } from '../smoothing';
+import { Vec3Input, VEC3_ZERO, toThreeVector3 } from '../../core/vector';
 
 /**
  * Options for the followTarget behavior.
@@ -9,7 +10,7 @@ export interface FollowTargetOptions {
 	/** Key in CameraContext.targets to follow. Default 'primary'. */
 	targetKey?: string;
 	/** Position offset from the target. Default (0, 0, 0). */
-	offset?: Vector3;
+	offset?: Vec3Input;
 	/**
 	 * Per-frame interpolation factor (0-1). Controls how quickly the
 	 * pose converges on the target each frame.
@@ -37,7 +38,11 @@ const DEFAULTS: Required<FollowTargetOptions> = {
  * ```
  */
 export function createFollowTarget(options?: FollowTargetOptions): CameraBehavior {
-	const opts = { ...DEFAULTS, ...options };
+	const opts = {
+		...DEFAULTS,
+		...options,
+		offset: toThreeVector3(options?.offset, DEFAULTS.offset),
+	};
 
 	// Internal state for smooth interpolation
 	let currentPos: Vector3 | null = null;

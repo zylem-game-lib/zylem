@@ -10,6 +10,7 @@ import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import type { FirstPersonPerspective } from '../../camera/perspectives/first-person-perspective';
+import { Vec3Input, VEC3_ZERO, toThreeVector3 } from '../../core/vector';
 import {
 	FirstPersonControllerBehavior,
 	type FirstPersonEntity,
@@ -37,7 +38,7 @@ export interface FirstPersonControllerOptions {
 	/** The FirstPersonPerspective to drive (from camera.getPerspective()) */
 	perspective?: FirstPersonPerspective;
 	/** Optional viewmodel (weapon/item) to position relative to the camera */
-	viewmodel?: { entity: any; offset: Vector3; rotation?: Euler };
+	viewmodel?: { entity: any; offset: Vec3Input; rotation?: Euler };
 }
 
 const defaultOptions: FirstPersonControllerOptions = {
@@ -94,7 +95,10 @@ class FirstPersonControllerSystem implements BehaviorSystem {
 
 			// Wire up viewmodel (once)
 			if (options.viewmodel && !this.behavior.hasViewmodel(gameEntity.uuid)) {
-				this.behavior.setViewmodel(gameEntity.uuid, options.viewmodel as ViewmodelConfig);
+				this.behavior.setViewmodel(gameEntity.uuid, {
+					...options.viewmodel,
+					offset: toThreeVector3(options.viewmodel.offset, VEC3_ZERO),
+				} as ViewmodelConfig);
 			}
 
 			// Create FSM lazily
@@ -159,7 +163,7 @@ export const FirstPersonController = defineBehavior<
 		getState: () => FirstPersonState;
 		getYaw: () => number;
 		getPitch: () => number;
-		attachViewmodel: (entity: any, offset: Vector3) => void;
+		attachViewmodel: (entity: any, offset: Vec3Input) => void;
 	},
 	FirstPersonEntity
 >({
@@ -171,7 +175,7 @@ export const FirstPersonController = defineBehavior<
 		getState: () => ref.fsm?.getState() ?? FirstPersonState.Idle,
 		getYaw: () => ref.fsm?.getYaw() ?? 0,
 		getPitch: () => ref.fsm?.getPitch() ?? 0,
-		attachViewmodel: (entity: any, offset: Vector3) => {
+		attachViewmodel: (entity: any, offset: Vec3Input) => {
 			if (ref.options) {
 				ref.options.viewmodel = { entity, offset };
 			}

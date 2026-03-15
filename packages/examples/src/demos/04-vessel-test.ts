@@ -32,19 +32,19 @@ export default function createDemo() {
   const vesselTextSetup = createText({
     text: '',
     stickToViewport: true,
-    screenPosition: new Vector2(0.5, 0.25),
+    screenPosition: { x: 0.5, y: 0.25 },
   });
 
   const vesselText = createText({
     text: 'Hello World',
     stickToViewport: true,
-    screenPosition: new Vector2(0.5, 0.5),
+    screenPosition: { x: 0.5, y: 0.5 },
   });
 
   const vesselTextUpdate = createText({
     text: '',
     stickToViewport: true,
-    screenPosition: new Vector2(0.5, 0.75),
+    screenPosition: { x: 0.5, y: 0.75 },
   });
 
   const stage1 = createStage({ backgroundImage: marsSurfacePath });

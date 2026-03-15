@@ -38,11 +38,11 @@ export default function createDemo() {
     text: '0',
     fontSize: 24,
     stickToViewport: true,
-    screenPosition: new Vector2(200, 100),
+    screenPosition: { x: 200, y: 100 },
   });
 
   // Use standalone onVariableChange
-  onVariableChange<number>(stage1, 'totalAngle', (value) => {
+  onVariableChange<number>(stage1, 'totalAngle', value => {
     const rotations = Math.round(value / (Math.PI * 2));
     rotationsText.updateText(`Rotations: ${rotations.toFixed(2)}`);
   });

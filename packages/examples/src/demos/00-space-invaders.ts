@@ -24,7 +24,7 @@ export default function createDemo() {
   const player = createSprite({
     name: 'player',
     images: [{ name: 'player', file: playerShip }],
-    position: new Vector3(0, -5, 0),
+    position: { x: 0, y: -5, z: 0 },
   });
 
   const playerBoundary = player.use(WorldBoundary2DBehavior, {
@@ -35,8 +35,8 @@ export default function createDemo() {
     const bullet = createSprite({
       name: 'bullet',
       images: [{ name: 'bullet', file: playerLaser }],
-      position: new Vector3(x, y, 0),
-      size: new Vector3(0.5, 0.5, 1),
+      position: { x: x, y: y, z: 0 },
+      size: { x: 0.5, y: 0.5, z: 1 },
     });
 
     const bulletBoundary = bullet.use(WorldBoundary2DBehavior, {
@@ -131,8 +131,8 @@ export default function createDemo() {
   }
 
   const camera = createCamera({
-    position: new Vector3(0, 0, 10),
-    target: new Vector3(0, 0, 0),
+    position: { x: 0, y: 0, z: 10 },
+    target: { x: 0, y: 0, z: 0 },
     zoom: 20,
     perspective: Perspectives.Fixed2D,
   });
@@ -152,7 +152,7 @@ export default function createDemo() {
     text: 'Lives: 3',
     fontSize: 20,
     stickToViewport: true,
-    screenPosition: new Vector2(0.1, 0.05),
+    screenPosition: { x: 0.1, y: 0.05 },
   });
 
   const scoreText = createText({
@@ -160,7 +160,7 @@ export default function createDemo() {
     text: 'Score: 0',
     fontSize: 20,
     stickToViewport: true,
-    screenPosition: new Vector2(0.9, 0.05),
+    screenPosition: { x: 0.9, y: 0.05 },
   });
 
   const game = createGame(

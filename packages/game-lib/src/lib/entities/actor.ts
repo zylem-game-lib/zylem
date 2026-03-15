@@ -22,13 +22,20 @@ import {
 } from '../core/base-node-life-cycle';
 import { AssetLoaderResult, EntityAssetLoader } from '../core/entity-asset-loader';
 import { EntityLoaderDelegate } from './delegates/loader';
-import { Vec3 } from '../core/vector';
+import {
+	Vec3Input,
+	VEC3_ONE,
+	VEC3_ZERO,
+	normalizeVec3,
+	toThreeVector3,
+} from '../core/vector';
 import { AnimationDelegate, AnimationOptions } from './delegates/animation';
 import { MaterialOptions } from '../graphics/material';
 import { DebugInfoProvider } from './delegates/debug';
 import { EntityBuilder, EntityCollisionBuilder } from './builder';
 import { commonDefaults } from './common';
 import { standardShader } from '../graphics/shaders/standard.shader';
+import { deepMergeValues } from '../core/clone-utils';
 
 type AnimationObject = {
 	key?: string;
@@ -42,7 +49,7 @@ type ZylemActorOptions = GameEntityOptions & {
 	static?: boolean;
 	animations?: AnimationObject[];
 	models?: string[];
-	scale?: Vec3;
+	scale?: Vec3Input;
 	material?: MaterialOptions;
 	collisionShape?: CollisionShapeType;
 };
@@ -86,11 +93,7 @@ const actorDefaults: ZylemActorOptions = {
 };
 
 function getActorScale(options: ZylemActorOptions): Vector3 {
-	return new Vector3(
-		options.scale?.x ?? 1,
-		options.scale?.y ?? 1,
-		options.scale?.z ?? 1,
-	);
+	return toThreeVector3(options.scale, VEC3_ONE);
 }
 
 function getCollisionPosition(
@@ -100,11 +103,7 @@ function getCollisionPosition(
 	if (!position) {
 		return null;
 	}
-	return {
-		x: position.x ?? 0,
-		y: position.y ?? 0,
-		z: position.z ?? 0,
-	};
+	return normalizeVec3(position, VEC3_ZERO);
 }
 
 function hasExplicitCollisionSize(options: ZylemActorOptions): boolean {
@@ -165,15 +164,19 @@ function createCapsuleColliderFromDimensions(
 }
 
 function createCapsuleCollider(options: ZylemActorOptions): ColliderDesc {
-	const size = options.collision?.size ?? options.size ?? { x: 0.5, y: 1, z: 0.5 };
-	const fullHeight = (size as any).y || 1;
+	const size = normalizeVec3(options.collision?.size ?? options.size, {
+		x: 0.5,
+		y: 1,
+		z: 0.5,
+	});
+	const fullHeight = size.y || 1;
 	const collisionPosition = getCollisionPosition(options);
 
 	return createCapsuleColliderFromDimensions(
 		{
-			x: (size as any).x || 0.5,
+			x: size.x || 0.5,
 			y: fullHeight,
-			z: (size as any).z || 0.5,
+			z: size.z || 0.5,
 		},
 		collisionPosition ?? { x: 0, y: fullHeight / 2, z: 0 },
 	);
@@ -185,9 +188,10 @@ function createExplicitBoxCollider(options: ZylemActorOptions): ColliderDesc | n
 		return null;
 	}
 
-	const halfWidth = (collisionSize as any).x / 2;
-	const halfHeight = (collisionSize as any).y / 2;
-	const halfDepth = (collisionSize as any).z / 2;
+	const normalizedSize = normalizeVec3(collisionSize, VEC3_ZERO);
+	const halfWidth = normalizedSize.x / 2;
+	const halfHeight = normalizedSize.y / 2;
+	const halfDepth = normalizedSize.z / 2;
 	const colliderDesc = ColliderDesc.cuboid(halfWidth, halfHeight, halfDepth);
 	const collisionPosition = getCollisionPosition(options);
 
@@ -541,7 +545,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 
 	constructor(options?: ZylemActorOptions) {
 		super();
-		this.options = { ...actorDefaults, ...options };
+		this.options = deepMergeValues(actorDefaults, options);
 		this.prependUpdate(this.actorUpdate.bind(this) as UpdateFunction<this>);
 		this.controlledRotation = true;
 	}
@@ -653,9 +657,10 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 			type: 'Actor',
 			models: this._modelFileNames.length > 0 ? this._modelFileNames : 'none',
 			modelLoaded: !!this._object,
-			scale: this.options.scale
-				? `${this.options.scale.x}, ${this.options.scale.y}, ${this.options.scale.z}`
-				: '1, 1, 1',
+			scale: (() => {
+				const scale = normalizeVec3(this.options.scale, VEC3_ONE);
+				return `${scale.x}, ${scale.y}, ${scale.z}`;
+			})(),
 			collisionShape: this.getResolvedCollisionShape(),
 		};
 

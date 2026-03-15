@@ -7,7 +7,7 @@ export function createStageOne() {
       backgroundColor: new Color(Color.NAMES.skyblue),
     },
     createCamera({
-      position: new Vector3(0, 10, 25),
+      position: { x: 0, y: 10, z: 25 },
     }),
     () =>
       createSphere({

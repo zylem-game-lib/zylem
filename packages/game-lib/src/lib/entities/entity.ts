@@ -7,7 +7,7 @@ import {
 	Vector,
 } from '@dimforge/rapier3d-compat';
 import { position, rotation, scale } from '../systems/transformable.system';
-import { Vec3 } from '../core/vector';
+import { Vec3, Vec3Input, VEC3_ZERO, normalizeVec3 } from '../core/vector';
 import { MaterialBuilder, MaterialOptions } from '../graphics/material';
 import { CollisionOptions } from '../collision/collision-builder';
 import { BaseNode } from '../core/base-node';
@@ -97,8 +97,8 @@ export type IBuilder<BuilderOptions = any> = {
 export type GameEntityOptions = {
 	name?: string;
 	color?: Color;
-	size?: Vec3;
-	position?: Vec3;
+	size?: Vec3Input;
+	position?: Vec3Input;
 	batched?: boolean;
 	collision?: Partial<CollisionOptions>;
 	material?: Partial<MaterialOptions>;
@@ -309,9 +309,9 @@ export class GameEntity<O extends GameEntityOptions>
 			this.colliderDesc = collision.colliderDesc;
 			this.colliderDescs.push(collision.colliderDesc);
 			// Apply entity position to the body
-			const pos = this.options?.position ?? { x: 0, y: 0, z: 0 };
-			this.bodyDesc.setTranslation(pos.x, pos.y, pos.z);
-		} else {
+				const pos = normalizeVec3(this.options?.position, VEC3_ZERO);
+				this.bodyDesc.setTranslation(pos.x, pos.y, pos.z);
+			} else {
 			// Subsequent collisions add extra colliders to the same body
 			this.colliderDescs.push(collision.colliderDesc);
 		}

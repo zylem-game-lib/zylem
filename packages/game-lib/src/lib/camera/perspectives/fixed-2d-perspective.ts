@@ -1,12 +1,13 @@
 import { Vector3, Quaternion } from 'three';
 import type { CameraPerspective, CameraContext, CameraPose } from '../types';
+import { Vec3Input, toThreeVector3 } from '../../core/vector';
 
 /**
  * Configuration for the fixed 2D perspective.
  */
 export interface Fixed2DOptions {
 	/** Fixed camera position. Default (0, 0, 10). */
-	position?: { x: number; y: number; z: number };
+	position?: Vec3Input;
 	/** Orthographic zoom (frustum size). Default 10. */
 	zoom?: number;
 }
@@ -29,7 +30,11 @@ export class Fixed2DPerspective implements CameraPerspective {
 	private opts: Required<Fixed2DOptions>;
 
 	constructor(options?: Fixed2DOptions) {
-		this.opts = { ...DEFAULTS, ...options };
+		this.opts = {
+			...DEFAULTS,
+			...options,
+			position: toThreeVector3(options?.position, DEFAULTS.position),
+		};
 	}
 
 	getBasePose(_ctx: CameraContext): CameraPose {

@@ -36,7 +36,7 @@ export default function createDemo() {
     const bullet = createSprite({
       name: 'robotron-bullet',
       images: [{ name: 'robotron-bullet', file: playerLaserImg }],
-      size: new Vector3(0.35, 0.75, 1),
+      size: { x: 0.35, y: 0.75, z: 1 },
     });
 
     bullet.onUpdate(({ me }) => {
@@ -68,12 +68,12 @@ export default function createDemo() {
     const enemy = createSprite({
       name: 'robotron-enemy',
       images: [{ name: `robotron-enemy-${index}`, file: enemyShipImg }],
-      size: new Vector3(1, 1, 1),
-      position: new Vector3(
-        index < 4 ? -10 + index * 3 : -10 + (index - 4) * 3,
-        index < 4 ? 6 : -6,
-        0,
-      ),
+      size: { x: 1, y: 1, z: 1 },
+      position: {
+        x: index < 4 ? -10 + index * 3 : -10 + (index - 4) * 3,
+        y: index < 4 ? 6 : -6,
+        z: 0,
+      },
     });
 
     enemy.use(ScreenWrapBehavior, {
@@ -107,8 +107,8 @@ export default function createDemo() {
   const basePlayer = createSprite({
     name: 'robotron-player',
     images: [{ name: 'robotron-player', file: playerShipImg }],
-    size: new Vector3(1, 1, 1),
-    position: new Vector3(0, 0, 0),
+    size: { x: 1, y: 1, z: 1 },
+    position: { x: 0, y: 0, z: 0 },
   });
 
   const player = useBehavior(basePlayer, TopDownMovementBehavior, {
@@ -133,8 +133,8 @@ export default function createDemo() {
   );
 
   const camera = createCamera({
-    position: new Vector3(0, 0, 12),
-    target: new Vector3(0, 0, 0),
+    position: { x: 0, y: 0, z: 12 },
+    target: { x: 0, y: 0, z: 0 },
     zoom: 18,
     perspective: Perspectives.Fixed2D,
   });
@@ -158,8 +158,12 @@ export default function createDemo() {
       playerInvulnerabilityMs - delta * 1000,
     );
 
-    const { Horizontal, Vertical, SecondaryHorizontal, SecondaryVertical } =
-      inputs.p1.axes;
+    const {
+      Horizontal,
+      Vertical,
+      SecondaryHorizontal,
+      SecondaryVertical,
+    } = inputs.p1.axes;
     const aimX = SecondaryHorizontal.value;
     const aimY = -SecondaryVertical.value;
     playerCoordinator.update({
@@ -187,7 +191,7 @@ export default function createDemo() {
     text: 'Score: 0',
     fontSize: 20,
     stickToViewport: true,
-    screenPosition: new Vector2(0.87, 0.05),
+    screenPosition: { x: 0.87, y: 0.05 },
   });
 
   const livesText = createText({
@@ -195,7 +199,7 @@ export default function createDemo() {
     text: 'Lives: 3',
     fontSize: 20,
     stickToViewport: true,
-    screenPosition: new Vector2(0.12, 0.05),
+    screenPosition: { x: 0.12, y: 0.05 },
   });
 
   stage.add(player, ...enemies);

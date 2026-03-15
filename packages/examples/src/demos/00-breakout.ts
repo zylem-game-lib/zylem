@@ -23,7 +23,7 @@ export default function createDemo() {
 
   const paddle = createBox({
     name: 'paddle',
-    position: new Vector3(0, -9, 0),
+    position: { x: 0, y: -9, z: 0 },
     size: paddleSize,
     material: { color: new Color('#ffffff') },
   });
@@ -117,8 +117,8 @@ export default function createDemo() {
 
   const failZone = createZone({
     name: 'failZone',
-    position: new Vector3(0, board.bottom - 1, 0),
-    size: new Vector3(board.right - board.left + 10, 2, 1),
+    position: { x: 0, y: board.bottom - 1, z: 0 },
+    size: { x: board.right - board.left + 10, y: 2, z: 1 },
   });
 
   failZone.onEnter(({ visitor, globals }) => {
@@ -148,7 +148,7 @@ export default function createDemo() {
       const b = createBox({
         name: 'brick',
         size: brickSize,
-        position: new Vector3(x, y, 0),
+        position: { x: x, y: y, z: 0 },
         material: { color },
         collision: { static: true },
       });
@@ -157,7 +157,7 @@ export default function createDemo() {
   }
 
   const camera1 = createCamera({
-    position: new Vector3(0, 0, 0),
+    position: { x: 0, y: 0, z: 0 },
     perspective: 'fixed-2d',
     zoom: 24,
   });
@@ -167,7 +167,7 @@ export default function createDemo() {
     text: 'Score: 0',
     fontSize: 20,
     stickToViewport: true,
-    screenPosition: new Vector2(0.1, 0.05),
+    screenPosition: { x: 0.1, y: 0.05 },
   });
 
   const livesText = createText({
@@ -175,7 +175,7 @@ export default function createDemo() {
     text: 'Lives: 3',
     fontSize: 20,
     stickToViewport: true,
-    screenPosition: new Vector2(0.9, 0.05),
+    screenPosition: { x: 0.9, y: 0.05 },
   });
 
   const statusText = createText({
@@ -183,7 +183,7 @@ export default function createDemo() {
     text: '',
     fontSize: 32,
     stickToViewport: true,
-    screenPosition: new Vector2(0.5, 0.5),
+    screenPosition: { x: 0.5, y: 0.5 },
   });
 
   const stage1 = createStage({}, camera1);
@@ -226,7 +226,7 @@ export default function createDemo() {
     },
   );
 
-  game.onGlobalChange<string>('status', (value) => {
+  game.onGlobalChange<string>('status', value => {
     if (value === 'win') statusText.updateText('You Win!');
     else if (value === 'lose') statusText.updateText('Game Over');
     else statusText.updateText('');
@@ -236,11 +236,11 @@ export default function createDemo() {
     }
   });
 
-  game.onGlobalChange<number>('score', (value) => {
+  game.onGlobalChange<number>('score', value => {
     scoreText.updateText(`Score: ${value}`);
   });
 
-  game.onGlobalChange<number>('lives', (value) => {
+  game.onGlobalChange<number>('lives', value => {
     livesText.updateText(`Lives: ${value}`);
   });
 

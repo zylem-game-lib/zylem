@@ -1,17 +1,15 @@
 import { Color, Material, Vector2, Vector3 } from 'three';
 import {
-	MeshPhongMaterial,
-	MeshStandardMaterial,
-	RepeatWrapping,
-	ShaderMaterial,
+  MeshPhongMaterial,
+  MeshStandardMaterial,
+  RepeatWrapping,
+  ShaderMaterial,
 } from 'three';
-import {
-	MeshBasicNodeMaterial,
-	MeshStandardNodeMaterial,
-} from 'three/webgpu';
+import { MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
 import { shortHash, sortedStringify } from '../core/utility/strings';
 import { standardShader } from './shaders/standard.shader';
 import { assetManager } from '../core/asset-manager';
+import { Vec2Input, VEC2_ONE, toThreeVector2 } from '../core/vector';
 
 /**
  * GLSL shader object (traditional approach for WebGL)
@@ -23,8 +21,8 @@ export type ZylemShaderObject = { fragment: string; vertex: string };
  * colorNode should be a TSL node that returns the fragment color
  */
 export type ZylemTSLShader = {
-	colorNode: any; // TSL node - use any since Three.js types are still evolving
-	transparent?: boolean;
+  colorNode: any; // TSL node - use any since Three.js types are still evolving
+  transparent?: boolean;
 };
 
 /**
@@ -36,36 +34,47 @@ export type ZylemShader = ZylemShaderObject | ZylemTSLShader;
  * Check if a shader is a TSL shader
  */
 export function isTSLShader(shader: ZylemShader): shader is ZylemTSLShader {
-	return 'colorNode' in shader;
+  return 'colorNode' in shader;
 }
 
 /**
  * Check if a shader is a GLSL shader
  */
 export function isGLSLShader(shader: ZylemShader): shader is ZylemShaderObject {
-	return 'fragment' in shader && 'vertex' in shader;
+  return 'fragment' in shader && 'vertex' in shader;
+}
+
+function isDefaultStandardShader(
+  shader: ZylemShader | undefined,
+): shader is ZylemShaderObject {
+  return (
+    !!shader &&
+    isGLSLShader(shader) &&
+    shader.vertex === standardShader.vertex &&
+    shader.fragment === standardShader.fragment
+  );
 }
 
 export interface MaterialOptions {
-	path?: string;
-	normalMap?: string;
-	repeat?: Vector2;
-	shader?: ZylemShader;
-	color?: Color;
-	/** Opacity from 0 (fully transparent) to 1 (fully opaque). */
-	opacity?: number;
-	/**
-	 * When true, prefer TSL/NodeMaterial (for WebGPU)
-	 * When false, prefer GLSL/ShaderMaterial (for WebGL)
-	 */
-	useTSL?: boolean;
+  path?: string;
+  normalMap?: string;
+  repeat?: Vec2Input;
+  shader?: ZylemShader;
+  color?: Color;
+  /** Opacity from 0 (fully transparent) to 1 (fully opaque). */
+  opacity?: number;
+  /**
+   * When true, prefer TSL/NodeMaterial (for WebGPU)
+   * When false, prefer GLSL/ShaderMaterial (for WebGL)
+   */
+  useTSL?: boolean;
 }
 
 type BatchGeometryMap = Map<symbol, number>;
 
 interface BatchMaterialMapObject {
-	geometryMap: BatchGeometryMap;
-	material: Material;
+  geometryMap: BatchGeometryMap;
+  material: Material;
 }
 
 type BatchKey = ReturnType<typeof shortHash>;
@@ -73,269 +82,283 @@ type BatchKey = ReturnType<typeof shortHash>;
 export type TexturePath = string | null;
 
 type OpacityCapableMaterial = Material & {
-	opacity: number;
-	transparent: boolean;
-	needsUpdate: boolean;
+  opacity: number;
+  transparent: boolean;
+  needsUpdate: boolean;
 };
 
 export class MaterialBuilder {
-	static batchMaterialMap: Map<BatchKey, BatchMaterialMapObject> = new Map();
+  static batchMaterialMap: Map<BatchKey, BatchMaterialMapObject> = new Map();
 
-	/**
-	 * Clear the static batch material cache.
-	 * Should be called during game disposal to prevent stale material references
-	 * from persisting across demo/stage switches.
-	 */
-	static clearBatchCache(): void {
-		MaterialBuilder.batchMaterialMap.clear();
-	}
+  /**
+   * Clear the static batch material cache.
+   * Should be called during game disposal to prevent stale material references
+   * from persisting across demo/stage switches.
+   */
+  static clearBatchCache(): void {
+    MaterialBuilder.batchMaterialMap.clear();
+  }
 
-	materials: Material[] = [];
+  materials: Material[] = [];
 
-	/** Whether to use TSL/NodeMaterial (for WebGPU compatibility) */
-	private useTSL: boolean;
+  /** Whether to use TSL/NodeMaterial (for WebGPU compatibility) */
+  private useTSL: boolean;
 
-	constructor(useTSL: boolean = false) {
-		this.useTSL = useTSL;
-	}
+  constructor(useTSL: boolean = false) {
+    this.useTSL = useTSL;
+  }
 
-	batchMaterial(options: Partial<MaterialOptions>, entityType: symbol) {
-		const batchKey = shortHash(sortedStringify(options));
-		const mappedObject = MaterialBuilder.batchMaterialMap.get(batchKey);
-		if (mappedObject) {
-			const count = mappedObject.geometryMap.get(entityType);
-			if (count) {
-				mappedObject.geometryMap.set(entityType, count + 1);
-			} else {
-				mappedObject.geometryMap.set(entityType, 1);
-			}
-		} else {
-			MaterialBuilder.batchMaterialMap.set(batchKey, {
-				geometryMap: new Map([[entityType, 1]]),
-				material: this.materials[0],
-			});
-		}
-	}
+  batchMaterial(options: Partial<MaterialOptions>, entityType: symbol) {
+    const batchKey = shortHash(sortedStringify(options));
+    const mappedObject = MaterialBuilder.batchMaterialMap.get(batchKey);
+    if (mappedObject) {
+      const count = mappedObject.geometryMap.get(entityType);
+      if (count) {
+        mappedObject.geometryMap.set(entityType, count + 1);
+      } else {
+        mappedObject.geometryMap.set(entityType, 1);
+      }
+    } else {
+      MaterialBuilder.batchMaterialMap.set(batchKey, {
+        geometryMap: new Map([[entityType, 1]]),
+        material: this.materials[0],
+      });
+    }
+  }
 
-	build(options: Partial<MaterialOptions>, entityType: symbol): void {
-		const { path, normalMap, repeat, color, shader, opacity, useTSL } = options;
-		
-		// Override TSL preference if specified in options
-		const shouldUseTSL = useTSL ?? this.useTSL;
+  build(options: Partial<MaterialOptions>, entityType: symbol): void {
+    const { path, normalMap, repeat, color, shader, opacity, useTSL } = options;
 
-		// If shader is provided, use it
-		if (shader) {
-			if (isTSLShader(shader)) {
-				// TSL shader provided directly
-				this.setTSLShader(shader, opacity);
-			} else if (isGLSLShader(shader)) {
-				// GLSL shader provided
-				if (shouldUseTSL) {
-					console.warn('MaterialBuilder: GLSL shader provided but TSL mode requested. Using GLSL.');
-				}
-				this.setShader(shader, opacity);
-			}
-		} else if (path) {
-			// Texture path provided
-			this.setTexture(path, repeat, shouldUseTSL, opacity);
-		}
+    // Override TSL preference if specified in options
+    const shouldUseTSL = useTSL ?? this.useTSL;
+    const usesDefaultStandardShader = isDefaultStandardShader(shader);
+    const shouldUseCustomShader = Boolean(shader) && !usesDefaultStandardShader;
+    const shouldUseTextureMaterial =
+      Boolean(path) && (!shader || usesDefaultStandardShader);
 
-		if (color) {
-			this.withColor(color, shouldUseTSL, opacity);
-		}
+    if (shouldUseTextureMaterial) {
+      this.setTexture(path ?? null, repeat, shouldUseTSL, opacity, color);
+    } else if (shouldUseCustomShader && shader) {
+      // If shader is provided, use it
+      if (isTSLShader(shader)) {
+        // TSL shader provided directly
+        this.setTSLShader(shader, opacity);
+      } else if (isGLSLShader(shader)) {
+        // GLSL shader provided
+        if (shouldUseTSL) {
+          console.warn(
+            'MaterialBuilder: GLSL shader provided but TSL mode requested. Using GLSL.',
+          );
+        }
+        this.setShader(shader, opacity);
+      }
+    } else if (path) {
+      // Texture path provided
+      this.setTexture(path, repeat, shouldUseTSL, opacity, color);
+    }
 
-		if (this.materials.length === 0) {
-			this.setColor(new Color('#ffffff'), shouldUseTSL, opacity);
-		}
+    if (color && !shouldUseTextureMaterial && !shouldUseCustomShader) {
+      this.withColor(color, shouldUseTSL, opacity);
+    }
 
-		// Apply normal map if present (to the last added material)
-		if (normalMap && this.materials.length > 0) {
-			this.setNormalMap(normalMap, repeat);
-		}
+    if (this.materials.length === 0) {
+      this.setColor(new Color('#ffffff'), shouldUseTSL, opacity);
+    }
 
-		this.batchMaterial(options, entityType);
-	}
+    // Apply normal map if present (to the last added material)
+    if (normalMap && this.materials.length > 0) {
+      this.setNormalMap(normalMap, repeat);
+    }
 
-	withColor(color: Color, useTSL: boolean = false, opacity?: number): this {
-		this.setColor(color, useTSL, opacity);
-		return this;
-	}
+    this.batchMaterial(options, entityType);
+  }
 
-	withShader(shader: ZylemShaderObject, opacity?: number): this {
-		this.setShader(shader, opacity);
-		return this;
-	}
+  withColor(color: Color, useTSL: boolean = false, opacity?: number): this {
+    this.setColor(color, useTSL, opacity);
+    return this;
+  }
 
-	withTSLShader(shader: ZylemTSLShader, opacity?: number): this {
-		this.setTSLShader(shader, opacity);
-		return this;
-	}
+  withShader(shader: ZylemShaderObject, opacity?: number): this {
+    this.setShader(shader, opacity);
+    return this;
+  }
 
-	private applyOpacity(material: OpacityCapableMaterial, opacity?: number, forceTransparent: boolean = false): void {
-		if (opacity !== undefined) {
-			material.opacity = opacity;
-		}
-		material.transparent = forceTransparent || opacity !== undefined && opacity < 1;
-		material.needsUpdate = true;
-	}
+  withTSLShader(shader: ZylemTSLShader, opacity?: number): this {
+    this.setTSLShader(shader, opacity);
+    return this;
+  }
 
-	/**
-	 * Set texture - loads in background (deferred).
-	 * Material is created immediately with null map, texture applies when loaded.
-	 */
-	setTexture(
-		texturePath: TexturePath = null,
-		repeat: Vector2 = new Vector2(1, 1),
-		useTSL: boolean = false,
-		opacity?: number,
-	): void {
-		if (!texturePath) {
-			return;
-		}
+  private applyOpacity(
+    material: OpacityCapableMaterial,
+    opacity?: number,
+    forceTransparent: boolean = false,
+  ): void {
+    if (opacity !== undefined) {
+      material.opacity = opacity;
+    }
+    material.transparent =
+      forceTransparent || (opacity !== undefined && opacity < 1);
+    material.needsUpdate = true;
+  }
 
-		if (useTSL) {
-			// For TSL/WebGPU, use NodeMaterial
-			const material = new MeshStandardNodeMaterial();
-			this.applyOpacity(material as OpacityCapableMaterial, opacity);
-			this.materials.push(material);
+  /**
+   * Set texture - loads in background (deferred).
+   * Material is created immediately with null map, texture applies when loaded.
+   */
+  setTexture(
+    texturePath: TexturePath = null,
+    repeat: Vec2Input = VEC2_ONE,
+    useTSL: boolean = false,
+    opacity?: number,
+    color?: Color,
+  ): void {
+    if (!texturePath) {
+      return;
+    }
 
-			// Load texture in background and apply when ready
-			assetManager.loadTexture(texturePath as string, {
-				clone: true,
-				repeat,
-			}).then((texture) => {
-				texture.wrapS = RepeatWrapping;
-				texture.wrapT = RepeatWrapping;
-				material.map = texture;
-				material.needsUpdate = true;
-			});
-		} else {
-			// For WebGL, use traditional material
-			const material = new MeshPhongMaterial({
-				map: null,
-				opacity: opacity ?? 1,
-				transparent: opacity !== undefined && opacity < 1,
-			});
-			this.materials.push(material);
+    if (useTSL) {
+      // For TSL/WebGPU, use NodeMaterial
+      const material = new MeshStandardNodeMaterial();
+      if (color) {
+        material.color = color;
+      }
+      this.applyOpacity(material as OpacityCapableMaterial, opacity);
+      this.materials.push(material);
 
-			// Load texture in background and apply when ready
-			assetManager
-				.loadTexture(texturePath as string, {
-					clone: true,
-					repeat,
-				})
-				.then((texture) => {
-					texture.wrapS = RepeatWrapping;
-					texture.wrapT = RepeatWrapping;
-					material.map = texture;
-					material.needsUpdate = true;
-				});
-		}
-	}
+      // Load texture in background and apply when ready
+      assetManager
+        .loadTexture(texturePath as string, {
+          clone: true,
+          repeat: toThreeVector2(repeat, VEC2_ONE),
+        })
+        .then(texture => {
+          texture.wrapS = RepeatWrapping;
+          texture.wrapT = RepeatWrapping;
+          material.map = texture;
+          material.needsUpdate = true;
+        });
+    } else {
+      // For WebGL, use traditional material
+      const material = new MeshPhongMaterial({
+        map: null,
+        color: color ?? new Color('#ffffff'),
+        opacity: opacity ?? 1,
+        transparent: opacity !== undefined && opacity < 1,
+      });
+      this.materials.push(material);
 
-	/**
-	 * Set normal map for the current material
-	 */
-	setNormalMap(normalMapPath: string, repeat: Vector2 = new Vector2(1, 1)): void {
-		const material = this.materials[this.materials.length - 1];
-		if (!material) return;
+      // Load texture in background and apply when ready
+      assetManager
+        .loadTexture(texturePath as string, {
+          clone: true,
+          repeat: toThreeVector2(repeat, VEC2_ONE),
+        })
+        .then(texture => {
+          texture.wrapS = RepeatWrapping;
+          texture.wrapT = RepeatWrapping;
+          material.map = texture;
+          material.needsUpdate = true;
+        });
+    }
+  }
 
-		assetManager
-			.loadTexture(normalMapPath, {
-				clone: true,
-				repeat,
-			})
-			.then((texture) => {
-				texture.wrapS = RepeatWrapping;
-				texture.wrapT = RepeatWrapping;
-				
-				if (material instanceof MeshStandardMaterial 
-					|| material instanceof MeshPhongMaterial
-					|| material instanceof MeshStandardNodeMaterial) {
-					material.normalMap = texture;
-					material.needsUpdate = true;
-				} else if (material instanceof ShaderMaterial) {
-					// Support for custom shaders if they have tNormal or normalMap uniform
-					if (material.uniforms.tNormal) {
-						material.uniforms.tNormal.value = texture;
-						material.needsUpdate = true;
-					}
-					if (material.uniforms.normalMap) {
-						material.uniforms.normalMap.value = texture;
-						material.needsUpdate = true;
-					}
-				}
-			});
-	}
+  /**
+   * Set normal map for the current material
+   */
+  setNormalMap(normalMapPath: string, repeat: Vec2Input = VEC2_ONE): void {
+    const material = this.materials[this.materials.length - 1];
+    if (!material) return;
 
-	setColor(color: Color, useTSL: boolean = false, opacity?: number) {
-		if (useTSL) {
-			// TSL/WebGPU compatible material
-			const material = new MeshStandardNodeMaterial();
-			material.color = color;
-			this.applyOpacity(material as OpacityCapableMaterial, opacity);
-			this.materials.push(material);
-		} else {
-			// WebGL compatible material
-			const material = new MeshStandardMaterial({
-				color: color,
-				emissiveIntensity: 0.5,
-				lightMapIntensity: 0.5,
-				fog: true,
-				opacity: opacity ?? 1,
-				transparent: opacity !== undefined && opacity < 1,
-			});
-			this.materials.push(material);
-		}
-	}
+    assetManager
+      .loadTexture(normalMapPath, {
+        clone: true,
+        repeat: toThreeVector2(repeat, VEC2_ONE),
+      })
+      .then(texture => {
+        texture.wrapS = RepeatWrapping;
+        texture.wrapT = RepeatWrapping;
 
-	/**
-	 * Set GLSL shader (WebGL only)
-	 */
-	setShader(customShader: ZylemShaderObject, opacity?: number) {
-		const { fragment, vertex } = customShader ?? standardShader;
+        if (
+          material instanceof MeshStandardMaterial ||
+          material instanceof MeshPhongMaterial ||
+          material instanceof MeshStandardNodeMaterial
+        ) {
+          material.normalMap = texture;
+          material.needsUpdate = true;
+        } else if (material instanceof ShaderMaterial) {
+          // Support for custom shaders if they have tNormal or normalMap uniform
+          if (material.uniforms.tNormal) {
+            material.uniforms.tNormal.value = texture;
+            material.needsUpdate = true;
+          }
+          if (material.uniforms.normalMap) {
+            material.uniforms.normalMap.value = texture;
+            material.needsUpdate = true;
+          }
+        }
+      });
+  }
 
-		const shader = new ShaderMaterial({
-			uniforms: {
-				iResolution: { value: new Vector3(1, 1, 1) },
-				iTime: { value: 0 },
-				tDiffuse: { value: null },
-				tDepth: { value: null },
-				tNormal: { value: null },
-				normalMap: { value: null },
-				lightDir: { value: new Vector3(1, 1, 1) },
-				normalStrength: { value: 1.0 },
-			},
-			vertexShader: vertex,
-			fragmentShader: fragment,
-			transparent: true,
-			opacity: opacity ?? 1,
-		});
-		this.materials.push(shader);
-	}
+  setColor(color: Color, useTSL: boolean = false, opacity?: number) {
+    if (useTSL) {
+      // TSL/WebGPU compatible material
+      const material = new MeshStandardNodeMaterial();
+      material.color = color;
+      this.applyOpacity(material as OpacityCapableMaterial, opacity);
+      this.materials.push(material);
+    } else {
+      // WebGL compatible material
+      const material = new MeshStandardMaterial({
+        color: color,
+        emissiveIntensity: 0.5,
+        lightMapIntensity: 0.5,
+        fog: true,
+        opacity: opacity ?? 1,
+        transparent: opacity !== undefined && opacity < 1,
+      });
+      this.materials.push(material);
+    }
+  }
 
-	/**
-	 * Set TSL shader (WebGPU compatible)
-	 */
-	setTSLShader(tslShader: ZylemTSLShader, opacity?: number) {
-		const material = new MeshBasicNodeMaterial();
-		material.colorNode = tslShader.colorNode;
-		this.applyOpacity(
-			material as OpacityCapableMaterial,
-			opacity,
-			tslShader.transparent,
-		);
-		this.materials.push(material);
-	}
+  /**
+   * Set GLSL shader (WebGL only)
+   */
+  setShader(customShader: ZylemShaderObject, opacity?: number) {
+    const { fragment, vertex } = customShader ?? standardShader;
+
+    const shader = new ShaderMaterial({
+      uniforms: {
+        iResolution: { value: new Vector3(1, 1, 1) },
+        iTime: { value: 0 },
+        tDiffuse: { value: null },
+        tDepth: { value: null },
+        tNormal: { value: null },
+        normalMap: { value: null },
+        lightDir: { value: new Vector3(1, 1, 1) },
+        normalStrength: { value: 1.0 },
+      },
+      vertexShader: vertex,
+      fragmentShader: fragment,
+      transparent: true,
+      opacity: opacity ?? 1,
+    });
+    this.materials.push(shader);
+  }
+
+  /**
+   * Set TSL shader (WebGPU compatible)
+   */
+  setTSLShader(tslShader: ZylemTSLShader, opacity?: number) {
+    const material = new MeshBasicNodeMaterial();
+    material.colorNode = tslShader.colorNode;
+    this.applyOpacity(
+      material as OpacityCapableMaterial,
+      opacity,
+      tslShader.transparent,
+    );
+    this.materials.push(material);
+  }
 }
 
 // Re-export TSL utilities for shader authoring
-export {
-	uniform,
-	uv,
-	time,
-	vec3,
-	vec4,
-	float,
-	Fn,
-} from 'three/tsl';
+export { uniform, uv, time, vec3, vec4, float, Fn } from 'three/tsl';

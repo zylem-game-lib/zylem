@@ -9,12 +9,12 @@ import wood from '@zylem/assets/3d/textures/wood-box.jpg';
 // Floor
 export const createFloor = () => {
   return createPlane({
-    tile: new Vector2(50, 50),
+    tile: { x: 50, y: 50 },
     position: { x: 0, y: 0, z: 0 },
     collision: { static: true },
     material: {
       path: steel,
-      repeat: new Vector2(10, 10),
+      repeat: { x: 10, y: 10 },
     },
   });
 };
@@ -32,7 +32,7 @@ export const createWall = (
     collision: { static: true },
     material: {
       path: wood,
-      repeat: new Vector2(size.x / 2, size.y / 2),
+      repeat: { x: size.x / 2, y: size.y / 2 },
     },
   });
 };
@@ -92,7 +92,7 @@ export const createArenaLevel = () => {
 export const createSpawnZone = (position: Vector3, name: string) => {
   return createZone({
     position: { x: position.x, y: position.y, z: position.z },
-    size: new Vector3(3, 3, 3),
+    size: { x: 3, y: 3, z: 3 },
     onEnter: ({ self, visitor, globals }) => {
       console.log(`${visitor.uuid} entered spawn zone: ${name}`);
     },
@@ -112,7 +112,7 @@ export const createPickupZone = (
 ) => {
   return createZone({
     position: { x: position.x, y: position.y, z: position.z },
-    size: new Vector3(2, 2, 2),
+    size: { x: 2, y: 2, z: 2 },
     onEnter: ({ self, visitor, globals }) => {
       console.log(`Pickup: ${type} +${amount}`);
       // Could emit event to add health/ammo to player

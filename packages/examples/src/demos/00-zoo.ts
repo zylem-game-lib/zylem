@@ -11,7 +11,7 @@ export default function createDemo() {
     { backgroundColor: new Color('#2e129f') },
     createCamera({
       position: { x: 0, y: 0, z: 15 },
-      target: new Vector3(0, 0, -15),
+      target: { x: 0, y: 0, z: -15 },
     }),
   );
 

@@ -20,13 +20,13 @@ export default function createDemo() {
 
   // 1. Red Box Batch
   const box1 = createBox({
-    position: new Vector3(-2, 5, 0),
+    position: { x: -2, y: 5, z: 0 },
     material: { color: new Color(0xff0000) },
     batched: true,
   });
 
   const box2 = createBox({
-    position: new Vector3(2, 5, 0),
+    position: { x: 2, y: 5, z: 0 },
     material: { color: new Color(0xff0000) }, // Same color -> Same batch
     batched: true,
   });
@@ -34,13 +34,13 @@ export default function createDemo() {
   // 2. Ground
   const ground = createPlane({
     collision: { static: true },
-    tile: new Vector2(20, 20),
-    position: new Vector3(0, 0, 0),
+    tile: { x: 20, y: 20 },
+    position: { x: 0, y: 0, z: 0 },
     material: { path: grassNormalPath },
   });
 
   const box3 = createBox({
-    position: new Vector3(2, 5, 5),
+    position: { x: 2, y: 5, z: 5 },
     material: { color: new Color(0xff0000) }, // Same color -> Same batch
     batched: true,
   });
@@ -48,8 +48,8 @@ export default function createDemo() {
   const game = createGame(
     { id: 'simple-instancing', debug: true },
     createStage(
-      { gravity: new Vector3(0, -9.81, 0), backgroundImage: skybox },
-      createCamera({ position: new Vector3(0, 5, 20) }),
+      { gravity: { x: 0, y: -9.81, z: 0 }, backgroundImage: skybox },
+      createCamera({ position: { x: 0, y: 5, z: 20 } }),
     ),
     ground,
     box1,

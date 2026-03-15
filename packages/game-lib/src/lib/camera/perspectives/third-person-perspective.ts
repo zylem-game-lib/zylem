@@ -1,5 +1,6 @@
 import { Vector3, Quaternion } from 'three';
 import type { CameraPerspective, CameraContext, CameraPose } from '../types';
+import { Vec3Input, VEC3_ZERO, toThreeVector3 } from '../../core/vector';
 
 /**
  * Configuration for the third-person perspective.
@@ -20,9 +21,9 @@ export interface ThirdPersonOptions {
 	/** Minimum camera distance when multi-framing. Default 5. */
 	minDistance?: number;
 	/** Fallback camera position when no targets exist (e.g. the user-specified initial position). */
-	initialPosition?: Vector3;
+	initialPosition?: Vec3Input;
 	/** Fallback lookAt point when no targets exist. */
-	initialLookAt?: Vector3;
+	initialLookAt?: Vec3Input;
 }
 
 interface ThirdPersonBaseDefaults {
@@ -63,8 +64,12 @@ export class ThirdPersonPerspective implements CameraPerspective {
 	constructor(options?: ThirdPersonOptions) {
 		const { initialPosition, initialLookAt, ...rest } = options ?? {};
 		this.opts = { ...DEFAULTS, ...rest };
-		this.initialPosition = initialPosition;
-		this.initialLookAt = initialLookAt;
+		this.initialPosition = initialPosition
+			? toThreeVector3(initialPosition, VEC3_ZERO)
+			: undefined;
+		this.initialLookAt = initialLookAt
+			? toThreeVector3(initialLookAt, VEC3_ZERO)
+			: undefined;
 	}
 
 	getBasePose(ctx: CameraContext): CameraPose {

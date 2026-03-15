@@ -24,15 +24,15 @@ export default function createDemo() {
   const grassNormal = grassNormalPath;
 
   const testBox = createBox(
-    { position: new Vector3(2, 3, 5), material: { path: rainMan } },
-    createBox({ position: new Vector3(1, 1, 1), material: { path: rainMan } }),
+    { position: { x: 2, y: 3, z: 5 }, material: { path: rainMan } },
+    createBox({ position: { x: 1, y: 1, z: 1 }, material: { path: rainMan } }),
   );
   const testBox1 = createBox({
-    position: new Vector3(0, 5, 5),
+    position: { x: 0, y: 5, z: 5 },
     material: { path: rainMan },
   });
   const testBox2 = createBox({
-    position: new Vector3(4, 5, 5),
+    position: { x: 4, y: 5, z: 5 },
     material: { path: rainMan },
   });
 
@@ -41,12 +41,12 @@ export default function createDemo() {
   for (let i = 0; i < 20; i++) {
     for (let j = 0; j < 5; j++) {
       const nextBox = createBox({
-        size: new Vector3(
-          1 + Math.random() * 1,
-          1 + Math.random() * 1,
-          1 + Math.random() * 1,
-        ),
-        position: new Vector3(i - 10, j + 2, 5),
+        size: {
+          x: 1 + Math.random() * 1,
+          y: 1 + Math.random() * 1,
+          z: 1 + Math.random() * 1,
+        },
+        position: { x: i - 10, y: j + 2, z: 5 },
         material: { shader: starShader },
         custom: {
           superProp: 1,
@@ -55,7 +55,7 @@ export default function createDemo() {
       testBoxes.push(nextBox);
       const nextBox2 = createSphere({
         radius: 0.25 + Math.random() * 0.5,
-        position: new Vector3(i - 10, 10 + j, 3),
+        position: { x: i - 10, y: 10 + j, z: 3 },
         material: { shader: fireShader },
       });
       testBoxes.push(nextBox2);
@@ -66,13 +66,13 @@ export default function createDemo() {
     collision: {
       static: true,
     },
-    tile: new Vector2(400, 400),
-    position: new Vector3(-10, -1, 0),
-    material: { path: grassNormal, repeat: new Vector2(50, 50) },
+    tile: { x: 400, y: 400 },
+    position: { x: -10, y: -1, z: 0 },
+    material: { path: grassNormal, repeat: { x: 50, y: 50 } },
   });
 
   const testSphere = createSphere({
-    position: new Vector3(0, 3, 10),
+    position: { x: 0, y: 3, z: 10 },
     material: {
       shader: starShader,
     },
@@ -105,9 +105,9 @@ export default function createDemo() {
   const example = createGame(
     { id: 'stress-test', debug: true },
     createStage(
-      { gravity: new Vector3(0, -9.81, 0), backgroundImage: skybox },
+      { gravity: { x: 0, y: -9.81, z: 0 }, backgroundImage: skybox },
       createCamera({
-        position: new Vector3(0, 10, 25),
+        position: { x: 0, y: 10, z: 25 },
       }),
     ),
     ...testBoxes,
