@@ -1,0 +1,137 @@
+name: Demo Screenshots
+
+on:
+  push:
+    paths:
+      - 'packages/examples/src/demos/**'
+      - 'packages/examples/src/router-config.ts'
+      - 'packages/examples/src/app-routes.tsx'
+      - 'packages/examples/src/ExampleWorkspace.tsx'
+      - 'packages/examples/src/examples-config.ts'
+      - 'packages/examples/src/components/DemoViewer/**'
+      - 'packages/examples/repo-actions/screenshot.ts'
+      - 'packages/examples/package.json'
+      - 'pnpm-lock.yaml'
+  pull_request:
+    paths:
+      - 'packages/examples/src/demos/**'
+      - 'packages/examples/src/router-config.ts'
+      - 'packages/examples/src/app-routes.tsx'
+      - 'packages/examples/src/ExampleWorkspace.tsx'
+      - 'packages/examples/src/examples-config.ts'
+      - 'packages/examples/src/components/DemoViewer/**'
+      - 'packages/examples/repo-actions/screenshot.ts'
+      - 'packages/examples/package.json'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  capture-demo-screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            packages/examples/src/demos/**
+            packages/examples/src/router-config.ts
+            packages/examples/src/app-routes.tsx
+            packages/examples/src/ExampleWorkspace.tsx
+            packages/examples/src/examples-config.ts
+            packages/examples/src/components/DemoViewer/**
+            packages/examples/repo-actions/screenshot.ts
+            packages/examples/repo-actions/screenshot-local.ts
+            packages/examples/package.json
+            pnpm-lock.yaml
+            packages/examples/screenshots/**
+
+      - name: Resolve screenshot targets
+        id: screenshot-targets
+        env:
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          mode="partial"
+          declare -A changed_demos=()
+          declare -A changed_screenshots=()
+
+          for file in $CHANGED_FILES; do
+            case "$file" in
+              packages/examples/src/demos/*.ts)
+                demo_id="$(basename "$file" .ts)"
+                changed_demos["$demo_id"]=1
+                ;;
+              packages/examples/screenshots/*.png)
+                screenshot_id="$(basename "$file" .png)"
+                changed_screenshots["$screenshot_id"]=1
+                ;;
+              *)
+                mode="all"
+                ;;
+            esac
+          done
+
+          if [ "$mode" = "all" ]; then
+            echo "mode=all" >> "$GITHUB_OUTPUT"
+            echo "targets=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          missing_targets=()
+          for demo_id in "${!changed_demos[@]}"; do
+            if [ -z "${changed_screenshots[$demo_id]+x}" ]; then
+              missing_targets+=("$demo_id")
+            fi
+          done
+
+          if [ "${#missing_targets[@]}" -eq 0 ]; then
+            echo "mode=skip" >> "$GITHUB_OUTPUT"
+            echo "targets=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          sorted_targets="$(printf '%s\n' "${missing_targets[@]}" | sort | xargs)"
+          echo "mode=partial" >> "$GITHUB_OUTPUT"
+          echo "targets=$sorted_targets" >> "$GITHUB_OUTPUT"
+
+      - uses: pnpm/action-setup@v4
+        if: ${{ steps.screenshot-targets.outputs.mode != 'skip' }}
+        with:
+          version: 10.18.3
+
+      - uses: actions/setup-node@v4
+        if: ${{ steps.screenshot-targets.outputs.mode != 'skip' }}
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: ${{ steps.screenshot-targets.outputs.mode != 'skip' }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        if: ${{ steps.screenshot-targets.outputs.mode != 'skip' }}
+        run: pnpm --filter @zylem/examples exec playwright install --with-deps chromium
+
+      - name: Skip screenshot capture
+        if: ${{ steps.screenshot-targets.outputs.mode == 'skip' }}
+        run: echo "All changed demos already include updated screenshots in this commit."
+
+      - name: Capture all demo screenshots
+        if: ${{ steps.screenshot-targets.outputs.mode == 'all' }}
+        run: pnpm --filter @zylem/examples screenshot:local
+
+      - name: Capture missing demo screenshots
+        if: ${{ steps.screenshot-targets.outputs.mode == 'partial' }}
+        run: pnpm --filter @zylem/examples screenshot:local -- ${{ steps.screenshot-targets.outputs.targets }}
+
+      - name: Upload screenshots
+        if: ${{ !cancelled() && steps.screenshot-targets.outputs.mode != 'skip' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-screenshots
+          path: packages/examples/screenshots/
+          retention-days: 14

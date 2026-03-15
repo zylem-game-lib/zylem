@@ -1,7 +1,8 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": ["vite/client", "vite-plugin-glsl/ext"],
+    "allowImportingTsExtensions": true,
+    "types": ["node", "vite/client", "vite-plugin-glsl/ext"],
     "noEmit": true,
     "exactOptionalPropertyTypes": false,
     "baseUrl": ".",
@@ -17,6 +18,6 @@
       "@state/*": ["../game-lib/src/state/*"]
     }
   },
-  "include": ["src", "*.html", "../editor/src", "../zylem-styles/src"],
+  "include": ["src", "repo-actions", "*.html", "../editor/src", "../zylem-styles/src"],
   "references": [{ "path": "../game-lib" }]
 }

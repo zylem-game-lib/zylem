@@ -1,9 +1,9 @@
-import { Component } from 'solid-js';
+import { Component, Show } from 'solid-js';
+import { useLocation } from '@solidjs/router';
+import type { RouteSectionProps } from '@solidjs/router';
 import { ZylemGameElement } from '@zylem/game-lib';
 import { registerZylemEditor } from '@zylem/editor';
-import SidePanel from './components/SidePanel/SidePanel';
-import DemoViewer from './components/DemoViewer/DemoViewer';
-import styles from './App.module.css';
+import { isScreenshotModeSearch } from './screenshot-mode';
 
 if (!customElements.get('zylem-game')) {
   customElements.define('zylem-game', ZylemGameElement);
@@ -18,14 +18,16 @@ declare module 'solid-js' {
   }
 }
 
-const App: Component = () => {
+const App: Component<RouteSectionProps> = (props) => {
+  const location = useLocation();
+  const screenshotMode = () => isScreenshotModeSearch(location.search);
+
   return (
     <>
-      <div class={`bg-zylem-background text-zylem-text font-zylem ${styles.appShell}`}>
-        <SidePanel />
-        <DemoViewer />
-      </div>
-      <zylem-editor class="fixed inset-0 z-[1000] pointer-events-none [&>*]:pointer-events-auto"></zylem-editor>
+      {props.children}
+      <Show when={!screenshotMode()}>
+        <zylem-editor class="fixed inset-0 z-[1000] pointer-events-none [&>*]:pointer-events-auto"></zylem-editor>
+      </Show>
     </>
   );
 };

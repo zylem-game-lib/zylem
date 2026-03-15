@@ -17,6 +17,7 @@
   "scripts": {
     "dev:editor": "pnpm --filter @zylem/editor dev",
     "dev:examples": "pnpm --filter @zylem/examples dev",
+    "dev:examples:screenshot": "node --experimental-strip-types ./packages/examples/repo-actions/screenshot-local.ts",
     "dev:server": "pnpm --filter @zylem/spacetime-server dev",
     "dev:lib": "pnpm --filter @zylem/game-lib dev",
     "build:lib": "pnpm --filter @zylem/game-lib build",
@@ -44,7 +45,7 @@
     "vite-plugin-glsl": "^1.5.4",
     "vite-plugin-solid": "^2.11.8"
   },
-  "packageManager": "pnpm@10.18.3",
+  "packageManager": "pnpm@10.32.1",
   "dependencies": {
     "esbuild": "^0.27.2",
     "mitt": "^3.0.1",
