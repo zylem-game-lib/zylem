@@ -68,6 +68,9 @@ export * from './jumper-2d';
 // Cooldown Module
 export * from './cooldown';
 
+// Destructible 3D Module
+export * from './destructible-3d';
+
 // Coordinators
 export * from '../coordinators/boundary-ricochet.coordinator';
 export * from '../coordinators/boundary-ricochet-3d.coordinator';

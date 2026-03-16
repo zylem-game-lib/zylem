@@ -1,6 +1,7 @@
 import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
+import { normalizeVec3, type Vec3Input } from '../../core/vector';
 import {
 	angleFromDirection2D,
 	directionFromAngle2D,
@@ -52,7 +53,7 @@ export interface Shooter2DSourceEntity {
 		rotation?: () => { x: number; y: number; z: number; w: number };
 	} | null;
 	options?: {
-		position?: { x: number; y: number; z?: number };
+		position?: Vec3Input;
 	};
 	topDownMovementState?: {
 		facingAngle: number;
@@ -103,11 +104,7 @@ function getEntityPosition(
 		return null;
 	}
 
-	return {
-		x: position.x,
-		y: position.y,
-		z: position.z ?? 0,
-	};
+	return normalizeVec3(position);
 }
 
 function getEntityFacingAngle(entity: Shooter2DSourceEntity): number {

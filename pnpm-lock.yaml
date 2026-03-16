@@ -12,6 +12,9 @@ importers:
 
   .:
     dependencies:
+      '@dgreenheck/three-pinata':
+        specifier: ^2.0.1
+        version: 2.0.1(three@0.180.0)
       esbuild:
         specifier: ^0.27.2
         version: 0.27.2
@@ -153,6 +156,9 @@ importers:
 
   packages/game-lib:
     dependencies:
+      '@dgreenheck/three-pinata':
+        specifier: ^2.0.1
+        version: 2.0.1(three@0.180.0)
       '@dimforge/rapier3d-compat':
         specifier: ^0.11.2
         version: 0.11.2
@@ -501,6 +507,11 @@ packages:
   '@csstools/css-tokenizer@3.0.4':
     resolution: {integrity: sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==}
     engines: {node: '>=18'}
+
+  '@dgreenheck/three-pinata@2.0.1':
+    resolution: {integrity: sha512-1pQU68B5xguxvRryl6nxZBARDqOW+/lXf7Xpz8QZ87awadSpN85mDNChTEdA4fPfJYyrft+thHS6Ooe7E5rdFA==}
+    peerDependencies:
+      three: '>=0.158.0'
 
   '@dimforge/rapier3d-compat@0.11.2':
     resolution: {integrity: sha512-vdWmlkpS3G8nGAzLuK7GYTpNdrkn/0NKCe0l1Jqxc7ZZOB3N0q9uG/Ap9l9bothWuAvxscIt0U97GVLr0lXWLg==}
@@ -2463,6 +2474,10 @@ snapshots:
   '@csstools/css-syntax-patches-for-csstree@1.0.16': {}
 
   '@csstools/css-tokenizer@3.0.4': {}
+
+  '@dgreenheck/three-pinata@2.0.1(three@0.180.0)':
+    dependencies:
+      three: 0.180.0
 
   '@dimforge/rapier3d-compat@0.11.2': {}
 

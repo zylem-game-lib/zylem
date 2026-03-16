@@ -36,6 +36,7 @@ export type ColliderShapeKind =
 	| 'capsule'
 	| 'cone'
 	| 'cylinder'
+	| 'convexHull'
 	| 'trimesh'
 	| 'heightfield';
 

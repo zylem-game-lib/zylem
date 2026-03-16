@@ -118,6 +118,17 @@ export {
 	registerCooldown, getCooldown, fireCooldown, resetCooldown,
 	type CooldownEntry, type CooldownHandle, type CooldownOptions,
 } from '../lib/behaviors/cooldown';
+export {
+	Destructible3DBehavior,
+	type Destructible3DBehaviorOptions,
+	type Destructible3DColliderOptions,
+	type Destructible3DFragmentColliderShape,
+	type Destructible3DHandle,
+	type FractureOptionsInput,
+	DestructibleMesh,
+	FractureOptions,
+	type VoronoiOptions,
+} from '../lib/behaviors/destructible-3d';
 export { createCooldownIcon, type IconSize, type IconSizePreset, type ScreenAnchor } from '../lib/entities/cooldown-icon';
 
 // Destruction utilities

@@ -332,6 +332,15 @@ export function reconstructColliderDesc(desc: SerializableColliderDesc): Collide
 		case 'cylinder':
 			colliderDesc = ColliderDesc.cylinder(d[0], d[1]);
 			break;
+		case 'convexHull':
+			colliderDesc = ColliderDesc.convexHull(
+				new Float32Array(desc.vertices ?? []),
+			) ?? ColliderDesc.cuboid(0.5, 0.5, 0.5);
+			(colliderDesc as any).__zylemShapeData = {
+				shape: 'convexHull',
+				vertices: [...(desc.vertices ?? [])],
+			};
+			break;
 		case 'trimesh':
 			colliderDesc = ColliderDesc.trimesh(
 				new Float32Array(desc.vertices ?? []),

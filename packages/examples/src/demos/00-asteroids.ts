@@ -10,6 +10,7 @@ import {
   Perspectives,
   ScreenWrapBehavior,
   Shooter2DBehavior,
+  type Shooter2DSourceEntity,
   setGlobal,
   TEXT_TYPE,
   ThrusterBehavior,
@@ -207,7 +208,7 @@ export default function createDemo() {
     const facingAngle = getRotationAngle2D(sourceRotation);
     const forward = getForwardDirection(facingAngle);
     void playerShooter.fire({
-      source: me,
+      source: me as Shooter2DSourceEntity,
       stage,
       target: {
         x: sourcePosition.x + forward.x,
