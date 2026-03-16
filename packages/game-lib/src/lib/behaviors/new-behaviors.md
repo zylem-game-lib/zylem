@@ -31,6 +31,7 @@ the consumer needs to observe. `screen-visibility` and `ricochet-*` use FSMs.
 ### Composable primitives and utilities
 
 - `cooldown`
+- `destructible-3d`
 - `jumper-2d`
 - `jumper-3d`
 - `ricochet-2d`
@@ -67,6 +68,7 @@ behaviors/
     bounds-2d.ts
     ground-probe-3d.ts
   cooldown/
+  destructible-3d/
   first-person/
   jumper-2d/
   jumper-3d/
@@ -136,6 +138,7 @@ Each behavior folder should also include a `README.md` covering:
 ## Public behavior modules
 
 - [cooldown](./cooldown/README.md)
+- [destructible-3d](./destructible-3d/README.md)
 - [first-person](./first-person/README.md)
 - [jumper-2d](./jumper-2d/README.md)
 - [jumper-3d](./jumper-3d/README.md)

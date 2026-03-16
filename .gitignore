@@ -29,6 +29,7 @@ dist-ssr
 !.vscode/extensions.json
 .idea
 .DS_Store
+.codex
 
 # Playwright
 /test-results/

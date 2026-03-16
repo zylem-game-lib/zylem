@@ -43,8 +43,39 @@ export function serializeBodyDesc(desc: RigidBodyDesc): SerializableBodyDesc {
 export function serializeColliderDesc(desc: ColliderDesc): SerializableColliderDesc {
 	const internal = desc as any;
 	const customShapeData = internal.__zylemShapeData as
+		| { shape: 'convexHull'; vertices: number[] }
 		| { shape: 'trimesh'; vertices: number[]; indices: number[] }
 		| undefined;
+	if (customShapeData?.shape === 'convexHull') {
+		const result: SerializableColliderDesc = {
+			shape: 'convexHull',
+			dimensions: [],
+			vertices: [...customShapeData.vertices],
+		};
+
+		const translation = internal.translation;
+		if (
+			translation
+			&& (translation.x !== 0 || translation.y !== 0 || translation.z !== 0)
+		) {
+			result.translation = [translation.x, translation.y, translation.z];
+		}
+
+		if (internal.isSensor) {
+			result.sensor = true;
+		}
+
+		if (internal.collisionGroups !== undefined && internal.collisionGroups !== 0xFFFFFFFF) {
+			result.collisionGroups = internal.collisionGroups;
+		}
+
+		if (internal.activeCollisionTypes !== undefined) {
+			result.activeCollisionTypes = internal.activeCollisionTypes;
+		}
+
+		return result;
+	}
+
 	if (customShapeData?.shape === 'trimesh') {
 		const result: SerializableColliderDesc = {
 			shape: 'trimesh',

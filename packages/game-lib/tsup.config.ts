@@ -24,6 +24,7 @@ export default defineConfig({
 		'behavior/world-boundary-3d': 'src/api/behavior/world-boundary-3d.ts',
 		'behavior/ricochet-2d': 'src/api/behavior/ricochet-2d.ts',
 		'behavior/ricochet-3d': 'src/api/behavior/ricochet-3d.ts',
+		'behavior/destructible-3d': 'src/api/behavior/destructible-3d.ts',
 		'behavior/jumper-2d': 'src/api/behavior/jumper-2d.ts',
 		'behavior/platformer-3d': 'src/api/behavior/platformer-3d.ts',
 	},

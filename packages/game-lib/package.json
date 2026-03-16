@@ -78,6 +78,10 @@
       "types": "./dist/behavior/ricochet-3d.d.ts",
       "import": "./dist/behavior/ricochet-3d.js"
     },
+    "./behavior/destructible-3d": {
+      "types": "./dist/behavior/destructible-3d.d.ts",
+      "import": "./dist/behavior/destructible-3d.js"
+    },
     "./behavior/jumper-2d": {
       "types": "./dist/behavior/jumper-2d.d.ts",
       "import": "./dist/behavior/jumper-2d.js"
@@ -114,6 +118,7 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@dgreenheck/three-pinata": "^2.0.1",
     "@dimforge/rapier3d-compat": "^0.11.2",
     "@sinclair/typebox": "^0.34.41",
     "@types/howler": "^2.2.12",

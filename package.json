@@ -47,6 +47,7 @@
   },
   "packageManager": "pnpm@10.32.1",
   "dependencies": {
+    "@dgreenheck/three-pinata": "^2.0.1",
     "esbuild": "^0.27.2",
     "mitt": "^3.0.1",
     "multithreading": "^0.3.45"

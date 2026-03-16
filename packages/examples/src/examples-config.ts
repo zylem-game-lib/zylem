@@ -62,6 +62,7 @@ const PREDEFINED_ORDER = {
 		'06-entity-test',
 		'07-actions-test',
 		'08-jumbotron-test',
+		'09-destructible-behavior',
 		'15-zylem-planet-demo',
 		'16-zylem-planet-demo-webGPU',
 		'17-simple-instancing',

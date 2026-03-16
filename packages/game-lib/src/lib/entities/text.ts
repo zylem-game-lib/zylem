@@ -185,6 +185,8 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
 
     if (this.options.stickToViewport && this._cameraRef) {
       this.updateStickyTransform();
+    } else {
+      this.updateWorldSpriteScale();
     }
   }
 
@@ -252,6 +254,15 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
     const pixelH = this._canvas.height;
     const scaleY = Math.max(0.0001, pixelH * unitsPerPixel);
     const aspect = this._canvas.width / this._canvas.height;
+    const scaleX = scaleY * aspect;
+    this._sprite.scale.set(scaleX, scaleY, 1);
+  }
+
+  private updateWorldSpriteScale() {
+    if (!this._canvas || !this._sprite) return;
+    const aspect = this._canvas.width / Math.max(1, this._canvas.height);
+    const fontSize = Math.max(1, this.options.fontSize ?? 18);
+    const scaleY = Math.max(0.25, fontSize / 32);
     const scaleX = scaleY * aspect;
     this._sprite.scale.set(scaleX, scaleY, 1);
   }
