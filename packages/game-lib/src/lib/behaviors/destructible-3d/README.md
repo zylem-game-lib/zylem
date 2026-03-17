@@ -8,9 +8,8 @@
 - swaps the entity's collider set to per-fragment colliders
 - restores the original mesh and colliders with `repair()`
 
-This behavior currently keeps all fragments on the same Zylem entity and rigid
-body. That means the fractured pieces behave like a compound body, not
-independent fragment entities.
+This behavior defaults to compound fragment physics for compatibility, but it
+can also spawn independent runtime fragment bodies.
 
 ## Usage
 
@@ -33,6 +32,10 @@ const destructible = crate.use(Destructible3DBehavior, {
 			mode: '3D',
 		},
 	}),
+	fragmentPhysics: {
+		mode: 'independent',
+		outwardVelocity: 4,
+	},
 });
 
 crate.onCollision(() => {
@@ -45,6 +48,7 @@ crate.onCollision(() => {
 - `fractureOptions`: default `three-pinata` fracture settings
 - `innerMaterial`: optional material for interior faces
 - `collider`: fragment collider settings
+- `fragmentPhysics`: fragment runtime behavior (`compound` by default)
 
 ## Handle Methods
 
@@ -57,5 +61,9 @@ crate.onCollision(() => {
 
 - The source mesh should be manifold/watertight for reliable results.
 - Instanced entities are not supported.
+- `fragmentPhysics.mode: 'compound'` keeps fragments on the source entity as a
+  compound body.
+- `fragmentPhysics.mode: 'independent'` spawns one dynamic body per fragment
+  and restores the source entity on `repair()`.
 - Fragment colliders default to convex hulls, with cuboid fallback if hull
   generation fails.

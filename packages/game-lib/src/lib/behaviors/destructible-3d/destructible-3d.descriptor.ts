@@ -2,6 +2,7 @@ import type { IWorld } from 'bitecs';
 import {
 	ActiveCollisionTypes,
 	ColliderDesc,
+	RigidBodyDesc,
 } from '@dimforge/rapier3d-compat';
 import {
 	DestructibleMesh,
@@ -12,6 +13,7 @@ import {
 	BufferAttribute,
 	Group,
 	Matrix4,
+	Quaternion,
 	Vector2,
 	Vector3,
 	type Material,
@@ -21,7 +23,9 @@ import {
 
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
-import type { GameEntity } from '../../entities/entity';
+import { create, type GameEntity } from '../../entities/entity';
+import { getGlobals } from '../../game/game-state';
+import { getBodyRenderPose } from '../../physics/physics-pose';
 
 export type FractureOptionsInput =
 	NonNullable<ConstructorParameters<typeof PinataFractureOptions>[0]>;
@@ -38,10 +42,18 @@ export interface Destructible3DColliderOptions {
 	activeCollisionTypes?: number;
 }
 
+export interface Destructible3DFragmentPhysicsOptions {
+	mode?: 'compound' | 'independent';
+	inheritSourceVelocity?: boolean;
+	outwardVelocity?: number;
+	angularVelocity?: number;
+}
+
 export interface Destructible3DBehaviorOptions {
 	fractureOptions?: FractureOptionsInput | PinataFractureOptions;
 	innerMaterial?: Material | null;
 	collider?: Destructible3DColliderOptions;
+	fragmentPhysics?: Destructible3DFragmentPhysicsOptions;
 }
 
 export interface Destructible3DHandle {
@@ -55,12 +67,18 @@ export interface Destructible3DHandle {
 
 interface RuntimeState {
 	fragmentContainer: Group | null;
+	fragmentEntities: GameEntity<any>[];
 	fragments: DestructibleMesh[];
 	createdRootGroup: boolean;
+	fractureMode: 'compound' | 'independent' | null;
 	isFractured: boolean;
 	originalMeshParent: Object3D | null;
 	originalColliderDesc: ColliderDesc | undefined;
 	originalColliderDescs: ColliderDesc[];
+	originalMeshVisible: boolean;
+	originalGroupVisible: boolean;
+	sourceBodySnapshot: PhysicsSnapshot | null;
+	sourcePhysicsAttached: boolean;
 }
 
 interface PhysicsSnapshot {
@@ -69,6 +87,19 @@ interface PhysicsSnapshot {
 	linearVelocity: { x: number; y: number; z: number };
 	angularVelocity: { x: number; y: number; z: number };
 }
+
+type BehaviorWorld = {
+	interpolationAlpha?: number;
+	destroyEntity(entity: GameEntity<any>): void;
+	addEntity(entity: GameEntity<any>): void;
+};
+
+type BehaviorScene = {
+	scene: {
+		add(object: Object3D): void;
+		remove(object: Object3D): void;
+	};
+};
 
 const DESTRUCTIBLE_3D_BEHAVIOR_KEY = Symbol.for(
 	'zylem:behavior:destructible-3d',
@@ -89,6 +120,13 @@ const DEFAULT_FRACTURE_OPTIONS: FractureOptionsInput = {
 	textureOffset: new Vector2(0, 0),
 };
 
+const DEFAULT_FRAGMENT_PHYSICS: Required<Destructible3DFragmentPhysicsOptions> = {
+	mode: 'compound',
+	inheritSourceVelocity: true,
+	outwardVelocity: 3,
+	angularVelocity: 1.5,
+};
+
 const defaultOptions: Destructible3DBehaviorOptions = {
 	fractureOptions: DEFAULT_FRACTURE_OPTIONS,
 	innerMaterial: null,
@@ -97,6 +135,7 @@ const defaultOptions: Destructible3DBehaviorOptions = {
 		sensor: false,
 		activeCollisionTypes: ActiveCollisionTypes.DEFAULT,
 	},
+	fragmentPhysics: DEFAULT_FRAGMENT_PHYSICS,
 };
 
 const runtimeStates = new WeakMap<
@@ -114,12 +153,18 @@ function getRuntimeState(
 
 	const state: RuntimeState = {
 		fragmentContainer: null,
+		fragmentEntities: [],
 		fragments: [],
 		createdRootGroup: false,
+		fractureMode: null,
 		isFractured: false,
 		originalMeshParent: null,
 		originalColliderDesc: undefined,
 		originalColliderDescs: [],
+		originalMeshVisible: true,
+		originalGroupVisible: true,
+		sourceBodySnapshot: null,
+		sourcePhysicsAttached: false,
 	};
 	runtimeStates.set(ref, state);
 	return state;
@@ -140,14 +185,14 @@ function requireEntity(
 
 function getBehaviorWorld(
 	ref: BehaviorRef<Destructible3DBehaviorOptions>,
-): {
-	destroyEntity(entity: GameEntity<any>): void;
-	addEntity(entity: GameEntity<any>): void;
-} | null {
-	return ((ref as any).__world ?? null) as {
-		destroyEntity(entity: GameEntity<any>): void;
-		addEntity(entity: GameEntity<any>): void;
-	} | null;
+): BehaviorWorld | null {
+	return ((ref as any).__world ?? null) as BehaviorWorld | null;
+}
+
+function getBehaviorScene(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+): BehaviorScene | null {
+	return ((ref as any).__scene ?? null) as BehaviorScene | null;
 }
 
 function cloneFractureOptionsInput(
@@ -302,6 +347,23 @@ function resolveColliderOptions(
 	};
 }
 
+function resolveFragmentPhysicsOptions(
+	input?: Destructible3DFragmentPhysicsOptions,
+): Required<Destructible3DFragmentPhysicsOptions> {
+	return {
+		mode: input?.mode ?? DEFAULT_FRAGMENT_PHYSICS.mode,
+		inheritSourceVelocity:
+			input?.inheritSourceVelocity
+			?? DEFAULT_FRAGMENT_PHYSICS.inheritSourceVelocity,
+		outwardVelocity:
+			input?.outwardVelocity
+			?? DEFAULT_FRAGMENT_PHYSICS.outwardVelocity,
+		angularVelocity:
+			input?.angularVelocity
+			?? DEFAULT_FRAGMENT_PHYSICS.angularVelocity,
+	};
+}
+
 function getPrimaryMaterial(mesh: Mesh): Material {
 	if (Array.isArray(mesh.material)) {
 		const material = mesh.material[0];
@@ -445,6 +507,7 @@ function createCuboidCollider(fragment: DestructibleMesh): ColliderDesc {
 function createFragmentColliderDesc(
 	fragment: DestructibleMesh,
 	options: Destructible3DColliderOptions | undefined,
+	translation?: Vector3 | null,
 ): ColliderDesc {
 	const resolved = resolveColliderOptions(options);
 	const vertices = getFragmentVertices(fragment);
@@ -471,11 +534,13 @@ function createFragmentColliderDesc(
 		colliderDesc = createCuboidCollider(fragment);
 	}
 
-	colliderDesc.setTranslation(
-		fragment.position.x,
-		fragment.position.y,
-		fragment.position.z,
-	);
+	if (translation) {
+		colliderDesc.setTranslation(
+			translation.x,
+			translation.y,
+			translation.z,
+		);
+	}
 	colliderDesc.setSensor(resolved.sensor);
 	if (resolved.collisionGroups !== undefined) {
 		colliderDesc.setCollisionGroups(resolved.collisionGroups);
@@ -489,11 +554,16 @@ function snapshotBody(entity: GameEntity<any>): PhysicsSnapshot | null {
 		return null;
 	}
 
+	const translation = entity.body.translation();
+	const rotation = entity.body.rotation();
+	const linearVelocity = entity.body.linvel();
+	const angularVelocity = entity.body.angvel();
+
 	return {
-		translation: entity.body.translation(),
-		rotation: entity.body.rotation(),
-		linearVelocity: entity.body.linvel(),
-		angularVelocity: entity.body.angvel(),
+		translation: { ...translation },
+		rotation: { ...rotation },
+		linearVelocity: { ...linearVelocity },
+		angularVelocity: { ...angularVelocity },
 	};
 }
 
@@ -511,7 +581,25 @@ function restoreBodySnapshot(
 	entity.body.setAngvel(snapshot.angularVelocity, true);
 }
 
-function refreshEntityPhysics(
+function attachEntityPhysics(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+	entity: GameEntity<any>,
+	snapshot: PhysicsSnapshot | null,
+): void {
+	const world = getBehaviorWorld(ref);
+	if (!world || !entity.colliderDesc) {
+		return;
+	}
+
+	if (entity.physicsAttached) {
+		world.destroyEntity(entity);
+	}
+
+	world.addEntity(entity);
+	restoreBodySnapshot(entity, snapshot);
+}
+
+function detachEntityPhysics(
 	ref: BehaviorRef<Destructible3DBehaviorOptions>,
 	entity: GameEntity<any>,
 ): void {
@@ -520,10 +608,7 @@ function refreshEntityPhysics(
 		return;
 	}
 
-	const snapshot = snapshotBody(entity);
 	world.destroyEntity(entity);
-	world.addEntity(entity);
-	restoreBodySnapshot(entity, snapshot);
 }
 
 function disposeFragments(fragments: readonly DestructibleMesh[]): void {
@@ -531,6 +616,255 @@ function disposeFragments(fragments: readonly DestructibleMesh[]): void {
 		fragment.removeFromParent();
 		fragment.geometry.dispose();
 	}
+}
+
+function syncRuntimeFragmentEntityTransform(
+	entity: GameEntity<any>,
+	interpolationAlpha: number,
+): void {
+	const target = entity.group ?? entity.mesh;
+	if (!target || !entity.body) {
+		return;
+	}
+
+	const pose = getBodyRenderPose(entity.body as any, interpolationAlpha);
+	target.position.set(
+		pose.position.x,
+		pose.position.y,
+		pose.position.z,
+	);
+	target.quaternion.set(
+		pose.rotation.x,
+		pose.rotation.y,
+		pose.rotation.z,
+		pose.rotation.w,
+	);
+}
+
+function bakeScaleIntoFragmentGeometry(
+	fragment: DestructibleMesh,
+	scale: Vector3,
+): void {
+	if (
+		Math.abs(scale.x - 1) < 1e-6
+		&& Math.abs(scale.y - 1) < 1e-6
+		&& Math.abs(scale.z - 1) < 1e-6
+	) {
+		return;
+	}
+
+	fragment.geometry.applyMatrix4(
+		new Matrix4().makeScale(scale.x, scale.y, scale.z),
+	);
+	fragment.geometry.computeBoundingBox();
+	fragment.geometry.computeBoundingSphere();
+}
+
+function getRootWorldPosition(root: Group): Vector3 {
+	root.updateMatrixWorld(true);
+	return root.getWorldPosition(new Vector3());
+}
+
+function getImpactPointWorld(
+	root: Group,
+	fractureOptions: PinataFractureOptions,
+): Vector3 | null {
+	const localImpactPoint = fractureOptions.voronoiOptions?.impactPoint;
+	if (!localImpactPoint) {
+		return null;
+	}
+
+	root.updateMatrixWorld(true);
+	return localImpactPoint.clone().applyMatrix4(root.matrixWorld);
+}
+
+function computeFragmentWorldPose(
+	root: Group,
+	fragment: DestructibleMesh,
+): {
+	position: Vector3;
+	rotation: Quaternion;
+	scale: Vector3;
+} {
+	root.updateMatrixWorld(true);
+	fragment.updateMatrix();
+
+	const worldMatrix = new Matrix4()
+		.copy(root.matrixWorld)
+		.multiply(fragment.matrix);
+	const position = new Vector3();
+	const rotation = new Quaternion();
+	const scale = new Vector3();
+
+	worldMatrix.decompose(position, rotation, scale);
+	return {
+		position,
+		rotation,
+		scale,
+	};
+}
+
+function pseudoRandomSigned(index: number, salt: number): number {
+	const value = Math.sin((index + 1) * 12.9898 + salt * 78.233) * 43758.5453;
+	return (value - Math.floor(value)) * 2 - 1;
+}
+
+function computeFragmentAngularVelocity(
+	index: number,
+	magnitude: number,
+): { x: number; y: number; z: number } {
+	if (magnitude <= 0) {
+		return { x: 0, y: 0, z: 0 };
+	}
+
+	const axis = new Vector3(
+		pseudoRandomSigned(index, 0.13),
+		pseudoRandomSigned(index, 0.47),
+		pseudoRandomSigned(index, 0.91),
+	);
+	if (axis.lengthSq() <= 1e-6) {
+		axis.set(0.35, 1, 0.2);
+	}
+	axis.normalize().multiplyScalar(magnitude);
+	return {
+		x: axis.x,
+		y: axis.y,
+		z: axis.z,
+	};
+}
+
+function computeFragmentLinearVelocity(
+	fragmentWorldPosition: Vector3,
+	rootWorldPosition: Vector3,
+	impactPointWorld: Vector3 | null,
+	physicsOptions: Required<Destructible3DFragmentPhysicsOptions>,
+	sourceVelocity: { x: number; y: number; z: number } | null,
+): { x: number; y: number; z: number } {
+	const velocity = new Vector3();
+
+	if (physicsOptions.inheritSourceVelocity && sourceVelocity) {
+		velocity.set(
+			sourceVelocity.x,
+			sourceVelocity.y,
+			sourceVelocity.z,
+		);
+	}
+
+	if (physicsOptions.outwardVelocity <= 0) {
+		return {
+			x: velocity.x,
+			y: velocity.y,
+			z: velocity.z,
+		};
+	}
+
+	const direction = fragmentWorldPosition.clone().sub(
+		impactPointWorld ?? rootWorldPosition,
+	);
+	if (direction.lengthSq() <= 1e-6) {
+		direction.copy(fragmentWorldPosition).sub(rootWorldPosition);
+	}
+	if (direction.lengthSq() <= 1e-6) {
+		direction.set(0, 1, 0);
+	}
+	direction.normalize().multiplyScalar(physicsOptions.outwardVelocity);
+	velocity.add(direction);
+
+	return {
+		x: velocity.x,
+		y: velocity.y,
+		z: velocity.z,
+	};
+}
+
+function createRuntimeFragmentEntity(
+	parentEntity: GameEntity<any>,
+	fragment: DestructibleMesh,
+	index: number,
+	colliderOptions: Destructible3DColliderOptions | undefined,
+	position: Vector3,
+	rotation: Quaternion,
+): GameEntity<any> {
+	const entity = create({
+		name: `${parentEntity.name ?? parentEntity.uuid}-fragment-${index}`,
+	});
+
+	entity.onCleanup(() => {
+		fragment.removeFromParent();
+		fragment.geometry.dispose();
+	});
+	entity.create();
+
+	entity.mesh = fragment;
+	if (Array.isArray(fragment.material)) {
+		entity.materials = [...fragment.material];
+	} else if (fragment.material) {
+		entity.materials = [fragment.material];
+	}
+
+	entity.colliderDesc = createFragmentColliderDesc(fragment, colliderOptions);
+	entity.colliderDescs = [entity.colliderDesc];
+	entity.bodyDesc = RigidBodyDesc.dynamic()
+		.setTranslation(position.x, position.y, position.z)
+		.setCanSleep(false)
+		.setCcdEnabled(true);
+
+	fragment.position.set(0, 0, 0);
+	fragment.quaternion.identity();
+	fragment.scale.set(1, 1, 1);
+	entity.bodyDesc.setRotation({
+		x: rotation.x,
+		y: rotation.y,
+		z: rotation.z,
+		w: rotation.w,
+	});
+
+	return entity;
+}
+
+function destroyRuntimeFragmentEntities(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+	state: RuntimeState,
+): void {
+	const world = getBehaviorWorld(ref);
+	const scene = getBehaviorScene(ref);
+	const handledFragments = new Set<DestructibleMesh>();
+
+	for (const fragmentEntity of state.fragmentEntities) {
+		const fragmentMesh = fragmentEntity.mesh as DestructibleMesh | undefined;
+		if (fragmentMesh) {
+			handledFragments.add(fragmentMesh);
+		}
+
+		try {
+			fragmentEntity.nodeDestroy({
+				me: fragmentEntity,
+				globals: getGlobals(),
+			} as any);
+		} catch {
+			// Cleanup is best-effort for behavior-managed runtime fragments.
+		}
+
+		if (world && fragmentEntity.physicsAttached) {
+			world.destroyEntity(fragmentEntity);
+		}
+
+		const target = fragmentEntity.group ?? fragmentEntity.mesh;
+		if (target) {
+			target.removeFromParent();
+			scene?.scene.remove(target);
+		}
+	}
+
+	for (const fragment of state.fragments) {
+		if (handledFragments.has(fragment)) {
+			continue;
+		}
+		fragment.removeFromParent();
+		fragment.geometry.dispose();
+	}
+
+	state.fragmentEntities = [];
 }
 
 function restoreOriginalMesh(
@@ -574,13 +908,25 @@ function restoreRuntimeState(
 	}
 
 	const entity = requireEntity(ref);
-	state.fragmentContainer?.removeFromParent();
-	state.fragmentContainer?.clear();
+
+	if (state.fractureMode === 'independent') {
+		destroyRuntimeFragmentEntities(ref, state);
+	} else {
+		state.fragmentContainer?.removeFromParent();
+		state.fragmentContainer?.clear();
+		disposeFragments(state.fragments);
+	}
+
 	state.fragmentContainer = null;
-	disposeFragments(state.fragments);
 	state.fragments = [];
 
 	restoreOriginalMesh(entity, state);
+	if (entity.mesh) {
+		entity.mesh.visible = state.originalMeshVisible;
+	}
+	if (entity.group) {
+		entity.group.visible = state.originalGroupVisible;
+	}
 
 	entity.colliderDesc = state.originalColliderDesc;
 	entity.colliderDescs = [...state.originalColliderDescs];
@@ -588,15 +934,132 @@ function restoreRuntimeState(
 		entity.colliderDesc = entity.colliderDescs[0];
 	}
 
+	if (refreshPhysics && state.sourcePhysicsAttached) {
+		attachEntityPhysics(ref, entity, state.sourceBodySnapshot);
+	}
+
 	state.createdRootGroup = false;
+	state.fractureMode = null;
 	state.originalMeshParent = null;
 	state.originalColliderDesc = undefined;
 	state.originalColliderDescs = [];
+	state.originalMeshVisible = true;
+	state.originalGroupVisible = true;
+	state.sourceBodySnapshot = null;
+	state.sourcePhysicsAttached = false;
 	state.isFractured = false;
+}
 
-	if (refreshPhysics) {
-		refreshEntityPhysics(ref, entity);
+function fractureCompoundEntity(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+	entity: GameEntity<any>,
+	root: Group,
+	fragments: readonly DestructibleMesh[],
+	state: RuntimeState,
+): void {
+	const fragmentContainer = new Group();
+	fragmentContainer.name = `${entity.name ?? entity.uuid}-fracture-fragments`;
+	for (const fragment of fragments) {
+		fragmentContainer.add(fragment);
 	}
+
+	entity.mesh?.removeFromParent();
+	root.add(fragmentContainer);
+
+	state.fragmentContainer = fragmentContainer;
+	state.fractureMode = 'compound';
+
+	const colliderDescs = fragments.map((fragment) =>
+		createFragmentColliderDesc(
+			fragment,
+			ref.options.collider,
+			fragment.position,
+		));
+	if (colliderDescs.length > 0) {
+		entity.colliderDescs = colliderDescs;
+		entity.colliderDesc = colliderDescs[0];
+		if (state.sourcePhysicsAttached) {
+			attachEntityPhysics(ref, entity, state.sourceBodySnapshot);
+		}
+	}
+}
+
+function fractureIndependentEntity(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+	entity: GameEntity<any>,
+	root: Group,
+	fractureOptions: PinataFractureOptions,
+	fragments: readonly DestructibleMesh[],
+	state: RuntimeState,
+): void {
+	const world = getBehaviorWorld(ref);
+	const scene = getBehaviorScene(ref);
+	if (!world || !scene) {
+		throw new Error(
+			'Destructible3DBehavior independent fragments require an active scene and physics world.',
+		);
+	}
+
+	const physicsOptions = resolveFragmentPhysicsOptions(ref.options.fragmentPhysics);
+	const rootWorldPosition = getRootWorldPosition(root);
+	const impactPointWorld = getImpactPointWorld(root, fractureOptions);
+	const sourceVelocity = state.sourceBodySnapshot?.linearVelocity ?? null;
+
+	if (entity.mesh) {
+		entity.mesh.visible = false;
+	}
+	if (state.sourcePhysicsAttached) {
+		detachEntityPhysics(ref, entity);
+	}
+
+	const fragmentEntities: GameEntity<any>[] = [];
+
+	for (const [index, fragment] of fragments.entries()) {
+		const fragmentWorldPose = computeFragmentWorldPose(root, fragment);
+		bakeScaleIntoFragmentGeometry(fragment, fragmentWorldPose.scale);
+
+		const fragmentEntity = createRuntimeFragmentEntity(
+			entity,
+			fragment,
+			index,
+			ref.options.collider,
+			fragmentWorldPose.position,
+			fragmentWorldPose.rotation,
+		);
+
+		world.addEntity(fragmentEntity);
+		const linearVelocity = computeFragmentLinearVelocity(
+			fragmentWorldPose.position,
+			rootWorldPosition,
+			impactPointWorld,
+			physicsOptions,
+			sourceVelocity,
+		);
+		fragmentEntity.body?.setLinvel(linearVelocity, true);
+		fragmentEntity.body?.setAngvel(
+			computeFragmentAngularVelocity(
+				index,
+				physicsOptions.angularVelocity,
+			),
+			true,
+		);
+
+		syncRuntimeFragmentEntityTransform(
+			fragmentEntity,
+			world.interpolationAlpha ?? 0,
+		);
+
+		const target = fragmentEntity.group ?? fragmentEntity.mesh;
+		if (target) {
+			target.removeFromParent();
+			scene.scene.add(target);
+		}
+
+		fragmentEntities.push(fragmentEntity);
+	}
+
+	state.fragmentEntities = fragmentEntities;
+	state.fractureMode = 'independent';
 }
 
 function fractureEntity(
@@ -616,11 +1079,11 @@ function fractureEntity(
 		);
 	}
 
-	if (getRuntimeState(ref).isFractured) {
-		restoreRuntimeState(ref, false);
+	const state = getRuntimeState(ref);
+	if (state.isFractured) {
+		restoreRuntimeState(ref, true);
 	}
 
-	const state = getRuntimeState(ref);
 	const root = ensureRootGroup(entity, state);
 	state.originalMeshParent = entity.mesh.parent;
 	state.originalColliderDesc = entity.colliderDesc;
@@ -629,6 +1092,10 @@ function fractureEntity(
 		: entity.colliderDesc
 			? [entity.colliderDesc]
 			: [];
+	state.originalMeshVisible = entity.mesh.visible;
+	state.originalGroupVisible = entity.group?.visible ?? true;
+	state.sourceBodySnapshot = snapshotBody(entity);
+	state.sourcePhysicsAttached = entity.physicsAttached;
 
 	const source = createFractureSourceMesh(
 		entity.mesh,
@@ -641,31 +1108,36 @@ function fractureEntity(
 			ref.options.fractureOptions,
 			overrideOptions,
 		);
+		const fragmentPhysics = resolveFragmentPhysicsOptions(
+			ref.options.fragmentPhysics,
+		);
 		const fragments = source.fracture(fractureOptions);
-		const fragmentContainer = new Group();
-		fragmentContainer.name = `${entity.name ?? entity.uuid}-fracture-fragments`;
-		for (const fragment of fragments) {
-			fragmentContainer.add(fragment);
-		}
 
-		entity.mesh.removeFromParent();
-		root.add(fragmentContainer);
-
-		state.fragmentContainer = fragmentContainer;
-		state.fragments = fragments;
+		state.fragments = [...fragments];
 		state.isFractured = true;
 
-		const colliderDescs = fragments.map((fragment) =>
-			createFragmentColliderDesc(fragment, ref.options.collider));
-		if (colliderDescs.length > 0) {
-			entity.colliderDescs = colliderDescs;
-			entity.colliderDesc = colliderDescs[0];
-			refreshEntityPhysics(ref, entity);
+		if (fragmentPhysics.mode === 'independent') {
+			fractureIndependentEntity(
+				ref,
+				entity,
+				root,
+				fractureOptions,
+				fragments,
+				state,
+			);
+		} else {
+			fractureCompoundEntity(
+				ref,
+				entity,
+				root,
+				fragments,
+				state,
+			);
 		}
 
 		return fragments;
 	} catch (error) {
-		restoreOriginalMesh(entity, state);
+		restoreRuntimeState(ref, true);
 		throw error;
 	} finally {
 		source.geometry.dispose();
@@ -694,6 +1166,25 @@ class Destructible3DSystem implements BehaviorSystem {
 
 	update(_ecs: IWorld, _delta: number): void {
 		this.primeLinks();
+		const links = this.getBehaviorLinks?.(DESTRUCTIBLE_3D_BEHAVIOR_KEY);
+		if (!links) {
+			return;
+		}
+
+		const interpolationAlpha =
+			(this.world as { interpolationAlpha?: number } | null)?.interpolationAlpha
+			?? 0;
+		for (const link of links) {
+			const state = getRuntimeState(
+				link.ref as BehaviorRef<Destructible3DBehaviorOptions>,
+			);
+			for (const fragmentEntity of state.fragmentEntities) {
+				syncRuntimeFragmentEntityTransform(
+					fragmentEntity,
+					interpolationAlpha,
+				);
+			}
+		}
 	}
 
 	destroy(_ecs: IWorld): void {
