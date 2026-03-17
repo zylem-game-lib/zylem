@@ -123,6 +123,7 @@ export {
 	type Destructible3DBehaviorOptions,
 	type Destructible3DColliderOptions,
 	type Destructible3DFragmentColliderShape,
+	type Destructible3DFragmentPhysicsOptions,
 	type Destructible3DHandle,
 	type FractureOptionsInput,
 	DestructibleMesh,

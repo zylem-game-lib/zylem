@@ -1,31 +1,59 @@
-import { Color, Vector3 } from 'three';
+import { Color, Matrix4, Vector3 } from 'three';
 import {
 	createBox,
 	createCamera,
 	createGame,
+	createSphere,
 	createStage,
 	createText,
 	Destructible3DBehavior,
 	FractureOptions,
 	type Destructible3DHandle,
+	type FractureOptionsInput,
 	useArrowsForDirections,
 } from '@zylem/game-lib';
 
-type ShowcaseTarget = {
+type LaneRuntime = {
 	label: string;
-	handle: Destructible3DHandle;
 	accent: Color;
+	target: ReturnType<typeof createBox>;
+	projectile: ReturnType<typeof createSphere>;
+	handle: Destructible3DHandle;
+	position: Vector3;
+	spawnPosition: Vector3;
+	parkPosition: Vector3;
+	launchVelocity: Vector3;
+	launchDelay: number;
+	impactRadius?: number;
+	launched: boolean;
+	smashed: boolean;
 };
+
+type LaneConfig = {
+	label: string;
+	position: Vector3;
+	spawnPosition: Vector3;
+	accent: Color;
+	fractureOptions: FractureOptions;
+	launchDelay: number;
+	launchVelocity: Vector3;
+	impactRadius?: number;
+};
+
+function slugify(value: string): string {
+	return value.toLowerCase().replace(/\s+/g, '-');
+}
 
 export default function createDemo() {
 	const camera = createCamera({
-		position: { x: 0, y: 6.5, z: 14 },
-		target: { x: 0, y: 2.5, z: 0 },
+		position: { x: -16, y: 4.8, z: 4.5 },
+		target: { x: 0, y: 2.3, z: 0 },
 	});
 
 	const stage = createStage(
 		{
-			backgroundColor: new Color('#09111a'),
+			backgroundColor: new Color('#08131d'),
+			gravity: new Vector3(0, -9.82, 0),
 		},
 		camera,
 	);
@@ -35,7 +63,7 @@ export default function createDemo() {
 	const floor = createBox({
 		name: 'floor',
 		position: { x: 0, y: -0.35, z: 0 },
-		size: { x: 20, y: 0.7, z: 12 },
+		size: { x: 24, y: 0.7, z: 16 },
 		collision: { static: true },
 		material: {
 			color: new Color('#13202c'),
@@ -44,56 +72,35 @@ export default function createDemo() {
 
 	const backdrop = createBox({
 		name: 'backdrop',
-		position: { x: 0, y: 4.2, z: -4.4 },
-		size: { x: 18, y: 9, z: 0.4 },
+		position: { x: 3.3, y: 4.2, z: 0 },
+		size: { x: 0.45, y: 8.8, z: 16.5 },
 		collision: { static: true },
 		material: {
 			color: new Color('#102332'),
-			opacity: 0.92,
+			opacity: 0.9,
 		},
 	});
 
 	const instructionText = createText({
 		name: 'destructible-instructions',
-		text: 'Left/Right changes focus. A fractures focused target. B repairs all.',
+		text: 'Projectiles auto-launch. Press A to reset the round.',
 		fontSize: 17,
 		fontColor: '#f8fafc',
 		backgroundColor: '#13202c',
 		padding: 8,
 		stickToViewport: true,
-		screenPosition: { x: 0.5, y: 0.06 },
+		screenPosition: { x: 0.5, y: 0.08 },
 	});
 
-	const focusText = createText({
-		name: 'destructible-focus',
-		text: 'Focused: Simple Fracture',
-		fontSize: 18,
-		fontColor: '#dbeafe',
-		backgroundColor: '#163047',
-		padding: 8,
-		stickToViewport: true,
-		screenPosition: { x: 0.5, y: 0.12 },
-	});
-
-	const statusText = createText({
-		name: 'destructible-status',
-		text: 'Status: ready',
-		fontSize: 18,
-		fontColor: '#bfdbfe',
-		backgroundColor: '#112438',
-		padding: 8,
-		stickToViewport: true,
-		screenPosition: { x: 0.5, y: 0.18 },
-	});
-
-	const targetConfigs = [
+	const laneConfigs: readonly LaneConfig[] = [
 		{
 			label: 'Simple Fracture',
-			position: new Vector3(-4.8, 2.3, 0),
+			position: new Vector3(0, 2.2, -4.4),
+			spawnPosition: new Vector3(-10.6, 2.2, -4.4),
 			accent: new Color('#f4b942'),
-			options: new FractureOptions({
+			fractureOptions: new FractureOptions({
 				fractureMethod: 'simple',
-				fragmentCount: 6,
+				fragmentCount: 7,
 				fracturePlanes: {
 					x: true,
 					y: true,
@@ -101,117 +108,234 @@ export default function createDemo() {
 				},
 				seed: 11,
 			}),
+			launchDelay: 0.2,
+			launchVelocity: new Vector3(20, 0, 0),
 		},
 		{
 			label: 'Voronoi 3D',
-			position: new Vector3(0, 2.3, 0),
+			position: new Vector3(0, 2.2, 0),
+			spawnPosition: new Vector3(-10.6, 2.2, 0),
 			accent: new Color('#67e8f9'),
-			options: new FractureOptions({
+			fractureOptions: new FractureOptions({
 				fractureMethod: 'voronoi',
-				fragmentCount: 14,
+				fragmentCount: 16,
 				voronoiOptions: {
 					mode: '3D',
 				},
 				seed: 23,
 			}),
+			launchDelay: 0.65,
+			launchVelocity: new Vector3(20, 0, 0),
 		},
 		{
 			label: 'Impact Voronoi',
-			position: new Vector3(4.8, 2.3, 0),
+			position: new Vector3(0, 2.2, 4.4),
+			spawnPosition: new Vector3(-10.6, 2.2, 4.4),
 			accent: new Color('#fb7185'),
-			options: new FractureOptions({
+			fractureOptions: new FractureOptions({
 				fractureMethod: 'voronoi',
-				fragmentCount: 20,
+				fragmentCount: 22,
 				voronoiOptions: {
 					mode: '3D',
-					impactPoint: new Vector3(0.4, 0.25, 0.15),
-					impactRadius: 0.6,
 				},
 				seed: 7,
 			}),
+			impactRadius: 0.62,
+			launchDelay: 1.1,
+			launchVelocity: new Vector3(20, 0, 0),
 		},
 	] as const;
 
-	const pedestals = targetConfigs.map((target) =>
+	const inverseMatrix = new Matrix4();
+	const pedestals = laneConfigs.map((lane) =>
 		createBox({
-			name: `${target.label.toLowerCase().replace(/\s+/g, '-')}-pedestal`,
-			position: { x: target.position.x, y: 0.8, z: target.position.z },
+			name: `${slugify(lane.label)}-pedestal`,
+			position: { x: lane.position.x, y: 0.8, z: lane.position.z },
 			size: { x: 2.5, y: 1.6, z: 2.5 },
 			collision: { static: true },
 			material: {
-				color: target.accent.clone().multiplyScalar(0.35),
+				color: lane.accent.clone().multiplyScalar(0.3),
+			},
+		}),
+	);
+	const launchRails = laneConfigs.map((lane) =>
+		createBox({
+			name: `${slugify(lane.label)}-rail`,
+			position: { x: -5, y: 1.1, z: lane.position.z },
+			size: { x: 10.8, y: 0.14, z: 1.2 },
+			collision: { static: true },
+			material: {
+				color: lane.accent.clone().multiplyScalar(0.16),
+				opacity: 0.75,
 			},
 		}),
 	);
 
-	const targets = targetConfigs.map((target) => {
-		const crate = createBox({
-			name: `${target.label.toLowerCase().replace(/\s+/g, '-')}-crate`,
-			position: { x: target.position.x, y: target.position.y, z: target.position.z },
+	const lanes: LaneRuntime[] = laneConfigs.map((lane, index) => {
+		const target = createBox({
+			name: `${slugify(lane.label)}-crate`,
+			position: { x: lane.position.x, y: lane.position.y, z: lane.position.z },
 			size: { x: 1.8, y: 1.8, z: 1.8 },
 			collision: { static: true },
 			material: {
-				color: target.accent.clone(),
+				color: lane.accent.clone(),
 			},
 		});
 
-		const handle = crate.use(Destructible3DBehavior, {
-			fractureOptions: target.options,
+		const projectile = createSphere({
+			name: `${slugify(lane.label)}-projectile`,
+			radius: 0.46,
+			position: { x: lane.spawnPosition.x, y: lane.spawnPosition.y, z: lane.spawnPosition.z },
+			material: {
+				color: lane.accent.clone().offsetHSL(0, 0, 0.08),
+			},
+		});
+
+		const handle = target.use(Destructible3DBehavior, {
+			fractureOptions: lane.fractureOptions,
+			fragmentPhysics: {
+				mode: 'independent',
+				outwardVelocity: 4.5,
+				angularVelocity: 2.1,
+			},
 		});
 
 		const label = createText({
-			name: `${target.label.toLowerCase().replace(/\s+/g, '-')}-label`,
-			text: target.label,
-			fontSize: 32,
-			fontColor: `#${target.accent.getHexString()}`,
+			name: `${slugify(lane.label)}-label`,
+			text: lane.label,
+			fontSize: 24,
+			fontColor: '#f8fafc',
 			backgroundColor: '#0b1620',
+			padding: 8,
 			stickToViewport: false,
 			position: {
-				x: target.position.x,
-				y: 4.15,
-				z: target.position.z,
+				x: lane.position.x,
+				y: 4.1,
+				z: lane.position.z,
 			},
 		});
 
-		stage.add(crate, label);
-
-		return {
-			label: target.label,
+		const laneRuntime: LaneRuntime = {
+			label: lane.label,
+			accent: lane.accent,
+			target,
+			projectile,
 			handle,
-			accent: target.accent,
+			position: lane.position.clone(),
+			spawnPosition: lane.spawnPosition.clone(),
+			parkPosition: new Vector3(-18, -12 - index * 3, lane.position.z),
+			launchVelocity: lane.launchVelocity.clone(),
+			launchDelay: lane.launchDelay,
+			impactRadius: lane.impactRadius,
+			launched: false,
+			smashed: false,
 		};
+
+		projectile.onSetup(({ me }) => {
+			me.body?.setGravityScale(0, true);
+			me.body?.lockRotations(true, true);
+			me.body?.setTranslation(laneRuntime.parkPosition, true);
+			me.body?.setLinvel({ x: 0, y: 0, z: 0 }, true);
+			me.body?.setAngvel({ x: 0, y: 0, z: 0 }, true);
+			if (me.mesh) {
+				me.mesh.visible = false;
+			}
+		});
+
+		projectile.onCollision(({ other }) => {
+			if (laneRuntime.smashed || other.uuid !== target.uuid) {
+				return;
+			}
+
+			laneRuntime.smashed = true;
+			retireProjectile(laneRuntime);
+			handle.fracture(buildImpactOverride(laneRuntime));
+		}, {
+			phase: 'enter',
+		});
+
+		stage.add(target, projectile, label);
+
+		return laneRuntime;
 	});
 
-	stage.add(floor, backdrop, ...pedestals);
+	stage.add(floor, backdrop, ...pedestals, ...launchRails);
 
-	let focusedIndex = 0;
+	let initialized = false;
+	let roundElapsed = 0;
 
-	const setFocusText = () => {
-		focusText.updateText(`Focused: ${targets[focusedIndex]!.label}`);
-	};
+	function retireProjectile(lane: LaneRuntime) {
+		lane.projectile.body?.setTranslation(lane.parkPosition, true);
+		lane.projectile.body?.setLinvel({ x: 0, y: 0, z: 0 }, true);
+		lane.projectile.body?.setAngvel({ x: 0, y: 0, z: 0 }, true);
+		if (lane.projectile.mesh) {
+			lane.projectile.mesh.visible = false;
+		}
+	}
 
-	const setStatusText = (message: string) => {
-		statusText.updateText(`Status: ${message}`);
-	};
+	function launchProjectile(lane: LaneRuntime) {
+		lane.projectile.body?.setTranslation(lane.spawnPosition, true);
+		lane.projectile.body?.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+		lane.projectile.body?.setLinvel(lane.launchVelocity, true);
+		lane.projectile.body?.setAngvel({ x: 0, y: 0, z: 0 }, true);
+		if (lane.projectile.mesh) {
+			lane.projectile.mesh.visible = true;
+		}
+	}
 
-	const fractureTarget = (index: number, source: 'auto' | 'manual') => {
-		const target = targets[index];
+	function getProjectileWorldPosition(lane: LaneRuntime): Vector3 | null {
+		const translation = lane.projectile.body?.translation();
+		if (translation) {
+			return new Vector3(
+				translation.x,
+				translation.y,
+				translation.z,
+			);
+		}
+
+		const target = lane.projectile.group ?? lane.projectile.mesh;
 		if (!target) {
-			return;
+			return null;
 		}
 
-		target.handle.fracture();
-		setStatusText(`${source} fracture -> ${target.label}`);
-	};
+		return target.getWorldPosition(new Vector3());
+	}
 
-	const repairAllTargets = (source: 'auto' | 'manual') => {
-		for (const target of targets) {
-			target.handle.repair();
+	function buildImpactOverride(lane: LaneRuntime): FractureOptionsInput | undefined {
+		if (lane.impactRadius == null) {
+			return undefined;
 		}
-		setStatusText(`${source} repair -> restored all targets`);
-	};
 
-	setFocusText();
+		const impactWorld = getProjectileWorldPosition(lane);
+		const targetRoot = lane.target.group ?? lane.target.mesh;
+		if (!impactWorld || !targetRoot) {
+			return undefined;
+		}
+
+		targetRoot.updateMatrixWorld(true);
+		const impactPoint = impactWorld.clone().applyMatrix4(
+			inverseMatrix.copy(targetRoot.matrixWorld).invert(),
+		);
+
+		return {
+			fractureMethod: 'voronoi',
+			voronoiOptions: {
+				impactPoint,
+				impactRadius: lane.impactRadius,
+			},
+		};
+	}
+
+	function resetRound() {
+		roundElapsed = 0;
+
+		for (const lane of lanes) {
+			lane.handle.repair();
+			lane.launched = false;
+			lane.smashed = false;
+			retireProjectile(lane);
+		}
+	}
 
 	const game = createGame(
 		{
@@ -220,28 +344,26 @@ export default function createDemo() {
 		},
 		stage,
 		instructionText,
-		focusText,
-		statusText,
 	).onUpdate(({ inputs, delta }) => {
+		if (!initialized) {
+			resetRound();
+			initialized = true;
+		}
+
 		const { p1 } = inputs;
-
-		if (p1.directions.Left?.pressed) {
-			focusedIndex =
-				(focusedIndex - 1 + targets.length) % targets.length;
-			setFocusText();
-		}
-
-		if (p1.directions.Right?.pressed) {
-			focusedIndex = (focusedIndex + 1) % targets.length;
-			setFocusText();
-		}
-
 		if (p1.buttons.A?.pressed) {
-			fractureTarget(focusedIndex, 'manual');
+			resetRound();
 		}
 
-		if (p1.buttons.B?.pressed) {
-			repairAllTargets('manual');
+		roundElapsed += delta;
+
+		for (const lane of lanes) {
+			if (lane.launched || roundElapsed < lane.launchDelay) {
+				continue;
+			}
+
+			launchProjectile(lane);
+			lane.launched = true;
 		}
 	});
 
