@@ -83,7 +83,7 @@ export default function createDemo() {
 
 	const instructionText = createText({
 		name: 'destructible-instructions',
-		text: 'Projectiles auto-launch. Press A to reset the round.',
+		text: 'Projectiles auto-launch. Press the z key to reset the round.',
 		fontSize: 17,
 		fontColor: '#f8fafc',
 		backgroundColor: '#13202c',
