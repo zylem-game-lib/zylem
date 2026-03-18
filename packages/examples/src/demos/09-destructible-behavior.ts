@@ -322,6 +322,7 @@ export default function createDemo() {
 			voronoiOptions: {
 				impactPoint,
 				impactRadius: lane.impactRadius,
+				mode: '3D'
 			},
 		};
 	}
