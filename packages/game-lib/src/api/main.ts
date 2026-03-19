@@ -87,6 +87,7 @@ export { createCone } from '../lib/entities/cone';
 export { createPyramid } from '../lib/entities/pyramid';
 export { createCylinder } from '../lib/entities/cylinder';
 export { createPill } from '../lib/entities/pill';
+export { createParticleSystem, ZylemParticleSystem } from '../lib/entities/particle-system';
 export { createEntityFactory, type TemplateFactory } from '../lib/entities/entity-factory';
 export { ZylemBox } from '../lib/entities/box';
 export { create } from '../lib/entities/entity';
@@ -131,6 +132,15 @@ export {
 	type VoronoiOptions,
 } from '../lib/behaviors/destructible-3d';
 export { createCooldownIcon, type IconSize, type IconSizePreset, type ScreenAnchor } from '../lib/entities/cooldown-icon';
+export {
+	ParticleEmitterBehavior,
+	type ParticleEmitterBehaviorOptions,
+	type ParticleEmitterHandle,
+	particleEffect,
+	particlePresets,
+	type BurstParticlePresetOptions,
+	type ParticleEffectDefinition,
+} from '../lib/behaviors/particle-emitter';
 
 // Destruction utilities
 export { destroy } from '../lib/entities/destroy';
@@ -180,8 +190,10 @@ export type { StageEntity } from '../lib/interfaces/entity';
 export {
 	TEXT_TYPE, SPRITE_TYPE, BOX_TYPE, SPHERE_TYPE,
 	RECT_TYPE, PLANE_TYPE, ZONE_TYPE, ACTOR_TYPE,
-	CONE_TYPE, PYRAMID_TYPE, CYLINDER_TYPE, PILL_TYPE,
+	CONE_TYPE, PYRAMID_TYPE, CYLINDER_TYPE, PILL_TYPE, PARTICLE_SYSTEM_TYPE,
 } from '../lib/types/entity-type-map';
+
+export * as QUARKS from 'three.quarks';
 
 // Events
 export {

@@ -11,6 +11,7 @@ import { ZylemCone, CONE_TYPE } from '../entities/cone';
 import { ZylemPyramid, PYRAMID_TYPE } from '../entities/pyramid';
 import { ZylemCylinder, CYLINDER_TYPE } from '../entities/cylinder';
 import { ZylemPill, PILL_TYPE } from '../entities/pill';
+import { ZylemParticleSystem, PARTICLE_SYSTEM_TYPE } from '../entities/particle-system';
 import { BaseNode } from '../core/base-node';
 
 /**
@@ -31,6 +32,7 @@ export interface EntityTypeMap {
 	[PYRAMID_TYPE]: ZylemPyramid;
 	[CYLINDER_TYPE]: ZylemCylinder;
 	[PILL_TYPE]: ZylemPill;
+	[PARTICLE_SYSTEM_TYPE]: ZylemParticleSystem;
 }
 
 /**
@@ -56,4 +58,5 @@ export {
 	PYRAMID_TYPE,
 	CYLINDER_TYPE,
 	PILL_TYPE,
+	PARTICLE_SYSTEM_TYPE,
 };

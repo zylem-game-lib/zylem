@@ -27,6 +27,7 @@ export default defineConfig({
 		'behavior/destructible-3d': 'src/api/behavior/destructible-3d.ts',
 		'behavior/jumper-2d': 'src/api/behavior/jumper-2d.ts',
 		'behavior/platformer-3d': 'src/api/behavior/platformer-3d.ts',
+		'behavior/particle-emitter': 'src/api/behavior/particle-emitter.ts',
 	},
 	format: ['esm'],
 	dts: true, // Generate TypeScript declaration files
@@ -47,6 +48,7 @@ export default defineConfig({
 		'stats.js',
 		'nanoid',
 		'bitecs',
+		'three.quarks',
 		'lucide-solid',
 		'@kobalte/core',
 	],
