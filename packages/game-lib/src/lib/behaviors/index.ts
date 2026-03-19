@@ -71,6 +71,9 @@ export * from './cooldown';
 // Destructible 3D Module
 export * from './destructible-3d';
 
+// Particle Emitter Module
+export * from './particle-emitter';
+
 // Coordinators
 export * from '../coordinators/boundary-ricochet.coordinator';
 export * from '../coordinators/boundary-ricochet-3d.coordinator';

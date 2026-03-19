@@ -10,3 +10,4 @@ export { createCone } from '../lib/entities/cone';
 export { createPyramid } from '../lib/entities/pyramid';
 export { createCylinder } from '../lib/entities/cylinder';
 export { createPill } from '../lib/entities/pill';
+export { createParticleSystem, ZylemParticleSystem } from '../lib/entities/particle-system';

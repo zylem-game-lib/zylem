@@ -34,6 +34,7 @@ the consumer needs to observe. `screen-visibility` and `ricochet-*` use FSMs.
 - `destructible-3d`
 - `jumper-2d`
 - `jumper-3d`
+- `particle-emitter`
 - `ricochet-2d`
 - `ricochet-3d`
 - `screen-visibility`
@@ -72,6 +73,7 @@ behaviors/
   first-person/
   jumper-2d/
   jumper-3d/
+  particle-emitter/
   platformer-3d/
   ricochet-2d/
   ricochet-3d/
@@ -142,6 +144,7 @@ Each behavior folder should also include a `README.md` covering:
 - [first-person](./first-person/README.md)
 - [jumper-2d](./jumper-2d/README.md)
 - [jumper-3d](./jumper-3d/README.md)
+- [particle-emitter](./particle-emitter/README.md)
 - [platformer-3d](./platformer-3d/README.md)
 - [ricochet-2d](./ricochet-2d/README.md)
 - [ricochet-3d](./ricochet-3d/README.md)

@@ -22,6 +22,8 @@ import type { IWorld } from 'bitecs';
 export interface BehaviorSystem {
 	/** Called once per frame with ECS world and delta time */
 	update(ecs: IWorld, delta: number): void;
+	/** Optional cleanup when a behavior link is detached from a live entity */
+	detach?(link: BehaviorEntityLink): void;
 	/** Optional cleanup when stage is destroyed */
 	destroy?(ecs: IWorld): void;
 }

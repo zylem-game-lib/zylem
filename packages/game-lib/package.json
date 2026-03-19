@@ -86,6 +86,10 @@
       "types": "./dist/behavior/jumper-2d.d.ts",
       "import": "./dist/behavior/jumper-2d.js"
     },
+    "./behavior/particle-emitter": {
+      "types": "./dist/behavior/particle-emitter.d.ts",
+      "import": "./dist/behavior/particle-emitter.js"
+    },
     "./behavior/platformer-3d": {
       "types": "./dist/behavior/platformer-3d.d.ts",
       "import": "./dist/behavior/platformer-3d.js"
@@ -129,6 +133,7 @@
     "nanoid": "^5.1.5",
     "stats.js": "^0.17.0",
     "three": "^0.180.0",
+    "three.quarks": "^0.17.0",
     "typescript-fsm": "^1.6.0",
     "valtio": "^2.1.7"
   },

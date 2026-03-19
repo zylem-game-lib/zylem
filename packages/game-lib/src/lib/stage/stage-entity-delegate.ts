@@ -65,6 +65,7 @@ export class StageEntityDelegate {
 
 	/** ECS behavior systems auto-registered from entity refs or manually added. */
 	readonly behaviorSystems: BehaviorSystem[] = [];
+	readonly behaviorSystemByKey: Map<symbol, BehaviorSystem> = new Map();
 	readonly registeredSystemKeys: Set<symbol> = new Set();
 	readonly behaviorEntityIndex: Map<symbol, Set<BehaviorEntityLink>> = new Map();
 	private readonly behaviorLinksByUuid: Map<string, BehaviorEntityLink[]> = new Map();
@@ -488,6 +489,7 @@ export class StageEntityDelegate {
 			system.destroy?.(this.ecs!);
 		}
 		this.behaviorSystems.length = 0;
+		this.behaviorSystemByKey.clear();
 		this.registeredSystemKeys.clear();
 		this.behaviorEntityIndex.clear();
 		this.behaviorLinksByUuid.clear();
@@ -542,6 +544,7 @@ export class StageEntityDelegate {
 						?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
 				});
 				this.behaviorSystems.push(system);
+				this.behaviorSystemByKey.set(key, system);
 				this.registeredSystemKeys.add(key);
 			}
 		}
@@ -559,6 +562,7 @@ export class StageEntityDelegate {
 			const indexed = this.behaviorEntityIndex.get(key);
 			if (!indexed) continue;
 
+			this.behaviorSystemByKey.get(key)?.detach?.(link);
 			indexed.delete(link);
 			if (indexed.size === 0) {
 				this.behaviorEntityIndex.delete(key);
