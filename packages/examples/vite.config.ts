@@ -25,7 +25,7 @@ export default defineConfig({
 			{ find: '@zylem/styles', replacement: path.resolve(__dirname, '../zylem-styles/src') },
 		],
 	},
-	assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb'],
+	assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb', '**/*.wasm'],
 	server: {
 		port: 1337,
 		open: true,

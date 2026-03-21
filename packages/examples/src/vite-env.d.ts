@@ -11,3 +11,7 @@ declare module '@zylem/styles/styles.css?raw' {
     export default css;
 }
 
+declare module '*.wasm?url' {
+    const url: string;
+    export default url;
+}

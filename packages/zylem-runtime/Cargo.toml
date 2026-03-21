@@ -1,0 +1,10 @@
+[package]
+name = "zylem-runtime"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Rust runtime scaffolding for Zylem simulation and future wasm builds."
+publish = false
+
+[lib]
+crate-type = ["rlib", "cdylib"]
