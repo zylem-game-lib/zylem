@@ -1,0 +1,168 @@
+@startuml
+title Zylem Game Runtime Startup Sequence
+
+skinparam backgroundColor transparent
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 140
+autonumber
+
+actor "App / Library Consumer" as App
+
+box "Author-facing API" #E8F2FF
+participant "createGame(...)" as CreateGame
+participant "Game\n(wrapper/controller)" as Game
+participant "Stage\n(wrapper)" as Stage
+end box
+
+box "Runtime" #F6F6F6
+participant "resolveGameConfig(...)\nGameConfig" as Config
+participant "ZylemGame\n(runtime coordinator)" as Runtime
+participant "GameCanvas" as Canvas
+participant "InputManager" as Input
+participant "RendererManager" as Renderer
+participant "GameLoadingDelegate" as Loading
+participant "GameRendererObserver" as Observer
+participant "ZylemStage\n(runtime stage)" as RuntimeStage
+participant "StageLoadingDelegate" as StageLoading
+participant "StageCameraDelegate" as StageCamera
+participant "StageEntityDelegate" as StageEntities
+participant "CameraManager" as Cameras
+participant "ZylemScene" as Scene
+participant "ZylemWorld" as World
+participant "InstanceManager" as Instances
+end box
+
+App -> CreateGame : createGame(stageOrOptions...)
+CreateGame -> Game : new Game(options)
+activate Game
+Game --> App : Game wrapper
+
+group Optional wrapper configuration before startup
+  App -> Game : onSetup(...) / onUpdate(...) / onDestroy(...)
+  App -> Game : onLoading(...) / setInputConfiguration(...)
+end
+
+App -> Game : start()
+
+Game -> Game : normalize options\nensure at least one stage
+Game -> Config : resolveGameConfig(options)
+activate Config
+Config --> Game : normalized GameConfig
+deactivate Config
+
+Game -> Runtime : new ZylemGame(config)
+activate Runtime
+
+Runtime -> Loading : create + subscribe
+activate Loading
+Loading --> Runtime : delegate ready
+deactivate Loading
+
+Runtime -> Canvas : create / mount canvas
+activate Canvas
+Canvas --> Runtime : container + HTMLCanvasElement
+deactivate Canvas
+
+Runtime -> Input : create(config.input)
+activate Input
+Input --> Runtime : providers ready
+deactivate Input
+
+Runtime -> Renderer : create(canvas, backend, post FX)
+activate Renderer
+Renderer --> Runtime : renderer ready
+deactivate Renderer
+
+Runtime -> Observer : create + bind canvas/renderer
+activate Observer
+Observer --> Runtime : observer ready
+deactivate Observer
+
+Game -> Game : resolve initial stage
+Game -> Runtime : loadStage(stage)
+Runtime -> Stage : load(runtime context)
+activate Stage
+
+Stage -> RuntimeStage : new ZylemStage(stage config)
+activate RuntimeStage
+
+RuntimeStage -> StageLoading : create
+activate StageLoading
+StageLoading --> RuntimeStage : delegate ready
+deactivate StageLoading
+
+RuntimeStage -> Scene : create / configure scene
+activate Scene
+Scene --> RuntimeStage : scene ready
+deactivate Scene
+
+RuntimeStage -> World : create physics world
+activate World
+World --> RuntimeStage : world ready
+deactivate World
+
+RuntimeStage -> StageCamera : create
+activate StageCamera
+StageCamera -> Cameras : resolve configured cameras\nor create default camera
+activate Cameras
+Cameras --> StageCamera : active camera(s)
+deactivate Cameras
+StageCamera --> RuntimeStage : camera manager ready
+deactivate StageCamera
+
+RuntimeStage -> StageEntities : create
+activate StageEntities
+StageEntities -> Instances : create / register instancing batches
+activate Instances
+Instances --> StageEntities : instance manager ready
+deactivate Instances
+StageEntities -> StageEntities : spawn queued entities\nattach physics, colliders, behaviors
+StageEntities --> RuntimeStage : entities registered
+deactivate StageEntities
+
+RuntimeStage -> Stage : run stage setup callbacks
+Stage --> RuntimeStage : stage ready
+deactivate Stage
+
+RuntimeStage --> Runtime : active runtime stage
+deactivate RuntimeStage
+
+Runtime -> Loading : forward loading completion
+Runtime -> Observer : attach stage + active camera(s)
+Runtime -> Renderer : start frame loop
+Renderer --> Runtime : first frame scheduled
+
+Runtime --> Game : started
+deactivate Runtime
+Game --> App : running
+deactivate Game
+
+group Steady-state frame loop
+  Renderer -> Input : poll / merge player input
+  Renderer -> Runtime : tick(delta)
+  Runtime -> RuntimeStage : update(delta)
+  RuntimeStage -> World : step physics
+  RuntimeStage -> RuntimeStage : run behavior systems\nand entity updates
+  RuntimeStage -> Renderer : render active cameras
+end
+
+note right of Game
+Game stores author callbacks and options.
+It acts as the fluent wrapper/controller,
+not the long-lived loop owner.
+end note
+
+note right of Runtime
+ZylemGame owns the live runtime:
+canvas, input, renderer, stage loading,
+and the main update loop.
+end note
+
+note right of RuntimeStage
+ZylemStage owns the scene/world runtime
+plus the camera, entity, loading,
+and per-frame stage delegates.
+end note
+
+@enduml

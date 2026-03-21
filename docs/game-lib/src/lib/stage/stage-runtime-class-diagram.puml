@@ -1,0 +1,134 @@
+@startuml
+title game-lib stage runtime class diagram
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+hide empty members
+hide circle
+
+package "Author-facing stage layer" {
+  class Stage <<wrapper>>
+  class StageConfig <<config>>
+  class CameraWrapper <<camera api>>
+}
+
+package "Live stage runtime" {
+  class ZylemStage <<runtime>>
+  class StageEntityDelegate <<delegate>>
+  class StageCameraDelegate <<delegate>>
+  class StageLoadingDelegate <<delegate>>
+  class StageEntityModelDelegate <<delegate>>
+  class StageDebugDelegate <<delegate>>
+}
+
+package "Scene / physics / rendering collaborators" {
+  class ZylemScene
+  class ZylemWorld
+  class CameraManager
+  class RendererManager
+  class InstanceManager
+}
+
+package "Entities / behaviors" {
+  abstract class BaseNode
+  class GameEntity
+  interface BehaviorSystem
+}
+
+package "Events" {
+  class GameEventBus <<event bus>>
+}
+
+BaseNode <|-- GameEntity
+
+Stage --> StageConfig : parses options into
+Stage --> CameraWrapper : add / remove / activate
+Stage *-- ZylemStage : creates at load time
+
+ZylemStage *-- StageEntityDelegate
+ZylemStage *-- StageCameraDelegate
+ZylemStage *-- StageLoadingDelegate
+ZylemStage *-- StageEntityModelDelegate
+ZylemStage *-- StageDebugDelegate
+
+ZylemStage *-- ZylemScene
+ZylemStage *-- ZylemWorld
+ZylemStage *-- InstanceManager
+ZylemStage o-- CameraManager
+
+StageCameraDelegate --> CameraManager : configures effective camera set
+CameraWrapper --> CameraManager : becomes managed camera
+CameraManager --> RendererManager : renders through
+
+StageEntityDelegate --> BaseNode : spawns / tracks
+StageEntityDelegate --> GameEntity : attaches physics + models
+StageEntityDelegate --> BehaviorSystem : auto-registers per behavior key
+
+StageEntityModelDelegate --> StageEntityDelegate : model-ready callbacks
+StageLoadingDelegate --> GameEventBus : forwards loading events
+StageDebugDelegate --> ZylemScene : helpers / overlays / picking
+StageDebugDelegate --> CameraManager : uses active camera
+ZylemWorld --> GameEntity : body sync + collisions
+InstanceManager --> GameEntity : batches instanced entities
+InstanceManager --> ZylemScene : writes instanced meshes
+
+note right of Stage
+Author-facing wrapper.
+
+Collects:
+- entities
+- cameras
+- lifecycle callbacks
+- input overrides
+
+The wrapper exists before the live
+runtime is created.
+end note
+
+note right of ZylemStage
+Live stage coordinator.
+
+Owns:
+- scene
+- physics world
+- entity/camera/loading/debug delegates
+- runtime update + teardown flow
+end note
+
+note bottom of StageEntityDelegate
+Central entity runtime manager.
+
+Responsibilities:
+- queue / spawn / remove nodes
+- maintain UUID/EID mappings
+- attach physics bodies and colliders
+- register instancing
+- link behaviors to stage systems
+end note
+
+note bottom of StageCameraDelegate
+Resolves the effective camera setup:
+- explicit cameras
+- multi-camera layouts
+- fallback default camera
+end note
+
+note right of RendererManager
+Shared renderer infrastructure.
+A stage reaches it indirectly through
+CameraManager rather than owning it directly.
+end note
+
+legend left
+|= Layer |= Role |
+| Stage | author-facing configuration wrapper |
+| ZylemStage | live runtime orchestrator |
+| Delegates | focused stage subsystems |
+| Scene / World / Camera | rendering + physics collaborators |
+| BaseNode / GameEntity | runtime content managed by the stage |
+endlegend
+
+@enduml

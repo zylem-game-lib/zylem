@@ -1,0 +1,80 @@
+@startuml
+title game-lib core: foundations overview
+allowmixing
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "Composition and lifecycle" {
+  abstract class BaseNode
+  class Vessel
+  component LifecycleContexts
+  component LifecycleCallbacks
+}
+
+package "Assets and loading" {
+  component AssetManager
+  interface LoaderAdapter
+  component LoaderAdapters
+  component CloneModelObject
+  component AssetEvents
+}
+
+package "Schemas and contracts" {
+  component Blueprints
+  class StageBlueprint
+  class EntityBlueprint
+  interface IGame
+  interface IStage
+  interface ICamera
+}
+
+package "Utilities and exports" {
+  component VectorUtils
+  component CoreIndex
+}
+
+package "Consumers" {
+  class Game
+  class Stage
+  class CameraWrapper
+  class GameEntity
+  component StageEntityDelegate
+  component StageFactory
+  component StageManager
+  component ZylemScene
+  component MaterialBuilder
+  component ApiCore
+}
+
+Vessel --|> BaseNode
+GameEntity --|> BaseNode
+BaseNode ..> LifecycleContexts
+BaseNode ..> LifecycleCallbacks
+AssetManager --> LoaderAdapter
+AssetManager --> LoaderAdapters
+AssetManager --> CloneModelObject
+AssetManager --> AssetEvents
+Blueprints --> StageBlueprint
+Blueprints --> EntityBlueprint
+Game ..|> IGame
+Stage ..|> IStage
+CameraWrapper ..|> ICamera
+CoreIndex --> BaseNode
+CoreIndex --> Vessel
+CoreIndex --> VectorUtils
+CoreIndex --> Blueprints
+StageEntityDelegate ..> BaseNode
+StageFactory ..> StageBlueprint
+StageManager ..> StageBlueprint
+MaterialBuilder ..> AssetManager
+ZylemScene ..> AssetManager
+ApiCore ..> CoreIndex
+
+note right of BaseNode
+BaseNode is the main content primitive
+for composition and lifecycle.
+end note
+@enduml

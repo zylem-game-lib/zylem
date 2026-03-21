@@ -1,0 +1,178 @@
+@startuml
+title game-lib physics: worker bridge sequence
+
+skinparam backgroundColor transparent
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 160
+skinparam ParticipantPadding 20
+skinparam BoxPadding 10
+autonumber
+
+box "Main thread" #E8F2FF
+participant "Stage / Runtime" as Runtime
+participant "ZylemWorld /\nStageEntityDelegate" as WorldLayer
+participant "PhysicsProxy" as Proxy
+participant "PhysicsBodyHandle" as Handle
+collections "Queued BodyCommands" as Queue
+end box
+
+box "Shared contract" #F6F6F6
+participant "physics-protocol" as Protocol
+end box
+
+box "Worker thread" #FFF4E0
+participant "physics-worker" as Worker
+participant "Rapier World" as Rapier
+end box
+
+box "Outbound notifications" #F3E8FF
+participant "Collision listeners" as Collisions
+end box
+
+== Initialization ==
+
+Runtime -> Proxy : init()
+activate Proxy
+Proxy -> Protocol : use message schema\nInit / Step / AddBody / RemoveBody
+activate Protocol
+Protocol --> Proxy : serializable contract ready
+deactivate Protocol
+Proxy -> Worker : spawn worker + post Init
+activate Worker
+Worker -> Rapier : create physics world
+activate Rapier
+Rapier --> Worker : world ready
+deactivate Rapier
+Worker --> Proxy : ready
+deactivate Worker
+
+note right of Proxy
+PhysicsProxy owns the worker connection,
+maps body IDs to handles, and applies
+authoritative worker results back onto
+main-thread snapshots.
+end note
+
+== Body registration ==
+
+WorldLayer -> Proxy : addBody(bodyDesc, colliderDescs)
+Proxy -> Protocol : encode AddBody payload
+activate Protocol
+Protocol --> Proxy : transferable message
+deactivate Protocol
+Proxy -> Worker : post AddBody
+activate Worker
+Worker -> Rapier : create rigid body\ncreate colliders
+activate Rapier
+Rapier --> Worker : body handle + initial state
+deactivate Rapier
+Worker --> Proxy : bodyCreated(id, initial pose)
+deactivate Worker
+Proxy -> Handle : create(id, initial snapshot)
+activate Handle
+Handle --> Proxy : handle ready
+deactivate Handle
+Proxy --> WorldLayer : PhysicsBodyHandle
+deactivate Proxy
+
+note over Handle
+PhysicsBodyHandle is the main-thread façade.
+It exposes reads for translation / rotation /
+velocity and writes like setLinvel(),
+setTranslation(), setRotation(), applyImpulse().
+end note
+
+== Per-frame step ==
+
+group Local writes before stepping
+  Runtime -> Handle : setLinvel(...) / applyImpulse(...)\nsetTranslation(...) / setRotation(...)
+  activate Handle
+  Handle -> Queue : enqueue BodyCommand(s)
+  Handle -> Handle : update local snapshot\nfor low-latency reads
+  deactivate Handle
+end
+
+Runtime -> Proxy : step(delta)
+activate Proxy
+Proxy -> Queue : drain queued commands
+activate Queue
+Queue --> Proxy : commands by body id
+deactivate Queue
+
+Proxy -> Protocol : encode Step message\n(commands + frame delta)
+activate Protocol
+Protocol --> Proxy : transferable payload
+deactivate Protocol
+
+Proxy -> Worker : post Step(...)
+activate Worker
+Worker -> Rapier : apply BodyCommands
+activate Rapier
+Worker -> Rapier : run fixed timestep loop
+Worker -> Rapier : gather transforms + collisions
+Rapier --> Worker : updated world state
+deactivate Rapier
+
+Worker -> Protocol : pack Float32Array transform buffer\n+ collision events
+activate Protocol
+Protocol --> Worker : stepResult payload
+deactivate Protocol
+
+Worker --> Proxy : stepResult(buffer, collisions)
+deactivate Worker
+
+Proxy -> Handle : apply authoritative state\nupdate interpolation history
+activate Handle
+Handle -> Handle : capture previous/current pose\nfor render interpolation
+Handle --> Proxy : snapshots updated
+deactivate Handle
+
+Proxy --> Collisions : dispatch collision events
+Proxy --> Runtime : frame state ready
+deactivate Proxy
+
+== Render/read phase ==
+
+Runtime -> Handle : getRenderTranslation(alpha)\ngetRenderRotation(alpha)
+activate Handle
+Handle --> Runtime : interpolated pose
+deactivate Handle
+
+note over Runtime,Handle
+Rendering and scene sync can read interpolated poses
+from PhysicsBodyHandle while Rapier remains isolated
+inside the worker.
+end note
+
+== Removal / teardown ==
+
+WorldLayer -> Proxy : removeBody(id)
+activate Proxy
+Proxy -> Protocol : encode RemoveBody
+activate Protocol
+Protocol --> Proxy : payload
+deactivate Protocol
+Proxy -> Worker : post RemoveBody
+activate Worker
+Worker -> Rapier : remove rigid body / colliders
+activate Rapier
+Rapier --> Worker : removed
+deactivate Rapier
+Worker --> Proxy : removed(id)
+deactivate Worker
+Proxy -> Handle : invalidate snapshot
+Proxy --> WorldLayer : body removed
+deactivate Proxy
+
+legend right
+|= Element |= Responsibility |
+| PhysicsProxy | main-thread bridge to the worker |
+| PhysicsBodyHandle | cached read/write façade per body |
+| physics-protocol | stable serializable message contract |
+| physics-worker | worker-side runtime loop |
+| Rapier World | authoritative physics simulation |
+| Float32Array buffer | compact transform sync payload |
+endlegend
+
+@enduml

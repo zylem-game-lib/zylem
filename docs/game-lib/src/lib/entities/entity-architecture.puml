@@ -1,0 +1,203 @@
+@startuml
+title game-lib entities: entity architecture
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam defaultTextAlignment center
+hide circle
+hide empty members
+
+package "Core foundation" {
+  abstract class BaseNode
+  abstract class GameEntityLifeCycle {
+    +_setup(...)
+    +_update(...)
+    +_destroy(...)
+  }
+
+  interface MoveableEntity
+  interface RotatableEntityAPI
+}
+
+package "Entity runtime model" {
+  class GameEntity {
+    +group
+    +mesh
+    +materials
+    +compoundMeshes
+    --
+    +bodyDesc
+    +body
+    +colliderDesc
+    +colliderDescs
+    +colliders
+    +physicsAttached
+    --
+    +behaviors
+    +behaviorRefs
+    +transformStore
+    --
+    +add(part)
+    +use(descriptor, options)
+    +runAction(action)
+    +action(action)
+    +onCollision(callback)
+    +clone()
+  }
+
+  interface EntityDebugInfo
+  interface CollisionHandlerDelegate
+}
+
+BaseNode <|-- GameEntity
+GameEntityLifeCycle <|.. GameEntity
+MoveableEntity <|.. GameEntity
+RotatableEntityAPI <|.. GameEntity
+EntityDebugInfo <|.. GameEntity
+
+package "Builders and creation pipeline" {
+  class "createEntity(...)" as CreateEntity <<factory>>
+  class EntityBuilder {
+    +build()
+  }
+  abstract class EntityMeshBuilder
+  abstract class EntityCollisionBuilder
+
+  class EntityFactory {
+    +register(type, creator)
+    +createFromBlueprint(blueprint)
+  }
+
+  class "createEntityFactory(...)" as CreateEntityFactory <<factory>>
+  class EntityBlueprint
+}
+
+CreateEntity --> EntityBuilder : generic construction path
+EntityBuilder --> EntityMeshBuilder : optional mesh builder
+EntityBuilder --> EntityCollisionBuilder : optional collision builder
+EntityFactory --> EntityBlueprint : reads
+EntityFactory --> GameEntity : creates
+CreateEntityFactory --> GameEntity : clones / generates
+
+package "Composition parts" {
+  class "mesh-factories.ts" as MeshFactories <<module>>
+  class "collision-factories.ts" as CollisionFactories <<module>>
+  class CollisionComponent
+  class BehaviorDescriptor
+  class BehaviorRef
+  interface Action
+  class TransformState
+  class AssetManager
+}
+
+GameEntity --> CollisionComponent : add(...)
+GameEntity --> BehaviorRef : stores
+BehaviorRef --> BehaviorDescriptor : wraps
+GameEntity --> Action : runAction / action
+GameEntity --> TransformState : owns
+Action --> TransformState : writes intents
+
+package "Concrete entity families" {
+  class ZylemBox
+  class ZylemSphere
+  class ZylemActor
+  class ZylemZone
+  class ZylemParticleSystem
+
+  class "primitive factories\ncreateBox / createSphere /\ncreatePlane / createRect /\ncreateCone / createCylinder /\ncreatePill / createPyramid / ..." as PrimitiveFactories <<factory>>
+}
+
+GameEntity <|-- ZylemBox
+GameEntity <|-- ZylemSphere
+GameEntity <|-- ZylemActor
+GameEntity <|-- ZylemZone
+GameEntity <|-- ZylemParticleSystem
+
+PrimitiveFactories --> ZylemBox : creates
+PrimitiveFactories --> ZylemSphere : creates
+PrimitiveFactories --> MeshFactories : compose mesh parts
+PrimitiveFactories --> CollisionFactories : compose collision parts
+
+ZylemActor --> AssetManager : model / texture loading
+ZylemZone ..|> CollisionHandlerDelegate
+
+package "Runtime collaborators" {
+  class StageEntityDelegate
+  class ZylemStage
+  class ZylemWorld
+  interface BehaviorSystem
+}
+
+ZylemStage --> StageEntityDelegate : owns entity runtime
+StageEntityDelegate --> BaseNode : spawns / traverses
+StageEntityDelegate --> GameEntity : tracks / registers
+StageEntityDelegate --> BehaviorSystem : auto-registers by behavior key
+BehaviorSystem --> GameEntity : updates linked entities
+ZylemWorld --> GameEntity : attach bodies / colliders
+ZylemWorld --> CollisionHandlerDelegate : dispatch delegate callbacks
+
+note right of GameEntity
+Central composition root for gameplay content.
+
+Responsibilities:
+- visual state via mesh / group / materials
+- physics descriptors and runtime body refs
+- child-node composition from BaseNode
+- actions and buffered transform intent
+- behavior attachment through descriptor refs
+end note
+
+note bottom of GameEntity
+Two behavior-related concepts coexist:
+- `behaviors`: legacy / ECS-style registrations
+- `behaviorRefs`: descriptor-driven attachments from `use(...)`
+
+That split is important when reading the runtime.
+end note
+
+note bottom of EntityBuilder
+Builder path converts entity options into:
+- materials
+- mesh geometry
+- body/collider descriptors
+- final entity setup
+
+This is the main reusable construction pipeline.
+end note
+
+note right of PrimitiveFactories
+Simple shapes follow a strong
+composition-over-inheritance pattern:
+
+factory -> GameEntity subclass
+       -> mesh part(s)
+       -> collision part(s)
+end note
+
+note right of ZylemActor
+`ZylemActor` is the heavyweight model-backed entity:
+- asset loading
+- animation delegates
+- richer collision strategies
+end note
+
+note right of ZylemZone
+`ZylemZone` highlights the delegate-based
+collision path used for sensor-like entities
+with enter / held / exit semantics.
+end note
+
+legend right
+|= Area |= Purpose |
+| Entity runtime model | main object graph and capabilities |
+| Builders and creation pipeline | how entities are constructed |
+| Composition parts | reusable pieces attached to entities |
+| Concrete entity families | primitives and higher-level entities |
+| Runtime collaborators | stage/world systems that activate entities |
+endlegend
+
+@enduml

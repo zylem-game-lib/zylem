@@ -1,0 +1,187 @@
+@startuml
+title game-lib camera subsystem
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+hide empty members
+hide circle
+
+package "Public camera API" {
+  class "createCamera(...)" as CreateCamera <<factory>>
+  class CameraWrapper {
+    +addBehavior(...)
+    +removeBehavior(key)
+    +addAction(...)
+    +setPerspective(...)
+    +getPerspective()
+    +getState()
+    +setViewport(viewport)
+    +enableOrbitalControls()
+    +disableOrbitalControls()
+    +getRenderTexture()
+  }
+}
+
+package "Runtime camera core" {
+  class ZylemCamera {
+    +targets: StageEntity[]
+    +pipeline: CameraPipeline
+    +viewport: Viewport
+    +setTargets(targets)
+    +setPerspective(perspective)
+    +addBehavior(...)
+    +removeBehavior(key)
+    +addAction(...)
+    +update(delta)
+    +resize(width, height)
+    +setRenderTarget(...)
+  }
+
+  class CameraPipeline {
+    +setPerspective(perspective)
+    +addBehavior(key, behavior)
+    +removeBehavior(key)
+    +addAction(action)
+    +update(ctx, delta): CameraPose
+  }
+
+  interface CameraPerspective
+  interface CameraBehavior
+  interface CameraAction
+
+  class CameraManager {
+    +register(camera)
+    +unregister(id)
+    +setActive(ids)
+    +setup(renderer)
+    +update(delta)
+    +render(scene)
+  }
+
+  class CameraOrbitController {
+    +enable()
+    +disable()
+    +enterDebugMode()
+    +exitDebugMode()
+  }
+
+  class RendererManager {
+    +renderRTTCameras(...)
+    +renderViewportCameras(...)
+    +renderCamera(...)
+  }
+
+  class CameraContext <<type>>
+  class CameraPose <<type>>
+  class Viewport <<type>>
+}
+
+package "Perspective implementations" {
+  class ThirdPersonPerspective
+  class FirstPersonPerspective
+  class Fixed2DPerspective
+}
+
+package "Stage/runtime collaborators" {
+  class ZylemStage
+  class ZylemScene
+  class StageEntity
+  class CameraDebugDelegate
+}
+
+package "External rendering types" {
+  class "Three.js Camera" as ThreeCamera <<external>>
+  class "WebGLRenderTarget" as RenderTarget <<external>>
+}
+
+CreateCamera --> CameraWrapper : returns
+CreateCamera --> ZylemCamera : creates/configures
+
+CameraWrapper *-- ZylemCamera : facade over
+
+ZylemCamera *-- CameraPipeline
+ZylemCamera o-- CameraOrbitController
+ZylemCamera --> StageEntity : follow target(s)
+ZylemCamera --> ThreeCamera : owns concrete camera
+ZylemCamera --> Viewport : applies
+ZylemCamera --> RenderTarget : optional RTT output
+
+CameraPipeline --> CameraContext : consumes
+CameraPipeline --> CameraPose : computes
+CameraPipeline --> CameraPerspective : base pose from
+CameraPipeline --> CameraBehavior : applies ordered modifiers
+CameraPipeline --> CameraAction : applies transient deltas
+
+ThirdPersonPerspective ..|> CameraPerspective
+FirstPersonPerspective ..|> CameraPerspective
+Fixed2DPerspective ..|> CameraPerspective
+
+ThirdPersonPerspective --> StageEntity : follow / framing
+FirstPersonPerspective --> StageEntity : eye/body anchor
+
+CameraWrapper ..> CameraPerspective : set/get
+CameraWrapper ..> CameraBehavior : add/remove
+CameraWrapper ..> CameraAction : enqueue
+CameraWrapper ..> Viewport : setViewport(...)
+
+CameraManager o-- "0..*" ZylemCamera : manages
+CameraManager --> RendererManager : renders through
+CameraManager --> ZylemScene : renders active cameras into
+ZylemStage --> CameraManager : owns stage camera set
+
+CameraOrbitController ..> CameraDebugDelegate : debug orbit mode
+RendererManager ..> ThreeCamera
+RendererManager ..> RenderTarget
+
+note right of CameraWrapper
+Author-facing facade returned by `createCamera(...)`.
+
+It exposes the ergonomic API used by game code
+while delegating actual runtime work to `ZylemCamera`.
+end note
+
+note right of ZylemCamera
+Live runtime camera object.
+
+Responsibilities:
+- own the concrete Three.js camera
+- maintain target list
+- run the camera pipeline each frame
+- manage viewport and resize
+- optionally render to texture
+- bridge camera state into renderer usage
+end note
+
+note bottom of CameraPipeline
+Per-frame pipeline order:
+
+1. perspective computes a base pose
+2. behaviors modify the desired pose
+3. actions apply transient offsets/effects
+4. damping/smoothing produces final committed pose
+end note
+
+note bottom of CameraManager
+Stage-level multi-camera orchestration.
+
+Typical render order:
+- render-to-texture cameras first
+- viewport/screen cameras second
+end note
+
+legend right
+|= Part |= Role |
+| `CameraWrapper` | public facade for app code |
+| `ZylemCamera` | live runtime camera |
+| `CameraPipeline` | deterministic pose computation pipeline |
+| `CameraPerspective` | base framing strategy |
+| `CameraBehavior` | reusable pose modifier |
+| `CameraAction` | transient camera effect |
+| `CameraManager` | multi-camera coordination |
+| `RendererManager` | shared renderer backend |
+endlegend
+
+@enduml

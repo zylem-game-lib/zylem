@@ -1,0 +1,70 @@
+@startuml
+title game-lib behaviors: runtime architecture
+allowmixing
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "Entity attachment" {
+  class GameEntity
+  class BehaviorRef
+  component DefineBehavior
+  component UseBehavior
+}
+
+package "Behavior model" {
+  class BehaviorDescriptor
+  interface BehaviorSystem
+  class BehaviorSystemContext
+  class BehaviorHandle
+}
+
+package "Stage integration" {
+  class ZylemStage
+  class StageEntityDelegate
+  component LinkRegistry
+  component ECSWorld
+}
+
+package "Representative modules" {
+  component TopDownMovement
+  component Thruster
+  component FirstPerson
+  component WorldBoundary2D
+  component Cooldown
+  component TransformStore
+  component ZylemWorld
+  component FirstPersonPerspective
+}
+
+UseBehavior --> GameEntity : attach
+UseBehavior --> BehaviorDescriptor
+DefineBehavior --> BehaviorDescriptor
+GameEntity --> BehaviorRef : stores
+BehaviorRef --> BehaviorDescriptor
+BehaviorDescriptor --> BehaviorSystem : creates
+BehaviorDescriptor --> BehaviorHandle : optional handle
+ZylemStage --> StageEntityDelegate
+ZylemStage --> BehaviorSystem : updates
+StageEntityDelegate --> LinkRegistry : registers refs
+LinkRegistry --> BehaviorRef
+BehaviorSystem --> BehaviorSystemContext
+BehaviorSystemContext --> ECSWorld
+BehaviorSystemContext --> ZylemWorld
+BehaviorSystemContext --> LinkRegistry
+BehaviorSystem --> TransformStore : movement intent
+TopDownMovement ..> BehaviorDescriptor
+Thruster ..> BehaviorDescriptor
+FirstPerson ..> BehaviorDescriptor
+WorldBoundary2D ..> BehaviorDescriptor
+Cooldown ..> BehaviorDescriptor
+FirstPerson ..> FirstPersonPerspective
+Thruster ..> ZylemWorld
+
+note bottom of StageEntityDelegate
+One behavior system is created per
+behavior key for the active stage.
+end note
+@enduml

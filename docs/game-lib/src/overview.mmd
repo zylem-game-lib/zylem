@@ -1,0 +1,115 @@
+---
+title: Zylem game-lib overall architecture overview
+---
+classDiagram
+  direction LR
+
+  namespace PublicAPI {
+    class ApiMain
+    class ApiCore
+    class ApiStage
+    class ApiEntities
+    class ApiActions
+    class ApiCamera
+    class ApiBehavior
+  }
+
+  namespace WebHost {
+    class WebComponent
+  }
+
+  namespace GameAndStageRuntime {
+    class Game
+    class ZylemGame
+    class Stage
+    class ZylemStage
+    class GameState
+    class StageState
+  }
+
+  namespace CoreAndContent {
+    class BaseNode
+    class Vessel
+    class GameEntity
+    class AssetManager
+    class Blueprints
+    class BehaviorDescriptor
+    class BehaviorSystem
+    class Action
+    class TransformStore
+  }
+
+  namespace RenderingAndInput {
+    class CameraWrapper
+    class ZylemCamera
+    class CameraManager
+    class RendererManager
+    class ZylemScene
+    class MaterialBuilder
+    class InstanceManager
+    class InputManager
+  }
+
+  namespace PhysicsAndAudio {
+    class ZylemWorld
+    class CollisionBuilder
+    class PhysicsProxy
+    class PhysicsWorker
+    class Sounds
+  }
+
+  namespace ExternalLibraries {
+    class Three
+    class Rapier
+    class Bitecs
+    class Valtio
+    class WebAudio
+  }
+
+  PublicAPI.ApiMain --> GameAndStageRuntime.Game
+  PublicAPI.ApiMain --> GameAndStageRuntime.Stage
+  PublicAPI.ApiMain --> CoreAndContent.GameEntity
+  PublicAPI.ApiMain --> CoreAndContent.Action
+  PublicAPI.ApiMain --> RenderingAndInput.CameraWrapper
+  PublicAPI.ApiMain --> CoreAndContent.BehaviorDescriptor
+  PublicAPI.ApiCore --> GameAndStageRuntime.Game
+  PublicAPI.ApiStage --> GameAndStageRuntime.Stage
+  PublicAPI.ApiEntities --> CoreAndContent.GameEntity
+  PublicAPI.ApiActions --> CoreAndContent.Action
+  PublicAPI.ApiCamera --> RenderingAndInput.CameraWrapper
+  PublicAPI.ApiBehavior --> CoreAndContent.BehaviorDescriptor
+  WebHost.WebComponent --> GameAndStageRuntime.Game
+  GameAndStageRuntime.Game --> GameAndStageRuntime.ZylemGame
+  GameAndStageRuntime.Game --> GameAndStageRuntime.Stage
+  GameAndStageRuntime.Game --> GameAndStageRuntime.GameState
+  GameAndStageRuntime.Stage --> GameAndStageRuntime.ZylemStage
+  GameAndStageRuntime.Stage --> GameAndStageRuntime.StageState
+  CoreAndContent.BaseNode <|-- CoreAndContent.Vessel
+  CoreAndContent.BaseNode <|-- CoreAndContent.GameEntity
+  CoreAndContent.GameEntity --> CoreAndContent.BehaviorDescriptor
+  CoreAndContent.BehaviorDescriptor --> CoreAndContent.BehaviorSystem
+  CoreAndContent.GameEntity --> CoreAndContent.Action
+  CoreAndContent.Action --> CoreAndContent.TransformStore
+  CoreAndContent.BehaviorSystem --> CoreAndContent.TransformStore
+  GameAndStageRuntime.ZylemGame --> RenderingAndInput.InputManager
+  GameAndStageRuntime.ZylemGame --> RenderingAndInput.RendererManager
+  GameAndStageRuntime.ZylemGame --> GameAndStageRuntime.ZylemStage
+  GameAndStageRuntime.ZylemStage --> RenderingAndInput.CameraManager
+  GameAndStageRuntime.ZylemStage --> RenderingAndInput.ZylemScene
+  GameAndStageRuntime.ZylemStage --> PhysicsAndAudio.ZylemWorld
+  GameAndStageRuntime.ZylemStage ..> ExternalLibraries.Bitecs
+  RenderingAndInput.CameraManager --> RenderingAndInput.ZylemCamera
+  RenderingAndInput.RendererManager --> RenderingAndInput.ZylemScene
+  RenderingAndInput.InstanceManager --> CoreAndContent.GameEntity
+  RenderingAndInput.MaterialBuilder --> CoreAndContent.AssetManager
+  PhysicsAndAudio.CollisionBuilder --> CoreAndContent.GameEntity
+  PhysicsAndAudio.PhysicsProxy --> PhysicsAndAudio.PhysicsWorker
+  PhysicsAndAudio.ZylemWorld ..> ExternalLibraries.Rapier
+  RenderingAndInput.ZylemScene ..> ExternalLibraries.Three
+  RenderingAndInput.RendererManager ..> ExternalLibraries.Three
+  RenderingAndInput.ZylemCamera ..> ExternalLibraries.Three
+  GameAndStageRuntime.GameState ..> ExternalLibraries.Valtio
+  GameAndStageRuntime.StageState ..> ExternalLibraries.Valtio
+  PhysicsAndAudio.Sounds ..> ExternalLibraries.WebAudio
+
+  note for GameAndStageRuntime.Game "Wrapper types collect configuration.\nRuntime types own the live loop."

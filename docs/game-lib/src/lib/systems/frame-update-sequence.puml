@@ -1,0 +1,54 @@
+@startuml
+title game-lib systems: frame update sequence
+autonumber
+skinparam backgroundColor transparent
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+participant Renderer
+participant Input
+participant Game
+participant Stage
+participant World
+participant Entities
+participant BehaviorSystems
+participant RuntimeEntity
+participant Store
+participant Apply
+participant TransformSystem
+participant Instances
+participant Cameras
+participant ActiveCamera
+participant Scene
+
+Renderer -> Input : poll inputs
+Input --> Renderer : merged state
+Renderer -> Game : tick(delta)
+Game -> Stage : update(delta, inputs)
+Stage -> World : step physics
+World -> RuntimeEntity : collision callbacks
+Stage -> BehaviorSystems : update systems
+BehaviorSystems -> RuntimeEntity : read linked entities
+BehaviorSystems -> Store : write intent
+Stage -> Entities : iterate nodes
+Entities -> RuntimeEntity : update
+RuntimeEntity -> Store : action intent
+Stage -> Apply : flush transforms
+Apply -> Store : resolve channels
+Apply -> World : mutate bodies
+Stage -> TransformSystem : sync transforms
+TransformSystem -> World : read pose
+TransformSystem -> RuntimeEntity : update mesh/group
+TransformSystem -> Instances : update matrices
+Stage -> Cameras : update camera pipeline
+Cameras -> ActiveCamera : update pose
+Game -> Renderer : render
+Renderer -> Scene : draw scene
+
+note right of Stage
+Typical order:
+physics, behavior systems,
+entity updates, apply transforms,
+transform sync, camera update, render.
+end note
+@enduml

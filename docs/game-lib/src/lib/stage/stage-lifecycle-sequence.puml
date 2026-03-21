@@ -1,0 +1,73 @@
+@startuml
+title game-lib stage lifecycle sequence
+autonumber
+skinparam backgroundColor transparent
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor App
+participant CreateStage
+participant Stage
+participant Game
+participant ZylemGame
+participant StageConfig
+participant ZylemStage
+participant StageLoading
+participant StageCamera
+participant StageEntities
+participant StageModels
+participant StageDebug
+participant BehaviorSystems
+participant ApplyTransforms
+participant Scene
+participant World
+participant Cameras
+participant Instances
+participant Renderer
+participant RuntimeEntities
+
+App -> CreateStage : createStage(...)
+CreateStage -> Stage : new Stage
+Stage --> App : wrapper
+App -> Game : createGame(stage)
+App -> Game : start()
+Game -> ZylemGame : loadStage(stage)
+ZylemGame -> Stage : load(runtime context)
+Stage -> StageConfig : parse options
+StageConfig --> Stage : normalized config
+Stage -> ZylemStage : new runtime stage
+ZylemStage -> StageLoading : create
+ZylemStage -> Scene : create scene
+ZylemStage -> World : create world
+ZylemStage -> StageCamera : create
+StageCamera -> Cameras : resolve cameras
+ZylemStage -> StageEntities : create
+StageEntities -> Instances : prepare instancing
+StageEntities -> StageModels : register model observers
+StageEntities -> RuntimeEntities : spawn queued nodes
+ZylemStage -> StageDebug : create
+ZylemStage -> RuntimeEntities : setup / loaded callbacks
+ZylemStage -> Renderer : begin frame loop
+loop each frame
+  Renderer -> ZylemGame : tick(delta)
+  ZylemGame -> ZylemStage : update(delta)
+  ZylemStage -> World : step physics
+  ZylemStage -> BehaviorSystems : update systems
+  ZylemStage -> RuntimeEntities : node updates
+  ZylemStage -> ApplyTransforms : flush transform intent
+  ApplyTransforms -> World : mutate bodies
+  ZylemStage -> Instances : sync instancing
+  ZylemStage -> Cameras : update cameras
+  ZylemStage -> Renderer : render frame
+end
+Game -> ZylemGame : transition or stop
+ZylemGame -> ZylemStage : destroy()
+ZylemStage -> RuntimeEntities : destroy / cleanup
+ZylemStage -> World : dispose
+ZylemStage -> Scene : destroy
+
+note right of ZylemStage
+Stage runtime owns scene, world,
+delegates, and update flow.
+end note
+@enduml

@@ -1,0 +1,95 @@
+@startuml
+title game-lib sounds: audio utilities overview
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam defaultTextAlignment center
+
+skinparam component {
+  BackgroundColor<<exported>> #E8F5E9
+  BackgroundColor<<utility>> #F7F7F7
+  BackgroundColor<<runtime>> #FFF3E0
+  BackgroundColor<<external>> #E8F1FF
+}
+
+package "src/lib/sounds" {
+  component "pingPongBeep(...)" as Ping <<exported>>
+  component "ricochetSound(...)" as Ricochet <<exported>>
+  component "Procedural SFX routine\n(short-lived beep synthesis)" as Sfx <<utility>>
+  component "Sound parameters\nfrequency, duration,\nvolume, envelope" as Params <<utility>>
+}
+
+package "Typical call sites" {
+  component "Game / Stage callbacks" as Lifecycle <<runtime>>
+  component "Entity / behavior logic" as Gameplay <<runtime>>
+}
+
+cloud "Browser Web Audio API" {
+  component "AudioContext" as AudioContext <<external>>
+  component "OscillatorNode" as Oscillator <<external>>
+  component "GainNode" as Gain <<external>>
+  component "AudioDestinationNode" as Destination <<external>>
+}
+
+package "Separate subsystem\n(not used directly here)" {
+  component "AssetManager\nsrc/lib/core/loaders" as AssetManager
+  component "Loaded audio assets\nbuffer playback path" as AssetPipeline
+}
+
+Lifecycle --> Ping : invoke
+Gameplay --> Ping : invoke
+Lifecycle --> Ricochet : invoke
+Gameplay --> Ricochet : invoke
+
+Ping --> Params : choose ping-pong profile
+Ricochet --> Params : choose ricochet profile
+
+Ping --> Sfx : delegate
+Ricochet --> Sfx : delegate
+
+Sfx --> AudioContext : create per call
+Sfx --> Oscillator : configure tone
+Sfx --> Gain : shape volume envelope
+Oscillator --> Gain : connect
+Gain --> Destination : connect to output
+AudioContext --> Destination : owns
+
+AssetManager --> AssetPipeline : manages cached assets
+
+note right of Sfx
+Standalone procedural audio helper.
+
+Current role:
+- create a fresh audio context
+- create oscillator + gain nodes
+- apply a very short envelope
+- emit a tiny synthesized sound effect
+end note
+
+note bottom of AssetManager
+The sound helpers in `src/lib/sounds`
+are separate from the centralized asset-loading path.
+They do not depend on cached audio files to play.
+end note
+
+note bottom of Ping
+High-level helper for a short
+arcade-style beep.
+end note
+
+note bottom of Ricochet
+High-level helper for a short
+impact / ricochet effect.
+end note
+
+legend right
+|= Area |= Role |
+| `src/lib/sounds` | small procedural sound utilities |
+| Web Audio API | browser playback primitives |
+| Asset pipeline | separate loaded-audio path |
+endlegend
+
+@enduml

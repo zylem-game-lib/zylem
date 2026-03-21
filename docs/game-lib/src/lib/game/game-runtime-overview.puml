@@ -1,0 +1,70 @@
+@startuml
+title game-lib game runtime overview
+allowmixing
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "Author-facing layer" {
+  class Game
+  class Stage
+  component CreateGame
+}
+
+package "Configuration and state" {
+  component ResolveGameConfig
+  class GameConfig
+  component GameState
+  class GameEventBus
+}
+
+package "Live runtime" {
+  class ZylemGame
+  class GameCanvas
+  class GameLoadingDelegate
+  class GameRendererObserver
+  class GameDebugDelegate
+}
+
+package "Collaborators" {
+  class InputManager
+  class RendererManager
+  class ZylemStage
+  class StageLoadingDelegate
+  class CameraManager
+  class ZylemScene
+  class ZylemWorld
+}
+
+CreateGame --> Game
+Game --> ResolveGameConfig
+ResolveGameConfig --> GameConfig
+Game --> ZylemGame : controls
+Game --> Stage : accepts wrappers
+Game --> GameState
+Game --> GameEventBus
+ZylemGame --> GameConfig
+ZylemGame --> GameCanvas
+ZylemGame --> InputManager
+ZylemGame --> RendererManager
+ZylemGame --> GameLoadingDelegate
+ZylemGame --> GameRendererObserver
+ZylemGame --> GameDebugDelegate
+ZylemGame --> Stage : loads
+Stage --> ZylemStage : materializes runtime stage
+ZylemGame --> ZylemStage : active stage
+ZylemStage --> StageLoadingDelegate
+ZylemStage --> CameraManager
+ZylemStage --> ZylemScene
+ZylemStage --> ZylemWorld
+RendererManager --> CameraManager
+GameLoadingDelegate --> StageLoadingDelegate
+
+note bottom of ZylemGame
+Owns the live runtime loop,
+canvas, renderer, input,
+and active stage lifecycle.
+end note
+@enduml

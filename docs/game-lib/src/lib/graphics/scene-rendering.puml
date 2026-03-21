@@ -1,0 +1,145 @@
+@startuml
+title game-lib graphics: scene rendering architecture
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam linetype ortho
+skinparam wrapWidth 220
+skinparam maxMessageSize 180
+skinparam defaultTextAlignment center
+
+skinparam stereotype {
+  CBackgroundColor<<runtime>> #FFF1D6
+  CBackgroundColor<<graphics>> #EAF7EA
+  CBackgroundColor<<asset>> #E8F1FF
+  CBackgroundColor<<entity>> #F3E8FF
+  CBackgroundColor<<external>> #F7F7F7
+}
+
+package "Stage / camera runtime" {
+  component "ZylemStage" as ZylemStage <<runtime>>
+  component "CameraManager" as CameraManager <<runtime>>
+  component "ZylemCamera" as ZylemCamera <<runtime>>
+  component "RendererManager" as RendererManager <<runtime>>
+}
+
+package "src/lib/graphics" {
+  component "ZylemScene" as ZylemScene <<graphics>>
+  component "MaterialBuilder" as MaterialBuilder <<graphics>>
+  component "InstanceManager" as InstanceManager <<graphics>>
+  component "MeshBuilder" as MeshBuilder <<graphics>>
+  component "RenderPass" as RenderPass <<graphics>>
+}
+
+package "Content / asset collaborators" {
+  component "GameEntity" as GameEntity <<entity>>
+  component "PhysicsBodyHandle\nor Rapier body state" as BodyState <<entity>>
+  component "AssetManager" as AssetManager <<asset>>
+}
+
+cloud "Three.js / renderer backend" {
+  component "Three.Scene" as ThreeScene <<external>>
+  component "WebGLRenderer /\nWebGPURenderer" as ThreeRenderer <<external>>
+  component "EffectComposer" as EffectComposer <<external>>
+  component "InstancedMesh" as InstancedMesh <<external>>
+  component "ShaderMaterial /\nNodeMaterial" as ShaderMaterial <<external>>
+}
+
+ZylemStage --> ZylemScene : owns active scene
+ZylemStage --> InstanceManager : registers instancing
+ZylemStage --> CameraManager : resolves active cameras
+
+CameraManager --> ZylemCamera : manages one or more cameras
+CameraManager --> RendererManager : renders active cameras
+
+RendererManager --> ZylemScene : render(scene, camera)
+RendererManager --> ZylemCamera : uses viewport / RTT cameras
+RendererManager ..> RenderPass : legacy WebGL post FX path
+RendererManager ..> EffectComposer : post-processing
+RendererManager ..> ThreeRenderer : backend owner
+
+ZylemScene --> ThreeScene : wraps / configures
+ZylemScene --> MaterialBuilder : backgrounds / materials / shaders
+ZylemScene --> AssetManager : background textures
+ZylemScene --> CameraManager : attaches camera context
+
+MaterialBuilder --> AssetManager : textures / normal maps / files
+MaterialBuilder ..> ShaderMaterial : GLSL / TSL materials
+
+MeshBuilder --> MaterialBuilder : applies built materials
+MeshBuilder --> GameEntity : builds mesh primitives
+
+InstanceManager --> GameEntity : batch candidates
+InstanceManager --> BodyState : reads transforms
+InstanceManager --> ZylemScene : inserts instanced batches
+InstanceManager --> InstancedMesh : maintains batch meshes
+
+GameEntity ..> MeshBuilder : simple mesh path
+GameEntity ..> MaterialBuilder : material configuration
+
+note right of ZylemScene
+Scene ownership layer.
+
+Responsibilities:
+- create/configure Three.js scene
+- manage background color/image/shader
+- set up default lighting
+- attach entities and late-loaded groups
+- coordinate with camera/render runtime
+end note
+
+note right of RendererManager
+Renderer ownership layer.
+
+Responsibilities:
+- choose backend: auto / webgl / webgpu
+- own canvas + renderer instance
+- render RTT cameras first, viewport cameras second
+- optionally run WebGL post-processing
+end note
+
+note bottom of InstanceManager
+Primary batching system.
+
+It groups entities by compatible
+geometry/material signatures and
+updates instance matrices from
+physics or render transforms.
+end note
+
+note bottom of MaterialBuilder
+Resource/material creation layer.
+
+Supports:
+- color and texture materials
+- shader materials
+- node/TSL materials for WebGPU
+- cached batch-friendly materials
+end note
+
+note bottom of MeshBuilder
+Simple mesh construction path.
+
+Useful for direct mesh creation, but
+batching is primarily handled by
+InstanceManager rather than MeshBuilder.
+end note
+
+note left of RenderPass
+Legacy/fullscreen WebGL pass that combines
+scene color and normals in a custom shader.
+end note
+
+legend right
+|= Concern |= Main owner |
+| Scene graph ownership | `ZylemScene` |
+| Renderer/backend ownership | `RendererManager` |
+| Multi-camera coordination | `CameraManager` + `ZylemCamera` |
+| Material and shader creation | `MaterialBuilder` |
+| Instancing / draw-call reduction | `InstanceManager` |
+| Asset-backed textures/backgrounds | `AssetManager` |
+endlegend
+
+@enduml

@@ -1,0 +1,78 @@
+@startuml
+title game-lib input subsystem
+allowmixing
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "Runtime consumers" {
+  class Game
+  class ZylemGame
+}
+
+package "Providers" {
+  class InputManager
+  interface InputProvider
+  class KeyboardProvider
+  class MouseProvider
+  class GamepadProvider
+}
+
+package "Input state" {
+  class InputGamepad
+  class ButtonState
+  class AnalogState
+  class PointerState
+  class CompiledMapping
+  component CompileMapping
+  component CreateState
+  component MergeButtons
+  component MergeAnalogs
+  component MergeGamepads
+}
+
+package "Presets" {
+  class GameInputConfig
+  component UseArrows
+  component UseWASD
+  component UseMouseLook
+  component MergeConfigs
+}
+
+component KeyEvents
+component MouseEvents
+component BrowserGamepad
+
+Game --> ZylemGame
+ZylemGame --> InputManager
+InputManager o-- InputProvider
+InputProvider <|.. KeyboardProvider
+InputProvider <|.. MouseProvider
+InputProvider <|.. GamepadProvider
+InputManager --> GameInputConfig
+InputManager --> MergeGamepads
+InputManager --> InputGamepad
+KeyboardProvider --> CompiledMapping
+MouseProvider --> CompiledMapping
+KeyboardProvider --> KeyEvents
+MouseProvider --> MouseEvents
+GamepadProvider --> BrowserGamepad
+CompileMapping --> CompiledMapping
+CreateState --> ButtonState
+CreateState --> AnalogState
+MergeButtons --> ButtonState
+MergeAnalogs --> AnalogState
+MergeGamepads --> InputGamepad
+MergeGamepads ..> PointerState
+UseArrows --> GameInputConfig
+UseWASD --> GameInputConfig
+UseMouseLook --> GameInputConfig
+MergeConfigs --> GameInputConfig
+
+note bottom of InputGamepad
+All devices normalize into a shared
+controller-like input shape.
+end note
+@enduml

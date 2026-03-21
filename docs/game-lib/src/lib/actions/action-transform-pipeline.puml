@@ -1,0 +1,54 @@
+@startuml action-transform-pipeline
+title game-lib actions: action transform pipeline
+allowmixing
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "Entity runtime" {
+  class GameEntity
+  interface Action
+  class BaseAction
+  class TransformState
+}
+
+package "Action modules" {
+  component IntervalActions
+  component PersistentActions
+  component CompositionActions
+  component TransformHelpers
+}
+
+package "Stage collaborators" {
+  interface BehaviorSystem
+  component ApplyTransformChanges
+  component PhysicsWorld
+  component TransformSystem
+}
+
+BaseAction ..|> Action
+GameEntity --> Action : runs
+GameEntity --> TransformState : owns
+IntervalActions ..> Action
+PersistentActions ..> Action
+CompositionActions ..> Action
+TransformHelpers ..> TransformState
+Action ..> TransformState : writes intent
+BehaviorSystem ..> TransformState : writes intent
+ApplyTransformChanges ..> TransformState : reads
+ApplyTransformChanges --> PhysicsWorld : mutates bodies
+PhysicsWorld --> TransformSystem : body transforms
+TransformSystem --> GameEntity : sync visible pose
+
+note right of TransformState
+Frame-local buffer for motion
+and transform intent.
+end note
+
+note bottom of ApplyTransformChanges
+Flushes accumulated intent into
+live physics state.
+end note
+@enduml

@@ -1,0 +1,80 @@
+@startuml
+title game-lib core loaders: asset loading subsystem
+allowmixing
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "Consumers" {
+  component ZylemScene
+  component MaterialBuilder
+  component EntityAssetLoader
+  component EntityLoaders
+  component RuntimeClients
+}
+
+package "Core service" {
+  class AssetManager
+  component AssetCache
+  component InFlightRequests
+  component AssetLoadingEvents
+}
+
+package "Contracts and result types" {
+  interface LoaderAdapter
+  enum AssetType
+  class BatchItem
+  class BatchProgressEvent
+  class ModelLoadResult
+  class AudioLoadResult
+  class FileLoadResult
+}
+
+package "Adapters" {
+  class TextureLoaderAdapter
+  class GLTFLoaderAdapter
+  class FBXLoaderAdapter
+  class OBJLoaderAdapter
+  class AudioLoaderAdapter
+  class FileLoaderAdapter
+  class JsonLoaderAdapter
+}
+
+package "Utilities" {
+  component CloneModelObject
+}
+
+ZylemScene --> AssetManager
+MaterialBuilder --> AssetManager
+EntityAssetLoader --> AssetManager
+EntityLoaders --> EntityAssetLoader
+RuntimeClients --> AssetManager
+AssetManager --> AssetCache
+AssetManager --> InFlightRequests
+AssetManager --> AssetLoadingEvents
+AssetManager --> LoaderAdapter
+AssetManager ..> AssetType
+AssetManager ..> BatchItem
+AssetManager ..> BatchProgressEvent
+AssetManager ..> ModelLoadResult
+AssetManager ..> AudioLoadResult
+AssetManager ..> FileLoadResult
+TextureLoaderAdapter ..|> LoaderAdapter
+GLTFLoaderAdapter ..|> LoaderAdapter
+FBXLoaderAdapter ..|> LoaderAdapter
+OBJLoaderAdapter ..|> LoaderAdapter
+AudioLoaderAdapter ..|> LoaderAdapter
+FileLoaderAdapter ..|> LoaderAdapter
+JsonLoaderAdapter ..|> LoaderAdapter
+JsonLoaderAdapter --> FileLoaderAdapter
+GLTFLoaderAdapter ..> CloneModelObject
+FBXLoaderAdapter ..> CloneModelObject
+OBJLoaderAdapter ..> CloneModelObject
+
+note bottom of AssetManager
+Centralized loading, caching,
+and type-based routing.
+end note
+@enduml

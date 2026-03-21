@@ -1,0 +1,119 @@
+@startuml
+title game-lib core: BaseNode lifecycle and composition
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+hide empty members
+
+package "src/lib/core/base-node.ts" {
+  class BaseNode {
+    +parent: BaseNode
+    +children: BaseNode[]
+    --
+    +add(child: BaseNode): this
+    +remove(child: BaseNode): this
+    +clone(): BaseNode
+    --
+    +onSetup(fn: SetupFunction): this
+    +onLoaded(fn: LoadedFunction): this
+    +onUpdate(fn: UpdateFunction): this
+    +onDestroy(fn: DestroyFunction): this
+    +onCleanup(fn: CleanupFunction): this
+    +prependSetup(fn: SetupFunction): this
+    +prependUpdate(fn: UpdateFunction): this
+    --
+    +nodeSetup(ctx: SetupContext): void
+    +nodeLoaded(ctx: LoadedContext): void
+    +nodeUpdate(ctx: UpdateContext): void
+    +nodeDestroy(ctx: DestroyContext): void
+    +nodeCleanup(ctx: CleanupContext): void
+  }
+
+  class Vessel {
+    +add(child: BaseNode): this
+    +clone(): Vessel
+  }
+}
+
+package "src/lib/core/base-node-life-cycle.ts" {
+  class SetupContext <<type>>
+  class LoadedContext <<type>>
+  class UpdateContext <<type>> {
+    +delta: number
+  }
+  class DestroyContext <<type>>
+  class CleanupContext <<type>>
+
+  interface SetupFunction <<callback>>
+  interface LoadedFunction <<callback>>
+  interface UpdateFunction <<callback>>
+  interface DestroyFunction <<callback>>
+  interface CleanupFunction <<callback>>
+}
+
+package "runtime collaborators" {
+  class ZylemStage <<runtime>>
+  class StageEntityDelegate <<delegate>>
+}
+
+package "downstream node types" {
+  class GameEntity <<entity>>
+}
+
+Vessel --|> BaseNode
+GameEntity --|> BaseNode
+
+BaseNode "1" *-- "0..*" BaseNode : children
+BaseNode "0..1" --> "1" BaseNode : parent
+
+BaseNode ..> SetupContext
+BaseNode ..> LoadedContext
+BaseNode ..> UpdateContext
+BaseNode ..> DestroyContext
+BaseNode ..> CleanupContext
+
+BaseNode ..> SetupFunction : registers
+BaseNode ..> LoadedFunction : registers
+BaseNode ..> UpdateFunction : registers
+BaseNode ..> DestroyFunction : registers
+BaseNode ..> CleanupFunction : registers
+
+ZylemStage ..> BaseNode : drives lifecycle
+StageEntityDelegate ..> BaseNode : traverses / spawns
+StageEntityDelegate ..> Vessel : expands composite nodes
+
+note right of BaseNode
+Core runtime content primitive.
+
+Responsibilities:
+- parent/child composition
+- lifecycle callback registration
+- lifecycle execution entrypoints
+- cloneable node graphs
+
+Most stage content eventually flows through BaseNode.
+end note
+
+note right of Vessel
+Structural composite node.
+
+Used to group child nodes without
+introducing its own render or physics role.
+end note
+
+note right of ZylemStage
+Stage runtime orchestrator.
+
+Typical runtime flow:
+setup -> loaded -> update* -> destroy -> cleanup
+end note
+
+note bottom of BaseNode
+Lifecycle methods are invoked by runtime systems,
+while callback registration methods are used by
+author-facing wrappers and node subclasses.
+end note
+@enduml

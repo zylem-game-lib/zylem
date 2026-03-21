@@ -1,0 +1,64 @@
+@startuml
+title Zylem game web component runtime
+autonumber
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+
+actor App
+participant Element
+participant Shadow
+participant Resize
+participant Display
+participant Game
+participant Config
+participant Stage
+participant Runtime
+participant Canvas
+participant Input
+participant Renderer
+participant RuntimeStage
+participant Cameras
+participant Scene
+
+App -> Element : connectedCallback()
+Element -> Shadow : attach shadow and mount DOM
+Element -> Resize : observe container
+Element -> Element : wire focus and controls
+alt game already available
+  Element -> Game : start with host container
+else game supplied later
+  App -> Element : set game or config
+  Element -> Game : start with host container
+end
+Game -> Config : resolve game config
+Config --> Game : normalized config
+Game -> Runtime : create runtime
+Runtime -> Canvas : mount canvas
+Runtime -> Input : create input providers
+Runtime -> Renderer : create renderer
+Game -> Stage : resolve stage
+Stage -> RuntimeStage : load stage
+RuntimeStage -> Cameras : resolve cameras
+RuntimeStage -> Scene : create scene
+RuntimeStage --> Stage : loaded
+Runtime --> Game : running
+Game --> Element : started
+loop viewport changes
+  Resize --> Element : resized
+  Element -> Display : update viewport state
+  Element -> Game : push display runtime update
+  Game -> Runtime : apply display changes
+  Runtime -> Renderer : resize
+end
+opt debug interaction
+  App -> Element : toggle debug
+  Element -> Display : mutate debug state
+end
+
+note right of Element
+The custom element hosts the runtime
+but does not replace the engine.
+end note
+@enduml

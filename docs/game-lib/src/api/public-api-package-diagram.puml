@@ -1,0 +1,134 @@
+@startuml
+title Zylem Game Library - Public API Package Diagram
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam wrapWidth 220
+skinparam maxMessageSize 200
+skinparam defaultTextAlignment center
+
+legend right
+|= Stereotype |= Meaning |
+| <<entrypoint>> | Public import surface exposed by package exports |
+| <<barrel>> | Thin re-export module with little/no runtime logic |
+| <<impl>> | Internal implementation area under `src/lib` |
+endlegend
+
+package "Published package exports" as exports {
+  artifact "@zylem/game-lib" as pkg_root
+  artifact "@zylem/game-lib/core" as pkg_core
+  artifact "@zylem/game-lib/stage" as pkg_stage
+  artifact "@zylem/game-lib/entities" as pkg_entities
+  artifact "@zylem/game-lib/actions" as pkg_actions
+  artifact "@zylem/game-lib/camera" as pkg_camera
+  artifact "@zylem/game-lib/behavior/*" as pkg_behavior
+}
+
+package "src/api" as api {
+  component "main.ts\nomnibus SDK entrypoint" as api_main <<entrypoint>> <<barrel>>
+  component "core.ts\ncore helpers + game creation" as api_core <<entrypoint>> <<barrel>>
+  component "stage.ts\nstage-focused surface" as api_stage <<entrypoint>> <<barrel>>
+  component "entities.ts\nentity factory surface" as api_entities <<entrypoint>> <<barrel>>
+  component "actions.ts\nactions + transform helpers" as api_actions <<entrypoint>> <<barrel>>
+  component "camera.ts\ncamera/rendering surface" as api_camera <<entrypoint>> <<barrel>>
+  component "behavior/*.ts\none file per behavior entrypoint\n(thruster, top-down-movement,\nshooter-2d, screen-wrap,\nscreen-visibility, world-boundary-2d,\nworld-boundary-3d, ricochet-2d,\nricochet-3d, destructible-3d,\njumper-2d, particle-emitter,\nplatformer-3d)" as api_behavior <<entrypoint>> <<barrel>>
+}
+
+package "src/lib implementation" as lib {
+  component "game/\nGame\ncreateGame\nZylemGame\ngame-config\ngame-state" as lib_game <<impl>>
+
+  component "stage/\nStage\ncreateStage\nZylemStage\nstage-config\nstage-state\nstage-events" as lib_stage <<impl>>
+
+  component "core/\nBaseNode\nVessel\nblueprints\nvector utilities\nshared interfaces" as lib_core <<impl>>
+
+  component "entities/\nGameEntity\nprimitive factories\nactor\nzone\nparticle system" as lib_entities <<impl>>
+
+  component "actions/\nAction\ninterval/persistent actions\ncomposition\ntransform capabilities\nstate-change helpers" as lib_actions <<impl>>
+
+  component "camera/\nCameraWrapper\nZylemCamera\nCameraManager\nRendererManager\nperspectives" as lib_camera <<impl>>
+
+  component "behaviors/\ndescriptor-driven behaviors\nbehavior systems\nFSM-backed gameplay modules" as lib_behaviors <<impl>>
+
+  component "input/\nInputManager\nproviders\ninput presets" as lib_input <<impl>>
+
+  component "events/\nevent emitters\nloading/state bridges" as lib_events <<impl>>
+
+  component "graphics/\nscene helpers\nmaterials\nshaders" as lib_graphics <<impl>>
+
+  component "collision/\ncollision builders\nselectors\nworld integration" as lib_collision <<impl>>
+}
+
+pkg_root --> api_main
+pkg_core --> api_core
+pkg_stage --> api_stage
+pkg_entities --> api_entities
+pkg_actions --> api_actions
+pkg_camera --> api_camera
+pkg_behavior --> api_behavior : one file per\nbehavior import path
+
+api_main --> lib_game
+api_main --> lib_stage
+api_main --> lib_core
+api_main --> lib_entities
+api_main --> lib_actions
+api_main --> lib_camera
+api_main --> lib_behaviors
+api_main --> lib_input
+api_main --> lib_events
+api_main --> lib_graphics
+api_main --> lib_collision
+
+api_core --> lib_game
+api_core --> lib_core
+api_core --> lib_actions
+
+api_stage --> lib_stage
+api_stage --> lib_core
+api_stage --> lib_events
+
+api_entities --> lib_entities
+
+api_actions --> lib_actions
+
+api_camera --> lib_camera
+
+api_behavior --> lib_behaviors : thin re-export to\nmatching behavior module
+
+lib_game ..> lib_stage : loads / switches stages
+lib_stage ..> lib_entities : spawns content
+lib_stage ..> lib_camera : manages cameras
+lib_stage ..> lib_behaviors : registers behavior systems
+lib_stage ..> lib_collision : physics + triggers
+lib_stage ..> lib_events : loading / state notifications
+lib_camera ..> lib_graphics : renders scenes
+lib_entities ..> lib_actions : transform API
+lib_entities ..> lib_behaviors : attaches descriptors
+
+note bottom of api_main
+`src/api` is the public package surface.
+It is primarily a set of thin barrel/entrypoint files that
+re-export implementation from `src/lib`.
+The dependency direction is intentionally one-way:
+`src/api` -> `src/lib`.
+end note
+
+note right of api_main
+Broadest entrypoint:
+- game creation/config
+- stages
+- entities
+- actions + behaviors
+- camera
+- input/state/events
+- selected graphics helpers
+end note
+
+note right of api_behavior
+Each file under `src/api/behavior`
+maps directly to a corresponding
+module under `src/lib/behaviors`.
+end note
+
+@enduml

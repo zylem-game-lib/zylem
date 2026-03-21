@@ -1,0 +1,167 @@
+@startuml
+title game-lib collision: dispatch architecture
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+hide empty members
+hide circle
+
+package "Construction / policy" {
+  class CollisionBuilder <<builder>> {
+    +build(options)
+    +withCollision(...)
+    +bodyDesc(...)
+    +collider(...)
+    +getOrCreateCollisionGroupId(type)
+    +createCollisionFilter(allowedTypes)
+  }
+
+  class CollisionOptions <<type>>
+  class CollisionComponent <<value>>
+  class CollisionSelector <<type>>
+  class CollisionMask <<enum>>
+  class "matchesCollisionSelector(...)" as MatchSelector <<utility>>
+}
+
+package "Entity layer" {
+  class GameEntity <<entity>> {
+    +bodyDesc
+    +colliderDesc
+    +colliderDescs
+    +body
+    +colliders
+    --
+    +onCollision(selector, callback, phase, cooldown)
+    +_collision(other, event)
+  }
+
+  interface CollisionHandlerDelegate <<delegate>> {
+    +handleIntersectionEvent(event)
+    +handlePostCollision(event)
+  }
+
+  class ZylemZone <<entity>> {
+    +onEnter(callback)
+    +onHeld(callback)
+    +onExit(callback)
+  }
+}
+
+package "Stage integration" {
+  class StageEntityDelegate <<runtime>> {
+    +spawn(entity)
+    +attachPhysics(entity)
+    +remove(entity)
+  }
+}
+
+package "Physics runtime" {
+  class ZylemWorld <<runtime>> {
+    +attach(entity)
+    +update(delta)
+    +dispatch collisions
+  }
+
+  class RigidBodyDesc <<rapier>>
+  class ColliderDesc <<rapier>>
+  class RigidBody <<rapier>>
+  class Collider <<rapier>>
+  class "Rapier World" as RapierWorld <<external>>
+}
+
+ZylemZone --|> GameEntity
+ZylemZone ..|> CollisionHandlerDelegate
+
+CollisionBuilder --> CollisionOptions : reads
+CollisionBuilder --> CollisionComponent : build()
+CollisionBuilder --> RigidBodyDesc : bodyDesc()
+CollisionBuilder --> ColliderDesc : collider()
+CollisionBuilder --> CollisionMask : group ids / filters
+
+MatchSelector --> CollisionSelector
+MatchSelector --> CollisionMask
+
+GameEntity o-- RigidBodyDesc : planned body
+GameEntity o-- ColliderDesc : planned collider(s)
+GameEntity o-- RigidBody : attached body
+GameEntity o-- Collider : attached collider(s)
+GameEntity ..> MatchSelector : filters callback targets
+
+StageEntityDelegate --> GameEntity : spawn / track
+StageEntityDelegate --> ZylemWorld : attach into world
+StageEntityDelegate --> RigidBodyDesc : consumes
+StageEntityDelegate --> ColliderDesc : consumes
+
+ZylemWorld *-- RapierWorld : owns
+ZylemWorld --> RigidBody : creates / updates
+ZylemWorld --> Collider : creates / updates
+ZylemWorld --> GameEntity : body refs + callback dispatch
+ZylemWorld --> CollisionHandlerDelegate : delegate dispatch
+
+note top of CollisionBuilder
+CollisionBuilder is the low-level collision descriptor factory.
+
+It is responsible for:
+- body/collider descriptor creation
+- collision group ID allocation
+- allowed-type filter generation
+- reusable collision policy helpers
+end note
+
+note right of StageEntityDelegate
+StageEntityDelegate bridges author-created entities
+into the live physics runtime.
+
+Typical responsibilities:
+- read entity body/collider descriptors
+- create live Rapier objects through ZylemWorld
+- store the resulting body/collider refs on the entity
+end note
+
+note bottom of ZylemWorld
+Collision flow
+
+1. Physics step runs in the world
+2. Contacts / intersections are detected
+3. ZylemWorld dispatches through two paths
+
+Path A: entity callback path
+- GameEntity.onCollision(...) registers callbacks
+- ZylemWorld calls GameEntity._collision(...)
+- selector matching + cooldown/phase logic decide delivery
+
+Path B: delegate path
+- entities implementing CollisionHandlerDelegate
+  receive intersection and post-collision events directly
+- useful for stateful sensors and zone-style entities
+end note
+
+note right of GameEntity
+GameEntity is the common collision consumer.
+
+It can participate in collision handling by:
+- owning body/collider descriptors
+- receiving live body/collider refs
+- exposing onCollision(...) for filtered callbacks
+end note
+
+note right of ZylemZone
+ZylemZone is the clearest example of the delegate path.
+
+It behaves more like a stateful sensor than a simple
+one-shot callback target, so it implements
+CollisionHandlerDelegate and tracks enter/held/exit semantics.
+end note
+
+legend left
+|= Path |= Purpose |
+| Descriptor creation | CollisionBuilder creates body/collider descriptors and filter policy |
+| Runtime attachment | StageEntityDelegate attaches entity physics into ZylemWorld |
+| Callback dispatch | ZylemWorld -> GameEntity._collision(...) |
+| Delegate dispatch | ZylemWorld -> CollisionHandlerDelegate |
+endlegend
+
+@enduml
