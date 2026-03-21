@@ -26,6 +26,7 @@
     "build:editor": "pnpm --filter @zylem/editor build",
     "build:examples": "pnpm --filter @zylem/examples build",
     "build:styles": "pnpm --filter @zylem/styles build",
+    "build:render": "./scripts/render-build.sh",
     "build": "pnpm -r build",
     "test:runtime": "pnpm --filter @zylem/runtime test",
     "test": "pnpm --filter @zylem/game-lib test",

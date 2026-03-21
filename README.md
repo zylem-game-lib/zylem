@@ -13,6 +13,8 @@ This is a pnpm workspace monorepo containing:
 - **[@zylem/game-lib](./packages/game-lib)** - Core game engine library (published to npm)
 - **[@zylem/editor](./packages/editor)** - SolidJS-based debug UI and editor
 - **[@zylem/examples](./packages/examples)** - Example applications and playground
+- **[@zylem/styles](./packages/zylem-styles)** - Shared style package for Zylem UI builds
+- **[@zylem/runtime](./packages/zylem-runtime)** - Rust runtime scaffolding for simulation and future wasm builds
 - **[@zylem/spacetime-server](./packages/server)** - SpacetimeDB multiplayer server (scaffold)
 
 ## 🚀 Quick Start
@@ -44,6 +46,18 @@ pnpm typecheck
 # Lint all packages
 pnpm lint
 ```
+
+### Render builds with Rust
+
+If your Render deployment needs to build `@zylem/runtime`, use the root
+Render-safe build script:
+
+```bash
+pnpm build:render
+```
+
+That script installs Rust with `rustup` when `cargo` is missing, adds the
+`wasm32-unknown-unknown` target, then runs the normal monorepo build.
 
 ## 🎮 Using the Library
 
