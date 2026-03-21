@@ -1,0 +1,14 @@
+{
+  "name": "@zylem/runtime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rust runtime scaffolding for Zylem simulation and future wasm builds.",
+  "license": "MIT",
+  "scripts": {
+    "build": "cargo build --manifest-path Cargo.toml",
+    "build:release": "cargo build --manifest-path Cargo.toml --release",
+    "build:wasm": "cargo build --manifest-path Cargo.toml --target wasm32-unknown-unknown --release",
+    "test": "cargo test --manifest-path Cargo.toml",
+    "typecheck": "cargo check --manifest-path Cargo.toml"
+  }
+}
