@@ -18,4 +18,5 @@ fi
 echo "installing pnpm@10.32.1"
 npm install --global pnpm@10.32.1
 pnpm install --frozen-lockfile
+pnpm build:runtime:wasm
 pnpm build
