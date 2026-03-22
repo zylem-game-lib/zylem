@@ -15,6 +15,7 @@ if command -v rustup >/dev/null 2>&1; then
   rustup target add wasm32-unknown-unknown
 fi
 
-corepack enable
+echo "installing pnpm@10.32.1"
+npm install --global pnpm@10.32.1
 pnpm install --frozen-lockfile
 pnpm build
