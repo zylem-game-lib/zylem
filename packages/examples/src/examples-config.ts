@@ -81,6 +81,7 @@ const PREDEFINED_ORDER = {
 		'18-baileys-world',
 	],
 	'Classic Remakes': [
+		'00-3d-asteroids',
 		'00-pong',
 		'00-breakout',
 		'00-space-invaders',
