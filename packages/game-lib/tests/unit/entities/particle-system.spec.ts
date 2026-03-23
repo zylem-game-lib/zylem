@@ -34,4 +34,18 @@ describe('ZylemParticleSystem', () => {
 		entity.stop();
 		expect(entity.isPlaying()).toBe(false);
 	});
+
+	it('accepts semantic presets through the preset alias', () => {
+		const entity = createParticleSystem({
+			preset: particlePresets.fire.spark({
+				magic: 'arcane',
+			}),
+			autoplay: false,
+		});
+
+		expect(entity.getBehaviorRefs()).toHaveLength(1);
+		expect(entity.isPlaying()).toBe(false);
+		entity.play();
+		expect(entity.isPlaying()).toBe(true);
+	});
 });

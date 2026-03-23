@@ -1,34 +1,35 @@
-import {
-	MeshBasicMaterial,
-	type Blending,
-	type ColorRepresentation,
-	type MeshBasicMaterialParameters,
-	type Texture,
-} from 'three';
+import type { ColorRepresentation } from 'three';
 import {
 	ConstantColor,
 	ConstantValue,
-	IntervalValue,
 	ParticleSystem,
 	PointEmitter,
 	RenderMode,
-	Vector4,
 } from 'three.quarks';
 
-export interface ParticleEffectDefinition {
-	create(): ParticleSystem;
-}
+import {
+	createParticleMaterial,
+	createRangeValue,
+	createTextureSystemOptions,
+	particleEffect,
+	toColorVector,
+	type ParticleEffectDefinition,
+	type ParticlePresetMaterialOptions,
+} from './preset-builder';
+import { electricityPresets, firePresets, gasPresets, magicPresets, waterPresets } from './presets';
 
-interface ParticlePresetMaterialOptions {
-	texture?: Texture;
-	opacity?: number;
-	depthWrite?: boolean;
-	alphaTest?: number;
-	blending?: Blending;
-	uTileCount?: number;
-	vTileCount?: number;
-	blendTiles?: boolean;
-}
+export type {
+	ParticleEffectDefinition,
+	ParticleMagicAgency,
+	ParticleMagicAlignment,
+	ParticleMagicModifierInput,
+	ParticleMagicModifierOptions,
+	ParticleMagicOrder,
+	ParticleMagicRealityEffect,
+	ParticleMagicTemperament,
+	ParticlePresetMaterialOptions,
+	SemanticParticlePresetOptions,
+} from './preset-builder';
 
 export interface BurstParticlePresetOptions extends ParticlePresetMaterialOptions {
 	color?: ColorRepresentation;
@@ -38,90 +39,6 @@ export interface BurstParticlePresetOptions extends ParticlePresetMaterialOption
 	size?: number | readonly [number, number];
 	speed?: number | readonly [number, number];
 	worldSpace?: boolean;
-}
-
-function createRangeValue(
-	value: number | readonly [number, number],
-	defaultValue: readonly [number, number],
-) {
-	if (Array.isArray(value)) {
-		const min = value[0] ?? defaultValue[0];
-		const max = value[1] ?? defaultValue[1];
-		return min === max ? new ConstantValue(min) : new IntervalValue(min, max);
-	}
-
-	return new ConstantValue(value as number);
-}
-
-function toColorVector(color: ColorRepresentation): Vector4 {
-	const material = new MeshBasicMaterial({ color });
-	const { r, g, b } = material.color;
-	material.dispose();
-	return new Vector4(r, g, b, 1);
-}
-
-function createParticleMaterial(
-	color: ColorRepresentation,
-	options: ParticlePresetMaterialOptions,
-	defaultOpacity?: number,
-) {
-	const materialOptions: MeshBasicMaterialParameters = {
-		color,
-		transparent: true,
-	};
-
-	if (options.texture) {
-		materialOptions.map = options.texture;
-		materialOptions.depthWrite = options.depthWrite ?? false;
-		materialOptions.alphaTest = options.alphaTest ?? 0.01;
-	} else {
-		if (options.depthWrite !== undefined) {
-			materialOptions.depthWrite = options.depthWrite;
-		}
-
-		if (options.alphaTest !== undefined) {
-			materialOptions.alphaTest = options.alphaTest;
-		}
-	}
-
-	const opacity = options.opacity ?? defaultOpacity;
-	if (opacity !== undefined) {
-		materialOptions.opacity = opacity;
-	}
-
-	if (options.blending !== undefined) {
-		materialOptions.blending = options.blending;
-	}
-
-	return new MeshBasicMaterial(materialOptions);
-}
-
-function createTextureSystemOptions(options: ParticlePresetMaterialOptions) {
-	const systemOptions: {
-		uTileCount?: number;
-		vTileCount?: number;
-		blendTiles?: boolean;
-	} = {};
-
-	if (options.uTileCount !== undefined) {
-		systemOptions.uTileCount = options.uTileCount;
-	}
-
-	if (options.vTileCount !== undefined) {
-		systemOptions.vTileCount = options.vTileCount;
-	}
-
-	if (options.blendTiles !== undefined) {
-		systemOptions.blendTiles = options.blendTiles;
-	}
-
-	return systemOptions;
-}
-
-export function particleEffect(
-	create: () => ParticleSystem,
-): ParticleEffectDefinition {
-	return { create };
 }
 
 export const particlePresets = {
@@ -196,4 +113,11 @@ export const particlePresets = {
 				}),
 		);
 	},
+	fire: firePresets,
+	water: waterPresets,
+	gas: gasPresets,
+	electricity: electricityPresets,
+	magic: magicPresets,
 } as const;
+
+export { particleEffect } from './preset-builder';

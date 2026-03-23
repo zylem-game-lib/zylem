@@ -35,10 +35,47 @@ import {
 const box = createBox({ position: { x: 0, y: 0, z: 0 } });
 
 box.use(ParticleEmitterBehavior, {
-	effect: particlePresets.burst({ color: '#ffaa00' }),
+	effect: particlePresets.fire.spark(),
 	localOffset: { x: 0, y: 1, z: 0 },
 });
 ```
+
+## Semantic taxonomies
+
+`particlePresets` now includes semantic families that wrap QUARKS with
+lower-configuration presets:
+
+```ts
+import { createParticleSystem, particlePresets } from '@zylem/game-lib';
+
+const muzzleFlash = createParticleSystem({
+	preset: particlePresets.fire.spark(),
+	autoplay: false,
+});
+
+const holyMist = createParticleSystem({
+	preset: particlePresets.water.mist({
+		magic: 'holy',
+	}),
+});
+
+const arcaneBlaze = createParticleSystem({
+	preset: particlePresets.fire.blaze({
+		magic: particlePresets.magic.arcane({
+			order: 'geometric',
+			realityEffect: 'warping',
+		}),
+	}),
+});
+```
+
+Current semantic families:
+
+- `particlePresets.fire.*`
+- `particlePresets.water.*`
+- `particlePresets.gas.*`
+- `particlePresets.electricity.*`
+- `particlePresets.magic.*` for modifier presets such as `arcane()` or `holy()`
 
 ## Textured presets
 

@@ -1,573 +1,339 @@
+import { Color, Vector3 } from 'three';
 import {
-	AdditiveBlending,
-	CanvasTexture,
-	Color,
-	LinearFilter,
-	MeshBasicMaterial,
-	NormalBlending,
-	SRGBColorSpace,
-	Texture,
-	Vector3,
-} from 'three';
-import {
-	QUARKS,
 	createBox,
 	createCamera,
 	createGame,
 	createParticleSystem,
 	createStage,
 	createText,
+	particlePresets,
+	type ParticleEffectDefinition,
 } from '@zylem/game-lib';
+import {
+	particleEffectsDemoLabels,
+	type ParticleEffectsDemoLabelKey,
+} from './particle-effects/labels';
 
-type ColorStop = readonly [string, number];
-type AlphaStop = readonly [number, number];
-
-function createTexture(
-	draw: (
-		ctx: CanvasRenderingContext2D,
-		size: number,
-		center: number,
-	) => void,
-	size = 256,
-) {
-	const canvas = document.createElement('canvas');
-	canvas.width = size;
-	canvas.height = size;
-
-	const ctx = canvas.getContext('2d');
-	if (!ctx) {
-		throw new Error('Unable to create particle texture canvas context.');
-	}
-
-	const center = size / 2;
-	draw(ctx, size, center);
-
-	const texture = new CanvasTexture(canvas);
-	texture.colorSpace = SRGBColorSpace;
-	texture.minFilter = LinearFilter;
-	texture.magFilter = LinearFilter;
-	texture.needsUpdate = true;
-	return texture;
+interface ParticleDemoStationConfig {
+	labelKey: ParticleEffectsDemoLabelKey;
+	labelColor: string;
+	padColor: string;
+	columnColor: string;
+	preset: ParticleEffectDefinition;
+	repeatAfterSeconds?: number;
 }
 
-function toQuarksColor(color: string) {
-	const parsed = new Color(color);
-	return new QUARKS.Vector3(parsed.r, parsed.g, parsed.b);
+interface ParticleDemoStation extends ParticleDemoStationConfig {
+	position: { x: number; y: number; z: number };
 }
 
-function gradient(colors: readonly ColorStop[], alpha: readonly AlphaStop[]) {
-	return new QUARKS.Gradient(
-		colors.map(([color, stop]) => [toQuarksColor(color), stop] as [QUARKS.Vector3, number]),
-		alpha.map(([value, stop]) => [value, stop] as [number, number]),
-	);
-}
+const GRID_COLUMNS = 6;
+const GRID_X_SPACING = 6.2;
+const GRID_Z_SPACING = 7.2;
+const STATION_Y = 0.72;
+const PAD_SIZE = 2.75;
 
-function curve(...points: number[]) {
-	return new QUARKS.PiecewiseBezier([
-		[
-			new QUARKS.Bezier(
-				points[0] ?? 0,
-				points[1] ?? points[0] ?? 0,
-				points[2] ?? points[1] ?? points[0] ?? 0,
-				points[3] ?? points[2] ?? points[1] ?? points[0] ?? 0,
-			),
-			0,
-		],
-	]);
-}
-
-function createParticleMaterial(
-	texture: Texture,
-	color: string,
-	{
-		blending = AdditiveBlending,
-		opacity = 1,
-	}: {
-		blending?: typeof AdditiveBlending | typeof NormalBlending;
-		opacity?: number;
-	} = {},
-) {
-	return new MeshBasicMaterial({
-		map: texture,
-		color,
-		transparent: true,
-		opacity,
-		depthWrite: false,
-		alphaTest: 0.01,
-		blending,
-	});
-}
-
-function drawSoftBlob(
-	ctx: CanvasRenderingContext2D,
-	x: number,
-	y: number,
-	radius: number,
-	colorStops: Array<[number, string]>,
-) {
-	const gradientFill = ctx.createRadialGradient(x, y, radius * 0.14, x, y, radius);
-	for (const [stop, color] of colorStops) {
-		gradientFill.addColorStop(stop, color);
-	}
-
-	ctx.fillStyle = gradientFill;
-	ctx.beginPath();
-	ctx.arc(x, y, radius, 0, Math.PI * 2);
-	ctx.fill();
-}
-
-function createSmokeTexture() {
-	return createTexture((ctx, size, center) => {
-		ctx.clearRect(0, 0, size, size);
-		ctx.globalCompositeOperation = 'screen';
-
-		drawSoftBlob(ctx, center - 28, center + 22, 58, [
-			[0, 'rgba(255,255,255,0.42)'],
-			[0.45, 'rgba(191,203,214,0.28)'],
-			[1, 'rgba(91,104,116,0)'],
-		]);
-		drawSoftBlob(ctx, center + 34, center + 10, 52, [
-			[0, 'rgba(240,244,248,0.36)'],
-			[0.5, 'rgba(171,184,196,0.26)'],
-			[1, 'rgba(82,95,108,0)'],
-		]);
-		drawSoftBlob(ctx, center, center - 26, 72, [
-			[0, 'rgba(255,255,255,0.3)'],
-			[0.5, 'rgba(205,214,221,0.21)'],
-			[1, 'rgba(83,94,105,0)'],
-		]);
-	});
-}
-
-function createFireTexture() {
-	return createTexture((ctx, size, center) => {
-		ctx.clearRect(0, 0, size, size);
-		ctx.translate(center, center + 34);
-
-		const glow = ctx.createRadialGradient(0, -26, 10, 0, -26, 104);
-		glow.addColorStop(0, 'rgba(255, 222, 128, 0.85)');
-		glow.addColorStop(0.45, 'rgba(255, 132, 49, 0.45)');
-		glow.addColorStop(1, 'rgba(255, 64, 16, 0)');
-		ctx.fillStyle = glow;
-		ctx.beginPath();
-		ctx.arc(0, -18, 92, 0, Math.PI * 2);
-		ctx.fill();
-
-		const flame = ctx.createLinearGradient(0, 74, 0, -122);
-		flame.addColorStop(0, 'rgba(255, 54, 20, 0)');
-		flame.addColorStop(0.18, 'rgba(255, 86, 28, 0.88)');
-		flame.addColorStop(0.48, 'rgba(255, 162, 49, 0.98)');
-		flame.addColorStop(0.72, 'rgba(255, 224, 116, 0.86)');
-		flame.addColorStop(1, 'rgba(255, 252, 219, 0)');
-		ctx.fillStyle = flame;
-		ctx.beginPath();
-		ctx.moveTo(0, -112);
-		ctx.bezierCurveTo(60, -72, 72, -8, 14, 84);
-		ctx.bezierCurveTo(6, 96, -4, 96, -14, 84);
-		ctx.bezierCurveTo(-72, -8, -60, -72, 0, -112);
-		ctx.closePath();
-		ctx.fill();
-
-		const core = ctx.createLinearGradient(0, 70, 0, -84);
-		core.addColorStop(0, 'rgba(255, 210, 84, 0)');
-		core.addColorStop(0.25, 'rgba(255, 232, 135, 0.76)');
-		core.addColorStop(0.68, 'rgba(255, 250, 225, 0.95)');
-		core.addColorStop(1, 'rgba(255, 255, 255, 0)');
-		ctx.fillStyle = core;
-		ctx.beginPath();
-		ctx.moveTo(0, -82);
-		ctx.bezierCurveTo(24, -46, 26, 2, 6, 66);
-		ctx.bezierCurveTo(2, 74, -2, 74, -6, 66);
-		ctx.bezierCurveTo(-26, 2, -24, -46, 0, -82);
-		ctx.closePath();
-		ctx.fill();
-	});
-}
-
-function createWaterTexture() {
-	return createTexture((ctx, size, center) => {
-		ctx.clearRect(0, 0, size, size);
-		ctx.translate(center, center + 10);
-
-		const body = ctx.createLinearGradient(0, 90, 0, -112);
-		body.addColorStop(0, 'rgba(13, 148, 221, 0)');
-		body.addColorStop(0.22, 'rgba(56, 189, 248, 0.82)');
-		body.addColorStop(0.58, 'rgba(125, 211, 252, 0.92)');
-		body.addColorStop(1, 'rgba(239, 249, 255, 0)');
-		ctx.fillStyle = body;
-		ctx.beginPath();
-		ctx.moveTo(0, -104);
-		ctx.bezierCurveTo(58, -42, 70, 8, 0, 100);
-		ctx.bezierCurveTo(-70, 8, -58, -42, 0, -104);
-		ctx.closePath();
-		ctx.fill();
-
-		const highlight = ctx.createLinearGradient(-10, 58, -26, -84);
-		highlight.addColorStop(0, 'rgba(255,255,255,0)');
-		highlight.addColorStop(0.45, 'rgba(255,255,255,0.4)');
-		highlight.addColorStop(1, 'rgba(255,255,255,0)');
-		ctx.fillStyle = highlight;
-		ctx.beginPath();
-		ctx.moveTo(-10, -62);
-		ctx.bezierCurveTo(-44, -16, -34, 22, -8, 58);
-		ctx.bezierCurveTo(2, 42, 4, 2, -10, -62);
-		ctx.closePath();
-		ctx.fill();
-	});
-}
-
-function createElectricTexture() {
-	return createTexture((ctx, size, center) => {
-		ctx.clearRect(0, 0, size, size);
-		ctx.translate(center, center);
-
-		const segments = [
-			[-36, -96],
-			[12, -28],
-			[-14, -28],
-			[42, 34],
-			[10, 34],
-			[-28, 96],
-		] as const;
-
-		ctx.lineCap = 'round';
-		ctx.lineJoin = 'round';
-		ctx.shadowColor = 'rgba(129, 230, 255, 0.9)';
-		ctx.shadowBlur = 28;
-		ctx.strokeStyle = 'rgba(153, 246, 255, 0.92)';
-		ctx.lineWidth = 26;
-		ctx.beginPath();
-		ctx.moveTo(segments[0][0], segments[0][1]);
-		for (const [x, y] of segments.slice(1)) {
-			ctx.lineTo(x, y);
-		}
-		ctx.stroke();
-
-		ctx.shadowBlur = 12;
-		ctx.strokeStyle = 'rgba(255, 255, 255, 0.98)';
-		ctx.lineWidth = 10;
-		ctx.beginPath();
-		ctx.moveTo(segments[0][0], segments[0][1]);
-		for (const [x, y] of segments.slice(1)) {
-			ctx.lineTo(x, y);
-		}
-		ctx.stroke();
-	});
-}
-
-const smokeTexture = createSmokeTexture();
-const fireTexture = createFireTexture();
-const waterTexture = createWaterTexture();
-const electricTexture = createElectricTexture();
-
-const smokeEffect = {
-	create: () =>
-		new QUARKS.ParticleSystem({
-			duration: 4,
-			looping: true,
-			worldSpace: false,
-			startLife: new QUARKS.IntervalValue(2.6, 3.8),
-			startSpeed: new QUARKS.IntervalValue(0.12, 0.32),
-			startSize: new QUARKS.IntervalValue(0.45, 0.82),
-			startRotation: new QUARKS.IntervalValue(-Math.PI, Math.PI),
-			startColor: new QUARKS.ConstantColor(
-				new QUARKS.Vector4(0.9, 0.94, 0.97, 0.22),
-			),
-			emissionOverTime: new QUARKS.ConstantValue(16),
-			shape: new QUARKS.ConeEmitter({
-				radius: 0.18,
-				thickness: 0.85,
-				angle: 0.45,
-				speed: new QUARKS.IntervalValue(0.02, 0.08),
-			}),
-			material: createParticleMaterial(smokeTexture, '#d6dde3', {
-				blending: NormalBlending,
-				opacity: 0.9,
-			}),
-			behaviors: [
-				new QUARKS.ColorOverLife(
-					gradient(
-						[
-							['#e2e8f0', 0],
-							['#b8c1ca', 0.35],
-							['#6b7280', 1],
-						],
-						[
-							[0.06, 0],
-							[0.26, 0.14],
-							[0.22, 0.55],
-							[0, 1],
-						],
-					),
-				),
-				new QUARKS.SizeOverLife(curve(0.35, 0.88, 1.45, 2.1)),
-				new QUARKS.ForceOverLife(
-					new QUARKS.ConstantValue(0),
-					curve(0.1, 0.2, 0.28, 0.42),
-					new QUARKS.ConstantValue(0),
-				),
-				new QUARKS.Noise(
-					new QUARKS.ConstantValue(0.8),
-					new QUARKS.ConstantValue(0.18),
-					new QUARKS.ConstantValue(1.15),
-					new QUARKS.ConstantValue(0.18),
-				),
-				new QUARKS.RotationOverLife(
-					new QUARKS.IntervalValue(-0.28, 0.28),
-				),
-			],
-			renderMode: QUARKS.RenderMode.BillBoard,
-		}),
-};
-
-const fireEffect = {
-	create: () =>
-		new QUARKS.ParticleSystem({
-			duration: 2,
-			looping: true,
-			worldSpace: false,
-			startLife: new QUARKS.IntervalValue(0.5, 0.95),
-			startSpeed: new QUARKS.IntervalValue(0.55, 1.25),
-			startSize: new QUARKS.IntervalValue(0.32, 0.58),
-			startRotation: new QUARKS.IntervalValue(-0.22, 0.22),
-			startColor: new QUARKS.ConstantColor(
-				new QUARKS.Vector4(1, 0.72, 0.3, 1),
-			),
-			emissionOverTime: new QUARKS.ConstantValue(34),
-			shape: new QUARKS.ConeEmitter({
-				radius: 0.14,
-				thickness: 1,
-				angle: 0.28,
-				speed: new QUARKS.IntervalValue(0.45, 0.95),
-			}),
-			material: createParticleMaterial(fireTexture, '#ffb14d', {
-				opacity: 0.96,
-			}),
-			behaviors: [
-				new QUARKS.ColorOverLife(
-					gradient(
-						[
-							['#fff7d1', 0],
-							['#fbbf24', 0.18],
-							['#fb923c', 0.52],
-							['#ef4444', 1],
-						],
-						[
-							[0.12, 0],
-							[0.95, 0.18],
-							[0.72, 0.6],
-							[0, 1],
-						],
-					),
-				),
-				new QUARKS.SizeOverLife(curve(0.45, 0.9, 1.12, 0.18)),
-				new QUARKS.SpeedOverLife(curve(1.1, 0.95, 0.62, 0.15)),
-				new QUARKS.ForceOverLife(
-					new QUARKS.ConstantValue(0),
-					new QUARKS.ConstantValue(0.48),
-					new QUARKS.ConstantValue(0),
-				),
-				new QUARKS.Noise(
-					new QUARKS.ConstantValue(5),
-					new QUARKS.ConstantValue(0.12),
-					new QUARKS.ConstantValue(0.55),
-					new QUARKS.ConstantValue(0.4),
-				),
-				new QUARKS.RotationOverLife(
-					new QUARKS.IntervalValue(-0.6, 0.6),
-				),
-			],
-			renderMode: QUARKS.RenderMode.VerticalBillBoard,
-		}),
-};
-
-const waterEffect = {
-	create: () =>
-		new QUARKS.ParticleSystem({
-			duration: 2.2,
-			looping: true,
-			worldSpace: false,
-			startLife: new QUARKS.IntervalValue(0.85, 1.15),
-			startSpeed: new QUARKS.IntervalValue(2.4, 3.2),
-			startSize: new QUARKS.IntervalValue(0.13, 0.2),
-			startColor: new QUARKS.ConstantColor(
-				new QUARKS.Vector4(0.75, 0.94, 1, 1),
-			),
-			emissionOverTime: new QUARKS.ConstantValue(44),
-			shape: new QUARKS.ConeEmitter({
-				radius: 0.08,
-				thickness: 0.65,
-				angle: 0.22,
-				speed: new QUARKS.IntervalValue(1.3, 2.2),
-			}),
-			material: createParticleMaterial(waterTexture, '#7dd3fc', {
-				opacity: 0.9,
-			}),
-			behaviors: [
-				new QUARKS.ColorOverLife(
-					gradient(
-						[
-							['#effcff', 0],
-							['#a5f3fc', 0.35],
-							['#38bdf8', 1],
-						],
-						[
-							[0, 0],
-							[0.72, 0.08],
-							[0.55, 0.58],
-							[0, 1],
-						],
-					),
-				),
-				new QUARKS.SizeOverLife(curve(0.72, 0.94, 0.82, 0.3)),
-				new QUARKS.SpeedOverLife(curve(1.04, 0.92, 0.68, 0.38)),
-				new QUARKS.ForceOverLife(
-					new QUARKS.ConstantValue(0),
-					new QUARKS.ConstantValue(-5.8),
-					new QUARKS.ConstantValue(0),
-				),
-				new QUARKS.Noise(
-					new QUARKS.ConstantValue(1.5),
-					new QUARKS.ConstantValue(0.06),
-					new QUARKS.ConstantValue(0.18),
-					new QUARKS.ConstantValue(0.05),
-				),
-			],
-			renderMode: QUARKS.RenderMode.StretchedBillBoard,
-			rendererEmitterSettings: {
-				speedFactor: 0.38,
-				lengthFactor: 0.65,
-			},
-		}),
-};
-
-const electricityEffect = {
-	create: () =>
-		new QUARKS.ParticleSystem({
-			duration: 0.9,
-			looping: true,
-			worldSpace: false,
-			startLife: new QUARKS.IntervalValue(0.16, 0.34),
-			startSpeed: new QUARKS.IntervalValue(0.45, 1.1),
-			startSize: new QUARKS.IntervalValue(0.2, 0.38),
-			startRotation: new QUARKS.IntervalValue(-Math.PI, Math.PI),
-			startColor: new QUARKS.ConstantColor(
-				new QUARKS.Vector4(0.84, 0.98, 1, 1),
-			),
-			emissionOverTime: new QUARKS.ConstantValue(0),
-			emissionBursts: [
-				{
-					time: 0,
-					count: new QUARKS.ConstantValue(7),
-					cycle: 1,
-					interval: 0,
-					probability: 1,
-				},
-				{
-					time: 0.12,
-					count: new QUARKS.ConstantValue(5),
-					cycle: 1,
-					interval: 0,
-					probability: 1,
-				},
-				{
-					time: 0.28,
-					count: new QUARKS.ConstantValue(8),
-					cycle: 1,
-					interval: 0,
-					probability: 1,
-				},
-			],
-			shape: new QUARKS.SphereEmitter({
-				radius: 0.28,
-				thickness: 0.95,
-				speed: new QUARKS.IntervalValue(0.18, 0.52),
-			}),
-			material: createParticleMaterial(electricTexture, '#a5f3fc', {
-				opacity: 0.98,
-			}),
-			behaviors: [
-				new QUARKS.ColorOverLife(
-					gradient(
-						[
-							['#ffffff', 0],
-							['#a5f3fc', 0.35],
-							['#60a5fa', 1],
-						],
-						[
-							[0, 0],
-							[1, 0.18],
-							[0.75, 0.55],
-							[0, 1],
-						],
-					),
-				),
-				new QUARKS.SizeOverLife(curve(0.25, 0.88, 0.95, 0.05)),
-				new QUARKS.Noise(
-					new QUARKS.ConstantValue(13),
-					new QUARKS.ConstantValue(0.22),
-					new QUARKS.ConstantValue(1.1),
-					new QUARKS.ConstantValue(0.2),
-				),
-				new QUARKS.OrbitOverLife(
-					new QUARKS.ConstantValue(13),
-					new QUARKS.Vector3(0, 1, 0),
-				),
-				new QUARKS.RotationOverLife(
-					new QUARKS.IntervalValue(-8, 8),
-				),
-			],
-			renderMode: QUARKS.RenderMode.StretchedBillBoard,
-			rendererEmitterSettings: {
-				speedFactor: 0.24,
-				lengthFactor: 1.15,
-			},
-		}),
-};
-
-const stations = [
-	{
-		name: 'Smoke',
-		description: 'soft billboard plume with noise and upward drift',
-		position: { x: -4.3, y: 0.68, z: -4.2 },
-		labelColor: '#cbd5e1',
-		padColor: '#334155',
-		columnColor: '#475569',
-		effect: smokeEffect,
+function station(
+	labelKey: ParticleEffectsDemoLabelKey,
+	theme: {
+		labelColor: string;
+		padColor: string;
+		columnColor: string;
 	},
-	{
-		name: 'Fire',
-		description: 'vertical flame texture with hot core and flicker',
-		position: { x: 4.3, y: 0.68, z: -4.2 },
-		labelColor: '#fb923c',
-		padColor: '#4a2315',
-		columnColor: '#7c2d12',
-		effect: fireEffect,
-	},
-	{
-		name: 'Water',
-		description: 'stretched droplets pushed up then pulled down',
-		position: { x: -4.3, y: 0.68, z: 4.2 },
-		labelColor: '#67e8f9',
-		padColor: '#123247',
-		columnColor: '#0ea5e9',
-		effect: waterEffect,
-	},
-	{
-		name: 'Electricity',
-		description: 'bursting bolts with orbit, noise, and glow',
-		position: { x: 4.3, y: 0.68, z: 4.2 },
-		labelColor: '#a5f3fc',
-		padColor: '#1f2c4f',
-		columnColor: '#60a5fa',
-		effect: electricityEffect,
-	},
+	preset: ParticleEffectDefinition,
+	repeatAfterSeconds?: number,
+): ParticleDemoStationConfig {
+	return {
+		labelKey,
+		labelColor: theme.labelColor,
+		padColor: theme.padColor,
+		columnColor: theme.columnColor,
+		preset,
+		repeatAfterSeconds,
+	};
+}
+
+const stationConfigs: readonly ParticleDemoStationConfig[] = [
+	station(
+		'fireSpark',
+		{
+			labelColor: '#ffd166',
+			padColor: '#412015',
+			columnColor: '#f97316',
+		},
+		particlePresets.fire.spark(),
+		1,
+	),
+	station(
+		'fireBlaze',
+		{
+			labelColor: '#fb923c',
+			padColor: '#4a2315',
+			columnColor: '#ea580c',
+		},
+		particlePresets.fire.blaze(),
+	),
+	station(
+		'waterHolyMist',
+		{
+			labelColor: '#f8e7a0',
+			padColor: '#123247',
+			columnColor: '#60a5fa',
+		},
+		particlePresets.water.mist({
+			magic: 'holy',
+		}),
+	),
+	station(
+		'waterTorrent',
+		{
+			labelColor: '#67e8f9',
+			padColor: '#102d42',
+			columnColor: '#0ea5e9',
+		},
+		particlePresets.water.torrent(),
+	),
+	station(
+		'gasVapor',
+		{
+			labelColor: '#e2e8f0',
+			padColor: '#253445',
+			columnColor: '#94a3b8',
+		},
+		particlePresets.gas.vapor(),
+	),
+	station(
+		'gasCorruptedMiasma',
+		{
+			labelColor: '#bef264',
+			padColor: '#203217',
+			columnColor: '#65a30d',
+		},
+		particlePresets.gas.miasma({
+			magic: 'corrupted',
+		}),
+	),
+	station(
+		'electricArc',
+		{
+			labelColor: '#a5f3fc',
+			padColor: '#1b2b4a',
+			columnColor: '#38bdf8',
+		},
+		particlePresets.electricity.arc(),
+	),
+	station(
+		'electricStorm',
+		{
+			labelColor: '#bfdbfe',
+			padColor: '#1d2546',
+			columnColor: '#2563eb',
+		},
+		particlePresets.electricity.storm(),
+	),
+	station(
+		'arcaneFlamelet',
+		{
+			labelColor: '#93c5fd',
+			padColor: '#24234a',
+			columnColor: '#3b82f6',
+		},
+		particlePresets.fire.flamelet({
+			magic: particlePresets.magic.arcane({
+				order: 'geometric',
+				realityEffect: 'warping',
+			}),
+		}),
+	),
+	station(
+		'natureEmber',
+		{
+			labelColor: '#86efac',
+			padColor: '#203226',
+			columnColor: '#22c55e',
+		},
+		particlePresets.fire.ember({
+			magic: particlePresets.magic.nature({
+				order: 'organic',
+				realityEffect: 'healing',
+			}),
+		}),
+	),
+	station(
+		'voidVapor',
+		{
+			labelColor: '#c4b5fd',
+			padColor: '#202338',
+			columnColor: '#7c3aed',
+		},
+		particlePresets.gas.vapor({
+			magic: particlePresets.magic.void({
+				agency: 'seeking',
+				order: 'chaotic',
+			}),
+		}),
+	),
+	station(
+		'psychicPulse',
+		{
+			labelColor: '#f9a8d4',
+			padColor: '#352141',
+			columnColor: '#ec4899',
+		},
+			particlePresets.electricity.pulse({
+				magic: particlePresets.magic.psychic({
+					agency: 'sentient-feeling',
+					order: 'organic',
+					realityEffect: 'binding',
+				}),
+			}),
+		1,
+	),
+	station(
+		'fireEmber',
+		{
+			labelColor: '#fdba74',
+			padColor: '#3d2418',
+			columnColor: '#c2410c',
+		},
+		particlePresets.fire.ember(),
+	),
+	station(
+		'fireFlamelet',
+		{
+			labelColor: '#f59e0b',
+			padColor: '#412315',
+			columnColor: '#f97316',
+		},
+		particlePresets.fire.flamelet(),
+	),
+	station(
+		'fireSmolder',
+		{
+			labelColor: '#d6a56e',
+			padColor: '#35261f',
+			columnColor: '#a16207',
+		},
+		particlePresets.fire.smolder(),
+	),
+	station(
+		'waterSpray',
+		{
+			labelColor: '#93c5fd',
+			padColor: '#132c44',
+			columnColor: '#38bdf8',
+		},
+		particlePresets.water.spray(),
+	),
+	station(
+		'waterSplash',
+		{
+			labelColor: '#bae6fd',
+			padColor: '#17324b',
+			columnColor: '#0ea5e9',
+		},
+		particlePresets.water.splash(),
+		1,
+	),
+	station(
+		'waterDrizzle',
+		{
+			labelColor: '#e0f2fe',
+			padColor: '#1a3550',
+			columnColor: '#7dd3fc',
+		},
+		particlePresets.water.drizzle(),
+	),
+	station(
+		'gasSmoke',
+		{
+			labelColor: '#d4d4d8',
+			padColor: '#2c3440',
+			columnColor: '#737373',
+		},
+		particlePresets.gas.smoke(),
+	),
+	station(
+		'gasHaze',
+		{
+			labelColor: '#cbd5e1',
+			padColor: '#26384a',
+			columnColor: '#94a3b8',
+		},
+		particlePresets.gas.haze(),
+	),
+	station(
+		'gasPlume',
+		{
+			labelColor: '#dbeafe',
+			padColor: '#243446',
+			columnColor: '#64748b',
+		},
+		particlePresets.gas.plume(),
+	),
+	station(
+		'electricSpark',
+		{
+			labelColor: '#cffafe',
+			padColor: '#1f2b4b',
+			columnColor: '#22d3ee',
+		},
+		particlePresets.electricity.spark(),
+		1,
+	),
+	station(
+		'electricSurge',
+		{
+			labelColor: '#7dd3fc',
+			padColor: '#1c2849',
+			columnColor: '#0ea5e9',
+		},
+		particlePresets.electricity.surge(),
+		1,
+	),
+	station(
+		'electricPulse',
+		{
+			labelColor: '#a5f3fc',
+			padColor: '#202b45',
+			columnColor: '#06b6d4',
+		},
+		particlePresets.electricity.pulse(),
+		1,
+	),
 ] as const;
+
+const GRID_ROWS = Math.ceil(stationConfigs.length / GRID_COLUMNS);
+const FLOOR_SIZE_X = GRID_X_SPACING * (GRID_COLUMNS - 1) + 10;
+const FLOOR_SIZE_Z = GRID_Z_SPACING * (GRID_ROWS - 1) + 10;
+
+function layoutStations(
+	configs: readonly ParticleDemoStationConfig[],
+): ParticleDemoStation[] {
+	const rowOffset = (GRID_ROWS - 1) / 2;
+	const columnOffset = (GRID_COLUMNS - 1) / 2;
+
+	return configs.map((config, index) => {
+		const column = index % GRID_COLUMNS;
+		const row = Math.floor(index / GRID_COLUMNS);
+
+		return {
+			...config,
+			position: {
+				x: (column - columnOffset) * GRID_X_SPACING,
+				y: STATION_Y,
+				z: (row - rowOffset) * GRID_Z_SPACING,
+			},
+		};
+	});
+}
+
+const stations = layoutStations(stationConfigs);
 
 export default function createDemo() {
 	const camera = createCamera({
-		position: { x: 0, y: 6.8, z: 11.5 },
-		target: { x: 0, y: 1.4, z: 0 },
+		position: { x: 0, y: 14.2, z: 28.4 },
+		target: { x: 0, y: 1.8, z: 0 },
 	});
 
 	const stage = createStage(
@@ -581,18 +347,16 @@ export default function createDemo() {
 	const floor = createBox({
 		name: 'particle-floor',
 		position: { x: 0, y: -0.4, z: 0 },
-		size: { x: 22, y: 0.8, z: 22 },
-		collision: { static: true },
+		size: { x: FLOOR_SIZE_X, y: 0.8, z: FLOOR_SIZE_Z },
 		material: {
-			color: new Color('#0e2232'),
+			color: new Color('#0d2230'),
 		},
 	});
 
-	const centerStage = createBox({
-		name: 'particle-center-stage',
-		position: { x: 0, y: 0.04, z: 0 },
-		size: { x: 4.6, y: 0.08, z: 4.6 },
-		collision: { static: true },
+	const runway = createBox({
+		name: 'particle-runway',
+		position: { x: 0, y: 0.02, z: 0 },
+		size: { x: FLOOR_SIZE_X, y: 0.04, z: 2.2 },
 		material: {
 			color: new Color('#123347'),
 		},
@@ -600,7 +364,7 @@ export default function createDemo() {
 
 	const titleText = createText({
 		name: 'particle-title',
-		text: 'QUARKS textured particles: smoke, fire, water, and electricity.',
+		text: particleEffectsDemoLabels.title,
 		fontSize: 18,
 		fontColor: '#f8fafc',
 		backgroundColor: '#102434',
@@ -611,7 +375,7 @@ export default function createDemo() {
 
 	const statusText = createText({
 		name: 'particle-status',
-		text: 'Each station uses a custom CanvasTexture plus different emitter and behavior tuning.',
+		text: particleEffectsDemoLabels.status,
 		fontSize: 15,
 		fontColor: '#cbd5e1',
 		backgroundColor: '#102c3d',
@@ -620,59 +384,87 @@ export default function createDemo() {
 		screenPosition: { x: 0.5, y: 0.12 },
 	});
 
-	stage.add(floor, centerStage, titleText, statusText);
+	stage.add(floor, runway, titleText, statusText);
+
+	const repeatingEmitters: Array<{
+		emitter: ReturnType<typeof createParticleSystem>;
+		elapsedSeconds: number;
+		repeatAfterSeconds: number;
+	}> = [];
 
 	for (const station of stations) {
+		const copy = particleEffectsDemoLabels.stations[station.labelKey];
+		const slug = copy.name.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
+
 		const pad = createBox({
-			name: `${station.name.toLowerCase()}-pad`,
+			name: `${slug}-pad`,
 			position: { x: station.position.x, y: 0.12, z: station.position.z },
-			size: { x: 3.5, y: 0.24, z: 3.5 },
-			collision: { static: true },
+			size: { x: PAD_SIZE, y: 0.24, z: PAD_SIZE },
 			material: {
 				color: new Color(station.padColor),
 			},
 		});
 
 		const column = createBox({
-			name: `${station.name.toLowerCase()}-column`,
-			position: { x: station.position.x, y: 0.54, z: station.position.z },
-			size: { x: 0.42, y: 0.84, z: 0.42 },
-			collision: { static: true },
+			name: `${slug}-column`,
+			position: { x: station.position.x, y: 0.5, z: station.position.z },
+			size: { x: 0.34, y: 0.72, z: 0.34 },
 			material: {
 				color: new Color(station.columnColor),
 			},
 		});
 
 		const emitter = createParticleSystem({
-			name: `${station.name.toLowerCase()}-effect`,
+			name: `${slug}-effect`,
 			position: station.position,
-			effect: station.effect,
+			preset: station.preset,
 			autoplay: true,
 		});
+		if (station.repeatAfterSeconds !== undefined) {
+			repeatingEmitters.push({
+				emitter,
+				elapsedSeconds: 0,
+				repeatAfterSeconds: station.repeatAfterSeconds,
+			});
+		}
 
 		const label = createText({
-			name: `${station.name.toLowerCase()}-label`,
-			text: `${station.name}\n${station.description}`,
+			name: `${slug}-label`,
+			text: `${copy.name}\n${copy.description}`,
 			position: {
 				x: station.position.x,
-				y: station.position.y + 2.3,
+				y: station.position.y + 1.95,
 				z: station.position.z,
 			},
-			fontSize: 18,
+			fontSize: 13,
 			fontColor: station.labelColor,
 			backgroundColor: '#091723',
-			padding: 10,
+			padding: 8,
 			stickToViewport: false,
 		});
 
 		stage.add(pad, column, emitter, label);
 	}
 
-	return createGame(
+	const game = createGame(
 		{
 			id: 'particle-effects',
 			debug: true,
 		},
 		stage,
 	);
+
+	game.onUpdate(({ delta }) => {
+		for (const repeating of repeatingEmitters) {
+			repeating.elapsedSeconds += delta;
+			if (repeating.elapsedSeconds < repeating.repeatAfterSeconds) {
+				continue;
+			}
+
+			repeating.emitter.restart();
+			repeating.elapsedSeconds = 0;
+		}
+	});
+
+	return game;
 }

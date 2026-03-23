@@ -6,6 +6,7 @@ import {
 	type ParticleEmitterBehaviorOptions,
 	type ParticleEmitterHandle,
 } from '../behaviors/particle-emitter/particle-emitter.descriptor';
+import type { ParticleEffectDefinition } from '../behaviors/particle-emitter/particle-effect';
 import { deepMergeValues } from '../core/clone-utils';
 import { toThreeVector3 } from '../core/vector';
 import { commonDefaults } from './common';
@@ -16,17 +17,21 @@ import {
 } from './entity';
 
 export type ZylemParticleSystemOptions = GameEntityOptions
-	& ParticleEmitterBehaviorOptions;
+	& ParticleEmitterBehaviorOptions
+	& {
+		preset?: ParticleEffectDefinition;
+	};
 
 const particleSystemDefaults: ZylemParticleSystemOptions = {
 	...commonDefaults,
 	effect: {
 		create() {
 			throw new Error(
-				'createParticleSystem(...) requires an effect definition.',
+				'createParticleSystem(...) requires an effect or preset definition.',
 			);
 		},
 	},
+	preset: undefined,
 	autoplay: true,
 	localOffset: undefined,
 	followPosition: true,
@@ -40,7 +45,7 @@ function toBehaviorOptions(
 	options: ZylemParticleSystemOptions,
 ): ParticleEmitterBehaviorOptions {
 	return {
-		effect: options.effect,
+		effect: options.preset ?? options.effect,
 		autoplay: options.autoplay,
 		localOffset: options.localOffset,
 		followPosition: options.followPosition,

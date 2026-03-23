@@ -7,8 +7,11 @@ import {
 	Vector3,
 } from 'three';
 import {
+	ConeEmitter,
 	ConstantColor,
 	ConstantValue,
+	ForceOverLife,
+	Noise,
 	ParticleSystem,
 	PointEmitter,
 	RenderMode,
@@ -219,5 +222,69 @@ describe('ParticleEmitterBehavior', () => {
 		expect(system.uTileCount).toBe(4);
 		expect(system.vTileCount).toBe(2);
 		expect(system.blendTiles).toBe(true);
+	});
+
+	it('exposes nested semantic preset families for higher-level effects', () => {
+		const preset = particlePresets.fire.blaze();
+		const system = preset.create();
+
+		expect(system).toBeInstanceOf(ParticleSystem);
+		expect(system.looping).toBe(true);
+		expect(system.behaviors.length).toBeGreaterThan(0);
+	});
+
+	it('lets semantic presets keep their identity while overriding expert-level tuning', () => {
+		const preset = particlePresets.fire.flamelet({
+			shape: {
+				type: 'cone',
+				radius: 0.05,
+				speed: [0.45, 0.9],
+			},
+			behaviors: {
+				forceOverLife: null,
+				noise: {
+					frequency: 3,
+					power: 0.08,
+					positionAmount: 0.35,
+					rotationAmount: 0.18,
+				},
+			},
+			rendererEmitterSettings: {
+				speedFactor: 0.35,
+				lengthFactor: 0.95,
+			},
+		});
+		const system = preset.create();
+
+		expect(system.emitterShape).toBeInstanceOf(ConeEmitter);
+		expect((system.emitterShape as any).radius).toBe(0.05);
+		expect(
+			system.behaviors.some((behavior) => behavior instanceof ForceOverLife),
+		).toBe(false);
+		expect(
+			system.behaviors.some((behavior) => behavior instanceof Noise),
+		).toBe(true);
+		expect(system.rendererEmitterSettings).toMatchObject({
+			speedFactor: 0.35,
+			lengthFactor: 0.95,
+		});
+	});
+
+	it('treats magic as a modifier layer that can overlay another substance', () => {
+		const holyMist = particlePresets.water.mist({
+			magic: particlePresets.magic.holy({
+				order: 'geometric',
+			}),
+		});
+		const system = holyMist.create();
+		const material = system.material as MeshBasicMaterial;
+
+		expect(material.blending).toBe(AdditiveBlending);
+		expect(system.behaviors.length).toBeGreaterThan(1);
+	});
+
+	it('builds reusable modifier presets for semantic magic overlays', () => {
+		expect(particlePresets.magic.arcane().alignment).toBe('arcane');
+		expect(particlePresets.magic.corrupted().realityEffect).toBe('decaying');
 	});
 });
