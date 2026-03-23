@@ -14,6 +14,7 @@ import {
 import { GameEntity } from '../../../src/lib/entities/entity';
 import {
 	Destructible3DBehavior,
+	DestructibleMesh,
 	FractureOptions,
 	type Destructible3DHandle,
 } from '../../../src/lib/behaviors/destructible-3d';
@@ -298,5 +299,57 @@ describe('Destructible3DBehavior', () => {
 
 		expect(inheritedDelta).toBeGreaterThan(0.001);
 		expect(angularMagnitude).toBeGreaterThan(0.001);
+	});
+
+	it('prebakes fragment templates and reuses them across impact overrides', () => {
+		const fractureSpy = vi.spyOn(DestructibleMesh.prototype, 'fracture');
+		const { entity } = createDestructibleEntity();
+		const handle = entity.use(Destructible3DBehavior, {
+			fractureOptions: new FractureOptions({
+				fractureMethod: 'voronoi',
+				fragmentCount: 6,
+				voronoiOptions: {
+					mode: '3D',
+				},
+				seed: 23,
+			}),
+			fragmentPhysics: {
+				mode: 'independent',
+			},
+		}) as Destructible3DHandle;
+		attachBehaviorRuntime(entity);
+
+		handle.prebake();
+
+		expect(handle.isFractured()).toBe(false);
+		expect(handle.getFragments()).toHaveLength(0);
+		expect(fractureSpy).toHaveBeenCalledTimes(1);
+
+		handle.fracture({
+			fractureMethod: 'voronoi',
+			fragmentCount: 6,
+			voronoiOptions: {
+				mode: '3D',
+				impactPoint: entity.mesh!.position.clone(),
+				impactRadius: 0.45,
+			},
+			seed: 23,
+		});
+		expect(fractureSpy).toHaveBeenCalledTimes(1);
+
+		handle.repair();
+		handle.fracture({
+			fractureMethod: 'voronoi',
+			fragmentCount: 6,
+			voronoiOptions: {
+				mode: '3D',
+				impactPoint: entity.mesh!.position.clone().set(0.2, 0.1, -0.15),
+				impactRadius: 0.62,
+			},
+			seed: 23,
+		});
+		expect(fractureSpy).toHaveBeenCalledTimes(1);
+
+		fractureSpy.mockRestore();
 	});
 });

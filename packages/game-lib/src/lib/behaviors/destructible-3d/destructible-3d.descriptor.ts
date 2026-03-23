@@ -11,6 +11,7 @@ import {
 import {
 	Box3,
 	BufferAttribute,
+	BufferGeometry,
 	Group,
 	Matrix4,
 	Quaternion,
@@ -60,15 +61,27 @@ export interface Destructible3DHandle {
 	fracture(
 		overrideOptions?: FractureOptionsInput | PinataFractureOptions,
 	): readonly DestructibleMesh[];
+	prebake(
+		overrideOptions?: FractureOptionsInput | PinataFractureOptions,
+	): void;
 	repair(): void;
 	isFractured(): boolean;
 	getFragments(): readonly DestructibleMesh[];
+}
+
+interface PrebakedFragmentTemplate {
+	geometry: BufferGeometry;
+	position: Vector3;
+	quaternion: Quaternion;
+	scale: Vector3;
 }
 
 interface RuntimeState {
 	fragmentContainer: Group | null;
 	fragmentEntities: GameEntity<any>[];
 	fragments: DestructibleMesh[];
+	prebakedFragments: PrebakedFragmentTemplate[];
+	prebakedFractureKey: string | null;
 	createdRootGroup: boolean;
 	fractureMode: 'compound' | 'independent' | null;
 	isFractured: boolean;
@@ -155,6 +168,8 @@ function getRuntimeState(
 		fragmentContainer: null,
 		fragmentEntities: [],
 		fragments: [],
+		prebakedFragments: [],
+		prebakedFractureKey: null,
 		createdRootGroup: false,
 		fractureMode: null,
 		isFractured: false,
@@ -331,6 +346,51 @@ function resolveFractureOptions(
 	});
 }
 
+function vector2ToTuple(value?: Vector2): [number, number] | null {
+	if (!value) {
+		return null;
+	}
+
+	return [value.x, value.y];
+}
+
+function vector3ToTuple(value?: Vector3): [number, number, number] | null {
+	if (!value) {
+		return null;
+	}
+
+	return [value.x, value.y, value.z];
+}
+
+function buildFractureGeometryCacheKey(
+	options: PinataFractureOptions,
+): string {
+	return JSON.stringify({
+		fractureMethod: options.fractureMethod,
+		fragmentCount: options.fragmentCount,
+		fracturePlanes: {
+			x: options.fracturePlanes?.x ?? true,
+			y: options.fracturePlanes?.y ?? true,
+			z: options.fracturePlanes?.z ?? true,
+		},
+		textureScale: vector2ToTuple(options.textureScale),
+		textureOffset: vector2ToTuple(options.textureOffset),
+		seed: options.seed ?? null,
+		voronoiOptions: options.voronoiOptions
+			? {
+				mode: options.voronoiOptions.mode,
+				seedPoints:
+					options.voronoiOptions.seedPoints?.map((point) => vector3ToTuple(point)),
+				projectionAxis: options.voronoiOptions.projectionAxis ?? null,
+				projectionNormal: vector3ToTuple(options.voronoiOptions.projectionNormal),
+				useApproximation: options.voronoiOptions.useApproximation ?? false,
+				approximationNeighborCount:
+					options.voronoiOptions.approximationNeighborCount ?? 12,
+			}
+			: null,
+	});
+}
+
 function resolveColliderOptions(
 	input?: Destructible3DColliderOptions,
 ): Required<
@@ -441,6 +501,66 @@ function createFractureSourceMesh(
 		outerMaterial,
 		innerMaterial ?? outerMaterial,
 	);
+}
+
+function createPrebakedFragmentTemplates(
+	fragments: readonly DestructibleMesh[],
+): PrebakedFragmentTemplate[] {
+	return fragments.map((fragment) => {
+		const geometry = fragment.geometry.clone();
+		geometry.computeBoundingBox();
+		geometry.computeBoundingSphere();
+		return {
+			geometry,
+			position: fragment.position.clone(),
+			quaternion: fragment.quaternion.clone(),
+			scale: fragment.scale.clone(),
+		};
+	});
+}
+
+function disposePrebakedFragmentTemplates(
+	templates: readonly PrebakedFragmentTemplate[],
+): void {
+	for (const template of templates) {
+		template.geometry.dispose();
+	}
+}
+
+function cachePrebakedFragments(
+	state: RuntimeState,
+	cacheKey: string,
+	fragments: readonly DestructibleMesh[],
+): void {
+	if (
+		state.prebakedFractureKey === cacheKey
+		&& state.prebakedFragments.length > 0
+	) {
+		return;
+	}
+
+	disposePrebakedFragmentTemplates(state.prebakedFragments);
+	state.prebakedFragments = createPrebakedFragmentTemplates(fragments);
+	state.prebakedFractureKey = cacheKey;
+}
+
+function instantiatePrebakedFragments(
+	mesh: Mesh,
+	innerMaterial: Material | null | undefined,
+	templates: readonly PrebakedFragmentTemplate[],
+): readonly DestructibleMesh[] {
+	const outerMaterial = getPrimaryMaterial(mesh);
+	return templates.map((template) => {
+		const fragment = new DestructibleMesh(
+			template.geometry.clone(),
+			outerMaterial,
+			innerMaterial ?? outerMaterial,
+		);
+		fragment.position.copy(template.position);
+		fragment.quaternion.copy(template.quaternion);
+		fragment.scale.copy(template.scale);
+		return fragment;
+	});
 }
 
 function tagConvexHullCollider(
@@ -950,6 +1070,12 @@ function restoreRuntimeState(
 	state.isFractured = false;
 }
 
+function disposeRuntimeState(state: RuntimeState): void {
+	disposePrebakedFragmentTemplates(state.prebakedFragments);
+	state.prebakedFragments = [];
+	state.prebakedFractureKey = null;
+}
+
 function fractureCompoundEntity(
 	ref: BehaviorRef<Destructible3DBehaviorOptions>,
 	entity: GameEntity<any>,
@@ -1084,6 +1210,12 @@ function fractureEntity(
 		restoreRuntimeState(ref, true);
 	}
 
+	const fractureOptions = resolveFractureOptions(
+		ref.options.fractureOptions,
+		overrideOptions,
+	);
+	const cacheKey = buildFractureGeometryCacheKey(fractureOptions);
+
 	const root = ensureRootGroup(entity, state);
 	state.originalMeshParent = entity.mesh.parent;
 	state.originalColliderDesc = entity.colliderDesc;
@@ -1097,21 +1229,29 @@ function fractureEntity(
 	state.sourceBodySnapshot = snapshotBody(entity);
 	state.sourcePhysicsAttached = entity.physicsAttached;
 
-	const source = createFractureSourceMesh(
-		entity.mesh,
-		root,
-		ref.options.innerMaterial,
-	);
+	const usePrebakedFragments =
+		state.prebakedFractureKey === cacheKey
+		&& state.prebakedFragments.length > 0;
+	const source = usePrebakedFragments
+		? null
+		: createFractureSourceMesh(
+			entity.mesh,
+			root,
+			ref.options.innerMaterial,
+		);
 
 	try {
-		const fractureOptions = resolveFractureOptions(
-			ref.options.fractureOptions,
-			overrideOptions,
-		);
 		const fragmentPhysics = resolveFragmentPhysicsOptions(
 			ref.options.fragmentPhysics,
 		);
-		const fragments = source.fracture(fractureOptions);
+		const fragments = usePrebakedFragments
+			? instantiatePrebakedFragments(
+				entity.mesh,
+				ref.options.innerMaterial,
+				state.prebakedFragments,
+			)
+			: source!.fracture(fractureOptions);
+		cachePrebakedFragments(state, cacheKey, fragments);
 
 		state.fragments = [...fragments];
 		state.isFractured = true;
@@ -1140,8 +1280,33 @@ function fractureEntity(
 		restoreRuntimeState(ref, true);
 		throw error;
 	} finally {
-		source.geometry.dispose();
+		source?.geometry.dispose();
 	}
+}
+
+function prebakeEntity(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+	overrideOptions?: FractureOptionsInput | PinataFractureOptions,
+): void {
+	const state = getRuntimeState(ref);
+	if (state.isFractured) {
+		return;
+	}
+
+	const fractureOptions = resolveFractureOptions(
+		ref.options.fractureOptions,
+		overrideOptions,
+	);
+	const cacheKey = buildFractureGeometryCacheKey(fractureOptions);
+	if (
+		state.prebakedFractureKey === cacheKey
+		&& state.prebakedFragments.length > 0
+	) {
+		return;
+	}
+
+	fractureEntity(ref, overrideOptions);
+	restoreRuntimeState(ref, true);
 }
 
 function createDestructible3DHandle(
@@ -1149,6 +1314,9 @@ function createDestructible3DHandle(
 ): Destructible3DHandle {
 	return {
 		fracture: (overrideOptions) => fractureEntity(ref, overrideOptions),
+		prebake: (overrideOptions) => {
+			prebakeEntity(ref, overrideOptions);
+		},
 		repair: () => restoreRuntimeState(ref, true),
 		isFractured: () => getRuntimeState(ref).isFractured,
 		getFragments: () => getRuntimeState(ref).fragments,
@@ -1194,10 +1362,9 @@ class Destructible3DSystem implements BehaviorSystem {
 		}
 
 		for (const link of links) {
-			restoreRuntimeState(
-				link.ref as BehaviorRef<Destructible3DBehaviorOptions>,
-				false,
-			);
+			const ref = link.ref as BehaviorRef<Destructible3DBehaviorOptions>;
+			restoreRuntimeState(ref, false);
+			disposeRuntimeState(getRuntimeState(ref));
 		}
 	}
 
@@ -1219,6 +1386,7 @@ class Destructible3DSystem implements BehaviorSystem {
 			if (!ref.__cleanupRegistered) {
 				entity.onCleanup(() => {
 					restoreRuntimeState(ref, false);
+					disposeRuntimeState(getRuntimeState(ref));
 				});
 				ref.__cleanupRegistered = true;
 			}

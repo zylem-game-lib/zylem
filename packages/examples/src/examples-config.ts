@@ -17,10 +17,10 @@ export type GameModule = {
 };
 
 export const EXAMPLE_SECTION_ORDER = [
+	'Classic Remakes',
 	'Basic',
 	'Advanced',
 	'Game Demos',
-	'Classic Remakes',
 	'Misc',
 ] as const;
 
@@ -166,11 +166,11 @@ export const exampleSections: ExampleSection[] = EXAMPLE_SECTION_ORDER.map(
 		const unassignedExamples =
 			sectionName === 'Misc'
 				? allExamples
-						.filter((example) => !assignedExampleIds.has(example.id))
-						.sort((a, b) =>
-							a.id.localeCompare(b.id, undefined, { numeric: true })
-						)
-						.map((example) => ({ ...example, section: sectionName }))
+					.filter((example) => !assignedExampleIds.has(example.id))
+					.sort((a, b) =>
+						a.id.localeCompare(b.id, undefined, { numeric: true })
+					)
+					.map((example) => ({ ...example, section: sectionName }))
 				: [];
 
 		return {

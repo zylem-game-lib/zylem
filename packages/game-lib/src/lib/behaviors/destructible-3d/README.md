@@ -53,6 +53,7 @@ crate.onCollision(() => {
 ## Handle Methods
 
 - `fracture(overrideOptions?)`
+- `prebake(overrideOptions?)`
 - `repair()`
 - `isFractured()`
 - `getFragments()`
@@ -65,5 +66,6 @@ crate.onCollision(() => {
   compound body.
 - `fragmentPhysics.mode: 'independent'` spawns one dynamic body per fragment
   and restores the source entity on `repair()`.
+- `prebake()` computes and caches reusable fragment templates ahead of time.
 - Fragment colliders default to convex hulls, with cuboid fallback if hull
   generation fails.

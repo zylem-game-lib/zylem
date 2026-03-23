@@ -9,6 +9,7 @@ import {
 } from '@zylem/game-lib';
 import redAsteroidGlb from '../../assets/red-asteroid.glb';
 import {
+	ASTEROID_TARGET_SMALL_SHARE,
 	type AsteroidSize,
 	ASTEROID_FRAGMENT_TTL_SECONDS,
 	LARGE_ASTEROID_FRAGMENT_COUNT,
@@ -42,6 +43,8 @@ type PendingSplitSpawn = {
 	baseVelocity: Vector3;
 };
 
+type ActiveAsteroidCounts = Record<AsteroidSize, number>;
+
 export type AsteroidRuntime = {
 	entity: ReturnType<typeof createActor>;
 	destructible: Destructible3DHandle;
@@ -51,6 +54,7 @@ export type AsteroidRuntime = {
 	spin: Vector3;
 	active: boolean;
 	cleanupScheduled: boolean;
+	inPool: boolean;
 	warmedUp: boolean;
 };
 
@@ -60,6 +64,12 @@ type AsteroidFieldOptions = {
 };
 
 const ORIGIN_SPAWN_SAFE_DISTANCE = 1.5;
+const ASTEROID_COLLISION_PADDING = 0.18;
+const ASTEROID_COLLISION_MIN_SPEED = 0.2;
+
+function getAsteroidCollisionRadius(size: AsteroidSize) {
+	return size === 'large' ? 1.7 : 0.95;
+}
 
 export function createAsteroidField({
 	getPlayerPosition,
@@ -69,6 +79,10 @@ export function createAsteroidField({
 	const asteroidRuntimeById = new Map<string, AsteroidRuntime>();
 	const cleanupQueue: CleanupEntry[] = [];
 	const pendingSplitSpawns: PendingSplitSpawn[] = [];
+	const availableAsteroidPool = {
+		large: [] as AsteroidRuntime[],
+		small: [] as AsteroidRuntime[],
+	};
 
 	let asteroidCounter = 0;
 	let asteroidRespawnTimer = randomRespawnDelay();
@@ -93,13 +107,29 @@ export function createAsteroidField({
 		}
 	}
 
+	function getRuntimePosition(runtime: AsteroidRuntime) {
+		const position = runtime.entity.getPosition();
+		if (position) {
+			return new Vector3(position.x, position.y, position.z ?? 0);
+		}
+
+		return runtime.spawnPosition.clone();
+	}
+
+	function syncRuntimePosition(runtime: AsteroidRuntime, position: Vector3) {
+		runtime.entity.setPosition(position.x, position.y, position.z);
+		runtime.entity.body?.setTranslation(
+			{ x: position.x, y: position.y, z: position.z },
+			true,
+		);
+		runtime.entity.setPositionZ(position.z);
+	}
+
 	function parkAsteroid(runtime: AsteroidRuntime) {
 		runtime.spawnPosition.set(0, 0, 1000);
-		runtime.entity.setPosition(0, 0, 1000);
-		runtime.entity.body?.setTranslation({ x: 0, y: 0, z: 1000 }, true);
+		syncRuntimePosition(runtime, runtime.spawnPosition);
 		runtime.entity.body?.setLinvel({ x: 0, y: 0, z: 0 }, true);
 		runtime.entity.body?.setAngvel({ x: 0, y: 0, z: 0 }, true);
-		runtime.entity.setPositionZ(1000);
 		setAsteroidVisibility(runtime.entity, false);
 	}
 
@@ -112,6 +142,23 @@ export function createAsteroidField({
 		parkAsteroid(runtime);
 	}
 
+	function returnAsteroidToPool(runtime: AsteroidRuntime) {
+		if (runtime.inPool || runtime.active || runtime.cleanupScheduled) {
+			return;
+		}
+
+		availableAsteroidPool[runtime.size].push(runtime);
+		runtime.inPool = true;
+	}
+
+	function takeAsteroidFromPool(size: AsteroidSize) {
+		const runtime = availableAsteroidPool[size].pop() ?? null;
+		if (runtime) {
+			runtime.inPool = false;
+		}
+		return runtime;
+	}
+
 	function activateAsteroid(
 		runtime: AsteroidRuntime,
 		position: Vector3,
@@ -120,6 +167,7 @@ export function createAsteroidField({
 		const spawnPosition = sanitizeSpawnPosition(position.clone(), velocity);
 		runtime.active = true;
 		runtime.cleanupScheduled = false;
+		runtime.inPool = false;
 		runtime.spawnPosition.copy(spawnPosition);
 		runtime.velocity.copy(velocity);
 		runtime.spin.set(
@@ -129,8 +177,7 @@ export function createAsteroidField({
 		);
 		runtime.destructible.repair();
 		setAsteroidVisibility(runtime.entity, true);
-		runtime.entity.setPosition(spawnPosition.x, spawnPosition.y, 0);
-		runtime.entity.body?.setTranslation({ x: spawnPosition.x, y: spawnPosition.y, z: 0 }, true);
+		syncRuntimePosition(runtime, new Vector3(spawnPosition.x, spawnPosition.y, 0));
 		runtime.entity.body?.setLinvel({ x: 0, y: 0, z: 0 }, true);
 		runtime.entity.body?.setAngvel({ x: 0, y: 0, z: 0 }, true);
 		runtime.entity.setRotation(
@@ -138,7 +185,6 @@ export function createAsteroidField({
 			Math.random() * Math.PI,
 			Math.random() * Math.PI,
 		);
-		runtime.entity.setPositionZ(0);
 	}
 
 	function scheduleCleanup(runtime: AsteroidRuntime, ttl: number) {
@@ -155,13 +201,61 @@ export function createAsteroidField({
 		return count;
 	}
 
-	function getInactiveAsteroidFromPool(size: AsteroidSize) {
+	function getActiveAsteroidCounts(): ActiveAsteroidCounts {
+		const counts: ActiveAsteroidCounts = {
+			large: 0,
+			small: 0,
+		};
+
 		for (const runtime of asteroidRuntimeById.values()) {
-			if (runtime.size === size && !runtime.active && !runtime.cleanupScheduled) {
-				return runtime;
+			if (runtime.active) {
+				counts[runtime.size] += 1;
 			}
 		}
-		return null;
+
+		return counts;
+	}
+
+	function getDesiredSmallCount(totalAsteroids: number) {
+		if (totalAsteroids <= 1) {
+			return 0;
+		}
+
+		const target = totalAsteroids === 2
+			? 1
+			: Math.max(2, Math.round(totalAsteroids * ASTEROID_TARGET_SMALL_SHARE));
+		return Math.min(totalAsteroids - 1, target);
+	}
+
+	function chooseRandomSpawnSize() {
+		const hasLargeAvailable = availableAsteroidPool.large.length > 0;
+		const hasSmallAvailable = availableAsteroidPool.small.length > 0;
+		if (!hasLargeAvailable && !hasSmallAvailable) {
+			return null;
+		}
+
+		if (!hasLargeAvailable) {
+			return 'small';
+		}
+
+		if (!hasSmallAvailable) {
+			return 'large';
+		}
+
+		const activeCounts = getActiveAsteroidCounts();
+		const nextTotal = activeCounts.large + activeCounts.small + 1;
+		const desiredSmallCount = getDesiredSmallCount(nextTotal);
+		const desiredLargeCount = nextTotal - desiredSmallCount;
+
+		if (activeCounts.small < desiredSmallCount) {
+			return 'small';
+		}
+
+		if (activeCounts.large < desiredLargeCount) {
+			return 'large';
+		}
+
+		return Math.random() < ASTEROID_TARGET_SMALL_SHARE ? 'small' : 'large';
 	}
 
 	function warmupDestructible(runtime: AsteroidRuntime) {
@@ -170,8 +264,7 @@ export function createAsteroidField({
 		}
 
 		try {
-			runtime.destructible.fracture();
-			runtime.destructible.repair();
+			runtime.destructible.prebake();
 			runtime.warmedUp = true;
 		} catch (error) {
 			console.warn('Failed to warm destructible asteroid', error);
@@ -222,6 +315,81 @@ export function createAsteroidField({
 				impactRadius: runtime.size === 'large' ? 0.72 : 0.48,
 			},
 		};
+	}
+
+	function bounceAsteroidPair(runtime: AsteroidRuntime, otherRuntime: AsteroidRuntime) {
+		if (
+			!runtime.active
+			|| !otherRuntime.active
+			|| runtime.cleanupScheduled
+			|| otherRuntime.cleanupScheduled
+			|| runtime.entity.uuid > otherRuntime.entity.uuid
+		) {
+			return;
+		}
+
+		const runtimePosition = getRuntimePosition(runtime);
+		const otherPosition = getRuntimePosition(otherRuntime);
+		const collisionNormal = otherPosition.clone().sub(runtimePosition);
+
+		if (collisionNormal.lengthSq() <= 0.0001) {
+			collisionNormal.copy(otherRuntime.velocity).sub(runtime.velocity);
+		}
+
+		if (collisionNormal.lengthSq() <= 0.0001) {
+			collisionNormal.copy(randomDirection(1));
+		}
+
+		collisionNormal.normalize();
+
+		const runtimeNormalSpeed = runtime.velocity.dot(collisionNormal);
+		const otherNormalSpeed = otherRuntime.velocity.dot(collisionNormal);
+		const closingSpeed = runtimeNormalSpeed - otherNormalSpeed;
+
+		if (closingSpeed <= 0) {
+			return;
+		}
+
+		const runtimeNormalVelocity = collisionNormal
+			.clone()
+			.multiplyScalar(runtimeNormalSpeed);
+		const otherNormalVelocity = collisionNormal
+			.clone()
+			.multiplyScalar(otherNormalSpeed);
+		const runtimeTangentialVelocity = runtime.velocity
+			.clone()
+			.sub(runtimeNormalVelocity);
+		const otherTangentialVelocity = otherRuntime.velocity
+			.clone()
+			.sub(otherNormalVelocity);
+
+		runtime.velocity
+			.copy(runtimeTangentialVelocity)
+			.add(otherNormalVelocity);
+		otherRuntime.velocity
+			.copy(otherTangentialVelocity)
+			.add(runtimeNormalVelocity);
+
+		if (runtime.velocity.lengthSq() < ASTEROID_COLLISION_MIN_SPEED ** 2) {
+			runtime.velocity.copy(collisionNormal).multiplyScalar(-ASTEROID_COLLISION_MIN_SPEED);
+		}
+
+		if (otherRuntime.velocity.lengthSq() < ASTEROID_COLLISION_MIN_SPEED ** 2) {
+			otherRuntime.velocity.copy(collisionNormal).multiplyScalar(ASTEROID_COLLISION_MIN_SPEED);
+		}
+
+		const minimumDistance = getAsteroidCollisionRadius(runtime.size)
+			+ getAsteroidCollisionRadius(otherRuntime.size)
+			+ ASTEROID_COLLISION_PADDING;
+		const currentDistance = runtimePosition.distanceTo(otherPosition);
+		const separationDistance = currentDistance < minimumDistance
+			? (minimumDistance - currentDistance) * 0.5
+			: ASTEROID_COLLISION_PADDING * 0.5;
+
+		runtimePosition.addScaledVector(collisionNormal, -separationDistance);
+		otherPosition.addScaledVector(collisionNormal, separationDistance);
+		syncRuntimePosition(runtime, runtimePosition);
+		syncRuntimePosition(otherRuntime, otherPosition);
 	}
 
 	function createAsteroid(
@@ -275,10 +443,12 @@ export function createAsteroidField({
 			),
 			active: false,
 			cleanupScheduled: false,
+			inPool: false,
 			warmedUp: false,
 		};
 
 		asteroidRuntimeById.set(asteroid.uuid, runtime);
+		returnAsteroidToPool(runtime);
 
 		const bindPrimaryMesh = () => {
 			const primaryMesh = getFirstMesh(asteroid.group);
@@ -315,6 +485,17 @@ export function createAsteroidField({
 			bindPrimaryMesh();
 		});
 
+		asteroid.onCollision(({ other }) => {
+			const otherRuntime = asteroidRuntimeById.get(other.uuid);
+			if (!otherRuntime) {
+				return;
+			}
+
+			bounceAsteroidPair(runtime, otherRuntime);
+		}, {
+			phase: 'enter',
+		});
+
 		asteroid.onUpdate(({ me, delta }) => {
 			if (!runtime.active) {
 				return;
@@ -346,13 +527,13 @@ export function createAsteroidField({
 		const leftVelocity = rotateVector2(baseVelocity.clone().multiplyScalar(1.28), 0.55);
 		const rightVelocity = rotateVector2(baseVelocity.clone().multiplyScalar(1.28), -0.55);
 
-		const left = getInactiveAsteroidFromPool('small');
+		const left = takeAsteroidFromPool('small');
 		if (left) {
 			activateAsteroid(left, position.clone().add(splitOffset), leftVelocity);
 		}
 
 		if (spawnCount > 1) {
-			const right = getInactiveAsteroidFromPool('small');
+			const right = takeAsteroidFromPool('small');
 			if (right) {
 				activateAsteroid(right, position.clone().sub(splitOffset), rightVelocity);
 			}
@@ -398,11 +579,15 @@ export function createAsteroidField({
 		);
 		const candidatePool = validCandidates.length > 0 ? validCandidates : edgeCandidates;
 		const position = candidatePool[Math.floor(Math.random() * candidatePool.length)]!.clone();
+		const size = chooseRandomSpawnSize();
+		if (!size) {
+			return;
+		}
 
 		const velocity = new Vector3(-position.x, -position.y, 0)
 			.normalize()
-			.multiplyScalar(getAsteroidSpeed('large', elapsedSeconds));
-		const asteroid = getInactiveAsteroidFromPool('large');
+			.multiplyScalar(getAsteroidSpeed(size, elapsedSeconds));
+		const asteroid = takeAsteroidFromPool(size);
 		if (!asteroid) {
 			return;
 		}
@@ -453,26 +638,50 @@ export function createAsteroidField({
 		createAsteroid(new Vector3(0, 0, 1000), 'small', new Vector3()),
 	);
 
-	activateAsteroid(
-		largeAsteroidPool[0]!,
-		new Vector3(-10, 6, 0),
-		new Vector3(1.45, -0.95, 0),
-	);
-	activateAsteroid(
-		largeAsteroidPool[1]!,
-		new Vector3(8, 7.5, 0),
-		new Vector3(-1.25, -1.15, 0),
-	);
-	activateAsteroid(
-		largeAsteroidPool[2]!,
-		new Vector3(11, -6.5, 0),
-		new Vector3(-1.55, 0.82, 0),
-	);
-	activateAsteroid(
-		largeAsteroidPool[3]!,
-		new Vector3(-7.5, -7, 0),
-		new Vector3(1.1, 1.35, 0),
-	);
+	const initialLargeAsteroids = [
+		{
+			position: new Vector3(-10, 6, 0),
+			velocity: new Vector3(1.45, -0.95, 0),
+		},
+		{
+			position: new Vector3(8, 7.5, 0),
+			velocity: new Vector3(-1.25, -1.15, 0),
+		},
+		{
+			position: new Vector3(11, -6.5, 0),
+			velocity: new Vector3(-1.55, 0.82, 0),
+		},
+		{
+			position: new Vector3(-7.5, -7, 0),
+			velocity: new Vector3(1.1, 1.35, 0),
+		},
+	] as const;
+	const initialSmallAsteroids = [
+		{
+			position: new Vector3(-12.5, -1.5, 0),
+			velocity: new Vector3(2.4, 0.95, 0),
+		},
+		{
+			position: new Vector3(12.5, 2.25, 0),
+			velocity: new Vector3(-2.3, -1.1, 0),
+		},
+	] as const;
+	for (const initial of initialLargeAsteroids) {
+		const runtime = takeAsteroidFromPool('large');
+		if (!runtime) {
+			break;
+		}
+
+		activateAsteroid(runtime, initial.position, initial.velocity);
+	}
+	for (const initial of initialSmallAsteroids) {
+		const runtime = takeAsteroidFromPool('small');
+		if (!runtime) {
+			break;
+		}
+
+		activateAsteroid(runtime, initial.position, initial.velocity);
+	}
 
 	return {
 		entities: [
@@ -516,6 +725,7 @@ export function createAsteroidField({
 				}
 
 				deactivateAsteroid(entry.runtime);
+				returnAsteroidToPool(entry.runtime);
 				cleanupQueue.splice(index, 1);
 			}
 		},
@@ -524,6 +734,7 @@ export function createAsteroidField({
 			cleanupQueue.length = 0;
 			for (const runtime of asteroidRuntimeById.values()) {
 				deactivateAsteroid(runtime);
+				returnAsteroidToPool(runtime);
 			}
 		},
 	};

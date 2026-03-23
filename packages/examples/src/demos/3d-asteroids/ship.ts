@@ -115,8 +115,7 @@ export function createShip(): ShipRuntime {
 		}
 
 		try {
-			destructible.fracture();
-			destructible.repair();
+			destructible.prebake();
 			warmedUp = true;
 		} catch (error) {
 			console.warn('Failed to warm destructible ship', error);
