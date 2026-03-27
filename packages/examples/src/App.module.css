@@ -6,6 +6,13 @@
     overflow: hidden;
 }
 
+.appShellMobile {
+    display: block;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+}
+
 @media (max-width: 900px) {
     .appShell {
         flex-direction: column;
@@ -19,5 +26,10 @@
 
     .appShell > :last-child {
         order: 1;
+    }
+
+    .appShellMobile {
+        flex-direction: initial;
+        overflow: hidden;
     }
 }

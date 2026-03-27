@@ -5,6 +5,7 @@ interface DemoPreviewImageProps {
 	exampleId: string;
 	name: string;
 	isActive?: boolean;
+	variant?: 'default' | 'compact';
 }
 
 const PREVIEW_CDN_BASE_URL =
@@ -68,7 +69,7 @@ const DemoPreviewImage: Component<DemoPreviewImageProps> = (props) => {
 
 	return (
 		<div
-			class={`${styles.previewFrame} ${props.isActive ? styles.previewFrameActive : ''}`}
+			class={`${styles.previewFrame} ${props.isActive ? styles.previewFrameActive : ''} ${props.variant === 'compact' ? styles.previewFrameCompact : ''}`}
 		>
 			<Show
 				when={src()}

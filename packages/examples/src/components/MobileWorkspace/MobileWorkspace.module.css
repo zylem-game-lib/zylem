@@ -1,0 +1,235 @@
+.shell {
+	--mobile-shell-side-padding: 0.9rem;
+	--mobile-shell-bottom-bar-height: 5.25rem;
+	position: relative;
+	height: 100%;
+	min-height: 100dvh;
+	overflow: hidden;
+	background:
+		radial-gradient(circle at top, color-mix(in srgb, var(--zylem-color-primary) 12%, transparent), transparent 42%),
+		var(--zylem-color-background);
+}
+
+.viewerLayer {
+	position: relative;
+	height: 100%;
+}
+
+.drawer {
+	position: absolute;
+	right: 0;
+	bottom: calc(var(--mobile-shell-bottom-bar-height) + env(safe-area-inset-bottom));
+	left: 0;
+	z-index: 20;
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	min-height: 18rem;
+	max-height: min(72dvh, 42rem);
+	border: 1px solid color-mix(in srgb, var(--zylem-color-border) 85%, transparent);
+	border-bottom: none;
+	border-radius: 1.35rem 1.35rem 0 0;
+	background:
+		linear-gradient(180deg, color-mix(in srgb, var(--zylem-color-surface) 92%, black 8%), color-mix(in srgb, var(--zylem-color-background) 94%, black 6%));
+	box-shadow:
+		0 -20px 50px rgba(0, 0, 0, 0.32),
+		inset 0 1px 0 rgba(255, 255, 255, 0.05);
+	transform: translateY(calc(100% + 1rem));
+	opacity: 0;
+	pointer-events: none;
+	transition:
+		transform 0.24s ease,
+		opacity 0.24s ease;
+}
+
+.drawerOpen {
+	transform: translateY(0);
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.drawerHandle {
+	width: 3rem;
+	height: 0.3rem;
+	margin: 0.8rem auto 0.35rem;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--zylem-color-text-secondary) 70%, white 30%);
+	opacity: 0.8;
+}
+
+.drawerScrollArea {
+	overflow: auto;
+	padding: 0.35rem var(--mobile-shell-side-padding) 0.9rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.sectionHeader {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.sectionTitle {
+	margin: 0;
+	font-size: 0.88rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	text-transform: uppercase;
+	color: color-mix(in srgb, var(--zylem-color-text) 88%, white 12%);
+}
+
+.sectionCount {
+	font-size: 0.78rem;
+	font-weight: 700;
+	color: var(--zylem-color-text-secondary);
+}
+
+.sectionGrid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(5.75rem, 1fr));
+	gap: 0.75rem;
+}
+
+.demoCard {
+	all: unset;
+	display: block;
+	cursor: pointer;
+}
+
+.demoCardActive {
+	transform: translateY(-1px);
+}
+
+.emptyState {
+	padding: 1.75rem 0.5rem 2rem;
+	text-align: center;
+	font-size: 0.9rem;
+	color: var(--zylem-color-text-secondary);
+}
+
+.searchDock {
+	padding: 0.85rem var(--mobile-shell-side-padding);
+	border-top: 1px solid color-mix(in srgb, var(--zylem-color-border) 84%, transparent);
+	background: color-mix(in srgb, var(--zylem-color-surface) 88%, black 12%);
+}
+
+.searchInput {
+	width: 100%;
+	border: 1px solid color-mix(in srgb, var(--zylem-color-border) 85%, transparent);
+	border-radius: 0.95rem;
+	background: color-mix(in srgb, var(--zylem-color-background) 76%, black 24%);
+	padding: 0.9rem 1rem;
+	font: inherit;
+	color: var(--zylem-color-text);
+	outline: none;
+}
+
+.searchInput:focus {
+	border-color: color-mix(in srgb, var(--zylem-color-primary) 72%, white 28%);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--zylem-color-primary) 18%, transparent);
+}
+
+.bottomBar {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 30;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 0.85rem;
+	min-height: calc(var(--mobile-shell-bottom-bar-height) + env(safe-area-inset-bottom));
+	padding:
+		0.85rem
+		var(--mobile-shell-side-padding)
+		calc(0.85rem + env(safe-area-inset-bottom));
+	border-top: 1px solid color-mix(in srgb, var(--zylem-color-border) 84%, transparent);
+	background:
+		linear-gradient(180deg, color-mix(in srgb, var(--zylem-color-surface) 95%, black 5%), color-mix(in srgb, var(--zylem-color-background) 94%, black 6%));
+	box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.26);
+}
+
+.bottomButton {
+	width: 3.4rem;
+	height: 3.4rem;
+	border-radius: 1rem;
+	border: 1px solid color-mix(in srgb, var(--zylem-color-border) 84%, transparent);
+	background: color-mix(in srgb, var(--zylem-color-surface) 90%, black 10%);
+	color: var(--zylem-color-text);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition:
+		transform 0.16s ease,
+		background 0.16s ease,
+		border-color 0.16s ease,
+		color 0.16s ease;
+}
+
+.bottomButton:hover,
+.bottomButtonActive {
+	border-color: color-mix(in srgb, var(--zylem-color-primary) 70%, white 30%);
+	background: color-mix(in srgb, var(--zylem-color-primary) 18%, var(--zylem-color-surface) 82%);
+	color: white;
+}
+
+.bottomButton:active {
+	transform: translateY(1px);
+}
+
+.bottomButton svg {
+	width: 1.45rem;
+	height: 1.45rem;
+}
+
+.bottomBarLabel {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.bottomBarCaption {
+	font-size: 0.68rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--zylem-color-text-secondary);
+}
+
+.bottomBarTitle {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: var(--zylem-color-text);
+}
+
+.editorButton {
+	background-image: var(--zylem-logo-url);
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: 68% auto;
+}
+
+@media (min-width: 768px) {
+	.sectionGrid {
+		grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+	}
+
+	.bottomButton {
+		width: 3.7rem;
+		height: 3.7rem;
+	}
+}

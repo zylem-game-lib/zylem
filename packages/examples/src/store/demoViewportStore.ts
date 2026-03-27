@@ -49,7 +49,7 @@ function getBrowserViewportSize(): ViewportDimensions {
 	};
 }
 
-function resolveViewportControlsMode(
+export function resolveViewportControlsMode(
 	viewportSize: ViewportDimensions,
 ): ViewportControlsMode {
 	const shortestEdge = Math.min(viewportSize.width, viewportSize.height);
@@ -79,6 +79,38 @@ function resolveViewportControlsMode(
 
 	return 'full';
 }
+
+const isMobileShellDevice = () => {
+	if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+		return false;
+	}
+
+	const userAgent = navigator.userAgent.toLowerCase();
+	const platform = navigator.platform ?? '';
+	const isMobileAgent = /android|iphone|ipod|ipad|mobile/i.test(userAgent);
+	const isIPadDesktopMode =
+		platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+	const hasCoarsePointer =
+		typeof window.matchMedia === 'function'
+			? window.matchMedia('(pointer: coarse)').matches
+			: false;
+
+	return isMobileAgent || isIPadDesktopMode || hasCoarsePointer;
+};
+
+export const isMobileShellViewportMode = (
+	viewportControlsMode: ViewportControlsMode,
+) => {
+	if (viewportControlsMode === 'hidden') {
+		return true;
+	}
+
+	if (viewportControlsMode !== 'compact') {
+		return false;
+	}
+
+	return isMobileShellDevice();
+};
 
 const initialBrowserViewportSize = getBrowserViewportSize();
 
@@ -119,4 +151,38 @@ export const setMeasuredViewportSize = (size: ViewportDimensions) => {
 export const setBrowserViewportSize = (size: ViewportDimensions) => {
 	setDemoViewportStore('browserViewportSize', size);
 	setDemoViewportStore('viewportControlsMode', resolveViewportControlsMode(size));
+};
+
+let browserViewportTrackingCount = 0;
+let stopBrowserViewportTracking: (() => void) | null = null;
+
+export const startDemoViewportTracking = () => {
+	if (typeof window === 'undefined') {
+		return () => undefined;
+	}
+
+	browserViewportTrackingCount += 1;
+
+	if (!stopBrowserViewportTracking) {
+		const syncBrowserViewport = () => {
+			setBrowserViewportSize({
+				width: window.innerWidth,
+				height: window.innerHeight,
+			});
+		};
+
+		syncBrowserViewport();
+		window.addEventListener('resize', syncBrowserViewport);
+		stopBrowserViewportTracking = () => {
+			window.removeEventListener('resize', syncBrowserViewport);
+		};
+	}
+
+	return () => {
+		browserViewportTrackingCount = Math.max(0, browserViewportTrackingCount - 1);
+		if (browserViewportTrackingCount === 0 && stopBrowserViewportTracking) {
+			stopBrowserViewportTracking();
+			stopBrowserViewportTracking = null;
+		}
+	};
 };

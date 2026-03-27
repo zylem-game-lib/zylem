@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('<zylem-editor> web component', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(
+      testInfo.project.name.includes('Mobile'),
+      'Desktop launcher coverage only',
+    );
+
     await page.goto('/');
   });
 

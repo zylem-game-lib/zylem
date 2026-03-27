@@ -8,6 +8,7 @@ const SidePanel: Component = () => {
     return (
         <aside
             class={`${styles.sidePanel} ${!appStore.sidePanelOpen ? styles.sidePanelClosed : ''} sidebar`}
+            data-side-panel
         >
             <HeaderSearch />
             <div
