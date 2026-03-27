@@ -1,5 +1,8 @@
 import { render } from 'solid-js/web';
-import App from '../App';
+import App, {
+  type EditorController,
+  type EditorLauncherMode,
+} from '../App';
 import { EditorProvider } from '../components/EditorContext';
 
 // Import bundled CSS (single file with all tokens and component styles)
@@ -27,7 +30,15 @@ export interface ZylemEditorConfig {
    * @default true
    */
   includeStyles?: boolean;
+  /**
+   * Controls whether the internal floating launcher is rendered.
+   * @default 'floating'
+   */
+  launcherMode?: EditorLauncherMode;
 }
+
+const normalizeLauncherMode = (value: unknown): EditorLauncherMode =>
+  value === 'hidden' ? 'hidden' : 'floating';
 
 /**
  * ZylemEditorElement - A web component that wraps the Zylem Editor.
@@ -65,6 +76,7 @@ export class ZylemEditorElement extends HTMLElement {
   private dispose: (() => void) | null = null;
   private _config: ZylemEditorConfig = {};
   private _initialized = false;
+  private controller: EditorController | null = null;
 
   constructor() {
     super();
@@ -86,16 +98,37 @@ export class ZylemEditorElement extends HTMLElement {
     return this._config;
   }
 
+  set launcherMode(value: EditorLauncherMode) {
+    const normalized = normalizeLauncherMode(value);
+    if (this._config.launcherMode === normalized) {
+      return;
+    }
+
+    this._config.launcherMode = normalized;
+    if (this._initialized) {
+      this.reinitialize();
+    }
+  }
+
+  get launcherMode(): EditorLauncherMode {
+    return normalizeLauncherMode(this._config.launcherMode);
+  }
+
   /**
    * Observed attributes for the web component
    */
   static get observedAttributes() {
-    return ['include-styles'];
+    return ['include-styles', 'launcher-mode'];
   }
 
   attributeChangedCallback(name: string, _oldValue: string, newValue: string) {
     if (name === 'include-styles') {
       this._config.includeStyles = newValue !== 'false';
+      return;
+    }
+
+    if (name === 'launcher-mode') {
+      this.launcherMode = normalizeLauncherMode(newValue);
     }
   }
 
@@ -122,9 +155,26 @@ export class ZylemEditorElement extends HTMLElement {
 
     this.dispose = render(() => (
       <EditorProvider>
-        <App />
+        <App
+          launcherMode={this.launcherMode}
+          onControllerReady={(controller) => {
+            this.controller = controller;
+          }}
+        />
       </EditorProvider>
     ), div);
+  }
+
+  openPanel() {
+    this.controller?.openPanel();
+  }
+
+  closePanel() {
+    this.controller?.closePanel();
+  }
+
+  togglePanel() {
+    this.controller?.togglePanel();
   }
 
   /**
@@ -136,6 +186,7 @@ export class ZylemEditorElement extends HTMLElement {
       this.dispose();
       this.dispose = null;
     }
+    this.controller = null;
     // Clear shadow root
     while (this.shadowRoot!.firstChild) {
       this.shadowRoot!.removeChild(this.shadowRoot!.firstChild);
@@ -149,6 +200,7 @@ export class ZylemEditorElement extends HTMLElement {
       this.dispose();
       this.dispose = null;
     }
+    this.controller = null;
     this._initialized = false;
   }
 }

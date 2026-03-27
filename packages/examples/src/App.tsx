@@ -4,6 +4,10 @@ import type { RouteSectionProps } from '@solidjs/router';
 import { ZylemGameElement } from '@zylem/game-lib';
 import { registerZylemEditor } from '@zylem/editor';
 import { isScreenshotModeSearch } from './screenshot-mode';
+import {
+  demoViewportStore,
+  isMobileShellViewportMode,
+} from './store/demoViewportStore';
 
 if (!customElements.get('zylem-game')) {
   customElements.define('zylem-game', ZylemGameElement);
@@ -21,12 +25,19 @@ declare module 'solid-js' {
 const App: Component<RouteSectionProps> = (props) => {
   const location = useLocation();
   const screenshotMode = () => isScreenshotModeSearch(location.search);
+  const editorLauncherMode = () =>
+    isMobileShellViewportMode(demoViewportStore.viewportControlsMode)
+      ? 'hidden'
+      : 'floating';
 
   return (
     <>
       {props.children}
       <Show when={!screenshotMode()}>
-        <zylem-editor class="fixed inset-0 z-[1000] pointer-events-none [&>*]:pointer-events-auto"></zylem-editor>
+        <zylem-editor
+          class="fixed inset-0 z-[1000] pointer-events-none [&>*]:pointer-events-auto"
+          launcher-mode={editorLauncherMode()}
+        ></zylem-editor>
       </Show>
     </>
   );

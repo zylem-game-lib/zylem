@@ -131,6 +131,7 @@ const ViewportControls: Component = () => {
   return (
     <div
       class={`${styles.toolbar} ${isCompact() ? styles.toolbarCompact : ''}`}
+      data-viewport-controls
     >
       <div class={styles.toolbarGroup}>
         <For each={PROFILE_OPTIONS}>

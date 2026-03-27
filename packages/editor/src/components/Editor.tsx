@@ -1,5 +1,13 @@
 import { render } from 'solid-js/web';
-import { createSignal, For, Show } from 'solid-js';
+import {
+  createMemo,
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+  Show,
+  type Component,
+} from 'solid-js';
 
 import { Menu } from './editor-panel/Menu';
 import { EditorToggleButton } from './EditorToggleButton';
@@ -11,6 +19,48 @@ import { debugStore, setPanelPosition } from '.';
 const PANEL_WIDTH = 460;
 const PANEL_HEIGHT = 600;
 const PANEL_MARGIN = 20;
+const VIEWPORT_PANEL_MARGIN = 12;
+const MOBILE_BOTTOM_BAR_ALLOWANCE = 92;
+
+export type EditorLauncherMode = 'floating' | 'hidden';
+
+export interface EditorController {
+  openPanel: () => void;
+  closePanel: () => void;
+  togglePanel: () => void;
+}
+
+interface EditorProps {
+  launcherMode?: EditorLauncherMode | undefined;
+  onControllerReady?: ((controller: EditorController | null) => void) | undefined;
+}
+
+const getViewportFittedPanelLayout = (
+  bottomOffset = 0,
+): {
+  initialPosition: { x: number; y: number };
+  initialSize: { width: number; height: number };
+} => {
+  const inset = VIEWPORT_PANEL_MARGIN;
+  const availableWidth = Math.max(300, window.innerWidth - inset * 2);
+  const availableHeight = Math.max(
+    200,
+    window.innerHeight - bottomOffset - inset * 2,
+  );
+  const width = Math.min(PANEL_WIDTH, availableWidth);
+  const height = Math.min(PANEL_HEIGHT, availableHeight);
+  const topInset = inset;
+  const bottomLimit = window.innerHeight - bottomOffset - inset;
+  const centeredY = Math.round((bottomLimit - topInset - height) / 2) + topInset;
+
+  return {
+    initialPosition: {
+      x: Math.max(inset, Math.round((window.innerWidth - width) / 2)),
+      y: Math.max(topInset, centeredY),
+    },
+    initialSize: { width, height },
+  };
+};
 
 /**
  * Calculate the initial panel position based on the toggle button's quadrant.
@@ -57,13 +107,15 @@ const getInitialPanelPosition = () => {
  * Editor root component. Handles open/close state and layout.
  * Renders both the main editor panel and any detached floating panels.
  */
-export function Editor() {
+export const Editor: Component<EditorProps> = (props) => {
   const [isOpen, setIsOpen] = createSignal(false);
+  const launcherMode = () => props.launcherMode ?? 'floating';
 
   const toggleMenu = () => {
-    setIsOpen(!isOpen());
+    setIsOpen((open) => !open);
   };
   const closeMenu = () => setIsOpen(false);
+  const openMenu = () => setIsOpen(true);
 
   const handlePanelMove = (pos: { x: number; y: number }) => {
     setPanelPosition(pos);
@@ -71,6 +123,52 @@ export function Editor() {
 
   // Get list of detached panel IDs
   const getDetachedPanelIds = () => Object.keys(debugStore.detachedPanels);
+
+  const shouldViewportFitPanel = () => {
+    if (typeof window === 'undefined') {
+      return launcherMode() === 'hidden';
+    }
+
+    return (
+      launcherMode() === 'hidden' ||
+      window.innerWidth < PANEL_WIDTH + PANEL_MARGIN * 2 ||
+      window.innerHeight < PANEL_HEIGHT + PANEL_MARGIN * 2
+    );
+  };
+
+  const panelLayout = createMemo(() => {
+    if (typeof window === 'undefined') {
+      return {
+        initialPosition: getInitialPanelPosition(),
+        initialSize: { width: PANEL_WIDTH, height: PANEL_HEIGHT },
+      };
+    }
+
+    if (!shouldViewportFitPanel()) {
+      return {
+        initialPosition: getInitialPanelPosition(),
+        initialSize: { width: PANEL_WIDTH, height: PANEL_HEIGHT },
+      };
+    }
+
+    return getViewportFittedPanelLayout(
+      launcherMode() === 'hidden' ? MOBILE_BOTTOM_BAR_ALLOWANCE : 0,
+    );
+  });
+
+  const controller: EditorController = {
+    openPanel: openMenu,
+    closePanel: closeMenu,
+    togglePanel: toggleMenu,
+  };
+
+  onMount(() => {
+    props.onControllerReady?.(controller);
+  });
+
+  onCleanup(() => {
+    props.onControllerReady?.(null);
+  });
 
   return (
     <div
@@ -80,12 +178,14 @@ export function Editor() {
         width: '100vw',
       }}
     >
-      <EditorToggleButton onToggle={toggleMenu} />
+      <Show when={launcherMode() !== 'hidden'}>
+        <EditorToggleButton onToggle={toggleMenu} />
+      </Show>
       <Show when={isOpen()}>
         <FloatingPanel
           title="Zylem Editor"
-          initialPosition={getInitialPanelPosition()}
-          initialSize={{ width: PANEL_WIDTH, height: PANEL_HEIGHT }}
+          initialPosition={panelLayout().initialPosition}
+          initialSize={panelLayout().initialSize}
           minSize={{ width: 300, height: 200 }}
           collapsible={true}
           onClose={closeMenu}
@@ -104,7 +204,7 @@ export function Editor() {
       <div style={{ flex: 1 }} />
     </div>
   );
-}
+};
 
 // Only render if we're not in a test environment and the container exists
 if (typeof window !== 'undefined' && !import.meta.env.VITEST) {

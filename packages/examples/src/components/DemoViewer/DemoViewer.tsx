@@ -18,9 +18,7 @@ import { appStore } from '../../store/appStore';
 import '../../store/editorStateStore';
 import ViewportControls from '../ViewportControls/ViewportControls';
 import {
-  PHONE_VIEWPORT_PRESET,
   demoViewportStore,
-  setBrowserViewportSize,
   setMeasuredViewportSize,
 } from '../../store/demoViewportStore';
 import { isScreenshotModeSearch } from '../../screenshot-mode';
@@ -34,7 +32,15 @@ declare module 'solid-js' {
   }
 }
 
-const DemoViewer: Component = () => {
+export interface DemoViewerProps {
+  layout?: 'desktop' | 'mobile';
+  interceptStageInteractions?: boolean;
+  onStageInteract?: () => void;
+}
+
+const DemoViewer: Component<DemoViewerProps> = (props) => {
+  const layout = () => props.layout ?? 'desktop';
+
   return (
     <main class={styles.viewer} data-demo-viewer>
       <Show
@@ -44,64 +50,48 @@ const DemoViewer: Component = () => {
             <div class={styles.placeholderContent}>
               <p class={styles.placeholderTitle}>Select an example</p>
               <p class={styles.placeholderSubtitle}>
-                Use the sidebar to select an example
+                {layout() === 'mobile'
+                  ? 'Select an example from the bottom bar'
+                  : 'Use the sidebar to select an example'}
               </p>
             </div>
           </div>
         }
       >
-        <ExampleRunner />
+        <ExampleRunner
+          layout={layout()}
+          interceptStageInteractions={props.interceptStageInteractions}
+          onStageInteract={props.onStageInteract}
+        />
       </Show>
     </main>
   );
 };
 
-const ExampleRunner: Component = () => {
+const ExampleRunner: Component<DemoViewerProps> = (props) => {
   const location = useLocation();
   let gameRef: ZylemGameElement | undefined;
   let viewportFrameRef: HTMLDivElement | undefined;
-  let stageAreaRef: HTMLDivElement | undefined;
 
   const [example, setExample] = createSignal<any>(null);
   const [loading, setLoading] = createSignal(false);
   const [progress, setProgress] = createSignal(0);
   const [message, setMessage] = createSignal('');
-  const [stageAreaSize, setStageAreaSize] = createSignal({
-    width: PHONE_VIEWPORT_PRESET.width,
-    height: PHONE_VIEWPORT_PRESET.height,
-  });
 
-  const controlsHidden = () =>
-    demoViewportStore.viewportControlsMode === 'hidden';
+  const isMobileLayout = () => props.layout === 'mobile';
   const screenshotMode = createMemo(() =>
-    isScreenshotModeSearch(location.search)
+    isScreenshotModeSearch(location.search),
   );
   const activeViewportProfile = () =>
-    controlsHidden() ? 'mobile' : demoViewportStore.viewportProfile;
+    isMobileLayout() ? 'mobile' : demoViewportStore.viewportProfile;
   const screenshotGameStyle = () => ({
     width: `${demoViewportStore.viewportSize.width}px`,
     height: `${demoViewportStore.viewportSize.height}px`,
   });
-  const viewportFrameStyle = () => {
-    if (!controlsHidden()) {
-      return {
-        width: `${demoViewportStore.viewportSize.width}px`,
-        height: `${demoViewportStore.viewportSize.height}px`,
-      };
-    }
-
-    const availableWidth = stageAreaSize().width;
-    const availableHeight = stageAreaSize().height;
-    const widthScale = availableWidth / PHONE_VIEWPORT_PRESET.width;
-    const heightScale = availableHeight / PHONE_VIEWPORT_PRESET.height;
-    const scale = Math.min(widthScale, heightScale, 1);
-    const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
-
-    return {
-      width: `${Math.round(PHONE_VIEWPORT_PRESET.width * safeScale)}px`,
-      height: `${Math.round(PHONE_VIEWPORT_PRESET.height * safeScale)}px`,
-    };
-  };
+  const viewportFrameStyle = () => ({
+    width: `${demoViewportStore.viewportSize.width}px`,
+    height: `${demoViewportStore.viewportSize.height}px`,
+  });
 
   const handleLoadingEvent = (event: GameLoadingPayload) => {
     setProgress(event.progress ?? 0);
@@ -119,18 +109,12 @@ const ExampleRunner: Component = () => {
     zylemEventBus.on('loading:progress', handleLoadingEvent);
     zylemEventBus.on('loading:complete', handleLoadingEvent);
 
-    const syncBrowserViewport = () => {
-      setBrowserViewportSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-    syncBrowserViewport();
-    window.addEventListener('resize', syncBrowserViewport);
-
     let frameObserver: ResizeObserver | null = null;
-    let stageObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined' && viewportFrameRef) {
+      setMeasuredViewportSize({
+        width: Math.round(viewportFrameRef.clientWidth),
+        height: Math.round(viewportFrameRef.clientHeight),
+      });
       frameObserver = new ResizeObserver((entries) => {
         const entry = entries[0];
         if (!entry) return;
@@ -142,22 +126,8 @@ const ExampleRunner: Component = () => {
       frameObserver.observe(viewportFrameRef);
     }
 
-    if (typeof ResizeObserver !== 'undefined' && stageAreaRef) {
-      stageObserver = new ResizeObserver((entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-        setStageAreaSize({
-          width: Math.round(entry.contentRect.width),
-          height: Math.round(entry.contentRect.height),
-        });
-      });
-      stageObserver.observe(stageAreaRef);
-    }
-
     onCleanup(() => {
       frameObserver?.disconnect();
-      stageObserver?.disconnect();
-      window.removeEventListener('resize', syncBrowserViewport);
     });
   });
 
@@ -185,9 +155,9 @@ const ExampleRunner: Component = () => {
 
   return (
     <div
-      class={`${styles.container} ${screenshotMode() ? styles.containerScreenshot : ''}`}
+      class={`${styles.container} ${screenshotMode() ? styles.containerScreenshot : ''} ${isMobileLayout() ? styles.containerMobile : ''}`}
     >
-      <Show when={!controlsHidden() && !screenshotMode()}>
+      <Show when={!isMobileLayout() && !screenshotMode()}>
         <ViewportControls />
       </Show>
       <Show
@@ -224,14 +194,49 @@ const ExampleRunner: Component = () => {
           </div>
         }
       >
-        <div ref={stageAreaRef} class={styles.stageArea}>
-          <div class={styles.viewportShell}>
-            <div
-              ref={viewportFrameRef}
-              class={`${styles.viewportFrame} ${controlsHidden() ? styles.viewportFrameFixed : ''}`}
-              style={viewportFrameStyle()}
-            >
-              <div class={styles.gameContainer}>
+        <Show
+          when={isMobileLayout()}
+          fallback={
+            <div class={styles.stageArea}>
+              <div class={styles.viewportShell}>
+                <div
+                  ref={viewportFrameRef}
+                  class={styles.viewportFrame}
+                  style={viewportFrameStyle()}
+                >
+                  <div class={styles.gameContainer}>
+                    <Show when={example()}>
+                      <zylem-game
+                        ref={gameRef}
+                        class="block h-full w-full"
+                        data-demo-id={appStore.activeExample?.id ?? ''}
+                        game={example()}
+                        viewport-profile={activeViewportProfile()}
+                      />
+                    </Show>
+                    <Show when={loading()}>
+                      <div class={styles.loadingOverlay} data-demo-loading-overlay>
+                        <div class={styles.loadingContent}>
+                          <div class={styles.loadingTitle}>Loading...</div>
+                          <div class={styles.progressBar}>
+                            <div
+                              class={styles.progressFill}
+                              style={{ width: `${progress() * 100}%` }}
+                            />
+                          </div>
+                          <div class={styles.loadingMessage}>{message()}</div>
+                        </div>
+                      </div>
+                    </Show>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <div class={styles.mobileStageArea}>
+            <div ref={viewportFrameRef} class={styles.mobileViewportFrame}>
+              <div class={`${styles.gameContainer} ${styles.gameContainerMobile}`}>
                 <Show when={example()}>
                   <zylem-game
                     ref={gameRef}
@@ -255,10 +260,18 @@ const ExampleRunner: Component = () => {
                     </div>
                   </div>
                 </Show>
+                <Show when={props.interceptStageInteractions}>
+                  <button
+                    type="button"
+                    class={styles.mobileInteractionShield}
+                    aria-label="Close demo drawer"
+                    onClick={() => props.onStageInteract?.()}
+                  />
+                </Show>
               </div>
             </div>
           </div>
-        </div>
+        </Show>
       </Show>
     </div>
   );

@@ -15,6 +15,7 @@ export const [appStore, setAppStore] = createStore({
     activeExample: null as ExampleConfig | null,
     searchTerm: '',
     sidePanelOpen: true,
+    mobileDemoDrawerOpen: false,
 });
 
 // Actions
@@ -32,6 +33,14 @@ export const toggleSidePanel = () => {
 
 export const setSidePanelOpen = (open: boolean) => {
     setAppStore('sidePanelOpen', open);
+};
+
+export const toggleMobileDemoDrawer = () => {
+    setAppStore('mobileDemoDrawerOpen', !appStore.mobileDemoDrawerOpen);
+};
+
+export const setMobileDemoDrawerOpen = (open: boolean) => {
+    setAppStore('mobileDemoDrawerOpen', open);
 };
 
 // Derived state helper
