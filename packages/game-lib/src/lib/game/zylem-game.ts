@@ -95,14 +95,16 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		const config = resolveGameConfig(options as any, this.displayRuntime);
 
 		this.globalInputConfig = config.input;
-		this.inputManager = new InputManager(config.input);
-
 		this.id = config.id;
 		this.stages = (config.stages as any) || [];
 		this.container = config.container;
 		this.canvas = config.canvas ?? null;
 		this.resolvedConfig = config;
 		this.loadGameCanvas(config);
+		this.container = this.gameCanvas?.container ?? this.container;
+		this.inputManager = new InputManager(config.input, {
+			targetElement: this.gameCanvas?.getOverlayContainer(),
+		});
 		this.loadDebugOptions(options);
 		this.setGlobals(options);
 	}
@@ -356,6 +358,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.eventBusUnsubscribes = [];
 
 		this.rendererObserver.dispose();
+
+		this.inputManager.dispose();
 
 		// Dispose the shared renderer manager
 		if (this.rendererManager) {

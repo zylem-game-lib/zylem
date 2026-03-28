@@ -2,6 +2,7 @@ import { InputProvider, InputGamepad, InputPlayerNumber, Inputs } from './input'
 import { KeyboardProvider } from './keyboard-provider';
 import { GamepadProvider } from './gamepad-provider';
 import { MouseProvider } from './mouse-provider';
+import { VirtualTouchProvider } from './virtual-touch-provider';
 import { GameInputConfig, GameInputPlayerConfig } from '../game/game-interfaces';
 import { mergeButtonState, mergeAnalogState } from './input-state';
 
@@ -16,20 +17,14 @@ export class InputManager {
 	private inputMap: Map<InputPlayerNumber, InputProvider[]> = new Map();
 	private currentInputs: Inputs = {} as Inputs;
 	private previousInputs: Inputs = {} as Inputs;
+	private readonly targetElement?: HTMLElement;
 
-	constructor(config?: GameInputConfig) {
+	constructor(config?: GameInputConfig, options?: { targetElement?: HTMLElement }) {
+		this.targetElement = options?.targetElement;
 		const players = this.buildPlayerEntries(config);
 
 		for (const { player, config: playerConfig, gamepadIndex, isP1 } of players) {
-			if (playerConfig?.key) {
-				const includeDefaultBase = playerConfig.includeDefaults ?? isP1;
-				this.addInputProvider(player, new KeyboardProvider(playerConfig.key, { includeDefaultBase }));
-			} else if (isP1) {
-				this.addInputProvider(player, new KeyboardProvider());
-			}
-			if (playerConfig?.mouse) {
-				this.addInputProvider(player, new MouseProvider(playerConfig.mouse));
-			}
+			this.addConfigurableProviders(player, playerConfig, isP1);
 			this.addInputProvider(player, new GamepadProvider(gamepadIndex));
 		}
 	}
@@ -44,29 +39,16 @@ export class InputManager {
 		for (const { player, config: playerConfig, isP1 } of players) {
 			const providers = this.inputMap.get(player) ?? [];
 
-			// Dispose and remove keyboard + mouse providers
+			// Dispose and remove dynamic providers while preserving persistent gamepad providers.
 			const remaining = providers.filter(p => {
-				if (p instanceof KeyboardProvider || p instanceof MouseProvider) {
+				if (p instanceof KeyboardProvider || p instanceof MouseProvider || p instanceof VirtualTouchProvider) {
 					p.dispose();
 					return false;
 				}
 				return true;
 			});
 
-			// Create new keyboard provider and prepend before gamepad providers
-			if (playerConfig?.key) {
-				const includeDefaultBase = playerConfig.includeDefaults ?? isP1;
-				remaining.unshift(new KeyboardProvider(playerConfig.key, { includeDefaultBase }));
-			} else if (isP1) {
-				remaining.unshift(new KeyboardProvider());
-			}
-
-			// Create new mouse provider
-			if (playerConfig?.mouse) {
-				remaining.unshift(new MouseProvider(playerConfig.mouse));
-			}
-
-			this.inputMap.set(player, remaining);
+			this.inputMap.set(player, [...this.createConfigurableProviders(playerConfig, isP1), ...remaining]);
 		}
 	}
 
@@ -75,6 +57,18 @@ export class InputManager {
 			this.inputMap.set(playerNumber, []);
 		}
 		this.inputMap.get(playerNumber)?.push(provider);
+	}
+
+	dispose(): void {
+		for (const providers of this.inputMap.values()) {
+			for (const provider of providers) {
+				provider.dispose?.();
+			}
+		}
+
+		this.inputMap.clear();
+		this.currentInputs = {} as Inputs;
+		this.previousInputs = {} as Inputs;
 	}
 
 	getInputs(delta: number): Inputs {
@@ -106,6 +100,40 @@ export class InputManager {
 			{ player: 7, config: config?.p7, gamepadIndex: 6, isP1: false },
 			{ player: 8, config: config?.p8, gamepadIndex: 7, isP1: false },
 		];
+	}
+
+	private addConfigurableProviders(
+		player: InputPlayerNumber,
+		playerConfig: GameInputPlayerConfig | undefined,
+		isP1: boolean,
+	): void {
+		for (const provider of this.createConfigurableProviders(playerConfig, isP1)) {
+			this.addInputProvider(player, provider);
+		}
+	}
+
+	private createConfigurableProviders(
+		playerConfig: GameInputPlayerConfig | undefined,
+		isP1: boolean,
+	): InputProvider[] {
+		const providers: InputProvider[] = [];
+
+		if (playerConfig?.key) {
+			const includeDefaultBase = playerConfig.includeDefaults ?? isP1;
+			providers.push(new KeyboardProvider(playerConfig.key, { includeDefaultBase }));
+		} else if (isP1) {
+			providers.push(new KeyboardProvider());
+		}
+
+		if (playerConfig?.mouse) {
+			providers.push(new MouseProvider(playerConfig.mouse, this.targetElement));
+		}
+
+		if (playerConfig?.touch) {
+			providers.push(new VirtualTouchProvider(playerConfig.touch, this.targetElement));
+		}
+
+		return providers;
 	}
 
 	private mergeInputs(a: Partial<InputGamepad>, b: Partial<InputGamepad>): Partial<InputGamepad> {
