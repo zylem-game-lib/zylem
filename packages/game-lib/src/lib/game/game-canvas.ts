@@ -25,6 +25,7 @@ export class GameCanvas {
 	fullscreen: boolean;
 	aspectRatio: number;
 	private ratioDelegate: AspectRatioDelegate | null = null;
+	private overlayContainer: HTMLDivElement | null = null;
 
 	constructor(options: GameCanvasOptions) {
 		this.id = options.id;
@@ -42,19 +43,17 @@ export class GameCanvas {
 	}
 
 	mountCanvas() {
-		while (this.container.firstChild) {
-			this.container.removeChild(this.container.firstChild);
-		}
-		this.container.appendChild(this.canvas);
+		this.mountChildren(this.canvas);
 	}
 
 	mountRenderer(rendererDom: HTMLCanvasElement, onResize: (width: number, height: number) => void) {
-		while (this.container.firstChild) {
-			this.container.removeChild(this.container.firstChild);
-		}
-		this.container.appendChild(rendererDom);
+		this.mountChildren(rendererDom);
 		this.canvas = rendererDom;
 		this.attachAspectRatio(onResize);
+	}
+
+	getOverlayContainer(): HTMLElement {
+		return this.ensureOverlayContainer();
 	}
 
 	centerIfFullscreen() {
@@ -99,6 +98,28 @@ export class GameCanvas {
 	destroy() {
 		this.ratioDelegate?.detach();
 		this.ratioDelegate = null;
+	}
+
+	private mountChildren(canvasElement: HTMLCanvasElement): void {
+		while (this.container.firstChild) {
+			this.container.removeChild(this.container.firstChild);
+		}
+		this.container.appendChild(canvasElement);
+		this.container.appendChild(this.ensureOverlayContainer());
+	}
+
+	private ensureOverlayContainer(): HTMLDivElement {
+		if (this.overlayContainer) return this.overlayContainer;
+
+		const overlay = document.createElement('div');
+		overlay.dataset.zylemOverlayRoot = 'true';
+		overlay.style.position = 'absolute';
+		overlay.style.inset = '0';
+		overlay.style.pointerEvents = 'none';
+		overlay.style.touchAction = 'none';
+		overlay.style.zIndex = '10';
+		this.overlayContainer = overlay;
+		return overlay;
 	}
 
 	private ensureContainer(containerId?: string, existing?: HTMLElement | null): HTMLElement {

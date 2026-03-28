@@ -1,6 +1,21 @@
 // Core game functionality
 export { createGame, Game } from '../lib/game/game';
-export type { ZylemGameConfig } from '../lib/game/game-interfaces';
+export type {
+	GameInputConfig,
+	GameInputPlayerConfig,
+	KeyboardMapping,
+	MouseConfig,
+	MouseMapping,
+	VirtualTouchButtonConfig,
+	VirtualTouchButtonsConfig,
+	VirtualTouchButtonSlot,
+	VirtualTouchConfig,
+	VirtualTouchJoystickConfig,
+	VirtualTouchJoysticksConfig,
+	VirtualTouchPosition,
+	VirtualTouchStyle,
+	ZylemGameConfig,
+} from '../lib/game/game-interfaces';
 export { gameConfig } from '../lib/game/game-config';
 export type {
 	GameConfigLike,
@@ -176,6 +191,7 @@ export {
 	useIJKLForDirections,
 	useMouseLook,
 	useMouse,
+	useVirtualControls,
 	mergeInputConfigs,
 } from '../lib/input/input-presets';
 

@@ -53,6 +53,7 @@ const PREDEFINED_ORDER = {
 		'03-variable-test',
 		'20-empty-game',
 		'20-basic-ball',
+		'20-virtual-touch-ball',
 	],
 	Advanced: [
 		'00-stage-test',

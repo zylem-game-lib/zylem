@@ -1,5 +1,15 @@
 import { InputPlayer } from './input';
-import { GameInputConfig, GameInputPlayerConfig, KeyboardMapping, MouseConfig } from '../game/game-interfaces';
+import {
+	GameInputConfig,
+	GameInputPlayerConfig,
+	KeyboardMapping,
+	MouseConfig,
+	VirtualTouchButtonConfig,
+	VirtualTouchButtonsConfig,
+	VirtualTouchConfig,
+	VirtualTouchJoystickConfig,
+	VirtualTouchJoysticksConfig,
+} from '../game/game-interfaces';
 
 /**
  * Creates a GameInputConfig scoped to a single player.
@@ -132,6 +142,22 @@ export function useMouse(player: InputPlayer, options?: { sensitivity?: number }
 	} as GameInputConfig;
 }
 
+/**
+ * Enables virtual touch controls for the given player.
+ * By default the provider auto-enables itself on mobile/touch devices.
+ * @example stage.setInputConfiguration(useVirtualControls('p1'));
+ */
+export function useVirtualControls(player: InputPlayer, options?: VirtualTouchConfig): GameInputConfig {
+	return {
+		[player]: {
+			touch: {
+				enabled: options?.enabled ?? 'auto',
+				...options,
+			} satisfies VirtualTouchConfig,
+		},
+	} as GameInputConfig;
+}
+
 const INPUT_PLAYERS: (keyof GameInputConfig)[] = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'];
 
 /**
@@ -157,13 +183,178 @@ export function mergeInputConfigs(...configs: GameInputConfig[]): GameInputConfi
 						mapping: { ...target.mouse?.mapping, ...source.mouse?.mapping },
 					}
 					: undefined;
+			const mergedTouch = mergeTouchConfigs(target.touch, source.touch);
 			result[player] = {
 				key: { ...target.key, ...source.key },
 				mouse: mergedMouse,
+				touch: mergedTouch,
 				includeDefaults: source.includeDefaults ?? target.includeDefaults,
 			};
 		}
 	}
 
 	return result;
+}
+
+function mergeTouchConfigs(
+	target?: VirtualTouchConfig,
+	source?: VirtualTouchConfig,
+): VirtualTouchConfig | undefined {
+	if (!target && !source) return undefined;
+	if (!target) return cloneTouchConfig(source);
+	if (!source) return cloneTouchConfig(target);
+
+	return {
+		...target,
+		...source,
+		style: mergePlainObject(target.style, source.style),
+		joysticks: mergeTouchJoysticks(target.joysticks, source.joysticks),
+		buttons: mergeTouchButtons(target.buttons, source.buttons),
+	};
+}
+
+function mergeTouchJoysticks(
+	target?: VirtualTouchJoysticksConfig | false,
+	source?: VirtualTouchJoysticksConfig | false,
+): VirtualTouchJoysticksConfig | false | undefined {
+	if (source === undefined) return cloneTouchJoysticks(target);
+	if (source === false) return false;
+
+	const base = target ? target : undefined;
+	return {
+		left: mergeTouchJoystickConfig(base?.left, source.left),
+		right: mergeTouchJoystickConfig(base?.right, source.right),
+	};
+}
+
+function mergeTouchJoystickConfig(
+	target?: VirtualTouchJoystickConfig | false,
+	source?: VirtualTouchJoystickConfig | false,
+): VirtualTouchJoystickConfig | false | undefined {
+	if (source === undefined) return cloneTouchJoystickConfig(target);
+	if (source === false) return false;
+	if (!target) {
+		return cloneTouchJoystickConfig(source);
+	}
+
+	return {
+		...target,
+		...source,
+		style: mergePlainObject(target.style, source.style),
+		position: mergePlainObject(target.position, source.position),
+		svg: mergePlainObject(target.svg, source.svg),
+	};
+}
+
+function mergeTouchButtons(
+	target?: VirtualTouchButtonsConfig | false,
+	source?: VirtualTouchButtonsConfig | false,
+): VirtualTouchButtonsConfig | false | undefined {
+	if (source === undefined) return cloneTouchButtons(target);
+	if (source === false) return false;
+
+	const base = target ? target : undefined;
+	const result: VirtualTouchButtonsConfig = base ? cloneTouchButtonsRecord(base) : {};
+
+	for (const [slot, config] of Object.entries(source)) {
+		const key = slot as keyof VirtualTouchButtonsConfig;
+		const current = result[key];
+		if (config === false) {
+			result[key] = false;
+			continue;
+		}
+
+		if (!current) {
+			result[key] = cloneTouchButtonConfig(config);
+			continue;
+		}
+
+		result[key] = {
+			...current,
+			...config,
+			style: mergePlainObject(current.style, config.style),
+			position: mergePlainObject(current.position, config.position),
+		};
+	}
+
+	return result;
+}
+
+function cloneTouchConfig(config?: VirtualTouchConfig): VirtualTouchConfig | undefined {
+	if (!config) return undefined;
+
+	return {
+		...config,
+		style: mergePlainObject(undefined, config.style),
+		joysticks: cloneTouchJoysticks(config.joysticks),
+		buttons: cloneTouchButtons(config.buttons),
+	};
+}
+
+function cloneTouchJoysticks(
+	config?: VirtualTouchJoysticksConfig | false,
+): VirtualTouchJoysticksConfig | false | undefined {
+	if (config === undefined) return undefined;
+	if (config === false) return false;
+
+	return cloneTouchJoysticksRecord(config);
+}
+
+function cloneTouchJoystickConfig(
+	config?: VirtualTouchJoystickConfig | false,
+): VirtualTouchJoystickConfig | false | undefined {
+	if (config === undefined) return undefined;
+	if (config === false) return false;
+
+	return {
+		...config,
+		style: mergePlainObject(undefined, config.style),
+		position: mergePlainObject(undefined, config.position),
+		svg: mergePlainObject(undefined, config.svg),
+	};
+}
+
+function cloneTouchButtons(
+	config?: VirtualTouchButtonsConfig | false,
+): VirtualTouchButtonsConfig | false | undefined {
+	if (config === undefined) return undefined;
+	if (config === false) return false;
+
+	return cloneTouchButtonsRecord(config);
+}
+
+function cloneTouchButtonConfig(config: VirtualTouchButtonConfig): VirtualTouchButtonConfig {
+	return {
+		...config,
+		style: mergePlainObject(undefined, config.style),
+		position: mergePlainObject(undefined, config.position),
+	};
+}
+
+function cloneTouchJoysticksRecord(config: VirtualTouchJoysticksConfig): VirtualTouchJoysticksConfig {
+	return {
+		left: cloneTouchJoystickConfig(config.left),
+		right: cloneTouchJoystickConfig(config.right),
+	};
+}
+
+function cloneTouchButtonsRecord(config: VirtualTouchButtonsConfig): VirtualTouchButtonsConfig {
+	const result: VirtualTouchButtonsConfig = {};
+	for (const [slot, value] of Object.entries(config)) {
+		result[slot as keyof VirtualTouchButtonsConfig] = value === false
+			? false
+			: cloneTouchButtonConfig(value);
+	}
+	return result;
+}
+
+function mergePlainObject<T extends object>(
+	target?: T,
+	source?: Partial<T>,
+): T | undefined {
+	if (!target && !source) return undefined;
+	return {
+		...(target ?? {}),
+		...(source ?? {}),
+	} as T;
 }
