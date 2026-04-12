@@ -827,6 +827,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 					entityId: this.uuid,
 					success: false,
 					meshCount: 0,
+					errorMessage: error instanceof Error ? error.message : String(error),
 				});
 			});
 	}

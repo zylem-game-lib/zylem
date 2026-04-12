@@ -6,7 +6,6 @@
  */
 
 import { Texture, Object3D, LoadingManager, Cache } from 'three';
-import { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import mitt, { Emitter } from 'mitt';
 
 import {
@@ -20,6 +19,7 @@ import {
 import {
   TextureLoaderAdapter,
   GLTFLoaderAdapter,
+  type GLTFRuntimeConfig,
   FBXLoaderAdapter,
   OBJLoaderAdapter,
   AudioLoaderAdapter,
@@ -32,6 +32,7 @@ import {
   FileLoadOptions,
 } from './loaders';
 import { VEC2_ONE, toThreeVector2 } from './vector';
+import { getUrlFileExtension } from './loaders/url-utils';
 
 /**
  * Asset cache entry
@@ -61,6 +62,9 @@ export class AssetManager {
   private audioCache: Map<string, CacheEntry<AudioBuffer>> = new Map();
   private fileCache: Map<string, CacheEntry<string | ArrayBuffer>> = new Map();
   private jsonCache: Map<string, CacheEntry<unknown>> = new Map();
+  private pendingGLTFRuntimePath: string | null = null;
+  private pendingGLTFRuntimePromise: Promise<void> | null = null;
+  private pendingGLTFRuntimeResolve: (() => void) | null = null;
 
   // Loaders
   private textureLoader: TextureLoaderAdapter;
@@ -171,6 +175,7 @@ export class AssetManager {
     url: string,
     options?: GLTFLoadOptions,
   ): Promise<ModelLoadResult> {
+    await this.waitForPreparedGLTFRuntime();
     return this.loadWithCache(
       url,
       AssetType.GLTF,
@@ -179,6 +184,40 @@ export class AssetManager {
       options,
       result => (options?.clone ? this.gltfLoader.clone(result) : result),
     );
+  }
+
+  /**
+   * Prime GLTF runtime requirements before a renderer is available.
+   * This lets eager actor/model loads pause until stage startup configures
+   * the renderer-backed KTX2 runtime.
+   */
+  prepareGLTFRuntime(options?: GLTFRuntimeConfig): void {
+    const pendingPath = this.normalizeTranscoderPath(options?.ktx2TranscoderPath);
+    if (!pendingPath) {
+      return;
+    }
+
+    if (this.pendingGLTFRuntimePath === pendingPath && this.pendingGLTFRuntimePromise) {
+      return;
+    }
+
+    this.pendingGLTFRuntimePath = pendingPath;
+    if (!this.pendingGLTFRuntimePromise) {
+      this.pendingGLTFRuntimePromise = new Promise<void>((resolve) => {
+        this.pendingGLTFRuntimeResolve = resolve;
+      });
+    }
+  }
+
+  /**
+   * Configure shared GLTF runtime support such as Meshopt and KTX2 loaders.
+   */
+  async configureGLTFRuntime(options?: GLTFRuntimeConfig): Promise<void> {
+    await this.gltfLoader.configureRuntime(options);
+    const configuredPath = this.normalizeTranscoderPath(options?.ktx2TranscoderPath);
+    if (configuredPath && options?.renderer) {
+      this.resolvePreparedGLTFRuntime(configuredPath);
+    }
   }
 
   /**
@@ -224,10 +263,7 @@ export class AssetManager {
     url: string,
     options?: AssetLoadOptions,
   ): Promise<ModelLoadResult> {
-    const ext = url
-      .split('.')
-      .pop()
-      ?.toLowerCase();
+    const ext = getUrlFileExtension(url);
 
     switch (ext) {
       case 'gltf':
@@ -392,6 +428,9 @@ export class AssetManager {
       this.fileCache.clear();
       this.jsonCache.clear();
       Cache.clear();
+      this.pendingGLTFRuntimePath = null;
+      this.pendingGLTFRuntimePromise = null;
+      this.pendingGLTFRuntimeResolve = null;
     }
   }
 
@@ -499,6 +538,34 @@ export class AssetManager {
         this.stats.filesLoaded++;
         break;
     }
+  }
+
+  private async waitForPreparedGLTFRuntime(): Promise<void> {
+    if (!this.pendingGLTFRuntimePromise) {
+      return;
+    }
+
+    await this.pendingGLTFRuntimePromise;
+  }
+
+  private resolvePreparedGLTFRuntime(configuredPath: string): void {
+    if (this.pendingGLTFRuntimePath && this.pendingGLTFRuntimePath !== configuredPath) {
+      return;
+    }
+
+    this.pendingGLTFRuntimeResolve?.();
+    this.pendingGLTFRuntimeResolve = null;
+    this.pendingGLTFRuntimePromise = null;
+    this.pendingGLTFRuntimePath = null;
+  }
+
+  private normalizeTranscoderPath(path?: URL | string): string | null {
+    if (!path) {
+      return null;
+    }
+
+    const value = String(path);
+    return value.endsWith('/') ? value : `${value}/`;
   }
 }
 

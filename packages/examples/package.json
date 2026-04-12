@@ -7,6 +7,8 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
+    "optimize:gltf": "node ./repo-actions/optimize-gltf-assets.mjs",
+    "destructible-prebake": "zylem-destructible-prebake",
     "test:e2e": "playwright test",
     "screenshot": "node --experimental-strip-types ./repo-actions/screenshot.ts",
     "screenshot:local": "node --experimental-strip-types ./repo-actions/screenshot-local.ts"
@@ -29,6 +31,7 @@
     "@playwright/test": "^1.56.1",
     "@types/node": "^20.19.13",
     "@types/three": "0.171.0",
+    "@zylem/utilities": "workspace:*",
     "autoprefixer": "^10.4.22",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.18",

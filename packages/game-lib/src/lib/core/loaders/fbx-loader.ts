@@ -7,6 +7,7 @@ import { Object3D } from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { LoaderAdapter, AssetLoadOptions, ModelLoadResult } from '../asset-types';
 import { cloneModelObject } from './model-clone';
+import { getUrlFileExtension } from './url-utils';
 
 export interface FBXLoadOptions extends AssetLoadOptions {
 	/** 
@@ -24,7 +25,7 @@ export class FBXLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 	}
 
 	isSupported(url: string): boolean {
-		const ext = url.split('.').pop()?.toLowerCase();
+		const ext = getUrlFileExtension(url);
 		return ext === 'fbx';
 	}
 

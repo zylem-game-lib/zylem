@@ -3,4 +3,6 @@
 mod ffi;
 mod runtime;
 
-pub use runtime::{EntityId, RuntimeStats, RuntimeWorld, Vec3};
+pub use runtime::{
+    Simulation, INPUT_STRIDE, RENDER_STRIDE, SUMMARY_LEN,
+};

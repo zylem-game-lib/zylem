@@ -4,6 +4,7 @@
 
 import { AudioLoader } from 'three';
 import { LoaderAdapter, AssetLoadOptions } from '../asset-types';
+import { getUrlFileExtension } from './url-utils';
 
 export class AudioLoaderAdapter implements LoaderAdapter<AudioBuffer> {
 	private loader: AudioLoader;
@@ -13,7 +14,7 @@ export class AudioLoaderAdapter implements LoaderAdapter<AudioBuffer> {
 	}
 
 	isSupported(url: string): boolean {
-		const ext = url.split('.').pop()?.toLowerCase();
+		const ext = getUrlFileExtension(url);
 		return ['mp3', 'ogg', 'wav', 'flac', 'aac', 'm4a'].includes(ext || '');
 	}
 

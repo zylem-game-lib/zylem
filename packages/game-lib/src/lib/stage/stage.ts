@@ -1,9 +1,10 @@
 import { BaseNode } from '../core/base-node';
 import { DestroyFunction, SetupContext, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
-import { LoadingEvent, StageOptionItem, StageOptions, ZylemStage } from './zylem-stage';
+import { LoadingEvent, StageOptionItem, StageOptions, ZylemStage, ZylemStageConfig } from './zylem-stage';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraWrapper } from '../camera/camera';
 import { RendererManager } from '../camera/renderer-manager';
+import { assetManager } from '../core/asset-manager';
 import { stageState } from './stage-state';
 import { getStageOptions } from './stage-default';
 import { EntityTypeMap } from '../types/entity-type-map';
@@ -43,6 +44,9 @@ export class Stage {
 	constructor(options: StageOptions) {
 		this.options = options;
 		this.wrappedStage = null;
+
+		const stageConfig = this.options[0] as Partial<ZylemStageConfig> | undefined;
+		assetManager.prepareGLTFRuntime(stageConfig?.assetLoaders?.gltf);
 	}
 
 	/**

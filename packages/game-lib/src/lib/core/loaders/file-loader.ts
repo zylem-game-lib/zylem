@@ -4,6 +4,7 @@
 
 import { FileLoader } from 'three';
 import { LoaderAdapter, AssetLoadOptions } from '../asset-types';
+import { getUrlFileExtension } from './url-utils';
 
 export interface FileLoadOptions extends AssetLoadOptions {
 	responseType?: 'text' | 'arraybuffer' | 'blob' | 'json';
@@ -51,7 +52,7 @@ export class JsonLoaderAdapter implements LoaderAdapter<unknown> {
 	}
 
 	isSupported(url: string): boolean {
-		const ext = url.split('.').pop()?.toLowerCase();
+		const ext = getUrlFileExtension(url);
 		return ext === 'json';
 	}
 

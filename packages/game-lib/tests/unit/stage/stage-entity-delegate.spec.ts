@@ -2,12 +2,18 @@ import { createWorld } from 'bitecs';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import {
+	Destructible3DBehavior,
+	type Destructible3DHandle,
+	FractureOptions,
+} from '../../../src/lib/behaviors/destructible-3d';
 import { EntityAssetLoader } from '../../../src/lib/core/entity-asset-loader';
 import { createActor } from '../../../src/lib/entities/actor';
 import { createBox } from '../../../src/lib/entities/box';
 import { StageEntityDelegate } from '../../../src/lib/stage/stage-entity-delegate';
 import { StageEntityModelDelegate } from '../../../src/lib/stage/stage-entity-model-delegate';
 import { StageLoadingDelegate } from '../../../src/lib/stage/stage-loading-delegate';
+import type { StageRuntimeAdapter } from '../../../src/lib/runtime/zylem-stage-runtime';
 
 function createDeferredModel() {
 	let resolve!: (value: { object: any }) => void;
@@ -76,6 +82,51 @@ describe('StageEntityDelegate', () => {
 
 		expect(scene.addEntityGroup).toHaveBeenCalledOnce();
 		expect(addedPositions[0]).toEqual({ x: 5, y: 6, z: 0 });
+	});
+
+	it('routes runtime-backed entities away from TS physics and scene registration', async () => {
+		const delegate = new StageEntityDelegate(
+			new StageLoadingDelegate(),
+			new StageEntityModelDelegate(),
+		);
+		const runtimeAdapter = {
+			init: vi.fn(),
+			step: vi.fn(),
+			destroy: vi.fn(),
+			ownsEntity: vi.fn((entity: any) => entity.options?.runtime?.simulation === 'runtime'),
+			rendersEntity: vi.fn((entity: any) => entity.options?.runtime?.render === 'instanced'),
+			registerEntity: vi.fn(),
+			unregisterEntity: vi.fn(),
+		} satisfies StageRuntimeAdapter;
+		const scene = {
+			addEntityGroup: vi.fn(),
+		};
+		const world = {
+			addEntity: vi.fn(),
+		};
+
+		delegate.attach({
+			scene: scene as any,
+			world: world as any,
+			ecs: createWorld(),
+			instanceManager: null,
+			camera: {} as any,
+			runtimeAdapter,
+		});
+
+		const entity = createBox({
+			position: new Vector3(1, 2, 3),
+			runtime: {
+				simulation: 'runtime',
+				render: 'instanced',
+			},
+		});
+
+		await delegate.spawnEntity(entity);
+
+		expect(world.addEntity).not.toHaveBeenCalled();
+		expect(scene.addEntityGroup).not.toHaveBeenCalled();
+		expect(runtimeAdapter.registerEntity).toHaveBeenCalledWith(entity);
 	});
 
 	it('attaches deferred actor physics after the model finishes loading', async () => {
@@ -194,5 +245,73 @@ describe('StageEntityDelegate', () => {
 		expect(addEntity).toHaveBeenCalledOnce();
 		expect(scene.addEntityGroup).toHaveBeenCalledOnce();
 		expect(addedPositions[0]).toEqual({ x: 2, y: 3, z: 4 });
+	});
+
+	it('attaches new behavior links before setup callbacks on existing systems', async () => {
+		const delegate = new StageEntityDelegate(
+			new StageLoadingDelegate(),
+			new StageEntityModelDelegate(),
+		);
+		const scene = {
+			addEntityGroup: vi.fn(),
+		};
+		const world = {
+			addEntity(entity: any) {
+				let position = { x: 0, y: 0, z: 0 };
+				entity.physicsAttached = true;
+				entity.body = {
+					translation: () => position,
+					setTranslation: (next: { x: number; y: number; z: number }) => {
+						position = { ...next };
+					},
+					rotation: () => ({ x: 0, y: 0, z: 0, w: 1 }),
+					setRotation: () => {},
+					linvel: () => ({ x: 0, y: 0, z: 0 }),
+					setLinvel: () => {},
+					angvel: () => ({ x: 0, y: 0, z: 0 }),
+					setAngvel: () => {},
+					lockTranslations: () => {},
+					lockRotations: () => {},
+				};
+			},
+			destroyEntity(entity: any) {
+				entity.physicsAttached = false;
+				entity.body = null;
+			},
+		};
+
+		delegate.attach({
+			scene: scene as any,
+			world: world as any,
+			ecs: createWorld(),
+			instanceManager: null,
+			camera: {} as any,
+		});
+
+		const first = createBox({ name: 'first-destructible-box' });
+		first.use(Destructible3DBehavior, {
+			fractureOptions: new FractureOptions({
+				fractureMethod: 'simple',
+				fragmentCount: 4,
+			}),
+		});
+		await delegate.spawnEntity(first);
+
+		const second = createBox({ name: 'second-destructible-box' });
+		const secondHandle = second.use(Destructible3DBehavior, {
+			fractureOptions: new FractureOptions({
+				fractureMethod: 'simple',
+				fragmentCount: 4,
+			}),
+		}) as Destructible3DHandle;
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		second.onSetup(() => {
+			secondHandle.prebake();
+		});
+
+		await expect(delegate.spawnEntity(second)).resolves.toBeUndefined();
+		expect(warnSpy).not.toHaveBeenCalled();
+		expect(secondHandle.isFractured()).toBe(false);
+		expect(secondHandle.getFragments()).toHaveLength(0);
 	});
 });

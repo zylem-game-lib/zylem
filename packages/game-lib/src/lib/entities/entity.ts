@@ -94,12 +94,26 @@ export type IBuilder<BuilderOptions = any> = {
 	postBuild: (options: BuilderOptions) => BuilderOptions;
 };
 
+export type GameEntitySimulationMode = 'ts' | 'runtime';
+export type GameEntityRenderMode = 'mesh' | 'instanced';
+export type RuntimeEntityBodyMode = 'dynamic' | 'static' | 'none';
+export type RuntimeEntityColorMode = 'base' | 'heatTint';
+
+export interface RuntimeEntityOptions {
+	simulation?: GameEntitySimulationMode;
+	render?: GameEntityRenderMode;
+	batchKeyOverride?: string;
+	body?: RuntimeEntityBodyMode;
+	colorMode?: RuntimeEntityColorMode;
+}
+
 export type GameEntityOptions = {
 	name?: string;
 	color?: Color;
 	size?: Vec3Input;
 	position?: Vec3Input;
 	batched?: boolean;
+	runtime?: RuntimeEntityOptions;
 	collision?: Partial<CollisionOptions>;
 	material?: Partial<MaterialOptions>;
 	custom?: { [key: string]: any };
@@ -192,6 +206,8 @@ export class GameEntity<O extends GameEntityOptions>
 	public instanceId: number = -1;
 	/** Whether this entity uses instanced rendering */
 	public isInstanced: boolean = false;
+	/** Runtime slot index when owned by a stage runtime adapter. */
+	public runtimeSlot: number = -1;
 
 	// Event delegate for dispatch/listen API
 	protected eventDelegate = new EventEmitterDelegate<EntityEvents>();

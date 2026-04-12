@@ -79,7 +79,12 @@ export type EntityEvents = {
 	'entity:destroyed': { entityId: string };
 	'entity:collision': { entityId: string; otherId: string };
 	'entity:model:loading': { entityId: string; files: string[] };
-	'entity:model:loaded': { entityId: string; success: boolean; meshCount?: number };
+	'entity:model:loaded': {
+		entityId: string;
+		success: boolean;
+		meshCount?: number;
+		errorMessage?: string;
+	};
 	'entity:animation:loaded': { entityId: string; animationCount: number };
 };
 

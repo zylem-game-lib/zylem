@@ -8,6 +8,7 @@ import {
 	type Destructible3DHandle,
 } from '@zylem/game-lib';
 import redAsteroidGlb from '../../assets/red-asteroid.glb';
+import { destructiblePrebakeWorkerUrl } from '../lib/destructible-prebake-worker-url';
 import {
 	ASTEROID_TARGET_SMALL_SHARE,
 	type AsteroidSize,
@@ -263,12 +264,16 @@ export function createAsteroidField({
 			return;
 		}
 
-		try {
-			runtime.destructible.prebake();
-			runtime.warmedUp = true;
-		} catch (error) {
-			console.warn('Failed to warm destructible asteroid', error);
-		}
+		// Worker prebake keeps Voronoi off the main thread; game-lib dedupes concurrent
+		// prebakeAsync calls on the same asteroid behavior handle.
+		void runtime.destructible.prebakeAsync().then(
+			() => {
+				runtime.warmedUp = true;
+			},
+			(error) => {
+				console.warn('Failed to warm destructible asteroid', error);
+			},
+		);
 	}
 
 	function isAsteroidReady(runtime: AsteroidRuntime) {
@@ -420,6 +425,7 @@ export function createAsteroidField({
 
 		const destructible = asteroid.use(Destructible3DBehavior, {
 			fractureOptions: buildAsteroidFractureOptions(size),
+			prebakeWorkerUrl: destructiblePrebakeWorkerUrl,
 			collider: {
 				shape: 'cuboid',
 			},

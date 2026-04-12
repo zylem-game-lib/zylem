@@ -9,6 +9,7 @@ import {
 	type Destructible3DHandle,
 } from '@zylem/game-lib';
 import fisherShipGlb from '../../assets/fisher-ship.glb';
+import { destructiblePrebakeWorkerUrl } from '../lib/destructible-prebake-worker-url';
 import { shipShieldShader } from './shield.shader';
 import {
 	BULLET_BOUNDS_X,
@@ -71,19 +72,21 @@ export function createShip(): ShipRuntime {
 	const destructible = ship.use(Destructible3DBehavior, {
 		fractureOptions: new FractureOptions({
 			fractureMethod: 'voronoi',
-			fragmentCount: 16,
+			fragmentCount: 10,
 			voronoiOptions: {
 				mode: '3D',
 			},
 			seed: 41,
 		}),
+		prebakeWorkerUrl: destructiblePrebakeWorkerUrl,
 		collider: {
 			shape: 'cuboid',
 		},
 		fragmentPhysics: {
 			mode: 'independent',
-			outwardVelocity: 3.6,
-			angularVelocity: 1.9,
+			inheritSourceVelocity: false,
+			outwardVelocity: 4.2,
+			angularVelocity: 1.8,
 		},
 	});
 	let warmedUp = false;
@@ -114,12 +117,16 @@ export function createShip(): ShipRuntime {
 			return;
 		}
 
-		try {
-			destructible.prebake();
-			warmedUp = true;
-		} catch (error) {
-			console.warn('Failed to warm destructible ship', error);
-		}
+		// Worker prebake keeps Voronoi off the main thread; game-lib dedupes concurrent
+		// prebakeAsync calls on this same behavior handle.
+		void destructible.prebakeAsync().then(
+			() => {
+				warmedUp = true;
+			},
+			(error) => {
+				console.warn('Failed to warm destructible ship', error);
+			},
+		);
 	}
 
 	function bindPrimaryMesh() {
@@ -132,32 +139,6 @@ export function createShip(): ShipRuntime {
 		warmupDestructible();
 	}
 
-	function buildImpactOverride(impactWorld?: Vector3) {
-		if (!impactWorld) {
-			return undefined;
-		}
-
-		const targetRoot = ship.mesh ?? ship.group;
-		if (!targetRoot) {
-			return undefined;
-		}
-
-		targetRoot.updateMatrixWorld(true);
-		const impactPoint = impactWorld.clone().applyMatrix4(
-			inverseMatrix.copy(targetRoot.matrixWorld).invert(),
-		);
-
-		return {
-			fractureMethod: 'voronoi' as const,
-			fragmentCount: 16,
-			voronoiOptions: {
-				mode: '3D' as const,
-				impactPoint,
-				impactRadius: 0.58,
-			},
-		};
-	}
-
 	return {
 		entity: ship,
 		destructible,
@@ -168,7 +149,7 @@ export function createShip(): ShipRuntime {
 			}
 
 			exploded = true;
-			destructible.fracture(buildImpactOverride(impactWorld));
+			destructible.fracture();
 			return true;
 		},
 	};

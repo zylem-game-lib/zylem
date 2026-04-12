@@ -5,10 +5,11 @@
   "description": "Rust runtime scaffolding for Zylem simulation and future wasm builds.",
   "license": "MIT",
   "scripts": {
-    "build": "cargo build --manifest-path Cargo.toml",
-    "build:release": "cargo build --manifest-path Cargo.toml --release",
-    "build:wasm": "cargo build --manifest-path Cargo.toml --target wasm32-unknown-unknown --release",
-    "test": "cargo test --manifest-path Cargo.toml",
-    "typecheck": "cargo check --manifest-path Cargo.toml"
+    "build": "cargo build --manifest-path Cargo.toml --target-dir target && cargo build --manifest-path Cargo.toml --target-dir target --target wasm32-unknown-unknown --release",
+    "build:native": "cargo build --manifest-path Cargo.toml --target-dir target",
+    "build:release": "cargo build --manifest-path Cargo.toml --target-dir target --release",
+    "build:wasm": "cargo build --manifest-path Cargo.toml --target-dir target --target wasm32-unknown-unknown --release",
+    "test": "cargo test --manifest-path Cargo.toml --target-dir target",
+    "typecheck": "cargo check --manifest-path Cargo.toml --target-dir target"
   }
 }

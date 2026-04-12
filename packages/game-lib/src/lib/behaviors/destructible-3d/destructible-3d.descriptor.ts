@@ -22,11 +22,22 @@ import {
 	type Object3D,
 } from 'three';
 
+import * as Comlink from 'comlink';
+
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { create, type GameEntity } from '../../entities/entity';
 import { getGlobals } from '../../game/game-state';
 import { getBodyRenderPose } from '../../physics/physics-pose';
+
+import { buildFractureGeometryCacheKey } from './destructible-prebake-cache-key';
+import {
+	bufferGeometryToPlain,
+	type DestructiblePrebakeWorkerAPI,
+	pinataFractureOptionsToPlain,
+	plainWorkerResultToTemplateParts,
+} from './destructible-prebake-payload';
+import { buildNormalizedFractureSourceGeometry } from './destructible-prebake-source-geometry';
 
 export type FractureOptionsInput =
 	NonNullable<ConstructorParameters<typeof PinataFractureOptions>[0]>;
@@ -55,6 +66,11 @@ export interface Destructible3DBehaviorOptions {
 	innerMaterial?: Material | null;
 	collider?: Destructible3DColliderOptions;
 	fragmentPhysics?: Destructible3DFragmentPhysicsOptions;
+	/**
+	 * When set, {@link Destructible3DHandle.prebakeAsync} runs Voronoi fracture
+	 * in a Web Worker (see `destructible-prebake-worker` bundle).
+	 */
+	prebakeWorkerUrl?: URL | string;
 }
 
 export interface Destructible3DHandle {
@@ -64,6 +80,9 @@ export interface Destructible3DHandle {
 	prebake(
 		overrideOptions?: FractureOptionsInput | PinataFractureOptions,
 	): void;
+	prebakeAsync(
+		overrideOptions?: FractureOptionsInput | PinataFractureOptions,
+	): Promise<void>;
 	repair(): void;
 	isFractured(): boolean;
 	getFragments(): readonly DestructibleMesh[];
@@ -183,6 +202,40 @@ function getRuntimeState(
 	};
 	runtimeStates.set(ref, state);
 	return state;
+}
+
+const prebakeWorkerApis = new Map<
+	string,
+	Comlink.Remote<DestructiblePrebakeWorkerAPI>
+>();
+
+/** One in-flight worker prebake per behavior ref (dedupes duplicate bind calls). */
+const prebakeAsyncInFlight = new WeakMap<
+	BehaviorRef<Destructible3DBehaviorOptions>,
+	Promise<void>
+>();
+
+function resolvePrebakeWorkerHref(url: URL | string): string {
+	return typeof url === 'string' ? url : url.href;
+}
+
+function getPrebakeWorkerApi(
+	url: URL | string,
+): Comlink.Remote<DestructiblePrebakeWorkerAPI> {
+	if (typeof Worker === 'undefined') {
+		throw new Error(
+			'Destructible3D prebakeAsync requires a Web Worker-capable environment.',
+		);
+	}
+	const key = resolvePrebakeWorkerHref(url);
+	let api = prebakeWorkerApis.get(key);
+	if (api) {
+		return api;
+	}
+	const worker = new Worker(key, { type: 'module' });
+	api = Comlink.wrap(worker);
+	prebakeWorkerApis.set(key, api);
+	return api;
 }
 
 function requireEntity(
@@ -346,51 +399,6 @@ function resolveFractureOptions(
 	});
 }
 
-function vector2ToTuple(value?: Vector2): [number, number] | null {
-	if (!value) {
-		return null;
-	}
-
-	return [value.x, value.y];
-}
-
-function vector3ToTuple(value?: Vector3): [number, number, number] | null {
-	if (!value) {
-		return null;
-	}
-
-	return [value.x, value.y, value.z];
-}
-
-function buildFractureGeometryCacheKey(
-	options: PinataFractureOptions,
-): string {
-	return JSON.stringify({
-		fractureMethod: options.fractureMethod,
-		fragmentCount: options.fragmentCount,
-		fracturePlanes: {
-			x: options.fracturePlanes?.x ?? true,
-			y: options.fracturePlanes?.y ?? true,
-			z: options.fracturePlanes?.z ?? true,
-		},
-		textureScale: vector2ToTuple(options.textureScale),
-		textureOffset: vector2ToTuple(options.textureOffset),
-		seed: options.seed ?? null,
-		voronoiOptions: options.voronoiOptions
-			? {
-				mode: options.voronoiOptions.mode,
-				seedPoints:
-					options.voronoiOptions.seedPoints?.map((point) => vector3ToTuple(point)),
-				projectionAxis: options.voronoiOptions.projectionAxis ?? null,
-				projectionNormal: vector3ToTuple(options.voronoiOptions.projectionNormal),
-				useApproximation: options.voronoiOptions.useApproximation ?? false,
-				approximationNeighborCount:
-					options.voronoiOptions.approximationNeighborCount ?? 12,
-			}
-			: null,
-	});
-}
-
 function resolveColliderOptions(
 	input?: Destructible3DColliderOptions,
 ): Required<
@@ -424,6 +432,44 @@ function resolveFragmentPhysicsOptions(
 	};
 }
 
+function findFirstMesh(root: Object3D | null | undefined): Mesh | null {
+	let resolved: Mesh | null = null;
+	root?.traverse((child) => {
+		if (resolved) {
+			return;
+		}
+
+		if ((child as { isMesh?: boolean }).isMesh) {
+			resolved = child as Mesh;
+		}
+	});
+	return resolved;
+}
+
+function requireEntityMesh(entity: GameEntity<any>): Mesh {
+	if (entity.mesh?.geometry) {
+		return entity.mesh;
+	}
+
+	const mesh = findFirstMesh(entity.group);
+	if (!mesh?.geometry) {
+		throw new Error(
+			'Destructible3DBehavior requires the entity to have a primary mesh geometry.',
+		);
+	}
+
+	entity.mesh = mesh;
+	if (!entity.materials?.length) {
+		if (Array.isArray(mesh.material)) {
+			entity.materials = [...mesh.material];
+		} else if (mesh.material) {
+			entity.materials = [mesh.material];
+		}
+	}
+
+	return mesh;
+}
+
 function getPrimaryMaterial(mesh: Mesh): Material {
 	if (Array.isArray(mesh.material)) {
 		const material = mesh.material[0];
@@ -448,13 +494,7 @@ function ensureRootGroup(
 		return entity.group;
 	}
 
-	if (!entity.mesh) {
-		throw new Error(
-			'Destructible3DBehavior requires the entity to have a primary mesh.',
-		);
-	}
-
-	const originalMesh = entity.mesh;
+	const originalMesh = requireEntityMesh(entity);
 	const parent = originalMesh.parent;
 	const root = new Group();
 	root.name = `${entity.name ?? entity.uuid}-destructible-root`;
@@ -482,19 +522,7 @@ function createFractureSourceMesh(
 	root: Group,
 	innerMaterial: Material | null | undefined,
 ): DestructibleMesh {
-	const geometry = mesh.geometry.clone();
-	root.updateMatrixWorld(true);
-	mesh.updateMatrixWorld(true);
-
-	const relativeMatrix = new Matrix4()
-		.copy(root.matrixWorld)
-		.invert()
-		.multiply(mesh.matrixWorld);
-
-	geometry.applyMatrix4(relativeMatrix);
-	geometry.computeBoundingBox();
-	geometry.computeBoundingSphere();
-
+	const geometry = buildNormalizedFractureSourceGeometry(mesh, root);
 	const outerMaterial = getPrimaryMaterial(mesh);
 	return new DestructibleMesh(
 		geometry,
@@ -541,6 +569,36 @@ function cachePrebakedFragments(
 
 	disposePrebakedFragmentTemplates(state.prebakedFragments);
 	state.prebakedFragments = createPrebakedFragmentTemplates(fragments);
+	state.prebakedFractureKey = cacheKey;
+}
+
+function installPrebakedTemplateParts(
+	state: RuntimeState,
+	cacheKey: string,
+	parts: Array<{
+		geometry: BufferGeometry;
+		position: Vector3;
+		quaternion: Quaternion;
+		scale: Vector3;
+	}>,
+): void {
+	if (
+		state.prebakedFractureKey === cacheKey
+		&& state.prebakedFragments.length > 0
+	) {
+		for (const part of parts) {
+			part.geometry.dispose();
+		}
+		return;
+	}
+
+	disposePrebakedFragmentTemplates(state.prebakedFragments);
+	state.prebakedFragments = parts.map((part) => ({
+		geometry: part.geometry,
+		position: part.position.clone(),
+		quaternion: part.quaternion.clone(),
+		scale: part.scale.clone(),
+	}));
 	state.prebakedFractureKey = cacheKey;
 }
 
@@ -942,6 +1000,27 @@ function createRuntimeFragmentEntity(
 	return entity;
 }
 
+/**
+ * {@link ZylemWorld} locks translations and rotations on every new rigid body
+ * when world gravity is `(0,0,0)`, so entities do not drift in zero‑G scenes.
+ * Independent destructible fragments are still meant to move via
+ * `setLinvel` / `setAngvel`, so they must opt out of that lock after spawn.
+ */
+function unlockIndependentFragmentPhysicsBody(entity: GameEntity<any>): void {
+	const body = entity.body as
+		| {
+			lockTranslations?(locked: boolean, wakeUp?: boolean): void;
+			lockRotations?(locked: boolean, wakeUp?: boolean): void;
+		}
+		| null
+		| undefined;
+	if (!body?.lockTranslations || !body.lockRotations) {
+		return;
+	}
+	body.lockTranslations(false, true);
+	body.lockRotations(false, true);
+}
+
 function destroyRuntimeFragmentEntities(
 	ref: BehaviorRef<Destructible3DBehaviorOptions>,
 	state: RuntimeState,
@@ -1154,6 +1233,7 @@ function fractureIndependentEntity(
 		);
 
 		world.addEntity(fragmentEntity);
+		unlockIndependentFragmentPhysicsBody(fragmentEntity);
 		const linearVelocity = computeFragmentLinearVelocity(
 			fragmentWorldPose.position,
 			rootWorldPosition,
@@ -1199,17 +1279,12 @@ function fractureEntity(
 		);
 	}
 
-	if (!entity.mesh?.geometry) {
-		throw new Error(
-			'Destructible3DBehavior requires the entity to have a primary mesh geometry.',
-		);
-	}
-
 	const state = getRuntimeState(ref);
 	if (state.isFractured) {
 		restoreRuntimeState(ref, true);
 	}
 
+	const sourceMesh = requireEntityMesh(entity);
 	const fractureOptions = resolveFractureOptions(
 		ref.options.fractureOptions,
 		overrideOptions,
@@ -1217,14 +1292,14 @@ function fractureEntity(
 	const cacheKey = buildFractureGeometryCacheKey(fractureOptions);
 
 	const root = ensureRootGroup(entity, state);
-	state.originalMeshParent = entity.mesh.parent;
+	state.originalMeshParent = sourceMesh.parent;
 	state.originalColliderDesc = entity.colliderDesc;
 	state.originalColliderDescs = entity.colliderDescs.length > 0
 		? [...entity.colliderDescs]
 		: entity.colliderDesc
 			? [entity.colliderDesc]
 			: [];
-	state.originalMeshVisible = entity.mesh.visible;
+	state.originalMeshVisible = sourceMesh.visible;
 	state.originalGroupVisible = entity.group?.visible ?? true;
 	state.sourceBodySnapshot = snapshotBody(entity);
 	state.sourcePhysicsAttached = entity.physicsAttached;
@@ -1235,7 +1310,7 @@ function fractureEntity(
 	const source = usePrebakedFragments
 		? null
 		: createFractureSourceMesh(
-			entity.mesh,
+			sourceMesh,
 			root,
 			ref.options.innerMaterial,
 		);
@@ -1246,7 +1321,7 @@ function fractureEntity(
 		);
 		const fragments = usePrebakedFragments
 			? instantiatePrebakedFragments(
-				entity.mesh,
+				sourceMesh,
 				ref.options.innerMaterial,
 				state.prebakedFragments,
 			)
@@ -1284,10 +1359,17 @@ function fractureEntity(
 	}
 }
 
-function prebakeEntity(
+function prebakeEntityGeometryOnly(
 	ref: BehaviorRef<Destructible3DBehaviorOptions>,
 	overrideOptions?: FractureOptionsInput | PinataFractureOptions,
 ): void {
+	const entity = requireEntity(ref);
+	if (entity.isInstanced) {
+		throw new Error(
+			'Destructible3DBehavior does not support entities using instanced rendering.',
+		);
+	}
+
 	const state = getRuntimeState(ref);
 	if (state.isFractured) {
 		return;
@@ -1305,8 +1387,116 @@ function prebakeEntity(
 		return;
 	}
 
-	fractureEntity(ref, overrideOptions);
-	restoreRuntimeState(ref, true);
+	const sourceMesh = requireEntityMesh(entity);
+	const root = ensureRootGroup(entity, state);
+	const createdRootGroup = state.createdRootGroup;
+
+	const source = createFractureSourceMesh(
+		sourceMesh,
+		root,
+		ref.options.innerMaterial,
+	);
+	try {
+		const fragments = source.fracture(fractureOptions) as DestructibleMesh[];
+		cachePrebakedFragments(state, cacheKey, fragments);
+		for (const fragment of fragments) {
+			fragment.geometry.dispose();
+		}
+	} finally {
+		source.geometry.dispose();
+	}
+
+	if (createdRootGroup) {
+		restoreOriginalMesh(entity, state);
+		state.createdRootGroup = false;
+	}
+}
+
+async function prebakeEntityAsync(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+	overrideOptions?: FractureOptionsInput | PinataFractureOptions,
+): Promise<void> {
+	const workerUrl = ref.options.prebakeWorkerUrl;
+	if (!workerUrl) {
+		prebakeEntityGeometryOnly(ref, overrideOptions);
+		return;
+	}
+
+	const existing = prebakeAsyncInFlight.get(ref);
+	if (existing) {
+		await existing;
+		return;
+	}
+
+	const job = (async () => {
+		const entity = requireEntity(ref);
+		if (entity.isInstanced) {
+			throw new Error(
+				'Destructible3DBehavior does not support entities using instanced rendering.',
+			);
+		}
+
+		const state = getRuntimeState(ref);
+		if (state.isFractured) {
+			return;
+		}
+
+		const fractureOptions = resolveFractureOptions(
+			ref.options.fractureOptions,
+			overrideOptions,
+		);
+		const cacheKey = buildFractureGeometryCacheKey(fractureOptions);
+		if (
+			state.prebakedFractureKey === cacheKey
+			&& state.prebakedFragments.length > 0
+		) {
+			return;
+		}
+
+		const sourceMesh = requireEntityMesh(entity);
+		const root = ensureRootGroup(entity, state);
+		const createdRootGroup = state.createdRootGroup;
+
+		const normalizedGeometry = buildNormalizedFractureSourceGeometry(
+			sourceMesh,
+			root,
+		);
+
+		if (createdRootGroup) {
+			restoreOriginalMesh(entity, state);
+			state.createdRootGroup = false;
+		}
+
+		const { payload, transferables } = bufferGeometryToPlain(normalizedGeometry);
+		normalizedGeometry.dispose();
+
+		const plainOptions = pinataFractureOptionsToPlain(fractureOptions);
+		const api = getPrebakeWorkerApi(workerUrl);
+		const request = Comlink.transfer(
+			{ geometry: payload, options: plainOptions },
+			transferables,
+		);
+
+		const response = await api.prebake(request);
+		const parts = plainWorkerResultToTemplateParts(response);
+		installPrebakedTemplateParts(state, cacheKey, parts);
+	})();
+
+	prebakeAsyncInFlight.set(ref, job);
+	try {
+		await job;
+	} finally {
+		if (prebakeAsyncInFlight.get(ref) === job) {
+			prebakeAsyncInFlight.delete(ref);
+		}
+	}
+}
+
+function prebakeEntity(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+	overrideOptions?: FractureOptionsInput | PinataFractureOptions,
+): void {
+	prebakeEntityGeometryOnly(ref, overrideOptions);
 }
 
 function createDestructible3DHandle(
@@ -1317,6 +1507,7 @@ function createDestructible3DHandle(
 		prebake: (overrideOptions) => {
 			prebakeEntity(ref, overrideOptions);
 		},
+		prebakeAsync: (overrideOptions) => prebakeEntityAsync(ref, overrideOptions),
 		repair: () => restoreRuntimeState(ref, true),
 		isFractured: () => getRuntimeState(ref).isFractured,
 		getFragments: () => getRuntimeState(ref).fragments,
@@ -1330,6 +1521,14 @@ class Destructible3DSystem implements BehaviorSystem {
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {
 		this.primeLinks();
+	}
+
+	attach(link: BehaviorEntityLink): void {
+		if (link.ref?.descriptor?.key !== DESTRUCTIBLE_3D_BEHAVIOR_KEY) {
+			return;
+		}
+
+		this.primeLink(link);
 	}
 
 	update(_ecs: IWorld, _delta: number): void {
@@ -1375,21 +1574,25 @@ class Destructible3DSystem implements BehaviorSystem {
 		}
 
 		for (const link of links) {
-			const ref = link.ref as BehaviorRef<Destructible3DBehaviorOptions> & {
-				__cleanupRegistered?: boolean;
-			};
-			const entity = link.entity as GameEntity<any>;
-			(ref as any).__entity = entity;
-			(ref as any).__world = this.world;
-			(ref as any).__scene = this.scene;
+			this.primeLink(link);
+		}
+	}
 
-			if (!ref.__cleanupRegistered) {
-				entity.onCleanup(() => {
-					restoreRuntimeState(ref, false);
-					disposeRuntimeState(getRuntimeState(ref));
-				});
-				ref.__cleanupRegistered = true;
-			}
+	private primeLink(link: BehaviorEntityLink): void {
+		const ref = link.ref as BehaviorRef<Destructible3DBehaviorOptions> & {
+			__cleanupRegistered?: boolean;
+		};
+		const entity = link.entity as GameEntity<any>;
+		(ref as any).__entity = entity;
+		(ref as any).__world = this.world;
+		(ref as any).__scene = this.scene;
+
+		if (!ref.__cleanupRegistered) {
+			entity.onCleanup(() => {
+				restoreRuntimeState(ref, false);
+				disposeRuntimeState(getRuntimeState(ref));
+			});
+			ref.__cleanupRegistered = true;
 		}
 	}
 }

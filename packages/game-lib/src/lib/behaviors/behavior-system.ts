@@ -20,6 +20,8 @@ import type { IWorld } from 'bitecs';
  * ```
  */
 export interface BehaviorSystem {
+	/** Optional eager initialization when a behavior link is registered on a live entity */
+	attach?(link: BehaviorEntityLink): void;
 	/** Called once per frame with ECS world and delta time */
 	update(ecs: IWorld, delta: number): void;
 	/** Optional cleanup when a behavior link is detached from a live entity */

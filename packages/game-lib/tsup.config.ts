@@ -10,9 +10,12 @@ export default defineConfig({
 		entities: 'src/api/entities.ts',
 		actions: 'src/api/actions.ts',
 		physics: 'src/lib/physics/index.ts',
+		runtime: 'src/api/runtime.ts',
 
 		// Physics worker (standalone file for Web Worker instantiation)
 		'physics-worker': 'src/lib/physics/physics-worker.ts',
+		'destructible-prebake-worker':
+			'src/lib/behaviors/destructible-3d/destructible-prebake-worker.ts',
 
 		// Individual behavior exports (tree-shakeable deep imports)
 		'behavior/thruster': 'src/api/behavior/thruster.ts',
@@ -25,6 +28,8 @@ export default defineConfig({
 		'behavior/ricochet-2d': 'src/api/behavior/ricochet-2d.ts',
 		'behavior/ricochet-3d': 'src/api/behavior/ricochet-3d.ts',
 		'behavior/destructible-3d': 'src/api/behavior/destructible-3d.ts',
+		'behavior/destructible-3d-prebake-build':
+			'src/api/behavior/destructible-3d-prebake-build.ts',
 		'behavior/jumper-2d': 'src/api/behavior/jumper-2d.ts',
 		'behavior/platformer-3d': 'src/api/behavior/platformer-3d.ts',
 		'behavior/particle-emitter': 'src/api/behavior/particle-emitter.ts',

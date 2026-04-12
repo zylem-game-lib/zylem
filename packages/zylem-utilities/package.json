@@ -1,0 +1,25 @@
+{
+	"name": "@zylem/utilities",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Zylem monorepo CLI utilities (destructible prebake, …)",
+	"bin": {
+		"zylem-destructible-prebake": "./destructible-prebake/dist/cli.js"
+	},
+	"scripts": {
+		"build": "cd destructible-prebake && tsup",
+		"typecheck": "tsc -p destructible-prebake/tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"@dgreenheck/three-pinata": "^2.0.1",
+		"@zylem/game-lib": "workspace:*",
+		"three": "^0.180.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.19.13",
+		"@types/three": "0.171.0",
+		"tsup": "^8.5.1",
+		"typescript": "5.8.2"
+	}
+}

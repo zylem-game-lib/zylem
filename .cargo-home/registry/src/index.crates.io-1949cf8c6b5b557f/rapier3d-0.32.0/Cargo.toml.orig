@@ -1,0 +1,103 @@
+[package]
+name = "rapier3d"
+version = "0.32.0"
+authors = ["Sébastien Crozet <sebcrozet@dimforge.com>"]
+description = "3-dimensional physics engine in Rust."
+documentation = "https://docs.rs/rapier3d"
+homepage = "https://rapier.rs"
+repository = "https://github.com/dimforge/rapier"
+readme = "README.md"
+categories = [
+    "science",
+    "game-development",
+    "mathematics",
+    "simulation",
+    "wasm",
+]
+keywords = ["physics", "dynamics", "rigid", "real-time", "impulse_joints"]
+license = "Apache-2.0"
+rust-version = "1.86"
+edition = "2024"
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[lints]
+rust.unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(feature, values("dim2", "f64"))',
+] }
+clippy = { needless_lifetimes = "allow" }
+
+
+[features]
+default = ["dim3", "f32"]
+dim3 = []
+f32 = []
+parallel = ["dep:rayon"]
+simd-stable = ["parry3d/simd-stable", "simba/wide", "simd-is-enabled"]
+simd-nightly = [
+    "parry3d/simd-nightly",
+    "simba/portable_simd",
+    "simd-is-enabled",
+]
+# Do not enable this feature directly. It is automatically
+# enabled with the "simd-stable" or "simd-nightly" feature.
+simd-is-enabled = []
+serde-serialize = [
+    "nalgebra/serde-serialize",
+    "parry3d/serde-serialize",
+    "dep:serde",
+    "bit-vec/serde",
+    "vec_map/serde"
+]
+enhanced-determinism = ["simba/libm_force", "parry3d/enhanced-determinism"]
+debug-render = []
+profiler = ["dep:web-time"] # Enables the internal profiler.
+
+# Feature used for debugging only.
+debug-disable-legitimate-fe-exceptions = []
+
+# Feature used for development and debugging only.
+# Do not enable this unless you are working on the engine internals.
+dev-remove-slow-accessors = []
+
+[package.metadata.docs.rs]
+features = ["parallel", "simd-stable", "serde-serialize", "debug-render"]
+
+[lib]
+name = "rapier3d"
+path = "src/lib.rs"
+required-features = ["dim3", "f32"]
+
+
+[dependencies]
+vec_map = "0.8"
+web-time = { version = "1.1", optional = true }
+num-traits = "0.2"
+nalgebra = "0.34"
+glamx = { version = "0.1", features = ["nalgebra"] }
+parry3d = "0.26.0"
+simba = "0.9.1"
+approx = "0.5"
+rayon = { version = "1", optional = true }
+arrayvec = "0.7"
+bit-vec = "0.8"
+rustc-hash = "2"
+serde = { version = "1", features = ["derive"], optional = true }
+downcast-rs = "2"
+num-derive = "0.4"
+bitflags = "2"
+log = "0.4"
+ordered-float = "5"
+thiserror = "2"
+profiling = "1.0"
+static_assertions = "1"
+
+# TODO: should be re-exported from simba
+wide = "0.7.1"
+
+[dev-dependencies]
+bincode = "1"
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+oorandom = { version = "11", default-features = false }

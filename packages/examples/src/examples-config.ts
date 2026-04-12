@@ -83,13 +83,19 @@ const PREDEFINED_ORDER = {
 	],
 	'Classic Remakes': [
 		'00-3d-asteroids',
+		'00-3d-space-invaders',
 		'00-pong',
 		'00-breakout',
 		'00-space-invaders',
 		'00-asteroids',
 		'00-robotron',
 	],
-	Misc: ['00-physics-worker'],
+	Misc: [
+		'00-optimized-destructible-ship',
+		'00-optimized-ships-ab',
+		'00-optimized-ships',
+		'00-physics-worker',
+	],
 } as const satisfies Record<ExampleSectionName, readonly string[]>;
 
 // Create a map of all examples

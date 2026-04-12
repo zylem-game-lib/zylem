@@ -34,7 +34,7 @@ export const SMALL_ASTEROID_FRAGMENT_COUNT = 6;
 export const LARGE_ASTEROID_SCALE = 1.6;
 export const SMALL_ASTEROID_SCALE = 0.9;
 export const PLAYER_MAX_HEALTH = 100;
-export const PLAYER_COLLISION_DAMAGE = 20;
+export const PLAYER_COLLISION_DAMAGE = 25;
 export const PLAYER_DAMAGE_COOLDOWN_SECONDS = 0.8;
 export const PLAYER_ASTEROID_SPAWN_SAFE_DISTANCE = 10;
 export const HEALTH_BAR_WIDTH = 220;
@@ -73,7 +73,7 @@ export function randomDirection(speed: number) {
 export function randomRespawnDelay() {
 	return ASTEROID_RESPAWN_DELAY_MIN_SECONDS
 		+ Math.random()
-			* (ASTEROID_RESPAWN_DELAY_MAX_SECONDS - ASTEROID_RESPAWN_DELAY_MIN_SECONDS);
+		* (ASTEROID_RESPAWN_DELAY_MAX_SECONDS - ASTEROID_RESPAWN_DELAY_MIN_SECONDS);
 }
 
 export function clamp01(value: number) {
