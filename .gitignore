@@ -22,6 +22,9 @@ _docs
 stats.html
 target
 
+# Local Cargo home when CARGO_HOME is set to a repo-local path (registry/git caches)
+.cargo-home/
+
 dist-ssr
 *.local
 

@@ -1,0 +1,13 @@
+# Rust / Cargo — build artifacts and tool outputs
+debug/
+target/
+
+# rustfmt
+**/*.rs.bk
+
+# MSVC (Windows) debug symbols
+*.pdb
+
+# LLVM coverage (e.g. cargo llvm-cov)
+*.profraw
+*.profdata
