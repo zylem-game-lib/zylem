@@ -5,16 +5,17 @@ import {
   createSphere,
   createStage,
   createCamera,
-  createZone,
   createText,
   ricochetSound,
   pingPongBeep,
   getGlobal,
   setGlobal,
-  WorldBoundary2DBehavior,
-  Ricochet2DBehavior,
-  BoundaryRicochetCoordinator,
+  RuntimeBoundary2DBehavior,
+  RuntimeDynamicCircleBody2DBehavior,
+  RuntimePlayerInput2DBehavior,
+  RuntimeRicochet2DBehavior,
 } from '@zylem/game-lib';
+import { createBundledZylemRuntimeStageAdapter } from '../runtime/zylem-runtime';
 
 export default function createDemo() {
   const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
@@ -24,10 +25,17 @@ export default function createDemo() {
     position: { x: 0, y: 0, z: 0 },
     radius: 0.1,
     color: new Color(Color.NAMES.white),
+    runtime: {
+      simulation: 'runtime',
+      render: 'mesh',
+    },
   });
 
-  // Attach ricochet behavior for ball reflection
-  const ballRicochet = ball.use(Ricochet2DBehavior, {
+  const ballRuntime = ball.use(RuntimeDynamicCircleBody2DBehavior, {
+    initialVelocity: [5, 0],
+  });
+
+  const ballRicochet = ball.use(RuntimeRicochet2DBehavior, {
     minSpeed: 5,
     maxSpeed: 10,
     speedMultiplier: 1.05,
@@ -35,50 +43,14 @@ export default function createDemo() {
     maxAngleDeg: 60,
   });
 
-  // Attach boundary behavior to detect wall hits
-  const ballBoundary = ball.use(WorldBoundary2DBehavior, {
+  ball.use(RuntimeBoundary2DBehavior, {
     boundaries: gameBounds,
   });
 
-  ball.onSetup(({ me }) => {
-    me.setPosition(0, 0, 0);
-    me.moveX(5);
-  });
-
-  ballRicochet.onRicochet(() => {
-    ricochetSound();
-  });
-
-  const ballCoordinator = new BoundaryRicochetCoordinator(
-    ball,
-    ballBoundary,
-    ballRicochet,
-  );
-
-  ball.onUpdate(() => {
-    ballCoordinator.update();
-  });
-
-  // Handle paddle collisions
-  ball.onCollision(({ entity, other }) => {
-    if (!other.name || other.name.indexOf('paddle') === -1) return;
-
-    // Determine collision normal based on paddle position (always force horizontal reflection)
-    const ballPos = entity.body?.translation();
-    const paddlePos = other.body?.translation();
-    if (!ballPos || !paddlePos) return;
-
-    const normalX = ballPos.x > paddlePos.x ? 1 : -1;
-
-    // Apply ricochet with entities and explicit normal
-    const applied = ballRicochet.applyRicochet({
-      entity,
-      otherEntity: other,
-      otherSize: paddleSize,
-      contact: { normal: { x: normalX, y: 0 } },
-    });
-
-    if (applied) {
+  ballRicochet.onRicochet((event) => {
+    if (event.kind === 'wall') {
+      ricochetSound();
+    } else {
       pingPongBeep();
     }
   });
@@ -92,21 +64,18 @@ export default function createDemo() {
     position: { x: -8, y: 0, z: 0 },
     size: paddleSize,
     material: paddleMaterial,
+    runtime: {
+      simulation: 'runtime',
+      render: 'mesh',
+    },
   });
 
-  const paddle1Boundary = paddle1.use(WorldBoundary2DBehavior, {
+  paddle1.use(RuntimeBoundary2DBehavior, {
     boundaries: gameBounds,
   });
-
-  paddle1.onUpdate(({ me, inputs }) => {
-    const { Up, Down } = inputs.p1.directions;
-    const { Vertical } = inputs.p1.axes;
-    let value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -Vertical.value;
-    let moveY = value * paddleSpeed;
-
-    // Constrain movement to boundaries
-    ({ moveY } = paddle1Boundary.getMovement(0, moveY));
-    me.moveY(moveY);
+  paddle1.use(RuntimePlayerInput2DBehavior, {
+    player: 'p1',
+    speed: paddleSpeed,
   });
 
   const paddle2 = createBox({
@@ -114,49 +83,18 @@ export default function createDemo() {
     position: { x: 8, y: 0, z: 0 },
     size: paddleSize,
     material: paddleMaterial,
+    runtime: {
+      simulation: 'runtime',
+      render: 'mesh',
+    },
   });
 
-  const paddle2Boundary = paddle2.use(WorldBoundary2DBehavior, {
+  paddle2.use(RuntimeBoundary2DBehavior, {
     boundaries: gameBounds,
   });
-
-  paddle2.onUpdate(({ me, inputs }) => {
-    const { Up, Down } = inputs.p2.directions;
-    const { Vertical } = inputs.p2.axes;
-    const value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -Vertical.value;
-    let moveY = value * paddleSpeed;
-
-    // Constrain movement to boundaries
-    ({ moveY } = paddle2Boundary.getMovement(0, moveY));
-    me.moveY(moveY);
-  });
-
-  const p1Goal = createZone({
-    name: 'p1Goal',
-    position: { x: 12, y: 0, z: 0 },
-    size: { x: 2, y: 10, z: 1 },
-  });
-  p1Goal.onEnter(({ visitor }) => {
-    const p1Score = getGlobal<number>('p1Score') ?? 0;
-    if (visitor.uuid === ball.uuid) {
-      setGlobal('p1Score', p1Score + 1);
-      ball.setPosition(0, 0, 0);
-      ball.moveXY(-5, 0);
-    }
-  });
-
-  const p2Goal = createZone({
-    name: 'p2Goal',
-    position: { x: -12, y: 0, z: 0 },
-    size: { x: 2, y: 10, z: 1 },
-  });
-  p2Goal.onEnter(({ visitor }) => {
-    const p2Score = getGlobal<number>('p2Score') ?? 0;
-    if (visitor.uuid === ball.uuid) {
-      setGlobal('p2Score', p2Score + 1);
-      ball.setPosition(0, 0, 0);
-      ball.moveXY(5, 0);
-    }
+  paddle2.use(RuntimePlayerInput2DBehavior, {
+    player: 'p2',
+    speed: paddleSpeed,
   });
 
   const camera = createCamera({
@@ -187,7 +125,10 @@ export default function createDemo() {
   });
 
   const stage1 = createStage(
-    { backgroundColor: new Color(Color.NAMES.black) },
+    {
+      backgroundColor: new Color(Color.NAMES.black),
+      runtimeAdapter: createBundledZylemRuntimeStageAdapter(),
+    },
     camera,
   );
   const game = createGame(
@@ -213,25 +154,48 @@ export default function createDemo() {
     ball,
     paddle1,
     paddle2,
-    p1Goal,
-    p2Goal,
     p1Text,
     p2Text,
     winnerText,
   );
 
   const goalScore = 3;
+  let justScored = false;
+
+  stage1.onUpdate(() => {
+    const position = ballRuntime.getRuntimePosition();
+    if (!position) return;
+
+    if (justScored && Math.abs(position.x) < 0.5) {
+      justScored = false;
+    }
+    if (justScored || (getGlobal<string>('winner') ?? '') !== '') {
+      return;
+    }
+
+    if (position.x >= 12) {
+      setGlobal('p1Score', (getGlobal<number>('p1Score') ?? 0) + 1);
+      ballRuntime.setRuntimePosition(0, 0, 0);
+      ballRuntime.setRuntimeVelocity(-5, 0);
+      justScored = true;
+    } else if (position.x <= -12) {
+      setGlobal('p2Score', (getGlobal<number>('p2Score') ?? 0) + 1);
+      ballRuntime.setRuntimePosition(0, 0, 0);
+      ballRuntime.setRuntimeVelocity(5, 0);
+      justScored = true;
+    }
+  });
 
   game.onGlobalChanges<[number, number]>(['p1Score', 'p2Score'], ([p1, p2]) => {
     if (p1 >= goalScore) {
       setGlobal('winner', 'p1');
-      ball.setPosition(0, 1, 0);
-      ball.moveXY(0, 0);
+      ballRuntime.setRuntimePosition(0, 1, 0);
+      ballRuntime.setRuntimeVelocity(0, 0);
     }
     if (p2 >= goalScore) {
       setGlobal('winner', 'p2');
-      ball.setPosition(0, 1, 0);
-      ball.moveXY(0, 0);
+      ballRuntime.setRuntimePosition(0, 1, 0);
+      ballRuntime.setRuntimeVelocity(0, 0);
     }
   });
 

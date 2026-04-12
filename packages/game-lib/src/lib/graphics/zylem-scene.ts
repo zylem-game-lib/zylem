@@ -192,16 +192,20 @@ export class ZylemScene implements Entity<ZylemScene> {
 	 * Setup camera with the scene.
 	 * Supports both legacy single camera and CameraManager modes.
 	 */
-	setupCamera(scene: Scene, camera: ZylemCamera, rendererManager?: RendererManager) {
+	async setupCamera(
+		scene: Scene,
+		camera: ZylemCamera,
+		rendererManager?: RendererManager,
+	): Promise<void> {
 		// Add camera rig or camera directly to scene
 		this.addCameraToScene(scene, camera);
 
 		if (rendererManager) {
 			// New path: camera setup with shared renderer manager
-			camera.setup(scene, rendererManager);
+			await camera.setup(scene, rendererManager);
 		} else {
 			// Legacy path: camera handles its own renderer
-			camera.setupLegacy(scene);
+			await camera.setupLegacy(scene);
 		}
 	}
 

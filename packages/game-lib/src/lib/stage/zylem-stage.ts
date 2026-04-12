@@ -25,8 +25,18 @@ import { StageEntityModelDelegate } from './stage-entity-model-delegate';
 import { BaseEntityInterface } from '../types/entity-types';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { LoadingEvent } from '../core/interfaces';
-import { parseStageOptions } from './stage-config';
+import { assetManager } from '../core/asset-manager';
+import {
+	parseStageOptions,
+	type StageAssetLoaderConfig,
+} from './stage-config';
 import type { BehaviorSystem, BehaviorSystemFactory } from '../behaviors/behavior-system';
+import { createRuntimeDebugBindingFromDebugState } from '../runtime/runtime-debug-binding';
+import type {
+	RuntimeDebugBinding,
+	StageRuntimeAdapter,
+	StageRuntimeContext,
+} from '../runtime/zylem-stage-runtime';
 import { applyTransformChanges, TransformableEntity } from '../actions/capabilities/apply-transform';
 import { StageEntityDelegate, StageEntityInput } from './stage-entity-delegate';
 export type { LoadingEvent };
@@ -44,6 +54,12 @@ export interface ZylemStageConfig {
 	usePhysicsWorker: boolean;
 	/** URL to the physics worker script (required when usePhysicsWorker is true). */
 	physicsWorkerUrl?: URL | string;
+	/** Optional runtime loader configuration for stage-managed assets. */
+	assetLoaders?: StageAssetLoaderConfig;
+	/** Optional runtime adapter for wasm-driven simulation/rendering. */
+	runtimeAdapter?: StageRuntimeAdapter;
+	/** Optional debug binding for wasm runtime adapters (heat tint, etc.). */
+	runtimeDebugBinding?: RuntimeDebugBinding;
 	stageRef?: Stage;
 }
 
@@ -86,6 +102,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	cameraManagerRef: CameraManager | null = null;
 	/** Shared renderer manager (injected by the game) */
 	rendererManager: RendererManager | null = null;
+	runtimeAdapter: StageRuntimeAdapter | null = null;
 
 	// Delegates
 	private cameraDelegate: StageCameraDelegate;
@@ -135,10 +152,17 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			physicsRate: parsed.config.physicsRate,
 			usePhysicsWorker: parsed.config.usePhysicsWorker,
 			physicsWorkerUrl: parsed.config.physicsWorkerUrl,
+			assetLoaders: parsed.config.assetLoaders,
+			runtimeAdapter: parsed.config.runtimeAdapter,
+			runtimeDebugBinding: parsed.config.runtimeDebugBinding,
 			entities: [],
 		};
 
 		this.gravity = parsed.config.gravity ?? new Vector3(0, 0, 0);
+		this.runtimeAdapter = parsed.config.runtimeAdapter ?? null;
+		if (this.runtimeAdapter && !this.state.runtimeDebugBinding) {
+			this.state.runtimeDebugBinding = createRuntimeDebugBindingFromDebugState();
+		}
 	}
 
 	private setState() {
@@ -203,8 +227,13 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 				this.cameraManagerRef?.render(this.scene!.scene);
 			});
 		} else {
-			this.scene.setupCamera(this.scene.scene, zylemCamera);
+			await this.scene.setupCamera(this.scene.scene, zylemCamera);
 		}
+
+		await assetManager.configureGLTFRuntime({
+			renderer: this.rendererManager?.renderer ?? zylemCamera.renderer ?? null,
+			...this.state.assetLoaders?.gltf,
+		});
 
 		this.entityModelDelegate.attach(
 			this.scene,
@@ -222,6 +251,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			ecs: this.ecs,
 			instanceManager: this.instanceManager,
 			camera: zylemCamera,
+			runtimeAdapter: this.runtimeAdapter,
 		});
 
 		this.loadingDelegate.emitStart();
@@ -232,6 +262,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			_world: this.world,
 		} as unknown as StageSystem);
 		this.entityDelegate.isLoaded = true;
+		if (this.runtimeAdapter) {
+			await this.runtimeAdapter.init(this.runtimeContext());
+		}
 		this.loadingDelegate.emitComplete();
 	}
 
@@ -283,6 +316,14 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		// Sync physics to rendering AFTER transforms are applied
 		this.transformSystem?.system(this.ecs);
 
+		if (this.runtimeAdapter) {
+			this.runtimeAdapter.step({
+				...this.runtimeContext(),
+				delta,
+				inputs: params.inputs,
+			});
+		}
+
 		// Sync instanced mesh transforms
 		this.instanceManager?.update();
 		this.scene.update({ delta });
@@ -302,6 +343,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	/** Cleanup owned resources when the stage is destroyed. */
 	protected _destroy(params: DestroyContext<ZylemStage>): void {
+		this.runtimeAdapter?.destroy(this.scene && this.world ? this.runtimeContext() : null);
+		this.runtimeAdapter = null;
+
 		// Delegate handles entity + behavior system cleanup
 		this.entityDelegate.destroyAll();
 
@@ -385,6 +429,16 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	logMissingEntities() {
 		console.warn('Zylem world or scene is null');
+	}
+
+	private runtimeContext(): StageRuntimeContext {
+		return {
+			scene: this.scene!,
+			world: this.world!,
+			ecs: this.ecs,
+			camera: this.cameraRef!,
+			debug: this.state.runtimeDebugBinding,
+		};
 	}
 
 	// ─── Camera management forwarding ─────────────────────────────────────

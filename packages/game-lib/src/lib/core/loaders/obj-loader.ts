@@ -8,6 +8,7 @@ import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 import { LoaderAdapter, AssetLoadOptions, ModelLoadResult } from '../asset-types';
 import { cloneModelObject } from './model-clone';
+import { getUrlFileExtension } from './url-utils';
 
 export interface OBJLoadOptions extends AssetLoadOptions {
 	/** Path to MTL material file */
@@ -24,7 +25,7 @@ export class OBJLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 	}
 
 	isSupported(url: string): boolean {
-		const ext = url.split('.').pop()?.toLowerCase();
+		const ext = getUrlFileExtension(url);
 		return ext === 'obj';
 	}
 

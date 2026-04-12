@@ -1,5 +1,6 @@
 // Core game functionality
 export { createGame, Game } from '../lib/game/game';
+export type { GameLoadingEvent } from '../lib/game/game-loading-delegate';
 export type {
 	GameInputConfig,
 	GameInputPlayerConfig,
@@ -34,6 +35,21 @@ export { entitySpawner } from '../lib/stage/entity-spawner';
 export type { StageOptions, LoadingEvent } from '../lib/stage/zylem-stage';
 export type { StageBlueprint } from '../lib/core/blueprints';
 export { StageManager, stageState } from '../lib/stage/stage-manager';
+export {
+	RuntimeGoalZone2DBehavior,
+	RuntimePaddleInput2DBehavior,
+	RuntimePongBallBehavior,
+	RuntimeRicochet2DBehavior,
+	RuntimeTriggerRegion2DBehavior,
+	RuntimeWorldBoundary2DBehavior,
+} from '../lib/behaviors/runtime-pong/runtime-pong.descriptors';
+export {
+	RuntimeBoundary2DBehavior,
+	RuntimeDynamicCircleBody2DBehavior,
+	RuntimePlayerInput2DBehavior,
+	RuntimeRicochet2DBehavior as RuntimeRicochet2DDescriptor,
+	RuntimeTriggerRegion2DBehavior as RuntimeTriggerRegion2DDescriptor,
+} from '../lib/behaviors/runtime-2d/runtime-2d.descriptors';
 
 export { vessel } from '../lib/core/vessel';
 

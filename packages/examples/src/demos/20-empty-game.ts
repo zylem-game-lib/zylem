@@ -1,37 +1,44 @@
-import { createGame } from '@zylem/game-lib';
-import { createZylemRuntimeWorld } from '../runtime/zylem-runtime';
+import { createGame, type GameLoadingEvent } from '@zylem/game-lib';
+import {
+	createBundledZylemRuntimeSession,
+	readRenderSlot,
+	readSummary,
+	writeInputSlotFromParts,
+} from '../runtime/zylem-runtime';
 
 async function runRuntimeDemo(): Promise<void> {
-  const runtime = await createZylemRuntimeWorld();
+	const buffers = await createBundledZylemRuntimeSession(8, 1);
 
-  try {
-    const entity = runtime.spawn();
+	writeInputSlotFromParts(buffers.inputView, buffers.inputStride, 0, {
+		position: [1, 2, 3],
+		rotation: [0, 0, 0, 1],
+		contacts: 0,
+		speed: 1,
+	});
 
-    runtime.setPosition(entity, { x: 1, y: 2, z: 3 });
-    runtime.setVelocity(entity, { x: 4, y: -2, z: 0.5 });
-    runtime.step(0.5);
+	buffers.exports.zylem_runtime_step(0.5);
+	buffers.refreshViews();
 
-    console.log('zylem-runtime wasm demo', {
-      entity,
-      stats: runtime.stats(),
-      position: runtime.getPosition(entity),
-      velocity: runtime.getVelocity(entity),
-    });
-  } finally {
-    runtime.destroy();
-  }
+	const render = readRenderSlot(buffers.renderView, buffers.renderStride, 0);
+	const summary = readSummary(buffers.summaryView);
+
+	console.log('zylem-runtime wasm demo (batched buffers)', {
+		tick: buffers.exports.zylem_runtime_tick_count(),
+		renderSlot0: render,
+		summary,
+	});
 }
 
 export default function createDemo() {
-  const game = createGame();
+	const game = createGame();
 
-  void runRuntimeDemo().catch((error) => {
-    console.error('Failed to load zylem-runtime wasm demo', error);
-  });
+	void runRuntimeDemo().catch((error) => {
+		console.error('Failed to load zylem-runtime wasm demo', error);
+	});
 
-  game.onLoading((event) => {
-    console.log('my loading event: ', event);
-  });
+	game.onLoading((event: GameLoadingEvent) => {
+		console.log('my loading event: ', event);
+	});
 
-  return game;
+	return game;
 }

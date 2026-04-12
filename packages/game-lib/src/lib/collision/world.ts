@@ -492,6 +492,24 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		return pairs;
 	}
 
+	private entityHasCollisionPhaseListener(
+		entity: GameEntity<any> | undefined,
+		phase: CollisionPhase,
+	): boolean {
+		const registrations = entity?.collisionDelegate.collision;
+		if (!registrations?.length) {
+			return false;
+		}
+
+		for (const registration of registrations) {
+			if (registration.options.phase === phase) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private processCollisionPairs(
 		pairs: CollisionPair[],
 		delta: number,
@@ -500,11 +518,19 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		const snapshot = buildCollisionSnapshot(pairs);
 
 		for (const [key, pair] of snapshot) {
+			const entityA = this.collisionMap.get(pair.uuidA);
+			const entityB = this.collisionMap.get(pair.uuidB);
 			const wasActive = this.activeCollisionPairs.has(key);
 			if (!wasActive) {
 				this.dispatchCollisionPhase(pair, 'enter', nowMs);
 			}
-			this.dispatchCollisionPhase(pair, 'stay', nowMs);
+
+			if (
+				this.entityHasCollisionPhaseListener(entityA, 'stay')
+				|| this.entityHasCollisionPhaseListener(entityB, 'stay')
+			) {
+				this.dispatchCollisionPhase(pair, 'stay', nowMs);
+			}
 
 			if (pair.hasIntersection) {
 				this.dispatchIntersectionDelegates(pair, delta);

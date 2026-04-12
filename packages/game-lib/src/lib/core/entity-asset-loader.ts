@@ -9,6 +9,7 @@ import { AnimationClip, Object3D } from 'three';
 import { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { assetManager } from './asset-manager';
 import type { AssetLoadOptions } from './asset-types';
+import { getUrlFileExtension } from './loaders/url-utils';
 
 export interface AssetLoaderResult {
 	object?: Object3D;
@@ -27,7 +28,7 @@ export class EntityAssetLoader {
 	 * Load a model file (FBX, GLTF, GLB, OBJ) using the asset manager
 	 */
 	async loadFile(file: string, options?: AssetLoadOptions): Promise<AssetLoaderResult> {
-		const ext = file.split('.').pop()?.toLowerCase();
+		const ext = getUrlFileExtension(file);
 
 		switch (ext) {
 			case 'fbx': {

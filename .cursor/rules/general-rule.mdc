@@ -1,8 +1,9 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
+
 You are an expert in ThreeJS, RapierJS, TypeScript, valtio, and howlerJS.
 
 For most modules you will write TypeScript only.

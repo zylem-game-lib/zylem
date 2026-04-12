@@ -132,6 +132,9 @@ importers:
       '@types/three':
         specifier: 0.171.0
         version: 0.171.0
+      '@zylem/utilities':
+        specifier: workspace:*
+        version: link:../zylem-utilities
       autoprefixer:
         specifier: ^10.4.22
         version: 10.4.22(postcss@8.5.6)
@@ -171,6 +174,9 @@ importers:
       bitecs:
         specifier: ^0.3.40
         version: 0.3.40
+      comlink:
+        specifier: ^4.4.2
+        version: 4.4.2
       howler:
         specifier: ^2.2.4
         version: 2.2.4
@@ -208,6 +214,9 @@ importers:
       '@types/three':
         specifier: 0.171.0
         version: 0.171.0
+      '@zylem/runtime':
+        specifier: workspace:*
+        version: link:../zylem-runtime
       happy-dom:
         specifier: ^18.0.1
         version: 18.0.1
@@ -232,8 +241,35 @@ importers:
 
   packages/server: {}
 
+  packages/zylem-runtime: {}
+
   packages/zylem-styles:
     devDependencies:
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.6)(typescript@5.8.2)
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+
+  packages/zylem-utilities:
+    dependencies:
+      '@dgreenheck/three-pinata':
+        specifier: ^2.0.1
+        version: 2.0.1(three@0.180.0)
+      '@zylem/game-lib':
+        specifier: workspace:*
+        version: link:../game-lib
+      three:
+        specifier: ^0.180.0
+        version: 0.180.0
+    devDependencies:
+      '@types/node':
+        specifier: ^20.19.13
+        version: 20.19.13
+      '@types/three':
+        specifier: 0.171.0
+        version: 0.171.0
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.6)(typescript@5.8.2)
@@ -1309,6 +1345,9 @@ packages:
   chokidar@4.0.3:
     resolution: {integrity: sha512-Qgzu8kfBvo+cA4962jnP1KkS6Dop5NS6g7R5LFYJr4b8Ub94PPQXUksCw9PvXoeXPRRddRNC5C1JQUR2SMGtnA==}
     engines: {node: '>= 14.16.0'}
+
+  comlink@4.4.2:
+    resolution: {integrity: sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g==}
 
   commander@4.1.1:
     resolution: {integrity: sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==}
@@ -3099,6 +3138,8 @@ snapshots:
   chokidar@4.0.3:
     dependencies:
       readdirp: 4.1.2
+
+  comlink@4.4.2: {}
 
   commander@4.1.1: {}
 

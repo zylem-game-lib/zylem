@@ -5,7 +5,11 @@ import RAPIER, {
 	RigidBodyDesc,
 } from '@dimforge/rapier3d-compat';
 import {
+	BufferAttribute,
 	BoxGeometry,
+	Group,
+	InterleavedBuffer,
+	InterleavedBufferAttribute,
 	Mesh,
 	MeshBasicMaterial,
 	type Object3D,
@@ -79,6 +83,98 @@ function createDestructibleEntity() {
 		entity,
 		originalCollider,
 	};
+}
+
+function createGroupedDestructibleEntity() {
+	const entity = new GameEntity<any>();
+	entity.name = 'grouped-crate';
+
+	const root = new Group();
+	root.position.set(4, -2, 1);
+	root.rotation.set(0.2, -0.4, 0.1);
+
+	const modelRoot = new Group();
+	modelRoot.rotation.set(-Math.PI / 2, 0, Math.PI);
+	modelRoot.scale.set(1.2, 1.2, 1.2);
+
+	const mesh = new Mesh(
+		new BoxGeometry(1, 1, 1),
+		new MeshBasicMaterial(),
+	);
+	mesh.position.set(0.1, -0.05, 0);
+	modelRoot.add(mesh);
+	root.add(modelRoot);
+
+	entity.group = root;
+	entity.bodyDesc = RigidBodyDesc.dynamic();
+	const originalCollider = ColliderDesc.cuboid(0.5, 0.5, 0.5);
+	entity.colliderDesc = originalCollider;
+	entity.colliderDescs = [originalCollider];
+	entity.physicsAttached = true;
+	entity.body = createBodySnapshot() as any;
+
+	return {
+		entity,
+		mesh,
+		modelRoot,
+		originalCollider,
+	};
+}
+
+function createOptimizedLikeGeometry() {
+	const geometry = new BoxGeometry(1, 1, 1);
+	geometry.translate(1.5, 1.5, 1.5);
+
+	const position = geometry.getAttribute('position');
+	const quantizedPositions = new Uint16Array(position.count * position.itemSize);
+	for (let index = 0; index < position.count; index += 1) {
+		for (let component = 0; component < position.itemSize; component += 1) {
+			const offset = (index * position.itemSize) + component;
+			quantizedPositions[offset] =
+				Math.round(position.getComponent(index, component) * 2048);
+		}
+	}
+	geometry.setAttribute(
+		'position',
+		new InterleavedBufferAttribute(
+			new InterleavedBuffer(quantizedPositions, position.itemSize),
+			position.itemSize,
+			0,
+			false,
+		),
+	);
+
+	const normal = geometry.getAttribute('normal');
+	const quantizedNormals = new Int8Array(normal.count * normal.itemSize);
+	for (let index = 0; index < normal.count; index += 1) {
+		for (let component = 0; component < normal.itemSize; component += 1) {
+			const offset = (index * normal.itemSize) + component;
+			quantizedNormals[offset] = Math.round(
+				normal.getComponent(index, component) * 127,
+			);
+		}
+	}
+	geometry.setAttribute(
+		'normal',
+		new InterleavedBufferAttribute(
+			new InterleavedBuffer(quantizedNormals, normal.itemSize),
+			normal.itemSize,
+			0,
+			true,
+		),
+	);
+
+	const index = geometry.getIndex();
+	if (index) {
+		geometry.setIndex(
+			new BufferAttribute(
+				new Uint16Array(index.array as ArrayLike<number>),
+				1,
+			),
+		);
+	}
+
+	return geometry;
 }
 
 function attachBehaviorRuntime(
@@ -254,6 +350,39 @@ describe('Destructible3DBehavior', () => {
 		);
 	});
 
+	it('resolves the first mesh from a grouped model entity when entity.mesh is unset', () => {
+		const { entity, mesh, modelRoot, originalCollider } = createGroupedDestructibleEntity();
+		const handle = entity.use(Destructible3DBehavior, {
+			fractureOptions: new FractureOptions({
+				fractureMethod: 'simple',
+				fragmentCount: 4,
+			}),
+		}) as Destructible3DHandle;
+		const runtime = attachBehaviorRuntime(entity);
+
+		expect(() => handle.prebake()).not.toThrow();
+		expect(entity.mesh).toBe(mesh);
+
+		const fragments = handle.fracture();
+
+		expect(fragments.length).toBeGreaterThan(1);
+		expect(handle.isFractured()).toBe(true);
+		expect(entity.group).toBeDefined();
+
+		handle.repair();
+
+		expect(handle.isFractured()).toBe(false);
+		expect(entity.mesh).toBe(mesh);
+		expect(mesh.parent).toBe(modelRoot);
+		expect(entity.group?.children).toContain(modelRoot);
+		expect(entity.colliderDesc).toBe(originalCollider);
+		expect(entity.colliderDescs).toEqual([originalCollider]);
+		// Geometry-only prebake does not run fracture/restore on the world; only
+		// the final fracture + repair cycle touches physics.
+		expect(runtime.world.destroyEntity).toHaveBeenCalledTimes(2);
+		expect(runtime.world.addEntity).toHaveBeenCalledTimes(2);
+	});
+
 	it('applies inherited outward launch velocity and angular velocity in independent mode', () => {
 		const { entity } = createDestructibleEntity();
 		const handle = entity.use(Destructible3DBehavior, {
@@ -299,6 +428,26 @@ describe('Destructible3DBehavior', () => {
 
 		expect(inheritedDelta).toBeGreaterThan(0.001);
 		expect(angularMagnitude).toBeGreaterThan(0.001);
+	});
+
+	it('prebake does not add entities or scene objects in independent mode', () => {
+		const { entity } = createDestructibleEntity();
+		const handle = entity.use(Destructible3DBehavior, {
+			fractureOptions: new FractureOptions({
+				fractureMethod: 'simple',
+				fragmentCount: 4,
+			}),
+			fragmentPhysics: {
+				mode: 'independent',
+			},
+		}) as Destructible3DHandle;
+		const runtime = attachBehaviorRuntime(entity);
+
+		handle.prebake();
+
+		expect(runtime.world.addEntity).not.toHaveBeenCalled();
+		expect(runtime.world.destroyEntity).not.toHaveBeenCalled();
+		expect(runtime.scene.scene.add).not.toHaveBeenCalled();
 	});
 
 	it('prebakes fragment templates and reuses them across impact overrides', () => {
@@ -351,5 +500,27 @@ describe('Destructible3DBehavior', () => {
 		expect(fractureSpy).toHaveBeenCalledTimes(1);
 
 		fractureSpy.mockRestore();
+	});
+
+	it('prebakes grouped meshes with optimized-style indexed geometry', () => {
+		const { entity, mesh } = createGroupedDestructibleEntity();
+		mesh.geometry = createOptimizedLikeGeometry();
+
+		const handle = entity.use(Destructible3DBehavior, {
+			fractureOptions: new FractureOptions({
+				fractureMethod: 'voronoi',
+				fragmentCount: 4,
+				voronoiOptions: {
+					mode: '3D',
+				},
+				seed: 19,
+			}),
+		}) as Destructible3DHandle;
+		attachBehaviorRuntime(entity);
+
+		expect(() => handle.prebake()).not.toThrow();
+
+		const fragments = handle.fracture();
+		expect(fragments.length).toBeGreaterThan(1);
 	});
 });

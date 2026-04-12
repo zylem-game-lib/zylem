@@ -31,6 +31,8 @@ export class StageEntityModelDelegate {
 	 */
 	observe(entity: GameEntity<any>): void {
 		if (entity.group || entity.mesh) {
+			this.scene?.addEntityGroup(entity);
+			this.onEntityReady?.(entity);
 			return;
 		}
 		this.pendingEntities.set(entity.uuid, entity);

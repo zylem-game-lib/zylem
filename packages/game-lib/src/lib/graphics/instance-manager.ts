@@ -72,6 +72,26 @@ export class InstanceManager {
 		return shortHash(sortedStringify(keyData));
 	}
 
+	static generateEntityBatchKey(entity: Pick<GameEntity<GameEntityOptions>, 'options' | 'materials'> & { constructor: any }): string {
+		const options = entity.options as GameEntityOptions & {
+			runtime?: { batchKeyOverride?: string };
+		};
+		if (options.runtime?.batchKeyOverride) {
+			return options.runtime.batchKeyOverride;
+		}
+
+		const entityType = entity.constructor?.type?.description || 'unknown';
+		const size = (options.size as Record<string, number> | undefined) || { x: 1, y: 1, z: 1 };
+		const matOptions = options.material || {};
+		return InstanceManager.generateBatchKey({
+			geometryType: entityType,
+			dimensions: { x: size.x, y: size.y, z: size.z },
+			materialPath: matOptions.path || null,
+			shaderType: matOptions.shader ? 'custom' : 'standard',
+			colorHex: matOptions.color?.getHex?.() || options.color?.getHex?.() || 0xffffff,
+		});
+	}
+
 	/**
 	 * Register an entity with the instance manager
 	 * @returns The instance index, or -1 if registration failed

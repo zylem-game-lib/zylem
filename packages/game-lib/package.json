@@ -82,6 +82,10 @@
       "types": "./dist/behavior/destructible-3d.d.ts",
       "import": "./dist/behavior/destructible-3d.js"
     },
+    "./behavior/destructible-3d/prebake-build": {
+      "types": "./dist/behavior/destructible-3d-prebake-build.d.ts",
+      "import": "./dist/behavior/destructible-3d-prebake-build.js"
+    },
     "./behavior/jumper-2d": {
       "types": "./dist/behavior/jumper-2d.d.ts",
       "import": "./dist/behavior/jumper-2d.js"
@@ -93,6 +97,10 @@
     "./behavior/platformer-3d": {
       "types": "./dist/behavior/platformer-3d.d.ts",
       "import": "./dist/behavior/platformer-3d.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "import": "./dist/runtime.js"
     }
   },
   "keywords": [
@@ -122,6 +130,7 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "comlink": "^4.4.2",
     "@dgreenheck/three-pinata": "^2.0.1",
     "@dimforge/rapier3d-compat": "^0.11.2",
     "@sinclair/typebox": "^0.34.41",
@@ -139,13 +148,20 @@
   },
   "peerDependencies": {
     "@dimforge/rapier3d-compat": "^0.11.2",
+    "@zylem/runtime": "^0.1.0",
     "bitecs": "^0.3.40",
     "howler": "^2.2.4",
     "nanoid": "^5.1.5",
     "three": "^0.180.0",
     "valtio": "^2.1.7"
   },
+  "peerDependenciesMeta": {
+    "@zylem/runtime": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@zylem/runtime": "workspace:*",
     "@types/node": "^20.19.13",
     "@types/stats.js": "^0.17.4",
     "@types/three": "0.171.0",

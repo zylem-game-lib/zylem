@@ -20,6 +20,7 @@ import type {
 	BehaviorSystemFactory,
 } from '../behaviors/behavior-system';
 import { Vessel } from '../core/vessel';
+import type { StageRuntimeAdapter } from '../runtime/zylem-stage-runtime';
 
 type NodeLike = { create: Function };
 export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
@@ -34,6 +35,7 @@ export interface EntityDelegateContext {
 	instanceManager: InstanceManager | null;
 	/** Resolved camera for entity setup contexts. */
 	camera: ZylemCamera;
+	runtimeAdapter?: StageRuntimeAdapter | null;
 }
 
 /**
@@ -76,6 +78,7 @@ export class StageEntityDelegate {
 	private ecs: ReturnType<typeof import('bitecs').createWorld> | null = null;
 	private instanceManager: InstanceManager | null = null;
 	private camera: ZylemCamera | null = null;
+	private runtimeAdapter: StageRuntimeAdapter | null = null;
 
 	private loadingDelegate: StageLoadingDelegate;
 	private entityModelDelegate: StageEntityModelDelegate;
@@ -106,6 +109,7 @@ export class StageEntityDelegate {
 		this.ecs = context.ecs;
 		this.instanceManager = context.instanceManager;
 		this.camera = context.camera;
+		this.runtimeAdapter = context.runtimeAdapter ?? null;
 	}
 
 	// ─── Spawning ────────────────────────────────────────────────────────────
@@ -142,11 +146,15 @@ export class StageEntityDelegate {
 		const entity = child.create();
 		const eid = addEntity(this.ecs);
 		entity.eid = eid;
+		const runtimeManaged = this.runtimeAdapter?.ownsEntity(entity) ?? false;
+		const runtimeRendered = runtimeManaged && (this.runtimeAdapter?.rendersEntity(entity) ?? false);
 
 		// Register behavior links and auto-register behavior systems once per key.
 		this.registerBehaviorLinks(entity);
 
-		this.maybeAttachEntityPhysics(entity);
+		if (!runtimeManaged) {
+			this.maybeAttachEntityPhysics(entity);
+		}
 
 		for (const childNode of child.getChildren()) {
 			if (childNode instanceof BaseNode) {
@@ -160,14 +168,28 @@ export class StageEntityDelegate {
 			camera: this.camera!,
 		});
 
-		this.scene.addEntityGroup(entity);
-		this.tryRegisterInstance(entity);
+		if (runtimeManaged) {
+			this.runtimeAdapter?.registerEntity(entity);
+		}
+		if (!runtimeRendered) {
+			this.scene.addEntityGroup(entity);
+		}
+		if (!runtimeManaged) {
+			this.tryRegisterInstance(entity);
+		}
 		this.addEntityToStage(entity);
 		this.entityModelDelegate.observe(entity);
 	}
 
 	handleLateModelReady(entity: GameEntity<any>): void {
 		if (!this.world || !this.scene || !this.uuidToEid.has(entity.uuid)) {
+			return;
+		}
+		if (this.runtimeAdapter?.ownsEntity(entity)) {
+			this.runtimeAdapter.registerEntity(entity);
+			if (!(this.runtimeAdapter.rendersEntity(entity))) {
+				this.scene.addEntityGroup(entity);
+			}
 			return;
 		}
 		this.maybeAttachEntityPhysics(entity);
@@ -189,18 +211,7 @@ export class StageEntityDelegate {
 
 		const geometry = entity.mesh.geometry;
 		const material = entity.materials[0];
-
-		const entityType = (entity.constructor as any).type?.description || 'unknown';
-		const size = options.size || { x: 1, y: 1, z: 1 };
-		const matOptions = options.material || {};
-
-		const batchKey = InstanceManager.generateBatchKey({
-			geometryType: entityType,
-			dimensions: { x: size.x, y: size.y, z: size.z },
-			materialPath: matOptions.path || null,
-			shaderType: matOptions.shader ? 'custom' : 'standard',
-			colorHex: matOptions.color?.getHex?.() || 0xffffff,
-		});
+		const batchKey = InstanceManager.generateEntityBatchKey(entity);
 
 		const instanceId = this.instanceManager.register(entity, geometry, material, batchKey);
 
@@ -260,7 +271,11 @@ export class StageEntityDelegate {
 
 		// @ts-ignore - collisionMap is public Map<string, GameEntity<any>>
 		const mapEntity = this.world.collisionMap.get(uuid) as any | undefined;
-		const entity: any = mapEntity ?? this.debugMap.get(uuid);
+		const eidFromUuid = this.uuidToEid.get(uuid);
+		const entityFromChildren = eidFromUuid !== undefined
+			? this.childrenMap.get(eidFromUuid)
+			: undefined;
+		const entity: any = mapEntity ?? entityFromChildren ?? this.debugMap.get(uuid);
 		if (!entity) return false;
 		this.unregisterBehaviorLinks(entity);
 
@@ -269,8 +284,11 @@ export class StageEntityDelegate {
 		if (entity.isInstanced && this.instanceManager) {
 			this.instanceManager.unregister(entity);
 		}
+		this.runtimeAdapter?.unregisterEntity(entity);
 
-		this.world.destroyEntity(entity);
+		if (!this.runtimeAdapter?.ownsEntity(entity)) {
+			this.world.destroyEntity(entity);
+		}
 
 		if (entity.group) {
 			this.scene.scene.remove(entity.group);
@@ -281,9 +299,8 @@ export class StageEntityDelegate {
 		removeEntity(this.ecs, entity.eid);
 
 		// O(1) removal via reverse map
-		const eid = this.uuidToEid.get(uuid);
-		if (eid !== undefined) {
-			this.childrenMap.delete(eid);
+		if (eidFromUuid !== undefined) {
+			this.childrenMap.delete(eidFromUuid);
 			this.uuidToEid.delete(uuid);
 		}
 		this.debugMap.delete(uuid);
@@ -534,8 +551,9 @@ export class StageEntityDelegate {
 			}
 			indexed.add(link);
 
-			if (!this.registeredSystemKeys.has(key)) {
-				const system = ref.descriptor.systemFactory({
+			let system = this.behaviorSystemByKey.get(key);
+			if (!system && !this.registeredSystemKeys.has(key)) {
+				const createdSystem = ref.descriptor.systemFactory({
 					world: this.world,
 					ecs: this.ecs,
 					scene: this.scene,
@@ -543,10 +561,13 @@ export class StageEntityDelegate {
 						this.behaviorEntityIndex.get(behaviorKey)
 						?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
 				});
-				this.behaviorSystems.push(system);
-				this.behaviorSystemByKey.set(key, system);
+				system = createdSystem;
+				this.behaviorSystems.push(createdSystem);
+				this.behaviorSystemByKey.set(key, createdSystem);
 				this.registeredSystemKeys.add(key);
 			}
+
+			system?.attach?.(link);
 		}
 
 		this.behaviorLinksByUuid.set(entity.uuid, links);

@@ -4,6 +4,16 @@ import { CameraWrapper } from '../camera/camera';
 import { isBaseNode, isCameraWrapper, isConfigObject, isEntityInput } from '../core/utility/options-parser';
 import { ZylemBlueColor } from '../core/utility/vector';
 import type { ZylemShader } from '../graphics/material';
+import type { RuntimeDebugBinding, StageRuntimeAdapter } from '../runtime/zylem-stage-runtime';
+
+export type StageGLTFAssetLoaderConfig = {
+	meshopt?: boolean;
+	ktx2TranscoderPath?: URL | string;
+};
+
+export type StageAssetLoaderConfig = {
+	gltf?: StageGLTFAssetLoaderConfig;
+};
 
 /**
  * Stage configuration type for user-facing options.
@@ -27,6 +37,10 @@ export type StageConfigLike = Partial<{
 	 * ```
 	 */
 	physicsWorkerUrl: URL | string;
+	assetLoaders: StageAssetLoaderConfig;
+	runtimeAdapter: StageRuntimeAdapter;
+	/** Binds stage debug policy into wasm runtime adapters (see {@link RuntimeDebugBinding}). */
+	runtimeDebugBinding?: RuntimeDebugBinding;
 }>;
 
 /**
@@ -46,6 +60,12 @@ export class StageConfig {
 		public usePhysicsWorker: boolean = false,
 		/** URL to the physics worker script. Required when usePhysicsWorker is true. */
 		public physicsWorkerUrl: URL | string | undefined = undefined,
+		/** Optional runtime loader configuration for stage-managed assets. */
+		public assetLoaders: StageAssetLoaderConfig = {},
+		/** Optional stage runtime adapter for wasm-owned simulation/rendering. */
+		public runtimeAdapter: StageRuntimeAdapter | undefined = undefined,
+		/** Optional debug signals for wasm runtime adapters. */
+		public runtimeDebugBinding: RuntimeDebugBinding | undefined = undefined,
 	) { }
 }
 
@@ -65,6 +85,9 @@ export function createDefaultStageConfig(): StageConfig {
 		{},
 		60,
 		false,
+		undefined,
+		{},
+		undefined,
 		undefined,
 	);
 }
@@ -119,6 +142,9 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		config.physicsRate ?? defaults.physicsRate,
 		config.usePhysicsWorker ?? defaults.usePhysicsWorker,
 		(config as any).physicsWorkerUrl ?? defaults.physicsWorkerUrl,
+		(config as any).assetLoaders ?? defaults.assetLoaders,
+		(config as any).runtimeAdapter ?? defaults.runtimeAdapter,
+		(config as any).runtimeDebugBinding ?? defaults.runtimeDebugBinding,
 	);
 
 	// Backward compat: first camera is the legacy `camera` field
