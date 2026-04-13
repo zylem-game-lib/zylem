@@ -35,6 +35,9 @@ dist-ssr
 .DS_Store
 .codex
 
+# SpacetimeDB CLI (optional local install via install.spacetimedb.com --root-dir)
+.tools/
+
 # Playwright
 /test-results/
 /playwright-report/

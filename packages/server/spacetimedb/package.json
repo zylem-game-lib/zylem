@@ -1,0 +1,12 @@
+{
+  "name": "@zylem/spacetimedb-module",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "spacetimedb": "2.1.0"
+  },
+  "devDependencies": {
+    "typescript": "5.8.2"
+  }
+}

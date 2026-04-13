@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
     readonly VITE_EXAMPLES_PREVIEW_CDN_BASE_URL?: string;
     readonly VITE_EXAMPLES_PREVIEW_IMAGE_EXTENSION?: string;
+    /** SpacetimeDB base URL for examples (`ws://` / `wss://` preferred; `http(s)://` is normalized). */
+    readonly VITE_STDB_URI?: string;
 }
 
 // Declare CSS modules for @zylem/styles

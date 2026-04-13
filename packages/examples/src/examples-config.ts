@@ -5,8 +5,9 @@ import {
 	normalizePathname,
 } from './router-config';
 
-// Use Vite's import.meta.glob to find all example files
-const demoModules = import.meta.glob('./demos/*.ts');
+// Only load top-level demo entrypoints; helper files in `src/demos` should not
+// appear as standalone examples in the viewer.
+const demoModules = import.meta.glob('./demos/[0-9][0-9]-*.ts');
 const stageTestModules = import.meta.glob('./demos/03-stage-test/03-stage-test.ts');
 
 // Combine the globs
@@ -78,6 +79,7 @@ const PREDEFINED_ORDER = {
 		'00-jumper-2d',
 		'00-screen-wrap',
 		'00-third-person-test',
+		'00-four-characters-plane',
 		'00-zoo',
 		'18-baileys-world',
 	],
