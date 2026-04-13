@@ -17,6 +17,7 @@ export const DEMO_ROUTE_SLUGS: Record<string, string> = {
     '00-space-invaders': 'space-invaders',
     '00-stage-test': 'stage-test',
     '00-third-person-test': 'third-person-test',
+    '00-four-characters-plane': 'four-characters-plane',
     '00-zoo': 'zoo',
     '01-fps': 'fps',
     '03-rect': 'rect',

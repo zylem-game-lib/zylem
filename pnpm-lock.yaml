@@ -116,6 +116,9 @@ importers:
       solid-js:
         specifier: ^1.9.9
         version: 1.9.9
+      spacetimedb:
+        specifier: 2.1.0
+        version: 2.1.0(react@18.3.1)
       three:
         specifier: ^0.180.0
         version: 0.180.0
@@ -239,7 +242,21 @@ importers:
         specifier: ^4.0.9
         version: 4.0.9(@types/node@20.19.13)(happy-dom@18.0.1)(jiti@2.6.1)(jsdom@27.2.0)(tsx@4.20.6)
 
-  packages/server: {}
+  packages/server:
+    dependencies:
+      '@zylem/spacetimedb-module':
+        specifier: workspace:*
+        version: link:spacetimedb
+
+  packages/server/spacetimedb:
+    dependencies:
+      spacetimedb:
+        specifier: 2.1.0
+        version: 2.1.0(react@18.3.1)
+    devDependencies:
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
 
   packages/zylem-runtime: {}
 
@@ -1294,6 +1311,9 @@ packages:
       solid-js:
         optional: true
 
+  base64-js@1.5.1:
+    resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
+
   baseline-browser-mapping@2.8.31:
     resolution: {integrity: sha512-a28v2eWrrRWPpJSzxc+mKwm0ZtVx/G8SepdQZDArnXYU/XS+IF6mp8aB/4E+hH1tyGCoDo3KlUCdlSxGDsRkAw==}
     hasBin: true
@@ -1517,6 +1537,9 @@ packages:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
 
+  headers-polyfill@4.0.3:
+    resolution: {integrity: sha512-IScLbePpkvO846sIwOtOTDjutRMWdXdJmXdMvk6gCBHxFO8d+QKOQedyZSxFTTFYRSmlgSTDtXqqq4pcenBXLQ==}
+
   howler@2.2.4:
     resolution: {integrity: sha512-iARIBPgcQrwtEr+tALF+rapJ8qSc+Set2GJQl7xT1MQzWaVkFebdJhR3alVlSiUf5U7nAANKuj3aWpwerocD5w==}
 
@@ -1710,6 +1733,10 @@ packages:
     resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
     engines: {node: '>= 6'}
 
+  object-inspect@1.13.4:
+    resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
+    engines: {node: '>= 0.4'}
+
   parse5@7.3.0:
     resolution: {integrity: sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw==}
 
@@ -1801,6 +1828,11 @@ packages:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
 
+  prettier@3.8.2:
+    resolution: {integrity: sha512-8c3mgTe0ASwWAJK+78dpviD+A8EqhndQPUBpNUIPt6+xWlIigCwfN01lWr9MAede4uqXGTEKeQWTvzb3vjia0Q==}
+    engines: {node: '>=14'}
+    hasBin: true
+
   pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
@@ -1811,6 +1843,9 @@ packages:
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
+
+  pure-rand@7.0.1:
+    resolution: {integrity: sha512-oTUZM/NAZS8p7ANR3SHh30kXB+zK2r2BPcEn/awJIbOvq82WoMN4p62AWWp3Hhw50G0xMsw1mhIBLqHw64EcNQ==}
 
   quarks.core@0.17.0:
     resolution: {integrity: sha512-MhFT+PokVAdNoawiRUYxLIjArTr5d+Lq/00ssZY60y4ivOVnIKBq9ZeMFzjBHm8UdszYzeyr7pu0a3VJi2mMVQ==}
@@ -1864,6 +1899,10 @@ packages:
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
 
+  safe-stable-stringify@2.5.0:
+    resolution: {integrity: sha512-b3rppTKm9T+PsVCBEOUR46GWI7fdOs00VKZ1+9c1EWDaDMvjQc6tUwuFyIprgGgTcWoVHSKrU8H31ZHA2e0RHA==}
+    engines: {node: '>=10'}
+
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
 
@@ -1914,11 +1953,38 @@ packages:
     resolution: {integrity: sha512-i5uvt8C3ikiWeNZSVZNWcfZPItFQOsYTUAOkcUPGd8DqDy1uOUikjt5dG+uRlwyvR108Fb9DOd4GvXfT0N2/uQ==}
     engines: {node: '>= 12'}
 
+  spacetimedb@2.1.0:
+    resolution: {integrity: sha512-Kzs+HXCRj15ryld03ztU4a2uQg0M8ivV/9Bk/gvMpb59lLc/A2/r7UkGCYBePsBL7Zwqgr8gE8FeufoZVXtPnA==}
+    peerDependencies:
+      '@angular/core': '>=17.0.0'
+      '@tanstack/react-query': ^5.0.0
+      react: ^18.0.0 || ^19.0.0-0 || ^19.0.0
+      svelte: ^4.0.0 || ^5.0.0
+      undici: ^6.19.2
+      vue: ^3.3.0
+    peerDependenciesMeta:
+      '@angular/core':
+        optional: true
+      '@tanstack/react-query':
+        optional: true
+      react:
+        optional: true
+      svelte:
+        optional: true
+      undici:
+        optional: true
+      vue:
+        optional: true
+
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
   stats.js@0.17.0:
     resolution: {integrity: sha512-hNKz8phvYLPEcRkeG1rsGmV5ChMjKDAWU7/OJJdDErPBNChQXxCo3WZurGpnWc6gZhAzEPFad1aVgyOANH1sMw==}
+
+  statuses@2.0.2:
+    resolution: {integrity: sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw==}
+    engines: {node: '>= 0.8'}
 
   std-env@3.10.0:
     resolution: {integrity: sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==}
@@ -2041,6 +2107,9 @@ packages:
     hasBin: true
     peerDependencies:
       browserslist: '>= 4.21.0'
+
+  url-polyfill@1.1.14:
+    resolution: {integrity: sha512-p4f3TTAG6ADVF3mwbXw7hGw+QJyw5CnNGvYh5fCuQQZIiuKUswqcznyV3pGDP9j0TSmC4UvRKm8kl1QsX1diiQ==}
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -3088,6 +3157,8 @@ snapshots:
     optionalDependencies:
       solid-js: 1.9.9
 
+  base64-js@1.5.1: {}
+
   baseline-browser-mapping@2.8.31: {}
 
   bidi-js@1.0.3:
@@ -3334,6 +3405,8 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
+  headers-polyfill@4.0.3: {}
+
   howler@2.2.4: {}
 
   html-encoding-sniffer@4.0.0:
@@ -3518,6 +3591,8 @@ snapshots:
 
   object-hash@3.0.0: {}
 
+  object-inspect@1.13.4: {}
+
   parse5@7.3.0:
     dependencies:
       entities: 6.0.1
@@ -3600,6 +3675,8 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  prettier@3.8.2: {}
+
   pretty-format@27.5.1:
     dependencies:
       ansi-regex: 5.0.1
@@ -3609,6 +3686,8 @@ snapshots:
   proxy-compare@3.0.1: {}
 
   punycode@2.3.1: {}
+
+  pure-rand@7.0.1: {}
 
   quarks.core@0.17.0: {}
 
@@ -3677,6 +3756,8 @@ snapshots:
     dependencies:
       queue-microtask: 1.2.3
 
+  safe-stable-stringify@2.5.0: {}
+
   safer-buffer@2.1.2: {}
 
   saxes@6.0.0:
@@ -3722,9 +3803,24 @@ snapshots:
 
   source-map@0.7.6: {}
 
+  spacetimedb@2.1.0(react@18.3.1):
+    dependencies:
+      base64-js: 1.5.1
+      headers-polyfill: 4.0.3
+      object-inspect: 1.13.4
+      prettier: 3.8.2
+      pure-rand: 7.0.1
+      safe-stable-stringify: 2.5.0
+      statuses: 2.0.2
+      url-polyfill: 1.1.14
+    optionalDependencies:
+      react: 18.3.1
+
   stackback@0.0.2: {}
 
   stats.js@0.17.0: {}
+
+  statuses@2.0.2: {}
 
   std-env@3.10.0: {}
 
@@ -3869,6 +3965,8 @@ snapshots:
       browserslist: 4.28.0
       escalade: 3.2.0
       picocolors: 1.1.1
+
+  url-polyfill@1.1.14: {}
 
   util-deprecate@1.0.2: {}
 

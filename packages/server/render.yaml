@@ -1,0 +1,27 @@
+services:
+  - type: web
+    runtime: docker
+    name: zylem-spacetimedb
+    plan: starter
+    dockerfilePath: ./packages/server/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: SPACETIMEDB_HTTP_ADDR
+        value: 127.0.0.1:3000
+      - key: SPACETIMEDB_DATA_DIR
+        value: /var/data/spacetimedb
+      - key: SPACETIMEDB_MODULE_PATH
+        value: /app/spacetimedb
+      - key: SPACETIMEDB_DATABASE_NAME
+        value: zylem-entity-transforms-v2
+      - key: SPACETIMEDB_AUTO_PUBLISH
+        value: "true"
+      - key: SPACETIMEDB_PUBLISH_DELETE_DATA
+        value: never
+    disk:
+      name: spacetimedb-data
+      mountPath: /var/data
+      sizeGB: 10

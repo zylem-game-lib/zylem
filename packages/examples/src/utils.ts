@@ -85,23 +85,27 @@ const actorTypeToCollision: Record<PlaygroundActorType, any> = {
 	mascot: { size: { x: 2, y: 3, z: 0 }, position: { x: 0, y: 1.2, z: 0 }, static: false }
 };
 
-export const playgroundActor: any = (type: PlaygroundActorType) => {
+export const playgroundActor: any = (
+	type: PlaygroundActorType,
+	color?: Color,
+	position: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 },
+) => {
 	return createActor({
-		position: { x: 0, y: 0, z: 0 },
+		position,
 		scale: actorTypeToScale[type],
 		models: [actorTypeToPath[type]],
 		animations: actorTypeToAnimations[type].map(animation => ({ key: animation, path: animationMap[type][animation]! })),
 		material: {
-			color: new Color(Color.NAMES.lightgreen),
+			color: color ?? new Color(Color.NAMES.lightgreen),
 		},
 		collision: actorTypeToCollision[type],
 		collisionShape: 'capsule',
 	});
-}
+};
 
 export const playgroundActorFactory = (type: PlaygroundActorType) => {
 	return () => playgroundActor(type);
-}
+};
 
 /**
  * Platform shape definitions for the platformer course

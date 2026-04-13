@@ -1,0 +1,116 @@
+.overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 55;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: color-mix(in srgb, var(--zylem-color-background) 82%, transparent);
+    backdrop-filter: blur(6px);
+}
+
+.panel {
+    width: min(22rem, 100%);
+    padding: 1.25rem 1.35rem;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--zylem-color-border) 70%, transparent);
+    background: color-mix(in srgb, var(--zylem-color-surface) 94%, black 6%);
+    box-shadow:
+        0 16px 40px rgba(0, 0, 0, 0.35),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.title {
+    margin: 0 0 0.35rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--zylem-color-text);
+}
+
+.hint {
+    margin: 0 0 1rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--zylem-color-text);
+    opacity: 0.72;
+}
+
+.code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.76em;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.85rem;
+}
+
+.label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--zylem-color-text);
+    opacity: 0.85;
+}
+
+.input {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--zylem-color-border) 85%, transparent);
+    background: var(--zylem-color-background);
+    color: var(--zylem-color-text);
+    font-size: 0.95rem;
+}
+
+.input:focus {
+    outline: 2px solid color-mix(in srgb, var(--zylem-color-primary) 55%, transparent);
+    outline-offset: 1px;
+}
+
+.swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.swatch {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+}
+
+.swatch:hover {
+    filter: brightness(1.08);
+}
+
+.swatchActive {
+    border-color: var(--zylem-color-text);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--zylem-color-primary) 45%, transparent);
+}
+
+.enter {
+    width: 100%;
+    margin-top: 0.25rem;
+    padding: 0.55rem 0.75rem;
+    border: 0;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    color: var(--zylem-color-background);
+    background: var(--zylem-color-primary);
+}
+
+.enter:hover {
+    filter: brightness(1.05);
+}
+
+.enter:active {
+    transform: translateY(1px);
+}

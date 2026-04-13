@@ -22,7 +22,13 @@ import {
   setMeasuredViewportSize,
 } from '../../store/demoViewportStore';
 import { isScreenshotModeSearch } from '../../screenshot-mode';
+import {
+  fourCharLobbyStore,
+  resetFourCharLobbyForExampleSwitch,
+} from '../../demos/four-characters-lobby-store';
+import FourCharactersLobby from '../FourCharactersLobby/FourCharactersLobby';
 import styles from './DemoViewer.module.css';
+import { subscribe } from 'valtio/vanilla';
 
 declare module 'solid-js' {
   namespace JSX {
@@ -77,6 +83,7 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   const [loading, setLoading] = createSignal(false);
   const [progress, setProgress] = createSignal(0);
   const [message, setMessage] = createSignal('');
+  const [fourCharLobbyRev, setFourCharLobbyRev] = createSignal(0);
 
   const isMobileLayout = () => props.layout === 'mobile';
   const screenshotMode = createMemo(() =>
@@ -105,6 +112,13 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   };
 
   onMount(() => {
+    const unsubLobby = subscribe(
+      fourCharLobbyStore,
+      () => setFourCharLobbyRev((n) => n + 1),
+      true,
+    );
+    onCleanup(unsubLobby);
+
     zylemEventBus.on('loading:start', handleLoadingEvent);
     zylemEventBus.on('loading:progress', handleLoadingEvent);
     zylemEventBus.on('loading:complete', handleLoadingEvent);
@@ -139,6 +153,15 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   });
 
   createEffect(() => {
+    const id = appStore.activeExample?.id;
+    onCleanup(() => {
+      if (id === '00-four-characters-plane') {
+        resetFourCharLobbyForExampleSwitch();
+      }
+    });
+  });
+
+  createEffect(() => {
     const activeExample = appStore.activeExample;
     if (!activeExample) return;
 
@@ -152,6 +175,15 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
       editorEvents.emit({ type: 'debug', payload: { enabled: true } });
     });
   });
+
+  const showFourCharactersLobby = () => {
+    void fourCharLobbyRev();
+    return (
+      !screenshotMode() &&
+      appStore.activeExample?.id === '00-four-characters-plane' &&
+      !fourCharLobbyStore.lobbyDismissed
+    );
+  };
 
   return (
     <div
@@ -214,6 +246,9 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
                         viewport-profile={activeViewportProfile()}
                       />
                     </Show>
+                    <Show when={showFourCharactersLobby()}>
+                      <FourCharactersLobby />
+                    </Show>
                     <Show when={loading()}>
                       <div class={styles.loadingOverlay} data-demo-loading-overlay>
                         <div class={styles.loadingContent}>
@@ -245,6 +280,9 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
                     game={example()}
                     viewport-profile={activeViewportProfile()}
                   />
+                </Show>
+                <Show when={showFourCharactersLobby()}>
+                  <FourCharactersLobby />
                 </Show>
                 <Show when={loading()}>
                   <div class={styles.loadingOverlay} data-demo-loading-overlay>
