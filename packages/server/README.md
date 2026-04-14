@@ -67,6 +67,8 @@ Override the local defaults with `SPACETIME_SERVER_LISTEN_ADDR`, `SPACETIME_SERV
 
 **Native Node web service:** Render sets `CI=true`, so `scripts/run-spacetimedb-cli.sh` automatically installs the SpacetimeDB CLI and Rust (`wasm32-unknown-unknown`) on first build when neither `spacetime` nor `spacetimedb-cli` is on `PATH`. You can still use `pnpm run build:render` at the repo root to install the same toolchain explicitly before `pnpm build`.
 
+`scripts/start-spacetimedb-server.sh` listens on **`0.0.0.0:$PORT`** when **`RENDER=true`** and **`PORT`** is set (Render’s default for web services). That satisfies Render’s port scan. Override with **`SPACETIME_SERVER_LISTEN_ADDR`** if you need a different bind (e.g. loopback behind another proxy).
+
 This package now includes a Render deployment scaffold inside `packages/server`:
 
 - [render.yaml](render.yaml) – Blueprint service definition for a `zylem-spacetimedb` Docker web service.

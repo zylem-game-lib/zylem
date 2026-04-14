@@ -2,7 +2,15 @@
 set -euo pipefail
 
 _pkg_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-_default_listen_addr="${SPACETIME_SERVER_LISTEN_ADDR:-127.0.0.1:3000}"
+# Local dev: loopback only. Render (and similar) web services require binding 0.0.0.0:$PORT so the
+# platform health check sees an open port; 127.0.0.1:3000 alone fails with "no open ports on 0.0.0.0".
+if [[ -n "${SPACETIME_SERVER_LISTEN_ADDR:-}" ]]; then
+  _default_listen_addr="${SPACETIME_SERVER_LISTEN_ADDR}"
+elif [[ "${RENDER:-}" == "true" && -n "${PORT:-}" ]]; then
+  _default_listen_addr="0.0.0.0:${PORT}"
+else
+  _default_listen_addr="127.0.0.1:3000"
+fi
 _default_data_dir="${SPACETIME_SERVER_DATA_DIR:-${_pkg_root}/.data/spacetimedb}"
 
 if [[ "${1:-}" == "--" ]]; then
