@@ -78,12 +78,18 @@ The Render setup assumes:
 - a persistent disk mounted at `/var/data`, because Render's normal service filesystem is ephemeral;
 - your browser clients connect to the public Render URL, while SpacetimeDB itself only binds to `127.0.0.1:3000` inside the container.
 
+### Loopback, nginx, and browser URIs
+
+`SPACETIMEDB_HTTP_ADDR=127.0.0.1:3000` (see [render.yaml](render.yaml)) is intentional: SpacetimeDB listens only on the container loopback, so nothing off-machine can reach port 3000 directly. [nginx](render/nginx.conf.template) listens on `PORT` and reverse-proxies `/v1/identity*` and `/v1/database/.../subscribe` to that loopback address. The API your **browsers** use is therefore the service’s **public HTTPS origin** (`https://<your-service>.onrender.com`), which becomes **`wss://`** for the subscribe WebSocket—**not** `http://127.0.0.1:3000` or `:3000` on the host.
+
+For **production builds** of `@zylem/examples` (or any Vite app using the same env), set **`VITE_STDB_URI`** to that public URL, e.g. `https://<your-render-service>.onrender.com`. Apply it in the **static site / client** build environment (Render dashboard or CI), not on the SpacetimeDB container unless that same job builds the client. See [packages/examples/.env.production.example](../examples/.env.production.example).
+
 ### Import into Render
 
 1. In Render, create or open your existing `zylem` project.
 2. Add a new Blueprint or web service using the Blueprint file at `packages/server/render.yaml`.
 3. Keep the included persistent disk, or increase `sizeGB` if you need more storage.
-4. After the first deploy, point clients at the public service URL with `VITE_STDB_URI=https://<your-render-service>.onrender.com`.
+4. After the first deploy, configure the examples app’s build with `VITE_STDB_URI=https://<your-render-service>.onrender.com` so clients use `wss://` through nginx (see **Loopback, nginx, and browser URIs** above).
 
 ### Auto-publish behavior
 

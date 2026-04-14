@@ -7,7 +7,10 @@ export const FOUR_CHAR_MODULE_NAME = 'zylem-entity-transforms-v2';
 
 /**
  * WebSocket base URL for SpacetimeDB (see SpacetimeDB TS SDK: use `ws://` / `wss://`).
- * Override with `VITE_STDB_URI` (`ws://…`, `wss://…`, or `http(s)://…` which we normalize).
+ * Default is local dev (`ws://127.0.0.1:3000`). For production, set `VITE_STDB_URI` to your
+ * public HTTPS origin (e.g. Render web service URL). See `packages/server/README.md` (Render deploy,
+ * subsection “Loopback, nginx, and browser URIs”) and `packages/examples/.env.production.example`.
+ * Accepts `ws://`, `wss://`, or `http(s)://` (normalized to WebSocket schemes).
  */
 export function getFourCharSpacetimeUri(): string {
   const raw = import.meta.env.VITE_STDB_URI ?? 'ws://127.0.0.1:3000';
