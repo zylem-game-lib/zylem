@@ -20,10 +20,14 @@ fi
 
 if ! command -v cargo >/dev/null 2>&1; then
   echo "cargo not found; installing Rust toolchain with rustup"
-  curl https://sh.rustup.rs -sSf | sh -s -- -y
-  # shellcheck disable=SC1090
-  . "${HOME}/.cargo/env"
+  # --no-modify-path: Render (and many CI images) disallow writing ~/.bash_profile (permission denied).
+  # PATH is set below and in run-spacetimedb-cli.sh after this script runs.
+  curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-toolchain stable
   export PATH="${HOME}/.cargo/bin:${PATH}"
+  if [ -f "${HOME}/.cargo/env" ]; then
+    # shellcheck disable=SC1090
+    . "${HOME}/.cargo/env"
+  fi
 else
   echo "cargo already available"
 fi
