@@ -7,6 +7,10 @@ server {
   listen ${PORT};
   server_name _;
 
+  # Zylem examples SPA (built in Docker stage `examples-builder`)
+  root /var/www/examples;
+  index index.html;
+
   access_log /dev/stdout;
   error_log /dev/stderr warn;
 
@@ -36,6 +40,6 @@ server {
   }
 
   location / {
-    return 404;
+    try_files $uri $uri/ /index.html;
   }
 }

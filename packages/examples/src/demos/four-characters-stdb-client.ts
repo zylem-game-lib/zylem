@@ -7,14 +7,22 @@ export const FOUR_CHAR_MODULE_NAME = 'zylem-entity-transforms-v2';
 
 /**
  * WebSocket base URL for SpacetimeDB (see SpacetimeDB TS SDK: use `ws://` / `wss://`).
- * Default is local dev (`ws://127.0.0.1:3000`). For production, set `VITE_STDB_URI` to your
- * public HTTPS origin (e.g. Render web service URL). See `packages/server/README.md` (Render deploy,
- * subsection “Loopback, nginx, and browser URIs”) and `packages/examples/.env.production.example`.
- * Accepts `ws://`, `wss://`, or `http(s)://` (normalized to WebSocket schemes).
+ * - **Dev:** defaults to `ws://127.0.0.1:3000`.
+ * - **Production:** set `VITE_STDB_URI` to the public HTTPS origin (e.g. another Render service), or omit it when the examples app and SpacetimeDB share the same origin (Docker nginx image) so `window.location.origin` is used.
+ * See `packages/server/README.md` (Render deploy) and `packages/examples/.env.production.example`.
  */
 export function getFourCharSpacetimeUri(): string {
-  const raw = import.meta.env.VITE_STDB_URI ?? 'ws://127.0.0.1:3000';
-  return normalizeSpacetimeClientUri(raw);
+  const env = import.meta.env.VITE_STDB_URI;
+  if (typeof env === 'string' && env.trim() !== '') {
+    return normalizeSpacetimeClientUri(env);
+  }
+  if (import.meta.env.PROD && typeof globalThis !== 'undefined' && 'location' in globalThis) {
+    const origin = (globalThis as unknown as Window).location?.origin;
+    if (origin) {
+      return normalizeSpacetimeClientUri(origin);
+    }
+  }
+  return normalizeSpacetimeClientUri('ws://127.0.0.1:3000');
 }
 
 /** WHATWG URL parses `ws://10000` as host `0.0.39.16` (decimal IPv4 for 10000). That breaks WSS / mixed content. */

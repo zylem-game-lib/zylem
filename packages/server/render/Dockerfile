@@ -1,3 +1,20 @@
+# --- Stage 1: build @zylem/examples (Vite SPA) for nginx static hosting ---
+FROM node:22-bookworm-slim AS examples-builder
+
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages ./packages
+
+RUN pnpm install --frozen-lockfile \
+  && pnpm --filter "@zylem/styles" run build \
+  && pnpm --filter "@zylem/game-lib" run build \
+  && pnpm --filter "@zylem/editor" run build \
+  && pnpm --filter "@zylem/examples" run build
+
+# --- Stage 2: SpacetimeDB + nginx (proxies /v1/* to loopback, serves SPA on /) ---
 FROM node:22-bookworm-slim
 
 ARG SPACETIMEDB_VERSION=2.1.0
@@ -21,6 +38,8 @@ RUN cd /app/spacetimedb \
 
 COPY packages/server/spacetimedb /app/spacetimedb
 COPY packages/server/render /app/render
+
+COPY --from=examples-builder /app/packages/examples/dist /var/www/examples
 
 RUN chmod +x /app/render/entrypoint.sh \
   && spacetime build -p /app/spacetimedb

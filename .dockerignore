@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.git
+.cursor
+**/.turbo
+**/coverage
+**/playwright-report
+.env
+.env.*
+!.env.production.example

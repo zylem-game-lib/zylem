@@ -72,9 +72,9 @@ Override the local defaults with `SPACETIME_SERVER_LISTEN_ADDR`, `SPACETIME_SERV
 This package now includes a Render deployment scaffold inside `packages/server`:
 
 - [render.yaml](render.yaml) – Blueprint service definition for a `zylem-spacetimedb` Docker web service.
-- [render/Dockerfile](render/Dockerfile) – Installs SpacetimeDB, installs the module package dependencies, and verifies the module builds during image build.
+- [render/Dockerfile](render/Dockerfile) – Multi-stage: builds `@zylem/examples` (Vite SPA), then installs SpacetimeDB, builds the module, copies the SPA into `/var/www/examples`, and verifies the module.
 - [render/entrypoint.sh](render/entrypoint.sh) – Starts SpacetimeDB on an internal port, waits for readiness, auto-publishes `zylem-entity-transforms-v2`, then starts nginx.
-- [render/nginx.conf.template](render/nginx.conf.template) – Exposes only `/v1/identity*`, `/v1/database/<db>/subscribe`, and `/healthz`.
+- [render/nginx.conf.template](render/nginx.conf.template) – Reverse-proxies `/v1/identity*` and `/v1/database/<db>/subscribe` to SpacetimeDB; serves the examples SPA on `/` (`try_files` for client routing); `/healthz` for health checks.
 
 The Render setup assumes:
 
@@ -86,14 +86,14 @@ The Render setup assumes:
 
 `SPACETIMEDB_HTTP_ADDR=127.0.0.1:3000` (see [render.yaml](render.yaml)) is intentional: SpacetimeDB listens only on the container loopback, so nothing off-machine can reach port 3000 directly. [nginx](render/nginx.conf.template) listens on `PORT` and reverse-proxies `/v1/identity*` and `/v1/database/.../subscribe` to that loopback address. The API your **browsers** use is therefore the service’s **public HTTPS origin** (`https://<your-service>.onrender.com`), which becomes **`wss://`** for the subscribe WebSocket—**not** `http://127.0.0.1:3000` or `:3000` on the host.
 
-For **production builds** of `@zylem/examples` (or any Vite app using the same env), set **`VITE_STDB_URI`** to that public URL, e.g. `https://<your-render-service>.onrender.com`. Apply it in the **static site / client** build environment (Render dashboard or CI), not on the SpacetimeDB container unless that same job builds the client. See [packages/examples/.env.production.example](../examples/.env.production.example).
+For **production builds** of `@zylem/examples` deployed **separately** (e.g. Render static site pointing at this service), set **`VITE_STDB_URI`** to the SpacetimeDB public URL, e.g. `https://<your-render-service>.onrender.com`. When the examples app is **served from the same Docker image** as SpacetimeDB, you can omit `VITE_STDB_URI`; the client uses `window.location.origin` so API and UI share one origin. See [packages/examples/.env.production.example](../examples/.env.production.example).
 
 ### Import into Render
 
 1. In Render, create or open your existing `zylem` project.
 2. Add a new Blueprint or web service using the Blueprint file at `packages/server/render.yaml`.
 3. Keep the included persistent disk, or increase `sizeGB` if you need more storage.
-4. After the first deploy, configure the examples app’s build with `VITE_STDB_URI=https://<your-render-service>.onrender.com` so clients use `wss://` through nginx (see **Loopback, nginx, and browser URIs** above).
+4. After the first deploy, if the examples UI is **not** baked into this Docker image, configure its build with `VITE_STDB_URI=https://<your-render-service>.onrender.com`. Same-image deploys do not require that variable (see **Loopback, nginx, and browser URIs** above).
 
 ### Auto-publish behavior
 
