@@ -5,9 +5,9 @@
   "type": "module",
   "description": "SpacetimeDB TypeScript module (entity transform replication) for Zylem multiplayer",
   "scripts": {
-    "build": "bash scripts/run-spacetimedb-cli.sh build -p spacetimedb",
-    "generate:bindings": "bash scripts/run-spacetimedb-cli.sh generate --lang typescript -o ../examples/src/spacetimedb-generated -p spacetimedb -y",
-    "publish:local": "bash scripts/run-spacetimedb-cli.sh publish zylem-entity-transforms-v2 -s local -p spacetimedb",
+    "build": "sh scripts/run-spacetimedb-cli.sh build -p spacetimedb",
+    "generate:bindings": "sh scripts/run-spacetimedb-cli.sh generate --lang typescript -o ../examples/src/spacetimedb-generated -p spacetimedb -y",
+    "publish:local": "sh scripts/run-spacetimedb-cli.sh publish zylem-entity-transforms-v2 -s local -p spacetimedb",
     "start:server": "bash scripts/start-spacetimedb-server.sh",
     "dev": "pnpm run build && pnpm run publish:local"
   },

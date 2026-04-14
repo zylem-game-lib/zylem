@@ -27,7 +27,7 @@ for _arg in "$@"; do
   esac
 done
 
-_cmd=(bash "${_pkg_root}/scripts/run-spacetimedb-cli.sh" start)
+_cmd=(sh "${_pkg_root}/scripts/run-spacetimedb-cli.sh" start)
 
 if [[ "${_has_listen_addr}" -eq 0 ]]; then
   _cmd+=(--listen-addr "${_default_listen_addr}")
