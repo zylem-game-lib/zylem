@@ -11,6 +11,12 @@ const additionalAllowedHosts = (process.env.__VITE_ADDITIONAL_SERVER_ALLOWED_HOS
 	.map(host => host.trim())
 	.filter(Boolean);
 const allowedHosts = [...new Set([...defaultAllowedHosts, ...additionalAllowedHosts])];
+const devPort = Number(process.env.PORT ?? '1337');
+const shouldOpenBrowser = !(
+	process.env.CI === 'true' ||
+	process.env.RENDER === 'true' ||
+	process.env.PORT
+);
 
 export default defineConfig({
 	plugins: [glsl(), solidPlugin()] as any,
@@ -33,8 +39,8 @@ export default defineConfig({
 	},
 	assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb', '**/*.wasm'],
 	server: {
-		port: 1337,
-		open: true,
+		port: Number.isFinite(devPort) ? devPort : 1337,
+		open: shouldOpenBrowser,
 		allowedHosts,
 		fs: {
 			// Allow serving files from sibling packages (e.g. game-lib source for workers)
