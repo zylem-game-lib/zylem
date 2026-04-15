@@ -312,8 +312,10 @@ export default function createDemo() {
 		if (isLocalHost) {
 			return `Target: ${uri}\nWith the server running, publish once: pnpm --filter @zylem/spacetime-server run publish:local`;
 		}
+		const message = `Target: ${uri}\nIf this is a deployed build, that host must serve /v1/* through the Docker/nginx + SpacetimeDB setup from render.yaml. If the examples app is hosted separately, set VITE_STDB_URI to the public SpacetimeDB service origin instead of the frontend host.`;
+		console.warn(message);
 
-		return `Target: ${uri}\nIf this is a deployed build, that host must serve /v1/* through the Docker/nginx + SpacetimeDB setup from render.yaml. If the examples app is hosted separately, set VITE_STDB_URI to the public SpacetimeDB service origin instead of the frontend host.`;
+		return message;
 	}
 
 	function reportNetError(context: string, err: unknown) {
