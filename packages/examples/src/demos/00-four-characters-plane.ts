@@ -339,6 +339,62 @@ export default function createDemo() {
 		}
 	}
 
+	/**
+	 * Spawns the local player in offline mode (no SpacetimeDB connection).
+	 * Used as a fallback when the server is unavailable so the player can still
+	 * move around with their chosen name and colour.
+	 */
+	function spawnOfflineLocalPlayer(stage: StageHandle) {
+		if (localActor) return;
+
+		const displayName = getGlobal<string>('fourCharDisplayName') ?? 'Player';
+		const colorU32 = getGlobal<number>('fourCharColorU32') ?? 0xff4a90e2;
+		const color = u32ToColor(colorU32);
+
+		const actor = playgroundActor('player', color, { x: 0, y: 0, z: 0 }) as PlayerEntity;
+		const nameplate = createText({
+			text: displayName,
+			stickToViewport: false,
+			fontSize: 22,
+			fontColor: '#f5f5f5',
+		});
+
+		// Use a sentinel entity ID that won't collide with real server-assigned IDs.
+		const eid = BigInt(-1);
+		const rec: AvatarRecord = { actor, nameplate, deviceId: net.localDeviceId, isLocal: true };
+		avatars.set(eid, rec);
+
+		net.localEntityId = eid;
+		localActor = actor;
+		localPlatformer = actor.use(Platformer3DBehavior, platformerOpts);
+		mainCamera.cameraRef.target = actor;
+
+		actor.onUpdate(({ inputs, me }: UpdateContext<any>) => {
+			const { p1 } = inputs;
+			const horizontal = p1.axes.Horizontal.value;
+			const vertical = p1.axes.Vertical.value;
+			const pl = me.$platformer;
+			if (pl) {
+				pl.moveX = horizontal;
+				pl.moveZ = vertical;
+				pl.jump = p1.buttons.A.held > 0;
+				pl.run = p1.shoulders.LTrigger.held > 0;
+			}
+
+			const animation = animationForPlatformerState(localPlatformer?.getState());
+			me.playAnimation(animation);
+			if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
+				lastMovement.set(horizontal, 0, vertical);
+			}
+			if (lastMovement.lengthSq() > 0) {
+				me.rotateInDirection(lastMovement);
+			}
+			// No network sync in offline mode (net.conn is null).
+		});
+
+		stage.add(actor, nameplate);
+	}
+
 	function resetNetworkState() {
 		networkTearingDown = true;
 		net.conn?.disconnect();
@@ -372,7 +428,11 @@ export default function createDemo() {
 			try {
 				await preflightFourCharSpacetimeUri();
 			} catch (err) {
-				reportNetError('preflight failed', err);
+				// SpacetimeDB is not reachable (e.g. staging/production without the
+				// Docker service). Fall back to offline single-player mode so the user
+				// can still play with their chosen name and colour.
+				console.warn('[four-characters-plane] SpacetimeDB unavailable – running offline:', err);
+				spawnOfflineLocalPlayer(st);
 				return;
 			}
 
@@ -386,6 +446,8 @@ export default function createDemo() {
 				},
 				onConnectError: (_ctx, err) => {
 					reportNetError('connect failed', err);
+					// Fall back to offline mode if the player hasn't been spawned yet.
+					spawnOfflineLocalPlayer(st);
 				},
 				onDisconnect: () => {
 					if (networkTearingDown) return;
