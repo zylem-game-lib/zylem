@@ -339,12 +339,19 @@ export default function createDemo() {
 		}
 	}
 
+	/** Sentinel entity ID used for the local player when running in offline mode. */
+	const OFFLINE_PLAYER_ENTITY_ID = BigInt(-1);
+
 	/**
 	 * Spawns the local player in offline mode (no SpacetimeDB connection).
 	 * Used as a fallback when the server is unavailable so the player can still
 	 * move around with their chosen name and colour.
 	 */
 	function spawnOfflineLocalPlayer(stage: StageHandle) {
+		// Guard against duplicate spawns. In the `onConnectError` path this can only
+		// fire before a successful connection (and therefore before `spawnAvatarForPlayer`
+		// has ever set `localActor`), so when the guard triggers it means the player is
+		// already visible and no action is needed.
 		if (localActor) return;
 
 		const displayName = getGlobal<string>('fourCharDisplayName') ?? 'Player';
@@ -359,8 +366,7 @@ export default function createDemo() {
 			fontColor: '#f5f5f5',
 		});
 
-		// Use a sentinel entity ID that won't collide with real server-assigned IDs.
-		const eid = BigInt(-1);
+		const eid = OFFLINE_PLAYER_ENTITY_ID;
 		const rec: AvatarRecord = { actor, nameplate, deviceId: net.localDeviceId, isLocal: true };
 		avatars.set(eid, rec);
 
