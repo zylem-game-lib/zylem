@@ -68,9 +68,10 @@ const FourCharactersLobby: Component = () => {
       <div class={styles.panel}>
         <h2 class={styles.title}>Join session</h2>
         <p class={styles.hint}>
-          Requires a local SpacetimeDB with module{' '}
-          <code class={styles.code}>zylem-entity-transforms-v2</code> published (see{' '}
-          <code class={styles.code}>packages/server/README.md</code>).
+          Enter a name and pick a colour to join. Multiplayer sync is enabled
+          when a SpacetimeDB server is available (see{' '}
+          <code class={styles.code}>packages/server/README.md</code>
+          ); otherwise the game runs in single-player mode.
         </p>
         <label class={styles.field}>
           <span class={styles.label}>Display name</span>
