@@ -5,6 +5,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const defaultAllowedHosts = ['zylem.onrender.com', 'zylem-staging.onrender.com'];
+const additionalAllowedHosts = (process.env.__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS ?? '')
+	.split(',')
+	.map(host => host.trim())
+	.filter(Boolean);
+const allowedHosts = [...new Set([...defaultAllowedHosts, ...additionalAllowedHosts])];
 
 export default defineConfig({
 	plugins: [glsl(), solidPlugin()] as any,
@@ -29,11 +35,14 @@ export default defineConfig({
 	server: {
 		port: 1337,
 		open: true,
-		allowedHosts: ['zylem.onrender.com'],
+		allowedHosts,
 		fs: {
 			// Allow serving files from sibling packages (e.g. game-lib source for workers)
 			allow: [path.resolve(__dirname, '..')],
 		},
+	},
+	preview: {
+		allowedHosts,
 	},
 	// Resolve paths relative to the package root where index.html is
 	root: __dirname,
