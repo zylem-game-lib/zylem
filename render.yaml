@@ -1,3 +1,5 @@
+# Blueprint: Docker web service — nginx (examples SPA) + SpacetimeDB (loopback) + persistent disk.
+# Import in Render: New → Blueprint → connect repo; file is detected at repo root.
 services:
   - type: web
     runtime: docker
