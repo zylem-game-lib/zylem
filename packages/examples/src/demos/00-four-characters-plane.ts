@@ -3,7 +3,6 @@
 import { Color, Vector2, Vector3 } from 'three';
 import {
 	Platformer3DBehavior,
-	type SetupContext,
 	type UpdateContext,
 	createCamera,
 	createGame,
@@ -29,6 +28,8 @@ import {
 import {
 	connectFourCharModule,
 	type FourCharDbConnection,
+	getFourCharSpacetimeUri,
+	preflightFourCharSpacetimeUri,
 } from './four-characters-stdb-client';
 
 type PlayerEntity = TransformableEntity & GameEntity<any> & StageEntity;
@@ -292,23 +293,32 @@ export default function createDemo() {
 		}
 	}
 
-	mainStage.onUpdate(() => {
-		for (const rec of avatars.values()) {
-			const g = rec.actor.group;
-			const np = rec.nameplate.group;
-			if (g && np) {
-				np.position.set(g.position.x, g.position.y + 2.6, g.position.z);
-			}
-		}
-	});
-
 	let networkBootstrapped = false;
+	let networkTearingDown = false;
 	let netErrorBanner: ReturnType<typeof createText> | null = null;
+
+	function getNetworkTroubleshootingHint() {
+		const uri = getFourCharSpacetimeUri();
+		const host = (() => {
+			try {
+				return new URL(uri).hostname;
+			} catch {
+				return '';
+			}
+		})();
+		const isLocalHost =
+			host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+
+		if (isLocalHost) {
+			return `Target: ${uri}\nWith the server running, publish once: pnpm --filter @zylem/spacetime-server run publish:local`;
+		}
+
+		return `Target: ${uri}\nIf this is a deployed build, that host must serve /v1/* through the Docker/nginx + SpacetimeDB setup from render.yaml. If the examples app is hosted separately, set VITE_STDB_URI to the public SpacetimeDB service origin instead of the frontend host.`;
+	}
 
 	function reportNetError(context: string, err: unknown) {
 		const msg = err instanceof Error ? err.message : String(err);
-		const hint =
-			'With the server running, publish once: pnpm --filter @zylem/spacetime-server run publish:local';
+		const hint = getNetworkTroubleshootingHint();
 		const full = `SpacetimeDB ${context}: ${msg}\n${hint}`;
 		console.error('[four-characters-plane]', context, err);
 		if (!netErrorBanner) {
@@ -327,9 +337,25 @@ export default function createDemo() {
 		}
 	}
 
-	groundPlane.onSetup((_ctx: SetupContext<any>) => {
+	function resetNetworkState() {
+		networkTearingDown = true;
+		net.conn?.disconnect();
+		net.conn = null;
+		net.localEntityId = null;
+		net.localDeviceId = '';
+		localActor = null;
+		localPlatformer = null;
+		lastMovement.set(0, 0, 0);
+		avatars.clear();
+		pendingTransforms.clear();
+		netErrorBanner = null;
+		networkBootstrapped = false;
+	}
+
+	function bootstrapNetwork() {
 		if (networkBootstrapped) return;
 		networkBootstrapped = true;
+		networkTearingDown = false;
 
 		const rawDeviceId =
 			getGlobal<string>('fourCharDeviceId') ?? getOrCreateFourCharDeviceId();
@@ -340,90 +366,116 @@ export default function createDemo() {
 
 		const st = mainStage;
 
-		const conn = connectFourCharModule({
-			onConnect: (c) => {
-				void c.reducers.registerPlayer({
-					deviceId,
-					displayName,
-					colorU32,
-				});
-			},
-			onConnectError: (_ctx, err) => {
-				reportNetError('connect failed', err);
-			},
-			onDisconnect: () => {
-				console.warn('[four-characters-plane] SpacetimeDB disconnected');
-			},
-		});
-		net.conn = conn;
-
-		conn.db.entity_transform.onInsert((_ctx, row) => {
-			const eid = entityIdOf(row.entityId);
-			pendingTransforms.set(eid, row);
-			const rec = avatars.get(eid);
-			if (!rec || rec.isLocal) return;
-			applyRemoteEntityState(rec.actor, row);
-		});
-
-		conn.db.entity_transform.onUpdate((_ctx, _old, row) => {
-			const eid = entityIdOf(row.entityId);
-			if (entityIdsEqual(eid, net.localEntityId)) return;
-			const rec = avatars.get(eid);
-			if (!rec || rec.isLocal) return;
-			applyRemoteEntityState(rec.actor, row);
-		});
-
-		conn.db.entity_transform.onDelete((_ctx, row) => {
-			const eid = entityIdOf(row.entityId);
-			pendingTransforms.delete(eid);
-			removeAvatarForEntity(eid, st);
-		});
-
-		conn.db.player.onInsert((_ctx, row) => {
-			spawnAvatarForPlayer(conn, st, row);
-		});
-
-		conn.db.player.onUpdate((_ctx, _old, row) => {
-			const rec = avatars.get(entityIdOf(row.entityId));
-			if (rec) {
-				rec.nameplate.updateText(row.displayName);
+		void (async () => {
+			try {
+				await preflightFourCharSpacetimeUri();
+			} catch (err) {
+				reportNetError('preflight failed', err);
+				return;
 			}
-		});
 
-		conn.db.player.onDelete((_ctx, row) => {
-			const eid = entityIdOf(row.entityId);
-			removeAvatarForEntity(eid, st);
-			if (entityIdsEqual(eid, net.localEntityId)) {
-				net.localEntityId = null;
-				localActor = null;
-				localPlatformer = null;
+			const conn = connectFourCharModule({
+				onConnect: (c) => {
+					void c.reducers.registerPlayer({
+						deviceId,
+						displayName,
+						colorU32,
+					});
+				},
+				onConnectError: (_ctx, err) => {
+					reportNetError('connect failed', err);
+				},
+				onDisconnect: () => {
+					if (networkTearingDown) return;
+					console.warn('[four-characters-plane] SpacetimeDB disconnected');
+				},
+			});
+			net.conn = conn;
+
+			conn.db.entity_transform.onInsert((_ctx, row) => {
+				const eid = entityIdOf(row.entityId);
+				pendingTransforms.set(eid, row);
+				const rec = avatars.get(eid);
+				if (!rec || rec.isLocal) return;
+				applyRemoteEntityState(rec.actor, row);
+			});
+
+			conn.db.entity_transform.onUpdate((_ctx, _old, row) => {
+				const eid = entityIdOf(row.entityId);
+				if (entityIdsEqual(eid, net.localEntityId)) return;
+				const rec = avatars.get(eid);
+				if (!rec || rec.isLocal) return;
+				applyRemoteEntityState(rec.actor, row);
+			});
+
+			conn.db.entity_transform.onDelete((_ctx, row) => {
+				const eid = entityIdOf(row.entityId);
+				pendingTransforms.delete(eid);
+				removeAvatarForEntity(eid, st);
+			});
+
+			conn.db.player.onInsert((_ctx, row) => {
+				spawnAvatarForPlayer(conn, st, row);
+			});
+
+			conn.db.player.onUpdate((_ctx, _old, row) => {
+				const rec = avatars.get(entityIdOf(row.entityId));
+				if (rec) {
+					rec.nameplate.updateText(row.displayName);
+				}
+			});
+
+			conn.db.player.onDelete((_ctx, row) => {
+				const eid = entityIdOf(row.entityId);
+				removeAvatarForEntity(eid, st);
+				if (entityIdsEqual(eid, net.localEntityId)) {
+					net.localEntityId = null;
+					localActor = null;
+					localPlatformer = null;
+				}
+			});
+
+			conn
+				.subscriptionBuilder()
+				.onApplied((ctx) => {
+					for (const t of ctx.db.entity_transform.iter()) {
+						pendingTransforms.set(entityIdOf(t.entityId), t);
+					}
+					for (const p of ctx.db.player.iter()) {
+						spawnAvatarForPlayer(conn, st, p);
+					}
+					for (const t of ctx.db.entity_transform.iter()) {
+						const eid = entityIdOf(t.entityId);
+						if (entityIdsEqual(eid, net.localEntityId)) continue;
+						const rec = avatars.get(eid);
+						if (!rec || rec.isLocal) continue;
+						applyRemoteEntityState(rec.actor, t);
+					}
+				})
+				.onError((ctx: ErrorContext) => {
+					reportNetError(
+						'subscription failed',
+						ctx.event ?? new Error('Unknown subscription error'),
+					);
+				})
+				.subscribeToAllTables();
+		})();
+	}
+
+	mainStage.onUpdate(() => {
+		bootstrapNetwork();
+
+		for (const rec of avatars.values()) {
+			const g = rec.actor.group;
+			const np = rec.nameplate.group;
+			if (g && np) {
+				np.position.set(g.position.x, g.position.y + 2.6, g.position.z);
 			}
-		});
+		}
+	});
 
-		conn
-			.subscriptionBuilder()
-			.onApplied((ctx) => {
-				for (const t of ctx.db.entity_transform.iter()) {
-					pendingTransforms.set(entityIdOf(t.entityId), t);
-				}
-				for (const p of ctx.db.player.iter()) {
-					spawnAvatarForPlayer(conn, st, p);
-				}
-				for (const t of ctx.db.entity_transform.iter()) {
-					const eid = entityIdOf(t.entityId);
-					if (entityIdsEqual(eid, net.localEntityId)) continue;
-					const rec = avatars.get(eid);
-					if (!rec || rec.isLocal) continue;
-					applyRemoteEntityState(rec.actor, t);
-				}
-			})
-			.onError((ctx: ErrorContext) => {
-				reportNetError(
-					'subscription failed',
-					ctx.event ?? new Error('Unknown subscription error'),
-				);
-			})
-			.subscribeToAllTables();
+	mainStage.onDestroy(() => {
+		resetNetworkState();
 	});
 
 	mainStage.add(groundPlane);

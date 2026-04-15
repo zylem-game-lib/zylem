@@ -25,6 +25,13 @@ export function getFourCharSpacetimeUri(): string {
   return normalizeSpacetimeClientUri('ws://127.0.0.1:3000');
 }
 
+function getBrowserLocationOrigin(): string | null {
+  if (typeof globalThis === 'undefined' || !('location' in globalThis)) {
+    return null;
+  }
+  return (globalThis as { location?: { origin?: string } }).location?.origin ?? null;
+}
+
 /** WHATWG URL parses `ws://10000` as host `0.0.39.16` (decimal IPv4 for 10000). That breaks WSS / mixed content. */
 const LEGACY_DECIMAL_IPV4_FROM_SINGLE_NUMBER = '0.0.39.16';
 
@@ -89,6 +96,93 @@ export function normalizeSpacetimeClientUri(uri: string): string {
   }
 
   return u.toString();
+}
+
+function isSameOriginBrowserUri(uri: string): boolean {
+  const browserOrigin = getBrowserLocationOrigin();
+  if (!browserOrigin) {
+    return false;
+  }
+
+  try {
+    return new URL(uri).origin === browserOrigin;
+  } catch {
+    return false;
+  }
+}
+
+function looksLikeViteHtmlFallback(contentType: string | null, body: string): boolean {
+  if (!contentType?.includes('text/html')) {
+    return false;
+  }
+  return body.includes('/@vite/client') || body.includes('/src/index.tsx');
+}
+
+function asErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function toHttpProbeUrl(uri: string, path: string): URL {
+  const url = new URL(path, uri);
+  if (url.protocol === 'wss:') {
+    url.protocol = 'https:';
+  } else if (url.protocol === 'ws:') {
+    url.protocol = 'http:';
+  }
+  return url;
+}
+
+/**
+ * Same-origin deploys are expected to serve `/v1/*` from the current origin.
+ * When Render is accidentally serving the Vite dev server instead of the Docker/nginx
+ * scaffold, `/v1/ping` often falls back to index.html. Catch that before opening the WS.
+ */
+export async function preflightFourCharSpacetimeUri(uri = getFourCharSpacetimeUri()): Promise<void> {
+  if (typeof fetch !== 'function' || !isSameOriginBrowserUri(uri)) {
+    return;
+  }
+
+  const pingUrl = toHttpProbeUrl(uri, '/v1/ping');
+
+  let response: Response;
+  try {
+    response = await fetch(pingUrl.toString(), {
+      method: 'GET',
+      cache: 'no-store',
+      headers: {
+        Accept: 'text/plain, application/json, text/html',
+      },
+    });
+  } catch (error) {
+    throw new Error(
+      `Could not reach ${pingUrl.origin} before opening the SpacetimeDB websocket: ${asErrorMessage(error)}`,
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `SpacetimeDB preflight failed at ${pingUrl} (${response.status} ${response.statusText}).`,
+    );
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (!contentType?.includes('text/html')) {
+    return;
+  }
+
+  const body = await response.text();
+  if (looksLikeViteHtmlFallback(contentType, body)) {
+    throw new Error(
+      `SpacetimeDB preflight hit Vite HTML at ${pingUrl}. This host is serving the examples app instead of the /v1 API. Deploy the Docker/nginx + SpacetimeDB service from render.yaml, or point VITE_STDB_URI at the public SpacetimeDB service origin rather than the frontend host.`,
+    );
+  }
+
+  throw new Error(
+    `SpacetimeDB preflight at ${pingUrl} returned HTML instead of API output. Check that /v1/* is reverse-proxied to SpacetimeDB.`,
+  );
 }
 
 export type FourCharDbConnection = InstanceType<typeof DbConnection>;
