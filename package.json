@@ -30,6 +30,7 @@
     "build:examples": "pnpm --filter @zylem/examples build",
     "build:styles": "pnpm --filter @zylem/styles build",
     "build:render": "./scripts/render-build.sh",
+    "verify:render-docker": "bash ./scripts/verify-render-docker-image.sh",
     "build": "pnpm -r build",
     "test:runtime": "pnpm --filter @zylem/runtime test",
     "test": "pnpm --filter @zylem/game-lib test",
