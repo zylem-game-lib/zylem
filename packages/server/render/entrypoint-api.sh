@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+PORT="${PORT:-10000}"
+SPACETIMEDB_LISTEN_ADDR="${SPACETIMEDB_LISTEN_ADDR:-0.0.0.0:${PORT}}"
+SPACETIMEDB_SERVER_URL="${SPACETIMEDB_SERVER_URL:-http://127.0.0.1:${PORT}}"
+SPACETIMEDB_DATA_DIR="${SPACETIMEDB_DATA_DIR:-/var/data/spacetimedb}"
+SPACETIMEDB_MODULE_PATH="${SPACETIMEDB_MODULE_PATH:-/app/spacetimedb}"
+SPACETIMEDB_DATABASE_NAME="${SPACETIMEDB_DATABASE_NAME:-zylem-entity-transforms-v2}"
+SPACETIMEDB_AUTO_PUBLISH="${SPACETIMEDB_AUTO_PUBLISH:-true}"
+SPACETIMEDB_PUBLISH_DELETE_DATA="${SPACETIMEDB_PUBLISH_DELETE_DATA:-never}"
+
+cleanup() {
+  if [[ -n "${SPACETIME_PID:-}" ]]; then
+    kill "${SPACETIME_PID}" 2>/dev/null || true
+  fi
+}
+
+trap cleanup EXIT INT TERM
+
+mkdir -p "${SPACETIMEDB_DATA_DIR}"
+
+echo "Starting SpacetimeDB API on ${SPACETIMEDB_LISTEN_ADDR}"
+spacetime start \
+  --listen-addr "${SPACETIMEDB_LISTEN_ADDR}" \
+  --data-dir "${SPACETIMEDB_DATA_DIR}" \
+  --non-interactive &
+SPACETIME_PID=$!
+
+ready=false
+for _ in $(seq 1 60); do
+  if spacetime server ping "${SPACETIMEDB_SERVER_URL}" >/dev/null 2>&1; then
+    ready=true
+    break
+  fi
+  sleep 1
+done
+
+if [[ "${ready}" != "true" ]]; then
+  echo "SpacetimeDB did not become ready in time" >&2
+  exit 1
+fi
+
+if [[ "${SPACETIMEDB_AUTO_PUBLISH}" == "true" ]]; then
+  publish_args=(
+    publish
+    "${SPACETIMEDB_DATABASE_NAME}"
+    -s "${SPACETIMEDB_SERVER_URL}"
+    -p "${SPACETIMEDB_MODULE_PATH}"
+    -y
+  )
+  if [[ -n "${SPACETIMEDB_PUBLISH_DELETE_DATA}" ]]; then
+    publish_args+=(--delete-data "${SPACETIMEDB_PUBLISH_DELETE_DATA}")
+  fi
+
+  echo "Publishing ${SPACETIMEDB_DATABASE_NAME} from ${SPACETIMEDB_MODULE_PATH}"
+  spacetime "${publish_args[@]}"
+fi
+
+wait "${SPACETIME_PID}"
