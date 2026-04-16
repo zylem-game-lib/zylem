@@ -1,0 +1,30 @@
+# SpacetimeDB-only API image for split frontend/backend deploys.
+FROM node:22-bookworm-slim
+
+ARG SPACETIMEDB_VERSION=2.1.0
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bash ca-certificates curl \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sSf https://install.spacetimedb.com | sh -s -- --root-dir /opt/spacetimedb -y \
+  && /opt/spacetimedb/spacetime version install "${SPACETIMEDB_VERSION}" --use -y
+
+ENV PATH="/opt/spacetimedb:/opt/spacetimedb/bin/current:${PATH}"
+
+WORKDIR /app
+
+COPY packages/server/spacetimedb/package.json /app/spacetimedb/package.json
+
+RUN cd /app/spacetimedb \
+  && npm install --no-audit --no-fund
+
+COPY packages/server/spacetimedb /app/spacetimedb
+COPY packages/server/render/entrypoint-api.sh /app/render/entrypoint-api.sh
+
+RUN chmod +x /app/render/entrypoint-api.sh \
+  && spacetime build -p /app/spacetimedb
+
+EXPOSE 10000
+
+CMD ["/bin/bash", "/app/render/entrypoint-api.sh"]
