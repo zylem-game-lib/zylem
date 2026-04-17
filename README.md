@@ -59,6 +59,15 @@ pnpm build:render
 That script installs Rust with `rustup` when `cargo` is missing, adds the
 `wasm32-unknown-unknown` target, then runs the normal monorepo build.
 
+For the split Render Blueprint, the static examples site uses:
+
+```bash
+pnpm build:render:examples
+```
+
+That builds the Rust runtime to `.wasm` first, then bundles the examples SPA.
+The SpacetimeDB API remains the separate Render web service.
+
 ## 🎮 Using the Library
 
 The `@zylem/game-lib` package can be installed in any project:
