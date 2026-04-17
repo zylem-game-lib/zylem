@@ -7,6 +7,9 @@
 # Important: VITE_STDB_URI is compiled into the static frontend at build time. If Render
 # gives the API service a different public URL than the value below, update VITE_STDB_URI
 # and redeploy the static site.
+#
+# The examples service is still a static site: the Rust runtime is compiled to a
+# `.wasm` asset during the build and served with the SPA.
 services:
   - type: web
     runtime: docker
@@ -36,14 +39,7 @@ services:
   - type: web
     runtime: static
     name: zylem-examples
-    buildCommand: >-
-      corepack enable &&
-      corepack prepare pnpm@10.33.0 --activate &&
-      pnpm install --frozen-lockfile &&
-      pnpm --filter "@zylem/styles" run build &&
-      pnpm --filter "@zylem/game-lib" run build &&
-      pnpm --filter "@zylem/editor" run build &&
-      pnpm --filter "@zylem/examples" run build
+    buildCommand: sh ./scripts/render-build-examples.sh
     staticPublishPath: ./packages/examples/dist
     envVars:
       - key: VITE_STDB_URI

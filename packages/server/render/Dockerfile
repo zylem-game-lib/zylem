@@ -1,6 +1,15 @@
 # --- Stage 1: build @zylem/examples (Vite SPA) for nginx static hosting ---
 FROM node:22-bookworm-slim AS examples-builder
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates curl \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-toolchain stable \
+  && /root/.cargo/bin/rustup target add wasm32-unknown-unknown
+
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 
 WORKDIR /app
@@ -9,6 +18,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages ./packages
 
 RUN pnpm install --frozen-lockfile \
+  && pnpm --filter "@zylem/runtime" run build:wasm \
   && pnpm --filter "@zylem/styles" run build \
   && pnpm --filter "@zylem/game-lib" run build \
   && pnpm --filter "@zylem/editor" run build \
