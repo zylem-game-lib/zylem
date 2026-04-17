@@ -11,6 +11,20 @@ SPACETIMEDB_DATABASE_NAME="${SPACETIMEDB_DATABASE_NAME:-zylem-entity-transforms-
 SPACETIMEDB_AUTO_PUBLISH="${SPACETIMEDB_AUTO_PUBLISH:-true}"
 SPACETIMEDB_PUBLISH_DELETE_DATA="${SPACETIMEDB_PUBLISH_DELETE_DATA:-never}"
 
+append_publish_delete_data_arg() {
+  case "${SPACETIMEDB_PUBLISH_DELETE_DATA}" in
+    "" | "0" | false | no | never)
+      ;;
+    "1" | true | yes | always | on-conflict)
+      publish_args+=(--delete-data)
+      ;;
+    *)
+      echo "Unsupported SPACETIMEDB_PUBLISH_DELETE_DATA=${SPACETIMEDB_PUBLISH_DELETE_DATA}; use never, true, or on-conflict" >&2
+      exit 1
+      ;;
+  esac
+}
+
 cleanup() {
   if [[ -n "${SPACETIME_PID:-}" ]]; then
     kill "${SPACETIME_PID}" 2>/dev/null || true
@@ -50,9 +64,7 @@ if [[ "${SPACETIMEDB_AUTO_PUBLISH}" == "true" ]]; then
     -p "${SPACETIMEDB_MODULE_PATH}"
     -y
   )
-  if [[ -n "${SPACETIMEDB_PUBLISH_DELETE_DATA}" ]]; then
-    publish_args+=(--delete-data "${SPACETIMEDB_PUBLISH_DELETE_DATA}")
-  fi
+  append_publish_delete_data_arg
 
   echo "Publishing ${SPACETIMEDB_DATABASE_NAME} from ${SPACETIMEDB_MODULE_PATH}"
   spacetime "${publish_args[@]}"
