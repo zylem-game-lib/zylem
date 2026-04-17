@@ -5,8 +5,10 @@ set -eu
 _root_dir="$(cd "$(dirname "$0")/.." && pwd)"
 
 sh "${_root_dir}/scripts/ensure-rust-wasm-ci.sh"
-# shellcheck disable=SC1090
-. "${HOME}/.cargo/env" 2>/dev/null || true
+if [ -f "${HOME}/.cargo/env" ]; then
+  # shellcheck disable=SC1090
+  . "${HOME}/.cargo/env"
+fi
 export PATH="${HOME}/.cargo/bin:${PATH}"
 
 cd "${_root_dir}"

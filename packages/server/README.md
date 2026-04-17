@@ -112,7 +112,7 @@ This builds [`render/Dockerfile`](render/Dockerfile), runs a short-lived contain
 On boot, the container publishes `zylem-entity-transforms-v2` to the local in-container SpacetimeDB instance.
 
 - Default conflict mode is `never`, so breaking schema changes fail the deploy instead of deleting data.
-- To allow breaking schema deploys that clear module data automatically, set `SPACETIMEDB_PUBLISH_DELETE_DATA=on-conflict` in Render.
+- To pass SpacetimeDB's `--delete-data` publish flag for breaking schema deploys, set `SPACETIMEDB_PUBLISH_DELETE_DATA=true` in Render (`on-conflict` is accepted as a legacy alias).
 - To disable boot-time publish entirely, set `SPACETIMEDB_AUTO_PUBLISH=false`.
 
 ## Client SDK
