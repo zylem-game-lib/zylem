@@ -1,0 +1,32 @@
+# Production build + tests on push / PR (matches root engines: Node 22 + pnpm).
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Production verify (toolchain + typecheck + lint + build:production)
+        run: bash ./scripts/ci-production-verify.sh
+
+      - name: Unit tests (game-lib)
+        run: pnpm test

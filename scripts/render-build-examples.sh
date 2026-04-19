@@ -20,6 +20,7 @@ else
   corepack prepare pnpm@10.33.0 --activate
 fi
 pnpm install --frozen-lockfile
+export NODE_ENV=production
 pnpm --filter "@zylem/runtime" run build:wasm
 pnpm --filter "@zylem/styles" run build
 pnpm --filter "@zylem/game-lib" run build

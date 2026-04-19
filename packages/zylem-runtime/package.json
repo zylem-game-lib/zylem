@@ -6,6 +6,7 @@
   "license": "MIT",
   "scripts": {
     "build": "cargo build --manifest-path Cargo.toml --target-dir target && cargo build --manifest-path Cargo.toml --target-dir target --target wasm32-unknown-unknown --release",
+    "build:production": "cargo build --manifest-path Cargo.toml --target-dir target --target wasm32-unknown-unknown --release",
     "build:native": "cargo build --manifest-path Cargo.toml --target-dir target",
     "build:release": "cargo build --manifest-path Cargo.toml --target-dir target --release",
     "build:wasm": "cargo build --manifest-path Cargo.toml --target-dir target --target wasm32-unknown-unknown --release",
