@@ -112,8 +112,8 @@ This builds [`render/Dockerfile`](render/Dockerfile), runs a short-lived contain
 On boot, the container publishes `zylem-entity-transforms-v2` to the local in-container SpacetimeDB instance.
 
 - **403 Forbidden / “not authorized to … update database”:** The standalone server stores the database on the persistent disk (`SPACETIMEDB_DATA_DIR`), which is **owned** by the Spacetime **identity** that first created it. The CLI used to save its login under `/root/.config` (ephemeral), so **every new container** got a **new** identity while the **old** database still expected the **previous** owner. The entrypoints set **`XDG_CONFIG_HOME`** to **`/var/data/.config`** (override with **`SPACETIMEDB_XDG_CONFIG_HOME`**) so the same identity is reused across deploys on the Render disk. If you already hit this error **before** that fix, do **one** of: clear the Spacetime data on the disk, or set **`SPACETIMEDB_PUBLISH_DELETE_DATA=true`** for a single deploy (accepts data loss), then set it back to **`never`**.
-- Default conflict mode is `never`, so breaking schema changes fail the deploy instead of deleting data.
-- To pass SpacetimeDB's `--delete-data` publish flag for breaking schema deploys, set `SPACETIMEDB_PUBLISH_DELETE_DATA=true` in Render (`on-conflict` is accepted as a legacy alias).
+- Default conflict mode in this repo is **`true`** (see [render.yaml](../../render.yaml)), which appends `--delete-data` to `spacetime publish`. Treat the database as **ephemeral**: every deploy wipes the DB and republishes the current schema/module. To preserve data between deploys, set `SPACETIMEDB_PUBLISH_DELETE_DATA=never` (breaking schema changes will then fail instead of deleting data).
+- `on-conflict` is accepted as a legacy alias for `true`.
 - To disable boot-time publish entirely, set `SPACETIMEDB_AUTO_PUBLISH=false`.
 
 ## Client SDK

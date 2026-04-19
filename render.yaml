@@ -29,8 +29,9 @@ services:
         value: zylem-entity-transforms-v2
       - key: SPACETIMEDB_AUTO_PUBLISH
         value: "true"
+      # Ephemeral DB: wipe + republish on every deploy (demo/staging semantics).
       - key: SPACETIMEDB_PUBLISH_DELETE_DATA
-        value: never
+        value: "true"
     disk:
       name: spacetimedb-data
       mountPath: /var/data
