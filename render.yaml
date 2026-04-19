@@ -29,7 +29,11 @@ services:
         value: zylem-entity-transforms-v2
       - key: SPACETIMEDB_AUTO_PUBLISH
         value: "true"
-      # Ephemeral DB: wipe + republish on every deploy (demo/staging semantics).
+      # Ephemeral DB: wipe the data dir at boot (resets ownership) and republish on every deploy.
+      # SPACETIMEDB_RESET_DATA_ON_BOOT is required if the previous deploy left a DB owned by
+      # a lost identity — `--delete-data` alone does not bypass the pre-publish ownership check.
+      - key: SPACETIMEDB_RESET_DATA_ON_BOOT
+        value: "true"
       - key: SPACETIMEDB_PUBLISH_DELETE_DATA
         value: "true"
     disk:

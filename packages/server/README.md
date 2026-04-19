@@ -111,9 +111,11 @@ This builds [`render/Dockerfile`](render/Dockerfile), runs a short-lived contain
 
 On boot, the container publishes `zylem-entity-transforms-v2` to the local in-container SpacetimeDB instance.
 
-- **403 Forbidden / “not authorized to … update database”:** The standalone server stores the database on the persistent disk (`SPACETIMEDB_DATA_DIR`), which is **owned** by the Spacetime **identity** that first created it. The CLI used to save its login under `/root/.config` (ephemeral), so **every new container** got a **new** identity while the **old** database still expected the **previous** owner. The entrypoints set **`XDG_CONFIG_HOME`** to **`/var/data/.config`** (override with **`SPACETIMEDB_XDG_CONFIG_HOME`**) so the same identity is reused across deploys on the Render disk. If you already hit this error **before** that fix, do **one** of: clear the Spacetime data on the disk, or set **`SPACETIMEDB_PUBLISH_DELETE_DATA=true`** for a single deploy (accepts data loss), then set it back to **`never`**.
-- Default conflict mode in this repo is **`true`** (see [render.yaml](../../render.yaml)), which appends `--delete-data` to `spacetime publish`. Treat the database as **ephemeral**: every deploy wipes the DB and republishes the current schema/module. To preserve data between deploys, set `SPACETIMEDB_PUBLISH_DELETE_DATA=never` (breaking schema changes will then fail instead of deleting data).
-- `on-conflict` is accepted as a legacy alias for `true`.
+- **403 Forbidden / “not authorized to … update database”:** The standalone server stores the database on the persistent disk (`SPACETIMEDB_DATA_DIR`), which is **owned** by the Spacetime **identity** that first created it. Two fixes cooperate:
+  - **Persist CLI identity** — the entrypoints set **`XDG_CONFIG_HOME`** to **`/var/data/.config`** (override with **`SPACETIMEDB_XDG_CONFIG_HOME`**) so the same identity is reused across deploys. Prevents future drift.
+  - **Reset stale DBs** — `--delete-data` does **not** bypass the pre-publish ownership check; if a previous container left a DB owned by a now-lost identity, publish still 403s. Set **`SPACETIMEDB_RESET_DATA_ON_BOOT=true`** (default in [render.yaml](../../render.yaml)) and the entrypoints will `rm -rf "${SPACETIMEDB_DATA_DIR}"` at boot, so the current identity always creates + owns a fresh DB. Use only when the DB is ephemeral.
+- Repo default treats the DB as **ephemeral**: `SPACETIMEDB_RESET_DATA_ON_BOOT=true` plus `SPACETIMEDB_PUBLISH_DELETE_DATA=true`. To preserve data between deploys, set both to `never` / `false` (breaking schema changes will then fail instead of deleting data).
+- `on-conflict` is accepted as a legacy alias for `true` on `SPACETIMEDB_PUBLISH_DELETE_DATA`.
 - To disable boot-time publish entirely, set `SPACETIMEDB_AUTO_PUBLISH=false`.
 
 ## Client SDK

@@ -10,6 +10,15 @@ SPACETIMEDB_MODULE_PATH="${SPACETIMEDB_MODULE_PATH:-/app/spacetimedb}"
 SPACETIMEDB_DATABASE_NAME="${SPACETIMEDB_DATABASE_NAME:-zylem-entity-transforms-v2}"
 SPACETIMEDB_AUTO_PUBLISH="${SPACETIMEDB_AUTO_PUBLISH:-true}"
 SPACETIMEDB_PUBLISH_DELETE_DATA="${SPACETIMEDB_PUBLISH_DELETE_DATA:-never}"
+# See entrypoint.sh: true ephemeral reset (ownership included) by wiping the data dir.
+SPACETIMEDB_RESET_DATA_ON_BOOT="${SPACETIMEDB_RESET_DATA_ON_BOOT:-false}"
+
+is_truthy() {
+  case "${1:-}" in
+    "1" | true | yes | always | on | on-conflict) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 append_publish_delete_data_arg() {
   case "${SPACETIMEDB_PUBLISH_DELETE_DATA}" in
@@ -33,6 +42,10 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
+if is_truthy "${SPACETIMEDB_RESET_DATA_ON_BOOT}"; then
+  echo "SPACETIMEDB_RESET_DATA_ON_BOOT=${SPACETIMEDB_RESET_DATA_ON_BOOT}: wiping ${SPACETIMEDB_DATA_DIR}"
+  rm -rf "${SPACETIMEDB_DATA_DIR}"
+fi
 mkdir -p "${SPACETIMEDB_DATA_DIR}"
 
 # See entrypoint.sh: persist CLI identity on the Render disk so publish matches DB owner.
