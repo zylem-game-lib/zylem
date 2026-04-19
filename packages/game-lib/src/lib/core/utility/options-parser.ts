@@ -17,9 +17,10 @@ export function isThenable(item: unknown): item is Promise<any> {
 
 /**
  * Check if an item is a CameraWrapper.
+ * Uses `instanceof` — do not rely on `constructor.name` (breaks under minification).
  */
 export function isCameraWrapper(item: unknown): item is CameraWrapper {
-	return !!item && typeof item === 'object' && (item as any).constructor?.name === 'CameraWrapper';
+	return !!item && typeof item === 'object' && item instanceof CameraWrapper;
 }
 
 /**
