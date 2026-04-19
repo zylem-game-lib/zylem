@@ -1,5 +1,9 @@
 import { defineConfig } from 'tsup';
 
+const isProd = process.env.NODE_ENV === 'production';
+/** Emit sourcemaps in production when SOURCEMAP=1 (default: off in production). */
+const sourcemap = process.env.SOURCEMAP === '1' || !isProd;
+
 export default defineConfig({
 	entry: {
 		// Main entry points
@@ -38,7 +42,7 @@ export default defineConfig({
 	dts: true, // Generate TypeScript declaration files
 	tsconfig: './tsconfig.build.json', // Use custom tsconfig for build
 	splitting: false,
-	sourcemap: true,
+	sourcemap,
 	clean: true,
 	// TODO: why does minify break the build
 	// minify: true,

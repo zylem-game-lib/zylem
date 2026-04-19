@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "cross-env NODE_ENV=production vite build",
     "preview": "vite preview",
     "optimize:gltf": "node ./repo-actions/optimize-gltf-assets.mjs",
     "destructible-prebake": "zylem-destructible-prebake",
@@ -29,6 +29,7 @@
     "valtio": "^2.1.7"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "@playwright/test": "^1.56.1",
     "@types/node": "^20.19.13",
     "@types/three": "0.171.0",

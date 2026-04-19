@@ -14,4 +14,4 @@ export PATH="${HOME}/.cargo/bin:${PATH}"
 echo "installing pnpm@10.32.1"
 npm install --global pnpm@10.32.1
 pnpm install --frozen-lockfile
-pnpm build
+pnpm run build:production

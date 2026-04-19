@@ -68,6 +68,12 @@ pnpm build:render:examples
 That builds the Rust runtime to `.wasm` first, then bundles the examples SPA.
 The SpacetimeDB API remains the separate Render web service.
 
+### Production builds
+
+- **`pnpm run build:production`** — Sets `NODE_ENV=production` for all JS/TS packages, disables `.map` files by default (override with `SOURCEMAP=1`), enables minify where configured, and builds `@zylem/runtime` as **wasm release only** (skips the extra debug native `cargo build` from `pnpm build`).
+- **`pnpm run build:production:verify`** — Runs `scripts/ensure-spacetimedb-toolchain-ci.sh` (Rust wasm + SpacetimeDB CLI when missing), then `typecheck`, `lint`, and `build:production`. Use this in CI or for a full gate before release.
+- For **npm publish** of `@zylem/game-lib`, `pnpm run publish:lib` builds the library with `NODE_ENV=production` first.
+
 ## 🎮 Using the Library
 
 The `@zylem/game-lib` package can be installed in any project:

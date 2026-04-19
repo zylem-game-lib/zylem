@@ -1,6 +1,4 @@
-# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
-
+# Publish @zylem/game-lib to GitHub Packages on release (requires aligned CI build).
 name: publish zylem library
 
 on:
@@ -12,11 +10,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - run: npm ci
-      - run: npm test
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Production verify
+        run: bash ./scripts/ci-production-verify.sh
+
+      - name: Unit tests (game-lib)
+        run: pnpm test
 
   publish-gpr:
     needs: build
@@ -26,12 +37,31 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "22"
           registry-url: https://npm.pkg.github.com/
-      - run: pnpm install
-      - run: npm run build
-      - run: npm publish
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Ensure Rust wasm + SpacetimeDB CLI
+        run: bash ./scripts/ensure-spacetimedb-toolchain-ci.sh
+
+      - name: Export toolchain PATH
+        run: |
+          echo "PATH=${HOME}/.spacetimedb:${HOME}/.spacetimedb/bin/current:${HOME}/.cargo/bin:${PATH}" >> "${GITHUB_ENV}"
+
+      - name: Build for publish
+        run: pnpm run build:production
+
+      - name: Publish @zylem/game-lib to GitHub Packages
+        run: pnpm --filter @zylem/game-lib publish --no-git-checks
         env:
-          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

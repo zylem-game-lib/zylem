@@ -1,4 +1,7 @@
 import { defineConfig } from 'tsup';
+
+const isProd = process.env.NODE_ENV === 'production';
+const sourcemap = process.env.SOURCEMAP === '1' || !isProd;
 import { solidPlugin } from 'esbuild-plugin-solid';
 import { readFileSync, existsSync } from 'fs';
 import { resolve, dirname } from 'path';
@@ -47,9 +50,9 @@ export default defineConfig({
     format: ['esm'],
     dts: true,
     clean: true,
-    sourcemap: true,
+    sourcemap,
     outDir: 'dist',
-    minify: false,
+    minify: isProd,
     esbuildPlugins: [rawPlugin, solidPlugin()],
     external: [
         'solid-js',
