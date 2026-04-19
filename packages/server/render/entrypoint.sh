@@ -38,6 +38,14 @@ trap cleanup EXIT INT TERM
 
 mkdir -p "${SPACETIMEDB_DATA_DIR}"
 
+# SpacetimeDB CLI stores login identity under XDG config (default: /root/.config), which is
+# ephemeral in Docker. The database on the persistent disk is owned by whatever identity
+# created it; a new identity each boot causes 403 on publish. Persist CLI config beside data.
+# Override with SPACETIMEDB_XDG_CONFIG_HOME if needed.
+SPACETIMEDB_XDG_CONFIG_HOME="${SPACETIMEDB_XDG_CONFIG_HOME:-/var/data/.config}"
+export XDG_CONFIG_HOME="${SPACETIMEDB_XDG_CONFIG_HOME}"
+mkdir -p "${XDG_CONFIG_HOME}"
+
 sed \
   -e "s|\${PORT}|${PORT}|g" \
   -e "s|\${SPACETIMEDB_HTTP_ADDR}|${SPACETIMEDB_HTTP_ADDR}|g" \

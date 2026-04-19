@@ -35,6 +35,11 @@ trap cleanup EXIT INT TERM
 
 mkdir -p "${SPACETIMEDB_DATA_DIR}"
 
+# See entrypoint.sh: persist CLI identity on the Render disk so publish matches DB owner.
+SPACETIMEDB_XDG_CONFIG_HOME="${SPACETIMEDB_XDG_CONFIG_HOME:-/var/data/.config}"
+export XDG_CONFIG_HOME="${SPACETIMEDB_XDG_CONFIG_HOME}"
+mkdir -p "${XDG_CONFIG_HOME}"
+
 echo "Starting SpacetimeDB API on ${SPACETIMEDB_LISTEN_ADDR}"
 spacetime start \
   --listen-addr "${SPACETIMEDB_LISTEN_ADDR}" \
