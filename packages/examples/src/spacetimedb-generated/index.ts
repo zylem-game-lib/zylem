@@ -34,12 +34,22 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import ClaimAiHostReducer from "./claim_ai_host_reducer";
+import DamageEnemyReducer from "./damage_enemy_reducer";
+import DamagePlayerReducer from "./damage_player_reducer";
+import DespawnEnemyReducer from "./despawn_enemy_reducer";
 import RegisterPlayerReducer from "./register_player_reducer";
+import RespawnPlayerReducer from "./respawn_player_reducer";
+import SetEnemyTransformReducer from "./set_enemy_transform_reducer";
 import SetEntityTransformReducer from "./set_entity_transform_reducer";
+import SetPlayerCharacterClassReducer from "./set_player_character_class_reducer";
+import SpawnEnemyReducer from "./spawn_enemy_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import AiHostRow from "./ai_host_table";
+import EnemyRow from "./enemy_table";
 import EntityTransformRow from "./entity_transform_table";
 import PlayerRow from "./player_table";
 
@@ -47,6 +57,32 @@ import PlayerRow from "./player_table";
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  ai_host: __table({
+    name: 'ai_host',
+    indexes: [
+      { accessor: 'id', name: 'ai_host_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'ai_host_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, AiHostRow),
+  enemy: __table({
+    name: 'enemy',
+    indexes: [
+      { accessor: 'enemy_id', name: 'enemy_enemy_id_idx_btree', algorithm: 'btree', columns: [
+        'enemyId',
+      ] },
+      { accessor: 'entity_id', name: 'enemy_entity_id_idx_btree', algorithm: 'btree', columns: [
+        'entityId',
+      ] },
+    ],
+    constraints: [
+      { name: 'enemy_enemy_id_key', constraint: 'unique', columns: ['enemyId'] },
+      { name: 'enemy_entity_id_key', constraint: 'unique', columns: ['entityId'] },
+    ],
+  }, EnemyRow),
   entity_transform: __table({
     name: 'entity_transform',
     indexes: [
@@ -81,8 +117,16 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("claim_ai_host", ClaimAiHostReducer),
+  __reducerSchema("damage_enemy", DamageEnemyReducer),
+  __reducerSchema("damage_player", DamagePlayerReducer),
+  __reducerSchema("despawn_enemy", DespawnEnemyReducer),
   __reducerSchema("register_player", RegisterPlayerReducer),
+  __reducerSchema("respawn_player", RespawnPlayerReducer),
+  __reducerSchema("set_enemy_transform", SetEnemyTransformReducer),
   __reducerSchema("set_entity_transform", SetEntityTransformReducer),
+  __reducerSchema("set_player_character_class", SetPlayerCharacterClassReducer),
+  __reducerSchema("spawn_enemy", SpawnEnemyReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

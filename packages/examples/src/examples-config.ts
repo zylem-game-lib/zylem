@@ -80,6 +80,7 @@ const PREDEFINED_ORDER = {
 		'00-screen-wrap',
 		'00-third-person-test',
 		'00-four-characters-plane',
+		'00-arena',
 		'00-zoo',
 		'18-baileys-world',
 	],

@@ -41,6 +41,12 @@ export type StageConfigLike = Partial<{
 	runtimeAdapter: StageRuntimeAdapter;
 	/** Binds stage debug policy into wasm runtime adapters (see {@link RuntimeDebugBinding}). */
 	runtimeDebugBinding?: RuntimeDebugBinding;
+	/**
+	 * When `false`, the engine's built-in ambient + directional lights are
+	 * suppressed so the stage can be lit entirely via `createLight(...)`
+	 * entities. Defaults to `true`.
+	 */
+	defaultLighting: boolean;
 }>;
 
 /**
@@ -66,6 +72,8 @@ export class StageConfig {
 		public runtimeAdapter: StageRuntimeAdapter | undefined = undefined,
 		/** Optional debug signals for wasm runtime adapters. */
 		public runtimeDebugBinding: RuntimeDebugBinding | undefined = undefined,
+		/** Whether the built-in ambient + directional lights are created. */
+		public defaultLighting: boolean = true,
 	) { }
 }
 
@@ -89,6 +97,7 @@ export function createDefaultStageConfig(): StageConfig {
 		{},
 		undefined,
 		undefined,
+		true,
 	);
 }
 
@@ -145,6 +154,7 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		(config as any).assetLoaders ?? defaults.assetLoaders,
 		(config as any).runtimeAdapter ?? defaults.runtimeAdapter,
 		(config as any).runtimeDebugBinding ?? defaults.runtimeDebugBinding,
+		(config as any).defaultLighting ?? defaults.defaultLighting,
 	);
 
 	// Backward compat: first camera is the legacy `camera` field

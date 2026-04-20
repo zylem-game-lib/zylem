@@ -22,6 +22,7 @@ export const initialStageState = {
 	physicsRate: 60,
 	usePhysicsWorker: false,
 	physicsWorkerUrl: undefined as URL | string | undefined,
+	defaultLighting: true,
 	entities: [] as GameEntityInterface[],
 };
 

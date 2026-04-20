@@ -11,3 +11,13 @@ export { createPyramid } from '../lib/entities/pyramid';
 export { createCylinder } from '../lib/entities/cylinder';
 export { createPill } from '../lib/entities/pill';
 export { createParticleSystem, ZylemParticleSystem } from '../lib/entities/particle-system';
+export { createLight, ZylemLight, LIGHT_TYPE } from '../lib/entities/light';
+export type {
+	ZylemLightOptions,
+	AmbientLightOptions,
+	HemisphereLightOptions,
+	DirectionalLightOptions,
+	PointLightOptions,
+	SpotLightOptions,
+	LightShadowOptions,
+} from '../lib/entities/light';

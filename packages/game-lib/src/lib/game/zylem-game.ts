@@ -63,6 +63,13 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	gameCanvas: GameCanvas | null = null;
 	private animationFrameId: number | null = null;
 	private isDisposed = false;
+	/**
+	 * True once `start()` has been invoked for this game's initial stage.
+	 * Used by `loadStage` to decide whether to drive the stage's `_setup`
+	 * lifecycle directly (for subsequent stages loaded via `nextStage`
+	 * / `loadStage`) or defer to `start()` (for the very first stage).
+	 */
+	private hasStarted = false;
 	private debugDelegate: GameDebugDelegate | null = null;
 	private loadingDelegate: GameLoadingDelegate = new GameLoadingDelegate();
 	private rendererObserver: GameRendererObserver = new GameRendererObserver();
@@ -187,6 +194,23 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		// Wire callback so runtime changes to stage input config take effect immediately
 		stage.onInputConfigChanged = () => this.applyInputConfig(stage);
 
+		// For stages loaded AFTER `start()` has already run (e.g. via
+		// `game.nextStage()` or a direct `loadStage` call), drive the
+		// stage's `_setup` lifecycle here. Without this, only the initial
+		// stage ever got `StageDebugDelegate`, `onSetup` callbacks, etc.
+		// The initial stage is still routed through `start()` unchanged.
+		if (this.hasStarted && stage.wrappedStage && !stage.wrappedStage.hasSetup) {
+			const params = this.params();
+			const setupParams = { ...this.stageSetupParams };
+			setupParams.inputs = params.inputs;
+			setupParams.globals = params.globals;
+			setupParams.camera = params.camera;
+			setupParams.stage = params.stage;
+			setupParams.game = params.game;
+			setupParams.me = stage.wrappedStage;
+			stage.start(setupParams);
+		}
+
 		// Emit state dispatch after stage is loaded so editor receives initial config
 		this.emitStateDispatch('@stage:loaded');
 	}
@@ -291,6 +315,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		if (this.customSetup) {
 			this.customSetup(params);
 		}
+		this.hasStarted = true;
 		this.loop(0);
 	}
 

@@ -1,0 +1,139 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(
+    in srgb,
+    var(--zylem-color-background) 82%,
+    transparent
+  );
+  backdrop-filter: blur(6px);
+}
+
+.backdrop {
+  position: relative;
+  width: min(960px, 100%);
+  aspect-ratio: 3 / 2;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  border-radius: 0.75rem;
+  border: 1px solid
+    color-mix(in srgb, var(--zylem-color-border) 70%, transparent);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.buttonRow {
+  position: absolute;
+  inset: 0 0 9% 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  top: 74px;
+}
+
+.charButton {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0.75rem;
+  background: transparent;
+  border: 2px solid color-mix(in srgb, #ffffff 35%, transparent);
+  border-radius: 0.5rem;
+  margin: 0.4rem;
+  cursor: pointer;
+  color: #f5f5f5;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    border-color 120ms ease-out,
+    box-shadow 120ms ease-out,
+    transform 120ms ease-out;
+}
+
+.charButton:hover {
+  border-color: color-mix(in srgb, #ffffff 70%, transparent);
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.08);
+}
+
+.charButton:active {
+  transform: translateY(1px);
+}
+
+.charButtonActive {
+  border-color: #ffd54a;
+  box-shadow:
+    0 0 0 2px rgba(255, 213, 74, 0.25),
+    inset 0 0 28px rgba(255, 213, 74, 0.18);
+}
+
+.charLabel {
+  font-size: 0.9rem;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+}
+
+.controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.55) 60%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.input {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid
+    color-mix(in srgb, var(--zylem-color-border) 85%, transparent);
+  background: rgba(0, 0, 0, 0.55);
+  color: #f5f5f5;
+  font-size: 0.95rem;
+}
+
+.input:focus {
+  outline: 2px solid
+    color-mix(in srgb, var(--zylem-color-primary) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.input::placeholder {
+  color: rgba(245, 245, 245, 0.6);
+}
+
+.enter {
+  padding: 0.55rem 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: var(--zylem-color-background);
+  background: var(--zylem-color-primary);
+}
+
+.enter:hover {
+  filter: brightness(1.05);
+}
+
+.enter:active {
+  transform: translateY(1px);
+}

@@ -16,4 +16,10 @@ export default __t.row({
   colorU32: __t.u32().name("color_u_32"),
   entityId: __t.u64().name("entity_id"),
   ownerIdentity: __t.identity().name("owner_identity"),
+  characterClass: __t.string().name("character_class"),
+  hp: __t.u32(),
+  maxHp: __t.u32().name("max_hp"),
+  spawnX: __t.f32().name("spawn_x"),
+  spawnY: __t.f32().name("spawn_y"),
+  spawnZ: __t.f32().name("spawn_z"),
 });

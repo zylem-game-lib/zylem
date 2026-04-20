@@ -851,40 +851,63 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 			}
 
 			const mesh = child as Mesh;
-			if (materialOptions.color) {
-				const newMaterial = new MeshStandardMaterial({
-					color: materialOptions.color,
-					emissiveIntensity: 0.5,
-					lightMapIntensity: 0.5,
-					fog: true,
-					opacity: materialOptions.opacity ?? 1,
-					transparent: materialOptions.opacity !== undefined && materialOptions.opacity < 1,
-				});
-				mesh.castShadow = true;
-				mesh.receiveShadow = true;
-				mesh.material = newMaterial;
-				return;
-			}
-
-			if (materialOptions.opacity === undefined) {
-				return;
-			}
-
-			const applyOpacity = (material: Material): Material => {
-				const clonedMaterial = material.clone();
-				if ('opacity' in clonedMaterial && 'transparent' in clonedMaterial) {
-					const transparentMaterial = clonedMaterial as TransparentMaterial;
-					transparentMaterial.opacity = materialOptions.opacity!;
-					transparentMaterial.transparent = materialOptions.opacity! < 1;
-					transparentMaterial.needsUpdate = true;
-				}
-				return clonedMaterial;
-			};
 
 			mesh.material = Array.isArray(mesh.material)
-				? mesh.material.map(applyOpacity)
-				: applyOpacity(mesh.material);
+				? mesh.material.map((m) => this.tintMaterial(m, materialOptions))
+				: this.tintMaterial(mesh.material, materialOptions);
+
+			if (materialOptions.color) {
+				mesh.castShadow = true;
+				mesh.receiveShadow = true;
+			}
 		});
+	}
+
+	/**
+	 * Produce a cloned material with the requested color/opacity applied.
+	 *
+	 * Cloning preserves any textures (`map`, `normalMap`, `roughnessMap`, …)
+	 * that came with the loaded model — colour acts as a multiplicative tint on
+	 * top of them, matching standard PBR behaviour. We fall back to a fresh
+	 * `MeshStandardMaterial` only when the source material has no `.color`
+	 * field (e.g. custom `ShaderMaterial`).
+	 */
+	private tintMaterial(
+		source: Material,
+		materialOptions: MaterialOptions,
+	): Material {
+		const hasColorField = 'color' in source;
+		const wantsColor = Boolean(materialOptions.color);
+		const wantsOpacity = materialOptions.opacity !== undefined;
+
+		if (!wantsColor && !wantsOpacity) {
+			return source;
+		}
+
+		if (wantsColor && !hasColorField) {
+			const replacement = new MeshStandardMaterial({
+				color: materialOptions.color!,
+				emissiveIntensity: 0.5,
+				lightMapIntensity: 0.5,
+				fog: true,
+				opacity: materialOptions.opacity ?? 1,
+				transparent: wantsOpacity && materialOptions.opacity! < 1,
+			});
+			return replacement;
+		}
+
+		const cloned = source.clone();
+		if (wantsColor && 'color' in cloned) {
+			(cloned as unknown as { color: { copy: (c: unknown) => void } }).color
+				.copy(materialOptions.color!);
+		}
+		if (wantsOpacity && 'opacity' in cloned && 'transparent' in cloned) {
+			const transparentMaterial = cloned as TransparentMaterial;
+			transparentMaterial.opacity = materialOptions.opacity!;
+			transparentMaterial.transparent = materialOptions.opacity! < 1;
+		}
+		(cloned as TransparentMaterial).needsUpdate = true;
+		return cloned;
 	}
 }
 

@@ -10,6 +10,25 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+export const AiHost = __t.object("AiHost", {
+  id: __t.u8(),
+  identity: __t.identity(),
+});
+export type AiHost = __Infer<typeof AiHost>;
+
+export const Enemy = __t.object("Enemy", {
+  enemyId: __t.u64(),
+  entityId: __t.u64(),
+  kind: __t.string(),
+  hp: __t.u32(),
+  maxHp: __t.u32(),
+  alive: __t.bool(),
+  anchorX: __t.f32(),
+  anchorY: __t.f32(),
+  anchorZ: __t.f32(),
+});
+export type Enemy = __Infer<typeof Enemy>;
+
 export const EntityTransform = __t.object("EntityTransform", {
   entityId: __t.u64(),
   posX: __t.f32(),
@@ -33,6 +52,12 @@ export const Player = __t.object("Player", {
   colorU32: __t.u32(),
   entityId: __t.u64(),
   ownerIdentity: __t.identity(),
+  characterClass: __t.string(),
+  hp: __t.u32(),
+  maxHp: __t.u32(),
+  spawnX: __t.f32(),
+  spawnY: __t.f32(),
+  spawnZ: __t.f32(),
 });
 export type Player = __Infer<typeof Player>;
 

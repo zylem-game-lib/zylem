@@ -157,9 +157,10 @@ export class ZylemCamera {
 			// Setup render pass for WebGL
 			this._rendererManager.setupRenderPass(scene, this.camera);
 
-			// Start render loop
-			this._rendererManager.startRenderLoop((delta) => {
-				this.update(delta);
+			// Start render loop — render-only. Camera `update(delta)` is now
+			// driven from `ZylemStage._update` after the transform sync so
+			// follow-cameras don't read a stale `group.position`.
+			this._rendererManager.startRenderLoop(() => {
 				if (this._rendererManager && this.sceneRef) {
 					this._rendererManager.render(this.sceneRef, this.camera);
 				}
