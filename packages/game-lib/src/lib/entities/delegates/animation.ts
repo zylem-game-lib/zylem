@@ -153,6 +153,18 @@ export class AnimationDelegate {
 		const action = this._actions[key];
 		if (!action) return;
 
+		// Two keys pointing at the same AnimationClip share a single
+		// mixer-cached AnimationAction. Resetting/cross-fading it into
+		// itself restarts the clip from time 0 and re-applies any baked
+		// root-bone Y track, causing a visible "sink into ground" snap on
+		// every switch. Treat these transitions as a no-op and just
+		// rename the current key so future `key === _currentKey` checks
+		// stay consistent.
+		if (action === this._currentAction) {
+			this._currentKey = key;
+			return;
+		}
+
 		this._queuedKey = fadeToKey || null;
 		this._fadeDuration = fadeDuration;
 

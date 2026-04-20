@@ -119,6 +119,16 @@ export { createPyramid } from '../lib/entities/pyramid';
 export { createCylinder } from '../lib/entities/cylinder';
 export { createPill } from '../lib/entities/pill';
 export { createParticleSystem, ZylemParticleSystem } from '../lib/entities/particle-system';
+export { createLight, ZylemLight, LIGHT_TYPE } from '../lib/entities/light';
+export type {
+	ZylemLightOptions,
+	AmbientLightOptions,
+	HemisphereLightOptions,
+	DirectionalLightOptions,
+	PointLightOptions,
+	SpotLightOptions,
+	LightShadowOptions,
+} from '../lib/entities/light';
 export { createEntityFactory, type TemplateFactory } from '../lib/entities/entity-factory';
 export { ZylemBox } from '../lib/entities/box';
 export { create } from '../lib/entities/entity';
@@ -210,6 +220,10 @@ export {
 	useVirtualControls,
 	mergeInputConfigs,
 } from '../lib/input/input-presets';
+
+// Input types — exported so gameplay-side controllers can strong-type
+// the `inputs` payload handed to `entity.onUpdate(({ inputs }) => ...)`.
+export type { Inputs, InputPlayer, InputGamepad, ButtonState, AnalogState } from '../lib/input/input';
 
 // State management - standalone functions
 export { setGlobal, getGlobal, createGlobal, onGlobalChange, onGlobalChanges, getGlobals, clearGlobalSubscriptions } from '../lib/game/game-state';

@@ -12,6 +12,7 @@ import { ZylemPyramid, PYRAMID_TYPE } from '../entities/pyramid';
 import { ZylemCylinder, CYLINDER_TYPE } from '../entities/cylinder';
 import { ZylemPill, PILL_TYPE } from '../entities/pill';
 import { ZylemParticleSystem, PARTICLE_SYSTEM_TYPE } from '../entities/particle-system';
+import { ZylemLight, LIGHT_TYPE } from '../entities/light';
 import { BaseNode } from '../core/base-node';
 
 /**
@@ -33,6 +34,7 @@ export interface EntityTypeMap {
 	[CYLINDER_TYPE]: ZylemCylinder;
 	[PILL_TYPE]: ZylemPill;
 	[PARTICLE_SYSTEM_TYPE]: ZylemParticleSystem;
+	[LIGHT_TYPE]: ZylemLight;
 }
 
 /**
@@ -59,4 +61,5 @@ export {
 	CYLINDER_TYPE,
 	PILL_TYPE,
 	PARTICLE_SYSTEM_TYPE,
+	LIGHT_TYPE,
 };

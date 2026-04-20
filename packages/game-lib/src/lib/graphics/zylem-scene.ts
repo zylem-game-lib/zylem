@@ -30,6 +30,13 @@ interface SceneState {
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
 	backgroundShader?: ZylemShader | null;
+	/**
+	 * When `false`, skip the engine's built-in ambient + directional lights so
+	 * the caller can configure the scene's lighting entirely via
+	 * `createLight(...)` entities. Defaults to `true` for backward
+	 * compatibility with existing demos.
+	 */
+	defaultLighting?: boolean;
 }
 
 export class ZylemScene implements Entity<ZylemScene> {
@@ -70,7 +77,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 		this.scene = scene;
 		this.zylemCamera = camera;
 
-		this.setupLighting(scene);
+		if (state.defaultLighting !== false) {
+			this.setupLighting(scene);
+		}
 		if (debugState.enabled) {
 			this.debugScene();
 		}

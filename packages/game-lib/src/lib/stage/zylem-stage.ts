@@ -60,6 +60,12 @@ export interface ZylemStageConfig {
 	runtimeAdapter?: StageRuntimeAdapter;
 	/** Optional debug binding for wasm runtime adapters (heat tint, etc.). */
 	runtimeDebugBinding?: RuntimeDebugBinding;
+	/**
+	 * When `false`, suppress the engine's built-in ambient + directional
+	 * lights so the stage owns its lighting rig entirely (usually via
+	 * `createLight(...)` entities). Defaults to `true`.
+	 */
+	defaultLighting: boolean;
 	stageRef?: Stage;
 }
 
@@ -155,6 +161,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			assetLoaders: parsed.config.assetLoaders,
 			runtimeAdapter: parsed.config.runtimeAdapter,
 			runtimeDebugBinding: parsed.config.runtimeDebugBinding,
+			defaultLighting: parsed.config.defaultLighting,
 			entities: [],
 		};
 
@@ -222,8 +229,11 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			if (primaryCam) {
 				this.rendererManager.setupRenderPass(this.scene.scene, primaryCam.camera);
 			}
-			this.rendererManager.startRenderLoop((delta) => {
-				this.cameraManagerRef?.update(delta);
+			// Camera update runs inside `_update` (after transformSystem) so it
+			// always reads a freshly-synced `group.position`. The renderer loop
+			// is now render-only to avoid a two-rAF race with the physics →
+			// transform-sync pipeline that caused follow-cam jitter.
+			this.rendererManager.startRenderLoop(() => {
 				this.cameraManagerRef?.render(this.scene!.scene);
 			});
 		} else {
@@ -268,7 +278,20 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.loadingDelegate.emitComplete();
 	}
 
+	/**
+	 * Idempotency guard for `_setup`. The initial stage is currently set up
+	 * twice — once when `ZylemGame.loadStage` runs for non-initial stages
+	 * (so every stage gets a `StageDebugDelegate`, stage.onSetup callbacks,
+	 * etc.), and once from `ZylemGame.start()` for the very first stage.
+	 * Keeping a flag here lets both call sites invoke `stage.start(...)`
+	 * safely; the second call is a no-op.
+	 */
+	public hasSetup: boolean = false;
+
 	protected _setup(params: SetupContext<ZylemStage>): void {
+		if (this.hasSetup) {
+			return;
+		}
 		if (!this.scene || !this.world) {
 			this.logMissingEntities();
 			return;
@@ -276,6 +299,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		// Debug delegate is self-managing — it subscribes to debugState internally
 		// and activates/deactivates visuals and camera debug automatically.
 		this.debugDelegate = new StageDebugDelegate(this);
+		this.hasSetup = true;
 	}
 
 	protected _update(params: UpdateContext<ZylemStage>): void {
@@ -326,6 +350,16 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 		// Sync instanced mesh transforms
 		this.instanceManager?.update();
+
+		// Update cameras here — strictly AFTER transformSystem writes
+		// `group.position` — so follow-cameras read this frame's synced pose,
+		// not the previous frame's. The renderer loop is render-only.
+		if (this.cameraManagerRef) {
+			this.cameraManagerRef.update(delta);
+		} else {
+			this.cameraRef?.update(delta);
+		}
+
 		this.scene.update({ delta });
 		this.scene.updateSkybox(delta);
 	}

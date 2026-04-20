@@ -15,9 +15,44 @@ type ZylemPlaneOptions = GameEntityOptions & {
   tile?: Vec2Input;
   repeat?: Vec2Input;
   texture?: TexturePath;
+  /**
+   * Number of subdivisions per axis. Used for both X and Z unless
+   * `subdivisionsX` / `subdivisionsZ` are set, or a `heightMap` /
+   * `heightMap2D` is provided (in which case subdivisions are derived
+   * from the height data).
+   */
   subdivisions?: number;
+  /** Subdivisions along the X axis (overrides `subdivisions`). */
+  subdivisionsX?: number;
+  /** Subdivisions along the Z axis (overrides `subdivisions`). */
+  subdivisionsZ?: number;
+  /**
+   * If true and no explicit heightmap is provided, each vertex gets a
+   * random height in `[0, 4 * heightScale]`.
+   */
   randomizeHeight?: boolean;
+  /**
+   * Absolute heights along the X axis, one value per vertex-column
+   * (constant along Z). `length` defines the X vertex count, so
+   * `subdivisionsX` becomes `length - 1`. Values are absolute world-space
+   * heights above/below the plane (multiplied by `heightScale`, default 1).
+   *
+   * Example: `heightMap: [10, 1, -1, 10]` produces 4 X-columns with those
+   * absolute heights, forming ridges parallel to the Z axis.
+   *
+   * Takes precedence over `randomizeHeight`.
+   */
   heightMap?: number[];
+  /**
+   * Absolute heights as a 2D grid, indexed `heightMap2D[z][x]`. The outer
+   * array's length defines the Z vertex count and each inner array's
+   * length defines the X vertex count (all rows must share the same X
+   * length). Values are absolute (multiplied by `heightScale`).
+   *
+   * Takes precedence over `heightMap` and `randomizeHeight`.
+   */
+  heightMap2D?: number[][];
+  /** Multiplier applied to heightmap / random heights (default 1). */
   heightScale?: number;
 };
 
@@ -37,18 +72,43 @@ const planeDefaults: ZylemPlaneOptions = {
   heightScale: 1,
 };
 
+/**
+ * Resolve the X/Z subdivisions for a plane, honouring explicit axis
+ * options, then any supplied heightmap's shape, then the scalar
+ * `subdivisions`, finally falling back to `DEFAULT_SUBDIVISIONS`.
+ */
+function resolvePlaneSubdivisions(
+  options: ZylemPlaneOptions,
+): { subdivisionsX: number; subdivisionsZ: number } {
+  const fallback = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
+  const hm2D = options.heightMap2D;
+  const hm1D = options.heightMap;
+
+  let subdivisionsX = options.subdivisionsX ?? fallback;
+  let subdivisionsZ = options.subdivisionsZ ?? fallback;
+
+  if (hm2D && hm2D.length > 0 && hm2D[0]?.length > 0) {
+    subdivisionsZ = hm2D.length - 1;
+    subdivisionsX = hm2D[0].length - 1;
+  } else if (hm1D && hm1D.length > 0) {
+    subdivisionsX = hm1D.length - 1;
+  }
+
+  return { subdivisionsX, subdivisionsZ };
+}
+
 export class PlaneCollisionBuilder extends EntityCollisionBuilder {
   collider(options: ZylemPlaneOptions): ColliderDesc {
     const tile = toThreeVector2(options.tile, VEC2_ONE);
-    const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
+    const { subdivisionsX, subdivisionsZ } = resolvePlaneSubdivisions(options);
     const size = new Vector3(tile.x, 1, tile.y);
 
     const heightData = ((options._builders
       ?.meshBuilder as unknown) as PlaneMeshBuilder)?.heightData;
     const scale = new Vector3(size.x, 1, size.z);
     let colliderDesc = ColliderDesc.heightfield(
-      subdivisions,
-      subdivisions,
+      subdivisionsX,
+      subdivisionsZ,
       heightData,
       scale,
     );
@@ -59,79 +119,91 @@ export class PlaneCollisionBuilder extends EntityCollisionBuilder {
 
 export class PlaneMeshBuilder extends EntityMeshBuilder {
   heightData: Float32Array = new Float32Array();
-  columnsRows = new Map();
-  private subdivisions: number = DEFAULT_SUBDIVISIONS;
+  columnsRows = new Map<number, Map<number, number>>();
+  private subdivisionsX: number = DEFAULT_SUBDIVISIONS;
+  private subdivisionsZ: number = DEFAULT_SUBDIVISIONS;
 
   build(options: ZylemPlaneOptions): XZPlaneGeometry {
     const tile = toThreeVector2(options.tile, VEC2_ONE);
-    const subdivisions = options.subdivisions ?? DEFAULT_SUBDIVISIONS;
-    this.subdivisions = subdivisions;
+    const { subdivisionsX, subdivisionsZ } = resolvePlaneSubdivisions(options);
+    this.subdivisionsX = subdivisionsX;
+    this.subdivisionsZ = subdivisionsZ;
+
     const size = new Vector3(tile.x, 1, tile.y);
     const heightScale = options.heightScale ?? 1;
 
     const geometry = new XZPlaneGeometry(
       size.x,
       size.z,
-      subdivisions,
-      subdivisions,
+      subdivisionsX,
+      subdivisionsZ,
     );
     const vertexGeometry = new PlaneGeometry(
       size.x,
       size.z,
-      subdivisions,
-      subdivisions,
+      subdivisionsX,
+      subdivisionsZ,
     );
-    const dx = size.x / subdivisions;
-    const dy = size.z / subdivisions;
+    const dx = subdivisionsX > 0 ? size.x / subdivisionsX : 1;
+    const dz = subdivisionsZ > 0 ? size.z / subdivisionsZ : 1;
     const originalVertices = geometry.attributes.position.array;
     const vertices = vertexGeometry.attributes.position.array;
-    const columsRows = new Map();
+    const columsRows = new Map<number, Map<number, number>>();
 
-    // Get height data source
-    const heightMapData = options.heightMap;
+    const hm2D = options.heightMap2D;
+    const hm1D = options.heightMap;
     const useRandomHeight = options.randomizeHeight ?? false;
 
+    const clampIndex = (value: number, max: number): number =>
+      value < 0 ? 0 : value > max ? max : value;
+
     for (let i = 0; i < vertices.length; i += 3) {
-      const vertexIndex = i / 3;
-      let row = Math.floor(Math.abs((vertices as any)[i] + size.x / 2) / dx);
-      let column = Math.floor(
-        Math.abs((vertices as any)[i + 1] - size.z / 2) / dy,
+      const vx = (vertices as any)[i];
+      // `PlaneGeometry` lies flat on the XY plane before rotation; its Y
+      // axis maps to world-Z here, matching the current sign convention
+      // used by the collider generation below.
+      const vyAsZ = (vertices as any)[i + 1];
+      const xIdx = clampIndex(Math.round((vx + size.x / 2) / dx), subdivisionsX);
+      const zIdx = clampIndex(
+        Math.round((size.z / 2 - vyAsZ) / dz),
+        subdivisionsZ,
       );
 
-      let height = 0;
-      if (heightMapData && heightMapData.length > 0) {
-        // Loop the height map data if it doesn't cover all vertices
-        const heightIndex = vertexIndex % heightMapData.length;
-        height = heightMapData[heightIndex] * heightScale;
+      let rawHeight = 0;
+      if (hm2D) {
+        const row = hm2D[zIdx];
+        if (row) rawHeight = row[xIdx] ?? 0;
+      } else if (hm1D && hm1D.length > 0) {
+        rawHeight = hm1D[xIdx] ?? 0;
       } else if (useRandomHeight) {
-        height = Math.random() * 4 * heightScale;
+        rawHeight = Math.random() * 4;
       }
+
+      const height = rawHeight * heightScale;
 
       (vertices as any)[i + 2] = height;
       originalVertices[i + 1] = height;
-      if (!columsRows.get(column)) {
-        columsRows.set(column, new Map());
+      if (!columsRows.get(zIdx)) {
+        columsRows.set(zIdx, new Map());
       }
-      columsRows.get(column).set(row, height);
+      columsRows.get(zIdx)!.set(xIdx, height);
     }
     this.columnsRows = columsRows;
     return geometry;
   }
 
   postBuild(): void {
-    const heights = [];
-    for (let i = 0; i <= this.subdivisions; ++i) {
-      for (let j = 0; j <= this.subdivisions; ++j) {
-        const row = this.columnsRows.get(j);
-        if (!row) {
-          heights.push(0);
-          continue;
-        }
-        const data = row.get(i);
-        heights.push(data ?? 0);
+    const heights: number[] = [];
+    // Flatten in X-major order (outer X, inner Z) to match the Rapier
+    // heightfield layout used by `PlaneCollisionBuilder`, which passes
+    // `(nrows=subdivisionsX, ncols=subdivisionsZ, ...)`.
+    for (let x = 0; x <= this.subdivisionsX; ++x) {
+      for (let z = 0; z <= this.subdivisionsZ; ++z) {
+        const row = this.columnsRows.get(z);
+        heights.push(row?.get(x) ?? 0);
       }
     }
-    this.heightData = new Float32Array((heights as unknown) as number[]);
+    this.heightData = new Float32Array(heights);
   }
 }
 

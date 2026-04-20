@@ -143,7 +143,10 @@ export class Stage {
 	}
 
 	start(params: SetupContext<ZylemStage>) {
-		this.wrappedStage?.nodeSetup(params);
+		if (!this.wrappedStage || this.wrappedStage.hasSetup) {
+			return;
+		}
+		this.wrappedStage.nodeSetup(params);
 	}
 
 	// Fluent API for adding lifecycle callbacks
