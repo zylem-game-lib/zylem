@@ -17,6 +17,24 @@ import type {
 } from './components';
 
 /**
+ * Duration of the jump-cut velocity ramp in seconds.
+ * Instead of halving velocity.y in a single frame (which produces a visible
+ * camera pop), we lerp toward the cut velocity across roughly 3 physics steps
+ * at 60 Hz. Short enough to still feel responsive, long enough to be smooth.
+ */
+const JUMP_CUT_RAMP_DURATION = 0.05;
+
+/**
+ * Hysteresis window for the grounded state (seconds).
+ *
+ * When the ground probe misses for a frame but we were grounded the previous
+ * frame, remain grounded for this brief window before flipping to airborne.
+ * Prevents rapid grounded/airborne toggling at platform edges where a single
+ * corner ray may miss intermittently, and absorbs sub-step probe noise.
+ */
+const GROUNDED_GRACE_WINDOW = 0.06;
+
+/**
  * Entity with platformer components
  */
 export interface Platformer3DEntity {
@@ -45,36 +63,31 @@ export class Platformer3DBehavior {
 	}
 
 	/**
-	 * Apply horizontal movement based on input
+	 * Apply horizontal movement based on input.
+	 *
+	 * Only writes X/Z axes — Y is left untouched so Rapier's contact resolution
+	 * can damp vertical motion correctly while grounded. Jump and gravity are
+	 * the sole writers of Y velocity (see handleJump / applyGravity).
 	 */
 	private applyMovement(entity: Platformer3DEntity, delta: number): void {
 		const input = entity.$platformer;
 		const movement = entity.platformer;
 		const state = entity.platformerState;
 
-		// Determine current speed
 		const speed = input.run ? movement.runSpeed : movement.walkSpeed;
 		state.currentSpeed = speed;
 
-		// Calculate horizontal movement
 		const moveX = input.moveX * speed;
 		const moveZ = input.moveZ * speed;
 
-		// Get current Y velocity from physics body (preserve vertical momentum)
-		const currentVel = entity.body.linvel();
-
-		// Set complete velocity - horizontal from input, vertical preserved
 		entity.transformStore.velocity.x = moveX;
-		entity.transformStore.velocity.y = currentVel.y;
 		entity.transformStore.velocity.z = moveZ;
-		entity.transformStore.dirty.velocity = true;
+		entity.transformStore.dirty.velocityX = true;
+		entity.transformStore.dirty.velocityZ = true;
 	}
 
 	/**
-	 * Handle jump logic with multi-jump support
-	 */
-	/**
-	 * Handle jump logic with multi-jump, coyote time, and buffering
+	 * Handle jump logic with multi-jump, coyote time, buffering, and jump-cut ramp.
 	 */
 	private handleJump(entity: Platformer3DEntity, delta: number): void {
 		const input = entity.$platformer;
@@ -109,14 +122,25 @@ export class Platformer3DBehavior {
 		}
 
 		// 2. Variable Jump Height (Jump Cut)
-		// Only apply jump cut if we've been jumping for a bit (prevents cutting multi-jump immediately)
-		const minTimeBeforeCut = 0.1; // 100ms minimum before cut can apply
+		// Only trigger a cut if we've been jumping for a bit (prevents cutting multi-jump immediately).
+		const minTimeBeforeCut = 0.1;
 		const canApplyCut = state.timeSinceJump >= minTimeBeforeCut;
 		if (!input.jump && state.jumping && !state.jumpCutApplied && canApplyCut) {
-			const velocity = entity.body.linvel();
-			entity.transformStore.velocity.y = velocity.y * movement.jumpCutMultiplier;
-			entity.transformStore.dirty.velocity = true;
 			state.jumpCutApplied = true;
+			state.jumpCutRampTimer = JUMP_CUT_RAMP_DURATION;
+		}
+
+		// 2a. Ramp velocity.y toward velocity.y * jumpCutMultiplier across the
+		// ramp window so the change isn't a single-frame discontinuity.
+		if (state.jumpCutRampTimer > 0) {
+			const velocity = entity.body.linvel();
+			if (velocity.y > 0) {
+				const stepT = Math.min(delta / state.jumpCutRampTimer, 1);
+				const targetY = velocity.y * movement.jumpCutMultiplier;
+				entity.transformStore.velocity.y = velocity.y + (targetY - velocity.y) * stepT;
+				entity.transformStore.dirty.velocityY = true;
+			}
+			state.jumpCutRampTimer = Math.max(0, state.jumpCutRampTimer - delta);
 		}
 
 		// Execute Jump (if buffered input exists)
@@ -152,35 +176,43 @@ export class Platformer3DBehavior {
 			state.jumping = true;
 			state.falling = false;
 			state.jumpCutApplied = false;
+			state.jumpCutRampTimer = 0;
+			state.groundedGraceTimer = 0;
 
-			// Apply jump force via transform store
+			// Apply jump force via transform store (Y-axis only)
 			entity.transformStore.velocity.y = movement.jumpForce;
-			entity.transformStore.dirty.velocity = true;
+			entity.transformStore.dirty.velocityY = true;
+
+			// Flag this frame so applyGravity skips exactly one gravity step
+			// (the jump impulse we just wrote is the authoritative Y velocity).
+			state.jumpedThisFrame = true;
 		}
 	}
 
 	/**
-	 * Apply gravity when not grounded
+	 * Apply gravity when not grounded.
+	 *
+	 * Skipped on the single frame immediately after a jump impulse is applied
+	 * (tracked via `state.jumpedThisFrame`) so gravity never overwrites a
+	 * just-applied jump velocity. The flag is cleared here regardless, so it
+	 * only suppresses exactly one gravity step — independent of frame rate.
 	 */
 	private applyGravity(entity: Platformer3DEntity, delta: number): void {
 		const movement = entity.platformer;
 		const state = entity.platformerState;
 
-		if (state.grounded) return;
-		
-		// Skip gravity on the same frame as a jump (prevents overwriting jump velocity)
-		// timeSinceJump is reset to 0 when we jump, so if it's very small, we just jumped
-		if (state.jumping && state.timeSinceJump < 0.01) {
+		if (state.jumpedThisFrame) {
+			state.jumpedThisFrame = false;
 			return;
 		}
 
-		// Get current velocity from physics body and add gravity
+		if (state.grounded) return;
+
 		const currentVel = entity.body.linvel();
 		const newYVelocity = currentVel.y - movement.gravity * delta;
 
-		// Update the Y velocity in transform store (applyMovement already set x/z and old y)
 		entity.transformStore.velocity.y = newYVelocity;
-		entity.transformStore.dirty.velocity = true;
+		entity.transformStore.dirty.velocityY = true;
 	}
 
 	/**
@@ -201,8 +233,12 @@ export class Platformer3DBehavior {
 		const isAirborne = state.jumping || state.falling;
 		
 		if (isAirborne) {
-			// Airborne: Must be FALLING (not jumping) with very low velocity to land
-			// This prevents false grounding at jump apex or during descent
+			// Airborne: Must be FALLING (not jumping) to land.
+			// The velocity threshold must be loose enough to capture the frame
+			// after Rapier's contact resolution has partially damped the fall
+			// (|velocity.y| can sit between 0.5 and 2.0 for a frame or two); too
+			// strict a threshold caused the character to hover for 1–2 frames
+			// post-impact, producing a visible camera hitch.
 			const probeOriginYOffset = 0.05 - getGroundAnchorOffsetY(entity);
 			const nearGround = this.groundProbe.detect(entity, {
 				rayLength: entity.platformer.groundRayLength,
@@ -211,9 +247,16 @@ export class Platformer3DBehavior {
 				scene: this.scene,
 				originYOffset: probeOriginYOffset,
 			});
-			const canLand = state.falling && !state.jumping; // Only land when falling, not jumping
-			const hasLanded = Math.abs(velocity.y) < 0.5; // Very strict threshold for landing
+			const canLand = state.falling && !state.jumping;
+			const hasLanded = velocity.y > -3.0;
 			isGrounded = nearGround && canLand && hasLanded;
+
+			// On the landing frame, snap residual Y velocity to 0 so the character
+			// doesn't keep drifting downward into the ground on the next step.
+			if (isGrounded && velocity.y < 0) {
+				entity.transformStore.velocity.y = 0;
+				entity.transformStore.dirty.velocityY = true;
+			}
 		} else {
 			// On ground (walking/idle): Normal raycast detection with lenient threshold
 			const probeOriginYOffset = 0.05 - getGroundAnchorOffsetY(entity);
@@ -226,6 +269,24 @@ export class Platformer3DBehavior {
 			});
 			const notFallingFast = velocity.y > -2.0; // Lenient - don't ground while falling fast
 			isGrounded = nearGround && notFallingFast;
+		}
+
+		// Hysteresis: if the probe just missed but we were grounded last frame,
+		// stay grounded for a short grace window (absorbs edge/ray flicker).
+		if (!isGrounded && wasGrounded) {
+			if (state.groundedGraceTimer <= 0) {
+				state.groundedGraceTimer = GROUNDED_GRACE_WINDOW;
+			}
+		}
+		if (state.groundedGraceTimer > 0) {
+			if (!isGrounded && wasGrounded && !isAirborne) {
+				isGrounded = true;
+				state.groundedGraceTimer = Math.max(0, state.groundedGraceTimer - delta);
+			} else {
+				// Real ground regained, or we truly left (airborne state active):
+				// end grace immediately.
+				state.groundedGraceTimer = 0;
+			}
 		}
 
 		state.grounded = isGrounded;
@@ -244,6 +305,7 @@ export class Platformer3DBehavior {
 			state.jumping = false;
 			state.falling = false;
 			state.jumpCutApplied = false;
+			state.jumpCutRampTimer = 0;
 		}
 
 		// 4. Falling Logic (negative Y velocity and not grounded)
@@ -258,7 +320,8 @@ export class Platformer3DBehavior {
 	}
 
 	/**
-	 * Update one platformer entity.
+	 * Update one platformer entity. Invoked per linked entity by the
+	 * Platformer3DBehaviorSystem adapter.
 	 */
 	updateEntity(entity: any, delta: number): void {
 		if (!entity.platformer || !entity.$platformer || !entity.platformerState) {
@@ -272,19 +335,6 @@ export class Platformer3DBehavior {
 		this.applyGravity(platformerEntity, delta);
 	}
 
-	/**
-	 * Update all platformer entities.
-	 */
-	update(delta: number): void {
-		if (!this.world?.collisionMap) return;
-		for (const [, entity] of this.world.collisionMap) {
-			this.updateEntity(entity, delta);
-		}
-	}
-
-	/**
-	 * Cleanup
-	 */
 	destroy(): void {
 		this.groundProbe.destroy();
 	}

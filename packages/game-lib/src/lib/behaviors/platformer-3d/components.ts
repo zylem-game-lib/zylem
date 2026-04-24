@@ -121,6 +121,12 @@ export interface Platformer3DStateComponent {
 	jumpReleasedSinceLastJump: boolean;
 	/** Time since current jump started (for multi-jump window) */
 	timeSinceJump: number;
+	/** True for the single frame on which a jump impulse was applied; prevents gravity from clobbering jump velocity. */
+	jumpedThisFrame: boolean;
+	/** Remaining seconds of jump-cut velocity ramp; while > 0, velocity.y lerps toward velocity.y * jumpCutMultiplier. */
+	jumpCutRampTimer: number;
+	/** Remaining seconds of grounded-hysteresis grace (keeps `grounded` true briefly after ground probe misses, to absorb edge/ray flicker). */
+	groundedGraceTimer: number;
 }
 
 export function createPlatformer3DStateComponent(): Platformer3DStateComponent {
@@ -142,5 +148,8 @@ export function createPlatformer3DStateComponent(): Platformer3DStateComponent {
 		jumpCutApplied: false,
 		jumpReleasedSinceLastJump: true,
 		timeSinceJump: 0,
+		jumpedThisFrame: false,
+		jumpCutRampTimer: 0,
+		groundedGraceTimer: 0,
 	};
 }
