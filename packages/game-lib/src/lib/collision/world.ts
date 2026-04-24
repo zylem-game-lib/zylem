@@ -251,8 +251,15 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			}
 		}
 
+		// Rotation lock applies to every controlled actor (including platformer
+		// entities that drive their body via setLinvel). The character-controller
+		// allocation below is opt-in per entity — platformer 3D does not use it,
+		// and allocating it for every actor was producing orphan Rapier resources.
 		if (entity.controlledRotation || entity instanceof ZylemActor) {
 			entity.body.lockRotations(true, true);
+		}
+
+		if (entity.useCharacterController) {
 			entity.characterController = this.world.createCharacterController(0.01);
 			entity.characterController.setMaxSlopeClimbAngle(45 * Math.PI / 180);
 			entity.characterController.setMinSlopeSlideAngle(30 * Math.PI / 180);
@@ -369,8 +376,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 			.filter(Boolean)
 			.map(serializeColliderDesc);
 
-		const needsCharCtrl = entity.controlledRotation || entity instanceof ZylemActor;
-		const charCtrl = needsCharCtrl ? serializeCharacterController() : undefined;
+		const charCtrl = entity.useCharacterController ? serializeCharacterController() : undefined;
 
 		const handle = this.proxy.addBody(entity.uuid, bodyDesc, colliderDescs, charCtrl);
 

@@ -22,6 +22,15 @@ export interface FirstPersonOptions {
 	initialPosition?: Vec3Input;
 	/** Fallback look-at point used to derive initial yaw/pitch when no target. */
 	initialLookAt?: Vec3Input;
+	/**
+	 * Vertical (eye-height) smoothing factor in 0..1, applied per 60Hz frame.
+	 * 1 = instant snap (no smoothing), lower = smoother. Hides physics
+	 * micro-jitter and Rapier sub-step Y corrections without adding perceptible
+	 * input lag. Smooths only Y; X/Z still snap to the target every frame so
+	 * horizontal aim is never laggy.
+	 * @default 1 (disabled)
+	 */
+	verticalSmoothing?: number;
 }
 
 interface Defaults {
@@ -31,6 +40,7 @@ interface Defaults {
 	lookAtLerpSpeed: number;
 	fovLerpSpeed: number;
 	targetKey: string;
+	verticalSmoothing: number;
 }
 
 const DEFAULTS: Defaults = {
@@ -40,6 +50,7 @@ const DEFAULTS: Defaults = {
 	lookAtLerpSpeed: 5,
 	fovLerpSpeed: 8,
 	targetKey: 'primary',
+	verticalSmoothing: 1,
 };
 
 /**
@@ -71,6 +82,9 @@ export class FirstPersonPerspective implements CameraPerspective {
 	private _lookAtLerpSpeed: number;
 	private _currentRotation = new Quaternion();
 	private _rotationInitialized = false;
+
+	// --- Vertical (Y) smoothing state ---
+	private _smoothedY: number | null = null;
 
 	constructor(options?: FirstPersonOptions) {
 		const { initialPosition, initialLookAt, ...rest } = options ?? {};
@@ -168,16 +182,34 @@ export class FirstPersonPerspective implements CameraPerspective {
 	private computePosition(ctx: CameraContext): Vector3 {
 		const target = ctx.targets[this.opts.targetKey];
 		if (target) {
-			return new Vector3(
-				target.position.x,
-				target.position.y + this.opts.eyeHeight,
-				target.position.z,
-			);
+			const rawY = target.position.y + this.opts.eyeHeight;
+			const smoothedY = this.smoothVertical(rawY, ctx.dt);
+			return new Vector3(target.position.x, smoothedY, target.position.z);
 		}
 		if (this.initialPosition) {
 			return this.initialPosition.clone();
 		}
 		return new Vector3(0, this.opts.eyeHeight, 0);
+	}
+
+	/**
+	 * Low-pass filter the eye Y so Rapier sub-step corrections and probe-driven
+	 * micro-bobs don't show up as visible head jitter. X/Z are left un-smoothed
+	 * so horizontal aim remains 1:1 with input.
+	 */
+	private smoothVertical(targetY: number, dt: number): number {
+		if (this.opts.verticalSmoothing >= 1) {
+			this._smoothedY = targetY;
+			return targetY;
+		}
+		if (this._smoothedY == null) {
+			this._smoothedY = targetY;
+			return targetY;
+		}
+		const damping = MathUtils.clamp(this.opts.verticalSmoothing, 0, 1);
+		const t = 1 - Math.pow(1 - damping, dt * 60);
+		this._smoothedY = MathUtils.lerp(this._smoothedY, targetY, t);
+		return this._smoothedY;
 	}
 
 	private computeRotation(eyePosition: Vector3, dt: number): Quaternion {

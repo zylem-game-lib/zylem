@@ -1,4 +1,4 @@
-import { Vector3 } from 'three';
+import { MathUtils, Vector3 } from 'three';
 import type { CameraBehavior, CameraContext, CameraPose } from '../types';
 import { clonePose } from '../smoothing';
 import { Vec3Input, VEC3_ZERO, toThreeVector3 } from '../../core/vector';
@@ -12,9 +12,9 @@ export interface FollowTargetOptions {
 	/** Position offset from the target. Default (0, 0, 0). */
 	offset?: Vec3Input;
 	/**
-	 * Per-frame interpolation factor (0-1). Controls how quickly the
-	 * pose converges on the target each frame.
-	 * 1 = instant snap, lower = smoother follow.
+	 * Interpolation factor in 0..1, applied per 60Hz frame.
+	 * 1 = instant snap, lower = smoother follow. The per-frame rate is scaled
+	 * by dt so tracking speed is identical across refresh rates (60/120/144Hz).
 	 * Default 0.1.
 	 */
 	lerpFactor?: number;
@@ -65,7 +65,9 @@ export function createFollowTarget(options?: FollowTargetOptions): CameraBehavio
 			if (!currentPos) {
 				currentPos = desiredPos.clone();
 			} else {
-				currentPos.lerp(desiredPos, opts.lerpFactor);
+				const damping = MathUtils.clamp(opts.lerpFactor, 0, 1);
+				const t = 1 - Math.pow(1 - damping, ctx.dt * 60);
+				currentPos.lerp(desiredPos, t);
 			}
 
 			result.position.copy(currentPos);

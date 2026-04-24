@@ -60,6 +60,11 @@ export function applyDelta(pose: CameraPose, delta: PoseDelta): CameraPose {
 /**
  * Interpolate from `current` pose toward `target` pose using frame-rate-independent damping.
  *
+ * Smoothing is applied symmetrically to both position and lookAt when present.
+ * Smoothing lookAt at the same rate prevents the camera from "whipping" when the
+ * target moves quickly vertically (e.g. jumping): without this, a damped position
+ * paired with an instant lookAt would rotate the view faster than it translated.
+ *
  * @param current  The current (smoothed) pose from the previous frame.
  * @param target   The desired pose for this frame.
  * @param damping  Smoothing factor in 0-1 range. 1 = instant snap, 0 = no movement.
@@ -87,8 +92,15 @@ export function smoothPose(current: CameraPose, target: CameraPose, damping: num
 		result.far = target.far;
 	}
 
-	// Preserve lookAt from target (smoothing is on position/rotation, not lookAt)
-	result.lookAt = target.lookAt?.clone();
+	if (target.lookAt) {
+		if (result.lookAt) {
+			result.lookAt.lerp(target.lookAt, t);
+		} else {
+			result.lookAt = target.lookAt.clone();
+		}
+	} else {
+		result.lookAt = undefined;
+	}
 
 	return result;
 }
