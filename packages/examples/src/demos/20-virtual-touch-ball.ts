@@ -6,11 +6,11 @@ import {
   createSphere,
   createStage,
   createText,
+  defaultTouchControls,
   fireShader,
   mergeInputConfigs,
   starShader,
   useArrowsForAxes,
-  useVirtualControls,
   useWASDForAxes,
 } from '@zylem/game-lib';
 import {
@@ -55,42 +55,6 @@ const SHADER_LOOKS = [
 
 type ColorLook = (typeof COLOR_LOOKS)[number];
 type ShaderLook = (typeof SHADER_LOOKS)[number];
-
-const JOYSTICK_BASE_SVG = `
-  <svg viewBox="0 0 140 140" width="100%" height="100%" aria-hidden="true">
-    <circle cx="70" cy="70" r="62" fill="rgba(8,14,24,0.70)" stroke="rgba(207,250,254,0.85)" stroke-width="4" />
-    <circle cx="70" cy="70" r="42" fill="rgba(20,184,166,0.08)" stroke="rgba(45,212,191,0.35)" stroke-width="2" />
-    <path d="M70 24 L78 40 L62 40 Z" fill="rgba(207,250,254,0.55)" />
-    <path d="M116 70 L100 78 L100 62 Z" fill="rgba(207,250,254,0.55)" />
-    <path d="M70 116 L62 100 L78 100 Z" fill="rgba(207,250,254,0.55)" />
-    <path d="M24 70 L40 62 L40 78 Z" fill="rgba(207,250,254,0.55)" />
-  </svg>
-`;
-
-const JOYSTICK_THUMB_SVG = `
-  <svg viewBox="0 0 64 64" width="100%" height="100%" aria-hidden="true">
-    <circle cx="32" cy="32" r="28" fill="rgba(13,148,136,0.88)" stroke="rgba(240,253,250,0.95)" stroke-width="3.5" />
-    <circle cx="32" cy="32" r="15" fill="rgba(240,253,250,0.16)" stroke="rgba(240,253,250,0.35)" stroke-width="1.5" />
-  </svg>
-`;
-
-function createTouchButtonSvg(label: 'A' | 'B', accent: string): string {
-  return `
-    <svg viewBox="0 0 100 100" width="100%" height="100%" aria-hidden="true">
-      <circle cx="50" cy="50" r="45" fill="rgba(8,14,24,0.74)" stroke="${accent}" stroke-width="4.5" />
-      <circle cx="50" cy="50" r="33" fill="${accent}" opacity="0.18" />
-      <text
-        x="50"
-        y="60"
-        text-anchor="middle"
-        font-family="ui-sans-serif, system-ui, sans-serif"
-        font-size="34"
-        font-weight="700"
-        fill="${accent}"
-      >${label}</text>
-    </svg>
-  `;
-}
 
 function createArenaWall(options: {
   size: { x: number; y: number; z: number };
@@ -314,47 +278,24 @@ export default function createDemo() {
     mergeInputConfigs(
       useWASDForAxes('p1'),
       useArrowsForAxes('p1'),
-      useVirtualControls('p1', {
+      // The themed virtual touch UI (joystick + A/B) lives in
+      // `@zylem/game-lib`'s `input-ui/` module. Pass `enabled: true`
+      // to force it on for desktop testing; the default `'auto'`
+      // would only render it on touch/mobile devices.
+      //
+      // Equivalent shortcut: drop this call and add
+      //   mobile: { controls: { theme: 'lagoon', joysticks: 'left', buttons: ['A', 'B'] } }
+      // to the `createGame(...)` config below — `resolveGameConfig` will
+      // auto-merge the same `defaultTouchControls(...)` config on mobile.
+      defaultTouchControls('p1', {
         enabled: true,
-        style: {
-          filter: 'drop-shadow(0 18px 30px rgba(3, 7, 18, 0.42))',
-        },
-        joysticks: {
-          left: {
-            position: { left: 24, bottom: 28 },
-            size: 148,
-            thumbSize: 62,
-            maxDistance: 48,
-            svg: {
-              base: JOYSTICK_BASE_SVG,
-              thumb: JOYSTICK_THUMB_SVG,
-            },
+        theme: 'lagoon',
+        joysticks: 'left',
+        buttons: ['A', 'B'],
+        override: {
+          style: {
+            filter: 'drop-shadow(0 18px 30px rgba(3, 7, 18, 0.42))',
           },
-          right: false,
-        },
-        buttons: {
-          A: {
-            position: { right: 108, bottom: 64 },
-            size: 78,
-            svg: createTouchButtonSvg('A', '#8b5cf6'),
-          },
-          B: {
-            position: { right: 24, bottom: 122 },
-            size: 78,
-            svg: createTouchButtonSvg('B', '#fb7185'),
-          },
-          X: false,
-          Y: false,
-          Start: false,
-          Select: false,
-          L: false,
-          R: false,
-          LTrigger: false,
-          RTrigger: false,
-          Up: false,
-          Down: false,
-          Left: false,
-          Right: false,
         },
       }),
     ),
@@ -364,6 +305,11 @@ export default function createDemo() {
     {
       id: 'virtual-touch-ball',
       bodyBackground: '#07111d',
+      aspectRatio: 'OneByOne',
+      mobile: {
+        aspectRatio: 'OneByOne',
+        resolution: 'native',
+      },
     },
     stage,
     floor,

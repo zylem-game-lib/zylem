@@ -221,6 +221,24 @@ export {
 	mergeInputConfigs,
 } from '../lib/input/input-presets';
 
+// Input UI (themed virtual touch controls)
+export {
+	defaultTouchControls,
+	joystickBaseSvg,
+	joystickThumbSvg,
+	touchButtonSvg,
+	touchThemes,
+	resolveTouchTheme,
+} from '../lib/input-ui';
+export type {
+	DefaultTouchControlsOptions,
+	JoystickSelection,
+	TouchButtonSvgOptions,
+	TouchTheme,
+	TouchThemeName,
+	TouchThemeInput,
+} from '../lib/input-ui';
+
 // Input types — exported so gameplay-side controllers can strong-type
 // the `inputs` payload handed to `entity.onUpdate(({ inputs }) => ...)`.
 export type { Inputs, InputPlayer, InputGamepad, ButtonState, AnalogState } from '../lib/input/input';

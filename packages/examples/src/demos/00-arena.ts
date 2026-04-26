@@ -89,6 +89,15 @@ export default function createDemo() {
 				width: 800,
 				height: 600,
 			},
+			mobile: {
+				resolution: {
+					width: 800,
+					height: 600,
+				},
+				controls: {
+					buttons: ['A', 'B', 'X', 'Y'],
+				},
+			},
 			globals: {
 				arenaDeviceId: '',
 				arenaDisplayName: '',

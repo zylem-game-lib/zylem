@@ -3,9 +3,33 @@ import { GameInputConfig } from "./game-interfaces";
 import { AspectRatio, AspectRatioValue } from "../device/aspect-ratio";
 import { isMobile, type ViewportSize } from "../device/mobile";
 import { getDisplayAspect, getPresetResolution, parseResolution, RetroPresetKey } from "./game-retro-resolutions";
+import { mergeInputConfigs } from "../input/input-presets";
+import { defaultTouchControls, type DefaultTouchControlsOptions } from "../input-ui";
 
-export type ResolutionInput = string | { width: number; height: number };
+/**
+ * Resolution descriptor for the game's internal render buffer.
+ *  - `string` : a "WxH" literal or a known retro preset (e.g. `'NES'`).
+ *  - `{ width, height }` : explicit pixel dimensions.
+ *  - `'native'` : skip internal-resolution scaling — render at the
+ *    canvas' CSS size × DPR (i.e. 1:1 with the device viewport).
+ */
+export type ResolutionInput =
+	| string
+	| { width: number; height: number }
+	| 'native';
 export type DeviceProfile = 'auto' | 'desktop' | 'mobile';
+
+/**
+ * Sentinel returned by {@link normalizeResolutionInput} when the caller
+ * requested `'native'` resolution. Distinct from `undefined` (which means
+ * "not specified, fall back to defaults") so the resolver can map it to
+ * `internalResolution: undefined` and let the renderer use the viewport.
+ */
+const NATIVE_RESOLUTION_SENTINEL = null;
+type NormalizedResolution =
+	| { width: number; height: number }
+	| typeof NATIVE_RESOLUTION_SENTINEL
+	| undefined;
 
 export interface ResolveGameConfigRuntime {
 	deviceProfile?: DeviceProfile;
@@ -19,6 +43,15 @@ export type GameDeviceConfig = Partial<{
 	preset: RetroPresetKey;
 	/** lock internal render buffer for this device profile */
 	resolution: ResolutionInput;
+	/**
+	 * Auto-merge built-in virtual touch controls into the resolved input
+	 * config. The provider auto-enables on mobile devices via
+	 * `enabled: 'auto'`, so on desktop runtimes the UI stays dormant.
+	 *  - `true`         : default joystick + A/B layout, default theme.
+	 *  - options object : forwarded to `defaultTouchControls('p1', ...)`.
+	 *  - `false` / unset: no auto-injection (caller wires controls manually).
+	 */
+	controls: boolean | DefaultTouchControlsOptions;
 }>;
 
 export type GameConfigLike = Partial<{
@@ -125,10 +158,12 @@ const DEFAULT_MOBILE_BASE_EDGE = 360;
 function normalizeResolutionInput(
 	input?: ResolutionInput,
 	preset?: RetroPresetKey,
-): { width: number; height: number } | undefined {
+): NormalizedResolution {
 	if (!input) return undefined;
 
 	if (typeof input === 'string') {
+		if (input === 'native') return NATIVE_RESOLUTION_SENTINEL;
+
 		const parsed = parseResolution(input);
 		if (parsed) return parsed;
 
@@ -222,9 +257,9 @@ export function resolveGameConfig(
 		mobileConfig?.resolution,
 		mobileConfig?.preset ?? user?.preset,
 	);
-	const aspectFallbackResolution = useMobileProfile
-		? mobileResolution ?? desktopResolution
-		: desktopResolution;
+	const aspectFallbackResolution =
+		(useMobileProfile ? toAspectFallback(mobileResolution) : undefined) ??
+		toAspectFallback(desktopResolution);
 	const activeAspectInput = useMobileProfile
 		? mobileConfig?.aspectRatio ?? user?.aspectRatio
 		: user?.aspectRatio;
@@ -234,9 +269,12 @@ export function resolveGameConfig(
 		defaults.aspectRatio,
 		aspectFallbackResolution,
 	);
-	const internalResolution = useMobileProfile
-		? mobileResolution ?? createDefaultMobileResolution(aspectRatio)
-		: desktopResolution;
+	const internalResolution = resolveInternalResolution(
+		useMobileProfile,
+		mobileResolution,
+		desktopResolution,
+		aspectRatio,
+	);
 
 	const fullscreen = (user?.fullscreen as boolean) ?? defaults.fullscreen;
 	const bodyBackground = (user?.bodyBackground as string) ?? defaults.bodyBackground;
@@ -244,13 +282,18 @@ export function resolveGameConfig(
 	// Prefer provided canvas if any
 	const canvas = user?.canvas ?? undefined;
 
+	const resolvedInput = resolveInputConfig(
+		user?.input ?? defaults.input,
+		mobileConfig?.controls,
+	);
+
 	return new GameConfig(
 		(user?.id as string) ?? defaults.id,
 		(user?.globals as Record<string, any>) ?? defaults.globals,
 		(user?.stages as StageInterface[]) ?? defaults.stages,
 		Boolean(user?.debug ?? defaults.debug),
 		(user?.time as number) ?? defaults.time,
-		user?.input ?? defaults.input,
+		resolvedInput,
 		aspectRatio,
 		internalResolution,
 		fullscreen,
@@ -259,6 +302,40 @@ export function resolveGameConfig(
 		containerId,
 		canvas,
 	);
+}
+
+function toAspectFallback(
+	resolution: NormalizedResolution,
+): { width: number; height: number } | undefined {
+	if (!resolution) return undefined;
+	return resolution;
+}
+
+function resolveInternalResolution(
+	useMobileProfile: boolean,
+	mobileResolution: NormalizedResolution,
+	desktopResolution: NormalizedResolution,
+	aspectRatio: number,
+): { width: number; height: number } | undefined {
+	if (useMobileProfile) {
+		if (mobileResolution === NATIVE_RESOLUTION_SENTINEL) return undefined;
+		return mobileResolution ?? createDefaultMobileResolution(aspectRatio);
+	}
+
+	if (desktopResolution === NATIVE_RESOLUTION_SENTINEL) return undefined;
+	return desktopResolution;
+}
+
+function resolveInputConfig(
+	base: GameInputConfig | undefined,
+	controlsConfig: GameDeviceConfig['controls'],
+): GameInputConfig | undefined {
+	if (!controlsConfig) return base;
+
+	const opts: DefaultTouchControlsOptions =
+		controlsConfig === true ? {} : controlsConfig;
+	const touchInput = defaultTouchControls('p1', { enabled: 'auto', ...opts });
+	return mergeInputConfigs(touchInput, base ?? {});
 }
 
 /**
