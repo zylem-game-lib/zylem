@@ -3,7 +3,6 @@
 import { Color, Vector3 } from 'three';
 import {
 	CooldownBehavior,
-	Platformer3DBehavior,
 	type CooldownHandle,
 	type CooldownOptions,
 	type UpdateContext,
@@ -17,6 +16,13 @@ import {
 	useArrowsForAxes,
 	type StageEntity,
 } from '@zylem/game-lib';
+import { ZylemRuntimePlatformer3DFsmState } from '@zylem/game-lib/runtime';
+import {
+	Platformer3DRuntimeAdapter,
+	buildPlatformerGroundHeightfield,
+	staticBoxesFromEntities,
+	staticBoxFromEntity,
+} from '../../../runtime/platformer-3d-runtime';
 import { TransformableEntity } from '~/lib/actions/capabilities/apply-transform';
 import { GameEntity } from '~/lib/entities';
 import {
@@ -159,30 +165,30 @@ export interface ArenaMainStageHandle {
 }
 
 /**
- * Maps the Platformer3D FSM state to an animation key + pauseAtEnd flag.
- * Falling and jumping hold the last frame of `jumping-up` so the apex of
- * the jump reads as a still pose; landing plays a full descent frame.
+ * Maps the wasm runtime's Platformer3D FSM state to an animation key +
+ * pauseAtEnd flag. Falling and jumping hold the last frame of
+ * `jumping-up` so the apex of the jump reads as a still pose; landing
+ * plays a full descent frame.
+ *
+ * The arena intentionally doesn't expose a run ability, so the
+ * `Running` FSM state is unreachable in practice. Collapsing both
+ * Walking + Running onto 'walking' also matches the fact that the
+ * character rigs share one locomotion clip for both keys.
  */
 export function animationForPlatformerState(
-	state:
-		| ReturnType<NonNullable<ReturnType<PlayerEntity['use']>>['getState']>
-		| null
-		| undefined,
+	state: ZylemRuntimePlatformer3DFsmState,
 ): NetworkAnimationState {
 	switch (state) {
-		case 'running':
-		case 'walking':
-			// The arena intentionally doesn't expose a run ability, so the
-			// 'running' FSM state is unreachable in practice. Collapsing
-			// both cases onto 'walking' also matches the fact that the
-			// character rigs share one locomotion clip for both keys.
+		case ZylemRuntimePlatformer3DFsmState.Running:
+		case ZylemRuntimePlatformer3DFsmState.Walking:
 			return { key: 'walking' };
-		case 'jumping':
+		case ZylemRuntimePlatformer3DFsmState.Jumping:
 			return { key: 'jumping-up', pauseAtEnd: true };
-		case 'falling':
+		case ZylemRuntimePlatformer3DFsmState.Falling:
 			return { key: 'jumping-up', pauseAtEnd: true };
-		case 'landing':
+		case ZylemRuntimePlatformer3DFsmState.Landing:
 			return { key: 'jumping-down', pauseAtEnd: true };
+		case ZylemRuntimePlatformer3DFsmState.Idle:
 		default:
 			return { key: 'idle' };
 	}
@@ -275,15 +281,10 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		renderToTexture: { width: 1024, height: 576 },
 	});
 
-	const stage = createStage(
-		{
-			gravity: new Vector3(0, -9.82, 0),
-			backgroundShader: arenaShader,
-		},
-		mainCamera,
-		jumbotronCamera,
-	).setInputConfiguration(useArrowsForAxes('p1'));
-
+	// Build the static scenery up-front so we can mirror it into the wasm
+	// runtime *before* the stage is constructed. The wasm KCC needs to
+	// know about the heightfield + boulders + jumbotron walls so it
+	// stops the local player at the same surfaces the renderer shows.
 	const groundPlane = createPlane({
 		tile: { x: 100, y: 100 },
 		position: { x: 0, y: -4, z: 0 },
@@ -302,7 +303,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		},
 	});
 
-	stage.add(groundPlane, ...createBoulders());
+	const boulders = createBoulders();
 
 	// ─── Jumbotron: back-wall mega-screen with a broadcast feed ─────────────
 	//
@@ -335,6 +336,58 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		setCameraFeed(me, jumbotronCamera);
 	});
 
+	// All character classes share the same capsule dimensions; see the
+	// `*_COLLISION` constants in arena/characters/*.ts.
+	const PLAYER_CAPSULE = { halfHeight: 1.4, radius: 0.5 } as const;
+	const PLAYER_FEET_OFFSET = PLAYER_CAPSULE.halfHeight + PLAYER_CAPSULE.radius;
+
+	const groundHeightfield = buildPlatformerGroundHeightfield(groundPlane);
+	const staticColliders = [
+		...staticBoxesFromEntities(boulders),
+		// Jumbotron parts are far back / high, but mirroring them keeps
+		// the local player from clipping through if they jump that way.
+		...[jumbotronScreen, jumbotronFrame].flatMap((e) => {
+			const c = staticBoxFromEntity(e);
+			return c ? [c] : [];
+		}),
+	];
+
+	// Adapter is constructed up-front (so the stage knows about it from
+	// the start) but the *player* is wired in lazily in `spawnAvatar`
+	// once the lobby has resolved a character class. The platformer opts
+	// are baked from the third-person test defaults; per-class opts are
+	// applied via `setPlayer` indirectly through animation/input only,
+	// which is intentional for now \u2014 arena class differences in jump
+	// height / walk speed will return as a follow-up if needed.
+	const platformerAdapter = new Platformer3DRuntimeAdapter({
+		player: null,
+		capsule: {
+			position: [0, 5, 0],
+			halfHeight: PLAYER_CAPSULE.halfHeight,
+			radius: PLAYER_CAPSULE.radius,
+		},
+		platformer: {
+			walkSpeed: 10,
+			runSpeed: 20,
+			jumpForce: 16,
+			maxJumps: 1,
+			gravity: 9.82,
+		},
+		staticColliders,
+		heightfield: groundHeightfield,
+	});
+
+	const stage = createStage(
+		{
+			gravity: new Vector3(0, -9.82, 0),
+			backgroundShader: arenaShader,
+			runtimeAdapter: platformerAdapter,
+		},
+		mainCamera,
+		jumbotronCamera,
+	).setInputConfiguration(useArrowsForAxes('p1'));
+
+	stage.add(groundPlane, ...boulders);
 	stage.add(jumbotronScreen, jumbotronFrame);
 
 	// Sweep the broadcast camera across a bounded 120-degree arc centered
@@ -365,7 +418,6 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 	const avatars = new Map<bigint, AvatarRecord>();
 	let localEntityId: bigint | null = null;
 	let localActor: PlayerEntity | null = null;
-	let localPlatformer: ReturnType<PlayerEntity['use']> | null = null;
 	let attackHitHandler: ReportAttackHit | null = null;
 	let fallRespawnHandler: ((info: FallRespawnPayload) => void) | null = null;
 	const lastMovement = new Vector3();
@@ -452,61 +504,56 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 			const horizontal = p1.axes.Horizontal.value;
 			const vertical = p1.axes.Vertical.value;
 
-			// Fall-respawn: snap the body back to spawn before the combat
-			// controller and animation code run so we don't clobber its
-			// input next frame.
-			const translation = me.body?.translation?.();
-			if (translation && translation.y < FALL_Y_THRESHOLD) {
-				const body = me.body as
-					| {
-						setTranslation: (
-							v: { x: number; y: number; z: number },
-							wake: boolean,
-						) => void;
-						setLinvel: (
-							v: { x: number; y: number; z: number },
-							wake: boolean,
-						) => void;
-						setAngvel: (
-							v: { x: number; y: number; z: number },
-							wake: boolean,
-						) => void;
-					}
-					| undefined;
-				if (body) {
-					body.setTranslation(spawn, true);
-					body.setLinvel({ x: 0, y: 0, z: 0 }, true);
-					body.setAngvel({ x: 0, y: 0, z: 0 }, true);
-				}
+			// Fall-respawn: teleport the wasm capsule back to spawn before
+			// any further input processing so the next adapter step
+			// integrates from the spawn position. `spawn` was captured
+			// from the actor's spawn pose, which is in *feet* coordinates
+			// (matches what we sync over the network), so add the feet
+			// offset to get the capsule centre that the wasm runtime
+			// expects.
+			const groupPos = me.group?.position;
+			if (groupPos && groupPos.y < FALL_Y_THRESHOLD) {
+				platformerAdapter.teleport(
+					spawn.x,
+					spawn.y + PLAYER_FEET_OFFSET,
+					spawn.z,
+				);
 				fallRespawnHandler?.({ entityId, deviceId, spawn });
 			}
 
-			// The combat controller owns pl.moveX/moveZ/jump so it can
-			// lock movement during attack/special animations.
-			combat.tick({ delta, inputs, pl: me.$platformer ?? undefined });
+			// Combat controller resolves desired horizontal input + jump,
+			// zeroing them while an attack/special is locked in. We then
+			// forward the resolved values into the wasm adapter \u2014 the
+			// arena exposes no run modifier so the run flag stays false.
+			const move = combat.tick({ delta, inputs });
+			platformerAdapter.pushInput(move.moveX, move.moveZ, move.jump, false);
 
-			// Action animation (attack/special) wins over the platformer
-			// FSM while an action is in-progress; otherwise fall back to
-			// the locomotion state mapping.
-			const animation =
-				combat.currentAnimation() ??
-				animationForPlatformerState(localPlatformer?.getState());
-			me.playAnimation(animation);
-
-			// Continue tracking the last non-zero movement direction for
+			// Continue tracking the last non-zero *raw* axis input for
 			// facing, even while locked in an action, so the character
 			// faces the way they were travelling when the attack began.
 			if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
 				lastMovement.set(horizontal, 0, vertical);
 			}
 			if (lastMovement.lengthSq() > 0) {
-				me.rotateInDirection(lastMovement);
+				const yaw = Math.atan2(-lastMovement.x, lastMovement.z);
+				platformerAdapter.setFacing(yaw);
 			}
 
+			// Action animation (attack/special) wins over the platformer
+			// FSM while an action is in-progress; otherwise fall back to
+			// the locomotion state mapping.
+			const animation =
+				combat.currentAnimation() ??
+				animationForPlatformerState(platformerAdapter.currentState());
+			me.playAnimation(animation);
+
 			if (!onLocalTransform) return;
-			const tr = me.body?.translation?.();
+			// With the wasm adapter the entity has no Rapier body, so read
+			// the resolved pose from the player's group (which the adapter
+			// wrote during the previous tick's `step`).
 			const group = me.group;
-			if (!tr || !group) return;
+			if (!group) return;
+			const tr = group.position;
 			const q = group.quaternion;
 			onLocalTransform({
 				position: { x: tr.x, y: tr.y, z: tr.z },
@@ -556,9 +603,18 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		if (opts.isLocal) {
 			localEntityId = opts.entityId;
 			localActor = actor;
-			localPlatformer = actor.use(
-				Platformer3DBehavior,
-				loadout.platformerOpts,
+			// Mark the local actor as runtime-owned so the stage entity
+			// delegate skips creating a TS Rapier body for it. The wasm
+			// adapter drives its pose from the KCC.
+			(actor.options as any).runtime = { simulation: 'runtime' };
+			platformerAdapter.setPlayer(actor);
+			// Teleport the capsule to the network-authoritative spawn pose
+			// (record.spawn is in *feet* coordinates; convert to capsule
+			// centre by adding the feet offset).
+			platformerAdapter.teleport(
+				record.spawn.x,
+				record.spawn.y + PLAYER_FEET_OFFSET,
+				record.spawn.z,
 			);
 			const cooldownOpts = buildCooldownOptions(loadout);
 			const cd: CooldownHandle | null = cooldownOpts
@@ -615,7 +671,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		if (localEntityId === entityId) {
 			localEntityId = null;
 			localActor = null;
-			localPlatformer = null;
+			platformerAdapter.setPlayer(null);
 		}
 	}
 
@@ -623,7 +679,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		avatars.clear();
 		localEntityId = null;
 		localActor = null;
-		localPlatformer = null;
+		platformerAdapter.setPlayer(null);
 		attackHitHandler = null;
 		fallRespawnHandler = null;
 		lastMovement.set(0, 0, 0);

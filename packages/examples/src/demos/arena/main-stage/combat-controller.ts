@@ -89,22 +89,26 @@ export interface CombatControllerOptions {
 export interface CombatControllerTickInput {
 	delta: number;
 	inputs: Inputs;
-	/**
-	 * Live Platformer3D movement component. Optional so the controller
-	 * can no-op cleanly during the first tick before the behavior has
-	 * initialised it.
-	 */
-	pl:
-		| {
-			moveX: number;
-			moveZ: number;
-			jump: boolean;
-		}
-		| undefined;
+}
+
+/**
+ * Resolved per-frame movement intent emitted by {@link CombatController.tick}.
+ * The caller is responsible for forwarding these values to whatever
+ * platformer is driving the actor (TS-side `$platformer.moveX/moveZ/jump`,
+ * or the wasm runtime adapter via `adapter.pushInput`).
+ *
+ * While an attack or special is locked in, `moveX/moveZ/jump` are forced
+ * to zero so the character holds still for the animation; rotation is
+ * left to the caller (the arena re-uses the last non-zero axis input).
+ */
+export interface CombatTickResult {
+	moveX: number;
+	moveZ: number;
+	jump: boolean;
 }
 
 export interface CombatController {
-	tick(input: CombatControllerTickInput): void;
+	tick(input: CombatControllerTickInput): CombatTickResult;
 	/**
 	 * Animation to play this frame, or `null` if the platformer FSM
 	 * should own the animation slot.
@@ -252,7 +256,7 @@ export function createCombatController(
 	}
 
 	return {
-		tick({ delta, inputs, pl }) {
+		tick({ delta, inputs }) {
 			now += delta;
 			if (action?.kind === 'attack') maybeEmitHit();
 			completeActionIfDone();
@@ -267,19 +271,17 @@ export function createCombatController(
 			handleSpecialInput('L', p1.buttons.L.pressed);
 			handleSpecialInput('R', p1.buttons.R.pressed);
 
-			if (!pl) return;
 			if (action) {
 				// Lock movement while an action is locked in so the attack
 				// animation reads cleanly. Rotation is still applied by
 				// `installLocalMovement` from the last axis input.
-				pl.moveX = 0;
-				pl.moveZ = 0;
-				pl.jump = false;
-				return;
+				return { moveX: 0, moveZ: 0, jump: false };
 			}
-			pl.moveX = horizontal;
-			pl.moveZ = vertical;
-			pl.jump = p1.buttons.B.held > 0;
+			return {
+				moveX: horizontal,
+				moveZ: vertical,
+				jump: p1.buttons.B.held > 0,
+			};
 		},
 		currentAnimation() {
 			if (!action) return null;

@@ -1,12 +1,31 @@
-import { Ray } from '@dimforge/rapier3d-compat';
-import { BufferGeometry, Line, LineBasicMaterial, Vector3 } from 'three';
+import { Cuboid } from '@dimforge/rapier3d-compat';
+import {
+	BoxGeometry,
+	Mesh,
+	MeshBasicMaterial,
+} from 'three';
 import { serializeColliderDesc } from '../../physics/serialize-descriptors';
 
+/**
+ * @deprecated Kept for type compatibility with older callers; ignored at runtime.
+ * The boxcast implementation does not use offset rays.
+ */
 export interface GroundProbeOffset {
 	x: number;
 	z: number;
 }
 
+/**
+ * Probe sizing hint.
+ *
+ * - `center`: prefer a tiny box that behaves close to a single downward ray
+ *   (used by `Jumper3D` for thin/single-point ground tests).
+ * - `any`: prefer a box sized from the entity's collider footprint
+ *   (used by `Platformer3D` so the character "feels" the ground under any
+ *   foot, not just dead-center).
+ *
+ * The actual box dimensions are still configurable via `options.box`.
+ */
 export type GroundProbeMode = 'center' | 'any';
 
 export interface GroundProbeEntity {
@@ -15,12 +34,32 @@ export interface GroundProbeEntity {
 }
 
 export interface GroundProbeOptions {
+	/** Maximum cast distance in world units. */
 	rayLength: number;
+	/** @deprecated No longer used by the boxcast implementation. */
 	offsets?: readonly GroundProbeOffset[];
+	/** Selects the default box size when `box` is not explicitly provided. */
 	mode?: GroundProbeMode;
+	/** Render a wireframe of the cast box for debugging. Requires `scene`. */
 	debug?: boolean;
+	/** Three.js scene used to host the debug wireframe mesh. */
 	scene?: any;
+	/**
+	 * Vertical offset added to the body translation when computing the cast
+	 * origin. Allows callers to shift the probe to e.g. just above the
+	 * capsule's bottom face.
+	 */
 	originYOffset?: number;
+	/**
+	 * Half-extents of the cast cuboid. When omitted the probe derives a
+	 * sensible default from the entity's collider:
+	 * - capsule: `(r * 0.7, 0.05, r * 0.7)` — a thin slab smaller than the
+	 *   capsule footprint, so side walls don't register as ground.
+	 * - cuboid: shrink the bottom face by 30% so the probe sits well inside
+	 *   the collider footprint.
+	 * - `mode: 'center'`: forces a tiny `(0.05, 0.05, 0.05)` box.
+	 */
+	box?: { x: number; y: number; z: number };
 }
 
 export interface GroundProbeSupportHit {
@@ -35,23 +74,37 @@ export interface GroundProbeSupportHit {
 		y: number;
 		z: number;
 	};
+	/** Always 0 — kept for backward compatibility with the old multi-ray API. */
 	rayIndex: number;
 	colliderUuid?: string;
 }
 
 export const GROUND_SNAP_EPSILON = 0.001;
 
-const DEFAULT_OFFSETS: readonly GroundProbeOffset[] = [
-	{ x: 0, z: 0 },
-	{ x: 0.4, z: 0.4 },
-	{ x: -0.4, z: 0.4 },
-	{ x: 0.4, z: -0.4 },
-	{ x: -0.4, z: -0.4 },
-] as const;
+/**
+ * Tiny box used when the caller selects `mode: 'center'` — close enough to a
+ * point cast that it preserves the old single-ray behavior of `Jumper3D`.
+ */
+const CENTER_BOX_HALF = 0.05;
 
+/**
+ * Default vertical thickness of the cast cuboid. The box is intentionally thin
+ * vertically so the impact distance closely matches a downward ray's TOI;
+ * existing snap-to-ground math (which assumes `point.y ≈ origin.y - toi`)
+ * keeps working with negligible drift.
+ */
+const DEFAULT_BOX_THICKNESS = 0.05;
+
+/**
+ * GroundProbe3D — single-cast cuboid probe used by 3D platformer and jumper
+ * behaviors to detect the ground beneath an entity.
+ *
+ * Replaces the previous 5-ray probe: a single shape-cast handles edge cases
+ * (corner of a platform, narrow gap) more robustly and produces a single,
+ * intuitive debug visualization (a wireframe box).
+ */
 export class GroundProbe3D {
-	private rays = new Map<string, Ray[]>();
-	private debugLines = new Map<string, Line[]>();
+	private debugMeshes = new Map<string, Mesh>();
 
 	constructor(private world: any) {}
 
@@ -61,74 +114,58 @@ export class GroundProbe3D {
 	): GroundProbeSupportHit | null {
 		if (!this.world?.world || !entity.body) return null;
 
-		const mode = options.mode ?? 'any';
-		const offsets =
-			mode === 'center'
-				? (options.offsets ?? DEFAULT_OFFSETS).slice(0, 1)
-				: (options.offsets ?? DEFAULT_OFFSETS);
 		const translation = entity.body.translation();
-		const rays = this.getOrCreateRays(entity.uuid, offsets.length);
 		const originYOffset = options.originYOffset ?? 0;
+		const box = options.box ?? deriveDefaultBox(entity, options.mode ?? 'any');
+
+		const shapePos = {
+			x: translation.x,
+			y: translation.y + originYOffset,
+			z: translation.z,
+		};
+		const shapeRot = { x: 0, y: 0, z: 0, w: 1 };
+		const shapeVel = { x: 0, y: -1, z: 0 };
+
+		const shape = new Cuboid(box.x, box.y, box.z);
+		const hit = this.world.world.castShape(
+			shapePos,
+			shapeRot,
+			shapeVel,
+			shape,
+			options.rayLength,
+			true,
+			undefined,
+			undefined,
+			undefined,
+			entity.body,
+		);
+
 		let support: GroundProbeSupportHit | null = null;
-
-		for (let index = 0; index < offsets.length; index++) {
-			const offset = offsets[index];
-			const ray = rays[index];
-
-			ray.origin = {
-				x: translation.x + offset.x,
-				y: translation.y + originYOffset,
-				z: translation.z + offset.z,
-			};
-			ray.dir = { x: 0, y: -1, z: 0 };
-
-			const hit = this.world.world.castRay(
-				ray,
-				options.rayLength,
-				true,
-				undefined,
-				undefined,
-				undefined,
-				entity.body,
-			);
-			if (!hit) continue;
-
-			const nextSupport: GroundProbeSupportHit = {
+		if (hit) {
+			support = {
 				toi: hit.toi,
 				point: {
-					x: ray.origin.x + ray.dir.x * hit.toi,
-					y: ray.origin.y + ray.dir.y * hit.toi,
-					z: ray.origin.z + ray.dir.z * hit.toi,
+					x: shapePos.x,
+					y: shapePos.y - hit.toi - box.y,
+					z: shapePos.z,
 				},
-				origin: {
-					x: ray.origin.x,
-					y: ray.origin.y,
-					z: ray.origin.z,
-				},
-				rayIndex: index,
+				origin: { ...shapePos },
+				rayIndex: 0,
 				colliderUuid: hit.collider?._parent?.userData?.uuid,
 			};
-
-			if (mode === 'center') {
-				support = nextSupport;
-				break;
-			}
-
-			if (!support || nextSupport.toi < support.toi) {
-				support = nextSupport;
-			}
 		}
 
 		if (options.debug && options.scene) {
-			this.updateDebugLines(
+			this.updateDebugMesh(
 				entity.uuid,
-				rays,
-				Boolean(support),
+				shapePos,
+				box,
 				options.rayLength,
+				Boolean(support),
 				options.scene,
 			);
 		} else {
-			this.disposeDebugLines(entity.uuid);
+			this.disposeDebugMesh(entity.uuid);
 		}
 
 		return support;
@@ -139,80 +176,102 @@ export class GroundProbe3D {
 	}
 
 	destroyEntity(uuid: string): void {
-		this.rays.delete(uuid);
-		this.disposeDebugLines(uuid);
+		this.disposeDebugMesh(uuid);
 	}
 
 	destroy(): void {
-		this.rays.clear();
-		for (const uuid of this.debugLines.keys()) {
-			this.disposeDebugLines(uuid);
+		for (const uuid of this.debugMeshes.keys()) {
+			this.disposeDebugMesh(uuid);
 		}
-		this.debugLines.clear();
+		this.debugMeshes.clear();
 	}
 
-	private getOrCreateRays(uuid: string, count: number): Ray[] {
-		let rays = this.rays.get(uuid);
-		if (!rays || rays.length !== count) {
-			rays = Array.from(
-				{ length: count },
-				() => new Ray({ x: 0, y: 0, z: 0 }, { x: 0, y: -1, z: 0 }),
-			);
-			this.rays.set(uuid, rays);
-		}
-		return rays;
-	}
-
-	private updateDebugLines(
+	private updateDebugMesh(
 		uuid: string,
-		rays: Ray[],
+		shapePos: { x: number; y: number; z: number },
+		box: { x: number; y: number; z: number },
+		rayLength: number,
 		hasGround: boolean,
-		length: number,
 		scene: any,
 	): void {
-		let lines = this.debugLines.get(uuid);
-		if (!lines) {
-			lines = rays.map(() => {
-				const geometry = new BufferGeometry().setFromPoints([
-					new Vector3(),
-					new Vector3(),
-				]);
-				const material = new LineBasicMaterial({ color: 0xff0000 });
-				const line = new Line(geometry, material);
-				scene.add(line);
-				return line;
+		let mesh = this.debugMeshes.get(uuid);
+		if (!mesh) {
+			const geometry = new BoxGeometry(2 * box.x, 2 * box.y, 2 * box.z);
+			const material = new MeshBasicMaterial({
+				wireframe: true,
+				color: 0xff0000,
 			});
-			this.debugLines.set(uuid, lines);
+			mesh = new Mesh(geometry, material);
+			scene.add(mesh);
+			this.debugMeshes.set(uuid, mesh);
 		}
 
-		rays.forEach((ray, index) => {
-			const line = lines![index];
-			const start = new Vector3(ray.origin.x, ray.origin.y, ray.origin.z);
-			const end = new Vector3(
-				ray.origin.x + ray.dir.x * length,
-				ray.origin.y + ray.dir.y * length,
-				ray.origin.z + ray.dir.z * length,
-			);
-			line.visible = true;
-			line.geometry.setFromPoints([start, end]);
-			(line.material as LineBasicMaterial).color.setHex(
-				hasGround ? 0x00ff00 : 0xff0000,
-			);
-		});
+		// Position the box at the cast midpoint so users can see the swept volume.
+		mesh.position.set(
+			shapePos.x,
+			shapePos.y - rayLength * 0.5,
+			shapePos.z,
+		);
+		mesh.scale.set(1, Math.max(rayLength / Math.max(2 * box.y, 1e-6), 1), 1);
+		(mesh.material as MeshBasicMaterial).color.setHex(
+			hasGround ? 0x00ff00 : 0xff0000,
+		);
 	}
 
-	private disposeDebugLines(uuid: string): void {
-		const lines = this.debugLines.get(uuid);
-		if (!lines) return;
+	private disposeDebugMesh(uuid: string): void {
+		const mesh = this.debugMeshes.get(uuid);
+		if (!mesh) return;
 
-		for (const line of lines) {
-			line.removeFromParent();
-			line.geometry.dispose();
-			(line.material as LineBasicMaterial).dispose();
+		mesh.removeFromParent();
+		mesh.geometry.dispose();
+		(mesh.material as MeshBasicMaterial).dispose();
+
+		this.debugMeshes.delete(uuid);
+	}
+}
+
+function deriveDefaultBox(
+	entity: GroundProbeEntity,
+	mode: GroundProbeMode,
+): { x: number; y: number; z: number } {
+	if (mode === 'center') {
+		return { x: CENTER_BOX_HALF, y: CENTER_BOX_HALF, z: CENTER_BOX_HALF };
+	}
+
+	const runtimeColliderDesc = (entity as any)?.colliderDesc;
+	if (runtimeColliderDesc) {
+		const serialized = serializeColliderDesc(runtimeColliderDesc);
+		if (serialized.shape === 'capsule' && serialized.dimensions.length >= 2) {
+			const radius = serialized.dimensions[1] ?? 0.5;
+			const half = Math.max(radius * 0.7, CENTER_BOX_HALF);
+			return { x: half, y: DEFAULT_BOX_THICKNESS, z: half };
 		}
-
-		this.debugLines.delete(uuid);
+		if (serialized.shape === 'cuboid' && serialized.dimensions.length >= 3) {
+			const halfX = (serialized.dimensions[0] ?? 0.5) * 0.7;
+			const halfZ = (serialized.dimensions[2] ?? 0.5) * 0.7;
+			return {
+				x: Math.max(halfX, CENTER_BOX_HALF),
+				y: DEFAULT_BOX_THICKNESS,
+				z: Math.max(halfZ, CENTER_BOX_HALF),
+			};
+		}
 	}
+
+	const collisionSize =
+		(entity as any)?.options?.collision?.size ??
+		(entity as any)?.options?.collisionSize ??
+		(entity as any)?.options?.size;
+	if (collisionSize) {
+		const halfX = ((collisionSize.x ?? 1) / 2) * 0.7;
+		const halfZ = ((collisionSize.z ?? collisionSize.x ?? 1) / 2) * 0.7;
+		return {
+			x: Math.max(halfX, CENTER_BOX_HALF),
+			y: DEFAULT_BOX_THICKNESS,
+			z: Math.max(halfZ, CENTER_BOX_HALF),
+		};
+	}
+
+	return { x: 0.35, y: DEFAULT_BOX_THICKNESS, z: 0.35 };
 }
 
 export function getGroundAnchorOffsetY(entity: any): number {

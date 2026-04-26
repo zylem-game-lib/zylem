@@ -71,6 +71,13 @@ export interface StageRuntimeAdapter {
 	rendersEntity(entity: GameEntity<any>): boolean;
 	registerEntity(entity: GameEntity<any>): void;
 	unregisterEntity(entity: GameEntity<any>): void;
+	/**
+	 * Optional: when implemented, the stage debug delegate will draw the
+	 * returned line segments alongside the TS Rapier debug overlay so wasm
+	 * runtime adapters can visualize their own colliders. Returning `null`
+	 * (or omitting the method entirely) disables the second pass.
+	 */
+	getDebugRender?(): { vertices: Float32Array; colors: Float32Array } | null;
 }
 
 interface RuntimeBatchState {

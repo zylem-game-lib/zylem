@@ -17,15 +17,31 @@ mod events;
 mod modes;
 
 use components::body_2d::{Body2DKind, PendingBody2DSlot};
+use components::body_3d::PendingBody3DSlot;
 use modes::gameplay_2d::Gameplay2DState;
+use modes::gameplay_3d::Gameplay3DState;
+pub use behaviors::platformer_3d::components::Platformer3DConfig;
 pub use components::body_2d::{DynamicCircleBody2DConfig, KinematicAabbBody2DConfig};
-pub use common::{Bounds2D, StaticBoxCollider, DEFAULT_INSTANCING_GRAVITY_Y, EVENT_STRIDE, INPUT_STRIDE, RENDER_STRIDE, SUMMARY_LEN};
+pub use components::body_3d::KinematicCapsuleBody3DConfig;
+pub use common::{Bounds2D, StaticBoxCollider, StaticHeightfieldCollider, DEFAULT_INSTANCING_GRAVITY_Y, EVENT_STRIDE, INPUT_STRIDE, RENDER_STRIDE, SUMMARY_LEN};
 use common::{CollisionState, Gameplay2dTriggerAabb, Motion, Transform};
+
+/// Capacity of the pre-allocated heightfield staging buffer (in `f32`s).
+/// `129 * 129 = 16641` covers a 128×128 subdivision grid; smaller grids
+/// just use the prefix. Sized as a multiple of 4 for simd-friendliness.
+pub const HEIGHTFIELD_SCRATCH_CAPACITY: usize = 16_641;
+
+/// Capacity (in `f32`s) of each Gameplay3D debug-render buffer
+/// (vertices and colors). Dimensioned for ~10k line segments per frame
+/// which is ample for typical demo scenes (player capsule + a few
+/// hundred mirrored colliders).
+pub const GAMEPLAY3D_DEBUG_BUFFER_CAPACITY: usize = 256_000;
 
 enum SimulationMode {
     BufferDriven,
     Instancing(InstancingState),
     Gameplay2D(Gameplay2DState),
+    Gameplay3D(Gameplay3DState),
 }
 
 struct InstancingState {
@@ -149,9 +165,16 @@ pub struct Simulation {
     pub(crate) summary_buffer: Vec<f32>,
     pub(crate) tick_count: u32,
     pending_static_colliders: Vec<StaticBoxCollider>,
+    pending_static_heightfield_colliders: Vec<StaticHeightfieldCollider>,
+    /// Staging buffer the host writes heightfield rows into before calling
+    /// `add_static_heightfield_collider`. Sized once on construction; never
+    /// reallocated, so the FFI pointer stays stable across calls.
+    pub(crate) heightfield_scratch: Vec<f32>,
     pending_gameplay2d_bounds: Option<Bounds2D>,
     pending_gameplay2d_slots: Vec<PendingBody2DSlot>,
     pending_gameplay2d_triggers: Vec<Gameplay2dTriggerAabb>,
+    pending_gameplay3d_slots: Vec<PendingBody3DSlot>,
+    pending_gameplay3d_configs: Vec<Platformer3DConfig>,
     mode: SimulationMode,
 }
 
@@ -185,9 +208,13 @@ impl Simulation {
             summary_buffer: vec![0.0; SUMMARY_LEN],
             tick_count: 0,
             pending_static_colliders: Vec::new(),
+            pending_static_heightfield_colliders: Vec::new(),
+            heightfield_scratch: vec![0.0; HEIGHTFIELD_SCRATCH_CAPACITY],
             pending_gameplay2d_bounds: None,
             pending_gameplay2d_slots: vec![PendingBody2DSlot::default(); capacity],
             pending_gameplay2d_triggers: Vec::new(),
+            pending_gameplay3d_slots: vec![PendingBody3DSlot::default(); capacity],
+            pending_gameplay3d_configs: vec![Platformer3DConfig::default(); capacity],
             mode,
         })
     }
@@ -210,6 +237,10 @@ impl Simulation {
             SimulationMode::Gameplay2D(state) => {
                 state.step(dt);
                 Self::sync_pong(world, entity_order, active_count, input_buffer, state);
+            }
+            SimulationMode::Gameplay3D(state) => {
+                state.step(dt);
+                Self::sync_gameplay3d(world, entity_order, active_count, input_buffer, state);
             }
         }
 
@@ -254,6 +285,46 @@ impl Simulation {
 
     pub fn add_static_box_collider(&mut self, collider: StaticBoxCollider) {
         self.pending_static_colliders.push(collider);
+    }
+
+    pub fn clear_static_heightfield_colliders(&mut self) {
+        self.pending_static_heightfield_colliders.clear();
+    }
+
+    /// Records a heightfield collider whose heights have been pre-staged in
+    /// `heightfield_scratch[0..heights_len]`. Returns `false` if the rows /
+    /// cols / length triple is invalid (must satisfy
+    /// `heights_len == (rows + 1) * (cols + 1)`, both `>= 1`, fitting in
+    /// the scratch capacity).
+    pub fn add_static_heightfield_collider(
+        &mut self,
+        rows: u32,
+        cols: u32,
+        heights_len: usize,
+        scale: [f32; 3],
+        translation: [f32; 3],
+        friction: f32,
+        restitution: f32,
+    ) -> bool {
+        if rows == 0 || cols == 0 {
+            return false;
+        }
+        let expected = (rows as usize + 1) * (cols as usize + 1);
+        if heights_len != expected || heights_len > self.heightfield_scratch.len() {
+            return false;
+        }
+        let heights = self.heightfield_scratch[..heights_len].to_vec();
+        self.pending_static_heightfield_colliders
+            .push(StaticHeightfieldCollider {
+                rows,
+                cols,
+                heights,
+                scale,
+                translation,
+                friction: friction.max(0.0),
+                restitution: restitution.max(0.0),
+            });
+        true
     }
 
     pub fn clear_gameplay2d_config(&mut self) {
@@ -404,6 +475,156 @@ impl Simulation {
         }
     }
 
+    /// Resets all pending platformer3d state. Mirrors `clear_gameplay2d_config`.
+    pub fn clear_gameplay3d_config(&mut self) {
+        for slot in &mut self.pending_gameplay3d_slots {
+            *slot = PendingBody3DSlot::default();
+        }
+        for config in &mut self.pending_gameplay3d_configs {
+            *config = Platformer3DConfig::default();
+        }
+    }
+
+    /// Marks slot as a kinematic capsule body and records its capsule shape.
+    /// Must be called before `bootstrap_gameplay3d_from_input`.
+    pub fn configure_platformer_capsule_body3d(
+        &mut self,
+        slot: usize,
+        config: KinematicCapsuleBody3DConfig,
+    ) -> bool {
+        let Some(pending) = self.pending_gameplay3d_slots.get_mut(slot) else {
+            return false;
+        };
+        pending.kinematic_capsule = Some(KinematicCapsuleBody3DConfig {
+            half_height: config.half_height.max(0.01),
+            radius: config.radius.max(0.01),
+        });
+        true
+    }
+
+    pub fn configure_platformer_3d(&mut self, slot: usize, config: Platformer3DConfig) -> bool {
+        let Some(slot_config) = self.pending_gameplay3d_configs.get_mut(slot) else {
+            return false;
+        };
+        *slot_config = config;
+        true
+    }
+
+    /// Switches the simulation into `Gameplay3D` mode using the pending
+    /// capsule + platformer configs and the input buffer's `(x, y, z)` slot
+    /// positions for the initial pose. Returns the active body count.
+    pub fn bootstrap_gameplay3d_from_input(&mut self) -> usize {
+        if !matches!(self.mode, SimulationMode::BufferDriven) {
+            return self.active_count;
+        }
+        if self.active_count == 0 || self.input_buffer.len() < INPUT_STRIDE {
+            return 0;
+        }
+
+        let mut positions = Vec::with_capacity(self.active_count);
+        for index in 0..self.active_count {
+            let base = index * INPUT_STRIDE;
+            positions.push([
+                self.input_buffer[base],
+                self.input_buffer[base + 1],
+                self.input_buffer[base + 2],
+            ]);
+        }
+
+        let pending_slots = &self.pending_gameplay3d_slots[..self.active_count];
+        let configs = &self.pending_gameplay3d_configs[..self.active_count];
+        let gameplay = Gameplay3DState::from_pending(
+            &positions,
+            pending_slots,
+            configs,
+            &self.pending_static_colliders,
+            &self.pending_static_heightfield_colliders,
+        );
+        self.mode = SimulationMode::Gameplay3D(gameplay);
+        self.active_count
+    }
+
+    pub fn set_gameplay3d_input_axes(&mut self, slot: usize, move_x: f32, move_z: f32) {
+        if let SimulationMode::Gameplay3D(state) = &mut self.mode {
+            state.set_input_axes(slot, move_x, move_z);
+        }
+    }
+
+    pub fn set_gameplay3d_input_buttons(&mut self, slot: usize, jump: bool, run: bool) {
+        if let SimulationMode::Gameplay3D(state) = &mut self.mode {
+            state.set_input_buttons(slot, jump, run);
+        }
+    }
+
+    pub fn set_gameplay3d_slot_position(&mut self, slot: usize, x: f32, y: f32, z: f32) {
+        if let SimulationMode::Gameplay3D(state) = &mut self.mode {
+            state.set_slot_position(slot, [x, y, z]);
+        }
+    }
+
+    pub fn gameplay3d_slot_grounded(&self, slot: usize) -> Option<bool> {
+        match &self.mode {
+            SimulationMode::Gameplay3D(state) => state.slot_grounded(slot),
+            _ => None,
+        }
+    }
+
+    pub fn gameplay3d_slot_jump_count(&self, slot: usize) -> Option<u32> {
+        match &self.mode {
+            SimulationMode::Gameplay3D(state) => state.slot_jump_count(slot),
+            _ => None,
+        }
+    }
+
+    /// Animation FSM state (idle/walking/running/jumping/falling/landing)
+    /// for `slot`, encoded as a `u32` per [`crate::runtime::behaviors::
+    /// platformer_3d::fsm::Platformer3DFsmState`].
+    pub fn gameplay3d_slot_fsm_state(&self, slot: usize) -> Option<u32> {
+        match &self.mode {
+            SimulationMode::Gameplay3D(state) => state.slot_fsm_state(slot).map(|s| s as u32),
+            _ => None,
+        }
+    }
+
+    pub fn gameplay3d_event_buffer(&self) -> Option<&[f32]> {
+        match &self.mode {
+            SimulationMode::Gameplay3D(state) => Some(&state.event_buffer),
+            _ => None,
+        }
+    }
+
+    pub fn gameplay3d_event_count(&self) -> usize {
+        match &self.mode {
+            SimulationMode::Gameplay3D(state) => state.event_count(),
+            _ => 0,
+        }
+    }
+
+    /// Refresh the Gameplay3D debug-render buffers from the current Rapier
+    /// world snapshot. Returns the number of vertices written (always a
+    /// multiple of 2 since each line emits a pair). Does nothing and
+    /// returns `0` outside Gameplay3D mode.
+    pub fn gameplay3d_debug_render(&mut self) -> u32 {
+        match &mut self.mode {
+            SimulationMode::Gameplay3D(state) => state.debug_render(),
+            _ => 0,
+        }
+    }
+
+    pub fn gameplay3d_debug_vertices_ptr(&self) -> *const f32 {
+        match &self.mode {
+            SimulationMode::Gameplay3D(state) => state.debug_vertices.as_ptr(),
+            _ => std::ptr::null(),
+        }
+    }
+
+    pub fn gameplay3d_debug_colors_ptr(&self) -> *const f32 {
+        match &self.mode {
+            SimulationMode::Gameplay3D(state) => state.debug_colors.as_ptr(),
+            _ => std::ptr::null(),
+        }
+    }
+
     fn sync_input(
         world: &mut World,
         entity_order: &[EntityId],
@@ -501,6 +722,46 @@ impl Simulation {
             input_buffer[base + 6] = 1.0;
             input_buffer[base + 7] = 0.0;
             input_buffer[base + 8] = motion[entity].speed;
+        }
+    }
+
+    /// Mirrors `sync_pong` for Gameplay3D: pushes the platformer slot pose
+    /// into the ECS storages and the host-visible input buffer so the host
+    /// can read the post-step character pose without an extra FFI getter.
+    fn sync_gameplay3d(
+        world: &mut World,
+        entity_order: &[EntityId],
+        active_count: usize,
+        input_buffer: &mut [f32],
+        state: &Gameplay3DState,
+    ) {
+        let (mut transforms, mut motion, mut collisions) = world
+            .borrow::<(ViewMut<Transform>, ViewMut<Motion>, ViewMut<CollisionState>)>()
+            .expect("storages should exist");
+
+        for (index, &entity) in entity_order[..active_count].iter().enumerate() {
+            let base = index * INPUT_STRIDE;
+            let slot = &state.slots[index];
+            let speed = (slot.linvel[0] * slot.linvel[0]
+                + slot.linvel[1] * slot.linvel[1]
+                + slot.linvel[2] * slot.linvel[2])
+                .sqrt();
+            let grounded_contacts = if slot.grounded { 1 } else { 0 };
+
+            transforms[entity].position = slot.position;
+            transforms[entity].rotation = slot.rotation;
+            motion[entity].speed = speed;
+            collisions[entity].contacts = grounded_contacts;
+
+            input_buffer[base] = slot.position[0];
+            input_buffer[base + 1] = slot.position[1];
+            input_buffer[base + 2] = slot.position[2];
+            input_buffer[base + 3] = slot.rotation[0];
+            input_buffer[base + 4] = slot.rotation[1];
+            input_buffer[base + 5] = slot.rotation[2];
+            input_buffer[base + 6] = slot.rotation[3];
+            input_buffer[base + 7] = grounded_contacts as f32;
+            input_buffer[base + 8] = speed;
         }
     }
 

@@ -47,7 +47,19 @@ export abstract class EntityBuilder<
       collisionBuilder: this.collisionBuilder,
       materialBuilder: this.materialBuilder,
     };
+    // `_builders` is intentionally attached to BOTH the builder-side options
+    // (the raw `arg` from `createEntity`, used by builders during `build()`)
+    // and the entity's own `options`. Some entity classes (e.g. `ZylemPlane`)
+    // reassign `this.options = deepMergeValues(...)` in their constructor,
+    // producing a fresh object that loses any reference shared with `arg`.
+    // Without this second assignment, post-build consumers that look up
+    // `entity.options._builders` (e.g. extracting `heightData` from the
+    // plane's mesh builder for a runtime adapter) would silently see
+    // `undefined` even though the builders ran successfully.
     (this.options as Partial<GameEntityOptions>)._builders = builders;
+    if (entity && (entity as any).options) {
+      ((entity as any).options as Partial<GameEntityOptions>)._builders = builders;
+    }
   }
 
   withPosition(setupPosition: Vec3): this {

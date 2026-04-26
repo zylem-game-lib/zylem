@@ -33,6 +33,7 @@ export class StageDebugDelegate {
 	private domListenersAttached = false;
 	private debugCursor: DebugEntityCursor | null = null;
 	private debugLines: LineSegments | null = null;
+	private runtimeDebugLines: LineSegments | null = null;
 	private cameraDebugDelegate: StageCameraDebugDelegate | null = null;
 	private debugStateUnsubscribe: (() => void) | null = null;
 
@@ -91,6 +92,13 @@ export class StageDebugDelegate {
 		this.stage.scene.scene.add(this.debugLines);
 		this.debugLines.visible = true;
 
+		this.runtimeDebugLines = new LineSegments(
+			new BufferGeometry(),
+			new LineBasicMaterial({ vertexColors: true }),
+		);
+		this.runtimeDebugLines.visible = true;
+		this.stage.scene.scene.add(this.runtimeDebugLines);
+
 		this.debugCursor = new DebugEntityCursor(this.stage.scene.scene);
 	}
 
@@ -100,6 +108,12 @@ export class StageDebugDelegate {
 			this.debugLines.geometry.dispose();
 			(this.debugLines.material as LineBasicMaterial).dispose();
 			this.debugLines = null;
+		}
+		if (this.runtimeDebugLines && this.stage.scene) {
+			this.stage.scene.scene.remove(this.runtimeDebugLines);
+			this.runtimeDebugLines.geometry.dispose();
+			(this.runtimeDebugLines.material as LineBasicMaterial).dispose();
+			this.runtimeDebugLines = null;
 		}
 		this.debugCursor?.dispose();
 		this.debugCursor = null;
@@ -129,6 +143,26 @@ export class StageDebugDelegate {
 			const { vertices, colors } = world.world.debugRender();
 			this.debugLines.geometry.setAttribute('position', new BufferAttribute(vertices, 3));
 			this.debugLines.geometry.setAttribute('color', new BufferAttribute(colors, 4));
+		}
+
+		if (this.runtimeDebugLines) {
+			const runtimeAdapter = this.stage.runtimeAdapter;
+			const runtimeDebug = runtimeAdapter?.getDebugRender?.() ?? null;
+			if (runtimeDebug && runtimeDebug.vertices.length > 0) {
+				this.runtimeDebugLines.geometry.setAttribute(
+					'position',
+					new BufferAttribute(new Float32Array(runtimeDebug.vertices), 3),
+				);
+				this.runtimeDebugLines.geometry.setAttribute(
+					'color',
+					new BufferAttribute(new Float32Array(runtimeDebug.colors), 4),
+				);
+				this.runtimeDebugLines.geometry.attributes.position.needsUpdate = true;
+				this.runtimeDebugLines.geometry.attributes.color.needsUpdate = true;
+				this.runtimeDebugLines.visible = true;
+			} else {
+				this.runtimeDebugLines.visible = false;
+			}
 		}
 		const tool = getDebugTool();
 		const isCursorTool = tool === 'select' || tool === 'delete';
