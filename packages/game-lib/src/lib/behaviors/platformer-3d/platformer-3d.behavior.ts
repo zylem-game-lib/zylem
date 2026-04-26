@@ -1,15 +1,18 @@
 /**
  * Platformer 3D Behavior System
- * 
+ *
  * Handles 3D platformer physics including:
- * - Ground detection via raycasting
+ * - Contact-based ground detection (uses the actual capsule collider — no
+ *   raycast/shapecast probe). The bottom of the body's collider is the
+ *   single source of truth for "is grounded".
  * - Horizontal movement (walk/run)
  * - Jumping with multi-jump support
- * - Gravity application
+ * - Gravity application (Rapier's internal gravity is disabled per-body so
+ *   `movement.gravity` is the only fall acceleration — previously the two
+ *   stacked, doubling the airborne fall rate).
  * - State synchronization with FSM
  */
 
-import { GroundProbe3D, getGroundAnchorOffsetY } from '../shared/ground-probe-3d';
 import type {
 	Platformer3DMovementComponent,
 	Platformer3DInputComponent,
@@ -48,18 +51,83 @@ export interface Platformer3DEntity {
 
 /**
  * Platformer 3D Movement Behavior
- * 
- * Core physics system for 3D platformer movement
+ *
+ * Core physics system for 3D platformer movement.
+ *
+ * Ground detection uses Rapier's narrow-phase contacts on the entity's
+ * collider (`world.contactsWith` + `contactPair`). This eliminates the old
+ * shape/ray probe and aligns "grounded" with the same surface the body
+ * physically rests on, which removes the jitter that happened on heightmap
+ * terrain (the probe and the contact resolver could disagree by a frame).
  */
 export class Platformer3DBehavior {
 	private world: any;
 	private scene: any;
-	private groundProbe: GroundProbe3D;
+	/**
+	 * Tracks entities whose Rapier `gravityScale` has been zeroed so that
+	 * `applyGravity` is the sole writer of vertical velocity. We do this
+	 * lazily on the first update because the body isn't always available at
+	 * construction time.
+	 */
+	private gravityConfiguredUUIDs = new Set<string>();
 
 	constructor(world: any, scene: any) {
 		this.world = world;
 		this.scene = scene;
-		this.groundProbe = new GroundProbe3D(world);
+	}
+
+	/**
+	 * Detect "grounded" using the actual capsule collider's contact pairs.
+	 *
+	 * A contact is treated as ground when its solver point lies below the
+	 * body center (i.e., it sits on the bottom hemisphere/cylinder). We
+	 * deliberately don't filter by normal direction: the contact point's
+	 * position alone is robust against the various normal-flip conventions
+	 * Rapier uses for `flipped` manifolds and against rolling-bottom edges
+	 * on heightmap terrain.
+	 */
+	private detectGroundedFromContacts(entity: Platformer3DEntity): boolean {
+		const collider = (entity as any).collider;
+		const physicsWorld = this.world?.world;
+		if (!collider || !physicsWorld?.contactsWith) {
+			return false;
+		}
+
+		let grounded = false;
+
+		physicsWorld.contactsWith(collider, (other: any) => {
+			if (grounded) return;
+			physicsWorld.contactPair(collider, other, (manifold: any, flipped: boolean) => {
+				if (grounded) return;
+				const num = manifold.numContacts();
+				for (let i = 0; i < num; i++) {
+					const local = flipped
+						? manifold.localContactPoint2(i)
+						: manifold.localContactPoint1(i);
+					if (!local) continue;
+					if (local.y < 0) {
+						grounded = true;
+						return;
+					}
+				}
+			});
+		});
+
+		return grounded;
+	}
+
+	/**
+	 * One-time per-entity physics setup: take over gravity from Rapier's
+	 * world so that `applyGravity` controls the entire airborne fall curve.
+	 * Without this, gravity was effectively doubled (Rapier's world gravity
+	 * + this behavior's explicit gravity were both pulling the body down).
+	 */
+	private ensurePhysicsConfigured(entity: Platformer3DEntity): void {
+		if (this.gravityConfiguredUUIDs.has(entity.uuid)) return;
+		if (typeof entity.body?.setGravityScale === 'function') {
+			entity.body.setGravityScale(0, true);
+		}
+		this.gravityConfiguredUUIDs.add(entity.uuid);
 	}
 
 	/**
@@ -69,7 +137,7 @@ export class Platformer3DBehavior {
 	 * can damp vertical motion correctly while grounded. Jump and gravity are
 	 * the sole writers of Y velocity (see handleJump / applyGravity).
 	 */
-	private applyMovement(entity: Platformer3DEntity, delta: number): void {
+	private applyMovement(entity: Platformer3DEntity): void {
 		const input = entity.$platformer;
 		const movement = entity.platformer;
 		const state = entity.platformerState;
@@ -216,63 +284,39 @@ export class Platformer3DBehavior {
 	}
 
 	/**
-	 * Update entity state based on physics
+	 * Update entity state based on physics.
+	 *
+	 * Grounded is determined purely by Rapier's contact pairs on the entity's
+	 * collider. This removes a whole class of slope/heightmap jitter caused
+	 * by the previous shape probe disagreeing with the contact resolver — the
+	 * probe could report grounded while a contact impulse had just nudged the
+	 * body off the ground, producing visible micro-bouncing.
+	 *
+	 * While grounded, vertical velocity is held at 0 each frame. This stops
+	 * residual upward kicks from slope-contact resolution from accumulating
+	 * across frames (which previously caused the character to "ride up"
+	 * slopes and lose contact briefly, then fall back, then re-contact, in a
+	 * tight oscillation).
 	 */
 	private updateState(entity: Platformer3DEntity, delta: number): void {
 		const state = entity.platformerState;
-
-		// 1. Reset grounded state before detection
 		const wasGrounded = state.grounded;
-		
-		// Read ACTUAL velocity from physics body
 		const velocity = entity.body.linvel();
-		
-		let isGrounded = false;
-		
-		// Separate ground detection for airborne vs walking
-		const isAirborne = state.jumping || state.falling;
-		
-		if (isAirborne) {
-			// Airborne: Must be FALLING (not jumping) to land.
-			// The velocity threshold must be loose enough to capture the frame
-			// after Rapier's contact resolution has partially damped the fall
-			// (|velocity.y| can sit between 0.5 and 2.0 for a frame or two); too
-			// strict a threshold caused the character to hover for 1–2 frames
-			// post-impact, producing a visible camera hitch.
-			const probeOriginYOffset = 0.05 - getGroundAnchorOffsetY(entity);
-			const nearGround = this.groundProbe.detect(entity, {
-				rayLength: entity.platformer.groundRayLength,
-				mode: 'any',
-				debug: entity.platformer.debugGroundProbe,
-				scene: this.scene,
-				originYOffset: probeOriginYOffset,
-			});
-			const canLand = state.falling && !state.jumping;
-			const hasLanded = velocity.y > -3.0;
-			isGrounded = nearGround && canLand && hasLanded;
+		const hasContact = this.detectGroundedFromContacts(entity);
 
-			// On the landing frame, snap residual Y velocity to 0 so the character
-			// doesn't keep drifting downward into the ground on the next step.
-			if (isGrounded && velocity.y < 0) {
-				entity.transformStore.velocity.y = 0;
-				entity.transformStore.dirty.velocityY = true;
-			}
+		const isAirborne = state.jumping || state.falling;
+		let isGrounded: boolean;
+		if (isAirborne) {
+			// While in a jump arc the contact still exists for one frame after
+			// liftoff; require the falling state before allowing a landing.
+			const canLand = state.falling && !state.jumping;
+			isGrounded = hasContact && canLand;
 		} else {
-			// On ground (walking/idle): Normal raycast detection with lenient threshold
-			const probeOriginYOffset = 0.05 - getGroundAnchorOffsetY(entity);
-			const nearGround = this.groundProbe.detect(entity, {
-				rayLength: entity.platformer.groundRayLength,
-				mode: 'any',
-				debug: entity.platformer.debugGroundProbe,
-				scene: this.scene,
-				originYOffset: probeOriginYOffset,
-			});
-			const notFallingFast = velocity.y > -2.0; // Lenient - don't ground while falling fast
-			isGrounded = nearGround && notFallingFast;
+			isGrounded = hasContact;
 		}
 
-		// Hysteresis: if the probe just missed but we were grounded last frame,
-		// stay grounded for a short grace window (absorbs edge/ray flicker).
+		// Hysteresis: if the contact briefly drops over a heightmap seam,
+		// stay grounded for a short grace window.
 		if (!isGrounded && wasGrounded) {
 			if (state.groundedGraceTimer <= 0) {
 				state.groundedGraceTimer = GROUNDED_GRACE_WINDOW;
@@ -283,15 +327,20 @@ export class Platformer3DBehavior {
 				isGrounded = true;
 				state.groundedGraceTimer = Math.max(0, state.groundedGraceTimer - delta);
 			} else {
-				// Real ground regained, or we truly left (airborne state active):
-				// end grace immediately.
 				state.groundedGraceTimer = 0;
 			}
 		}
 
 		state.grounded = isGrounded;
 
-		// 2. Update Coyote Timer
+		// Hold vy = 0 while grounded so slope-impulse residual doesn't drift
+		// the body upward across frames. handleJump runs after this and will
+		// overwrite velocity.y with jumpForce on a jump frame.
+		if (state.grounded) {
+			entity.transformStore.velocity.y = 0;
+			entity.transformStore.dirty.velocityY = true;
+		}
+
 		if (state.grounded) {
 			state.timeSinceGrounded = 0;
 			state.lastGroundedY = entity.body.translation().y;
@@ -299,7 +348,6 @@ export class Platformer3DBehavior {
 			state.timeSinceGrounded += delta;
 		}
 
-		// 3. Landing Logic
 		if (!wasGrounded && state.grounded) {
 			state.jumpCount = 0;
 			state.jumping = false;
@@ -308,7 +356,6 @@ export class Platformer3DBehavior {
 			state.jumpCutRampTimer = 0;
 		}
 
-		// 4. Falling Logic (negative Y velocity and not grounded)
 		if (velocity.y < -0.1 && !state.grounded) {
 			if (state.jumping && velocity.y < 0) {
 				state.jumping = false;
@@ -329,13 +376,14 @@ export class Platformer3DBehavior {
 		}
 
 		const platformerEntity = entity as Platformer3DEntity;
+		this.ensurePhysicsConfigured(platformerEntity);
 		this.updateState(platformerEntity, delta);
-		this.applyMovement(platformerEntity, delta);
+		this.applyMovement(platformerEntity);
 		this.handleJump(platformerEntity, delta);
 		this.applyGravity(platformerEntity, delta);
 	}
 
 	destroy(): void {
-		this.groundProbe.destroy();
+		this.gravityConfiguredUUIDs.clear();
 	}
 }

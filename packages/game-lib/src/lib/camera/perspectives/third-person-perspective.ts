@@ -24,6 +24,20 @@ export interface ThirdPersonOptions {
 	initialPosition?: Vec3Input;
 	/** Fallback lookAt point when no targets exist. */
 	initialLookAt?: Vec3Input;
+	/**
+	 * Seconds the camera lags behind the target's actual position. The camera
+	 * samples target moves from `now - trailDelay` so brief, fast Y motion
+	 * (jump apex / fall start) doesn't get tracked 1:1 — eliminates the
+	 * shimmer-on-fall effect at high refresh rates. 0 disables the trail and
+	 * restores instantaneous tracking. Default 0.1 (100 ms).
+	 */
+	trailDelay?: number;
+	/**
+	 * Maximum number of samples to keep in the trailing ring buffer.
+	 * Sized to cover ~1 s at 120 Hz; larger only matters if `trailDelay` is
+	 * raised significantly. Default 120.
+	 */
+	trailBufferSize?: number;
 }
 
 interface ThirdPersonBaseDefaults {
@@ -34,6 +48,8 @@ interface ThirdPersonBaseDefaults {
 	fov: number;
 	paddingFactor: number;
 	minDistance: number;
+	trailDelay: number;
+	trailBufferSize: number;
 }
 
 const DEFAULTS: ThirdPersonBaseDefaults = {
@@ -44,7 +60,14 @@ const DEFAULTS: ThirdPersonBaseDefaults = {
 	fov: 75,
 	paddingFactor: 1.5,
 	minDistance: 5,
+	trailDelay: 0.1,
+	trailBufferSize: 120,
 };
+
+interface TrailSample {
+	time: number;
+	pos: Vector3;
+}
 
 /**
  * Third-person 3D perspective.
@@ -55,11 +78,19 @@ const DEFAULTS: ThirdPersonBaseDefaults = {
  */
 export class ThirdPersonPerspective implements CameraPerspective {
 	readonly id = 'third-person';
-	readonly defaults = { damping: 0.15 };
+	/**
+	 * Slightly looser than the previous 0.15 to compose better with the
+	 * trailing-delay follow: the trail absorbs short, fast moves and the
+	 * damping smooths the rest.
+	 */
+	readonly defaults = { damping: 0.12 };
 
 	private opts: ThirdPersonBaseDefaults;
 	private initialPosition?: Vector3;
 	private initialLookAt?: Vector3;
+
+	/** Per-target ring buffers for trailing-delay sampling, keyed by target key. */
+	private _trailBuffers = new Map<string, TrailSample[]>();
 
 	constructor(options?: ThirdPersonOptions) {
 		const { initialPosition, initialLookAt, ...rest } = options ?? {};
@@ -81,7 +112,7 @@ export class ThirdPersonPerspective implements CameraPerspective {
 		}
 
 		if (targetKeys.length === 1) {
-			return this.singleTargetPose(primary.position);
+			return this.singleTargetPose(primary.position, ctx, this.opts.targetKey);
 		}
 
 		return this.multiTargetPose(ctx);
@@ -121,13 +152,20 @@ export class ThirdPersonPerspective implements CameraPerspective {
 	}
 
 	/**
-	 * Single target: position = target + offset, lookAt = target.
+	 * Single target: position = trailedTarget + offset, lookAt = trailedTarget.
+	 *
+	 * The trailed position lags `targetPos` by `trailDelay` seconds (default
+	 * 100 ms), so transient spikes in target Y (the start of a fall, jump apex)
+	 * don't propagate into the camera every frame. Both `position` and
+	 * `lookAt` are derived from the same trailed point so the relative offset
+	 * is preserved exactly.
 	 */
-	private singleTargetPose(targetPos: Vector3): CameraPose {
+	private singleTargetPose(targetPos: Vector3, ctx: CameraContext, targetKey: string): CameraPose {
+		const trailed = this.getTrailedPosition(targetKey, targetPos, ctx.time);
 		const position = new Vector3(
-			targetPos.x + this.opts.shoulderOffset,
-			targetPos.y + this.opts.height,
-			targetPos.z + this.opts.distance
+			trailed.x + this.opts.shoulderOffset,
+			trailed.y + this.opts.height,
+			trailed.z + this.opts.distance
 		);
 		return {
 			position,
@@ -136,27 +174,31 @@ export class ThirdPersonPerspective implements CameraPerspective {
 			zoom: 1,
 			near: 0.1,
 			far: 1000,
-			lookAt: targetPos.clone(),
+			lookAt: trailed.clone(),
 		};
 	}
 
 	/**
-	 * Multi-target: compute centroid and adjust distance to frame all targets.
+	 * Multi-target: compute centroid (using trailed positions) and adjust
+	 * distance to frame all targets.
 	 */
 	private multiTargetPose(ctx: CameraContext): CameraPose {
-		const targets = Object.values(ctx.targets);
+		const entries = Object.entries(ctx.targets);
+		const trailedPositions = entries.map(
+			([key, t]) => this.getTrailedPosition(key, t.position, ctx.time),
+		);
 
 		// Centroid
 		const centroid = new Vector3();
-		for (const t of targets) {
-			centroid.add(t.position);
+		for (const pos of trailedPositions) {
+			centroid.add(pos);
 		}
-		centroid.divideScalar(targets.length);
+		centroid.divideScalar(trailedPositions.length);
 
 		// Max distance from centroid to any target
 		let maxDist = 0;
-		for (const t of targets) {
-			const d = centroid.distanceTo(t.position);
+		for (const pos of trailedPositions) {
+			const d = centroid.distanceTo(pos);
 			if (d > maxDist) maxDist = d;
 		}
 
@@ -191,5 +233,64 @@ export class ThirdPersonPerspective implements CameraPerspective {
 			far: 1000,
 			lookAt: centroid.clone(),
 		};
+	}
+
+	/**
+	 * Push the current target position into the per-target ring buffer and
+	 * return a position interpolated at `now - trailDelay`.
+	 *
+	 * - When `trailDelay` is 0 the call short-circuits and returns `targetPos`
+	 *   unchanged (no allocation, no buffer growth).
+	 * - During the warmup window (the first `trailDelay` seconds of life)
+	 *   the oldest sample is returned so the camera starts from rest rather
+	 *   than snapping to the live target.
+	 */
+	private getTrailedPosition(
+		targetKey: string,
+		targetPos: Vector3,
+		now: number,
+	): Vector3 {
+		const delay = this.opts.trailDelay;
+		if (delay <= 0) {
+			return targetPos;
+		}
+
+		let buffer = this._trailBuffers.get(targetKey);
+		if (!buffer) {
+			buffer = [];
+			this._trailBuffers.set(targetKey, buffer);
+		}
+
+		buffer.push({ time: now, pos: targetPos.clone() });
+
+		const trimBefore = now - delay - 0.05;
+		while (buffer.length > 1 && buffer[0].time < trimBefore) {
+			buffer.shift();
+		}
+		if (buffer.length > this.opts.trailBufferSize) {
+			buffer.splice(0, buffer.length - this.opts.trailBufferSize);
+		}
+
+		const sampleTime = now - delay;
+
+		// Warmup: sampleTime is older than every entry → return the oldest.
+		if (buffer[0].time >= sampleTime) {
+			return buffer[0].pos.clone();
+		}
+
+		// Find the two adjacent entries straddling sampleTime and lerp by time.
+		for (let i = 1; i < buffer.length; i++) {
+			const a = buffer[i - 1];
+			const b = buffer[i];
+			if (a.time <= sampleTime && sampleTime <= b.time) {
+				const span = b.time - a.time;
+				const t = span > 1e-6 ? (sampleTime - a.time) / span : 0;
+				return new Vector3().lerpVectors(a.pos, b.pos, t);
+			}
+		}
+
+		// Fallback: sampleTime is newer than every sample (shouldn't happen
+		// after the push above, but be defensive).
+		return buffer[buffer.length - 1].pos.clone();
 	}
 }

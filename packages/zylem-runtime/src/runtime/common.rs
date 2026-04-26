@@ -32,6 +32,27 @@ pub struct StaticBoxCollider {
     pub restitution: f32,
 }
 
+/// Static heightfield collider mirroring a TS playground plane. Heights are
+/// laid out outer-x / inner-z (TS convention from `PlaneMeshBuilder.postBuild`),
+/// i.e. `heights[x_idx * (cols + 1) + z_idx]`. The collider conversion in
+/// `Gameplay3DState::from_pending` repacks them to rapier3d's column-major
+/// `Array2` (`row → z`, `col → x`).
+///
+/// `rows` and `cols` are *subdivisions* not vertex counts; the heights vec
+/// must have exactly `(rows + 1) * (cols + 1)` entries. `scale.0` and
+/// `scale.2` are the full tile width and depth; `scale.1` is the multiplier
+/// applied to height values.
+#[derive(Clone, Debug, Default)]
+pub struct StaticHeightfieldCollider {
+    pub rows: u32,
+    pub cols: u32,
+    pub heights: Vec<f32>,
+    pub scale: [f32; 3],
+    pub translation: [f32; 3],
+    pub friction: f32,
+    pub restitution: f32,
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Bounds2D {
     pub left: f32,

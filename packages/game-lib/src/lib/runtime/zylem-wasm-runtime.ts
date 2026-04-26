@@ -85,6 +85,56 @@ export interface ZylemRuntimeExports {
 	zylem_runtime_event_ptr(): number;
 	zylem_runtime_event_len(): number;
 	zylem_runtime_event_count(): number;
+	zylem_runtime_gameplay3d_clear_config(): void;
+	zylem_runtime_configure_platformer_capsule_body3d(
+		slot: number,
+		halfHeight: number,
+		radius: number,
+	): number;
+	zylem_runtime_configure_platformer_3d(
+		slot: number,
+		walkSpeed: number,
+		runSpeed: number,
+		jumpForce: number,
+		maxJumps: number,
+		gravity: number,
+		coyoteTime: number,
+		jumpBufferTime: number,
+		jumpCutMultiplier: number,
+		multiJumpWindow: number,
+		maxSlopeDeg: number,
+		autostepHeight: number,
+		snapToGround: number,
+	): number;
+	zylem_runtime_bootstrap_gameplay3d(): number;
+	zylem_runtime_gameplay3d_set_input_axes(slot: number, moveX: number, moveZ: number): void;
+	zylem_runtime_gameplay3d_set_input_buttons(slot: number, jump: number, run: number): void;
+	zylem_runtime_gameplay3d_set_slot_position(slot: number, x: number, y: number, z: number): void;
+	zylem_runtime_gameplay3d_grounded(slot: number): number;
+	zylem_runtime_gameplay3d_jump_count(slot: number): number;
+	zylem_runtime_gameplay3d_state(slot: number): number;
+	zylem_runtime_gameplay3d_event_ptr(): number;
+	zylem_runtime_gameplay3d_event_len(): number;
+	zylem_runtime_gameplay3d_event_count(): number;
+	zylem_runtime_heightfield_scratch_ptr(): number;
+	zylem_runtime_heightfield_scratch_capacity(): number;
+	zylem_runtime_clear_static_heightfield_colliders(): void;
+	zylem_runtime_add_static_heightfield_collider(
+		rows: number,
+		cols: number,
+		heightsLen: number,
+		scaleX: number,
+		scaleY: number,
+		scaleZ: number,
+		translationX: number,
+		translationY: number,
+		translationZ: number,
+		friction: number,
+		restitution: number,
+	): number;
+	zylem_runtime_gameplay3d_debug_render(): number;
+	zylem_runtime_gameplay3d_debug_vertices_ptr(): number;
+	zylem_runtime_gameplay3d_debug_colors_ptr(): number;
 }
 
 export interface ZylemRuntimeBufferViews {
@@ -103,6 +153,12 @@ export interface ZylemRuntimeBufferViews {
 	eventStride: number;
 	eventView: Float32Array;
 	eventLen: number;
+	/**
+	 * Gameplay3D event buffer view. Backed by `zylem_runtime_gameplay3d_event_*`
+	 * exports. Populated only after the runtime switches into Gameplay3D mode.
+	 */
+	gameplay3dEventView: Float32Array;
+	gameplay3dEventLen: number;
 	/**
 	 * Recreate typed views after init or if `memory.buffer` was resized.
 	 * Call after {@link ZylemRuntimeExports.zylem_runtime_init} and whenever the wasm memory grows.
@@ -170,6 +226,10 @@ export const enum ZylemRuntimeEventType {
 	BoundaryBounce = 1,
 	ColliderBounce = 2,
 	RegionEntered = 3,
+	/** Platformer3D applied a jump impulse. `secondarySlot` is `jumpCount`. */
+	JumpStarted = 4,
+	/** Platformer3D landed (was airborne, now grounded). */
+	Landed = 5,
 }
 
 export interface ZylemRuntimeEvent {
@@ -182,6 +242,40 @@ export interface ZylemRuntimeEvent {
 export interface ZylemRuntimeInstancedBatchConfig {
 	positions: ReadonlyArray<readonly [number, number, number]>;
 	halfExtents: readonly [number, number, number];
+	staticColliders?: ReadonlyArray<ZylemRuntimeStaticBoxCollider>;
+}
+
+/** Capsule shape config for a Gameplay3D platformer body. */
+export interface ZylemRuntimePlatformerCapsuleConfig {
+	slot: number;
+	position: readonly [number, number, number];
+	halfHeight: number;
+	radius: number;
+}
+
+/**
+ * Tunable platformer movement parameters. Maps 1:1 to Rust's
+ * `Platformer3DConfig`. All time values are in seconds.
+ */
+export interface ZylemRuntimePlatformer3DConfig {
+	slot: number;
+	walkSpeed: number;
+	runSpeed: number;
+	jumpForce: number;
+	maxJumps: number;
+	gravity: number;
+	coyoteTime: number;
+	jumpBufferTime: number;
+	jumpCutMultiplier: number;
+	multiJumpWindow: number;
+	maxSlopeDeg: number;
+	autostepHeight: number;
+	snapToGround: number;
+}
+
+export interface ZylemRuntimeGameplay3DConfig {
+	capsules: ReadonlyArray<ZylemRuntimePlatformerCapsuleConfig>;
+	platformers: ReadonlyArray<ZylemRuntimePlatformer3DConfig>;
 	staticColliders?: ReadonlyArray<ZylemRuntimeStaticBoxCollider>;
 }
 
@@ -220,6 +314,8 @@ export function attachZylemRuntimeBufferViews(exports: ZylemRuntimeExports): Zyl
 	let renderLen = 0;
 	let eventView = new Float32Array(0);
 	let eventLen = 0;
+	let gameplay3dEventView = new Float32Array(0);
+	let gameplay3dEventLen = 0;
 	const eventStride = exports.zylem_runtime_event_stride();
 
 	function refreshViews(): void {
@@ -232,14 +328,19 @@ export function attachZylemRuntimeBufferViews(exports: ZylemRuntimeExports): Zyl
 		const sBufLen = exports.zylem_runtime_summary_buffer_len();
 		const ePtr = exports.zylem_runtime_event_ptr();
 		const eLen = exports.zylem_runtime_event_len();
+		const e3Ptr = exports.zylem_runtime_gameplay3d_event_ptr();
+		const e3Len = exports.zylem_runtime_gameplay3d_event_len();
 
 		inputLen = inLen;
 		renderLen = rLen;
 		eventLen = eLen;
+		gameplay3dEventLen = e3Len;
 		inputView = new Float32Array(buffer, inPtr, inLen);
 		renderView = new Float32Array(buffer, rPtr, rLen);
 		summaryView = new Float32Array(buffer, sPtr, sBufLen);
 		eventView = eLen > 0 ? new Float32Array(buffer, ePtr, eLen) : new Float32Array(0);
+		gameplay3dEventView =
+			e3Len > 0 ? new Float32Array(buffer, e3Ptr, e3Len) : new Float32Array(0);
 	}
 
 	refreshViews();
@@ -270,6 +371,12 @@ export function attachZylemRuntimeBufferViews(exports: ZylemRuntimeExports): Zyl
 		},
 		get eventLen() {
 			return eventLen;
+		},
+		get gameplay3dEventView() {
+			return gameplay3dEventView;
+		},
+		get gameplay3dEventLen() {
+			return gameplay3dEventLen;
 		},
 		refreshViews,
 	};
@@ -585,4 +692,325 @@ export async function createZylemRuntimeInstancedBatchSession(
 		imports,
 	);
 	return bootstrapZylemRuntimeInstancing(buffers, config);
+}
+
+/**
+ * Pushes capsule + platformer config to wasm. Does NOT switch the simulation
+ * mode — call {@link bootstrapZylemRuntimeGameplay3D} after writing initial
+ * positions to the input buffer.
+ */
+export function configureZylemRuntimePlatformer3D(
+	buffers: ZylemRuntimeBufferViews,
+	config: ZylemRuntimeGameplay3DConfig,
+): void {
+	buffers.exports.zylem_runtime_gameplay3d_clear_config();
+	for (const capsule of config.capsules) {
+		buffers.exports.zylem_runtime_configure_platformer_capsule_body3d(
+			capsule.slot,
+			Math.max(capsule.halfHeight, 0.01),
+			Math.max(capsule.radius, 0.01),
+		);
+	}
+	for (const platformer of config.platformers) {
+		buffers.exports.zylem_runtime_configure_platformer_3d(
+			platformer.slot,
+			platformer.walkSpeed,
+			platformer.runSpeed,
+			platformer.jumpForce,
+			platformer.maxJumps >>> 0,
+			platformer.gravity,
+			platformer.coyoteTime,
+			platformer.jumpBufferTime,
+			platformer.jumpCutMultiplier,
+			platformer.multiJumpWindow,
+			platformer.maxSlopeDeg,
+			platformer.autostepHeight,
+			platformer.snapToGround,
+		);
+	}
+}
+
+/**
+ * Writes initial capsule positions to the input buffer, registers static box
+ * colliders, configures platformer/capsule bodies, and switches the runtime
+ * into Gameplay3D mode. Returns the same buffers with views refreshed.
+ */
+export function bootstrapZylemRuntimeGameplay3D(
+	buffers: ZylemRuntimeBufferViews,
+	config: ZylemRuntimeGameplay3DConfig,
+): ZylemRuntimeBufferViews {
+	if (config.capsules.length === 0) {
+		throw new Error('bootstrapZylemRuntimeGameplay3D: at least one capsule must be provided');
+	}
+	if (buffers.inputStride < ZYLEM_RUNTIME_INPUT_STRIDE) {
+		throw new Error('bootstrapZylemRuntimeGameplay3D: input stride is smaller than expected');
+	}
+
+	buffers.inputView.fill(0);
+	for (const capsule of config.capsules) {
+		const base = capsule.slot * buffers.inputStride;
+		buffers.inputView[base] = capsule.position[0]!;
+		buffers.inputView[base + 1] = capsule.position[1]!;
+		buffers.inputView[base + 2] = capsule.position[2]!;
+		buffers.inputView[base + 6] = 1;
+	}
+
+	buffers.exports.zylem_runtime_clear_static_box_colliders();
+	for (const collider of config.staticColliders ?? []) {
+		buffers.exports.zylem_runtime_add_static_box_collider(
+			collider.center[0]!,
+			collider.center[1]!,
+			collider.center[2]!,
+			collider.halfExtents[0]!,
+			collider.halfExtents[1]!,
+			collider.halfExtents[2]!,
+			collider.friction ?? 0.95,
+			collider.restitution ?? 0.0,
+		);
+	}
+
+	configureZylemRuntimePlatformer3D(buffers, config);
+	buffers.exports.zylem_runtime_bootstrap_gameplay3d();
+	buffers.exports.zylem_runtime_step(0);
+	buffers.refreshViews();
+	return buffers;
+}
+
+/**
+ * Convenience wrapper that loads wasm, sizes the runtime to fit the provided
+ * capsules, and bootstraps Gameplay3D in one call.
+ */
+export async function createZylemRuntimeGameplay3DSession(
+	source: RequestInfo | URL | ArrayBuffer,
+	config: ZylemRuntimeGameplay3DConfig,
+	imports?: WebAssembly.Imports,
+): Promise<ZylemRuntimeBufferViews> {
+	const capacity = Math.max(...config.capsules.map((c) => c.slot)) + 1;
+	const buffers = await createZylemRuntimeSession(source, capacity, capacity, imports);
+	return bootstrapZylemRuntimeGameplay3D(buffers, config);
+}
+
+export function setZylemRuntimeGameplay3DInputAxes(
+	buffers: ZylemRuntimeBufferViews,
+	slot: number,
+	moveX: number,
+	moveZ: number,
+): void {
+	buffers.exports.zylem_runtime_gameplay3d_set_input_axes(slot, moveX, moveZ);
+}
+
+export function setZylemRuntimeGameplay3DInputButtons(
+	buffers: ZylemRuntimeBufferViews,
+	slot: number,
+	jump: boolean,
+	run: boolean,
+): void {
+	buffers.exports.zylem_runtime_gameplay3d_set_input_buttons(
+		slot,
+		jump ? 1 : 0,
+		run ? 1 : 0,
+	);
+}
+
+export function setZylemRuntimeGameplay3DSlotPosition(
+	buffers: ZylemRuntimeBufferViews,
+	slot: number,
+	x: number,
+	y: number,
+	z: number,
+): void {
+	buffers.exports.zylem_runtime_gameplay3d_set_slot_position(slot, x, y, z);
+}
+
+export function getZylemRuntimeGameplay3DGrounded(
+	buffers: ZylemRuntimeBufferViews,
+	slot: number,
+): boolean {
+	return buffers.exports.zylem_runtime_gameplay3d_grounded(slot) !== 0;
+}
+
+export function getZylemRuntimeGameplay3DJumpCount(
+	buffers: ZylemRuntimeBufferViews,
+	slot: number,
+): number {
+	return buffers.exports.zylem_runtime_gameplay3d_jump_count(slot) >>> 0;
+}
+
+/**
+ * Animation-facing platformer states surfaced from the wasm runtime FSM.
+ * Discriminants are stable and match `Platformer3DFsmState` in
+ * `packages/zylem-runtime/src/runtime/behaviors/platformer_3d/fsm.rs` —
+ * never reorder.
+ */
+export enum ZylemRuntimePlatformer3DFsmState {
+	Idle = 0,
+	Walking = 1,
+	Running = 2,
+	Jumping = 3,
+	Falling = 4,
+	Landing = 5,
+}
+
+/**
+ * Reads the current animation FSM state for a Gameplay3D platformer slot.
+ * Returns {@link ZylemRuntimePlatformer3DFsmState.Idle} when the simulation
+ * is not in Gameplay3D mode or the slot is out of range.
+ */
+export function getZylemRuntimeGameplay3DState(
+	buffers: ZylemRuntimeBufferViews,
+	slot: number,
+): ZylemRuntimePlatformer3DFsmState {
+	const raw = buffers.exports.zylem_runtime_gameplay3d_state(slot) >>> 0;
+	switch (raw) {
+		case ZylemRuntimePlatformer3DFsmState.Walking:
+		case ZylemRuntimePlatformer3DFsmState.Running:
+		case ZylemRuntimePlatformer3DFsmState.Jumping:
+		case ZylemRuntimePlatformer3DFsmState.Falling:
+		case ZylemRuntimePlatformer3DFsmState.Landing:
+			return raw;
+		default:
+			return ZylemRuntimePlatformer3DFsmState.Idle;
+	}
+}
+
+/**
+ * Configuration for a static heightfield collider passed to the wasm
+ * runtime. Mirrors the TS Rapier plane layout used by `playgroundPlane`
+ * (see `PlaneMeshBuilder.postBuild`):
+ *
+ *   - `rows` is the number of X subdivisions (so the X vertex count is
+ *     `rows + 1`).
+ *   - `cols` is the number of Z subdivisions.
+ *   - `heights` must have exactly `(rows + 1) * (cols + 1)` entries laid
+ *     out outer-x, inner-z, i.e. `heights[xIdx * (cols + 1) + zIdx]`.
+ *   - `scale` is `[tileX, heightScale, tileZ]`.
+ *   - `translation` shifts the heightfield in world space (heightfield
+ *     vertex y=0 maps to `translation[1]`).
+ */
+export interface ZylemRuntimeStaticHeightfieldCollider {
+	rows: number;
+	cols: number;
+	heights: Float32Array;
+	scale: readonly [number, number, number];
+	translation: readonly [number, number, number];
+	friction?: number;
+	restitution?: number;
+}
+
+/**
+ * Stages `cfg.heights` into the wasm heightfield scratch buffer and
+ * registers a pending heightfield collider. Must be called after wasm
+ * `init` and before `zylem_runtime_bootstrap_gameplay3d`. Throws if the
+ * heights array exceeds the scratch capacity or its length doesn't match
+ * `(rows + 1) * (cols + 1)`.
+ */
+export function addZylemRuntimeStaticHeightfieldCollider(
+	exports: ZylemRuntimeExports,
+	memory: WebAssembly.Memory,
+	cfg: ZylemRuntimeStaticHeightfieldCollider,
+): void {
+	const expected = (cfg.rows + 1) * (cfg.cols + 1);
+	if (cfg.heights.length !== expected) {
+		throw new Error(
+			`addZylemRuntimeStaticHeightfieldCollider: heights length ${cfg.heights.length} != expected ${expected} for rows=${cfg.rows} cols=${cfg.cols}`,
+		);
+	}
+	const capacity = exports.zylem_runtime_heightfield_scratch_capacity();
+	if (cfg.heights.length > capacity) {
+		throw new Error(
+			`addZylemRuntimeStaticHeightfieldCollider: heights length ${cfg.heights.length} exceeds wasm scratch capacity ${capacity}`,
+		);
+	}
+	const ptr = exports.zylem_runtime_heightfield_scratch_ptr();
+	const scratch = new Float32Array(memory.buffer, ptr, capacity);
+	scratch.set(cfg.heights);
+
+	const ok = exports.zylem_runtime_add_static_heightfield_collider(
+		cfg.rows >>> 0,
+		cfg.cols >>> 0,
+		cfg.heights.length >>> 0,
+		cfg.scale[0],
+		cfg.scale[1],
+		cfg.scale[2],
+		cfg.translation[0],
+		cfg.translation[1],
+		cfg.translation[2],
+		cfg.friction ?? 1.0,
+		cfg.restitution ?? 0.0,
+	);
+	if (ok === 0) {
+		throw new Error(
+			'addZylemRuntimeStaticHeightfieldCollider: wasm rejected the heightfield (rows/cols/length mismatch)',
+		);
+	}
+}
+
+/**
+ * Result of a Gameplay3D debug-render snapshot. Both views are fresh
+ * `Float32Array`s over the wasm memory, sliced to the populated prefix.
+ *
+ * - `vertices` is `vertexCount * 3` floats laid out as
+ *   `[x, y, z, x, y, z, ...]` with consecutive *pairs* forming line
+ *   segments (matching the layout of TS Rapier's `world.debugRender()`).
+ * - `colors` is `vertexCount * 4` floats laid out as
+ *   `[r, g, b, a, r, g, b, a, ...]` already converted from rapier's HSLA
+ *   palette so it can be fed directly into a `LineBasicMaterial` with
+ *   `vertexColors: true`.
+ */
+export interface ZylemRuntimeGameplay3DDebugRender {
+	vertices: Float32Array;
+	colors: Float32Array;
+	vertexCount: number;
+}
+
+/**
+ * Refreshes the wasm Gameplay3D debug-render buffers from the current
+ * Rapier world, then returns fresh `Float32Array` views over them.
+ * Returns `null` when the simulation is not in Gameplay3D mode or there
+ * are no lines to draw. Views are always reconstructed from the current
+ * `memory.buffer` so they stay valid across wasm memory growth.
+ */
+export function getZylemRuntimeGameplay3DDebugRender(
+	exports: ZylemRuntimeExports,
+	memory: WebAssembly.Memory,
+): ZylemRuntimeGameplay3DDebugRender | null {
+	const vertexCount = exports.zylem_runtime_gameplay3d_debug_render() >>> 0;
+	if (vertexCount === 0) {
+		return null;
+	}
+	const vPtr = exports.zylem_runtime_gameplay3d_debug_vertices_ptr();
+	const cPtr = exports.zylem_runtime_gameplay3d_debug_colors_ptr();
+	if (vPtr === 0 || cPtr === 0) {
+		return null;
+	}
+	const vertices = new Float32Array(memory.buffer, vPtr, vertexCount * 3);
+	const colors = new Float32Array(memory.buffer, cPtr, vertexCount * 4);
+	return { vertices, colors, vertexCount };
+}
+
+/**
+ * Reads the Gameplay3D event buffer (JumpStarted / Landed) for the most
+ * recent step. Mirrors {@link readZylemRuntimeEvents} but pulls from the
+ * dedicated 3D buffer; refreshes views first in case wasm memory grew.
+ */
+export function readZylemRuntimeGameplay3DEvents(
+	buffers: ZylemRuntimeBufferViews,
+): ZylemRuntimeEvent[] {
+	const eventCount = buffers.exports.zylem_runtime_gameplay3d_event_count();
+	if (eventCount === 0) {
+		return [];
+	}
+	buffers.refreshViews();
+	const view = buffers.gameplay3dEventView;
+	const events: ZylemRuntimeEvent[] = [];
+	for (let index = 0; index < eventCount; index++) {
+		const base = index * buffers.eventStride;
+		events.push({
+			type: view[base] as ZylemRuntimeEventType,
+			primarySlot: view[base + 1]!,
+			secondarySlot: view[base + 2]!,
+			aux: view[base + 3]!,
+		});
+	}
+	return events;
 }

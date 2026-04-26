@@ -10,5 +10,5 @@ publish = false
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-rapier3d = "0.32.0"
+rapier3d = { version = "0.32.0", features = ["debug-render"] }
 shipyard = { version = "0.11.2", default-features = false, features = ["proc", "std"] }

@@ -2,7 +2,6 @@
 
 import { Color, Vector2, Vector3 } from 'three';
 import {
-	Platformer3DBehavior,
 	type UpdateContext,
 	createCamera,
 	createGame,
@@ -15,6 +14,11 @@ import {
 	useArrowsForAxes,
 	useWASDForAxes,
 } from '@zylem/game-lib';
+import {
+	ZylemRuntimePlatformer3DFsmState,
+	type ZylemRuntimeStaticBoxCollider,
+} from '@zylem/game-lib/runtime';
+import { Platformer3DRuntimeAdapter } from '../runtime/platformer-3d-runtime';
 import type { ErrorContext } from '../spacetimedb-generated';
 import type { EntityTransform, Player } from '../spacetimedb-generated/types';
 import { playgroundActor } from '../utils';
@@ -47,6 +51,15 @@ type NetworkAnimationState = {
 	pauseAtEnd?: boolean;
 };
 
+/** Capsule dimensions for `playgroundActor('player')` (size.y = 3.8). */
+const PLAYER_CAPSULE = {
+	halfHeight: 1.4,
+	radius: 0.5,
+} as const;
+
+/** Y offset to apply to the WASM capsule centre to align the FBX feet with the visual ground. */
+const PLAYER_FEET_OFFSET = PLAYER_CAPSULE.halfHeight + PLAYER_CAPSULE.radius;
+
 function u32ToColor(u: number): Color {
 	const r = ((u >>> 16) & 255) / 255;
 	const g = ((u >>> 8) & 255) / 255;
@@ -54,20 +67,26 @@ function u32ToColor(u: number): Color {
 	return new Color(r, g, b);
 }
 
-function animationForPlatformerState(
-	state: ReturnType<NonNullable<ReturnType<PlayerEntity['use']>>['getState']> | null | undefined,
+/**
+ * Maps the FSM state from the wasm runtime to a renderable animation key.
+ * Mirrors the legacy TS-side `Platformer3DBehavior` state names so the
+ * existing FBX clips don't have to be renamed.
+ */
+function animationForFsmState(
+	state: ZylemRuntimePlatformer3DFsmState,
 ): NetworkAnimationState {
 	switch (state) {
-		case 'running':
+		case ZylemRuntimePlatformer3DFsmState.Running:
 			return { key: 'running' };
-		case 'walking':
+		case ZylemRuntimePlatformer3DFsmState.Walking:
 			return { key: 'walking' };
-		case 'jumping':
+		case ZylemRuntimePlatformer3DFsmState.Jumping:
 			return { key: 'jumping-up', pauseAtEnd: true };
-		case 'falling':
+		case ZylemRuntimePlatformer3DFsmState.Falling:
 			return { key: 'jumping-up', pauseAtEnd: true };
-		case 'landing':
+		case ZylemRuntimePlatformer3DFsmState.Landing:
 			return { key: 'jumping-down', pauseAtEnd: true };
+		case ZylemRuntimePlatformer3DFsmState.Idle:
 		default:
 			return { key: 'idle' };
 	}
@@ -75,12 +94,14 @@ function animationForPlatformerState(
 
 function applyNetworkTransform(entity: PlayerEntity, t: EntityTransform) {
 	const q = { x: t.rotX, y: t.rotY, z: t.rotZ, w: t.rotW };
-	const b = entity.body as {
-		setTranslation: (v: { x: number; y: number; z: number }, wake: boolean) => void;
-		setRotation: (v: { x: number; y: number; z: number; w: number }, wake: boolean) => void;
-		setLinvel: (v: { x: number; y: number; z: number }, wake: boolean) => void;
-		setAngvel: (v: { x: number; y: number; z: number }, wake: boolean) => void;
-	};
+	const b = entity.body as
+		| {
+			setTranslation: (v: { x: number; y: number; z: number }, wake: boolean) => void;
+			setRotation: (v: { x: number; y: number; z: number; w: number }, wake: boolean) => void;
+			setLinvel: (v: { x: number; y: number; z: number }, wake: boolean) => void;
+			setAngvel: (v: { x: number; y: number; z: number }, wake: boolean) => void;
+		}
+		| undefined;
 	if (b) {
 		b.setTranslation({ x: t.posX, y: t.posY, z: t.posZ }, true);
 		b.setRotation(q, true);
@@ -152,24 +173,41 @@ export default function createDemo() {
 		perspective: 'third-person',
 	});
 
+	// Mirror the flat ground plane into the wasm runtime as a single static
+	// box. The plane is `tile: 100x100` at y=-4 with thickness ~1 (so the
+	// top surface sits at y=-3.5, matching the visible ground). The KCC
+	// stands on this box.
+	const groundStaticCollider: ZylemRuntimeStaticBoxCollider = {
+		center: [0, -4.5, 0],
+		halfExtents: [50, 0.5, 50],
+		friction: 0.95,
+	};
+
+	// Adapter is constructed up-front so the stage knows about it before
+	// any avatars spawn. The local player entity is plumbed in lazily via
+	// `setLocalPlayer()` once spawned (network or offline path).
+	const platformerAdapter = new Platformer3DRuntimeAdapter({
+		// `null` placeholder \u2014 swapped in via `setLocalPlayer`. Until then,
+		// `ownsEntity` returns false so the stage skips this adapter.
+		player: null,
+		capsule: {
+			position: [0, 5, 0],
+			halfHeight: PLAYER_CAPSULE.halfHeight,
+			radius: PLAYER_CAPSULE.radius,
+		},
+		staticColliders: [groundStaticCollider],
+	});
+
 	const mainStage = createStage(
 		{
 			gravity: new Vector3(0, -9.82, 0),
 			backgroundColor: new Color(0x222233),
+			runtimeAdapter: platformerAdapter,
 		},
 		mainCamera,
 	).setInputConfiguration(
 		mergeInputConfigs(useArrowsForAxes('p1'), useWASDForAxes('p1')),
 	);
-
-	const platformerOpts = {
-		walkSpeed: 10,
-		runSpeed: 20,
-		jumpForce: 16,
-		maxJumps: 4,
-		gravity: 9.82,
-		groundRayLength: 0.25,
-	};
 
 	const avatars = new Map<bigint, AvatarRecord>();
 	const pendingTransforms = new Map<bigint, EntityTransform>();
@@ -180,9 +218,7 @@ export default function createDemo() {
 	} = { conn: null, localEntityId: null, localDeviceId: '' };
 
 	let localActor: PlayerEntity | null = null;
-	let localPlatformer: ReturnType<PlayerEntity['use']> | null = null;
-	let lastMovement = new Vector3();
-	// let syncAccum = 0;
+	const lastMovement = new Vector3();
 
 	function removeAvatarForEntity(entityId: bigint, stage: StageHandle) {
 		const rec = avatars.get(entityId);
@@ -191,6 +227,76 @@ export default function createDemo() {
 		stage.wrappedStage.removeEntityByUuid(rec.nameplate.uuid);
 		avatars.delete(entityId);
 		pendingTransforms.delete(entityId);
+	}
+
+	/**
+	 * Wire the wasm-driven platformer onto the (single) local actor.
+	 * Idempotent \u2014 calling it again with a different actor is currently
+	 * unsupported (the runtime session is bootstrapped once on first init).
+	 */
+	function attachLocalPlayer(actor: PlayerEntity) {
+		// Mark the entity as runtime-owned so the stage entity delegate
+		// skips creating a TS Rapier body. The adapter drives its pose
+		// from wasm.
+		(actor.options as any).runtime = { simulation: 'runtime' };
+		platformerAdapter.setPlayer(actor);
+		mainCamera.cameraRef.target = actor;
+		localActor = actor;
+	}
+
+	/**
+	 * Per-frame local-player update: push input into the wasm adapter,
+	 * mirror the FSM state into an animation, snap the visual yaw to the
+	 * last non-zero movement direction, and forward the resolved pose
+	 * over the network.
+	 */
+	function installLocalUpdate(actor: PlayerEntity) {
+		actor.onUpdate(({ inputs, me }: UpdateContext<any>) => {
+			const { p1 } = inputs;
+			const horizontal = p1.axes.Horizontal.value;
+			const vertical = p1.axes.Vertical.value;
+			const jumpHeld = p1.buttons.A.held > 0;
+			const runHeld = p1.shoulders.LTrigger.held > 0;
+
+			platformerAdapter.pushInput(horizontal, vertical, jumpHeld, runHeld);
+
+			if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
+				lastMovement.set(horizontal, 0, vertical);
+			}
+			if (lastMovement.lengthSq() > 0) {
+				const yaw = Math.atan2(-lastMovement.x, lastMovement.z);
+				platformerAdapter.setFacing(yaw);
+			}
+
+			const animation = animationForFsmState(platformerAdapter.currentState());
+			me.playAnimation(animation);
+
+			const c = net.conn;
+			if (!c || net.localEntityId === null) return;
+			// With the wasm adapter the entity has no Rapier body, so read
+			// the resolved pose from the player's group (which the adapter
+			// wrote during the previous tick's `step`).
+			const group = me.group;
+			if (!group) return;
+			const tr = group.position;
+			const q = group.quaternion;
+			void c.reducers.setEntityTransform({
+				deviceId: net.localDeviceId,
+				entityId: net.localEntityId,
+				posX: tr.x,
+				posY: tr.y,
+				posZ: tr.z,
+				rotX: q.x,
+				rotY: q.y,
+				rotZ: q.z,
+				rotW: q.w,
+				scaleX: group.scale.x,
+				scaleY: group.scale.y,
+				scaleZ: group.scale.z,
+				animKey: animation.key,
+				animPauseAtEnd: animation.pauseAtEnd ?? false,
+			});
+		});
 	}
 
 	function spawnAvatarForPlayer(
@@ -229,61 +335,12 @@ export default function createDemo() {
 
 		if (isLocal) {
 			net.localEntityId = eid;
-			localActor = actor;
-			// Attach the movement behavior before adding the actor to a live stage.
-			// `stage.add()` spawns immediately once the stage is loaded, and behavior
-			// systems are registered during spawn.
-			localPlatformer = actor.use(Platformer3DBehavior, platformerOpts);
-			mainCamera.cameraRef.target = actor;
-
-			actor.onUpdate(({ delta, inputs, me }: UpdateContext<any>) => {
-				const { p1 } = inputs;
-				const horizontal = p1.axes.Horizontal.value;
-				const vertical = p1.axes.Vertical.value;
-				// $platformer is created lazily by Platformer3DBehavior; dynamic spawns can miss a few frames.
-				const pl = me.$platformer;
-				if (pl) {
-					pl.moveX = horizontal;
-					pl.moveZ = vertical;
-					pl.jump = p1.buttons.A.held > 0;
-					pl.run = p1.shoulders.LTrigger.held > 0;
-				}
-
-				const animation = animationForPlatformerState(localPlatformer?.getState());
-				me.playAnimation(animation);
-				if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
-					lastMovement.set(horizontal, 0, vertical);
-				}
-				if (lastMovement.lengthSq() > 0) {
-					me.rotateInDirection(lastMovement);
-				}
-
-				// syncAccum += delta;
-				// if (syncAccum < 0.08) return;
-				// syncAccum = 0;
-				const c = net.conn;
-				if (!c || net.localEntityId === null) return;
-				const tr = me.body?.translation?.();
-				const group = me.group;
-				if (!tr || !group) return;
-				const q = group.quaternion;
-				void c.reducers.setEntityTransform({
-					deviceId: net.localDeviceId,
-					entityId: net.localEntityId,
-					posX: tr.x,
-					posY: tr.y,
-					posZ: tr.z,
-					rotX: q.x,
-					rotY: q.y,
-					rotZ: q.z,
-					rotW: q.w,
-					scaleX: group.scale.x,
-					scaleY: group.scale.y,
-					scaleZ: group.scale.z,
-					animKey: animation.key,
-					animPauseAtEnd: animation.pauseAtEnd ?? false,
-				});
-			});
+			attachLocalPlayer(actor);
+			// Teleport the wasm capsule to the network-authoritative spawn
+			// position so we don't ignore the `entity_transform` row that
+			// arrived during subscription.
+			platformerAdapter.teleport(pos.x, pos.y + PLAYER_FEET_OFFSET, pos.z);
+			installLocalUpdate(actor);
 		}
 
 		stage.add(actor, nameplate);
@@ -369,34 +426,10 @@ export default function createDemo() {
 		const eid = OFFLINE_PLAYER_ENTITY_ID;
 		const rec: AvatarRecord = { actor, nameplate, deviceId: net.localDeviceId, isLocal: true };
 		avatars.set(eid, rec);
-
 		net.localEntityId = eid;
-		localActor = actor;
-		localPlatformer = actor.use(Platformer3DBehavior, platformerOpts);
-		mainCamera.cameraRef.target = actor;
 
-		actor.onUpdate(({ inputs, me }: UpdateContext<any>) => {
-			const { p1 } = inputs;
-			const horizontal = p1.axes.Horizontal.value;
-			const vertical = p1.axes.Vertical.value;
-			const pl = me.$platformer;
-			if (pl) {
-				pl.moveX = horizontal;
-				pl.moveZ = vertical;
-				pl.jump = p1.buttons.A.held > 0;
-				pl.run = p1.shoulders.LTrigger.held > 0;
-			}
-
-			const animation = animationForPlatformerState(localPlatformer?.getState());
-			me.playAnimation(animation);
-			if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
-				lastMovement.set(horizontal, 0, vertical);
-			}
-			if (lastMovement.lengthSq() > 0) {
-				me.rotateInDirection(lastMovement);
-			}
-			// No network sync in offline mode (net.conn is null).
-		});
+		attachLocalPlayer(actor);
+		installLocalUpdate(actor);
 
 		stage.add(actor, nameplate);
 	}
@@ -408,7 +441,6 @@ export default function createDemo() {
 		net.localEntityId = null;
 		net.localDeviceId = '';
 		localActor = null;
-		localPlatformer = null;
 		lastMovement.set(0, 0, 0);
 		avatars.clear();
 		pendingTransforms.clear();
@@ -501,7 +533,6 @@ export default function createDemo() {
 				if (entityIdsEqual(eid, net.localEntityId)) {
 					net.localEntityId = null;
 					localActor = null;
-					localPlatformer = null;
 				}
 			});
 
