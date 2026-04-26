@@ -5,6 +5,7 @@ import { isBaseNode, isCameraWrapper, isConfigObject, isEntityInput } from '../c
 import { ZylemBlueColor } from '../core/utility/vector';
 import type { ZylemShader } from '../graphics/material';
 import type { RuntimeDebugBinding, StageRuntimeAdapter } from '../runtime/zylem-stage-runtime';
+import type { Vec3Components } from '../core/vector';
 
 export type StageGLTFAssetLoaderConfig = {
 	meshopt?: boolean;
@@ -23,7 +24,7 @@ export type StageConfigLike = Partial<{
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
 	backgroundShader: ZylemShader;
-	gravity: Vector3;
+	gravity: Vector3 | Vec3Components;
 	variables: Record<string, any>;
 	/** Physics update rate in Hz (default 60). */
 	physicsRate: number;
@@ -58,7 +59,7 @@ export class StageConfig {
 		public backgroundColor: Color | string,
 		public backgroundImage: string | null,
 		public backgroundShader: ZylemShader | null,
-		public gravity: Vector3,
+		public gravity: Vector3 | Vec3Components,
 		public variables: Record<string, any>,
 		/** Physics update rate in Hz (default 60). */
 		public physicsRate: number = 60,

@@ -74,7 +74,10 @@ export class MouseProvider implements InputProvider {
 
 		this.targetElement = targetElement ?? document.body;
 
-		this.targetElement.addEventListener('mousemove', this.onMouseMove);
+		// Listen for movement on `window` so deltas are still received during
+		// pointer lock (and even if the cursor leaves the target element). This
+		// mirrors `KeyboardProvider`'s window-based listener pattern.
+		window.addEventListener('mousemove', this.onMouseMove);
 		this.targetElement.addEventListener('mousedown', this.onMouseDown);
 		this.targetElement.addEventListener('mouseup', this.onMouseUp);
 		this.targetElement.addEventListener('contextmenu', this.onContextMenu);
@@ -86,7 +89,7 @@ export class MouseProvider implements InputProvider {
 
 	/** Removes all event listeners and cleans up state. */
 	dispose(): void {
-		this.targetElement.removeEventListener('mousemove', this.onMouseMove);
+		window.removeEventListener('mousemove', this.onMouseMove);
 		this.targetElement.removeEventListener('mousedown', this.onMouseDown);
 		this.targetElement.removeEventListener('mouseup', this.onMouseUp);
 		this.targetElement.removeEventListener('contextmenu', this.onContextMenu);

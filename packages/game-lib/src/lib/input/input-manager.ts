@@ -18,9 +18,14 @@ export class InputManager {
 	private currentInputs: Inputs = {} as Inputs;
 	private previousInputs: Inputs = {} as Inputs;
 	private readonly targetElement?: HTMLElement;
+	private readonly mouseTargetElement?: HTMLElement;
 
-	constructor(config?: GameInputConfig, options?: { targetElement?: HTMLElement }) {
+	constructor(
+		config?: GameInputConfig,
+		options?: { targetElement?: HTMLElement; mouseTargetElement?: HTMLElement },
+	) {
 		this.targetElement = options?.targetElement;
+		this.mouseTargetElement = options?.mouseTargetElement ?? options?.targetElement;
 		const players = this.buildPlayerEntries(config);
 
 		for (const { player, config: playerConfig, gamepadIndex, isP1 } of players) {
@@ -126,7 +131,7 @@ export class InputManager {
 		}
 
 		if (playerConfig?.mouse) {
-			providers.push(new MouseProvider(playerConfig.mouse, this.targetElement));
+			providers.push(new MouseProvider(playerConfig.mouse, this.mouseTargetElement));
 		}
 
 		if (playerConfig?.touch) {

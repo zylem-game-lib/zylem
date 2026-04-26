@@ -111,6 +111,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.container = this.gameCanvas?.container ?? this.container;
 		this.inputManager = new InputManager(config.input, {
 			targetElement: this.gameCanvas?.getOverlayContainer(),
+			mouseTargetElement: this.gameCanvas?.container,
 		});
 		this.loadDebugOptions(options);
 		this.setGlobals(options);

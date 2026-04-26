@@ -1,5 +1,6 @@
 import { Color, Vector3 } from 'three';
 import { BaseEntityInterface } from './entity-types';
+import type { Vec3Components } from '../core/vector';
 
 /**
  * Stage state interface - minimal to prevent circular dependencies
@@ -12,7 +13,7 @@ export interface StageStateInterface {
 		p2: string[];
 	};
 	variables: Record<string, any>;
-	gravity: Vector3;
+	gravity: Vector3 | Vec3Components;
 	entities: Partial<BaseEntityInterface>[];
 	stageRef?: any; // Keep as any to avoid circular dependency
 }
@@ -24,7 +25,7 @@ interface StageConfigInterface {
 	id?: string;
 	backgroundColor?: Color;
 	backgroundImage?: string;
-	gravity?: Vector3;
+	gravity?: Vector3 | Vec3Components;
 }
 
 /**

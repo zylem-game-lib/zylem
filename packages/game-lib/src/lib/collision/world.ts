@@ -2,6 +2,7 @@ import { Vector3 } from 'three';
 import RAPIER, { World } from '@dimforge/rapier3d-compat';
 
 import { Entity } from '../interfaces/entity';
+import type { Vec3Components } from '../core/vector';
 import { state } from '../game/game-state';
 import { UpdateContext } from '../core/base-node-life-cycle';
 import { ZylemActor } from '../entities/actor';
@@ -127,7 +128,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	private _pendingStep: Promise<void> | null = null;
 	private readonly trackedDirectBodies = new WeakSet<RAPIER.RigidBody>();
 
-	static async loadPhysics(gravity: Vector3) {
+	static async loadPhysics(gravity: Vector3 | Vec3Components) {
 		await RAPIER.init();
 		const physicsWorld = new RAPIER.World(gravity);
 		return physicsWorld;
@@ -142,7 +143,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	 * @param workerUrl Optional URL to the worker script.
 	 */
 	static async loadPhysicsWorker(
-		gravity: Vector3,
+		gravity: Vector3 | Vec3Components,
 		physicsRate = 60,
 		workerUrl?: URL,
 	): Promise<ZylemWorld> {

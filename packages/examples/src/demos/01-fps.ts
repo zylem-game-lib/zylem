@@ -85,7 +85,7 @@ export default function createDemo() {
   });
 
   const fpsShooter = new FirstPersonShooterCoordinator(
-    player,
+    player as any,
     fpsController,
     jumper,
   );

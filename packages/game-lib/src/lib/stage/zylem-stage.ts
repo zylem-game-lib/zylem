@@ -30,6 +30,7 @@ import {
 	parseStageOptions,
 	type StageAssetLoaderConfig,
 } from './stage-config';
+import type { Vec3Components } from '../core/vector';
 import type { BehaviorSystem, BehaviorSystemFactory } from '../behaviors/behavior-system';
 import { createRuntimeDebugBindingFromDebugState } from '../runtime/runtime-debug-binding';
 import type {
@@ -46,7 +47,7 @@ export interface ZylemStageConfig {
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
 	backgroundShader: any | null;
-	gravity: Vector3;
+	gravity: Vector3 | Vec3Components;
 	variables: Record<string, any>;
 	/** Physics update rate in Hz (default 60). */
 	physicsRate: number;
@@ -89,7 +90,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	public type = STAGE_TYPE;
 
 	state: StageState = { ...initialStageState };
-	gravity: Vector3;
+	gravity: Vector3 | Vec3Components;
 
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
