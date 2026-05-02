@@ -44,7 +44,7 @@ services:
   - type: web
     runtime: static
     name: zylem-examples
-    buildCommand: sh ./scripts/render-build-examples.sh
+    buildCommand: sh ./scripts/render-build.sh
     staticPublishPath: ./packages/examples/dist
     envVars:
       - key: VITE_STDB_URI

@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Idempotent: ensure SpacetimeDB CLI and Rust + wasm32-unknown-unknown for `spacetime build`.
-# Safe to run from CI (Render sets CI=true), local `./scripts/render-build.sh`, or when
+# Safe to run from CI (Render sets CI=true) or when
 # packages/server/scripts/run-spacetimedb-cli.sh triggers auto-install.
 set -eu
 
