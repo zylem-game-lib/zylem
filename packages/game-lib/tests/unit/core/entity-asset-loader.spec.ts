@@ -18,7 +18,7 @@ describe('EntityAssetLoader', () => {
 		});
 
 		const loader = new EntityAssetLoader();
-		const file = '/src/assets/cougar-ship.glb?t=1775283135030';
+		const file = '/src/assets/enemy-ship-purple.glb?t=1775283135030';
 
 		const result = await loader.loadFile(file, { clone: true });
 

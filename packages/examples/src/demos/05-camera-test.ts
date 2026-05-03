@@ -1,4 +1,3 @@
-/// <reference types="@zylem/assets" />
 import { Color, Vector2, Vector3 } from 'three';
 import {
 	createGame,
@@ -11,8 +10,10 @@ import {
 } from '@zylem/game-lib';
 import { playgroundPlane, playgroundActor } from '../utils';
 
-import woodPath from '@zylem/assets/3d/textures/wood-box.jpg';
+import { demoAsset } from '../assets/manifest';
 import { Vec3Input } from '@zylem/game-lib';
+
+const woodPath = demoAsset('general/texture-wood-box.jpg');
 
 export default function createDemo() {
 	// ─── Scene entities ──────────────────────────────────────────────────────

@@ -1,22 +1,22 @@
-/// <reference types="@zylem/assets" />
-
 import { Color } from 'three';
 import { createActor } from '@zylem/game-lib';
 
-import idle from '../assets/assassin/idle.fbx';
-import move from '../assets/assassin/move.fbx';
-import jump from '../assets/assassin/jump.fbx';
-import attackLight from '../assets/assassin/attack-light.fbx';
-import attackMedium from '../assets/assassin/attack-medium.fbx';
-import attackHeavy from '../assets/assassin/attack-heavy.fbx';
-import damageLight from '../assets/assassin/damage-light.fbx';
-import fallen from '../assets/assassin/fallen.fbx';
-import specialAttack from '../assets/assassin/special-attack.fbx';
-import specialStealth from '../assets/assassin/special-stealth.fbx';
+import { demoAsset } from '../../../assets/manifest';
 
-import baseColorUrl from '../assets/assassin/textures/base-color.jpg';
-import normalUrl from '../assets/assassin/textures/normal-gl.jpg';
-import ormUrl from '../assets/assassin/textures/orm.jpg';
+const idle = demoAsset('arena/models/assassin/idle.fbx');
+const move = demoAsset('arena/models/assassin/move.fbx');
+const jump = demoAsset('arena/models/assassin/jump.fbx');
+const attackLight = demoAsset('arena/models/assassin/attack-light.fbx');
+const attackMedium = demoAsset('arena/models/assassin/attack-medium.fbx');
+const attackHeavy = demoAsset('arena/models/assassin/attack-heavy.fbx');
+const damageLight = demoAsset('arena/models/assassin/damage-light.fbx');
+const fallen = demoAsset('arena/models/assassin/fallen.fbx');
+const specialAttack = demoAsset('arena/models/assassin/special-attack.fbx');
+const specialStealth = demoAsset('arena/models/assassin/special-stealth.fbx');
+
+const baseColorUrl = demoAsset('arena/models/assassin/textures/base-color.jpg');
+const normalUrl = demoAsset('arena/models/assassin/textures/normal-gl.jpg');
+const ormUrl = demoAsset('arena/models/assassin/textures/orm.jpg');
 
 import {
 	type PbrMaterialOptions,
@@ -110,6 +110,7 @@ export const ASSASSIN_MOVESET: CharacterMoveset = {
 			duration: 0.9,
 			damage: 28,
 			cooldown: 4,
+			icon: 'arena/images/icon-execute.png',
 			particles: {
 				kind: 'burst',
 				color: '#ef4444',
@@ -125,6 +126,7 @@ export const ASSASSIN_MOVESET: CharacterMoveset = {
 			key: 'special-stealth',
 			duration: 1.0,
 			cooldown: 10,
+			icon: 'arena/images/icon-stealth.png',
 			particles: {
 				kind: 'smoke',
 				color: '#1f2937',
@@ -136,6 +138,31 @@ export const ASSASSIN_MOVESET: CharacterMoveset = {
 				yOffset: 1.0,
 			},
 		},
+		// Mobility burst — reuses the existing `running` FBX so the legs
+		// read as a sprint. NOTE: the combat controller currently locks
+		// movement to zero while an action is live, so this plays the
+		// animation + trail in place until a dedicated dash impulse is
+		// added to `createCombatController`.
+		L: {
+			key: 'running',
+			duration: 0.35,
+			cooldown: 4,
+			icon: 'arena/images/icon-dash.png',
+			particles: {
+				kind: 'burst',
+				color: '#d946ef',
+				count: 18,
+				duration: 0.2,
+				life: [0.15, 0.35],
+				speed: [4.0, 8.0],
+				size: [0.1, 0.22],
+				yOffset: 1.0,
+			},
+		},
+	},
+	basics: {
+		attack: { cooldown: 0.4, icon: 'arena/images/icon-attack.png' },
+		jump: { cooldown: 0.5, icon: 'arena/images/icon-jump.png' },
 	},
 };
 

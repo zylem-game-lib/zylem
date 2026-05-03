@@ -1,5 +1,3 @@
-/// <reference types="@zylem/assets" />
-
 import { Euler, Vector3 } from 'three';
 import {
   createGame,
@@ -18,8 +16,10 @@ import {
 
 import { createFloor, createArenaLevel } from './01-fps/level';
 
-import skybox from '@zylem/assets/3d/skybox/default.png';
-import pistolGlb from '../assets/space-age-pistol.glb';
+import { demoAsset } from '../assets/manifest';
+
+const pistolGlb = demoAsset('general/player-gun.glb');
+const skybox = demoAsset('general/skybox-default.png');
 
 export default function createDemo() {
   // --- Camera ---

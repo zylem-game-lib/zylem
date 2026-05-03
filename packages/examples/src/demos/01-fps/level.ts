@@ -1,10 +1,10 @@
-/// <reference types="@zylem/assets" />
-
 import { createBox, createPlane, createZone } from '@zylem/game-lib';
 import { Vector2, Vector3, Color } from 'three';
 
-import steel from '@zylem/assets/3d/textures/steel.png';
-import wood from '@zylem/assets/3d/textures/wood-box.jpg';
+import { demoAsset } from '../../assets/manifest';
+
+const steel = demoAsset('general/texture-steel.png');
+const wood = demoAsset('general/texture-wood-box.jpg');
 
 // Floor
 export const createFloor = () => {

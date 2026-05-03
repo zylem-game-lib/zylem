@@ -1,5 +1,7 @@
 import { Vector3 } from 'three';
-import snakeShipGlb from '../../assets/snake-ship.glb';
+import { demoAsset } from '../../assets/manifest';
+
+const snakeShipGlb = demoAsset('general/enemy-ship-green.glb');
 import {
 	createEnemyRuntime,
 	type EnemyFactoryOptions,

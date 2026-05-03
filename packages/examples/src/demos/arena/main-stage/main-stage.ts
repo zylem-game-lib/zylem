@@ -1,14 +1,10 @@
-/// <reference types="@zylem/assets" />
-
 import { Color, Vector3 } from 'three';
 import {
 	CooldownBehavior,
 	type CooldownHandle,
-	type CooldownOptions,
 	type UpdateContext,
 	createBox,
 	createCamera,
-	createCooldownIcon,
 	createPlane,
 	createStage,
 	createText,
@@ -20,7 +16,6 @@ import { ZylemRuntimePlatformer3DFsmState } from '@zylem/game-lib/runtime';
 import {
 	Platformer3DRuntimeAdapter,
 	buildPlatformerGroundHeightfield,
-	staticBoxesFromEntities,
 	staticBoxFromEntity,
 } from '../../../runtime/platformer-3d-runtime';
 import { TransformableEntity } from '~/lib/actions/capabilities/apply-transform';
@@ -30,19 +25,20 @@ import {
 	createCharacterActor,
 	getCharacterLoadout,
 } from '../characters';
-import type {
-	CharacterLoadout,
-	CharacterMoveset,
-	SpecialSlotId,
-} from '../characters/movesets';
+import type { CharacterMoveset } from '../characters/movesets';
+import {
+	buildActionCooldownOptions,
+	buildActionIcons,
+} from '../characters/hud-icons';
 import { arenaShader } from './stage-background-shader.shader';
-import { createBoulders } from './boulders';
+import { createDoodads } from './doodads';
 import {
 	createCombatController,
-	cooldownNameForSlot,
 	type ReportAttackHit,
 } from './combat-controller';
-import groundTextureUrl from '../assets/ground.png';
+import { demoAsset } from '../../../assets/manifest';
+
+const groundTextureUrl = demoAsset('arena/images/ground.png');
 
 export type PlayerEntity = TransformableEntity & GameEntity<any> & StageEntity;
 
@@ -214,6 +210,57 @@ interface ArenaBowlOptions {
 }
 
 /**
+ * Inputs for {@link createGroundHeightSampler}: the same height grid +
+ * tile + plane-position trio that builds the visible ground plane.
+ * Keeping them as a struct (instead of three positional args) makes
+ * the call site at the top of `createArenaMainStage` self-documenting.
+ */
+interface GroundHeightSamplerOptions {
+	heightMap2D: number[][];
+	tile: { x: number; y: number };
+	position: { x: number; y: number; z: number };
+}
+
+/**
+ * Build a sampler that returns the world-space ground height at any
+ * `(x, z)` over the bowl. The heightfield is laid out in
+ * `heightMap2D[zIdx][xIdx]` order with vertex spacing
+ * `tile.{x,y} / subdivisions`; the sampler clamps out-of-bounds
+ * queries to the nearest grid cell so doodads slightly outside the
+ * authored layout still get a sensible spawn pose. Bilinear smoothing
+ * is intentionally skipped — the doodads only need to know roughly
+ * where to drop from, not the exact subpixel height of the visible
+ * heightfield.
+ */
+function createGroundHeightSampler(
+	options: GroundHeightSamplerOptions,
+): (x: number, z: number) => number {
+	const { heightMap2D, tile, position } = options;
+	const rowsZ = heightMap2D.length;
+	const colsX = rowsZ > 0 ? (heightMap2D[0]?.length ?? 0) : 0;
+
+	if (rowsZ === 0 || colsX === 0) {
+		// Degenerate heightmap → fall back to a flat plane so doodad
+		// placement doesn't blow up on a malformed config. Returning
+		// just the plane's Y matches a heightmap of all zeros.
+		return () => position.y;
+	}
+
+	const subdivisionsX = colsX - 1;
+	const subdivisionsZ = rowsZ - 1;
+	const halfTileX = tile.x / 2;
+	const halfTileZ = tile.y / 2;
+
+	return (x, z) => {
+		const u = (x - position.x + halfTileX) / tile.x;
+		const v = (z - position.z + halfTileZ) / tile.y;
+		const xIdx = Math.max(0, Math.min(subdivisionsX, Math.round(u * subdivisionsX)));
+		const zIdx = Math.max(0, Math.min(subdivisionsZ, Math.round(v * subdivisionsZ)));
+		return position.y + (heightMap2D[zIdx]?.[xIdx] ?? 0);
+	};
+}
+
+/**
  * Procedurally build a 2D absolute-height grid for the arena floor.
  *
  * The shape is a shallow "bowl": near the center, heights stay close to
@@ -283,27 +330,44 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 
 	// Build the static scenery up-front so we can mirror it into the wasm
 	// runtime *before* the stage is constructed. The wasm KCC needs to
-	// know about the heightfield + boulders + jumbotron walls so it
-	// stops the local player at the same surfaces the renderer shows.
+	// know about the heightfield + jumbotron walls so it stops the
+	// local player at the same surfaces the renderer shows.
+	const GROUND_PLANE_TILE = { x: 100, y: 100 } as const;
+	const GROUND_PLANE_SUBDIVISIONS = 40;
+	const GROUND_PLANE_POSITION = { x: 0, y: -4, z: 0 } as const;
+	const groundHeightMap = createArenaBowlHeightMap({
+		subdivisions: GROUND_PLANE_SUBDIVISIONS,
+		innerRadius: 0.35,
+		bumpAmplitude: 0.35,
+		edgeAmplitude: 4.5,
+	});
+
 	const groundPlane = createPlane({
-		tile: { x: 100, y: 100 },
-		position: { x: 0, y: -4, z: 0 },
+		tile: GROUND_PLANE_TILE,
+		position: GROUND_PLANE_POSITION,
 		collision: { static: true },
 		// 2D absolute-height grid: flat-ish play area in the middle, hills
 		// pushing up toward the edges to form an arena "bowl".
-		heightMap2D: createArenaBowlHeightMap({
-			subdivisions: 40,
-			innerRadius: 0.35,
-			bumpAmplitude: 0.35,
-			edgeAmplitude: 4.5,
-		}),
+		heightMap2D: groundHeightMap,
 		material: {
 			path: groundTextureUrl,
 			repeat: { x: 10, y: 10 },
 		},
 	});
 
-	const boulders = createBoulders();
+	const sampleGroundHeight = createGroundHeightSampler({
+		heightMap2D: groundHeightMap,
+		tile: GROUND_PLANE_TILE,
+		position: GROUND_PLANE_POSITION,
+	});
+
+	// Static scenery doodad layout (replaces the legacy static-sphere
+	// boulders). Every doodad is anchored to the ground heightfield at
+	// its authored `(x, z)`, slightly embedded so the visible mesh
+	// reads as half-buried, and exposes a pre-built static AABB that
+	// we seed into the wasm KCC below so the local player is blocked
+	// from walking through them from frame 0.
+	const doodads = createDoodads({ sampleGroundHeight });
 
 	// ─── Jumbotron: back-wall mega-screen with a broadcast feed ─────────────
 	//
@@ -343,7 +407,11 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 
 	const groundHeightfield = buildPlatformerGroundHeightfield(groundPlane);
 	const staticColliders = [
-		...staticBoxesFromEntities(boulders),
+		// Doodads are static from the start — their AABBs are ready at
+		// `createDoodads(...)` time and seeded into the KCC here so the
+		// local player is blocked at every doodad's footprint from
+		// frame 0 (no drop-and-settle dance).
+		...doodads.staticColliders,
 		// Jumbotron parts are far back / high, but mirroring them keeps
 		// the local player from clipping through if they jump that way.
 		...[jumbotronScreen, jumbotronFrame].flatMap((e) => {
@@ -387,7 +455,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		jumbotronCamera,
 	).setInputConfiguration(useArrowsForAxes('p1'));
 
-	stage.add(groundPlane, ...boulders);
+	stage.add(groundPlane, ...doodads.entities);
 	stage.add(jumbotronScreen, jumbotronFrame);
 
 	// Sweep the broadcast camera across a bounded 120-degree arc centered
@@ -428,60 +496,6 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 	 */
 	const FALL_Y_THRESHOLD = -20;
 
-	/**
-	 * Build the `cooldowns` config for `CooldownBehavior` from a loadout
-	 * by translating each `special` slot's `cooldown` into a registered
-	 * cooldown keyed by {@link cooldownNameForSlot}.
-	 */
-	function buildCooldownOptions(
-		loadout: CharacterLoadout,
-	): CooldownOptions | null {
-		const cooldowns: CooldownOptions['cooldowns'] = {};
-		let count = 0;
-		for (const slot of ['X', 'Y', 'L', 'R'] as const) {
-			const entry = loadout.moveset.specials[slot];
-			if (entry?.cooldown === undefined) continue;
-			cooldowns[cooldownNameForSlot(slot)] = { duration: entry.cooldown };
-			count += 1;
-		}
-		return count === 0 ? null : { cooldowns };
-	}
-
-	/**
-	 * Create the top-right stack of cooldown HUD icons for each bound
-	 * special slot with a cooldown. Icons read straight off the global
-	 * CooldownStore so they stay in sync with the handle we pass into
-	 * the combat controller.
-	 */
-	function buildCooldownIcons(
-		loadout: CharacterLoadout,
-	): Array<ReturnType<typeof createCooldownIcon>> {
-		const icons: Array<ReturnType<typeof createCooldownIcon>> = [];
-		const slotColor: Record<SpecialSlotId, string> = {
-			X: '#cc3333',
-			Y: '#ccaa33',
-			L: '#3366cc',
-			R: '#aa33cc',
-		};
-		let stackIndex = 0;
-		for (const slot of ['X', 'Y', 'L', 'R'] as const) {
-			const entry = loadout.moveset.specials[slot];
-			if (entry?.cooldown === undefined) continue;
-			icons.push(
-				createCooldownIcon({
-					cooldown: cooldownNameForSlot(slot),
-					fillColor: slotColor[slot],
-					screenAnchor: 'top-right',
-					screenPosition: { x: -10 - stackIndex * 60, y: 10 },
-					iconSize: 'sm',
-					showTimer: true,
-				}),
-			);
-			stackIndex += 1;
-		}
-		return icons;
-	}
-
 	function installLocalMovement(
 		actor: PlayerEntity,
 		moveset: CharacterMoveset,
@@ -496,7 +510,12 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 			stage,
 			moveset,
 			cooldowns,
-			onAttackHit: (info) => attackHitHandler?.(info),
+			onAttackHit: (info) => {
+				// Network-aware enemy damage path (when the network
+				// layer has wired up `setAttackHitHandler`). Doodads
+				// are static scenery now, so hits don't route to them.
+				attackHitHandler?.(info);
+			},
 		});
 
 		actor.onUpdate(({ inputs, me, delta }: UpdateContext<any>) => {
@@ -616,7 +635,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 				record.spawn.y + PLAYER_FEET_OFFSET,
 				record.spawn.z,
 			);
-			const cooldownOpts = buildCooldownOptions(loadout);
+			const cooldownOpts = buildActionCooldownOptions(loadout);
 			const cd: CooldownHandle | null = cooldownOpts
 				? actor.use(CooldownBehavior, cooldownOpts)
 				: null;
@@ -630,7 +649,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 				opts.entityId,
 				opts.onLocalTransform,
 			);
-			const cdIcons = buildCooldownIcons(loadout);
+			const cdIcons = buildActionIcons(loadout);
 			if (cdIcons.length > 0) {
 				stage.add(...(cdIcons as unknown as Parameters<typeof stage.add>));
 			}

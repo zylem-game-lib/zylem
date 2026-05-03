@@ -6,9 +6,11 @@ import {
 	createSphere,
 	type UpdateContext,
 } from '@zylem/game-lib';
-import snakeShipGlb from '../../../assets/snake-ship.glb';
-import vultureShipGlb from '../../../assets/vulture-ship.glb';
-import cougarShipGlb from '../../../assets/cougar-ship.glb';
+import { demoAsset } from '../../../assets/manifest';
+
+const snakeShipGlb = demoAsset('general/enemy-ship-green.glb');
+const vultureShipGlb = demoAsset('general/enemy-ship-red.glb');
+const cougarShipGlb = demoAsset('general/enemy-ship-purple.glb');
 import type { ArenaDbConnection } from '../networking/arena-stdb-client';
 import type { AiHostHandle } from './ai-host';
 import type {

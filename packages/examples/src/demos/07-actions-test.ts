@@ -30,8 +30,10 @@ import {
   useArrowsForDirections,
 } from '@zylem/game-lib';
 
-import grassPath from '@zylem/assets/3d/textures/grass.jpg';
-import woodPath from '@zylem/assets/3d/textures/wood-box.jpg';
+import { demoAsset } from '../assets/manifest';
+
+const grassPath = demoAsset('general/texture-grass.jpg');
+const woodPath = demoAsset('general/texture-wood-box.jpg');
 
 export default function createDemo() {
   // ─── Stage ───────────────────────────────────────────────────────────

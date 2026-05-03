@@ -14,8 +14,10 @@ import {
   CHARACTER_CLASSES,
   type CharacterClass,
 } from '../../demos/arena/characters';
-import characterSelectImage from '../../demos/arena/assets/character-select.png';
+import { demoAsset } from '../../assets/manifest';
 import styles from './ArenaLobby.module.css';
+
+const characterSelectImage = demoAsset('arena/images/character-select.png');
 
 const CHARACTER_LABELS: Record<CharacterClass, string> = {
   tank: 'Tank',

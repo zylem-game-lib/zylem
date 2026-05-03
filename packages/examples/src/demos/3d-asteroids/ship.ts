@@ -1,4 +1,4 @@
-import { Color, Matrix4, Vector3 } from 'three';
+import { Color, Vector3 } from 'three';
 import {
 	createActor,
 	createSphere,
@@ -8,7 +8,9 @@ import {
 	ScreenWrapBehavior,
 	type Destructible3DHandle,
 } from '@zylem/game-lib';
-import fisherShipGlb from '../../assets/fisher-ship.glb';
+import { demoAsset } from '../../assets/manifest';
+
+const fisherShipGlb = demoAsset('general/player-ship.glb');
 import { destructiblePrebakeWorkerUrl } from '../lib/destructible-prebake-worker-url';
 import { shipShieldShader } from './shield.shader';
 import {
@@ -42,7 +44,6 @@ export function setEntityVisibility(
 }
 
 export function createShip(): ShipRuntime {
-	const inverseMatrix = new Matrix4();
 	const ship = createActor({
 		name: '3d-asteroids-ship',
 		models: [fisherShipGlb],

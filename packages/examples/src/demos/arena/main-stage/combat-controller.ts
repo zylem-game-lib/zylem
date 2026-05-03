@@ -3,6 +3,11 @@ import {
 	spawnParticleBurst,
 	type ParticleBurstSpec,
 } from '../characters/attack-effects';
+import {
+	ATTACK_COOLDOWN_NAME,
+	JUMP_COOLDOWN_NAME,
+	cooldownNameForSlot,
+} from '../characters/hud-icons';
 import type {
 	CharacterActionEntry,
 	CharacterMoveset,
@@ -10,15 +15,7 @@ import type {
 } from '../characters/movesets';
 import type { NetworkAnimationState, PlayerEntity } from './main-stage';
 
-/**
- * Shared helper: the string-key name used to register a special slot's
- * cooldown on the global CooldownStore. Centralising this mapping keeps
- * the combat controller and the cooldown HUD in sync without having to
- * plumb a full lookup table through `spawnAvatar`.
- */
-export function cooldownNameForSlot(slot: SpecialSlotId): string {
-	return `arena-special-${slot}`;
-}
+export { cooldownNameForSlot };
 
 /**
  * Fraction of an attack's duration after which a follow-up A press can
@@ -143,6 +140,7 @@ export function createCombatController(
 	let action: ActiveAction | null = null;
 	let comboTier = 0;
 	let lastAttackEndedAt = Number.NEGATIVE_INFINITY;
+	let jumpHeldLastFrame = false;
 
 	function actorWorldPosition(): { x: number; y: number; z: number } {
 		const tr = actor.body?.translation?.();
@@ -180,6 +178,10 @@ export function createCombatController(
 		action = { kind, tier, startedAt: now, entry, hitEmitted: false };
 		if (kind === 'attack') {
 			comboTier = tier;
+			// Cosmetic sweep so the HUD attack icon reflects each swing.
+			// Firing doesn't gate input — combos remain driven by the
+			// cancel-window / combo-reset logic below.
+			cooldowns?.fire(ATTACK_COOLDOWN_NAME);
 		}
 		spawnParticles(entry.particles);
 	}
@@ -275,12 +277,28 @@ export function createCombatController(
 				// Lock movement while an action is locked in so the attack
 				// animation reads cleanly. Rotation is still applied by
 				// `installLocalMovement` from the last axis input.
+				jumpHeldLastFrame = p1.buttons.B.held > 0;
 				return { moveX: 0, moveZ: 0, jump: false };
 			}
+
+			const jumpHeld = p1.buttons.B.held > 0;
+			const jumpPressed = jumpHeld && !jumpHeldLastFrame;
+			// Gate jump on its cooldown: if a cooldown handle exists and
+			// the slot isn't ready yet, suppress the jump so both the
+			// platformer adapter and the HUD icon sweep stay in sync.
+			const jumpReady = cooldowns
+				? cooldowns.isReady(JUMP_COOLDOWN_NAME)
+				: true;
+			const allowJump = jumpHeld && jumpReady;
+			if (jumpPressed && jumpReady) {
+				cooldowns?.fire(JUMP_COOLDOWN_NAME);
+			}
+			jumpHeldLastFrame = jumpHeld;
+
 			return {
 				moveX: horizontal,
 				moveZ: vertical,
-				jump: p1.buttons.B.held > 0,
+				jump: allowJump,
 			};
 		},
 		currentAnimation() {

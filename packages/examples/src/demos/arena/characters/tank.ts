@@ -1,23 +1,23 @@
-/// <reference types="@zylem/assets" />
-
 import { Color } from 'three';
 import { createActor } from '@zylem/game-lib';
 
-import idle from '../assets/tank/idle.fbx';
-import walk from '../assets/tank/walk.fbx';
-import jump from '../assets/tank/jump.fbx';
-import attackLight from '../assets/tank/attack-light.fbx';
-import attackMedium from '../assets/tank/attack-medium.fbx';
-import attackStrong from '../assets/tank/attack-strong.fbx';
-import damageLight from '../assets/tank/damage-light.fbx';
-import damageHeavy from '../assets/tank/damage-heavy.fbx';
-import fallen from '../assets/tank/fallen.fbx';
-import specialGroundSlam from '../assets/tank/special-ground-slam.fbx';
-import specialTaunt from '../assets/tank/special-taunt.fbx';
+import { demoAsset } from '../../../assets/manifest';
 
-import baseColorUrl from '../assets/tank/textures/base-color.jpg';
-import normalUrl from '../assets/tank/textures/normal-gl.jpg';
-import ormUrl from '../assets/tank/textures/orm.jpg';
+const idle = demoAsset('arena/models/tank/idle.fbx');
+const walk = demoAsset('arena/models/tank/walk.fbx');
+const jump = demoAsset('arena/models/tank/jump.fbx');
+const attackLight = demoAsset('arena/models/tank/attack-light.fbx');
+const attackMedium = demoAsset('arena/models/tank/attack-medium.fbx');
+const attackStrong = demoAsset('arena/models/tank/attack-strong.fbx');
+const damageLight = demoAsset('arena/models/tank/damage-light.fbx');
+const damageHeavy = demoAsset('arena/models/tank/damage-heavy.fbx');
+const fallen = demoAsset('arena/models/tank/fallen.fbx');
+const specialGroundSlam = demoAsset('arena/models/tank/special-ground-slam.fbx');
+const specialTaunt = demoAsset('arena/models/tank/special-taunt.fbx');
+
+const baseColorUrl = demoAsset('arena/models/tank/textures/base-color.jpg');
+const normalUrl = demoAsset('arena/models/tank/textures/normal-gl.jpg');
+const ormUrl = demoAsset('arena/models/tank/textures/orm.jpg');
 
 import {
 	type PbrMaterialOptions,
@@ -111,6 +111,7 @@ export const TANK_MOVESET: CharacterMoveset = {
 			duration: 1.2,
 			damage: 30,
 			cooldown: 8,
+			icon: 'arena/images/icon-ground-slam.png',
 			particles: {
 				kind: 'smoke',
 				color: '#8b5a2b',
@@ -126,6 +127,7 @@ export const TANK_MOVESET: CharacterMoveset = {
 			key: 'special-taunt',
 			duration: 1.6,
 			cooldown: 12,
+			icon: 'arena/images/icon-taunt.png',
 			particles: {
 				kind: 'burst',
 				color: '#ffd166',
@@ -137,6 +139,29 @@ export const TANK_MOVESET: CharacterMoveset = {
 				yOffset: 1.8,
 			},
 		},
+		// Defensive stance — no dedicated `special-shield` animation yet,
+		// so we hold `idle` while a pale-blue smoke dome reads as the
+		// protective bubble. Swap `key` to a real FBX when authored.
+		L: {
+			key: 'idle',
+			duration: 2.0,
+			cooldown: 10,
+			icon: 'arena/images/icon-shield.png',
+			particles: {
+				kind: 'smoke',
+				color: '#93c5fd',
+				count: 30,
+				duration: 0.8,
+				life: [0.9, 1.8],
+				speed: [0.5, 1.4],
+				size: [0.4, 0.85],
+				yOffset: 1.2,
+			},
+		},
+	},
+	basics: {
+		attack: { cooldown: 0.55, icon: 'arena/images/icon-attack.png' },
+		jump: { cooldown: 0.75, icon: 'arena/images/icon-jump.png' },
 	},
 };
 

@@ -16,8 +16,10 @@ import {
 } from '@zylem/game-lib';
 
 import rainManPath from '@zylem/assets/2d/rain-man.png';
-import grassNormalPath from '@zylem/assets/3d/textures/grass-normal.png';
-import skybox from '@zylem/assets/3d/skybox/default.png';
+import { demoAsset } from '../assets/manifest';
+
+const grassNormalPath = demoAsset('general/texture-grass-normal.png');
+const skybox = demoAsset('general/skybox-default.png');
 
 export default function createDemo() {
   const rainMan = rainManPath;

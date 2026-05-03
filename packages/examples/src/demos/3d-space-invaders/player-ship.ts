@@ -6,7 +6,9 @@ import {
 	FractureOptions,
 	type Destructible3DHandle,
 } from '@zylem/game-lib';
-import fisherShipGlb from '../../assets/fisher-ship.glb';
+import { demoAsset } from '../../assets/manifest';
+
+const fisherShipGlb = demoAsset('general/player-ship.glb');
 import { destructiblePrebakeWorkerUrl } from '../lib/destructible-prebake-worker-url';
 import {
 	ENEMY_BULLET_COLLISION_TYPE,

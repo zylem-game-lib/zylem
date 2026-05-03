@@ -1,0 +1,23 @@
+[
+	{
+		"AllowedOrigins": [
+			"http://localhost:1337",
+			"http://127.0.0.1:1337",
+			"https://zylem.onrender.com",
+			"https://zylem-staging.onrender.com",
+			"https://zylem.com",
+			"https://www.zylem.com"
+		],
+		"AllowedMethods": ["GET", "HEAD"],
+		"AllowedHeaders": ["*"],
+		"ExposeHeaders": [
+			"ETag",
+			"Content-Length",
+			"Content-Type",
+			"Content-Range",
+			"Cache-Control",
+			"Last-Modified"
+		],
+		"MaxAgeSeconds": 3600
+	}
+]

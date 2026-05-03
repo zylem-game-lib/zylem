@@ -65,6 +65,16 @@ const DEFAULT_PLATFORMER: Required<PlatformerRuntimeOpts> = {
 /** Loose alias \u2014 demo player entities come back from `playgroundActor` / `createCharacterActor` typed as `any`. */
 export type PlatformerRuntimePlayer = any;
 
+/**
+ * Static box collider entry with an optional caller-supplied stable
+ * `id`. Callers can omit `id` for legacy "set and forget" colliders;
+ * the adapter auto-stamps a synthetic `static-{i}` id during
+ * construction so {@link Platformer3DRuntimeAdapter.removeStaticCollider}
+ * always has something to address.
+ */
+export type IdentifiedStaticBoxCollider =
+	ZylemRuntimeStaticBoxCollider & { id?: string };
+
 export interface Platformer3DRuntimeAdapterOptions {
 	/**
 	 * The local player entity to drive. May be `null` at construction
@@ -75,7 +85,12 @@ export interface Platformer3DRuntimeAdapterOptions {
 	player: PlatformerRuntimePlayer | null;
 	capsule: PlatformerRuntimeCapsule;
 	platformer?: PlatformerRuntimeOpts;
-	staticColliders?: ZylemRuntimeStaticBoxCollider[];
+	/**
+	 * Static AABB obstacles mirrored into the wasm world. Each entry
+	 * may carry an optional `id`; entries without one get a synthetic
+	 * id at construction so they can still be removed later if needed.
+	 */
+	staticColliders?: IdentifiedStaticBoxCollider[];
 	heightfield?: PlatformerRuntimeHeightfield | null;
 }
 
@@ -89,21 +104,96 @@ export interface Platformer3DRuntimeAdapterOptions {
  * driven by network setTranslation) \u2014 this adapter only owns the *local*
  * player.
  */
+/** Internal storage shape: every entry is guaranteed to carry an `id`. */
+type StoredStaticBoxCollider =
+	ZylemRuntimeStaticBoxCollider & { id: string };
+
 export class Platformer3DRuntimeAdapter implements StageRuntimeAdapter {
 	private buffers: ZylemRuntimeBufferViews | null = null;
 	private rotationY = 0;
 	private player: PlatformerRuntimePlayer | null;
 	private readonly capsule: PlatformerRuntimeCapsule;
 	private readonly platformer: Required<PlatformerRuntimeOpts>;
-	private readonly staticColliders: ZylemRuntimeStaticBoxCollider[];
+	/**
+	 * Mutable list of mirrored static colliders. Stored mutably (and
+	 * with a guaranteed `id` per entry) so {@link removeStaticCollider}
+	 * can drop a single doodad at runtime without rebuilding from a
+	 * higher-level entity list.
+	 */
+	private staticColliders: StoredStaticBoxCollider[];
 	private readonly heightfield: PlatformerRuntimeHeightfield | null;
 
 	constructor(opts: Platformer3DRuntimeAdapterOptions) {
 		this.player = opts.player;
 		this.capsule = opts.capsule;
 		this.platformer = { ...DEFAULT_PLATFORMER, ...(opts.platformer ?? {}) };
-		this.staticColliders = opts.staticColliders ?? [];
+		// Auto-stamp ids on any entry that arrived without one so the
+		// removal API can address every collider uniformly.
+		this.staticColliders = (opts.staticColliders ?? []).map(
+			(collider, index) => ({
+				...collider,
+				id: collider.id ?? `static-${index}`,
+			}),
+		);
 		this.heightfield = opts.heightfield ?? null;
+	}
+
+	/**
+	 * Drop a single mirrored static collider by id and reflect the
+	 * change into the wasm world by clearing every collider and
+	 * re-adding the survivors. Returns `true` if a matching id was
+	 * found, `false` otherwise. Used by the arena demo to let the
+	 * KCC walk through doodads after they shatter.
+	 */
+	removeStaticCollider(id: string): boolean {
+		const idx = this.staticColliders.findIndex((c) => c.id === id);
+		if (idx < 0) return false;
+		this.staticColliders.splice(idx, 1);
+		this.rebuildStaticColliders();
+		return true;
+	}
+
+	/**
+	 * Register a new static collider after init has run. Used by the
+	 * arena demo when a destructible doodad has fallen and settled
+	 * into its rest pose: the doodad's TS Rapier body is locked at
+	 * that pose and a matching static AABB is added here so the
+	 * wasm KCC blocks the player at the doodad's actual final
+	 * position. Re-uses the supplied `id` if present so a later
+	 * {@link removeStaticCollider} on the killing blow can drop it
+	 * cleanly; otherwise auto-stamps a synthetic id and returns it.
+	 */
+	addStaticCollider(collider: IdentifiedStaticBoxCollider): string {
+		const id = collider.id ?? `static-${this.staticColliders.length}`;
+		this.staticColliders.push({ ...collider, id });
+		this.rebuildStaticColliders();
+		return id;
+	}
+
+	/**
+	 * Push the current static-collider list to the wasm runtime by
+	 * clearing the existing set and re-adding each survivor. This is
+	 * a bulk operation, but with single-digit collider counts in the
+	 * arena it's negligible. Skips if `init()` hasn't run yet — the
+	 * next `bootstrapZylemRuntimeGameplay3D` call will pick up the
+	 * latest `this.staticColliders` snapshot.
+	 */
+	private rebuildStaticColliders(): void {
+		const buffers = this.buffers;
+		if (!buffers) return;
+		buffers.exports.zylem_runtime_clear_static_box_colliders();
+		for (const collider of this.staticColliders) {
+			buffers.exports.zylem_runtime_add_static_box_collider(
+				collider.center[0],
+				collider.center[1],
+				collider.center[2],
+				collider.halfExtents[0],
+				collider.halfExtents[1],
+				collider.halfExtents[2],
+				collider.friction ?? 0.95,
+				collider.restitution ?? 0,
+			);
+		}
 	}
 
 	/**
@@ -334,8 +424,8 @@ export function buildPlatformerGroundHeightfield(
  */
 export function staticBoxFromEntity(
 	entity: any,
-	overrides: { friction?: number; restitution?: number } = {},
-): ZylemRuntimeStaticBoxCollider | null {
+	overrides: { friction?: number; restitution?: number; id?: string } = {},
+): IdentifiedStaticBoxCollider | null {
 	const pos = entity?.options?.position;
 	if (!pos) return null;
 	const size = entity?.options?.size;
@@ -348,27 +438,56 @@ export function staticBoxFromEntity(
 	} else {
 		return null;
 	}
-	return {
+	const result: IdentifiedStaticBoxCollider = {
 		center: [pos.x, pos.y, pos.z],
 		halfExtents,
 		friction: overrides.friction ?? 0.95,
-		restitution: overrides.restitution,
 	};
+	if (overrides.restitution !== undefined) {
+		result.restitution = overrides.restitution;
+	}
+	if (overrides.id !== undefined) {
+		result.id = overrides.id;
+	}
+	return result;
 }
 
 /**
  * Convenience wrapper for the demos: build a list of static box colliders
  * by calling {@link staticBoxFromEntity} on each entry and dropping
- * anything that returned `null`.
+ * anything that returned `null`. Per-entity `id` overrides can be
+ * supplied via the optional `idFor` callback so callers that care
+ * about late removal (e.g. destructible doodads) can stamp stable
+ * ids; non-overriding callers leave each entry id-less and rely on
+ * the adapter's auto-stamp.
  */
 export function staticBoxesFromEntities(
 	entities: any[],
-	overrides: { friction?: number; restitution?: number } = {},
-): ZylemRuntimeStaticBoxCollider[] {
-	const colliders: ZylemRuntimeStaticBoxCollider[] = [];
-	for (const e of entities) {
-		const c = staticBoxFromEntity(e, overrides);
+	overrides: {
+		friction?: number;
+		restitution?: number;
+		idFor?: (entity: any, index: number) => string | undefined;
+	} = {},
+): IdentifiedStaticBoxCollider[] {
+	const colliders: IdentifiedStaticBoxCollider[] = [];
+	entities.forEach((e, index) => {
+		const perEntityOverrides: {
+			friction?: number;
+			restitution?: number;
+			id?: string;
+		} = {};
+		if (overrides.friction !== undefined) {
+			perEntityOverrides.friction = overrides.friction;
+		}
+		if (overrides.restitution !== undefined) {
+			perEntityOverrides.restitution = overrides.restitution;
+		}
+		const id = overrides.idFor?.(e, index);
+		if (id !== undefined) {
+			perEntityOverrides.id = id;
+		}
+		const c = staticBoxFromEntity(e, perEntityOverrides);
 		if (c) colliders.push(c);
-	}
+	});
 	return colliders;
 }

@@ -25,10 +25,10 @@ const basisSourceDir = path.join(
 );
 
 const assetManifest = [
-	'fisher-ship',
-	'snake-ship',
-	'vulture-ship',
-	'cougar-ship',
+	'player-ship',
+	'enemy-ship-green',
+	'enemy-ship-red',
+	'enemy-ship-purple',
 ].map((name) => ({
 	name,
 	source: path.join(RAW_ASSETS_DIR, `${name}.glb`),

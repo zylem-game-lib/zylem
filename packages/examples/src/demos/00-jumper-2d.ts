@@ -11,7 +11,9 @@ import {
   useArrowsForAxes,
   useWASDForAxes,
 } from '@zylem/game-lib';
-import zylemManSprite from '../assets/zylem-man-2d-sprite.png';
+import { demoAsset } from '../assets/manifest';
+
+const zylemManSprite = demoAsset('general/player-sprite.png');
 
 export default function createDemo() {
   const floor = createBox({

@@ -1,9 +1,10 @@
-/// <reference types="@zylem/assets" />
 import { Color, Vector3 } from 'three';
 import { createBox, createCamera, createGame, createPlane, createStage } from '@zylem/game-lib';
 
-import skybox from '@zylem/assets/3d/skybox/default.png';
+import { demoAsset } from '../assets/manifest';
 import { createBundledZylemRuntimeStageAdapter } from '../runtime/zylem-runtime';
+
+const skybox = demoAsset('general/skybox-default.png');
 
 const COUNT = 2500;
 const SPREAD = 30;

@@ -5,7 +5,9 @@ import {
 	type EnemyRuntime,
 	type EnemyUpdateContext,
 } from './enemy-common';
-import cougarShipGlb from '../../assets/cougar-ship.glb';
+import { demoAsset } from '../../assets/manifest';
+
+const cougarShipGlb = demoAsset('general/enemy-ship-purple.glb');
 import {
 	CHARGE_ENEMY_COOLDOWN_SECONDS,
 	CHARGE_ENEMY_FIRE_COOLDOWN_SECONDS,

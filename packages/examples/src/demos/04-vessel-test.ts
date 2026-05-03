@@ -7,8 +7,10 @@ import {
   getGlobal,
   setGlobal,
 } from '@zylem/game-lib';
-import marsSurfacePath from '@zylem/assets/3d/textures/mars-surface.jpg';
+import { demoAsset } from '../assets/manifest';
 import { Vector2 } from 'three';
+
+const marsSurfacePath = demoAsset('general/texture-mars-surface.jpg');
 
 export default function createDemo() {
   createGlobal('vesselCounter', 0);

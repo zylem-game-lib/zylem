@@ -7,7 +7,9 @@ import {
 	setGlobal,
 	type Destructible3DHandle,
 } from '@zylem/game-lib';
-import redAsteroidGlb from '../../assets/red-asteroid.glb';
+import { demoAsset } from '../../assets/manifest';
+
+const redAsteroidGlb = demoAsset('general/asteroid.glb');
 import { destructiblePrebakeWorkerUrl } from '../lib/destructible-prebake-worker-url';
 import {
 	ASTEROID_TARGET_SMALL_SHARE,

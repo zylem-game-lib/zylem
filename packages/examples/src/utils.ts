@@ -1,24 +1,23 @@
-/// <reference types="@zylem/assets" />
-
 import type { ZylemBox } from "@zylem/game-lib";
 import { createActor, createBox, createPlane } from "@zylem/game-lib";
 import { Color } from "three";
 
-import grass from '@zylem/assets/3d/textures/grass.jpg';
-import dirt from '@zylem/assets/3d/textures/dirt.png';
-import wood from '@zylem/assets/3d/textures/wood-box.jpg';
-import mars from '@zylem/assets/3d/textures/mars-surface.jpg';
-import steel from '@zylem/assets/3d/textures/steel.png';
+import { demoAsset } from './assets/manifest';
 
-import player from '@zylem/assets/3d/player/idle.fbx';
-import playerWalking from '@zylem/assets/3d/player/walking.fbx';
-import playerRunning from '@zylem/assets/3d/player/running.fbx';
-import playerJumpingUp from '@zylem/assets/3d/player/jumping-up.fbx';
-import playerJumpingDown from '@zylem/assets/3d/player/jumping-down.fbx';
-import playerIdle from '@zylem/assets/3d/player/idle.fbx';
+const grass = demoAsset('general/texture-grass.jpg');
+const dirt = demoAsset('general/texture-dirt.png');
+const wood = demoAsset('general/texture-wood-box.jpg');
+const mars = demoAsset('general/texture-mars-surface.jpg');
+const steel = demoAsset('general/texture-steel.png');
 
-import mascotIdle from '@zylem/assets/3d/mascot/idle.fbx';
-import mascotRun from '@zylem/assets/3d/mascot/run.fbx';
+const playerIdle = demoAsset('general/player/idle.fbx');
+const playerWalking = demoAsset('general/player/walking.fbx');
+const playerRunning = demoAsset('general/player/running.fbx');
+const playerJumpingUp = demoAsset('general/player/jumping-up.fbx');
+const playerJumpingDown = demoAsset('general/player/jumping-down.fbx');
+
+const mascotIdle = demoAsset('general/mascot/idle.fbx');
+const mascotRun = demoAsset('general/mascot/run.fbx');
 
 export type PlaygroundPlaneType = 'grass' | 'dirt' | 'wood' | 'mars' | 'steel';
 
@@ -52,7 +51,7 @@ export const playgroundPlane: any = (
 export type PlaygroundActorType = 'player' | 'mascot';
 
 const actorTypeToPath: Record<PlaygroundActorType, string> = {
-	player: player,
+	player: playerIdle,
 	mascot: mascotIdle
 };
 

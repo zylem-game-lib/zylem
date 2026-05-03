@@ -1,22 +1,22 @@
-/// <reference types="@zylem/assets" />
-
 import { Color } from 'three';
 import { createActor } from '@zylem/game-lib';
 
-import idle from '../assets/healer/idle.fbx';
-import move from '../assets/healer/move.fbx';
-import jump from '../assets/healer/jump.fbx';
-import attackLight from '../assets/healer/attack-light.fbx';
-import attackHeavy from '../assets/healer/attack-heavy.fbx';
-import damageLight from '../assets/healer/damage-light.fbx';
-import fallen from '../assets/healer/fallen.fbx';
-import specialHeal from '../assets/healer/special-heal.fbx';
-import specialSpellLink from '../assets/healer/special-spell-link.fbx';
-import specialSpellShot from '../assets/healer/special-spell-shot.fbx';
+import { demoAsset } from '../../../assets/manifest';
 
-import baseColorUrl from '../assets/healer/textures/base-color.jpg';
-import normalUrl from '../assets/healer/textures/normal-gl.jpg';
-import ormUrl from '../assets/healer/textures/orm.jpg';
+const idle = demoAsset('arena/models/healer/idle.fbx');
+const move = demoAsset('arena/models/healer/move.fbx');
+const jump = demoAsset('arena/models/healer/jump.fbx');
+const attackLight = demoAsset('arena/models/healer/attack-light.fbx');
+const attackHeavy = demoAsset('arena/models/healer/attack-heavy.fbx');
+const damageLight = demoAsset('arena/models/healer/damage-light.fbx');
+const fallen = demoAsset('arena/models/healer/fallen.fbx');
+const specialHeal = demoAsset('arena/models/healer/special-heal.fbx');
+const specialSpellLink = demoAsset('arena/models/healer/special-spell-link.fbx');
+const specialSpellShot = demoAsset('arena/models/healer/special-spell-shot.fbx');
+
+const baseColorUrl = demoAsset('arena/models/healer/textures/base-color.jpg');
+const normalUrl = demoAsset('arena/models/healer/textures/normal-gl.jpg');
+const ormUrl = demoAsset('arena/models/healer/textures/orm.jpg');
 
 import {
 	type PbrMaterialOptions,
@@ -92,6 +92,7 @@ export const HEALER_MOVESET: CharacterMoveset = {
 			key: 'special-heal',
 			duration: 1.4,
 			cooldown: 6,
+			icon: 'arena/images/icon-heal.png',
 			particles: {
 				kind: 'burst',
 				color: '#86efac',
@@ -107,6 +108,7 @@ export const HEALER_MOVESET: CharacterMoveset = {
 			key: 'special-spell-link',
 			duration: 1.4,
 			cooldown: 3,
+			icon: 'arena/images/icon-health-link.png',
 			particles: {
 				kind: 'smoke',
 				color: '#60a5fa',
@@ -123,6 +125,7 @@ export const HEALER_MOVESET: CharacterMoveset = {
 			duration: 1.1,
 			damage: 20,
 			cooldown: 5,
+			icon: 'arena/images/icon-cleanse.png',
 			particles: {
 				kind: 'burst',
 				color: '#e0f2fe',
@@ -134,6 +137,10 @@ export const HEALER_MOVESET: CharacterMoveset = {
 				yOffset: 1.4,
 			},
 		},
+	},
+	basics: {
+		attack: { cooldown: 0.55, icon: 'arena/images/icon-attack.png' },
+		jump: { cooldown: 0.6, icon: 'arena/images/icon-jump.png' },
 	},
 };
 

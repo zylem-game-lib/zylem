@@ -22,8 +22,8 @@ describe('GLTFLoaderAdapter runtime configuration', () => {
 	it('treats Vite-style GLB URLs as supported', () => {
 		const loader = new GLTFLoaderAdapter();
 
-		expect(loader.isSupported('/src/assets/cougar-ship.glb?t=1775283135030')).toBe(true);
-		expect(loader.isSupported('/src/assets/cougar-ship.glb#preview')).toBe(true);
+		expect(loader.isSupported('/src/assets/enemy-ship-purple.glb?t=1775283135030')).toBe(true);
+		expect(loader.isSupported('/src/assets/enemy-ship-purple.glb#preview')).toBe(true);
 	});
 
 	it('registers Meshopt only once when left enabled', async () => {
@@ -45,12 +45,14 @@ describe('GLTFLoaderAdapter runtime configuration', () => {
 	it('creates a KTX2 loader lazily and reuses it for the same path and WebGL renderer', async () => {
 		const detectSupportSpy = vi
 			.spyOn(KTX2Loader.prototype, 'detectSupport')
-			.mockImplementation(function mockDetectSupport() {
+			.mockImplementation(function mockDetectSupport(this: KTX2Loader) {
 				return this;
 			});
 		const disposeSpy = vi
 			.spyOn(KTX2Loader.prototype, 'dispose')
-			.mockImplementation(() => {});
+			.mockImplementation(function mockDispose(this: KTX2Loader) {
+				return this;
+			});
 
 		const loader = new GLTFLoaderAdapter();
 		const renderer = createWebGLRendererStub();
@@ -80,7 +82,7 @@ describe('GLTFLoaderAdapter runtime configuration', () => {
 	it('uses async KTX2 support detection for WebGPU renderers', async () => {
 		const detectSupportSpy = vi
 			.spyOn(KTX2Loader.prototype, 'detectSupport')
-			.mockImplementation(function mockDetectSupport() {
+			.mockImplementation(function mockDetectSupport(this: KTX2Loader) {
 				return this;
 			});
 		const detectSupportAsyncSpy = vi
@@ -100,13 +102,15 @@ describe('GLTFLoaderAdapter runtime configuration', () => {
 
 	it('recreates the KTX2 loader when the transcoder path changes', async () => {
 		vi.spyOn(KTX2Loader.prototype, 'detectSupport').mockImplementation(
-			function mockDetectSupport() {
+			function mockDetectSupport(this: KTX2Loader) {
 				return this;
 			},
 		);
 		const disposeSpy = vi
 			.spyOn(KTX2Loader.prototype, 'dispose')
-			.mockImplementation(() => {});
+			.mockImplementation(function mockDispose(this: KTX2Loader) {
+				return this;
+			});
 
 		const loader = new GLTFLoaderAdapter();
 		const renderer = createWebGLRendererStub();

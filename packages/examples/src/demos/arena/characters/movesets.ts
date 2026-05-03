@@ -1,3 +1,4 @@
+import type { DemoAssetKey } from '../../../assets/manifest';
 import type { ParticleBurstSpec } from './attack-effects';
 
 /**
@@ -27,6 +28,8 @@ export interface CharacterPlatformerOpts {
  * - `cooldown`: seconds the slot is locked out after firing. Currently
  *   only honoured on `specials` entries; attacks are already gated by the
  *   combo/cancel-window logic in the combat controller.
+ * - `icon`: manifest asset key for the HUD cooldown icon. Optional so
+ *   entries without an icon fall back to the slot's solid fill colour.
  */
 export interface CharacterActionEntry {
 	key: string;
@@ -34,20 +37,40 @@ export interface CharacterActionEntry {
 	particles?: ParticleBurstSpec;
 	damage?: number;
 	cooldown?: number;
+	icon?: DemoAssetKey;
 }
 
 /** The four action buttons available on the X/Y/L/R slots of the d-pad. */
 export type SpecialSlotId = 'X' | 'Y' | 'L' | 'R';
 
 /**
+ * A universal "basic" action — attack or jump — that every character
+ * exposes. Unlike {@link CharacterActionEntry}, the cooldown and icon are
+ * required so the HUD can always render a stable button-hint row; the
+ * actual gating/firing happens in the combat controller.
+ */
+export interface CharacterBasicAction {
+	cooldown: number;
+	icon: DemoAssetKey;
+}
+
+/**
  * Per-character action surface consumed by the arena combat controller.
  * `attacks` is a tier-ordered array (`[light, medium, heavy]`) of length
  * 2 or 3 — the `A` button combo advances through this list. Missing
  * special slots are simply unbound (no-op press).
+ *
+ * `basics` declares the always-on attack and jump HUD entries; both ship
+ * with a per-class cooldown duration so the icon sweep animates on each
+ * press, and an icon asset key picked out of the arena manifest.
  */
 export interface CharacterMoveset {
 	attacks: readonly CharacterActionEntry[];
 	specials: Partial<Record<SpecialSlotId, CharacterActionEntry>>;
+	basics: {
+		attack: CharacterBasicAction;
+		jump: CharacterBasicAction;
+	};
 }
 
 /**

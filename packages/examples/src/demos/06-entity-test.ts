@@ -20,10 +20,12 @@ import {
 import { Vector3, Vector2 } from 'three';
 import { playgroundActor } from '../utils';
 
-import grassPath from '@zylem/assets/3d/textures/grass.jpg';
-import woodPath from '@zylem/assets/3d/textures/wood-box.jpg';
-import marsSurfacePath from '@zylem/assets/3d/textures/mars-surface.jpg';
 import rainManPath from '@zylem/assets/2d/rain-man.png';
+import { demoAsset } from '../assets/manifest';
+
+const grassPath = demoAsset('general/texture-grass.jpg');
+const woodPath = demoAsset('general/texture-wood-box.jpg');
+const marsSurfacePath = demoAsset('general/texture-mars-surface.jpg');
 
 export default function createDemo() {
   const stage1 = createStage(

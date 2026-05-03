@@ -18,10 +18,11 @@ export type GameModule = {
 };
 
 export const EXAMPLE_SECTION_ORDER = [
+	'Game Demos',
+	'Tech Demos',
 	'Classic Remakes',
 	'Basic',
 	'Advanced',
-	'Game Demos',
 	'Misc',
 ] as const;
 
@@ -74,19 +75,20 @@ const PREDEFINED_ORDER = {
 		'20-architecture-test',
 	],
 	'Game Demos': [
+		'00-arena',
+		'00-3d-asteroids',
+		'00-3d-space-invaders',
+	],
+	'Tech Demos': [
 		'00-ricochet',
 		'00-ricochet-3d',
 		'00-jumper-2d',
 		'00-screen-wrap',
 		'00-third-person-test',
-		'00-four-characters-plane',
-		'00-arena',
 		'00-zoo',
-		'18-baileys-world',
+		'00-four-characters-plane',
 	],
 	'Classic Remakes': [
-		'00-3d-asteroids',
-		'00-3d-space-invaders',
 		'00-pong',
 		'00-breakout',
 		'00-space-invaders',
@@ -95,9 +97,8 @@ const PREDEFINED_ORDER = {
 	],
 	Misc: [
 		'00-optimized-destructible-ship',
-		'00-optimized-ships-ab',
-		'00-optimized-ships',
 		'00-physics-worker',
+		'18-baileys-world',
 	],
 } as const satisfies Record<ExampleSectionName, readonly string[]>;
 

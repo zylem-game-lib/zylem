@@ -10,7 +10,9 @@ import {
 import { planetShader } from './planet-demo/planet.shader';
 import { ringShader } from './planet-demo/ring.shader';
 import { starfieldShader } from './planet-demo/starfield.shader';
-import zylemPlanetNormalOptimized from '../assets/zylem-planet-normal-optimized.png';
+import { demoAsset } from '../assets/manifest';
+
+const zylemPlanetNormalOptimized = demoAsset('general/planet-normal-texture.png');
 
 export default function createDemo() {
   // Planet with blue procedural shader

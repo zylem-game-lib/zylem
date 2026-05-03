@@ -1,5 +1,3 @@
-/// <reference types="@zylem/assets" />
-
 import { Vector3 } from 'three';
 import {
 	createGame,
@@ -26,7 +24,9 @@ import {
 	playgroundActor,
 	playgroundPlatforms,
 } from '../utils';
-import skybox from '@zylem/assets/3d/skybox/default.png';
+import { demoAsset } from '../assets/manifest';
+
+const skybox = demoAsset('general/skybox-default.png');
 import { UpdateContext } from '@zylem/game-lib';
 import { createCamera } from '@zylem/game-lib';
 import { StageEntity } from '@zylem/game-lib';

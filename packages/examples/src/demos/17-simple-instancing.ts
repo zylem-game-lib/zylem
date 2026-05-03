@@ -1,4 +1,3 @@
-/// <reference types="@zylem/assets" />
 import { Color, Vector2, Vector3 } from 'three';
 import {
   createGame,
@@ -10,8 +9,10 @@ import {
   createText,
 } from '@zylem/game-lib';
 
-import skybox from '@zylem/assets/3d/skybox/default.png';
-import grassNormalPath from '@zylem/assets/3d/textures/grass-normal.png';
+import { demoAsset } from '../assets/manifest';
+
+const skybox = demoAsset('general/skybox-default.png');
+const grassNormalPath = demoAsset('general/texture-grass-normal.png');
 
 export default function createDemo() {
   // --------------------------------------------------

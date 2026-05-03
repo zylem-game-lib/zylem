@@ -29,7 +29,7 @@ describe('AssetManager GLTF runtime preparation', () => {
 			ktx2TranscoderPath: '/three/basis/',
 		});
 
-		const pendingLoad = manager.loadGLTF('/assets/fisher-ship.glb');
+		const pendingLoad = manager.loadGLTF('/assets/player-ship.glb');
 		await flushPromises();
 
 		expect(loadSpy).not.toHaveBeenCalled();
