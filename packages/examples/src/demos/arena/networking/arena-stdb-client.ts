@@ -3,7 +3,7 @@ import type { ErrorContext } from '../../../spacetimedb-generated';
 import { DbConnection } from '../../../spacetimedb-generated';
 
 /** Published database name (see `packages/server` `publish:local`). */
-export const ARENA_MODULE_NAME = 'zylem-entity-transforms-v2';
+export const ARENA_MODULE_NAME = 'arena';
 
 /**
  * WebSocket base URL for SpacetimeDB (see SpacetimeDB TS SDK: use `ws://` / `wss://`).

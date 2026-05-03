@@ -7,7 +7,7 @@ set -euo pipefail
 _root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 _image="${IMAGE:-zylem-spacetimedb:local}"
 _host_port="${VERIFY_PORT:-10000}"
-_db_name="${SPACETIMEDB_DATABASE_NAME:-zylem-entity-transforms-v2}"
+_db_names="${SPACETIMEDB_DATABASE_NAMES:-arena multiplayer-lobby}"
 _name="zylem-render-verify-$$"
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -28,7 +28,7 @@ echo "Starting container ${_name} (host http://127.0.0.1:${_host_port}) ..."
 docker run --rm -d --name "${_name}" \
 	-p "${_host_port}:10000" \
 	-e PORT=10000 \
-	-e SPACETIMEDB_DATABASE_NAME="${_db_name}" \
+	-e SPACETIMEDB_DATABASE_NAMES="${_db_names}" \
 	-e SPACETIMEDB_DATA_DIR=/tmp/spacetimedb-verify \
 	"${_image}"
 
@@ -60,16 +60,17 @@ echo "verify-render-docker-image: GET / (examples SPA) ok"
 curl -fsS "http://127.0.0.1:${_host_port}/v1/ping" >/dev/null
 echo "verify-render-docker-image: GET /v1/ping ok"
 
-_db_identity="$(curl -fsS "http://127.0.0.1:${_host_port}/v1/database/${_db_name}/identity")"
-if ! printf '%s' "${_db_identity}" | grep -Eq '^[0-9a-fA-F]{16,}$'; then
-	echo "verify-render-docker-image: GET /v1/database/${_db_name}/identity did not return a hex identity" >&2
-	echo "response: ${_db_identity}" >&2
-	exit 1
-fi
+for _db_name in ${_db_names}; do
+	_db_identity="$(curl -fsS "http://127.0.0.1:${_host_port}/v1/database/${_db_name}/identity")"
+	if ! printf '%s' "${_db_identity}" | grep -Eq '^[0-9a-fA-F]{16,}$'; then
+		echo "verify-render-docker-image: GET /v1/database/${_db_name}/identity did not return a hex identity" >&2
+		echo "response: ${_db_identity}" >&2
+		exit 1
+	fi
 
-echo "verify-render-docker-image: GET /v1/database/${_db_name}/identity ok"
+	echo "verify-render-docker-image: GET /v1/database/${_db_name}/identity ok"
 
-node --input-type=module - "${_host_port}" "${_db_name}" <<'NODE'
+	node --input-type=module - "${_host_port}" "${_db_name}" <<'NODE'
 const hostPort = process.argv[2];
 const dbName = process.argv[3];
 const wsUrl = `ws://127.0.0.1:${hostPort}/v1/database/${dbName}/subscribe`;
@@ -95,5 +96,6 @@ ws.addEventListener('error', event => {
 	process.exit(1);
 });
 NODE
+done
 
 echo "verify-render-docker-image: all checks passed."

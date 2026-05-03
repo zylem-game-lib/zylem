@@ -7,7 +7,7 @@ SPACETIMEDB_LISTEN_ADDR="${SPACETIMEDB_LISTEN_ADDR:-0.0.0.0:${PORT}}"
 SPACETIMEDB_SERVER_URL="${SPACETIMEDB_SERVER_URL:-http://127.0.0.1:${PORT}}"
 SPACETIMEDB_DATA_DIR="${SPACETIMEDB_DATA_DIR:-/var/data/spacetimedb}"
 SPACETIMEDB_MODULE_PATH="${SPACETIMEDB_MODULE_PATH:-/app/spacetimedb}"
-SPACETIMEDB_DATABASE_NAME="${SPACETIMEDB_DATABASE_NAME:-zylem-entity-transforms-v2}"
+SPACETIMEDB_DATABASE_NAMES="${SPACETIMEDB_DATABASE_NAMES:-arena multiplayer-lobby}"
 SPACETIMEDB_AUTO_PUBLISH="${SPACETIMEDB_AUTO_PUBLISH:-true}"
 SPACETIMEDB_PUBLISH_DELETE_DATA="${SPACETIMEDB_PUBLISH_DELETE_DATA:-never}"
 # See entrypoint.sh: true ephemeral reset (ownership included) by wiping the data dir.
@@ -75,17 +75,22 @@ if [[ "${ready}" != "true" ]]; then
 fi
 
 if [[ "${SPACETIMEDB_AUTO_PUBLISH}" == "true" ]]; then
-  publish_args=(
-    publish
-    "${SPACETIMEDB_DATABASE_NAME}"
-    -s "${SPACETIMEDB_SERVER_URL}"
-    -p "${SPACETIMEDB_MODULE_PATH}"
-    -y
-  )
-  append_publish_delete_data_arg
+  # SPACETIMEDB_DATABASE_NAMES is whitespace-separated. Each demo gets its own
+  # logical database publishing the same compiled module so individual rooms
+  # (arena, multiplayer-lobby, ...) don't collide on shared tables.
+  for db_name in ${SPACETIMEDB_DATABASE_NAMES}; do
+    publish_args=(
+      publish
+      "${db_name}"
+      -s "${SPACETIMEDB_SERVER_URL}"
+      -p "${SPACETIMEDB_MODULE_PATH}"
+      -y
+    )
+    append_publish_delete_data_arg
 
-  echo "Publishing ${SPACETIMEDB_DATABASE_NAME} from ${SPACETIMEDB_MODULE_PATH}"
-  spacetime "${publish_args[@]}"
+    echo "Publishing ${db_name} from ${SPACETIMEDB_MODULE_PATH}"
+    spacetime "${publish_args[@]}"
+  done
 fi
 
 wait "${SPACETIME_PID}"

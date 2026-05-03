@@ -7,7 +7,9 @@
   "scripts": {
     "build": "sh scripts/run-spacetimedb-cli.sh build -p spacetimedb",
     "generate:bindings": "sh scripts/run-spacetimedb-cli.sh generate --lang typescript -o ../examples/src/spacetimedb-generated -p spacetimedb -y",
-    "publish:local": "sh scripts/run-spacetimedb-cli.sh publish zylem-entity-transforms-v2 -s local -p spacetimedb",
+    "publish:arena": "sh scripts/run-spacetimedb-cli.sh publish arena -s local -p spacetimedb",
+    "publish:multiplayer-lobby": "sh scripts/run-spacetimedb-cli.sh publish multiplayer-lobby -s local -p spacetimedb",
+    "publish:local": "pnpm run publish:arena && pnpm run publish:multiplayer-lobby",
     "start:server": "bash scripts/start-spacetimedb-server.sh",
     "dev": "pnpm run build && pnpm run publish:local"
   },

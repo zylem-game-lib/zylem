@@ -52,11 +52,13 @@ Output path: [../examples/src/spacetimedb-generated](../examples/src/spacetimedb
 ## Scripts (from `packages/server`)
 
 ```sh
-pnpm run build              # spacetimedb-cli build -p spacetimedb
-pnpm run generate:bindings  # emit TS client bindings to packages/examples/src/spacetimedb-generated
-pnpm run start:server       # local start on 127.0.0.1:3000 with data in packages/server/.data/spacetimedb
-pnpm run publish:local      # publish to local server as database zylem-entity-transforms-v2
-pnpm run dev                # build then publish:local
+pnpm run build                     # spacetimedb-cli build -p spacetimedb
+pnpm run generate:bindings         # emit TS client bindings to packages/examples/src/spacetimedb-generated
+pnpm run start:server              # local start on 127.0.0.1:3000 with data in packages/server/.data/spacetimedb
+pnpm run publish:arena             # publish to local server as database `arena`
+pnpm run publish:multiplayer-lobby # publish to local server as database `multiplayer-lobby`
+pnpm run publish:local             # both publish:arena and publish:multiplayer-lobby
+pnpm run dev                       # build then publish:local
 ```
 
 For `publish:local` and `dev`, start the standalone server first (`pnpm run start:server` or `spacetime start`). The package script defaults to `127.0.0.1:3000` and stores local data in `packages/server/.data/spacetimedb`.
@@ -75,7 +77,7 @@ This package now includes a Render deployment scaffold (Blueprint at repository 
 
 - [render.yaml](../../render.yaml) – Blueprint service definition for a `zylem-spacetimedb` Docker web service.
 - [render/Dockerfile](render/Dockerfile) – Multi-stage: builds `@zylem/examples` (Vite SPA), then installs SpacetimeDB, builds the module, copies the SPA into `/var/www/examples`, and verifies the module.
-- [render/entrypoint.sh](render/entrypoint.sh) – Starts SpacetimeDB on an internal port, waits for readiness, auto-publishes `zylem-entity-transforms-v2`, then starts nginx.
+- [render/entrypoint.sh](render/entrypoint.sh) – Starts SpacetimeDB on an internal port, waits for readiness, auto-publishes every database listed in `SPACETIMEDB_DATABASE_NAMES` (default `arena multiplayer-lobby`), then starts nginx.
 - [render/nginx.conf.template](render/nginx.conf.template) – Reverse-proxies `/v1/*` to SpacetimeDB; serves the examples SPA on `/` (`try_files` for client routing); `/healthz` for health checks.
 
 The Render setup assumes:
@@ -109,7 +111,7 @@ This builds [`render/Dockerfile`](render/Dockerfile), runs a short-lived contain
 
 ### Auto-publish behavior
 
-On boot, the container publishes `zylem-entity-transforms-v2` to the local in-container SpacetimeDB instance.
+On boot, the container publishes every database listed in **`SPACETIMEDB_DATABASE_NAMES`** (whitespace-separated, default `arena multiplayer-lobby`) to the local in-container SpacetimeDB instance. Each demo gets its own logical database publishing the same compiled module, so e.g. arena rooms and multiplayer-lobby rooms don't collide on shared tables.
 
 - **403 Forbidden / “not authorized to … update database”:** The standalone server stores the database on the persistent disk (`SPACETIMEDB_DATA_DIR`), which is **owned** by the Spacetime **identity** that first created it. Two fixes cooperate:
   - **Persist CLI identity** — the entrypoints set **`XDG_CONFIG_HOME`** to **`/var/data/.config`** (override with **`SPACETIMEDB_XDG_CONFIG_HOME`**) so the same identity is reused across deploys. Prevents future drift.

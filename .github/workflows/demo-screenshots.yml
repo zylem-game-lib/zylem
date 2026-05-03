@@ -60,8 +60,17 @@ jobs:
 
           for file in $CHANGED_FILES; do
             case "$file" in
-              packages/examples/src/demos/*.ts)
-                demo_id="$(basename "$file" .ts)"
+              packages/examples/src/demos/_shared/*)
+                # Cross-demo shared modules: any change can touch every demo,
+                # so re-screenshot everything to be safe.
+                mode="all"
+                ;;
+              packages/examples/src/demos/*/*)
+                # Demo lives at `demos/<id>/...`. The demo id is the folder
+                # name; helper files inside the same folder still attribute
+                # to that demo.
+                rest="${file#packages/examples/src/demos/}"
+                demo_id="${rest%%/*}"
                 changed_demos["$demo_id"]=1
                 ;;
               packages/examples/screenshots/*.png)

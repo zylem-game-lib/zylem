@@ -10,7 +10,7 @@ import {
 import { demoAsset } from '../../assets/manifest';
 
 const redAsteroidGlb = demoAsset('general/asteroid.glb');
-import { destructiblePrebakeWorkerUrl } from '../lib/destructible-prebake-worker-url';
+import { destructiblePrebakeWorkerUrl } from '../_shared/destructible-prebake-worker-url';
 import {
 	ASTEROID_TARGET_SMALL_SHARE,
 	type AsteroidSize,

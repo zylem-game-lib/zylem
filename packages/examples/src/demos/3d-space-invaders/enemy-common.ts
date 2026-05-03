@@ -4,7 +4,7 @@ import {
 	FractureOptions,
 	type Destructible3DHandle,
 } from '@zylem/game-lib';
-import { destructiblePrebakeWorkerUrl } from '../lib/destructible-prebake-worker-url';
+import { destructiblePrebakeWorkerUrl } from '../_shared/destructible-prebake-worker-url';
 import { Matrix4, Vector3 } from 'three';
 import {
 	type EnemyKind,

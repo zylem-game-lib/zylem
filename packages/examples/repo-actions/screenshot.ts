@@ -18,16 +18,22 @@ const HELP_TEXT = `
 Usage:
   pnpm dev:examples:screenshot --name=space-invaders
   pnpm dev:examples:screenshot --all
-  pnpm --filter @zylem/examples screenshot:local -- 00-space-invaders
+  pnpm --filter @zylem/examples screenshot:local -- space-invaders
 `;
 
+// Each demo lives at `src/demos/<id>/<id>.ts` (folder name === entry filename).
+// Folders starting with `_` (e.g. `_shared`) hold cross-demo modules and are
+// intentionally excluded.
 const collectDemoIds = () => {
 	return fs
 		.readdirSync(DEMOS_DIR, {
 			withFileTypes: true,
 		})
-		.filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
-		.map((entry) => entry.name.replace(/\.ts$/, ''))
+		.filter((entry) => entry.isDirectory() && !entry.name.startsWith('_'))
+		.filter((entry) =>
+			fs.existsSync(path.join(DEMOS_DIR, entry.name, `${entry.name}.ts`))
+		)
+		.map((entry) => entry.name)
 		.sort((left, right) =>
 			left.localeCompare(right, undefined, { numeric: true })
 		);

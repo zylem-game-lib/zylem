@@ -23,15 +23,15 @@ import {
 } from '../../store/demoViewportStore';
 import { isScreenshotModeSearch } from '../../screenshot-mode';
 import {
-  fourCharLobbyStore,
-  resetFourCharLobbyForExampleSwitch,
-} from '../../demos/four-characters-lobby-store';
+  multiplayerLobbyStore,
+  resetMultiplayerLobbyForExampleSwitch,
+} from '../../demos/multiplayer-lobby/multiplayer-lobby-store';
 import {
   arenaLobbyStore,
   resetArenaLobbyForExampleSwitch,
 } from '../../demos/arena/networking/arena-lobby-store';
-import FourCharactersLobby from '../FourCharactersLobby/FourCharactersLobby';
-import ArenaLobby from '../ArenaLobby/ArenaLobby';
+import MultiplayerLobby from '../../demos/multiplayer-lobby/MultiplayerLobby/MultiplayerLobby';
+import ArenaLobby from '../../demos/arena/ArenaLobby/ArenaLobby';
 import styles from './DemoViewer.module.css';
 import { subscribe } from 'valtio/vanilla';
 
@@ -88,7 +88,7 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   const [loading, setLoading] = createSignal(false);
   const [progress, setProgress] = createSignal(0);
   const [message, setMessage] = createSignal('');
-  const [fourCharLobbyRev, setFourCharLobbyRev] = createSignal(0);
+  const [multiplayerLobbyRev, setMultiplayerLobbyRev] = createSignal(0);
   const [arenaLobbyRev, setArenaLobbyRev] = createSignal(0);
 
   const isMobileLayout = () => props.layout === 'mobile';
@@ -119,8 +119,8 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
 
   onMount(() => {
     const unsubLobby = subscribe(
-      fourCharLobbyStore,
-      () => setFourCharLobbyRev((n) => n + 1),
+      multiplayerLobbyStore,
+      () => setMultiplayerLobbyRev((n) => n + 1),
       true,
     );
     onCleanup(unsubLobby);
@@ -168,10 +168,10 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   createEffect(() => {
     const id = appStore.activeExample?.id;
     onCleanup(() => {
-      if (id === '00-four-characters-plane') {
-        resetFourCharLobbyForExampleSwitch();
+      if (id === 'multiplayer-lobby') {
+        resetMultiplayerLobbyForExampleSwitch();
       }
-      if (id === '00-arena') {
+      if (id === 'arena') {
         resetArenaLobbyForExampleSwitch();
       }
     });
@@ -192,12 +192,12 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
     });
   });
 
-  const showFourCharactersLobby = () => {
-    void fourCharLobbyRev();
+  const showMultiplayerLobby = () => {
+    void multiplayerLobbyRev();
     return (
       !screenshotMode() &&
-      appStore.activeExample?.id === '00-four-characters-plane' &&
-      !fourCharLobbyStore.lobbyDismissed
+      appStore.activeExample?.id === 'multiplayer-lobby' &&
+      !multiplayerLobbyStore.lobbyDismissed
     );
   };
 
@@ -205,7 +205,7 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
     void arenaLobbyRev();
     return (
       !screenshotMode() &&
-      appStore.activeExample?.id === '00-arena' &&
+      appStore.activeExample?.id === 'arena' &&
       !arenaLobbyStore.lobbyDismissed
     );
   };
@@ -271,8 +271,8 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
                         viewport-profile={activeViewportProfile()}
                       />
                     </Show>
-                    <Show when={showFourCharactersLobby()}>
-                      <FourCharactersLobby />
+                    <Show when={showMultiplayerLobby()}>
+                      <MultiplayerLobby />
                     </Show>
                     <Show when={showArenaLobby()}>
                       <ArenaLobby />
@@ -309,8 +309,8 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
                     viewport-profile={activeViewportProfile()}
                   />
                 </Show>
-                <Show when={showFourCharactersLobby()}>
-                  <FourCharactersLobby />
+                <Show when={showMultiplayerLobby()}>
+                  <MultiplayerLobby />
                 </Show>
                 <Show when={showArenaLobby()}>
                   <ArenaLobby />

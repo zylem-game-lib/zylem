@@ -9,7 +9,7 @@ import {
 import { demoAsset } from '../../assets/manifest';
 
 const fisherShipGlb = demoAsset('general/player-ship.glb');
-import { destructiblePrebakeWorkerUrl } from '../lib/destructible-prebake-worker-url';
+import { destructiblePrebakeWorkerUrl } from '../_shared/destructible-prebake-worker-url';
 import {
 	ENEMY_BULLET_COLLISION_TYPE,
 	ENEMY_COLLISION_TYPE,

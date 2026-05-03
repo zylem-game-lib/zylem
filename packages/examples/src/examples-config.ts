@@ -5,13 +5,11 @@ import {
 	normalizePathname,
 } from './router-config';
 
-// Only load top-level demo entrypoints; helper files in `src/demos` should not
-// appear as standalone examples in the viewer.
-const demoModules = import.meta.glob('./demos/[0-9][0-9]-*.ts');
-const stageTestModules = import.meta.glob('./demos/03-stage-test/03-stage-test.ts');
-
-// Combine the globs
-const allModules = { ...demoModules, ...stageTestModules };
+// Each demo lives at `demos/<demo-name>/<demo-name>.ts`. Helper files such as
+// `demos/<demo-name>/<helper>.ts` and shared modules under `demos/_shared/`
+// are intentionally not picked up; we only want top-level demo entrypoints.
+// (`_shared` is excluded by the leading-underscore folder name.)
+const allModules = import.meta.glob('./demos/*/*.ts');
 
 export type GameModule = {
 	default: () => Game<any>;
@@ -49,77 +47,80 @@ type UnsectionedExampleConfig = Omit<ExampleConfig, 'section'>;
 // Any demos omitted here fall back to the Misc section alphabetically.
 const PREDEFINED_ORDER = {
 	Basic: [
-		'00-readme-example',
-		'00-input',
-		'03-rect',
-		'03-variable-test',
-		'20-empty-game',
-		'20-basic-ball',
-		'20-virtual-touch-ball',
+		'readme-example',
+		'input',
+		'rect',
+		'variable-test',
+		'empty-game',
+		'basic-ball',
+		'virtual-touch-ball',
 	],
 	Advanced: [
-		'00-stage-test',
-		'01-fps',
-		'04-vessel-test',
-		'05-camera-test',
-		'06-entity-test',
-		'07-actions-test',
-		'08-jumbotron-test',
-		'09-destructible-behavior',
-		'10-particle-effects',
-		'15-zylem-planet-demo',
-		'16-zylem-planet-demo-webGPU',
-		'17-simple-instancing',
-		'17-massive-instancing',
-		'17-stress-test',
-		'20-architecture-test',
+		'stage-test',
+		'fps',
+		'vessel-test',
+		'camera-test',
+		'entity-test',
+		'actions-test',
+		'jumbotron-test',
+		'destructible-behavior',
+		'particle-effects',
+		'zylem-planet-demo',
+		'zylem-planet-demo-webgpu',
+		'simple-instancing',
+		'massive-instancing',
+		'stress-test',
+		'architecture-test',
 	],
 	'Game Demos': [
-		'00-arena',
-		'00-3d-asteroids',
-		'00-3d-space-invaders',
+		'arena',
+		'3d-asteroids',
+		'3d-space-invaders',
 	],
 	'Tech Demos': [
-		'00-ricochet',
-		'00-ricochet-3d',
-		'00-jumper-2d',
-		'00-screen-wrap',
-		'00-third-person-test',
-		'00-zoo',
-		'00-four-characters-plane',
+		'ricochet',
+		'ricochet-3d',
+		'jumper-2d',
+		'screen-wrap',
+		'third-person-test',
+		'zoo',
+		'multiplayer-lobby',
 	],
 	'Classic Remakes': [
-		'00-pong',
-		'00-breakout',
-		'00-space-invaders',
-		'00-asteroids',
-		'00-robotron',
+		'pong',
+		'breakout',
+		'space-invaders',
+		'asteroids',
+		'robotron',
 	],
 	Misc: [
-		'00-optimized-destructible-ship',
-		'00-physics-worker',
-		'18-baileys-world',
+		'optimized-destructible-ship',
+		'physics-worker',
+		'baileys-world',
 	],
 } as const satisfies Record<ExampleSectionName, readonly string[]>;
 
 // Create a map of all examples
 const allExamples = Object.entries(allModules)
 	.map(([path, load]) => {
-		// Extract the filename from the path
-		// e.g., ./demos/01-basic.ts -> 01-basic
-		// e.g., ./demos/03-stage-test/03-stage-test.ts -> 03-stage-test
-		const match = path.match(/\/([^\/]+)\.ts$/);
-		const id = match ? match[1] : undefined;
-
-		if (!id) return null;
+		// Only accept demos where the folder name matches the file name, e.g.
+		//   ./demos/arena/arena.ts                 -> id: 'arena'
+		//   ./demos/3d-asteroids/3d-asteroids.ts   -> id: '3d-asteroids'
+		// Helper files like `./demos/arena/main-stage/...` aren't matched by
+		// the glob (it's only one level deep), but sibling helpers like
+		// `./demos/multiplayer-lobby/multiplayer-lobby-store.ts` would be —
+		// the folder/filename equality check filters them out.
+		const match = path.match(/\/([^/]+)\/([^/]+)\.ts$/);
+		if (!match) return null;
+		const [, folder, file] = match;
+		if (folder !== file) return null;
+		const id = folder!;
 
 		// Create a readable name from the ID
-		// e.g., 01-basic -> Basic
-		// e.g., 08-pong -> Pong
+		// e.g., basic -> Basic, 3d-asteroids -> 3d Asteroids
 		const name = id
-			.replace(/^\d+[\.-]?/, '') // Remove leading numbers and separators
 			.split('-')
-			.map(word => word.charAt(0).toUpperCase() + word.slice(1))
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
 			.join(' ');
 		const routeSlug = getDemoRouteSlug(id);
 		const routePath = getDemoRoutePath(id);

@@ -11,7 +11,7 @@ import {
 import { demoAsset } from '../../assets/manifest';
 
 const fisherShipGlb = demoAsset('general/player-ship.glb');
-import { destructiblePrebakeWorkerUrl } from '../lib/destructible-prebake-worker-url';
+import { destructiblePrebakeWorkerUrl } from '../_shared/destructible-prebake-worker-url';
 import { shipShieldShader } from './shield.shader';
 import {
 	BULLET_BOUNDS_X,

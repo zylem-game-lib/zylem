@@ -25,8 +25,8 @@ services:
         value: /var/data/spacetimedb
       - key: SPACETIMEDB_MODULE_PATH
         value: /app/spacetimedb
-      - key: SPACETIMEDB_DATABASE_NAME
-        value: zylem-entity-transforms-v2
+      - key: SPACETIMEDB_DATABASE_NAMES
+        value: arena multiplayer-lobby
       - key: SPACETIMEDB_AUTO_PUBLISH
         value: "true"
       # Ephemeral DB: wipe the data dir at boot (resets ownership) and republish on every deploy.
