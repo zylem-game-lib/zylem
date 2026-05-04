@@ -59,4 +59,7 @@ export const GENERAL_ASSET_PATHS = {
 	'general/player/running.fbx': 'general/models/running.6b52c91c.fbx',
 	'general/player/jumping-up.fbx': 'general/models/jumping-up.cacb07a3.fbx',
 	'general/player/jumping-down.fbx': 'general/models/jumping-down.fdf4aeb1.fbx',
+
+	'general/audio/bounce.wav': 'general/audio/bounce.186e964e.wav',
+	'general/audio/coin-sound.mp3': 'general/audio/coin-sound.bfb7cd13.mp3',
 } as const satisfies Record<string, string>;
