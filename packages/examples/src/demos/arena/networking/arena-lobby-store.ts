@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 import { proxy } from 'valtio';
 import type { CharacterClass } from '../characters';
+import { DEFAULT_LOBBY_COLOR } from '../lobby-palette';
 
 const DEVICE_KEY = 'zylem-arena-device-id';
 
@@ -11,7 +12,7 @@ export const arenaLobbyStore = proxy({
 	deviceId: '',
 	displayName: '',
 	/** Packed 0xAARRGGBB for `register_player.color_u32`. */
-	colorU32: 0xffffff,
+	colorU32: DEFAULT_LOBBY_COLOR,
 	characterClass: 'tank' as CharacterClass,
 	joinRequested: false,
 	/** True after the user dismisses the lobby (Enter). */

@@ -1,12 +1,8 @@
 /// <reference types="@zylem/assets" />
 
-import { Color } from 'three';
 import {
 	type UpdateContext,
-	createCamera,
 	createGame,
-	createPlane,
-	createStage,
 	getGlobal,
 	setGlobal,
 } from '@zylem/game-lib';
@@ -14,6 +10,7 @@ import {
 	arenaLobbyStore,
 	getOrCreateArenaDeviceId,
 } from './networking/arena-lobby-store';
+import { createArenaLobbyStage } from './lobby';
 import { createArenaMainStage } from './main-stage/main-stage';
 import {
 	bootstrapArenaNetwork,
@@ -22,30 +19,7 @@ import {
 
 export default function createDemo() {
 	// ─── Lobby ──────────────────────────────────────────────────────────────
-	const lobbyCamera = createCamera({
-		position: { x: 0, y: 4, z: 6 },
-		target: { x: 0, y: 0, z: 0 },
-	});
-
-	const lobbyStage = createStage(
-		{
-			backgroundColor: new Color(0x111122),
-		},
-		lobbyCamera,
-	);
-
-	// A ground plane in the lobby keeps the camera framed on something solid
-	// while the character-select overlay is waiting for user input.
-	const lobbyGround = createPlane({
-		tile: { x: 100, y: 100 },
-		position: { x: 0, y: -4, z: 0 },
-		collision: { static: true },
-		randomizeHeight: false,
-		material: {
-			color: new Color(0x666666),
-		},
-	});
-	lobbyStage.add(lobbyGround);
+	const lobby = createArenaLobbyStage();
 
 	// ─── Main stage ─────────────────────────────────────────────────────────
 	const main = createArenaMainStage();
@@ -78,6 +52,7 @@ export default function createDemo() {
 		networkHandle = null;
 		networkBootstrapped = false;
 		main.reset();
+		lobby.dispose();
 	});
 
 	// ─── Game ───────────────────────────────────────────────────────────────
@@ -105,7 +80,7 @@ export default function createDemo() {
 				arenaCharacterClass: 'tank',
 			},
 		},
-		lobbyStage,
+		lobby.stage,
 		main.stage,
 	);
 

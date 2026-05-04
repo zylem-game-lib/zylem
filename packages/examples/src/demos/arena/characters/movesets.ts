@@ -38,6 +38,17 @@ export interface CharacterActionEntry {
 	damage?: number;
 	cooldown?: number;
 	icon?: DemoAssetKey;
+	/**
+	 * Short human-readable name for HUDs and the character-select panel.
+	 * Falls back to a prettified `key` when omitted.
+	 */
+	name?: string;
+	/**
+	 * Long-form blurb shown in the lobby's specials list. Kept brief
+	 * (one or two short sentences) so it fits the right-side panel
+	 * without scrolling on common viewports.
+	 */
+	description?: string;
 }
 
 /** The four action buttons available on the X/Y/L/R slots of the d-pad. */

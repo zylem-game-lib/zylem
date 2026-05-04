@@ -41,6 +41,23 @@ function shouldStripRootMotion(track: any, targetByName: Map<string, Object3D>):
 	return /hips\.position$/i.test(track.name) || /root\.position$/i.test(track.name);
 }
 
+/**
+ * Lock the root bone's translation track to the bone's **bind-pose**
+ * position on all three axes (falling back to the clip's first-frame
+ * value if the bone can't be resolved on the target).
+ *
+ * Two snaps are eliminated:
+ *
+ * 1. Horizontal (X/Z) stripping prevents the character from sliding
+ *    off its physics body — root motion isn't authoritative for
+ *    movement; the platformer body / KCC is.
+ * 2. Vertical (Y) stripping anchors the animated pose to the same
+ *    height the model sits at while the bind pose is showing. Without
+ *    this, the visible character "jumps" by `firstFrameY - bindPoseY`
+ *    the instant the mixer begins driving the root bone, which is
+ *    the load-time pop you see when the textureless model lands then
+ *    the idle clip kicks in.
+ */
 function stripClipRootMotion(
 	clip: AnimationClip,
 	targetByName: Map<string, Object3D>,
@@ -54,10 +71,15 @@ function stripClipRootMotion(
 			continue;
 		}
 
-		const baseX = track.values[0];
-		const baseZ = track.values[2];
+		const targetName = getTrackTargetName(track.name);
+		const target = targetByName.get(targetName);
+		const bindPosition = target?.position;
+		const baseX = bindPosition?.x ?? track.values[0];
+		const baseY = bindPosition?.y ?? track.values[1];
+		const baseZ = bindPosition?.z ?? track.values[2];
 		for (let i = 0; i < track.values.length; i += 3) {
 			track.values[i] = baseX;
+			track.values[i + 1] = baseY;
 			track.values[i + 2] = baseZ;
 		}
 	}

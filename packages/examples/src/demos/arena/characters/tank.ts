@@ -13,6 +13,7 @@ const damageLight = demoAsset('arena/models/tank/damage-light.fbx');
 const damageHeavy = demoAsset('arena/models/tank/damage-heavy.fbx');
 const fallen = demoAsset('arena/models/tank/fallen.fbx');
 const specialGroundSlam = demoAsset('arena/models/tank/special-ground-slam.fbx');
+const specialShield = demoAsset('arena/models/tank/special-shield.fbx');
 const specialTaunt = demoAsset('arena/models/tank/special-taunt.fbx');
 
 const baseColorUrl = demoAsset('arena/models/tank/textures/base-color.jpg');
@@ -33,7 +34,7 @@ import type {
 } from './movesets';
 
 const TANK_SCALE = { x: 0.02, y: 0.02, z: 0.02 };
-const TANK_COLLISION = { size: { x: 1, y: 3.8, z: 0.5 }, static: false };
+const TANK_COLLISION = { size: { x: 1, y: 1.5, z: 0.5 }, static: false };
 
 /**
  * Tank platformer tuning: slightly slower than baseline for a weighty
@@ -108,6 +109,9 @@ export const TANK_MOVESET: CharacterMoveset = {
 	specials: {
 		X: {
 			key: 'special-ground-slam',
+			name: 'Ground Slam',
+			description:
+				'Pound the earth in a heavy AoE that staggers anyone standing too close.',
 			duration: 1.2,
 			damage: 30,
 			cooldown: 8,
@@ -125,6 +129,9 @@ export const TANK_MOVESET: CharacterMoveset = {
 		},
 		Y: {
 			key: 'special-taunt',
+			name: 'Rally Taunt',
+			description:
+				'Bellow at every nearby enemy and force their aggro on you for several seconds.',
 			duration: 1.6,
 			cooldown: 12,
 			icon: 'arena/images/icon-taunt.png',
@@ -139,11 +146,13 @@ export const TANK_MOVESET: CharacterMoveset = {
 				yOffset: 1.8,
 			},
 		},
-		// Defensive stance — no dedicated `special-shield` animation yet,
-		// so we hold `idle` while a pale-blue smoke dome reads as the
-		// protective bubble. Swap `key` to a real FBX when authored.
+		// Defensive stance: dedicated shield-raise pose paired with a
+		// pale-blue smoke dome that reads as the protective bubble.
 		L: {
-			key: 'idle',
+			key: 'special-shield',
+			name: 'Shield Wall',
+			description:
+				'Brace behind a protective bubble that soaks incoming damage while it holds.',
 			duration: 2.0,
 			cooldown: 10,
 			icon: 'arena/images/icon-shield.png',
@@ -212,6 +221,7 @@ export function createTankActor(
 			{ key: 'damage-heavy', path: damageHeavy },
 			{ key: 'fallen', path: fallen },
 			{ key: 'special-ground-slam', path: specialGroundSlam },
+			{ key: 'special-shield', path: specialShield },
 			{ key: 'special-taunt', path: specialTaunt },
 		],
 		collision: TANK_COLLISION,

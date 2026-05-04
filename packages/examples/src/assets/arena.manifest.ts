@@ -42,7 +42,7 @@ export const ARENA_ASSET_PATHS = {
 	'arena/models/healer/textures/normal-gl.jpg': 'arena/images/normal-gl.249c8ecb.jpg',
 	'arena/models/healer/textures/orm.jpg': 'arena/images/orm.40882556.jpg',
 
-	'arena/models/tank/idle.fbx': 'arena/models/idle.478a2d20.fbx',
+	'arena/models/tank/idle.fbx': 'arena/models/idle.2a0981a5.fbx',
 	'arena/models/tank/walk.fbx': 'arena/models/walk.b53453b6.fbx',
 	'arena/models/tank/jump.fbx': 'arena/models/jump.d040da4c.fbx',
 	'arena/models/tank/attack-light.fbx': 'arena/models/attack-light.506ca6e5.fbx',
@@ -52,6 +52,7 @@ export const ARENA_ASSET_PATHS = {
 	'arena/models/tank/damage-heavy.fbx': 'arena/models/damage-heavy.e7c751be.fbx',
 	'arena/models/tank/fallen.fbx': 'arena/models/fallen.1c0ad378.fbx',
 	'arena/models/tank/special-ground-slam.fbx': 'arena/models/special-ground-slam.584b21f4.fbx',
+	'arena/models/tank/special-shield.fbx': 'arena/models/special-shield.4eb53888.fbx',
 	'arena/models/tank/special-taunt.fbx': 'arena/models/special-taunt.eded1604.fbx',
 	'arena/models/tank/tank.glb': 'arena/models/tank.54c1ba2e.glb',
 	'arena/models/tank/textures/base-color.jpg': 'arena/images/base-color.66d24cb2.jpg',
@@ -65,8 +66,11 @@ export const ARENA_ASSET_PATHS = {
 	'arena/models/doodads/rock-structure-small.glb': 'arena/models/rock-structure-small.233af8c9.glb',
 	'arena/models/doodads/spike-red.glb': 'arena/models/spike-red.e9742023.glb',
 
+	'arena/images/assassin-art.png': 'arena/images/assassin-art.f3375d2e.png',
 	'arena/images/character-select.png': 'arena/images/character-select.1bf704b7.png',
 	'arena/images/ground.png': 'arena/images/ground.1843023e.png',
+	'arena/images/healer-art.png': 'arena/images/healer-art.98c5c143.png',
+	'arena/images/tank-art.png': 'arena/images/tank-art.bd406e0e.png',
 
 	'arena/images/icon-attack.png': 'arena/images/icon-attack.8a6015bb.png',
 	'arena/images/icon-cleanse.png': 'arena/images/icon-cleanse.e5c62f97.png',

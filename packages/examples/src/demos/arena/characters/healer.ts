@@ -32,7 +32,7 @@ import type {
 } from './movesets';
 
 const HEALER_SCALE = { x: 0.02, y: 0.02, z: 0.02 };
-const HEALER_COLLISION = { size: { x: 1, y: 3.8, z: 0.5 }, static: false };
+const HEALER_COLLISION = { size: { x: 1, y: 1.5, z: 0.5 }, static: false };
 
 /** Healer platformer tuning: baseline arena values. */
 export const HEALER_PLATFORMER_OPTS: CharacterPlatformerOpts = {
@@ -90,6 +90,9 @@ export const HEALER_MOVESET: CharacterMoveset = {
 	specials: {
 		X: {
 			key: 'special-heal',
+			name: 'Restore',
+			description:
+				'Channel a soothing wave that restores hit points to you and any nearby allies.',
 			duration: 1.4,
 			cooldown: 6,
 			icon: 'arena/images/icon-heal.png',
@@ -106,6 +109,9 @@ export const HEALER_MOVESET: CharacterMoveset = {
 		},
 		Y: {
 			key: 'special-spell-link',
+			name: 'Spell Link',
+			description:
+				'Tether yourself to an ally so you share incoming damage and healing.',
 			duration: 1.4,
 			cooldown: 3,
 			icon: 'arena/images/icon-health-link.png',
@@ -122,6 +128,9 @@ export const HEALER_MOVESET: CharacterMoveset = {
 		},
 		L: {
 			key: 'special-spell-shot',
+			name: 'Spell Shot',
+			description:
+				'Hurl a focused bolt of arcane light that punches through enemies in a line.',
 			duration: 1.1,
 			damage: 20,
 			cooldown: 5,

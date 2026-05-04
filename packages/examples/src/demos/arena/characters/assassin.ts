@@ -32,7 +32,7 @@ import type {
 } from './movesets';
 
 const ASSASSIN_SCALE = { x: 0.02, y: 0.02, z: 0.02 };
-const ASSASSIN_COLLISION = { size: { x: 1, y: 3.8, z: 0.5 }, static: false };
+const ASSASSIN_COLLISION = { size: { x: 1, y: 1.4, z: 0.5 }, static: false };
 
 /**
  * Assassin platformer tuning: faster walk speed and a taller jump arc.
@@ -107,6 +107,9 @@ export const ASSASSIN_MOVESET: CharacterMoveset = {
 	specials: {
 		X: {
 			key: 'special-attack',
+			name: 'Execute',
+			description:
+				'Vault forward and bury a finishing strike into the closest enemy for massive single-target damage.',
 			duration: 0.9,
 			damage: 28,
 			cooldown: 4,
@@ -124,6 +127,9 @@ export const ASSASSIN_MOVESET: CharacterMoveset = {
 		},
 		Y: {
 			key: 'special-stealth',
+			name: 'Stealth',
+			description:
+				'Vanish into a smoke cloud and break enemy line of sight long enough to reposition.',
 			duration: 1.0,
 			cooldown: 10,
 			icon: 'arena/images/icon-stealth.png',
@@ -145,6 +151,9 @@ export const ASSASSIN_MOVESET: CharacterMoveset = {
 		// added to `createCombatController`.
 		L: {
 			key: 'running',
+			name: 'Dash',
+			description:
+				'A short burst of speed in your facing direction, useful for closing gaps or bailing out.',
 			duration: 0.35,
 			cooldown: 4,
 			icon: 'arena/images/icon-dash.png',
