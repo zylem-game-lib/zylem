@@ -15,9 +15,9 @@ import {
   starShader,
 } from '@zylem/game-lib';
 
-import rainManPath from '@zylem/assets/2d/rain-man.png';
 import { demoAsset } from '../../assets/manifest';
 
+const rainManPath = demoAsset('general/rain-man.png');
 const grassNormalPath = demoAsset('general/texture-grass-normal.png');
 const skybox = demoAsset('general/skybox-default.png');
 

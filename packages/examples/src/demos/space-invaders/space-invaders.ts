@@ -16,9 +16,11 @@ import {
   repeatForever,
   useArrowsForAxes,
 } from '@zylem/game-lib';
-import playerShip from '@zylem/assets/2d/space/player-ship.png';
-import enemyShip from '@zylem/assets/2d/space/enemy-ship.png';
-import playerLaser from '@zylem/assets/2d/space/player-laser.png';
+import { demoAsset } from '../../assets/manifest';
+
+const playerShip = demoAsset('general/space/player-ship.png');
+const enemyShip = demoAsset('general/space/enemy-ship.png');
+const playerLaser = demoAsset('general/space/player-laser.png');
 
 export default function createDemo() {
   const player = createSprite({

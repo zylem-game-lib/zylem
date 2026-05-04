@@ -14,24 +14,24 @@ import {
   type GameLoadingPayload,
 } from '@zylem/game-lib';
 import { editorEvents } from '@zylem/editor';
-import { appStore } from '../../store/appStore';
-import '../../store/editorStateStore';
+import { appStore } from '../../../store/appStore';
+import '../../../store/editorStateStore';
 import ViewportControls from '../ViewportControls/ViewportControls';
 import {
   demoViewportStore,
   setMeasuredViewportSize,
-} from '../../store/demoViewportStore';
-import { isScreenshotModeSearch } from '../../screenshot-mode';
+} from '../../../store/demoViewportStore';
+import { isScreenshotModeSearch } from '../../../screenshot-mode';
 import {
   multiplayerLobbyStore,
   resetMultiplayerLobbyForExampleSwitch,
-} from '../../demos/multiplayer-lobby/multiplayer-lobby-store';
+} from '../../../demos/multiplayer-lobby/multiplayer-lobby-store';
 import {
   arenaLobbyStore,
   resetArenaLobbyForExampleSwitch,
-} from '../../demos/arena/networking/arena-lobby-store';
-import MultiplayerLobby from '../../demos/multiplayer-lobby/MultiplayerLobby/MultiplayerLobby';
-import ArenaLobby from '../../demos/arena/ArenaLobby/ArenaLobby';
+} from '../../../demos/arena/networking/arena-lobby-store';
+import MultiplayerLobby from '../../../demos/multiplayer-lobby/MultiplayerLobby/MultiplayerLobby';
+import ArenaLobby from '../../../demos/arena/ArenaLobby/ArenaLobby';
 import styles from './DemoViewer.module.css';
 import { subscribe } from 'valtio/vanilla';
 
@@ -278,7 +278,10 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
                       <ArenaLobby />
                     </Show>
                     <Show when={loading()}>
-                      <div class={styles.loadingOverlay} data-demo-loading-overlay>
+                      <div
+                        class={styles.loadingOverlay}
+                        data-demo-loading-overlay
+                      >
                         <div class={styles.loadingContent}>
                           <div class={styles.loadingTitle}>Loading...</div>
                           <div class={styles.progressBar}>
@@ -299,7 +302,9 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
         >
           <div class={styles.mobileStageArea}>
             <div ref={viewportFrameRef} class={styles.mobileViewportFrame}>
-              <div class={`${styles.gameContainer} ${styles.gameContainerMobile}`}>
+              <div
+                class={`${styles.gameContainer} ${styles.gameContainerMobile}`}
+              >
                 <Show when={example()}>
                   <zylem-game
                     ref={gameRef}

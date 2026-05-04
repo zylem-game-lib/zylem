@@ -18,9 +18,11 @@ import {
   useBehavior,
   useWASDForAxes,
 } from '@zylem/game-lib';
-import playerShipImg from '@zylem/assets/2d/space/player-ship.png';
-import enemyShipImg from '@zylem/assets/2d/space/enemy-ship.png';
-import playerLaserImg from '@zylem/assets/2d/space/player-laser.png';
+import { demoAsset } from '../../assets/manifest';
+
+const playerShipImg = demoAsset('general/space/player-ship.png');
+const enemyShipImg = demoAsset('general/space/enemy-ship.png');
+const playerLaserImg = demoAsset('general/space/player-laser.png');
 
 export default function createDemo() {
   const PLAYFIELD_WIDTH = 28;

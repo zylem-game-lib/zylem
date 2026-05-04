@@ -18,12 +18,14 @@ import {
   useBehavior,
   useWASDForAxes,
 } from '@zylem/game-lib';
-import playerShipImg from '@zylem/assets/2d/space/player-ship.png';
-import playerLaserImg from '@zylem/assets/2d/space/player-laser.png';
-import meteorBig1 from '@zylem/assets/2d/space/asteroids/meteor-big-1.png';
-import meteorBig2 from '@zylem/assets/2d/space/asteroids/meteor-big-2.png';
-import meteorBig3 from '@zylem/assets/2d/space/asteroids/meteor-big-3.png';
-import meteorBig4 from '@zylem/assets/2d/space/asteroids/meteor-big-4.png';
+import { demoAsset } from '../../assets/manifest';
+
+const playerShipImg = demoAsset('general/space/player-ship.png');
+const playerLaserImg = demoAsset('general/space/player-laser.png');
+const meteorBig1 = demoAsset('general/space/asteroids/meteor-big-1.png');
+const meteorBig2 = demoAsset('general/space/asteroids/meteor-big-2.png');
+const meteorBig3 = demoAsset('general/space/asteroids/meteor-big-3.png');
+const meteorBig4 = demoAsset('general/space/asteroids/meteor-big-4.png');
 
 export default function createDemo() {
   const PLAYFIELD_WIDTH = 30;

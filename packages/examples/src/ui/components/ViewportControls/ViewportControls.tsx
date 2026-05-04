@@ -5,7 +5,7 @@ import {
   applyViewportPreset,
   demoViewportStore,
   setViewportProfile,
-} from '../../store/demoViewportStore';
+} from '../../../store/demoViewportStore';
 import styles from './ViewportControls.module.css';
 
 const PROFILE_OPTIONS = [

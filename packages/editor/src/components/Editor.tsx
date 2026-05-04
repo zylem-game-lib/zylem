@@ -32,7 +32,9 @@ export interface EditorController {
 
 interface EditorProps {
   launcherMode?: EditorLauncherMode | undefined;
-  onControllerReady?: ((controller: EditorController | null) => void) | undefined;
+  onControllerReady?:
+    | ((controller: EditorController | null) => void)
+    | undefined;
 }
 
 const getViewportFittedPanelLayout = (
@@ -51,7 +53,8 @@ const getViewportFittedPanelLayout = (
   const height = Math.min(PANEL_HEIGHT, availableHeight);
   const topInset = inset;
   const bottomLimit = window.innerHeight - bottomOffset - inset;
-  const centeredY = Math.round((bottomLimit - topInset - height) / 2) + topInset;
+  const centeredY =
+    Math.round((bottomLimit - topInset - height) / 2) + topInset;
 
   return {
     initialPosition: {
@@ -176,6 +179,7 @@ export const Editor: Component<EditorProps> = (props) => {
         display: 'flex',
         height: '100vh',
         width: '100vw',
+        position: 'absolute',
       }}
     >
       <Show when={launcherMode() !== 'hidden'}>

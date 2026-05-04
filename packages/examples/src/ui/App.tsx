@@ -3,11 +3,11 @@ import { useLocation } from '@solidjs/router';
 import type { RouteSectionProps } from '@solidjs/router';
 import { ZylemGameElement } from '@zylem/game-lib';
 import { registerZylemEditor } from '@zylem/editor';
-import { isScreenshotModeSearch } from './screenshot-mode';
+import { isScreenshotModeSearch } from '../screenshot-mode';
 import {
   demoViewportStore,
   isMobileShellViewportMode,
-} from './store/demoViewportStore';
+} from '../store/demoViewportStore';
 
 if (!customElements.get('zylem-game')) {
   customElements.define('zylem-game', ZylemGameElement);

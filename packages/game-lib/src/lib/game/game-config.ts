@@ -133,24 +133,43 @@ function ensureContainer(containerId?: string, existing?: HTMLElement | null): H
 	return el;
 }
 
-function createDefaultGameConfig(base?: Partial<Pick<GameConfig, 'id' | 'debug' | 'time' | 'input'>> & { stages?: StageInterface[]; globals?: Record<string, any> }): GameConfig {
+interface GameConfigDefaults {
+	id: string;
+	globals: Record<string, any>;
+	stages: StageInterface[];
+	debug: boolean;
+	time: number;
+	input: GameInputConfig | undefined;
+	aspectRatio: number;
+	fullscreen: boolean;
+	bodyBackground: string;
+	containerId: string;
+}
+
+/**
+ * Build a plain defaults bag for game configuration. Intentionally
+ * side-effect-free: container resolution happens once in
+ * {@link resolveGameConfig} so we never create an unused DOM node.
+ */
+function createGameConfigDefaults(
+	base?: Partial<Pick<GameConfig, 'id' | 'debug' | 'time' | 'input'>> & {
+		stages?: StageInterface[];
+		globals?: Record<string, any>;
+	},
+): GameConfigDefaults {
 	const id = base?.id ?? 'zylem';
-	const container = ensureContainer(id);
-	return new GameConfig(
+	return {
 		id,
-		(base?.globals ?? {}) as Record<string, any>,
-		(base?.stages ?? []) as StageInterface[],
-		Boolean(base?.debug),
-		base?.time ?? 0,
-		base?.input,
-		AspectRatio.SixteenByNine,
-		undefined,
-		true,
-		'#000000',
-		container,
-		id,
-		undefined,
-	);
+		globals: (base?.globals ?? {}) as Record<string, any>,
+		stages: (base?.stages ?? []) as StageInterface[],
+		debug: Boolean(base?.debug),
+		time: base?.time ?? 0,
+		input: base?.input,
+		aspectRatio: AspectRatio.SixteenByNine,
+		fullscreen: true,
+		bodyBackground: '#000000',
+		containerId: id,
+	};
 }
 
 const DEFAULT_MOBILE_BASE_EDGE = 360;
@@ -235,7 +254,7 @@ export function resolveGameConfig(
 	user?: GameConfigLike,
 	runtime: ResolveGameConfigRuntime = {},
 ): GameConfig {
-	const defaults = createDefaultGameConfig({
+	const defaults = createGameConfigDefaults({
 		id: user?.id ?? 'zylem',
 		debug: Boolean(user?.debug),
 		time: (user?.time as number) ?? 0,

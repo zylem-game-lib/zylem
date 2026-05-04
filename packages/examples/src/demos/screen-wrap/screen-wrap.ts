@@ -7,7 +7,9 @@ import {
   useBehavior,
   useArrowsForAxes,
 } from '@zylem/game-lib';
-import playerShipImg from '@zylem/assets/2d/space/player-ship.png';
+import { demoAsset } from '../../assets/manifest';
+
+const playerShipImg = demoAsset('general/space/player-ship.png');
 
 export default function createDemo() {
   function playerFactory() {
