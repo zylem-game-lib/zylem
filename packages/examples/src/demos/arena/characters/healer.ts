@@ -20,10 +20,11 @@ const ormUrl = demoAsset('arena/models/healer/textures/orm.jpg');
 
 import {
 	type PbrMaterialOptions,
-	applyPbrMaterial,
+	bindPbrTextures,
 	createPbrTextureLoader,
 	resolvePbrOptions,
 } from './pbr-materials';
+import type { CharacterActorBundle } from './bundle';
 import type {
 	CharacterLoadout,
 	CharacterMoveset,
@@ -32,7 +33,7 @@ import type {
 } from './movesets';
 
 const HEALER_SCALE = { x: 0.02, y: 0.02, z: 0.02 };
-const HEALER_COLLISION = { size: { x: 1, y: 1.5, z: 0.5 }, static: false };
+const HEALER_COLLISION = { size: { x: 1, y: 1, z: 0.5 }, static: false };
 
 /** Healer platformer tuning: baseline arena values. */
 export const HEALER_PLATFORMER_OPTS: CharacterPlatformerOpts = {
@@ -181,7 +182,7 @@ export function createHealerActor(
 	color?: Color,
 	position: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 },
 	materialOverrides?: PbrMaterialOptions,
-) {
+): CharacterActorBundle {
 	const material = resolvePbrOptions(materialOverrides);
 	const actor = createActor({
 		position,
@@ -206,13 +207,12 @@ export function createHealerActor(
 	});
 
 	const tint = color ?? new Color(0xffffff);
-
-	actor.listen('entity:model:loaded', ({ success }) => {
-		if (!success) return;
-		void loadHealerTextures().then((textures) => {
-			applyPbrMaterial(actor.group, textures, tint, material);
-		});
+	const ready = bindPbrTextures({
+		actor,
+		loadTextures: loadHealerTextures,
+		tint,
+		options: material,
 	});
 
-	return actor;
+	return { actor, ready };
 }

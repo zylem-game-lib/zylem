@@ -20,10 +20,11 @@ const ormUrl = demoAsset('arena/models/assassin/textures/orm.jpg');
 
 import {
 	type PbrMaterialOptions,
-	applyPbrMaterial,
+	bindPbrTextures,
 	createPbrTextureLoader,
 	resolvePbrOptions,
 } from './pbr-materials';
+import type { CharacterActorBundle } from './bundle';
 import type {
 	CharacterLoadout,
 	CharacterMoveset,
@@ -201,7 +202,7 @@ export function createAssassinActor(
 	color?: Color,
 	position: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 },
 	materialOverrides?: PbrMaterialOptions,
-) {
+): CharacterActorBundle {
 	const material = resolvePbrOptions(materialOverrides);
 	const actor = createActor({
 		position,
@@ -226,13 +227,12 @@ export function createAssassinActor(
 	});
 
 	const tint = color ?? new Color(0xffffff);
-
-	actor.listen('entity:model:loaded', ({ success }) => {
-		if (!success) return;
-		void loadAssassinTextures().then((textures) => {
-			applyPbrMaterial(actor.group, textures, tint, material);
-		});
+	const ready = bindPbrTextures({
+		actor,
+		loadTextures: loadAssassinTextures,
+		tint,
+		options: material,
 	});
 
-	return actor;
+	return { actor, ready };
 }

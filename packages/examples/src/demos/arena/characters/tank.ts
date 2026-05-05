@@ -22,10 +22,11 @@ const ormUrl = demoAsset('arena/models/tank/textures/orm.jpg');
 
 import {
 	type PbrMaterialOptions,
-	applyPbrMaterial,
+	bindPbrTextures,
 	createPbrTextureLoader,
 	resolvePbrOptions,
 } from './pbr-materials';
+import type { CharacterActorBundle } from './bundle';
 import type {
 	CharacterLoadout,
 	CharacterMoveset,
@@ -34,7 +35,7 @@ import type {
 } from './movesets';
 
 const TANK_SCALE = { x: 0.02, y: 0.02, z: 0.02 };
-const TANK_COLLISION = { size: { x: 1, y: 1.5, z: 0.5 }, static: false };
+const TANK_COLLISION = { size: { x: 1, y: 1, z: 0.5 }, static: false };
 
 /**
  * Tank platformer tuning: slightly slower than baseline for a weighty
@@ -202,7 +203,7 @@ export function createTankActor(
 	color?: Color,
 	position: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 },
 	materialOverrides?: PbrMaterialOptions,
-) {
+): CharacterActorBundle {
 	const material = resolvePbrOptions(materialOverrides);
 	const actor = createActor({
 		position,
@@ -229,13 +230,12 @@ export function createTankActor(
 	});
 
 	const tint = color ?? new Color(0xffffff);
-
-	actor.listen('entity:model:loaded', ({ success }) => {
-		if (!success) return;
-		void loadTankTextures().then((textures) => {
-			applyPbrMaterial(actor.group, textures, tint, material);
-		});
+	const ready = bindPbrTextures({
+		actor,
+		loadTextures: loadTankTextures,
+		tint,
+		options: material,
 	});
 
-	return actor;
+	return { actor, ready };
 }

@@ -155,3 +155,54 @@ export function resolvePbrOptions(
 ): Required<PbrMaterialOptions> {
 	return { ...defaults, ...(overrides ?? {}) };
 }
+
+/**
+ * Inputs for {@link bindPbrTextures}.
+ */
+export interface BindPbrTexturesOptions {
+	/**
+	 * The character actor returned by {@link createActor}. Loosely typed
+	 * (`any`) on purpose: the per-class character files don't import the
+	 * concrete `ZylemActor` symbol, and we only need `listen` + `group`
+	 * here.
+	 */
+	actor: any;
+	loadTextures: () => Promise<PbrTextures>;
+	tint: Color;
+	options: Required<PbrMaterialOptions>;
+}
+
+/**
+ * Wire a character actor's `entity:model:loaded` lifecycle to the
+ * Tripo-pack PBR texture pipeline.
+ *
+ * Returns a promise that resolves once the loaded model is *fully
+ * presentable* — i.e. the FBX has loaded AND the PBR materials have
+ * been swapped in (or the load failed, in which case the promise also
+ * resolves so callers don't deadlock waiting for a fade-in that will
+ * never fire).
+ *
+ * The actor's group is hidden the moment the model finishes loading and
+ * stays hidden until the textures resolve, so the player never sees the
+ * bare-FBX default materials flash before the textured character
+ * appears. Callers (typically the loading-indicator orchestration) are
+ * responsible for making the group visible again — usually as part of a
+ * fade-in.
+ */
+export function bindPbrTextures(opts: BindPbrTexturesOptions): Promise<void> {
+	return new Promise<void>((resolve) => {
+		opts.actor.listen('entity:model:loaded', ({ success }: { success: boolean }) => {
+			if (!success) {
+				resolve();
+				return;
+			}
+			if (opts.actor.group) {
+				opts.actor.group.visible = false;
+			}
+			void opts.loadTextures().then((textures) => {
+				applyPbrMaterial(opts.actor.group, textures, opts.tint, opts.options);
+				resolve();
+			});
+		});
+	});
+}

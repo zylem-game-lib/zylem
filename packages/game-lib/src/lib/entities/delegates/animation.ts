@@ -42,25 +42,25 @@ function shouldStripRootMotion(track: any, targetByName: Map<string, Object3D>):
 }
 
 /**
- * Lock the root bone's translation track to the bone's **bind-pose**
- * position on all three axes (falling back to the clip's first-frame
- * value if the bone can't be resolved on the target).
+ * Strip the root bone's translation track on the requested axes.
  *
- * Two snaps are eliminated:
+ * X/Z are always stripped: the platformer body / KCC owns horizontal
+ * world position, so any baked horizontal root motion would slide
+ * the mesh off the collider.
  *
- * 1. Horizontal (X/Z) stripping prevents the character from sliding
- *    off its physics body — root motion isn't authoritative for
- *    movement; the platformer body / KCC is.
- * 2. Vertical (Y) stripping anchors the animated pose to the same
- *    height the model sits at while the bind pose is showing. Without
- *    this, the visible character "jumps" by `firstFrameY - bindPoseY`
- *    the instant the mixer begins driving the root bone, which is
- *    the load-time pop you see when the textureless model lands then
- *    the idle clip kicks in.
+ * Y is opt-in via `stripY` because Mixamo-style FBX rigs commonly
+ * author the root bone's Y track as a *calibration* — the hips bone
+ * in bind pose typically sits at the model origin, not at
+ * hip-height-in-world, so the animation's first-frame Y is what
+ * places the visible feet on the ground. Stripping Y removes that
+ * calibration and the whole character drops. Callers should only
+ * enable `stripY` for rigs whose first-frame Y is true root motion
+ * (a bob), not a calibration.
  */
 function stripClipRootMotion(
 	clip: AnimationClip,
 	targetByName: Map<string, Object3D>,
+	stripY: boolean,
 ): AnimationClip {
 	for (const track of clip.tracks) {
 		if (!shouldStripRootMotion(track, targetByName)) {
@@ -71,20 +71,34 @@ function stripClipRootMotion(
 			continue;
 		}
 
-		const targetName = getTrackTargetName(track.name);
-		const target = targetByName.get(targetName);
-		const bindPosition = target?.position;
-		const baseX = bindPosition?.x ?? track.values[0];
-		const baseY = bindPosition?.y ?? track.values[1];
-		const baseZ = bindPosition?.z ?? track.values[2];
+		const baseX = track.values[0];
+		const baseY = track.values[1];
+		const baseZ = track.values[2];
 		for (let i = 0; i < track.values.length; i += 3) {
 			track.values[i] = baseX;
-			track.values[i + 1] = baseY;
+			if (stripY) {
+				track.values[i + 1] = baseY;
+			}
 			track.values[i + 2] = baseZ;
 		}
 	}
 
 	return clip;
+}
+
+/**
+ * Per-call options for {@link AnimationDelegate.loadAnimations}.
+ */
+export interface AnimationLoadOptions {
+	/**
+	 * If true, also lock the root bone's Y translation to its first
+	 * frame value (in addition to the always-stripped X/Z axes).
+	 * Eliminates the bind-pose-to-animation Y "snap" at load time on
+	 * rigs whose root Y track is true bob/root motion. Defaults to
+	 * false because most FBX exports use the Y track as a hip-height
+	 * calibration; see {@link stripClipRootMotion}.
+	 */
+	stripRootMotionY?: boolean;
 }
 
 export class AnimationDelegate {
@@ -103,8 +117,13 @@ export class AnimationDelegate {
 
 	constructor(private target: Object3D) { }
 
-	async loadAnimations(animations: AnimationObject[]): Promise<void> {
+	async loadAnimations(
+		animations: AnimationObject[],
+		options: AnimationLoadOptions = {},
+	): Promise<void> {
 		if (!animations.length) return;
+
+		const stripY = options.stripRootMotionY ?? false;
 
 		const results = await Promise.all(animations.map(a => this._assetLoader.loadFile(a.path)));
 		const targetByName = new Map<string, Object3D>();
@@ -121,7 +140,7 @@ export class AnimationDelegate {
 			if (result.animation) {
 				loadedAnimations.push({
 					key: animations[i].key || i.toString(),
-					clip: stripClipRootMotion(result.animation, targetByName),
+					clip: stripClipRootMotion(result.animation, targetByName, stripY),
 				});
 			}
 		});

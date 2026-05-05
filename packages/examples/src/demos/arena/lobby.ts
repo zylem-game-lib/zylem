@@ -11,7 +11,7 @@ import { createCharacterActor } from './characters';
 import { arenaLobbyStore } from './networking/arena-lobby-store';
 
 type LobbyStage = ReturnType<typeof createStage>;
-type PreviewActor = ReturnType<typeof createCharacterActor>;
+type PreviewBundle = ReturnType<typeof createCharacterActor>;
 
 /**
  * Position the preview character so its feet sit roughly on the lobby
@@ -69,12 +69,12 @@ export function createArenaLobbyStage(): ArenaLobbyHandle {
 	});
 	stage.add(ground);
 
-	let previewActor: PreviewActor | null = null;
+	let previewBundle: PreviewBundle | null = null;
 	let lastClass = arenaLobbyStore.characterClass;
 	let lastColor = arenaLobbyStore.colorU32;
 
-	const buildPreview = (): PreviewActor => {
-		const actor = createCharacterActor(
+	const buildPreview = (): PreviewBundle => {
+		const bundle = createCharacterActor(
 			arenaLobbyStore.characterClass,
 			new Color(arenaLobbyStore.colorU32),
 			PREVIEW_POSITION,
@@ -82,16 +82,28 @@ export function createArenaLobbyStage(): ArenaLobbyHandle {
 		// Skip the TS Rapier body / collider for the preview — the lobby
 		// has zero gravity, so we don't need physics here, and avoiding
 		// the body keeps the actor exactly at PREVIEW_POSITION.
-		(actor.options as { runtime?: { simulation: string } }).runtime = {
+		(bundle.actor.options as { runtime?: { simulation: string } }).runtime = {
 			simulation: 'runtime',
 		};
-		return actor;
+		// Suppress the bind-pose-to-first-frame Y snap when the model
+		// finishes loading. Safe to enable here because the preview is
+		// statically posed (no jumps / physics-driven vertical motion);
+		// the main stage leaves this off so the rigs' Y calibration
+		// keeps feet on the ground.
+		(bundle.actor.options as { stripRootMotionY?: boolean }).stripRootMotionY = true;
+		return bundle;
+	};
+
+	const removePreview = (bundle: PreviewBundle): void => {
+		if (!stage.wrappedStage) return;
+		stage.wrappedStage.removeEntityByUuid(bundle.actor.uuid);
+		stage.wrappedStage.removeEntityByUuid(bundle.indicator.uuid);
 	};
 
 	// Initial preview is added to blueprints (stage isn't loaded yet); the
 	// engine spawns it during stage setup using the latest store snapshot.
-	previewActor = buildPreview();
-	stage.add(previewActor);
+	previewBundle = buildPreview();
+	stage.add(previewBundle.actor, previewBundle.indicator);
 
 	let unsubscribe: (() => void) | null = null;
 
@@ -105,11 +117,11 @@ export function createArenaLobbyStage(): ArenaLobbyHandle {
 			lastColor = color;
 
 			if (!stage.wrappedStage) return;
-			if (previewActor) {
-				stage.wrappedStage.removeEntityByUuid(previewActor.uuid);
+			if (previewBundle) {
+				removePreview(previewBundle);
 			}
-			previewActor = buildPreview();
-			stage.add(previewActor);
+			previewBundle = buildPreview();
+			stage.add(previewBundle.actor, previewBundle.indicator);
 		});
 	});
 
@@ -119,9 +131,10 @@ export function createArenaLobbyStage(): ArenaLobbyHandle {
 	});
 
 	stage.onUpdate(({ delta }: UpdateContext<any>) => {
-		const group = previewActor?.group;
+		const group = previewBundle?.actor.group;
 		if (!group) return;
 		group.rotation.y += delta * PREVIEW_SPIN_SPEED;
+		group.position.y = -4.5;
 	});
 
 	return {
@@ -129,7 +142,7 @@ export function createArenaLobbyStage(): ArenaLobbyHandle {
 		dispose() {
 			unsubscribe?.();
 			unsubscribe = null;
-			previewActor = null;
+			previewBundle = null;
 		},
 	};
 }

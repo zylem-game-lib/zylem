@@ -49,6 +49,12 @@ export type PlayerEntity = TransformableEntity & GameEntity<any> & StageEntity;
  */
 export interface AvatarRecord {
 	actor: PlayerEntity;
+	/**
+	 * Sibling loading-indicator entity spawned alongside the actor. The
+	 * indicator self-fades once the actor is presentable, but it stays
+	 * registered with the stage until {@link removeAvatar} cleans it up.
+	 */
+	loadingIndicator: GameEntity<any>;
 	nameplate: ReturnType<typeof createText>;
 	/** Display name shown on the nameplate (pre-HP suffix). */
 	displayName: string;
@@ -375,10 +381,10 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 	// default camera framing. The screen mesh becomes a camera feed target
 	// via `setCameraFeed`, and we rotate the jumbotron camera slowly around
 	// the origin so remote players see an orbit-shot of the action.
-	const JUMBO_POS_Z = -28;
-	const JUMBO_WIDTH = 26;
+	const JUMBO_POS_Z = -50;
+	const JUMBO_WIDTH = 56;
 	const JUMBO_HEIGHT = JUMBO_WIDTH * (9 / 16);
-	const JUMBO_SCREEN_Y = 12;
+	const JUMBO_SCREEN_Y = 16;
 
 	const jumbotronScreen = createBox({
 		name: 'arena-jumbotron-screen',
@@ -402,8 +408,8 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 
 	// All character classes share the same capsule dimensions; see the
 	// `*_COLLISION` constants in arena/characters/*.ts.
-	const PLAYER_CAPSULE = { halfHeight: 1.4, radius: 0.5 } as const;
-	const PLAYER_FEET_OFFSET = PLAYER_CAPSULE.halfHeight + PLAYER_CAPSULE.radius;
+	const PLAYER_CAPSULE = { halfHeight: 0.5, radius: 0.5 } as const;
+	//const PLAYER_FEET_OFFSET = 5;//PLAYER_CAPSULE.halfHeight;
 
 	const groundHeightfield = buildPlatformerGroundHeightfield(groundPlane);
 	const staticColliders = [
@@ -534,7 +540,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 			if (groupPos && groupPos.y < FALL_Y_THRESHOLD) {
 				platformerAdapter.teleport(
 					spawn.x,
-					spawn.y + PLAYER_FEET_OFFSET,
+					spawn.y,
 					spawn.z,
 				);
 				fallRespawnHandler?.({ entityId, deviceId, spawn });
@@ -592,11 +598,13 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		if (existing) return existing;
 
 		const pos = opts.position ?? { x: 0, y: 0, z: 0 };
-		const actor = createCharacterActor(
+		const presenter = createCharacterActor(
 			opts.characterClass,
 			opts.color,
 			pos,
-		) as unknown as PlayerEntity;
+		);
+		const actor = presenter.actor as unknown as PlayerEntity;
+		const loadingIndicator = presenter.indicator as unknown as GameEntity<any>;
 
 		const loadout = getCharacterLoadout(opts.characterClass);
 
@@ -609,6 +617,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 
 		const record: AvatarRecord = {
 			actor,
+			loadingIndicator,
 			nameplate,
 			displayName: opts.displayName,
 			deviceId: opts.deviceId,
@@ -632,7 +641,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 			// centre by adding the feet offset).
 			platformerAdapter.teleport(
 				record.spawn.x,
-				record.spawn.y + PLAYER_FEET_OFFSET,
+				record.spawn.y,
 				record.spawn.z,
 			);
 			const cooldownOpts = buildActionCooldownOptions(loadout);
@@ -655,7 +664,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 			}
 		}
 
-		stage.add(actor, nameplate);
+		stage.add(actor, loadingIndicator, nameplate);
 		return record;
 	}
 
@@ -685,6 +694,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		const rec = avatars.get(entityId);
 		if (!rec || !stage.wrappedStage) return;
 		stage.wrappedStage.removeEntityByUuid(rec.actor.uuid);
+		stage.wrappedStage.removeEntityByUuid(rec.loadingIndicator.uuid);
 		stage.wrappedStage.removeEntityByUuid(rec.nameplate.uuid);
 		avatars.delete(entityId);
 		if (localEntityId === entityId) {
@@ -712,7 +722,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 			const g = rec.actor.group;
 			const np = rec.nameplate.group;
 			if (g && np) {
-				np.position.set(g.position.x, g.position.y + 2.6, g.position.z);
+				np.position.set(g.position.x, g.position.y, g.position.z);
 			}
 		}
 	});

@@ -18,6 +18,8 @@ import {
 	createTankActor,
 } from './tank';
 import type { CharacterLoadout } from './movesets';
+import type { CharacterActorBundle, CharacterPresenter } from './bundle';
+import { createLoadingIndicator, fadeInActor } from './loading-indicator';
 
 export const CHARACTER_CLASSES = ['tank', 'assassin', 'healer'] as const;
 
@@ -30,15 +32,11 @@ export function isCharacterClass(value: unknown): value is CharacterClass {
 	);
 }
 
-/**
- * Dispatcher that builds the correct character actor for a given class.
- * Keeps the entrypoint free of class-specific imports.
- */
-export function createCharacterActor(
+function buildCharacterBundle(
 	characterClass: CharacterClass,
-	color?: Color,
-	position: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 },
-) {
+	color: Color | undefined,
+	position: { x: number; y: number; z: number },
+): CharacterActorBundle {
 	switch (characterClass) {
 		case 'tank':
 			return createTankActor(color, position);
@@ -52,6 +50,33 @@ export function createCharacterActor(
 			return createTankActor(color, position);
 		}
 	}
+}
+
+/**
+ * Dispatcher that builds the correct character actor for a given class
+ * and pairs it with a self-managing loading indicator.
+ *
+ * The character is invisible until its FBX model and PBR textures have
+ * both fully resolved; once they do, the actor fades in and the
+ * indicator fades out in lockstep. Both the actor and the indicator
+ * entity should be added to the stage, and both should be removed (by
+ * uuid) when the character is despawned — the indicator does not remove
+ * itself from the entity manager, only its visible mesh.
+ */
+export function createCharacterActor(
+	characterClass: CharacterClass,
+	color?: Color,
+	position: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 },
+): CharacterPresenter {
+	const { actor, ready } = buildCharacterBundle(characterClass, color, position);
+	const indicator = createLoadingIndicator(position);
+
+	void ready.then(() => {
+		fadeInActor(actor);
+		indicator.startFadeOut();
+	});
+
+	return { actor, indicator: indicator.entity };
 }
 
 /**

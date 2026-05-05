@@ -52,6 +52,16 @@ type ZylemActorOptions = GameEntityOptions & {
 	scale?: Vec3Input;
 	material?: MaterialOptions;
 	collisionShape?: CollisionShapeType;
+	/**
+	 * Opt-in: also strip the root bone's Y translation track so the
+	 * mixer never overrides the bind-pose hip Y. Useful when the
+	 * actor is shown statically (e.g. a lobby preview) and you want
+	 * to suppress the bind→animation Y "snap" at load time. Defaults
+	 * to false because most FBX exports use the Y track as a
+	 * hip-height calibration that the renderer needs to keep feet on
+	 * the ground.
+	 */
+	stripRootMotionY?: boolean;
 };
 
 type TransparentMaterial = Material & {
@@ -800,7 +810,10 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 					this.applyMaterialOverrides();
 
 					this._animationDelegate = new AnimationDelegate(this._object);
-					void this._animationDelegate.loadAnimations(this.options.animations || []).then(() => {
+					void this._animationDelegate.loadAnimations(
+						this.options.animations || [],
+						{ stripRootMotionY: this.options.stripRootMotionY ?? false },
+					).then(() => {
 						if (loadGeneration !== this._loadGeneration) {
 							return;
 						}
