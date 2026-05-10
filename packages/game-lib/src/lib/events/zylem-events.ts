@@ -99,7 +99,7 @@ export type ZylemEvents = GameEvents & StageEvents & EntityEvents;
  * 
  * Usage:
  * ```ts
- * import { zylemEventBus } from '@zylem/game-lib';
+ * import { zylemEventBus } from '@zylem/game-lib/events';
  * 
  * // Subscribe
  * const unsub = zylemEventBus.on('loading:progress', (e) => console.log(e));

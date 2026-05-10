@@ -26,11 +26,8 @@ Adds a `three.quarks` particle effect to any entity or powers the standalone
 ## Usage
 
 ```ts
-import {
-	createBox,
-	ParticleEmitterBehavior,
-	particlePresets,
-} from '@zylem/game-lib';
+import { createBox } from '@zylem/game-lib/entity';
+import { ParticleEmitterBehavior, particlePresets } from '@zylem/game-lib/behavior';
 
 const box = createBox({ position: { x: 0, y: 0, z: 0 } });
 
@@ -46,7 +43,8 @@ box.use(ParticleEmitterBehavior, {
 lower-configuration presets:
 
 ```ts
-import { createParticleSystem, particlePresets } from '@zylem/game-lib';
+import { createParticleSystem } from '@zylem/game-lib/entity';
+import { particlePresets } from '@zylem/game-lib/behavior';
 
 const muzzleFlash = createParticleSystem({
 	preset: particlePresets.fire.spark(),
@@ -85,7 +83,7 @@ sprite sheets:
 ```ts
 import { AdditiveBlending, TextureLoader } from 'three';
 import hitSprite from '@zylem/assets/2d/space/player-laser-hit-03.png';
-import { particlePresets } from '@zylem/game-lib';
+import { particlePresets } from '@zylem/game-lib/behavior';
 
 const texture = new TextureLoader().load(hitSprite);
 

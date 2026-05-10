@@ -1,5 +1,6 @@
 import { Color, Vector2 } from 'three';
-import { createStage, createText } from '@zylem/game-lib';
+import { createStage } from '@zylem/game-lib/core';
+import { createText } from '@zylem/game-lib/entity';
 
 export function createStageZero() {
   return createStage(

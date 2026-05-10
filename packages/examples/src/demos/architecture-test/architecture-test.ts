@@ -1,6 +1,6 @@
-import { createGame, gameConfig } from '@zylem/game-lib';
-import { StageBlueprint } from '@zylem/game-lib';
-import { StageManager } from '@zylem/game-lib';
+import { createGame, gameConfig } from '@zylem/game-lib/core';
+import { StageBlueprint } from '@zylem/game-lib/core';
+import { StageManager } from '@zylem/game-lib/core';
 
 // Define a stage blueprint
 const myStageBlueprint: StageBlueprint = {

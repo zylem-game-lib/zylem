@@ -1,5 +1,5 @@
-import type { ZylemBox } from "@zylem/game-lib";
-import { createActor, createBox, createPlane } from "@zylem/game-lib";
+import type { ZylemBox } from '@zylem/game-lib/entity';
+import { createActor, createBox, createPlane } from '@zylem/game-lib/entity';
 import { Color } from "three";
 
 import { demoAsset } from './assets/manifest';

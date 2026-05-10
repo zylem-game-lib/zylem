@@ -1,7 +1,4 @@
-import {
-	createText,
-	TEXT_TYPE,
-} from '@zylem/game-lib';
+import { createText, TEXT_TYPE } from '@zylem/game-lib/entity';
 
 const HUD_NAMES = {
 	lives: 'space-invaders-3d-lives',

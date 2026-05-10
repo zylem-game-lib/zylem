@@ -1,12 +1,7 @@
 import { Color, Vector2 } from 'three';
-import {
-  createGame,
-  createStage,
-  createText,
-  useArrowsForDirections,
-  useIJKLForAxes,
-  useMouse,
-} from '@zylem/game-lib';
+import { createGame, createStage } from '@zylem/game-lib/core';
+import { createText } from '@zylem/game-lib/entity';
+import { useArrowsForDirections, useIJKLForAxes, useMouse } from '@zylem/game-lib/input';
 
 export default function createDemo() {
   const stage1 = createStage({

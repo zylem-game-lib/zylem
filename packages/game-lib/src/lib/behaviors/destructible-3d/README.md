@@ -14,11 +14,8 @@ can also spawn independent runtime fragment bodies.
 ## Usage
 
 ```ts
-import {
-	Destructible3DBehavior,
-	FractureOptions,
-	createBox,
-} from '@zylem/game-lib';
+import { Destructible3DBehavior, FractureOptions } from '@zylem/game-lib/behavior';
+import { createBox } from '@zylem/game-lib/entity';
 
 const crate = createBox({
 	name: 'crate',

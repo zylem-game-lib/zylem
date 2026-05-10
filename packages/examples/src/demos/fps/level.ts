@@ -1,4 +1,4 @@
-import { createBox, createPlane, createZone } from '@zylem/game-lib';
+import { createBox, createPlane, createZone } from '@zylem/game-lib/entity';
 import { Vector2, Vector3, Color } from 'three';
 
 import { demoAsset } from '../../assets/manifest';

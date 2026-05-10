@@ -85,11 +85,9 @@ npm install @zylem/game-lib
 ### Basic Example
 
 ```typescript
-import {
-  createGame,
-  createSphere,
-  WorldBoundary2DBehavior,
-} from '@zylem/game-lib';
+import { createGame } from '@zylem/game-lib/core';
+import { createSphere } from '@zylem/game-lib/entity';
+import { WorldBoundary2DBehavior } from '@zylem/game-lib/behavior';
 
 // Creates a sphere (movement capabilities are built-in)
 const ball = createSphere();

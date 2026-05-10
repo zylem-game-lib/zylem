@@ -1,12 +1,7 @@
 import { Matrix4, Vector3 } from 'three';
-import {
-	createActor,
-	Destructible3DBehavior,
-	FractureOptions,
-	ScreenWrapBehavior,
-	setGlobal,
-	type Destructible3DHandle,
-} from '@zylem/game-lib';
+import { createActor } from '@zylem/game-lib/entity';
+import { Destructible3DBehavior, FractureOptions, ScreenWrapBehavior, type Destructible3DHandle } from '@zylem/game-lib/behavior';
+import { setGlobal } from '@zylem/game-lib/globals';
 import { demoAsset } from '../../assets/manifest';
 
 const redAsteroidGlb = demoAsset('general/asteroid.glb');

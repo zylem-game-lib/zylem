@@ -1,5 +1,5 @@
 import { Color } from 'three';
-import { createActor } from '@zylem/game-lib';
+import { createActor } from '@zylem/game-lib/entity';
 
 import { demoAsset } from '../../../assets/manifest';
 

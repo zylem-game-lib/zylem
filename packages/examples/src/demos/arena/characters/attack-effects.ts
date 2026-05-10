@@ -6,11 +6,8 @@ import {
 	type ColorRepresentation,
 	type Texture,
 } from 'three';
-import {
-	createParticleSystem,
-	particlePresets,
-	type ZylemParticleSystem,
-} from '@zylem/game-lib';
+import { createParticleSystem, type ZylemParticleSystem } from '@zylem/game-lib/entity';
+import { particlePresets } from '@zylem/game-lib/behavior';
 
 /**
  * Lightweight authoring shape used by each character file to declare the

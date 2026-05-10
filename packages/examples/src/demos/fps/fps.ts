@@ -1,18 +1,8 @@
 import { Euler, Vector3 } from 'three';
-import {
-  createGame,
-  createStage,
-  createCamera,
-  createActor,
-  gameConfig,
-  Perspectives,
-  useWASDForAxes,
-  useMouseLook,
-  FirstPersonShooterCoordinator,
-  FirstPersonPerspective,
-  FirstPersonController,
-  Jumper3D,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera, gameConfig, Perspectives, FirstPersonPerspective } from '@zylem/game-lib/core';
+import { createActor } from '@zylem/game-lib/entity';
+import { useWASDForAxes, useMouseLook } from '@zylem/game-lib/input';
+import { FirstPersonShooterCoordinator, FirstPersonController, Jumper3D } from '@zylem/game-lib/behavior';
 
 import { createFloor, createArenaLevel } from './level';
 

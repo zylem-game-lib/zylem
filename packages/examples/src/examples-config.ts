@@ -1,4 +1,4 @@
-import { Game } from '@zylem/game-lib';
+import { Game } from '@zylem/game-lib/core';
 import {
 	getDemoRoutePath,
 	getDemoRouteSlug,

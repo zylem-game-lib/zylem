@@ -1,7 +1,7 @@
 import { Component, Show } from 'solid-js';
 import { useLocation } from '@solidjs/router';
 import type { RouteSectionProps } from '@solidjs/router';
-import { ZylemGameElement } from '@zylem/game-lib';
+import { ZylemGameElement } from '@zylem/game-lib/web-components';
 import { registerZylemEditor } from '@zylem/editor';
 import { isScreenshotModeSearch } from '../screenshot-mode';
 import {

@@ -1,12 +1,6 @@
-import {
-  createGame,
-  vessel,
-  createStage,
-  createText,
-  createGlobal,
-  getGlobal,
-  setGlobal,
-} from '@zylem/game-lib';
+import { createGame, vessel, createStage } from '@zylem/game-lib/core';
+import { createText } from '@zylem/game-lib/entity';
+import { createGlobal, getGlobal, setGlobal } from '@zylem/game-lib/globals';
 import { demoAsset } from '../../assets/manifest';
 import { Vector2 } from 'three';
 

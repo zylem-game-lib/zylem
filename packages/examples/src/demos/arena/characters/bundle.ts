@@ -1,4 +1,4 @@
-import type { createActor } from '@zylem/game-lib';
+import type { createActor } from '@zylem/game-lib/entity';
 
 import type { LoadingIndicatorEntity } from './loading-indicator';
 

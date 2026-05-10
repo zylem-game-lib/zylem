@@ -1,19 +1,10 @@
 /// <reference types="@zylem/assets" />
 
 import { Color, Vector2, Vector3 } from 'three';
-import {
-	type UpdateContext,
-	createCamera,
-	createGame,
-	createPlane,
-	createStage,
-	createText,
-	getGlobal,
-	mergeInputConfigs,
-	setGlobal,
-	useArrowsForAxes,
-	useWASDForAxes,
-} from '@zylem/game-lib';
+import { type UpdateContext, createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import { createPlane, createText } from '@zylem/game-lib/entity';
+import { getGlobal, setGlobal } from '@zylem/game-lib/globals';
+import { mergeInputConfigs, useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
 import {
 	ZylemRuntimePlatformer3DFsmState,
 	type ZylemRuntimeStaticBoxCollider,
@@ -24,7 +15,7 @@ import type { EntityTransform, Player } from '../../spacetimedb-generated/types'
 import { playgroundActor } from '../../utils';
 import { TransformableEntity } from '~/lib/actions/capabilities/apply-transform';
 import { GameEntity } from '~/lib/entities';
-import { StageEntity } from '@zylem/game-lib';
+import { StageEntity } from '@zylem/game-lib/core';
 import {
 	multiplayerLobbyStore,
 	getOrCreateMultiplayerLobbyDeviceId,

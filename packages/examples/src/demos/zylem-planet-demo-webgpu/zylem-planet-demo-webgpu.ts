@@ -1,12 +1,6 @@
 import { Vector3 } from 'three';
-import {
-  createGame,
-  createStage,
-  createSphere,
-  createDisk,
-  createCamera,
-  Perspectives,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera, Perspectives } from '@zylem/game-lib/core';
+import { createSphere, createDisk } from '@zylem/game-lib/entity';
 import { planetTSL } from './planet.tsl';
 import { ringTSL } from './ring.tsl';
 import { starfieldTSL } from '../_shared/starfield.tsl';

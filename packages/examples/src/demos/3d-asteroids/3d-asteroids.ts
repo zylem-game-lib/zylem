@@ -4,14 +4,9 @@ import {
 	HemisphereLight,
 	Vector3,
 } from 'three';
-import {
-	createCamera,
-	createGame,
-	createStage,
-	setGlobal,
-	useArrowsForAxes,
-	useWASDForAxes,
-} from '@zylem/game-lib';
+import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import { setGlobal } from '@zylem/game-lib/globals';
+import { useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
 import { createAsteroidField } from './asteroid';
 import {
 	createAsteroidHud,

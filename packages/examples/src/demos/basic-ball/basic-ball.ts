@@ -1,4 +1,6 @@
-import { createGame, createSphere, useArrowsForAxes } from '@zylem/game-lib';
+import { createGame } from '@zylem/game-lib/core';
+import { createSphere } from '@zylem/game-lib/entity';
+import { useArrowsForAxes } from '@zylem/game-lib/input';
 import { Color } from 'three';
 
 export default function createDemo() {

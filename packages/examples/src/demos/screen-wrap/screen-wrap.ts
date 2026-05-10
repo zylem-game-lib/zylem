@@ -1,12 +1,7 @@
-import {
-	createGame,
-	createSprite,
-	createStage,
-	ThrusterBehavior,
-	ScreenWrapBehavior,
-	useBehavior,
-	useArrowsForAxes,
-} from '@zylem/game-lib';
+import { createGame, createStage } from '@zylem/game-lib/core';
+import { createSprite } from '@zylem/game-lib/entity';
+import { ThrusterBehavior, ScreenWrapBehavior, useBehavior } from '@zylem/game-lib/behavior';
+import { useArrowsForAxes } from '@zylem/game-lib/input';
 import { demoAsset } from '../../assets/manifest';
 
 const playerShipImg = demoAsset('general/space/player-ship.png');

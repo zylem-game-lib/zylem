@@ -16,11 +16,8 @@
  * stack so the two categories read as distinct.
  */
 
-import {
-	type CooldownOptions,
-	createCooldownIcon,
-	type ScreenAnchor,
-} from '@zylem/game-lib';
+import { type CooldownOptions } from '@zylem/game-lib/behavior';
+import { createCooldownIcon, type ScreenAnchor } from '@zylem/game-lib/entity';
 
 import type { CharacterLoadout, SpecialSlotId } from './movesets';
 import { demoAsset } from '../../../assets/manifest';

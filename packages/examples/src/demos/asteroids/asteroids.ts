@@ -1,23 +1,10 @@
 import { Color, Vector2, Vector3 } from 'three';
-import {
-  createCamera,
-  createGame,
-  createSprite,
-  createStage,
-  createText,
-  destroy,
-  mergeInputConfigs,
-  Perspectives,
-  ScreenWrapBehavior,
-  Shooter2DBehavior,
-  type Shooter2DSourceEntity,
-  setGlobal,
-  TEXT_TYPE,
-  ThrusterBehavior,
-  useArrowsForAxes,
-  useBehavior,
-  useWASDForAxes,
-} from '@zylem/game-lib';
+import { createCamera, createGame, createStage, Perspectives } from '@zylem/game-lib/core';
+import { createSprite, createText, destroy, TEXT_TYPE } from '@zylem/game-lib/entity';
+import { mergeInputConfigs, useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
+import { ScreenWrapBehavior, Shooter2DBehavior, ThrusterBehavior, useBehavior } from '@zylem/game-lib/behavior';
+import { type Shooter2DSourceEntity } from '@zylem/game-lib/behavior';
+import { setGlobal } from '@zylem/game-lib/globals';
 import { demoAsset } from '../../assets/manifest';
 
 const playerShipImg = demoAsset('general/space/player-ship.png');

@@ -17,7 +17,23 @@ export async function createBaseConfig(_env: ConfigEnv): Promise<UserConfig> {
 		'@lib/ui': path.resolve(gameLibRoot, './src/lib/ui'),
 		'@lib': path.resolve(gameLibRoot, './src/lib'),
 		'@src': path.resolve(gameLibRoot, './src'),
-		'@zylem/game-lib': path.resolve(gameLibRoot, './src/api/main.ts')
+		'@zylem/game-lib/core': path.resolve(gameLibRoot, './src/api/core.ts'),
+		'@zylem/game-lib/entity': path.resolve(gameLibRoot, './src/api/entity.ts'),
+		'@zylem/game-lib/behavior': path.resolve(gameLibRoot, './src/api/behavior.ts'),
+		'@zylem/game-lib/audio': path.resolve(gameLibRoot, './src/api/audio.ts'),
+		'@zylem/game-lib/globals': path.resolve(gameLibRoot, './src/api/globals.ts'),
+		'@zylem/game-lib/actions': path.resolve(gameLibRoot, './src/api/actions.ts'),
+		'@zylem/game-lib/input': path.resolve(gameLibRoot, './src/api/input.ts'),
+		'@zylem/game-lib/input-ui': path.resolve(gameLibRoot, './src/api/input-ui.ts'),
+		'@zylem/game-lib/graphics': path.resolve(gameLibRoot, './src/api/graphics.ts'),
+		'@zylem/game-lib/events': path.resolve(gameLibRoot, './src/api/events.ts'),
+		'@zylem/game-lib/debug': path.resolve(gameLibRoot, './src/api/debug.ts'),
+		'@zylem/game-lib/web-components': path.resolve(gameLibRoot, './src/api/web-components.ts'),
+		'@zylem/game-lib/runtime': path.resolve(gameLibRoot, './src/api/runtime.ts'),
+		'@zylem/game-lib/behavior/destructible-3d/prebake-build': path.resolve(
+			gameLibRoot,
+			'./src/lib/behaviors/destructible-3d/destructible-prebake-build.ts',
+		),
 	};
 
 	return {

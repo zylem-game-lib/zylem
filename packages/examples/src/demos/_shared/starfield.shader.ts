@@ -1,4 +1,4 @@
-import { objectVertexShader } from '@zylem/game-lib';
+import { objectVertexShader } from '@zylem/game-lib/graphics';
 
 const fragment = `
 precision highp float;

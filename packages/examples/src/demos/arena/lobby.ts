@@ -1,10 +1,6 @@
 import { Color } from 'three';
-import {
-	type UpdateContext,
-	createCamera,
-	createPlane,
-	createStage,
-} from '@zylem/game-lib';
+import { type UpdateContext, createCamera, createStage } from '@zylem/game-lib/core';
+import { createPlane } from '@zylem/game-lib/entity';
 import { subscribe } from 'valtio/vanilla';
 
 import { createCharacterActor } from './characters';

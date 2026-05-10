@@ -1,5 +1,6 @@
 import { Color, Vector3 } from 'three';
-import { createBox, createCamera, createGame, createPlane, createStage } from '@zylem/game-lib';
+import { createBox, createPlane } from '@zylem/game-lib/entity';
+import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
 
 import { demoAsset } from '../../assets/manifest';
 import { createBundledZylemRuntimeStageAdapter } from '../../runtime/zylem-runtime';

@@ -1,14 +1,7 @@
 import { Color, Vector2 } from 'three';
-import {
-  createGame,
-  createStage,
-  createBox,
-  createText,
-  setVariable,
-  getVariable,
-  createVariable,
-  onVariableChange,
-} from '@zylem/game-lib';
+import { createGame, createStage } from '@zylem/game-lib/core';
+import { createBox, createText } from '@zylem/game-lib/entity';
+import { setVariable, getVariable, createVariable, onVariableChange } from '@zylem/game-lib/globals';
 
 export default function createDemo() {
   const stage1 = createStage();

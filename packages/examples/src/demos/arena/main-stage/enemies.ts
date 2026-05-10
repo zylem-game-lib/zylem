@@ -1,11 +1,8 @@
 /// <reference types="@zylem/assets" />
 
 import { Color, Vector3 } from 'three';
-import {
-	createActor,
-	createSphere,
-	type UpdateContext,
-} from '@zylem/game-lib';
+import { createActor, createSphere } from '@zylem/game-lib/entity';
+import { type UpdateContext } from '@zylem/game-lib/core';
 import { demoAsset } from '../../../assets/manifest';
 
 const snakeShipGlb = demoAsset('general/enemy-ship-green.glb');

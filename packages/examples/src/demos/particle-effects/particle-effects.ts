@@ -1,14 +1,7 @@
 import { Color, Vector3 } from 'three';
-import {
-	createBox,
-	createCamera,
-	createGame,
-	createParticleSystem,
-	createStage,
-	createText,
-	particlePresets,
-	type ParticleEffectDefinition,
-} from '@zylem/game-lib';
+import { createBox, createParticleSystem, createText } from '@zylem/game-lib/entity';
+import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import { particlePresets, type ParticleEffectDefinition } from '@zylem/game-lib/behavior';
 import {
 	particleEffectsDemoLabels,
 	type ParticleEffectsDemoLabelKey,

@@ -18,7 +18,7 @@ import {
   mix,
   max,
 } from 'three/tsl';
-import type { ZylemTSLShader } from '@zylem/game-lib';
+import type { ZylemTSLShader } from '@zylem/game-lib/graphics';
 
 // Star colors
 const starColorWarm = vec3(1.0, 0.9, 0.7);

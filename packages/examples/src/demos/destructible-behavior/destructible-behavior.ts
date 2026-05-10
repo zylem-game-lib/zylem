@@ -1,17 +1,8 @@
 import { Color, Matrix4, Vector3 } from 'three';
-import {
-	createBox,
-	createCamera,
-	createGame,
-	createSphere,
-	createStage,
-	createText,
-	Destructible3DBehavior,
-	FractureOptions,
-	type Destructible3DHandle,
-	type FractureOptionsInput,
-	useArrowsForDirections,
-} from '@zylem/game-lib';
+import { createBox, createSphere, createText } from '@zylem/game-lib/entity';
+import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import { Destructible3DBehavior, FractureOptions, type Destructible3DHandle, type FractureOptionsInput } from '@zylem/game-lib/behavior';
+import { useArrowsForDirections } from '@zylem/game-lib/input';
 
 type LaneRuntime = {
 	label: string;

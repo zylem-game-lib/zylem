@@ -5,17 +5,9 @@ import {
 	HemisphereLight,
 	Vector3,
 } from 'three';
-import {
-	createActor,
-	createBox,
-	createCamera,
-	createGame,
-	createStage,
-	createText,
-	Destructible3DBehavior,
-	FractureOptions,
-	type Destructible3DHandle,
-} from '@zylem/game-lib';
+import { createActor, createBox, createText } from '@zylem/game-lib/entity';
+import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import { Destructible3DBehavior, FractureOptions, type Destructible3DHandle } from '@zylem/game-lib/behavior';
 
 import { demoAsset } from '../../assets/manifest';
 

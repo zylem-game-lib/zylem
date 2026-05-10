@@ -1,19 +1,9 @@
 import { Color, Vector2, Vector3 } from 'three';
-import {
-  createGame,
-  createBox,
-  createSphere,
-  createStage,
-  createCamera,
-  createZone,
-  createText,
-  setGlobal,
-  ricochetSound,
-  destroy,
-  WorldBoundary2DBehavior,
-  Ricochet2DBehavior,
-  BoundaryRicochetCoordinator,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera } from '@zylem/game-lib/core';
+import { createBox, createSphere, createZone, createText, destroy } from '@zylem/game-lib/entity';
+import { setGlobal } from '@zylem/game-lib/globals';
+import { ricochetSound } from '@zylem/game-lib/audio';
+import { WorldBoundary2DBehavior, Ricochet2DBehavior, BoundaryRicochetCoordinator } from '@zylem/game-lib/behavior';
 
 export default function createDemo() {
   const board = { top: 10, bottom: -10, left: -12, right: 12 };

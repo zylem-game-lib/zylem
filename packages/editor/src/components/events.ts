@@ -6,7 +6,7 @@
  * updates to the editor using the familiar editorEvents API.
  */
 
-import { zylemEventBus, type ZylemEvents } from '@zylem/game-lib';
+import { zylemEventBus, type ZylemEvents } from '@zylem/game-lib/events';
 
 export type EditorEventType = 'debug' | 'game' | 'stage' | 'entities';
 

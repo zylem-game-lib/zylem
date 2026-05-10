@@ -27,7 +27,7 @@ export const LOBBY_COLOR_SWATCHES: readonly LobbySwatch[] = [
 	{ id: 'blossom', label: 'Blossom', value: 0xf06c9b },
 ] as const;
 
-export const DEFAULT_LOBBY_COLOR: number = LOBBY_COLOR_SWATCHES[0].value;
+export const DEFAULT_LOBBY_COLOR: number = LOBBY_COLOR_SWATCHES[0]?.value || 0xffffff;
 
 /**
  * Find the swatch whose `value` matches `colorU32`, or `null` if the

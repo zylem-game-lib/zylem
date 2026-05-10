@@ -1,13 +1,7 @@
 /// <reference types="@zylem/assets" />
 import { Color, Vector3 } from 'three';
-import {
-  createGame,
-  createStage,
-  createCamera,
-  createBox,
-  Perspectives,
-  setCameraFeed,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera, Perspectives, setCameraFeed } from '@zylem/game-lib/core';
+import { createBox } from '@zylem/game-lib/entity';
 import { playgroundPlane, playgroundActor } from '../../utils';
 
 export default function createDemo() {
