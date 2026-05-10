@@ -1,17 +1,10 @@
 import { Color, Vector2, Vector3 } from 'three';
-import {
-	createGame,
-	createStage,
-	createCamera,
-	createBox,
-	createText,
-	Perspectives,
-	type PerspectiveType,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera, Perspectives, type PerspectiveType } from '@zylem/game-lib/core';
+import { createBox, createText } from '@zylem/game-lib/entity';
 import { playgroundPlane, playgroundActor } from '../../utils';
 
 import { demoAsset } from '../../assets/manifest';
-import { Vec3Input } from '@zylem/game-lib';
+import { Vec3Input } from '@zylem/game-lib/core';
 
 const woodPath = demoAsset('general/texture-wood-box.jpg');
 

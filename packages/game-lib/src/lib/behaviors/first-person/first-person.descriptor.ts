@@ -134,7 +134,9 @@ class FirstPersonControllerSystem implements BehaviorSystem {
  *
  * @example
  * ```typescript
- * import { FirstPersonController, FirstPersonPerspective, createActor, createCamera, Perspectives } from "@zylem/game-lib";
+ * import { FirstPersonController } from "@zylem/game-lib/behavior";
+ * import { createCamera, Perspectives, FirstPersonPerspective } from "@zylem/game-lib/core";
+ * import { createActor } from "@zylem/game-lib/entity";
  *
  * const fpsCamera = createCamera({ perspective: Perspectives.FirstPerson, ... });
  * const fps = fpsCamera.getPerspective<FirstPersonPerspective>();

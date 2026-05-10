@@ -4,16 +4,9 @@
 // TODO: need to create a material map for reused materials
 
 import { Color, Vector2, Vector3 } from 'three';
-import {
-  createGame,
-  createStage,
-  createBox,
-  createSphere,
-  createCamera,
-  createPlane,
-  fireShader,
-  starShader,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera } from '@zylem/game-lib/core';
+import { createBox, createSphere, createPlane } from '@zylem/game-lib/entity';
+import { fireShader, starShader } from '@zylem/game-lib/graphics';
 
 import { demoAsset } from '../../assets/manifest';
 

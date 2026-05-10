@@ -20,7 +20,7 @@ import {
   mix,
   clamp,
 } from 'three/tsl';
-import type { ZylemTSLShader } from '@zylem/game-lib';
+import type { ZylemTSLShader } from '@zylem/game-lib/graphics';
 
 // Ring palette
 const ringA = vec3(0.85, 0.25, 0.15);

@@ -1,17 +1,8 @@
 import { Color, Vector3 } from 'three';
-import {
-	CooldownBehavior,
-	type CooldownHandle,
-	type UpdateContext,
-	createBox,
-	createCamera,
-	createPlane,
-	createStage,
-	createText,
-	setCameraFeed,
-	useArrowsForAxes,
-	type StageEntity,
-} from '@zylem/game-lib';
+import { CooldownBehavior, type CooldownHandle } from '@zylem/game-lib/behavior';
+import { type UpdateContext, createCamera, createStage, setCameraFeed, type StageEntity } from '@zylem/game-lib/core';
+import { createBox, createPlane, createText } from '@zylem/game-lib/entity';
+import { useArrowsForAxes } from '@zylem/game-lib/input';
 import { ZylemRuntimePlatformer3DFsmState } from '@zylem/game-lib/runtime';
 import {
 	Platformer3DRuntimeAdapter,

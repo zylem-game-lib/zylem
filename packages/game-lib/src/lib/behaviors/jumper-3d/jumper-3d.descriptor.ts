@@ -299,7 +299,7 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
  *
  * @example
  * ```typescript
- * import { Jumper3D } from "@zylem/game-lib";
+ * import { Jumper3D } from "@zylem/game-lib/behavior";
  *
  * const jumper = player.use(Jumper3D, {
  *   jumpHeight: 2.5,

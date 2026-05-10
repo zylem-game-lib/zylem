@@ -1,14 +1,7 @@
 import { Color, Vector3 } from 'three';
-import {
-  BoundaryRicochet3DCoordinator,
-  createBox,
-  createCamera,
-  createGame,
-  createSphere,
-  createStage,
-  Ricochet3DBehavior,
-  WorldBoundary3DBehavior,
-} from '@zylem/game-lib';
+import { BoundaryRicochet3DCoordinator, Ricochet3DBehavior, WorldBoundary3DBehavior } from '@zylem/game-lib/behavior';
+import { createBox, createSphere } from '@zylem/game-lib/entity';
+import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
 
 export default function createDemo() {
   const cubeHalfSize = 6;

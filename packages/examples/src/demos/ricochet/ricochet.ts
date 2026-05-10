@@ -1,12 +1,8 @@
 import { Color, Vector3 } from 'three';
-import {
-  createGame,
-  createSphere,
-  Ricochet2DBehavior,
-  WorldBoundary2DBehavior,
-  BoundaryRicochetCoordinator,
-  ricochetSound,
-} from '@zylem/game-lib';
+import { createGame } from '@zylem/game-lib/core';
+import { createSphere } from '@zylem/game-lib/entity';
+import { Ricochet2DBehavior, WorldBoundary2DBehavior, BoundaryRicochetCoordinator } from '@zylem/game-lib/behavior';
+import { ricochetSound } from '@zylem/game-lib/audio';
 
 export default function createDemo() {
   const ball = createSphere({ color: new Color(Color.NAMES.red) });

@@ -11,24 +11,11 @@
  */
 
 import { Color, Vector2, Vector3 } from 'three';
-import {
-  createGame,
-  createStage,
-  createBox,
-  createPlane,
-  createSphere,
-  moveBy,
-  rotateBy,
-  delay,
-  callFunc,
-  sequence,
-  parallel,
-  repeatForever,
-  throttle,
-  CooldownBehavior,
-  createCooldownIcon,
-  useArrowsForDirections,
-} from '@zylem/game-lib';
+import { createGame, createStage } from '@zylem/game-lib/core';
+import { createBox, createPlane, createSphere, createCooldownIcon } from '@zylem/game-lib/entity';
+import { moveBy, rotateBy, delay, callFunc, sequence, parallel, repeatForever, throttle } from '@zylem/game-lib/actions';
+import { CooldownBehavior } from '@zylem/game-lib/behavior';
+import { useArrowsForDirections } from '@zylem/game-lib/input';
 
 import { demoAsset } from '../../assets/manifest';
 

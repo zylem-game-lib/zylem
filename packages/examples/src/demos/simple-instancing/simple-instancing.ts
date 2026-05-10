@@ -1,13 +1,6 @@
 import { Color, Vector2, Vector3 } from 'three';
-import {
-  createGame,
-  createStage,
-  createBox,
-  createSphere,
-  createCamera,
-  createPlane,
-  createText,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera } from '@zylem/game-lib/core';
+import { createBox, createSphere, createPlane, createText } from '@zylem/game-lib/entity';
 
 import { demoAsset } from '../../assets/manifest';
 

@@ -1,9 +1,4 @@
-import {
-	createRect,
-	createText,
-	RECT_TYPE,
-	TEXT_TYPE,
-} from '@zylem/game-lib';
+import { createRect, createText, RECT_TYPE, TEXT_TYPE } from '@zylem/game-lib/entity';
 import {
 	HEALTH_BAR_HEIGHT,
 	HEALTH_BAR_WIDTH,

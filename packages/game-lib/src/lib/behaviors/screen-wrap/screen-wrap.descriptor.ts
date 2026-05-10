@@ -108,7 +108,7 @@ class ScreenWrapSystem implements BehaviorSystem {
  * 
  * @example
  * ```typescript
- * import { ScreenWrapBehavior } from "@zylem/game-lib";
+ * import { ScreenWrapBehavior } from "@zylem/game-lib/behavior";
  * 
  * const ship = createSprite({ ... });
  * const wrapRef = ship.use(ScreenWrapBehavior, { width: 20, height: 15 });

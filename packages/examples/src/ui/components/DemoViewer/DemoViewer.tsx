@@ -8,11 +8,8 @@ import {
   onMount,
 } from 'solid-js';
 import { useLocation } from '@solidjs/router';
-import {
-  ZylemGameElement,
-  zylemEventBus,
-  type GameLoadingPayload,
-} from '@zylem/game-lib';
+import { ZylemGameElement } from '@zylem/game-lib/web-components';
+import { zylemEventBus, type GameLoadingPayload } from '@zylem/game-lib/events';
 import { editorEvents } from '@zylem/editor';
 import { appStore } from '../../../store/appStore';
 import '../../../store/editorStateStore';

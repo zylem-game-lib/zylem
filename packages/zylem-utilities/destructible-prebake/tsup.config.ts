@@ -15,7 +15,7 @@ export default defineConfig({
 	banner: {
 		js: '#!/usr/bin/env node',
 	},
-	external: ['three', '@zylem/game-lib', '@dgreenheck/three-pinata'],
+	external: ['three', /^@zylem\/game-lib(\/.*)?$/, '@dgreenheck/three-pinata'],
 	outExtension() {
 		return { js: '.js' };
 	},

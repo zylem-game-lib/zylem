@@ -1,4 +1,4 @@
-import type { DeviceProfile } from '@zylem/game-lib';
+import type { DeviceProfile } from '@zylem/game-lib/core';
 import { createStore } from 'solid-js/store';
 
 export interface ViewportPreset {

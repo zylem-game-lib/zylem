@@ -57,6 +57,6 @@ export default defineConfig({
     external: [
         'solid-js',
         'solid-js/web',
-        '@zylem/game-lib',
+        /^@zylem\/game-lib(\/.*)?$/,
     ],
 });

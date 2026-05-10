@@ -1,8 +1,6 @@
-import {
-  WorldBoundary2DBehavior,
-  createGame,
-  createSphere,
-} from '@zylem/game-lib';
+import { WorldBoundary2DBehavior } from '@zylem/game-lib/behavior';
+import { createGame } from '@zylem/game-lib/core';
+import { createSphere } from '@zylem/game-lib/entity';
 
 export default function createDemo() {
   // Creates a sphere (movement capabilities are built-in)

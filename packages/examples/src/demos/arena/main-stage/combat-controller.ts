@@ -1,4 +1,5 @@
-import type { CooldownHandle, Inputs } from '@zylem/game-lib';
+import type { CooldownHandle } from '@zylem/game-lib/behavior';
+import type { Inputs } from '@zylem/game-lib/input';
 import {
 	spawnParticleBurst,
 	type ParticleBurstSpec,

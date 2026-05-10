@@ -217,7 +217,7 @@ class Ricochet2DSystem implements BehaviorSystem {
  *
  * @example
  * ```ts
- * import { Ricochet2DBehavior } from "@zylem/game-lib";
+ * import { Ricochet2DBehavior } from "@zylem/game-lib/behavior";
  *
  * const ball = createSphere({ ... });
  * const ricochet = ball.use(Ricochet2DBehavior, {

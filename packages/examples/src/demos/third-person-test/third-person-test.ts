@@ -1,10 +1,7 @@
 import { Vector3 } from 'three';
-import {
-	createGame,
-	createStage,
-	createZone,
-	useArrowsForAxes,
-} from '@zylem/game-lib';
+import { createGame, createStage } from '@zylem/game-lib/core';
+import { createZone } from '@zylem/game-lib/entity';
+import { useArrowsForAxes } from '@zylem/game-lib/input';
 import {
 	addZylemRuntimeStaticHeightfieldCollider,
 	bootstrapZylemRuntimeGameplay3D,
@@ -27,9 +24,9 @@ import {
 import { demoAsset } from '../../assets/manifest';
 
 const skybox = demoAsset('general/skybox-default.png');
-import { UpdateContext } from '@zylem/game-lib';
-import { createCamera } from '@zylem/game-lib';
-import { StageEntity } from '@zylem/game-lib';
+import { UpdateContext } from '@zylem/game-lib/core';
+import { createCamera } from '@zylem/game-lib/core';
+import { StageEntity } from '@zylem/game-lib/core';
 
 /**
  * Loose alias for the player entity in this demo. The actor returned by

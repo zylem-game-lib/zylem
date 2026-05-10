@@ -5,7 +5,7 @@
 
 import { proxy } from 'valtio';
 import { editorEvents } from '../events';
-import { zylemEventBus, type StateDispatchPayload } from '@zylem/game-lib';
+import { zylemEventBus, type StateDispatchPayload } from '@zylem/game-lib/events';
 
 /** Game config state from game-lib */
 export interface GameConfigState {

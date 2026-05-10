@@ -39,7 +39,9 @@ npm install @zylem/game-lib
  * the ball can be controlled with the arrow keys or gamepad
  * the ball cannot go outside the boundaries
  */
-import { createGame, createSphere, WorldBoundary2DBehavior } from '@zylem/game-lib';
+import { createGame } from '@zylem/game-lib/core';
+import { createSphere } from '@zylem/game-lib/entity';
+import { WorldBoundary2DBehavior } from '@zylem/game-lib/behavior';
 
 // Creates a sphere (movement capabilities are built-in)
 const ball = createSphere();

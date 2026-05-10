@@ -1,21 +1,10 @@
 import { Color, Vector2, Vector3 } from 'three';
-import {
-  createCamera,
-  destroy,
-  entitySpawner,
-  createGame,
-  Perspectives,
-  createSprite,
-  createStage,
-  createText,
-  setGlobal,
-  TEXT_TYPE,
-  WorldBoundary2DBehavior,
-  moveBy,
-  sequence,
-  repeatForever,
-  useArrowsForAxes,
-} from '@zylem/game-lib';
+import { createCamera, entitySpawner, createGame, Perspectives, createStage } from '@zylem/game-lib/core';
+import { destroy, createSprite, createText, TEXT_TYPE } from '@zylem/game-lib/entity';
+import { setGlobal } from '@zylem/game-lib/globals';
+import { WorldBoundary2DBehavior } from '@zylem/game-lib/behavior';
+import { moveBy, sequence, repeatForever } from '@zylem/game-lib/actions';
+import { useArrowsForAxes } from '@zylem/game-lib/input';
 import { demoAsset } from '../../assets/manifest';
 
 const playerShip = demoAsset('general/space/player-ship.png');

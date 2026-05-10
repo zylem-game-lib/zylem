@@ -1,17 +1,8 @@
 import { Color, Vector2, Vector3 } from 'three';
-import {
-  createGame,
-  createStage,
-  createCamera,
-  createBox,
-  createSphere,
-  createText,
-  entitySpawner,
-  destroy,
-  setGlobal,
-  getGlobal,
-  useArrowsForAxes,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera, entitySpawner } from '@zylem/game-lib/core';
+import { createBox, createSphere, createText, destroy } from '@zylem/game-lib/entity';
+import { setGlobal, getGlobal } from '@zylem/game-lib/globals';
+import { useArrowsForAxes } from '@zylem/game-lib/input';
 
 export default function createDemo() {
   const SPAWN_INTERVAL = 0.1;

@@ -11,7 +11,7 @@ import {
     EDITOR_STATE_RECEIVE,
     type EditorUpdatePayload,
 } from '@zylem/editor';
-import { debugState, setDebugTool, setPaused, type DebugTools } from '@zylem/game-lib';
+import { debugState, setDebugTool, setPaused, type DebugTools } from '@zylem/game-lib/debug';
 
 export interface GameState {
     debugFlag: boolean;

@@ -18,7 +18,7 @@ import {
   clamp,
   smoothstep,
 } from 'three/tsl';
-import type { ZylemTSLShader } from '@zylem/game-lib';
+import type { ZylemTSLShader } from '@zylem/game-lib/graphics';
 
 // Planet color palette
 const colorA = vec3(0.02, 0.1, 0.45);

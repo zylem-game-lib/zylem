@@ -1,11 +1,5 @@
-import {
-	createGame,
-	createStage,
-	createCamera,
-	createActor,
-	createPlane,
-	createBox,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera } from '@zylem/game-lib/core';
+import { createActor, createPlane, createBox } from '@zylem/game-lib/entity';
 import { demoAsset } from '../../assets/manifest';
 
 const bailey = demoAsset('baileys-world/models/bailey-samba.fbx');

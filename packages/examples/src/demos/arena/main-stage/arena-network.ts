@@ -1,5 +1,6 @@
 import { Color, Vector2 } from 'three';
-import { createText, getGlobal } from '@zylem/game-lib';
+import { createText } from '@zylem/game-lib/entity';
+import { getGlobal } from '@zylem/game-lib/globals';
 import type { ErrorContext } from '../../../spacetimedb-generated';
 import type { EntityTransform, Player } from '../../../spacetimedb-generated/types';
 import {

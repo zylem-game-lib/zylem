@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, createStage } from '@zylem/game-lib';
+import { createGame, createStage } from '@zylem/game-lib/core';
 
 describe('create a basic game', () => {
 	it('default configuration', () => {

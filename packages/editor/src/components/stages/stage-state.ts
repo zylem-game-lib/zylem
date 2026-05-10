@@ -5,7 +5,7 @@
 
 import { proxy } from 'valtio';
 import { editorEvents } from '../events';
-import { zylemEventBus, type StateDispatchPayload, type EntityConfigPayload } from '@zylem/game-lib';
+import { zylemEventBus, type StateDispatchPayload, type EntityConfigPayload } from '@zylem/game-lib/events';
 import type { BaseEntityInterface, StageStateInterface } from '../../types';
 
 export const stageState = proxy<StageStateInterface>({

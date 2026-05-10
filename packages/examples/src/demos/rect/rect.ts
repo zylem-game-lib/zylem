@@ -1,4 +1,5 @@
-import { createGame, createRect, createStage } from '@zylem/game-lib';
+import { createGame, createStage } from '@zylem/game-lib/core';
+import { createRect } from '@zylem/game-lib/entity';
 import { Color } from 'three';
 
 export default function createDemo() {

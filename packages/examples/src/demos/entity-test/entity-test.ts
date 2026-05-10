@@ -1,22 +1,5 @@
-import {
-  createGame,
-  createStage,
-  createBox,
-  createPlane,
-  createSphere,
-  createSprite,
-  createZone,
-  createCone,
-  createPyramid,
-  createCylinder,
-  createPill,
-  create,
-  boxMesh,
-  boxCollision,
-  sphereMesh,
-  sphereCollision,
-  createCamera,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera } from '@zylem/game-lib/core';
+import { createBox, createPlane, createSphere, createSprite, createZone, createCone, createPyramid, createCylinder, createPill, create, boxMesh, boxCollision, sphereMesh, sphereCollision } from '@zylem/game-lib/entity';
 import { Vector3, Vector2 } from 'three';
 import { playgroundActor } from '../../utils';
 

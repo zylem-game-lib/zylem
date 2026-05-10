@@ -1,11 +1,7 @@
 /// <reference types="@zylem/assets" />
 
-import {
-	type UpdateContext,
-	createGame,
-	getGlobal,
-	setGlobal,
-} from '@zylem/game-lib';
+import { type UpdateContext, createGame } from '@zylem/game-lib/core';
+import { getGlobal, setGlobal } from '@zylem/game-lib/globals';
 import {
 	arenaLobbyStore,
 	getOrCreateArenaDeviceId,

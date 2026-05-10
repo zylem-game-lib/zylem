@@ -1,9 +1,5 @@
-import {
-	createActor,
-	Destructible3DBehavior,
-	FractureOptions,
-	type Destructible3DHandle,
-} from '@zylem/game-lib';
+import { createActor } from '@zylem/game-lib/entity';
+import { Destructible3DBehavior, FractureOptions, type Destructible3DHandle } from '@zylem/game-lib/behavior';
 import { destructiblePrebakeWorkerUrl } from '../_shared/destructible-prebake-worker-url';
 import { Matrix4, Vector3 } from 'three';
 import {
@@ -20,7 +16,7 @@ import {
 	setWorldPosition,
 } from './shared';
 
-type EnemyProjectile = ReturnType<typeof import('@zylem/game-lib').createSphere>;
+type EnemyProjectile = ReturnType<typeof import('@zylem/game-lib/entity').createSphere>;
 
 export type EnemyPhase =
 	| 'patrol'

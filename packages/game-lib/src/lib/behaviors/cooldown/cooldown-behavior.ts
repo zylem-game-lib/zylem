@@ -136,7 +136,8 @@ function ensureCooldownEntriesRegistered(ref: BehaviorRef<CooldownOptions>): voi
  *
  * @example
  * ```ts
- * import { CooldownBehavior, moveBy } from '@zylem/game-lib';
+ * import { CooldownBehavior } from '@zylem/game-lib/behavior';
+ * import { moveBy } from '@zylem/game-lib/actions';
  *
  * const hero = createBox({ ... });
  * const cd = hero.use(CooldownBehavior, {

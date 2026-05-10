@@ -120,7 +120,7 @@ class WorldBoundary2DSystem implements BehaviorSystem {
  *
  * @example
  * ```ts
- * import { WorldBoundary2DBehavior } from "@zylem/game-lib";
+ * import { WorldBoundary2DBehavior } from "@zylem/game-lib/behavior";
  *
  * const ship = createSprite({ ... });
  * const boundary = ship.use(WorldBoundary2DBehavior, {

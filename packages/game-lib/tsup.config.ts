@@ -6,46 +6,42 @@ const sourcemap = process.env.SOURCEMAP === '1' || !isProd;
 
 export default defineConfig({
 	entry: {
-		// Main entry points
-		main: 'src/api/main.ts',
+		// Public subpaths
 		core: 'src/api/core.ts',
-		camera: 'src/api/camera.ts',
-		stage: 'src/api/stage.ts',
-		entities: 'src/api/entities.ts',
+		entity: 'src/api/entity.ts',
+		behavior: 'src/api/behavior.ts',
+		audio: 'src/api/audio.ts',
+		globals: 'src/api/globals.ts',
 		actions: 'src/api/actions.ts',
-		physics: 'src/lib/physics/index.ts',
+		input: 'src/api/input.ts',
+		'input-ui': 'src/api/input-ui.ts',
+		graphics: 'src/api/graphics.ts',
+		events: 'src/api/events.ts',
+		debug: 'src/api/debug.ts',
+		'web-components': 'src/api/web-components.ts',
 		runtime: 'src/api/runtime.ts',
 
-		// Physics worker (standalone file for Web Worker instantiation)
+		// Build-time helpers consumed by Node tooling (e.g. the
+		// destructible-prebake CLI). Kept on its legacy nested subpath.
+		'behavior/destructible-3d-prebake-build':
+			'src/lib/behaviors/destructible-3d/destructible-prebake-build.ts',
+
+		// Internal: physics module entry (consumed via deep imports today)
+		physics: 'src/lib/physics/index.ts',
+
+		// Workers (standalone files for Web Worker instantiation; not exposed
+		// publicly via the package `exports` map).
 		'physics-worker': 'src/lib/physics/physics-worker.ts',
 		'destructible-prebake-worker':
 			'src/lib/behaviors/destructible-3d/destructible-prebake-worker.ts',
-
-		// Individual behavior exports (tree-shakeable deep imports)
-		'behavior/thruster': 'src/api/behavior/thruster.ts',
-		'behavior/top-down-movement': 'src/api/behavior/top-down-movement.ts',
-		'behavior/shooter-2d': 'src/api/behavior/shooter-2d.ts',
-		'behavior/screen-wrap': 'src/api/behavior/screen-wrap.ts',
-		'behavior/screen-visibility': 'src/api/behavior/screen-visibility.ts',
-		'behavior/world-boundary-2d': 'src/api/behavior/world-boundary-2d.ts',
-		'behavior/world-boundary-3d': 'src/api/behavior/world-boundary-3d.ts',
-		'behavior/ricochet-2d': 'src/api/behavior/ricochet-2d.ts',
-		'behavior/ricochet-3d': 'src/api/behavior/ricochet-3d.ts',
-		'behavior/destructible-3d': 'src/api/behavior/destructible-3d.ts',
-		'behavior/destructible-3d-prebake-build':
-			'src/api/behavior/destructible-3d-prebake-build.ts',
-		'behavior/jumper-2d': 'src/api/behavior/jumper-2d.ts',
-		'behavior/platformer-3d': 'src/api/behavior/platformer-3d.ts',
-		'behavior/particle-emitter': 'src/api/behavior/particle-emitter.ts',
 	},
 	format: ['esm'],
 	dts: true, // Generate TypeScript declaration files
 	tsconfig: './tsconfig.build.json', // Use custom tsconfig for build
-	splitting: false,
+	splitting: true,
 	sourcemap,
 	clean: true,
-	// TODO: why does minify break the build
-	// minify: true,
+	minify: true,
 	outDir: 'dist',
 	external: [
 		'three',

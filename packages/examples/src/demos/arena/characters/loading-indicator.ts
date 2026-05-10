@@ -6,7 +6,8 @@ import {
 	type Object3D,
 	TorusGeometry,
 } from 'three';
-import { createSphere, type UpdateContext } from '@zylem/game-lib';
+import { createSphere } from '@zylem/game-lib/entity';
+import { type UpdateContext } from '@zylem/game-lib/core';
 
 /**
  * Visual treatment for the placeholder ring shown while a character actor

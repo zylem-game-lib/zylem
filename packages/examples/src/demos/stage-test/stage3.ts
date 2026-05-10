@@ -1,12 +1,5 @@
-import {
-  createStage,
-  createBox,
-  createPlane,
-  createSphere,
-  createSprite,
-  createZone,
-  createCamera,
-} from '@zylem/game-lib';
+import { createStage, createCamera } from '@zylem/game-lib/core';
+import { createBox, createPlane, createSphere, createSprite, createZone } from '@zylem/game-lib/entity';
 import { Vector3, Vector2, Color } from 'three';
 import { playgroundActorFactory } from '../../utils';
 

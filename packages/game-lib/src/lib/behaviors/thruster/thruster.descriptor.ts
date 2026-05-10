@@ -117,7 +117,7 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
  * 
  * @example
  * ```typescript
- * import { ThrusterBehavior } from "@zylem/game-lib";
+ * import { ThrusterBehavior } from "@zylem/game-lib/behavior";
  * 
  * const ship = createSprite({ ... });
  * ship.use(ThrusterBehavior, { linearThrust: 15, angularThrust: 8 });

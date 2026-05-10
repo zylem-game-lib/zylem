@@ -1,5 +1,6 @@
 import { Color, Vector3 } from 'three';
-import { createCamera, createStage, createBox } from '@zylem/game-lib';
+import { createCamera, createStage } from '@zylem/game-lib/core';
+import { createBox } from '@zylem/game-lib/entity';
 
 export function createStageTwo() {
   return createStage(

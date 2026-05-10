@@ -8,8 +8,22 @@
     "baseUrl": ".",
     "paths": {
       "@zylem/styles": ["../zylem-styles/src/index.ts"],
-      "@zylem/game-lib": ["../game-lib/src/api/main.ts"],
+      "@zylem/game-lib/core": ["../game-lib/src/api/core.ts"],
+      "@zylem/game-lib/entity": ["../game-lib/src/api/entity.ts"],
+      "@zylem/game-lib/behavior": ["../game-lib/src/api/behavior.ts"],
+      "@zylem/game-lib/audio": ["../game-lib/src/api/audio.ts"],
+      "@zylem/game-lib/globals": ["../game-lib/src/api/globals.ts"],
+      "@zylem/game-lib/actions": ["../game-lib/src/api/actions.ts"],
+      "@zylem/game-lib/input": ["../game-lib/src/api/input.ts"],
+      "@zylem/game-lib/input-ui": ["../game-lib/src/api/input-ui.ts"],
+      "@zylem/game-lib/graphics": ["../game-lib/src/api/graphics.ts"],
+      "@zylem/game-lib/events": ["../game-lib/src/api/events.ts"],
+      "@zylem/game-lib/debug": ["../game-lib/src/api/debug.ts"],
+      "@zylem/game-lib/web-components": ["../game-lib/src/api/web-components.ts"],
       "@zylem/game-lib/runtime": ["../game-lib/src/api/runtime.ts"],
+      "@zylem/game-lib/behavior/destructible-3d/prebake-build": [
+        "../game-lib/src/lib/behaviors/destructible-3d/destructible-prebake-build.ts"
+      ],
       "~/*": ["../game-lib/src/*"],
       "@/*": ["../game-lib/src/*"],
       "@lib/debug/*": ["../editor/src/debug/*"],

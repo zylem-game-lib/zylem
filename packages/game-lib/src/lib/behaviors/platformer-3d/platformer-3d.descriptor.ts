@@ -119,7 +119,7 @@ class Platformer3DBehaviorSystem implements BehaviorSystem {
  * 
  * @example
  * ```typescript
- * import { Platformer3DBehavior } from "@zylem/game-lib";
+ * import { Platformer3DBehavior } from "@zylem/game-lib/behavior";
  * 
  * const player = await playgroundActor('player');
  * const platformer = player.use(Platformer3DBehavior, {

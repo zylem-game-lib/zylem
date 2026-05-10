@@ -1,11 +1,6 @@
 import { Color, Matrix4, Vector3 } from 'three';
-import {
-	createActor,
-	createSphere,
-	Destructible3DBehavior,
-	FractureOptions,
-	type Destructible3DHandle,
-} from '@zylem/game-lib';
+import { createActor, createSphere } from '@zylem/game-lib/entity';
+import { Destructible3DBehavior, FractureOptions, type Destructible3DHandle } from '@zylem/game-lib/behavior';
 import { demoAsset } from '../../assets/manifest';
 
 const fisherShipGlb = demoAsset('general/player-ship.glb');

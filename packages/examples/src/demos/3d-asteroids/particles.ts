@@ -5,7 +5,8 @@ import {
 	SRGBColorSpace,
 	Vector3,
 } from 'three';
-import { createParticleSystem, particlePresets } from '@zylem/game-lib';
+import { createParticleSystem } from '@zylem/game-lib/entity';
+import { particlePresets } from '@zylem/game-lib/behavior';
 
 function createTexture(
 	draw: (

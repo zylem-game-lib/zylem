@@ -1,12 +1,6 @@
 import { Vector3 } from 'three';
-import {
-  createGame,
-  createStage,
-  createSphere,
-  createDisk,
-  createCamera,
-  Perspectives,
-} from '@zylem/game-lib';
+import { createGame, createStage, createCamera, Perspectives } from '@zylem/game-lib/core';
+import { createSphere, createDisk } from '@zylem/game-lib/entity';
 import { planetShader } from './planet.shader';
 import { ringShader } from './ring.shader';
 import { starfieldShader } from '../_shared/starfield.shader';

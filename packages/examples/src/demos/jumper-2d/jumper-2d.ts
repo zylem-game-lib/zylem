@@ -1,16 +1,8 @@
 import { Color, Vector3 } from 'three';
-import {
-  createBox,
-  createCamera,
-  createGame,
-  createSprite,
-  createStage,
-  Jumper2D,
-  mergeInputConfigs,
-  Perspectives,
-  useArrowsForAxes,
-  useWASDForAxes,
-} from '@zylem/game-lib';
+import { createBox, createSprite } from '@zylem/game-lib/entity';
+import { createCamera, createGame, createStage, Perspectives } from '@zylem/game-lib/core';
+import { Jumper2D } from '@zylem/game-lib/behavior';
+import { mergeInputConfigs, useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
 import { demoAsset } from '../../assets/manifest';
 
 const zylemManSprite = demoAsset('general/player-sprite.png');

@@ -1,4 +1,4 @@
-import { createGame, type GameLoadingEvent } from '@zylem/game-lib';
+import { createGame, type GameLoadingEvent } from '@zylem/game-lib/core';
 import {
 	createBundledZylemRuntimeSession,
 	readRenderSlot,

@@ -1,4 +1,4 @@
-import { createGame, gameConfig } from '@zylem/game-lib';
+import { createGame, gameConfig } from '@zylem/game-lib/core';
 import { createStageZero } from './stage0';
 import { createStageOne } from './stage1';
 import { createStageTwo } from './stage2';

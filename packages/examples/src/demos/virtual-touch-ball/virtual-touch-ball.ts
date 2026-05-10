@@ -1,18 +1,8 @@
-import {
-  createBox,
-  createCamera,
-  createGame,
-  createPlane,
-  createSphere,
-  createStage,
-  createText,
-  defaultTouchControls,
-  fireShader,
-  mergeInputConfigs,
-  starShader,
-  useArrowsForAxes,
-  useWASDForAxes,
-} from '@zylem/game-lib';
+import { createBox, createPlane, createSphere, createText } from '@zylem/game-lib/entity';
+import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
+import { defaultTouchControls } from '@zylem/game-lib/input-ui';
+import { fireShader, starShader } from '@zylem/game-lib/graphics';
+import { mergeInputConfigs, useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
 import {
   Color,
   Material,

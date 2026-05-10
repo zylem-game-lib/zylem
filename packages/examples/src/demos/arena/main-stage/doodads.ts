@@ -23,7 +23,7 @@
  */
 
 import { Box3, Object3D } from 'three';
-import { createActor } from '@zylem/game-lib';
+import { createActor } from '@zylem/game-lib/entity';
 import type { ZylemRuntimeStaticBoxCollider } from '@zylem/game-lib/runtime';
 
 import { demoAsset } from '../../../assets/manifest';
