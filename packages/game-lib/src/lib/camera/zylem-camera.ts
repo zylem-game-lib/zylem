@@ -157,11 +157,14 @@ export class ZylemCamera {
 			// Setup render pass for WebGL
 			this._rendererManager.setupRenderPass(scene, this.camera);
 
-			// Start render loop — render-only. Camera `update(delta)` is now
-			// driven from `ZylemStage._update` after the transform sync so
-			// follow-cameras don't read a stale `group.position`.
+			// Start render loop — render-only for the camera pipeline (`update(delta)`
+			// stays in `ZylemStage._update`). Orbit damping runs here via
+			// `updateOrbitControls()` so it keeps up with display frames while paused.
 			this._rendererManager.startRenderLoop(() => {
 				if (this._rendererManager && this.sceneRef) {
+					if (this.isOrbitActive) {
+						this.updateOrbitControls();
+					}
 					this._rendererManager.render(this.sceneRef, this.camera);
 				}
 			});
@@ -178,8 +181,8 @@ export class ZylemCamera {
 	 * runs: Perspective -> Behaviors -> Actions -> Smoothing -> Commit.
 	 */
 	update(delta: number): void {
-		// Update orbit controls (if debug mode or user orbital controls enabled)
-		this.orbitController?.update();
+		// Orbit damping / target tracking: `updateOrbitControls()` (called from the
+		// renderer loop / CameraManager.render) so paused games still animate orbit.
 
 		// Skip pipeline when orbit controls are active
 		if (this.isDebugModeActive() || this._useOrbitalControls) {
@@ -204,6 +207,21 @@ export class ZylemCamera {
 	 */
 	isDebugModeActive(): boolean {
 		return this.orbitController?.isActive ?? false;
+	}
+
+	/**
+	 * True when debug orbit or user orbital controls are enabled (orbit controller is driving the camera).
+	 */
+	get isOrbitActive(): boolean {
+		return this.orbitController?.isOrbitActive ?? false;
+	}
+
+	/**
+	 * Advance OrbitControls (damping, pointer release) and follow the debug-selection orbit target.
+	 * Intended to run once per render frame — see `CameraManager.render` and legacy `setupLegacy` render loop.
+	 */
+	updateOrbitControls(): void {
+		this.orbitController?.update();
 	}
 
 	/**

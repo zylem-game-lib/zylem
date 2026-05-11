@@ -226,6 +226,10 @@ export class CameraManager {
 	render(scene: Scene): void {
 		if (!this._rendererManager || this._activeCameras.length === 0) return;
 
+		// One tick per render frame so OrbitControls damping/target follow the
+		// display refresh even when `ZylemGame.step()` is paused.
+		this.updateOrbitingCamerasForRender();
+
 		const rttCameras: ZylemCamera[] = [];
 		const viewportCameras: ZylemCamera[] = [];
 
@@ -245,6 +249,14 @@ export class CameraManager {
 		// Viewport pass renders to the screen canvas
 		if (viewportCameras.length > 0) {
 			this._rendererManager.renderCameras(scene, viewportCameras);
+		}
+	}
+
+	private updateOrbitingCamerasForRender(): void {
+		for (const camera of this._activeCameras) {
+			if (camera.isOrbitActive) {
+				camera.updateOrbitControls();
+			}
 		}
 	}
 
