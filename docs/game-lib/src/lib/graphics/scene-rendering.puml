@@ -35,7 +35,7 @@ package "src/lib/graphics" {
 
 package "Content / asset collaborators" {
   component "GameEntity" as GameEntity <<entity>>
-  component "PhysicsBodyHandle\nor Rapier body state" as BodyState <<entity>>
+  component "Rapier body state" as BodyState <<entity>>
   component "AssetManager" as AssetManager <<asset>>
 }
 

@@ -1,4 +1,3 @@
-import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import {
@@ -7,6 +6,11 @@ import {
 	type Ricochet3DCollisionContext,
 	type Ricochet3DCallback,
 } from './ricochet-3d-fsm';
+import {
+	StageRicochetDim,
+	StageRicochetReflection,
+	type WasmStageRuntime,
+} from '../../runtime/wasm-stage-runtime';
 
 export type { Ricochet3DResult };
 
@@ -85,13 +89,15 @@ function createRicochet3DHandle(
 
 class Ricochet3DSystem implements BehaviorSystem {
 	private elapsedMs = 0;
+	private attachedRuntimeSlots = new Set<number>();
 
 	constructor(
 		private world: any,
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {}
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, delta: number): void {
 		this.elapsedMs += delta * 1000;
 
 		const links = this.getBehaviorLinks?.(RICOCHET_3D_BEHAVIOR_KEY);
@@ -99,6 +105,7 @@ class Ricochet3DSystem implements BehaviorSystem {
 
 		for (const link of links) {
 			const ref = link.ref as any;
+			const gameEntity = link.entity as any;
 			if (!ref.fsm) {
 				ref.fsm = new Ricochet3DFSM();
 				const pending = ref.pendingListeners as Ricochet3DCallback[] | undefined;
@@ -111,16 +118,38 @@ class Ricochet3DSystem implements BehaviorSystem {
 			}
 
 			ref.fsm.setCurrentTimeMs(this.elapsedMs);
+
+			const handle = (gameEntity?.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, ref.options as Ricochet3DOptions);
+			}
 		}
 	}
 
-	destroy(_ecs: IWorld): void {
+	private ensureWasmAttached(handle: number, options: Ricochet3DOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		const reflectionMode = options.reflectionMode === 'simple'
+			? StageRicochetReflection.Mirror
+			: StageRicochetReflection.Angled;
+		this.wasmStage.attachRicochet(handle, StageRicochetDim.Three, {
+			minSpeed: options.minSpeed,
+			maxSpeed: options.maxSpeed,
+			speedMultiplier: options.speedMultiplier,
+			maxAngleDeg: options.maxAngleDeg,
+			reflectionMode,
+		});
+		this.attachedRuntimeSlots.add(handle);
+	}
+
+	destroy(_ecs: unknown): void {
 		const links = this.getBehaviorLinks?.(RICOCHET_3D_BEHAVIOR_KEY);
-		if (!links) return;
-		for (const link of links) {
-			const ref = link.ref as any;
-			ref.fsm?.resetCooldown();
+		if (links) {
+			for (const link of links) {
+				const ref = link.ref as any;
+				ref.fsm?.resetCooldown();
+			}
 		}
+		this.attachedRuntimeSlots.clear();
 	}
 }
 
@@ -128,6 +157,6 @@ export const Ricochet3DBehavior = defineBehavior({
 	name: 'ricochet-3d',
 	defaultOptions,
 	systemFactory: (ctx) =>
-		new Ricochet3DSystem(ctx.world, ctx.getBehaviorLinks),
+		new Ricochet3DSystem(ctx.world, ctx.wasmStage ?? null, ctx.getBehaviorLinks),
 	createHandle: createRicochet3DHandle,
 });

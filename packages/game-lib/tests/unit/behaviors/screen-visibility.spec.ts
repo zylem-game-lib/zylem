@@ -6,7 +6,6 @@ import {
 	Vector2,
 	Vector3,
 } from 'three';
-import type { IWorld } from 'bitecs';
 
 import { GameEntity } from '../../../src/lib/entities/entity';
 import { Perspectives } from '../../../src/lib/camera/perspective';
@@ -52,7 +51,6 @@ function createSystem(
 	const ref = entity.getBehaviorRefs()[0];
 	return ScreenVisibilityBehavior.systemFactory({
 		world: {},
-		ecs: {} as IWorld,
 		scene: {
 			zylemCamera: cameras[0] ?? null,
 			cameraManager: cameras.length > 0
@@ -73,7 +71,7 @@ describe('ScreenVisibilityBehavior', () => {
 		const camera = createCamera('main');
 		const system = createSystem(entity, [camera]);
 
-		system.update({} as IWorld, 1 / 60);
+		system.update(undefined, 1 / 60);
 
 		expect(handle.isVisible()).toBe(true);
 		expect(handle.wasJustEntered()).toBe(true);
@@ -98,9 +96,9 @@ describe('ScreenVisibilityBehavior', () => {
 		const camera = createCamera('main');
 		const system = createSystem(entity, [camera]);
 
-		system.update({} as IWorld, 1 / 60);
+		system.update(undefined, 1 / 60);
 		entity.mesh!.position.set(100, 0, 0);
-		system.update({} as IWorld, 1 / 60);
+		system.update(undefined, 1 / 60);
 
 		expect(handle.isVisible()).toBe(false);
 		expect(handle.wasJustExited()).toBe(true);
@@ -118,7 +116,6 @@ describe('ScreenVisibilityBehavior', () => {
 		const camera = createCamera('main');
 		const partialSystem = ScreenVisibilityBehavior.systemFactory({
 			world: {},
-			ecs: {} as IWorld,
 			scene: {
 				zylemCamera: camera,
 				cameraManager: { activeCameras: [camera] },
@@ -132,7 +129,7 @@ describe('ScreenVisibilityBehavior', () => {
 					: [],
 		});
 
-		partialSystem.update({} as IWorld, 1 / 60);
+		partialSystem.update(undefined, 1 / 60);
 
 		expect(partialHandle.isVisible()).toBe(true);
 		expect(fullHandle.isVisible()).toBe(false);
@@ -151,7 +148,7 @@ describe('ScreenVisibilityBehavior', () => {
 		);
 		const system = createSystem(entity, [mainCamera, hudCamera]);
 
-		system.update({} as IWorld, 1 / 60);
+		system.update(undefined, 1 / 60);
 
 		expect(handle.isVisible()).toBe(false);
 		expect(handle.getVisibleCameraNames()).toEqual([]);

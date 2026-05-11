@@ -4,7 +4,7 @@ import {
 	Mesh,
 	MeshBasicMaterial,
 } from 'three';
-import { serializeColliderDesc } from '../../physics/serialize-descriptors';
+import { inspectColliderDesc } from '../../physics/collider-desc-inspect';
 
 /**
  * @deprecated Kept for type compatibility with older callers; ignored at runtime.
@@ -240,15 +240,15 @@ function deriveDefaultBox(
 
 	const runtimeColliderDesc = (entity as any)?.colliderDesc;
 	if (runtimeColliderDesc) {
-		const serialized = serializeColliderDesc(runtimeColliderDesc);
-		if (serialized.shape === 'capsule' && serialized.dimensions.length >= 2) {
-			const radius = serialized.dimensions[1] ?? 0.5;
+		const inspected = inspectColliderDesc(runtimeColliderDesc);
+		if (inspected.shape === 'capsule' && inspected.dimensions.length >= 2) {
+			const radius = inspected.dimensions[1] ?? 0.5;
 			const half = Math.max(radius * 0.7, CENTER_BOX_HALF);
 			return { x: half, y: DEFAULT_BOX_THICKNESS, z: half };
 		}
-		if (serialized.shape === 'cuboid' && serialized.dimensions.length >= 3) {
-			const halfX = (serialized.dimensions[0] ?? 0.5) * 0.7;
-			const halfZ = (serialized.dimensions[2] ?? 0.5) * 0.7;
+		if (inspected.shape === 'cuboid' && inspected.dimensions.length >= 3) {
+			const halfX = (inspected.dimensions[0] ?? 0.5) * 0.7;
+			const halfZ = (inspected.dimensions[2] ?? 0.5) * 0.7;
 			return {
 				x: Math.max(halfX, CENTER_BOX_HALF),
 				y: DEFAULT_BOX_THICKNESS,
@@ -277,15 +277,15 @@ function deriveDefaultBox(
 export function getGroundAnchorOffsetY(entity: any): number {
 	const runtimeColliderDesc = entity?.colliderDesc;
 	if (runtimeColliderDesc) {
-		const serialized = serializeColliderDesc(runtimeColliderDesc);
-		const centerY = serialized.translation?.[1] ?? 0;
-		if (serialized.shape === 'capsule' && serialized.dimensions.length >= 2) {
-			const halfCylinder = serialized.dimensions[0] ?? 0;
-			const radius = serialized.dimensions[1] ?? 0;
+		const inspected = inspectColliderDesc(runtimeColliderDesc);
+		const centerY = inspected.translation?.[1] ?? 0;
+		if (inspected.shape === 'capsule' && inspected.dimensions.length >= 2) {
+			const halfCylinder = inspected.dimensions[0] ?? 0;
+			const radius = inspected.dimensions[1] ?? 0;
 			return halfCylinder + radius - centerY;
 		}
-		if (serialized.shape === 'cuboid' && serialized.dimensions.length >= 2) {
-			const halfHeight = serialized.dimensions[1] ?? 0;
+		if (inspected.shape === 'cuboid' && inspected.dimensions.length >= 2) {
+			const halfHeight = inspected.dimensions[1] ?? 0;
 			return halfHeight - centerY;
 		}
 	}

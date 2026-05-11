@@ -1,10 +1,9 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { ZylemWorld } from '../../../src/lib/collision/world';
+import { ZylemWorld, type CollisionPair } from '../../../src/lib/collision/world';
 import { createBox } from '../../../src/lib/entities/box';
 import { createSphere } from '../../../src/lib/entities/sphere';
-import type { CollisionPair } from '../../../src/lib/physics/physics-protocol';
 import { getDirectBodyPoseHistory } from '../../../src/lib/physics/physics-pose';
 
 function registerEntities(world: ZylemWorld, ...entities: Array<ReturnType<typeof createSphere> | ReturnType<typeof createBox>>) {
@@ -31,7 +30,7 @@ function bidirectionalContact(uuidA: string, uuidB: string): CollisionPair[] {
 
 describe('ZylemWorld collision dispatch', () => {
 	it('fires enter once and stay once per update for sustained contact', () => {
-		const world = new ZylemWorld(null as any, 60, false);
+		const world = new ZylemWorld(null as any, 60);
 		const ball = createSphere({ name: 'ball' });
 		const wall = createBox({ name: 'wall' });
 		const enterSpy = vi.fn();
@@ -50,7 +49,7 @@ describe('ZylemWorld collision dispatch', () => {
 	});
 
 	it('applies cooldown per callback and collision pair', () => {
-		const world = new ZylemWorld(null as any, 60, false);
+		const world = new ZylemWorld(null as any, 60);
 		const ball = createSphere({ name: 'ball' });
 		const wallA = createBox({ name: 'wall-a' });
 		const wallB = createBox({ name: 'wall-b' });
@@ -67,50 +66,6 @@ describe('ZylemWorld collision dispatch', () => {
 		expect(staySpy).toHaveBeenCalledTimes(3);
 	});
 
-	it('matches callback counts across direct and worker collision batches', () => {
-		const createHarness = (useWorker: boolean) => {
-			const world = new ZylemWorld(null as any, 60, useWorker);
-			const ball = createSphere({ name: 'ball' });
-			const wallA = createBox({ name: 'wall-a' });
-			const wallB = createBox({ name: 'wall-b' });
-			const enterSpy = vi.fn();
-			const staySpy = vi.fn();
-
-			ball.onCollision(enterSpy, { phase: 'enter' });
-			ball.onCollision(staySpy, { phase: 'stay', cooldownMs: 75 });
-			registerEntities(world, ball, wallA, wallB);
-
-			return { world, ball, wallA, wallB, enterSpy, staySpy };
-		};
-
-		const direct = createHarness(false);
-		const worker = createHarness(true);
-
-		const directSequence = [
-			{ nowMs: 16, pairs: bidirectionalContact(direct.ball.uuid, direct.wallA.uuid) },
-			{ nowMs: 40, pairs: bidirectionalContact(direct.ball.uuid, direct.wallA.uuid) },
-			{ nowMs: 55, pairs: bidirectionalContact(direct.ball.uuid, direct.wallB.uuid) },
-			{ nowMs: 120, pairs: bidirectionalContact(direct.ball.uuid, direct.wallA.uuid) },
-		];
-		const workerSequence = [
-			{ nowMs: 16, pairs: bidirectionalContact(worker.ball.uuid, worker.wallA.uuid) },
-			{ nowMs: 40, pairs: bidirectionalContact(worker.ball.uuid, worker.wallA.uuid) },
-			{ nowMs: 55, pairs: bidirectionalContact(worker.ball.uuid, worker.wallB.uuid) },
-			{ nowMs: 120, pairs: bidirectionalContact(worker.ball.uuid, worker.wallA.uuid) },
-		];
-
-		for (let index = 0; index < directSequence.length; index += 1) {
-			const directStep = directSequence[index]!;
-			const workerStep = workerSequence[index]!;
-			applyPairs(direct.world, directStep.pairs, directStep.nowMs);
-			applyPairs(worker.world, workerStep.pairs, workerStep.nowMs);
-		}
-
-		expect(direct.enterSpy).toHaveBeenCalledTimes(worker.enterSpy.mock.calls.length);
-		expect(direct.staySpy).toHaveBeenCalledTimes(worker.staySpy.mock.calls.length);
-		expect(direct.enterSpy.mock.calls.length).toBe(3);
-		expect(direct.staySpy.mock.calls.length).toBe(3);
-	});
 });
 
 describe('ZylemWorld fixed-step pose history', () => {
@@ -120,7 +75,7 @@ describe('ZylemWorld fixed-step pose history', () => {
 
 	it('tracks previous and current poses for direct-mode interpolation', () => {
 		const physicsWorld = new RAPIER.World({ x: 0, y: 0, z: 0 });
-		const world = new ZylemWorld(physicsWorld, 60, false);
+		const world = new ZylemWorld(physicsWorld, 60);
 		const ball = createSphere({ name: 'ball' });
 
 		world.addEntity(ball as any);
@@ -144,7 +99,7 @@ describe('ZylemWorld fixed-step pose history', () => {
 
 	it('collapses pose history after explicit body translations', () => {
 		const physicsWorld = new RAPIER.World({ x: 0, y: 0, z: 0 });
-		const world = new ZylemWorld(physicsWorld, 60, false);
+		const world = new ZylemWorld(physicsWorld, 60);
 		const ball = createSphere({ name: 'teleport-ball' });
 
 		world.addEntity(ball as any);
@@ -158,7 +113,7 @@ describe('ZylemWorld fixed-step pose history', () => {
 
 	it('clears entity physics references when bodies are destroyed', () => {
 		const physicsWorld = new RAPIER.World({ x: 0, y: 0, z: 0 });
-		const world = new ZylemWorld(physicsWorld, 60, false);
+		const world = new ZylemWorld(physicsWorld, 60);
 		const box = createBox({ name: 'cleanup-box' });
 
 		world.addEntity(box as any);

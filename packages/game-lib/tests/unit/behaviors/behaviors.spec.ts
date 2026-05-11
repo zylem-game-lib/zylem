@@ -1,8 +1,7 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { defineBehavior, type BehaviorRef } from '../../../src/lib/behaviors/behavior-descriptor';
 import { type BehaviorSystem } from '../../../src/lib/behaviors/behavior-system';
 import { createPhysicsBodyComponent, createTransformComponent } from '../../../src/lib/behaviors/components';
-import type { IWorld } from 'bitecs';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { Vector3, Quaternion } from 'three';
 
@@ -70,22 +69,15 @@ describe('Behavior System', () => {
   });
 
   describe('BehaviorSystem', () => {
-    let mockECS: IWorld;
-
-    beforeEach(() => {
-      // Create a minimal mock ECS world
-      mockECS = {} as IWorld;
-    });
-
     it('should implement update method', () => {
       const system: BehaviorSystem = {
-        update: (ecs: IWorld, delta: number) => {
-          expect(ecs).toBe(mockECS);
+        update: (ecs, delta: number) => {
+          expect(ecs).toBeUndefined();
           expect(delta).toBeGreaterThan(0);
         },
       };
 
-      system.update(mockECS, 1 / 60);
+      system.update(undefined, 1 / 60);
     });
 
     it('should support optional destroy method', () => {
@@ -93,14 +85,14 @@ describe('Behavior System', () => {
 
       const system: BehaviorSystem = {
         update: () => {},
-        destroy: (ecs: IWorld) => {
+        destroy: (ecs) => {
           destroyed = true;
-          expect(ecs).toBe(mockECS);
+          expect(ecs).toBeUndefined();
         },
       };
 
       expect(system.destroy).toBeDefined();
-      system.destroy!(mockECS);
+      system.destroy!();
       expect(destroyed).toBe(true);
     });
 
@@ -110,10 +102,10 @@ describe('Behavior System', () => {
         defaultOptions: {},
         systemFactory: (ctx) => {
           expect(ctx.world).toBeDefined();
-          expect(ctx.ecs).toBeDefined();
-          
+          expect(ctx.scene).toBeDefined();
+
           return {
-            update: (ecs: IWorld, delta: number) => {
+            update: (_ecs, _delta: number) => {
               // System logic here
             },
           };
@@ -122,10 +114,10 @@ describe('Behavior System', () => {
 
       const mockContext = {
         world: { test: 'world' },
-        ecs: mockECS,
+        scene: null,
       };
 
-      const system = TestBehavior.systemFactory(mockContext);
+      const system = TestBehavior.systemFactory(mockContext as any);
       expect(system).toBeDefined();
       expect(system.update).toBeDefined();
     });

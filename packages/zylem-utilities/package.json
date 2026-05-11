@@ -3,17 +3,30 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
-	"description": "Zylem monorepo CLI utilities (destructible prebake, …)",
+	"description": "Zylem monorepo utilities (offline destructible-prebake CLI, browser destructible-prebake worker, …)",
 	"bin": {
 		"zylem-destructible-prebake": "./destructible-prebake/dist/cli.js"
 	},
+	"exports": {
+		"./workers/destructible-prebake/worker.js": "./workers/destructible-prebake/dist/worker.js",
+		"./workers/destructible-prebake": {
+			"import": "./workers/destructible-prebake/dist/worker.js",
+			"default": "./workers/destructible-prebake/dist/worker.js"
+		}
+	},
 	"scripts": {
-		"build": "cd destructible-prebake && tsup",
-		"typecheck": "tsc -p destructible-prebake/tsconfig.json --noEmit"
+		"build": "pnpm run build:cli && pnpm run build:worker:destructible-prebake",
+		"build:cli": "cd destructible-prebake && tsup",
+		"build:worker:destructible-prebake": "cd workers/destructible-prebake && tsup",
+		"typecheck": "pnpm run typecheck:cli && pnpm run typecheck:worker:destructible-prebake",
+		"typecheck:cli": "tsc -p destructible-prebake/tsconfig.json --noEmit",
+		"typecheck:worker:destructible-prebake": "tsc -p workers/destructible-prebake/tsconfig.json --noEmit"
 	},
 	"dependencies": {
 		"@dgreenheck/three-pinata": "^2.0.1",
+		"@zylem/game-behavior-shared": "workspace:*",
 		"@zylem/game-lib": "workspace:*",
+		"comlink": "^4.4.2",
 		"three": "^0.180.0"
 	},
 	"devDependencies": {

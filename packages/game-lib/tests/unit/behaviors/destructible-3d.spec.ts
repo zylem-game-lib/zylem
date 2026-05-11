@@ -1,5 +1,4 @@
 import { describe, expect, it, beforeAll, vi } from 'vitest';
-import type { IWorld } from 'bitecs';
 import RAPIER, {
 	ColliderDesc,
 	RigidBodyDesc,
@@ -225,7 +224,6 @@ function attachBehaviorRuntime(
 	Destructible3DBehavior.systemFactory({
 		world,
 		scene,
-		ecs: {} as IWorld,
 		getBehaviorLinks: (key: symbol) =>
 			key === Destructible3DBehavior.key
 				? [{ entity, ref }]

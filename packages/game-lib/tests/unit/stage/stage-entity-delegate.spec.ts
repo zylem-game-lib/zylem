@@ -1,4 +1,3 @@
-import { createWorld } from 'bitecs';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -66,7 +65,6 @@ describe('StageEntityDelegate', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: world as any,
-			ecs: createWorld(),
 			instanceManager: null,
 			camera: {} as any,
 		});
@@ -108,7 +106,6 @@ describe('StageEntityDelegate', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: world as any,
-			ecs: createWorld(),
 			instanceManager: null,
 			camera: {} as any,
 			runtimeAdapter,
@@ -168,7 +165,6 @@ describe('StageEntityDelegate', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: { addEntity } as any,
-			ecs: createWorld(),
 			instanceManager: null,
 			camera: {} as any,
 		});
@@ -225,7 +221,6 @@ describe('StageEntityDelegate', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: { addEntity } as any,
-			ecs: createWorld(),
 			instanceManager: null,
 			camera: {} as any,
 		});
@@ -283,7 +278,6 @@ describe('StageEntityDelegate', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: world as any,
-			ecs: createWorld(),
 			instanceManager: null,
 			camera: {} as any,
 		});

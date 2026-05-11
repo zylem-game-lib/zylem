@@ -1,4 +1,3 @@
-import type { IWorld } from 'bitecs';
 import {
 	Box3,
 	Frustum,
@@ -99,7 +98,7 @@ class ScreenVisibilitySystem implements BehaviorSystem {
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) { }
 
-	update(_ecs: IWorld, _delta: number): void {
+	update(_ecs: unknown, _delta: number): void {
 		const links = this.getBehaviorLinks?.(SCREEN_VISIBILITY_BEHAVIOR_KEY);
 		if (!links) return;
 
@@ -161,17 +160,31 @@ class ScreenVisibilitySystem implements BehaviorSystem {
 		this.worldBounds.makeEmpty();
 
 		if (target) {
-			const body = (entity as any).body;
-			if (body) {
+			const wasmPose = (entity as any).getPose?.();
+			const useWasm = wasmPose && (entity as any).runtimeHandle >= 0;
+			const body = useWasm ? null : (entity as any).body;
+
+			if (useWasm || body) {
 				this.savedPosition.copy(target.position);
 				this.savedQuaternion.copy(target.quaternion);
 
-				const translation = body.translation();
-				target.position.set(translation.x, translation.y, translation.z);
-
-				if (!(entity as any).controlledRotation) {
-					const rotation = body.rotation();
-					target.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+				if (useWasm) {
+					target.position.set(wasmPose.position.x, wasmPose.position.y, wasmPose.position.z);
+					if (!(entity as any).controlledRotation) {
+						target.quaternion.set(
+							wasmPose.rotation.x,
+							wasmPose.rotation.y,
+							wasmPose.rotation.z,
+							wasmPose.rotation.w,
+						);
+					}
+				} else {
+					const translation = body.translation();
+					target.position.set(translation.x, translation.y, translation.z);
+					if (!(entity as any).controlledRotation) {
+						const rotation = body.rotation();
+						target.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+					}
 				}
 
 				target.updateWorldMatrix(true, true);
@@ -384,7 +397,7 @@ class ScreenVisibilitySystem implements BehaviorSystem {
 		options.onChange?.(context);
 	}
 
-	destroy(_ecs: IWorld): void {
+	destroy(_ecs: unknown): void {
 		this.boundsCache.clear();
 	}
 }

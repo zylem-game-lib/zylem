@@ -2,7 +2,7 @@ import type {
 	PlainFractureOptions,
 	PlainWorkerFragmentPayload,
 	PrebakeWorkerResponse,
-} from '@zylem/game-lib/behavior/destructible-3d/prebake-build';
+} from '@zylem/game-behavior-shared';
 
 /**
  * v1 on-disk format: base64 attribute blobs (JSON-safe).

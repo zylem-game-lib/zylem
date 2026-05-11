@@ -7,10 +7,14 @@
  * Use `getRicochet(ctx)` on the behavior handle to compute reflection results.
  */
 
-import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { Ricochet2DFSM, type Ricochet2DResult, type Ricochet2DCollisionContext, type RicochetCallback } from './ricochet-2d-fsm';
+import {
+	StageRicochetDim,
+	StageRicochetReflection,
+	type WasmStageRuntime,
+} from '../../runtime/wasm-stage-runtime';
 export type { Ricochet2DResult };
 
 export interface Ricochet2DOptions {
@@ -165,14 +169,15 @@ function createRicochet2DHandle(
  */
 class Ricochet2DSystem implements BehaviorSystem {
 	private elapsedMs: number = 0;
+	private attachedRuntimeSlots = new Set<number>();
 
 	constructor(
 		private world: any,
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {}
 
-	update(_ecs: IWorld, delta: number): void {
-		// Accumulate elapsed time (delta is in seconds)
+	update(_ecs: unknown, delta: number): void {
 		this.elapsedMs += delta * 1000;
 
 		const links = this.getBehaviorLinks?.(RICOCHET_BEHAVIOR_KEY);
@@ -180,12 +185,11 @@ class Ricochet2DSystem implements BehaviorSystem {
 
 		for (const link of links) {
 			const ricochetRef = link.ref as any;
+			const gameEntity = link.entity as any;
 
-			// Create FSM lazily on first update after spawn
 			if (!ricochetRef.fsm) {
 				ricochetRef.fsm = new Ricochet2DFSM();
-				
-				// Apply any pending listeners that were registered before FSM existed
+
 				const pending = (ricochetRef as any).pendingListeners as RicochetCallback[] | undefined;
 				if (pending) {
 					for (const cb of pending) {
@@ -195,20 +199,41 @@ class Ricochet2DSystem implements BehaviorSystem {
 				}
 			}
 
-			// Sync current game time to FSM
 			ricochetRef.fsm.setCurrentTimeMs(this.elapsedMs);
+
+			const handle = (gameEntity?.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, ricochetRef.options as Ricochet2DOptions);
+			}
 		}
 	}
 
-	destroy(_ecs: IWorld): void {
+	private ensureWasmAttached(handle: number, options: Ricochet2DOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		const reflectionMode = options.reflectionMode === 'simple'
+			? StageRicochetReflection.Mirror
+			: StageRicochetReflection.Angled;
+		this.wasmStage.attachRicochet(handle, StageRicochetDim.Two, {
+			minSpeed: options.minSpeed,
+			maxSpeed: options.maxSpeed,
+			speedMultiplier: options.speedMultiplier,
+			maxAngleDeg: options.maxAngleDeg,
+			reflectionMode,
+		});
+		this.attachedRuntimeSlots.add(handle);
+	}
+
+	destroy(_ecs: unknown): void {
 		const links = this.getBehaviorLinks?.(RICOCHET_BEHAVIOR_KEY);
-		if (!links) return;
-		for (const link of links) {
-			const ricochetRef = link.ref as any;
-			if (ricochetRef?.fsm) {
-				ricochetRef.fsm.resetCooldown();
+		if (links) {
+			for (const link of links) {
+				const ricochetRef = link.ref as any;
+				if (ricochetRef?.fsm) {
+					ricochetRef.fsm.resetCooldown();
+				}
 			}
 		}
+		this.attachedRuntimeSlots.clear();
 	}
 }
 
@@ -243,6 +268,6 @@ export const Ricochet2DBehavior = defineBehavior({
 	name: 'ricochet-2d',
 	defaultOptions,
 	systemFactory: (ctx) =>
-		new Ricochet2DSystem(ctx.world, ctx.getBehaviorLinks),
+		new Ricochet2DSystem(ctx.world, ctx.wasmStage ?? null, ctx.getBehaviorLinks),
 	createHandle: createRicochet2DHandle,
 });

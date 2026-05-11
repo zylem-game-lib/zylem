@@ -1,4 +1,3 @@
-import type { IWorld } from 'bitecs';
 import { Color, Quaternion, Vector3, type BufferGeometry, type Material } from 'three';
 
 import { normalizeVec2, normalizeVec3, VEC2_ONE, VEC3_ONE, VEC3_ZERO } from '../core/vector';
@@ -52,7 +51,6 @@ export interface RuntimeDebugBinding {
 export interface StageRuntimeContext {
 	scene: ZylemScene;
 	world: ZylemWorld;
-	ecs: IWorld;
 	camera: ZylemCamera;
 	/** Optional; when set, adapters may enable extra runtime visualization. */
 	debug?: RuntimeDebugBinding;

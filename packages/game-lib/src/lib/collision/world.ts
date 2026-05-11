@@ -11,15 +11,26 @@ import {
 	type CollisionDispatchMetadata,
 	type CollisionPhase,
 } from '../entities/entity';
-import { PhysicsProxy } from '../physics/physics-proxy';
-import { serializeBodyDesc, serializeColliderDesc, serializeCharacterController } from '../physics/serialize-descriptors';
-import type { CollisionPair } from '../physics/physics-protocol';
 import {
 	commitDirectBodyPoseHistoryStep,
 	collapseDirectBodyPoseHistory,
 	prepareDirectBodyPoseHistoryStep,
 	registerDirectBodyPoseHistory,
 } from '../physics/physics-pose';
+
+/**
+ * Collision pair surfaced by the world after each physics step.
+ *
+ * Originally part of the now-removed worker IPC protocol; kept here as a
+ * runtime-internal type because it is the canonical shape consumed by
+ * collision dispatch and a couple of unit tests. The wasm-runtime path
+ * will replace this surface entirely once the migration is complete.
+ */
+export interface CollisionPair {
+	uuidA: string;
+	uuidB: string;
+	contactType: 'contact' | 'intersection';
+}
 
 /**
  * Interface for entities that handle collision events.
@@ -83,20 +94,17 @@ export function buildCollisionSnapshot(
 }
 
 /**
- * Physics world wrapper supporting two modes:
+ * Physics world wrapper.
  *
- * - **Direct mode** (default): Rapier world lives on the main thread.
- *   This is the original behavior with the Phase-1 fixed-timestep accumulator.
- *
- * - **Worker mode**: Physics runs in a Web Worker via {@link PhysicsProxy}.
- *   Entity bodies are replaced with {@link PhysicsBodyHandle} instances that
- *   cache transforms and queue write commands. Collision events are delivered
- *   asynchronously (one frame latency).
+ * Owns a single Rapier world that lives on the main thread and is advanced
+ * with a fixed-timestep accumulator. The off-thread JS Web Worker physics
+ * path that previously sat alongside this implementation has been removed;
+ * the long-term off-main-thread story is the wasm runtime adapter, which
+ * sits behind {@link StageRuntimeAdapter} rather than inside this class.
  */
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
 
-	/** Rapier world instance (null in worker mode). */
 	world: World;
 
 	collisionMap: Map<string, GameEntity<any>> = new Map();
@@ -118,14 +126,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	 */
 	interpolationAlpha = 0;
 
-	// ─── Worker Mode ─────────────────────────────────────────────────────
-
-	/** When true, physics runs in a Web Worker via the proxy. */
-	readonly workerMode: boolean;
-	/** Physics worker proxy (only set in worker mode). */
-	private proxy: PhysicsProxy | null = null;
-	/** Pending step promise (worker mode). */
-	private _pendingStep: Promise<void> | null = null;
 	private readonly trackedDirectBodies = new WeakSet<RAPIER.RigidBody>();
 
 	static async loadPhysics(gravity: Vector3 | Vec3Components) {
@@ -135,41 +135,13 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	/**
-	 * Initialize physics in worker mode. Returns a ZylemWorld that
-	 * delegates all physics to a Web Worker.
-	 *
-	 * @param gravity World gravity.
-	 * @param physicsRate Physics tick rate in Hz.
-	 * @param workerUrl Optional URL to the worker script.
-	 */
-	static async loadPhysicsWorker(
-		gravity: Vector3 | Vec3Components,
-		physicsRate = 60,
-		workerUrl?: URL,
-	): Promise<ZylemWorld> {
-		const proxy = new PhysicsProxy();
-		await proxy.init(
-			[gravity.x, gravity.y, gravity.z],
-			physicsRate,
-			workerUrl,
-		);
-
-		const zw = new ZylemWorld(null as unknown as World, physicsRate, true);
-		zw.proxy = proxy;
-
-		return zw;
-	}
-
-	/**
-	 * @param world The Rapier physics world instance (null in worker mode).
+	 * @param world The Rapier physics world instance.
 	 * @param physicsRate Physics update rate in Hz (default 60).
-	 * @param useWorker Whether to use worker mode (default false).
 	 */
-	constructor(world: World, physicsRate = 60, useWorker = false) {
+	constructor(world: World, physicsRate = 60) {
 		this.world = world;
-		this.workerMode = useWorker;
 		this.fixedTimestep = 1 / physicsRate;
-		if (!useWorker && world) {
+		if (world) {
 			this.world.integrationParameters.dt = this.fixedTimestep;
 		}
 	}
@@ -177,10 +149,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	// ─── Entity Management ───────────────────────────────────────────────
 
 	addEntity(entity: any) {
-		if (this.workerMode) {
-			this.addEntityWorker(entity);
-			return;
-		}
 		this.addEntityDirect(entity);
 	}
 
@@ -191,10 +159,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	destroyEntity(entity: GameEntity<any>) {
-		if (this.workerMode) {
-			this.destroyEntityWorker(entity);
-			return;
-		}
 		this.destroyEntityDirect(entity);
 	}
 
@@ -203,28 +167,10 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	// ─── Update ──────────────────────────────────────────────────────────
 
 	/**
-	 * Advance the physics simulation.
-	 *
-	 * In direct mode, uses the fixed-timestep accumulator on the main thread.
-	 * In worker mode, sends a step command and awaits the result.
+	 * Advance the physics simulation using the fixed-timestep accumulator.
 	 */
 	update(params: UpdateContext<any>) {
-		if (this.workerMode) {
-			this.updateWorker(params);
-			return;
-		}
 		this.updateDirect(params);
-	}
-
-	/**
-	 * In worker mode, the step is async. Call this to await the
-	 * pending step before reading transform data.
-	 */
-	async awaitStep(): Promise<void> {
-		if (this._pendingStep) {
-			await this._pendingStep;
-			this._pendingStep = null;
-		}
 	}
 
 	// ─── Direct Mode Implementation ──────────────────────────────────────
@@ -365,51 +311,6 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		};
 
 		this.trackedDirectBodies.add(body);
-	}
-
-	// ─── Worker Mode Implementation ──────────────────────────────────────
-
-	private addEntityWorker(entity: any) {
-		if (!this.proxy) return;
-
-		const bodyDesc = serializeBodyDesc(entity.bodyDesc);
-		const colliderDescs = (entity.colliderDescs?.length > 0 ? entity.colliderDescs : [entity.colliderDesc])
-			.filter(Boolean)
-			.map(serializeColliderDesc);
-
-		const charCtrl = entity.useCharacterController ? serializeCharacterController() : undefined;
-
-		const handle = this.proxy.addBody(entity.uuid, bodyDesc, colliderDescs, charCtrl);
-
-		// Replace entity.body with the handle. The handle provides the same
-		// read API (translation(), rotation(), linvel(), angvel()) and queues
-		// write operations as commands for the worker.
-		entity.body = handle as any;
-		entity.physicsAttached = true;
-		entity.collider = null;
-		entity.colliders = [];
-
-		this.collisionMap.set(entity.uuid, entity);
-	}
-
-	private destroyEntityWorker(entity: GameEntity<any>) {
-		if (!this.proxy) return;
-		this.proxy.removeBody(entity.uuid);
-		this.removeEntityFromTracking(entity.uuid);
-		this.clearEntityPhysicsState(entity);
-	}
-
-	private updateWorker(params: UpdateContext<any>) {
-		if (!this.proxy) return;
-
-		const { delta } = params;
-		this.currentCollisionTimeMs += delta * 1000;
-		this.processPendingRemovals();
-		const collisionTimeMs = this.currentCollisionTimeMs;
-		this._pendingStep = this.proxy.step(delta).then((result) => {
-			this.interpolationAlpha = result.interpolationAlpha;
-			this.processCollisionPairs(result.collisions, delta, collisionTimeMs);
-		});
 	}
 
 	// ─── Shared collision behavior processing ────────────────────────────
@@ -600,20 +501,12 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 
 	destroy() {
 		try {
-			if (this.workerMode) {
-				for (const [, entity] of this.collisionMap) {
-					this.clearEntityPhysicsState(entity);
-				}
-				this.proxy?.dispose();
-				this.proxy = null;
-			} else {
-				for (const [, entity] of this.collisionMap) {
-					try { this.destroyEntityDirect(entity); } catch { /* noop */ }
-				}
-				try { this.world?.free(); } catch { /* noop */ }
-				// @ts-ignore
-				this.world = undefined as any;
+			for (const [, entity] of this.collisionMap) {
+				try { this.destroyEntityDirect(entity); } catch { /* noop */ }
 			}
+			try { this.world?.free(); } catch { /* noop */ }
+			// @ts-ignore
+			this.world = undefined as any;
 			this.collisionMap.clear();
 			this.collisionBehaviorMap.clear();
 			this._removalMap.clear();

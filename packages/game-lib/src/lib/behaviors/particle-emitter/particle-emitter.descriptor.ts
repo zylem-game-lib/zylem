@@ -1,4 +1,3 @@
-import type { IWorld } from 'bitecs';
 import { Group, Object3D, Quaternion, Vector3 } from 'three';
 import {
 	BatchedRenderer,
@@ -151,6 +150,19 @@ function readHostTransform(entity: ParticleEmitterHostEntity): {
 	position: Vector3;
 	quaternion: Quaternion;
 } {
+	const wasmPose = (entity as any).getPose?.();
+	if (wasmPose && (entity as any).runtimeHandle >= 0) {
+		return {
+			position: new Vector3(wasmPose.position.x, wasmPose.position.y, wasmPose.position.z),
+			quaternion: new Quaternion(
+				wasmPose.rotation.x,
+				wasmPose.rotation.y,
+				wasmPose.rotation.z,
+				wasmPose.rotation.w,
+			),
+		};
+	}
+
 	if (entity.body?.translation) {
 		const position = entity.body.translation();
 		const rotation = entity.body.rotation?.() ?? { x: 0, y: 0, z: 0, w: 1 };
@@ -352,7 +364,7 @@ class ParticleEmitterBehaviorSystem implements BehaviorSystem {
 		return this.rendererService;
 	}
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, delta: number): void {
 		const links = this.getBehaviorLinks?.(PARTICLE_EMITTER_BEHAVIOR_KEY);
 		if (!links) {
 			return;
@@ -399,7 +411,7 @@ class ParticleEmitterBehaviorSystem implements BehaviorSystem {
 		);
 	}
 
-	destroy(_ecs: IWorld): void {
+	destroy(_ecs: unknown): void {
 		const links = this.getBehaviorLinks?.(PARTICLE_EMITTER_BEHAVIOR_KEY);
 		if (links) {
 			for (const link of links) {

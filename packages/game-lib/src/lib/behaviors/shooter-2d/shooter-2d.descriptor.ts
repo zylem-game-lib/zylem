@@ -1,7 +1,7 @@
-import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { normalizeVec3, type Vec3Input } from '../../core/vector';
+import type { WasmStageRuntime } from '../../runtime/wasm-stage-runtime';
 import {
 	angleFromDirection2D,
 	directionFromAngle2D,
@@ -178,16 +178,19 @@ function createShooter2DHandle(
 }
 
 class Shooter2DBehaviorSystem implements BehaviorSystem {
+	private attachedRuntimeSlots = new Set<number>();
+
 	constructor(
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {}
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, delta: number): void {
 		const links = this.getBehaviorLinks?.(SHOOTER_2D_BEHAVIOR_KEY);
 		if (!links) return;
 
 		for (const link of links) {
-			const entity = link.entity as Shooter2DSourceEntity;
+			const entity = link.entity as Shooter2DSourceEntity & { runtimeHandle?: number };
 			const ref = link.ref as any;
 			const state = ensureShooterState(entity);
 			state.cooldownRemainingMs = Math.max(
@@ -195,10 +198,32 @@ class Shooter2DBehaviorSystem implements BehaviorSystem {
 				state.cooldownRemainingMs - delta * 1000,
 			);
 			ref.__entity = entity;
+
+			const handle = (entity.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, ref.options as Shooter2DBehaviorOptions);
+			}
 		}
 	}
 
-	destroy(_ecs: IWorld): void {}
+	private ensureWasmAttached(handle: number, options: Shooter2DBehaviorOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		const offset = options.spawnOffset ?? defaultOptions.spawnOffset!;
+		const fireRateHz = options.cooldownMs && options.cooldownMs > 0
+			? 1000 / options.cooldownMs
+			: 0;
+		this.wasmStage.attachShooter2D(handle, {
+			fireRateHz,
+			muzzleOffsetX: offset.x,
+			muzzleOffsetY: offset.y,
+			muzzleSpeed: options.projectileSpeed,
+		});
+		this.attachedRuntimeSlots.add(handle);
+	}
+
+	destroy(_ecs: unknown): void {
+		this.attachedRuntimeSlots.clear();
+	}
 }
 
 export const Shooter2DBehavior = defineBehavior<
@@ -208,6 +233,6 @@ export const Shooter2DBehavior = defineBehavior<
 >({
 	name: 'shooter-2d',
 	defaultOptions,
-	systemFactory: (ctx) => new Shooter2DBehaviorSystem(ctx.getBehaviorLinks),
+	systemFactory: (ctx) => new Shooter2DBehaviorSystem(ctx.wasmStage ?? null, ctx.getBehaviorLinks),
 	createHandle: createShooter2DHandle,
 });

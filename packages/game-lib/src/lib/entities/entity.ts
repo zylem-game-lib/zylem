@@ -6,7 +6,6 @@ import {
 	RigidBodyDesc,
 	Vector,
 } from '@dimforge/rapier3d-compat';
-import { position, rotation, scale } from '../systems/transformable.system';
 import { Vec3, Vec3Input, VEC3_ZERO, normalizeVec3 } from '../core/vector';
 import { MaterialBuilder, MaterialOptions } from '../graphics/material';
 import { CollisionOptions } from '../collision/collision-builder';
@@ -19,7 +18,6 @@ import {
 	CleanupContext,
 } from '../core/base-node-life-cycle';
 import type { EntityMeshBuilder, EntityCollisionBuilder } from './builder';
-import { Behavior } from '../behaviors/behavior';
 import {
 	EventEmitterDelegate,
 	zylemEventBus,
@@ -170,7 +168,6 @@ function getCollisionNowMs(): number {
 export class GameEntity<O extends GameEntityOptions>
 	extends BaseNode<O>
 	implements GameEntityLifeCycle, EntityDebugInfo, MoveableEntity, RotatableEntityAPI {
-	public behaviors: Behavior[] = [];
 	public group: Group | undefined;
 	public mesh: Mesh | undefined;
 	public materials: Material[] | undefined;
@@ -206,8 +203,24 @@ export class GameEntity<O extends GameEntityOptions>
 	public instanceId: number = -1;
 	/** Whether this entity uses instanced rendering */
 	public isInstanced: boolean = false;
-	/** Runtime slot index when owned by a stage runtime adapter. */
+	/** Runtime slot index when owned by a stage runtime adapter (legacy alias for runtimeHandle). */
 	public runtimeSlot: number = -1;
+	/**
+	 * Stable u32 handle into the wasm `StageSimulation`. Returned by
+	 * `WasmStageRuntime.createEntity()`; -1 means the entity is not currently
+	 * attached to the runtime. Replaces `runtimeSlot` and the legacy
+	 * `entity.body` / `entity.collider` fields once Phase 3 lands.
+	 */
+	public runtimeHandle: number = -1;
+	/** True once the entity has been attached to the wasm `StageSimulation`. */
+	public runtimeAttached = false;
+	/**
+	 * Optional reference to the stage's {@link WasmStageRuntime}. Set by
+	 * `StageEntityDelegate.spawnEntity()` so {@link GameEntity.getPose} /
+	 * {@link GameEntity.setPose} can route through the unified-Stage runtime
+	 * without each call site needing to thread the wasm handle around.
+	 */
+	public wasmStageRef: import('../runtime/wasm-stage-runtime').WasmStageRuntime | null = null;
 
 	// Event delegate for dispatch/listen API
 	protected eventDelegate = new EventEmitterDelegate<EntityEvents>();
@@ -260,6 +273,67 @@ export class GameEntity<O extends GameEntityOptions>
 		super();
 		this.transformStore = createTransformStore();
 		makeTransformable(this);
+	}
+
+	/**
+	 * Read the entity's pose. Prefers the unified-Stage wasm runtime when
+	 * the entity has a live `runtimeHandle`; otherwise falls back to the
+	 * legacy TS Rapier `RigidBody` translation/rotation. Returns `null` when
+	 * neither source is available.
+	 */
+	public getPose(): { position: Vec3; rotation: { x: number; y: number; z: number; w: number } } | null {
+		if (this.wasmStageRef && this.runtimeHandle >= 0) {
+			const pose = this.wasmStageRef.getPose(this.runtimeHandle);
+			if (pose) {
+				return {
+					position: { x: pose.position[0], y: pose.position[1], z: pose.position[2] },
+					rotation: { x: pose.rotation[0], y: pose.rotation[1], z: pose.rotation[2], w: pose.rotation[3] },
+				};
+			}
+		}
+		const body = this.body as RigidBody | null | undefined;
+		if (!body) return null;
+		const t = body.translation();
+		const r = body.rotation();
+		return {
+			position: { x: t.x, y: t.y, z: t.z },
+			rotation: { x: r.x, y: r.y, z: r.z, w: r.w },
+		};
+	}
+
+	/**
+	 * Write the entity's pose. Routes through the unified-Stage wasm runtime
+	 * when present; otherwise writes to the legacy TS Rapier `RigidBody`.
+	 *
+	 * Either or both of `position` and `rotation` may be omitted to leave
+	 * that component unchanged.
+	 */
+	public setPose(input: {
+		position?: Vec3Input;
+		rotation?: { x: number; y: number; z: number; w: number };
+	}): boolean {
+		if (this.wasmStageRef && this.runtimeHandle >= 0) {
+			let ok = true;
+			if (input.position) {
+				const p = normalizeVec3(input.position);
+				ok = this.wasmStageRef.setPosition(this.runtimeHandle, p.x, p.y, p.z) && ok;
+			}
+			if (input.rotation) {
+				const { x, y, z, w } = input.rotation;
+				ok = this.wasmStageRef.setRotation(this.runtimeHandle, x, y, z, w) && ok;
+			}
+			return ok;
+		}
+		const body = this.body as RigidBody | null | undefined;
+		if (!body) return false;
+		if (input.position) {
+			const p = normalizeVec3(input.position);
+			body.setTranslation({ x: p.x, y: p.y, z: p.z }, true);
+		}
+		if (input.rotation) {
+			body.setRotation(input.rotation, true);
+		}
+		return true;
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────
@@ -421,13 +495,6 @@ export class GameEntity<O extends GameEntityOptions>
 	}
 
 	public create(): this {
-		const { position: setupPosition } = this.options;
-		const { x, y, z } = setupPosition || { x: 0, y: 0, z: 0 };
-		this.behaviors = [
-			{ component: position, values: { x, y, z } },
-			{ component: scale, values: { x: 0, y: 0, z: 0 } },
-			{ component: rotation, values: { x: 0, y: 0, z: 0, w: 0 } },
-		];
 		this.name = this.options.name || '';
 		return this;
 	}
@@ -731,7 +798,6 @@ export class GameEntity<O extends GameEntityOptions>
 		const info: Record<string, string> = {};
 		info.name = this.name;
 		info.uuid = this.uuid;
-		info.eid = this.eid.toString();
 		return info;
 	}
 

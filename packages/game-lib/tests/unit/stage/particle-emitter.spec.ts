@@ -1,4 +1,3 @@
-import { createWorld } from 'bitecs';
 import { Scene } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -14,7 +13,6 @@ describe('particle emitter stage integration', () => {
 			new StageLoadingDelegate(),
 			new StageEntityModelDelegate(),
 		);
-		const ecs = createWorld();
 		const sceneRoot = new Scene();
 		const world = {
 			collisionMap: new Map<string, any>(),
@@ -34,7 +32,6 @@ describe('particle emitter stage integration', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: world as any,
-			ecs,
 			instanceManager: null,
 			camera: {} as any,
 		});
@@ -48,7 +45,7 @@ describe('particle emitter stage integration', () => {
 
 		expect(delegate.behaviorSystems).toHaveLength(1);
 
-		delegate.behaviorSystems[0].update(ecs, 1 / 60);
+		delegate.behaviorSystems[0].update(undefined, 1 / 60);
 		expect(entity.getSystem()).not.toBeNull();
 
 		expect(delegate.removeEntityByUuid(entity.uuid)).toBe(true);

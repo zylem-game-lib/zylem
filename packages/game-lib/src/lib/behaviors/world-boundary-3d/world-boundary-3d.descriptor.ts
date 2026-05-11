@@ -1,4 +1,3 @@
-import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import type { Bounds3DPaddingInput } from '../shared/bounds-3d';
@@ -8,6 +7,10 @@ import {
 	type WorldBoundary3DHits,
 	type WorldBoundary3DPosition,
 } from './world-boundary-3d-fsm';
+import {
+	StageBoundaryDim,
+	type WasmStageRuntime,
+} from '../../runtime/wasm-stage-runtime';
 
 export interface WorldBoundary3DOptions {
 	boundaries: WorldBoundary3DBounds;
@@ -53,25 +56,41 @@ function createWorldBoundary3DHandle(
 }
 
 class WorldBoundary3DSystem implements BehaviorSystem {
+	private attachedRuntimeSlots = new Set<number>();
+
 	constructor(
 		private world: any,
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {}
 
-	update(_ecs: IWorld, _delta: number): void {
+	update(_ecs: unknown, _delta: number): void {
 		const links = this.getBehaviorLinks?.(WORLD_BOUNDARY_3D_BEHAVIOR_KEY);
 		if (!links) return;
 
 		for (const link of links) {
 			const gameEntity = link.entity as any;
 			const boundaryRef = link.ref as any;
-			if (!gameEntity.body) continue;
-
 			const options = boundaryRef.options as WorldBoundary3DOptions;
 			if (!boundaryRef.fsm) {
 				boundaryRef.fsm = new WorldBoundary3DFSM();
 			}
 
+			const handle = (gameEntity.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, options);
+				const query = this.wasmStage.queryWorldBoundary(handle);
+				if (query) {
+					boundaryRef.fsm.update(
+						{ x: query.clamped[0], y: query.clamped[1], z: query.clamped[2] },
+						options.boundaries,
+						options.padding,
+					);
+					continue;
+				}
+			}
+
+			if (!gameEntity.body) continue;
 			const pos = gameEntity.body.translation();
 			boundaryRef.fsm.update(
 				{ x: pos.x, y: pos.y, z: pos.z },
@@ -81,13 +100,30 @@ class WorldBoundary3DSystem implements BehaviorSystem {
 		}
 	}
 
-	destroy(_ecs: IWorld): void {}
+	private ensureWasmAttached(handle: number, options: WorldBoundary3DOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		const padding = typeof options.padding === 'number' ? options.padding : 0;
+		this.wasmStage.attachWorldBoundary(handle, StageBoundaryDim.Three, {
+			top: options.boundaries.top,
+			bottom: options.boundaries.bottom,
+			left: options.boundaries.left,
+			right: options.boundaries.right,
+			front: options.boundaries.front,
+			back: options.boundaries.back,
+			padding,
+		});
+		this.attachedRuntimeSlots.add(handle);
+	}
+
+	destroy(_ecs: unknown): void {
+		this.attachedRuntimeSlots.clear();
+	}
 }
 
 export const WorldBoundary3DBehavior = defineBehavior({
 	name: 'world-boundary-3d',
 	defaultOptions,
 	systemFactory: (ctx) =>
-		new WorldBoundary3DSystem(ctx.world, ctx.getBehaviorLinks),
+		new WorldBoundary3DSystem(ctx.world, ctx.wasmStage ?? null, ctx.getBehaviorLinks),
 	createHandle: createWorldBoundary3DHandle,
 });

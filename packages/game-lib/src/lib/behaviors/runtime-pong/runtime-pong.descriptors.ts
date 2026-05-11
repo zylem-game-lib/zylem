@@ -1,5 +1,3 @@
-import type { IWorld } from 'bitecs';
-
 import {
 	defineBehavior,
 	type BehaviorRef,
@@ -73,7 +71,7 @@ export interface RuntimeGoalZone2DHandle {
 }
 
 const runtimeNoopSystemFactory = (): BehaviorSystem => ({
-	update(_ecs: IWorld, _delta: number) {},
+	update(_ecs: unknown, _delta: number) {},
 });
 
 export const RUNTIME_PONG_BALL_BEHAVIOR_KEY = Symbol.for('zylem:behavior:runtime-pong-ball');

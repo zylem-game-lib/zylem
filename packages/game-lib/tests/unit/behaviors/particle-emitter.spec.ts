@@ -1,4 +1,3 @@
-import { createWorld } from 'bitecs';
 import {
 	AdditiveBlending,
 	MeshBasicMaterial,
@@ -74,15 +73,13 @@ function createBehaviorHarness(options: {
 	const ref = entity.getBehaviorRefs().at(-1)!;
 	const links = [{ entity, ref }];
 	const scene = { scene: new Scene() };
-	const ecs = createWorld();
 	const system = ParticleEmitterBehavior.systemFactory({
 		world: {} as any,
-		ecs,
 		scene,
 		getBehaviorLinks: () => links,
 	});
 
-	return { entity, handle, ref, scene, system, ecs };
+	return { entity, handle, ref, scene, system };
 }
 
 describe('ParticleEmitterBehavior', () => {
@@ -99,10 +96,8 @@ describe('ParticleEmitterBehavior', () => {
 			{ entity: second, ref: secondRef },
 		];
 		const scene = { scene: new Scene() };
-		const ecs = createWorld();
 		const system = ParticleEmitterBehavior.systemFactory({
 			world: {} as any,
-			ecs,
 			scene,
 			getBehaviorLinks: () => links,
 		});
@@ -114,7 +109,7 @@ describe('ParticleEmitterBehavior', () => {
 			autoDestroy: false,
 		});
 
-		system.update(ecs, 1 / 60);
+		system.update(undefined, 1 / 60);
 
 		expect(firstHandle.getSystem()).toBeInstanceOf(ParticleSystem);
 		expect(secondHandle.getSystem()).toBeInstanceOf(ParticleSystem);
@@ -123,16 +118,16 @@ describe('ParticleEmitterBehavior', () => {
 			scene.scene.children.filter((child) => child.type === 'BatchedRenderer'),
 		).toHaveLength(1);
 
-		system.destroy?.(ecs);
+		system.destroy?.();
 	});
 
 	it('supports play, pause, stop, and restart through the handle', () => {
-		const { handle, system, ecs } = createBehaviorHarness({
+		const { handle, system } = createBehaviorHarness({
 			autoplay: true,
 			looping: true,
 		});
 
-		system.update(ecs, 1 / 60);
+		system.update(undefined, 1 / 60);
 		expect(handle.getSystem()).not.toBeNull();
 		expect(handle.isPlaying()).toBe(true);
 
@@ -153,7 +148,7 @@ describe('ParticleEmitterBehavior', () => {
 		expect(handle.getSystem()?.paused).toBe(false);
 		expect(handle.isPlaying()).toBe(true);
 
-		system.destroy?.(ecs);
+		system.destroy?.();
 	});
 
 	it('auto-destroys standalone particle entities after one-shot effects finish', () => {
@@ -170,22 +165,20 @@ describe('ParticleEmitterBehavior', () => {
 		const links = [{ entity, ref }];
 		const scene = new Scene();
 		scene.add(entity.group!);
-		const ecs = createWorld();
 		const system = ParticleEmitterBehavior.systemFactory({
 			world: {} as any,
-			ecs,
 			scene: { scene },
 			getBehaviorLinks: () => links,
 		});
 
 		for (let i = 0; i < 6; i++) {
-			system.update(ecs, 0.1);
+			system.update(undefined, 0.1);
 		}
 
 		expect(entity.markedForRemoval).toBe(true);
 		expect(entity.getSystem()).toBeNull();
 
-		system.destroy?.(ecs);
+		system.destroy?.();
 	});
 
 	it('builds reusable preset effect definitions', () => {

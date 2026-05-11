@@ -1,4 +1,3 @@
-import type { IWorld } from 'bitecs';
 import {
 	ActiveCollisionTypes,
 	ColliderDesc,
@@ -30,14 +29,14 @@ import { create, type GameEntity } from '../../entities/entity';
 import { getGlobals } from '../../game/game-state';
 import { getBodyRenderPose } from '../../physics/physics-pose';
 
-import { buildFractureGeometryCacheKey } from './destructible-prebake-cache-key';
 import {
+	buildFractureGeometryCacheKey,
+	buildNormalizedFractureSourceGeometry,
 	bufferGeometryToPlain,
 	type DestructiblePrebakeWorkerAPI,
 	pinataFractureOptionsToPlain,
 	plainWorkerResultToTemplateParts,
-} from './destructible-prebake-payload';
-import { buildNormalizedFractureSourceGeometry } from './destructible-prebake-source-geometry';
+} from '@zylem/game-behavior-shared';
 
 export type FractureOptionsInput =
 	NonNullable<ConstructorParameters<typeof PinataFractureOptions>[0]>;
@@ -801,22 +800,23 @@ function syncRuntimeFragmentEntityTransform(
 	interpolationAlpha: number,
 ): void {
 	const target = entity.group ?? entity.mesh;
-	if (!target || !entity.body) {
+	if (!target) {
 		return;
 	}
 
+	const wasmPose = (entity as any).getPose?.();
+	if (wasmPose && (entity as any).runtimeHandle >= 0) {
+		target.position.set(wasmPose.position.x, wasmPose.position.y, wasmPose.position.z);
+		target.quaternion.set(wasmPose.rotation.x, wasmPose.rotation.y, wasmPose.rotation.z, wasmPose.rotation.w);
+		return;
+	}
+
+	if (!entity.body) {
+		return;
+	}
 	const pose = getBodyRenderPose(entity.body as any, interpolationAlpha);
-	target.position.set(
-		pose.position.x,
-		pose.position.y,
-		pose.position.z,
-	);
-	target.quaternion.set(
-		pose.rotation.x,
-		pose.rotation.y,
-		pose.rotation.z,
-		pose.rotation.w,
-	);
+	target.position.set(pose.position.x, pose.position.y, pose.position.z);
+	target.quaternion.set(pose.rotation.x, pose.rotation.y, pose.rotation.z, pose.rotation.w);
 }
 
 function bakeScaleIntoFragmentGeometry(
@@ -1531,7 +1531,7 @@ class Destructible3DSystem implements BehaviorSystem {
 		this.primeLink(link);
 	}
 
-	update(_ecs: IWorld, _delta: number): void {
+	update(_ecs: unknown, _delta: number): void {
 		this.primeLinks();
 		const links = this.getBehaviorLinks?.(DESTRUCTIBLE_3D_BEHAVIOR_KEY);
 		if (!links) {
@@ -1554,7 +1554,7 @@ class Destructible3DSystem implements BehaviorSystem {
 		}
 	}
 
-	destroy(_ecs: IWorld): void {
+	destroy(_ecs: unknown): void {
 		const links = this.getBehaviorLinks?.(DESTRUCTIBLE_3D_BEHAVIOR_KEY);
 		if (!links) {
 			return;

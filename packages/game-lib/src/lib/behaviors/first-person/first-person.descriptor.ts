@@ -6,7 +6,6 @@
  */
 
 import { Vector3, Euler } from 'three';
-import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import type { FirstPersonPerspective } from '../../camera/perspectives/first-person-perspective';
@@ -22,6 +21,7 @@ import {
 	createFirstPersonInputComponent,
 	createFirstPersonStateComponent,
 } from './components';
+import type { WasmStageRuntime } from '../../runtime/wasm-stage-runtime';
 
 /**
  * First-person controller behavior options (typed for entity.use() autocomplete).
@@ -57,15 +57,17 @@ const FIRST_PERSON_BEHAVIOR_KEY = Symbol.for(
  */
 class FirstPersonControllerSystem implements BehaviorSystem {
 	private behavior: FirstPersonControllerBehavior;
+	private attachedRuntimeSlots = new Set<number>();
 
 	constructor(
 		private world: any,
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {
 		this.behavior = new FirstPersonControllerBehavior(world);
 	}
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, delta: number): void {
 		const links = this.getBehaviorLinks?.(FIRST_PERSON_BEHAVIOR_KEY);
 		if (!links) return;
 
@@ -74,6 +76,21 @@ class FirstPersonControllerSystem implements BehaviorSystem {
 			const fpsRef = link.ref as any;
 
 			const options = fpsRef.options as FirstPersonControllerOptions;
+			const handle = (gameEntity.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, options);
+				const input = gameEntity.$fps;
+				if (input) {
+					this.wasmStage.setFirstPersonInput(handle, {
+						moveX: input.moveX ?? 0,
+						moveZ: input.moveZ ?? 0,
+						lookYawDelta: input.lookX ?? 0,
+						lookPitchDelta: input.lookY ?? 0,
+						run: !!input.sprint,
+					});
+				}
+				continue;
+			}
 
 			// Initialize components (once)
 			if (!gameEntity.firstPerson) {
@@ -118,8 +135,20 @@ class FirstPersonControllerSystem implements BehaviorSystem {
 		}
 	}
 
-	destroy(_ecs: IWorld): void {
+	private ensureWasmAttached(handle: number, options: FirstPersonControllerOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		this.wasmStage.attachFirstPerson(handle, {
+			walkSpeed: options.walkSpeed ?? defaultOptions.walkSpeed!,
+			runSpeed: options.runSpeed ?? defaultOptions.runSpeed!,
+			eyeHeight: options.eyeHeight ?? defaultOptions.eyeHeight!,
+			lookSensitivity: options.lookSensitivity ?? defaultOptions.lookSensitivity!,
+		});
+		this.attachedRuntimeSlots.add(handle);
+	}
+
+	destroy(_ecs: unknown): void {
 		this.behavior.destroy();
+		this.attachedRuntimeSlots.clear();
 	}
 }
 
@@ -172,7 +201,7 @@ export const FirstPersonController = defineBehavior<
 	name: 'first-person-controller',
 	defaultOptions,
 	systemFactory: (ctx) =>
-		new FirstPersonControllerSystem(ctx.world, ctx.getBehaviorLinks),
+		new FirstPersonControllerSystem(ctx.world, ctx.wasmStage ?? null, ctx.getBehaviorLinks),
 	createHandle: (ref) => ({
 		getState: () => ref.fsm?.getState() ?? FirstPersonState.Idle,
 		getYaw: () => ref.fsm?.getYaw() ?? 0,

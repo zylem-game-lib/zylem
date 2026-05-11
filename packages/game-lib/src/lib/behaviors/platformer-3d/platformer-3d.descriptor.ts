@@ -5,7 +5,6 @@
  * Provides entity.use() API for 3D platformer movement.
  */
 
-import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { Platformer3DBehavior as Platformer3DMovementBehavior, Platformer3DEntity } from './platformer-3d.behavior';
@@ -15,6 +14,7 @@ import {
 	createPlatformer3DInputComponent,
 	createPlatformer3DStateComponent,
 } from './components';
+import type { WasmStageRuntime } from '../../runtime/wasm-stage-runtime';
 
 /**
  * Platformer behavior options (typed for entity.use() autocomplete)
@@ -53,58 +53,80 @@ const PLATFORMER_BEHAVIOR_KEY = Symbol.for('zylem:behavior:platformer-3d');
  */
 class Platformer3DBehaviorSystem implements BehaviorSystem {
 	private movementBehavior: Platformer3DMovementBehavior;
+	private attachedRuntimeSlots = new Set<number>();
 
 	constructor(
 		private world: any,
 		private scene: any,
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {
 		this.movementBehavior = new Platformer3DMovementBehavior(world, scene);
 	}
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, delta: number): void {
 		const links = this.getBehaviorLinks?.(PLATFORMER_BEHAVIOR_KEY);
 		if (!links) return;
 
 		for (const link of links) {
 			const gameEntity = link.entity as any;
 			const platformerRef = link.ref as any;
-			if (!gameEntity.body) continue;
 
 			const options = platformerRef.options as Platformer3DBehaviorOptions;
 
-			// Ensure entity has platformer components (initialized once)
 			if (!gameEntity.platformer) {
 				gameEntity.platformer = createPlatformer3DMovementComponent(options);
 			}
-
 			if (!gameEntity.$platformer) {
 				gameEntity.$platformer = createPlatformer3DInputComponent();
 			}
-
 			if (!gameEntity.platformerState) {
 				gameEntity.platformerState = createPlatformer3DStateComponent();
 			}
 
-			// Create FSM lazily and attach to the BehaviorRef
 			if (!platformerRef.fsm && gameEntity.$platformer && gameEntity.platformerState) {
 				platformerRef.fsm = new Platformer3DFSM({
 					input: gameEntity.$platformer,
 					state: gameEntity.platformerState,
 				});
 			}
-
-			// Update FSM to sync state with physics
 			if (platformerRef.fsm && gameEntity.$platformer && gameEntity.platformerState) {
 				platformerRef.fsm.update(gameEntity.$platformer, gameEntity.platformerState);
 			}
 
+			const handle = (gameEntity.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, options);
+				const input = gameEntity.$platformer;
+				if (input) {
+					this.wasmStage.setPlatformer3DInputAxes(handle, input.moveX ?? 0, input.moveZ ?? 0);
+					this.wasmStage.setPlatformer3DInputButtons(handle, !!input.jump, !!input.run);
+				}
+				continue;
+			}
+
+			if (!gameEntity.body) continue;
 			this.movementBehavior.updateEntity(gameEntity, delta);
 		}
 	}
 
-	destroy(_ecs: IWorld): void {
+	private ensureWasmAttached(handle: number, options: Platformer3DBehaviorOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		this.wasmStage.attachPlatformer3D(handle, {
+			halfHeight: 0.9,
+			radius: 0.4,
+			walkSpeed: options.walkSpeed ?? defaultOptions.walkSpeed!,
+			runSpeed: options.runSpeed ?? defaultOptions.runSpeed!,
+			jumpForce: options.jumpForce ?? defaultOptions.jumpForce!,
+			maxJumps: options.maxJumps ?? defaultOptions.maxJumps!,
+			gravity: options.gravity ?? defaultOptions.gravity!,
+		});
+		this.attachedRuntimeSlots.add(handle);
+	}
+
+	destroy(_ecs: unknown): void {
 		this.movementBehavior.destroy();
+		this.attachedRuntimeSlots.clear();
 	}
 }
 
@@ -157,6 +179,7 @@ export const Platformer3DBehavior = defineBehavior<
 		new Platformer3DBehaviorSystem(
 			ctx.world,
 			ctx.scene,
+			ctx.wasmStage ?? null,
 			ctx.getBehaviorLinks,
 		),
 	createHandle: (ref) => ({

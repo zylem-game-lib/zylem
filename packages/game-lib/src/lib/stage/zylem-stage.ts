@@ -1,4 +1,3 @@
-import { createWorld as createECS } from 'bitecs';
 import { Color, Vector3 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
@@ -11,7 +10,7 @@ import { debugState } from '../debug/debug-state';
 
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
 import { LifeCycleBase } from '../core/lifecycle-base';
-import createTransformSystem, { StageSystem } from '../systems/transformable.system';
+import { syncRenderPoses, type StageSystem } from '../systems/transformable.system';
 import { BaseNode } from '../core/base-node';
 import { nanoid } from 'nanoid';
 import { Stage } from './stage';
@@ -29,7 +28,13 @@ import { assetManager } from '../core/asset-manager';
 import {
 	parseStageOptions,
 	type StageAssetLoaderConfig,
+	type StageWasmRuntimeConfig,
 } from './stage-config';
+import {
+	WasmStageRuntime,
+	createWasmStageRuntime,
+	type StageWasmExports,
+} from '../runtime/wasm-stage-runtime';
 import type { Vec3Components } from '../core/vector';
 import type { BehaviorSystem, BehaviorSystemFactory } from '../behaviors/behavior-system';
 import { createRuntimeDebugBindingFromDebugState } from '../runtime/runtime-debug-binding';
@@ -51,16 +56,18 @@ export interface ZylemStageConfig {
 	variables: Record<string, any>;
 	/** Physics update rate in Hz (default 60). */
 	physicsRate: number;
-	/** Run physics in a Web Worker for true parallelism (default false). */
-	usePhysicsWorker: boolean;
-	/** URL to the physics worker script (required when usePhysicsWorker is true). */
-	physicsWorkerUrl?: URL | string;
 	/** Optional runtime loader configuration for stage-managed assets. */
 	assetLoaders?: StageAssetLoaderConfig;
 	/** Optional runtime adapter for wasm-driven simulation/rendering. */
 	runtimeAdapter?: StageRuntimeAdapter;
 	/** Optional debug binding for wasm runtime adapters (heat tint, etc.). */
 	runtimeDebugBinding?: RuntimeDebugBinding;
+	/**
+	 * Optional unified-Stage wasm runtime configuration. When set, the stage
+	 * instantiates a {@link WasmStageRuntime} during `load()` and exposes it
+	 * to behavior systems via `BehaviorSystemContext.wasmStage`.
+	 */
+	wasmRuntime?: StageWasmRuntimeConfig;
 	/**
 	 * When `false`, suppress the engine's built-in ambient + directional
 	 * lights so the stage owns its lighting rig entirely (usually via
@@ -95,9 +102,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
 	instanceManager: InstanceManager | null = null;
+	/** Unified-Stage wasm runtime; non-null only when `wasmRuntime` was configured. */
+	wasmStage: WasmStageRuntime | null = null;
 
-	ecs = createECS();
-	transformSystem: ReturnType<typeof createTransformSystem> | null = null;
 	debugDelegate: StageDebugDelegate | null = null;
 
 	uuid: string;
@@ -157,12 +164,11 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			gravity: parsed.config.gravity,
 			variables: parsed.config.variables,
 			physicsRate: parsed.config.physicsRate,
-			usePhysicsWorker: parsed.config.usePhysicsWorker,
-			physicsWorkerUrl: parsed.config.physicsWorkerUrl,
 			assetLoaders: parsed.config.assetLoaders,
 			runtimeAdapter: parsed.config.runtimeAdapter,
 			runtimeDebugBinding: parsed.config.runtimeDebugBinding,
 			defaultLighting: parsed.config.defaultLighting,
+			wasmRuntime: parsed.config.wasmRuntime,
 			entities: [],
 		};
 
@@ -211,14 +217,11 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.scene = new ZylemScene(id, zylemCamera, this.state);
 
 		const gravity = this.gravity ?? new Vector3(0, 0, 0);
-		if (this.state.usePhysicsWorker) {
-			const workerUrl = this.state.physicsWorkerUrl
-				? new URL(this.state.physicsWorkerUrl, typeof location !== 'undefined' ? location.href : undefined)
-				: undefined;
-			this.world = await ZylemWorld.loadPhysicsWorker(gravity, this.state.physicsRate, workerUrl);
-		} else {
-			const physicsWorld = await ZylemWorld.loadPhysics(gravity);
-			this.world = new ZylemWorld(physicsWorld, this.state.physicsRate);
+		const physicsWorld = await ZylemWorld.loadPhysics(gravity);
+		this.world = new ZylemWorld(physicsWorld, this.state.physicsRate);
+
+		if (this.state.wasmRuntime) {
+			this.wasmStage = await this.loadWasmStage(this.state.wasmRuntime);
 		}
 
 		this.scene.setup();
@@ -259,19 +262,15 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.entityDelegate.attach({
 			scene: this.scene,
 			world: this.world,
-			ecs: this.ecs,
 			instanceManager: this.instanceManager,
 			camera: zylemCamera,
 			runtimeAdapter: this.runtimeAdapter,
+			wasmStage: this.wasmStage,
 		});
 
 		this.loadingDelegate.emitStart();
 		await this.entityDelegate.runEntityLoadGenerator();
 
-		this.transformSystem = createTransformSystem({
-			_childrenMap: this.entityDelegate.childrenMap,
-			_world: this.world,
-		} as unknown as StageSystem);
 		this.entityDelegate.isLoaded = true;
 		if (this.runtimeAdapter) {
 			await this.runtimeAdapter.init(this.runtimeContext());
@@ -311,9 +310,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		}
 		this.world.update(params);
 
-		// Run registered ECS behavior systems
+		// Run registered behavior systems (first `update` arg is unused / reserved)
 		for (const system of this.entityDelegate.behaviorSystems) {
-			system.update(this.ecs, delta);
+			system.update(undefined, delta);
 		}
 
 		for (const child of this.entityDelegate.childrenMap.values()) {
@@ -339,7 +338,17 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		}
 
 		// Sync physics to rendering AFTER transforms are applied
-		this.transformSystem?.system(this.ecs);
+		syncRenderPoses({
+			_childrenMap: this.entityDelegate.childrenMap,
+			_world: this.world,
+		} as unknown as StageSystem);
+
+		// Step the unified-Stage wasm runtime (Phase 2+ migration). Behaviors that
+		// have been ported call into `wasmStage` from inside their systemFactory
+		// and rely on the post-step buffers being fresh.
+		if (this.wasmStage) {
+			this.wasmStage.step(delta);
+		}
 
 		if (this.runtimeAdapter) {
 			this.runtimeAdapter.step({
@@ -381,6 +390,11 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.runtimeAdapter?.destroy(this.scene && this.world ? this.runtimeContext() : null);
 		this.runtimeAdapter = null;
 
+		if (this.wasmStage) {
+			this.wasmStage.dispose();
+			this.wasmStage = null;
+		}
+
 		// Delegate handles entity + behavior system cleanup
 		this.entityDelegate.destroyAll();
 
@@ -406,10 +420,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.scene = null as any;
 		this.cameraRef = null;
 		this.cameraManagerRef = null;
-
-		// Cleanup transform system
-		this.transformSystem?.destroy(this.ecs);
-		this.transformSystem = null;
 
 		// Clear reactive stage variables on unload
 		resetStageVariables();
@@ -470,10 +480,39 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		return {
 			scene: this.scene!,
 			world: this.world!,
-			ecs: this.ecs,
 			camera: this.cameraRef!,
 			debug: this.state.runtimeDebugBinding,
 		};
+	}
+
+	/**
+	 * Resolve a {@link StageWasmRuntimeConfig} into a live {@link WasmStageRuntime}.
+	 * Accepts wasm bytes (`ArrayBuffer`), a fetch URL, or a deferred async
+	 * builder so demos can `?url`-import a Vite asset without forcing the engine
+	 * to bundle the wasm itself.
+	 */
+	private async loadWasmStage(config: StageWasmRuntimeConfig): Promise<WasmStageRuntime> {
+		const rawSource = typeof config.source === 'function'
+			? await (config.source as () => Promise<ArrayBuffer | RequestInfo | URL>)()
+			: config.source;
+
+		const baseOpts = config.options ?? {};
+		const initialCapacity = baseOpts.initialCapacity ?? 256;
+		const gravityVec = this.gravity instanceof Vector3
+			? this.gravity
+			: new Vector3(this.gravity?.x ?? 0, this.gravity?.y ?? 0, this.gravity?.z ?? 0);
+		const gravity = baseOpts.gravity ?? ([gravityVec.x, gravityVec.y, gravityVec.z] as const);
+
+		if (rawSource instanceof ArrayBuffer) {
+			return createWasmStageRuntime(rawSource, { initialCapacity, gravity });
+		}
+
+		const response = await fetch(rawSource as RequestInfo | URL);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch wasm-stage runtime: ${response.status} ${response.statusText}`);
+		}
+		const bytes = await response.arrayBuffer();
+		return createWasmStageRuntime(bytes, { initialCapacity, gravity });
 	}
 
 	// ─── Camera management forwarding ─────────────────────────────────────
