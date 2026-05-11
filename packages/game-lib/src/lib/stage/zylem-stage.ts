@@ -233,10 +233,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			if (primaryCam) {
 				this.rendererManager.setupRenderPass(this.scene.scene, primaryCam.camera);
 			}
-			// Camera update runs inside `_update` (after transformSystem) so it
-			// always reads a freshly-synced `group.position`. The renderer loop
-			// is now render-only to avoid a two-rAF race with the physics →
-			// transform-sync pipeline that caused follow-cam jitter.
+			// Pipeline/follow-camera runs inside `_update` (after transformSystem).
+			// The renderer loop calls `CameraManager.render` (orbit pre-tick +
+			// draw) display-frame-synced so damping works while paused.
 			this.rendererManager.startRenderLoop(() => {
 				this.cameraManagerRef?.render(this.scene!.scene);
 			});
