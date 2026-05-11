@@ -1,20 +1,21 @@
 /**
  * BehaviorSystem Interface
- * 
- * Base interface for ECS-based behavior systems that run at the stage level.
- * Systems query entities with matching components and process them each frame.
+ *
+ * Legacy behavior systems reserved the first `update` argument for an ECS world
+ * handle; it is always `undefined` now.
  */
 
-import type { IWorld } from 'bitecs';
+/** @deprecated Retained only for the first argument slot of `BehaviorSystem.update`. */
+export type BehaviorEcsHandle = unknown;
 
 /**
  * A behavior system that processes entities with specific components.
- * 
+ *
  * @example
  * ```typescript
  * class ThrusterMovementSystem implements BehaviorSystem {
- *   update(ecs: IWorld, delta: number): void {
- *     // Query and process entities with thruster components
+ *   update(_ecs: BehaviorEcsHandle | undefined, delta: number): void {
+ *     // Iterate behavior links, push intent into wasm runtime, etc.
  *   }
  * }
  * ```
@@ -22,12 +23,12 @@ import type { IWorld } from 'bitecs';
 export interface BehaviorSystem {
 	/** Optional eager initialization when a behavior link is registered on a live entity */
 	attach?(link: BehaviorEntityLink): void;
-	/** Called once per frame with ECS world and delta time */
-	update(ecs: IWorld, delta: number): void;
+	/** Called once per frame. The first argument is always `undefined` (reserved legacy slot). */
+	update(ecs: BehaviorEcsHandle | undefined, delta: number): void;
 	/** Optional cleanup when a behavior link is detached from a live entity */
 	detach?(link: BehaviorEntityLink): void;
 	/** Optional cleanup when stage is destroyed */
-	destroy?(ecs: IWorld): void;
+	destroy?(ecs?: BehaviorEcsHandle): void;
 }
 
 /**
@@ -41,11 +42,18 @@ export interface BehaviorEntityLink {
 
 /**
  * Context provided to behavior-system factories.
+ *
+ * After the runtime-only stage migration, `wasmStage` is the source of
+ * truth — descriptors should call `wasmStage.attach<X>(handle, opts)` /
+ * `wasmStage.query<X>(handle)` from inside the system instead of touching
+ * `entity.body` directly. The legacy `world` / `scene` fields remain for
+ * unmigrated descriptors.
  */
 export interface BehaviorSystemContext {
 	world: any;
-	ecs: IWorld;
 	scene: any;
+	/** Wasm-driven Stage runtime; omitted when the stage has no wasm module. */
+	wasmStage?: import('../runtime/wasm-stage-runtime').WasmStageRuntime | null;
 	/**
 	 * Returns live behavior links for a descriptor key.
 	 * O(1) lookup into a pre-built stage index.

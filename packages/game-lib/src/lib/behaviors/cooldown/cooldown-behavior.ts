@@ -6,7 +6,6 @@
  * UI components (CooldownIcon) can read from the same store.
  */
 
-import type { IWorld } from 'bitecs';
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import {
@@ -68,11 +67,10 @@ export interface CooldownHandle {
 
 class CooldownSystem implements BehaviorSystem {
 	constructor(
-		private world: any,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) { }
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, delta: number): void {
 		const links = this.getBehaviorLinks?.(COOLDOWN_BEHAVIOR_KEY);
 		if (links) {
 			for (const link of links) {
@@ -80,11 +78,10 @@ class CooldownSystem implements BehaviorSystem {
 			}
 		}
 
-		// Tick all active cooldowns
 		tickCooldowns(delta);
 	}
 
-	destroy(_ecs: IWorld): void { }
+	destroy(_ecs: unknown): void { }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -163,6 +160,6 @@ export const CooldownBehavior = defineBehavior<CooldownOptions, CooldownHandle>(
 	name: 'cooldown',
 	defaultOptions: { cooldowns: {} },
 	systemFactory: (ctx) =>
-		new CooldownSystem(ctx.world, ctx.getBehaviorLinks),
+		new CooldownSystem(ctx.getBehaviorLinks),
 	createHandle: createCooldownHandle,
 });

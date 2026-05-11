@@ -27,7 +27,6 @@ export default defineConfig(async (env: ConfigEnv): Promise<UserConfig> => {
 		'three-instanced-uniforms-mesh',
 		'three-spritetext',
 		'nanoid',
-		'bitecs',
 		'lucide-solid',
 	];
 

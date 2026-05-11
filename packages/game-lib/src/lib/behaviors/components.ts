@@ -1,8 +1,7 @@
 /**
- * Core ECS Components
- * 
- * These are pure data interfaces with no logic.
- * They work alongside the existing bitecs components in transformable.system.ts
+ * Core behavior helper types
+ *
+ * Plain data interfaces shared by movement behaviors and coordinators.
  */
 
 import type { RigidBody } from '@dimforge/rapier3d-compat';

@@ -5,7 +5,6 @@
  * This wraps the existing ThrusterMovementBehavior and components.
  */
 
-import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { ThrusterMovementBehavior, ThrusterEntity } from './thruster-movement.behavior';
@@ -16,6 +15,7 @@ import {
 	type ThrusterMovementComponent,
 	type ThrusterInputComponent,
 } from './components';
+import type { WasmStageRuntime } from '../../runtime/wasm-stage-runtime';
 
 /**
  * Thruster behavior options (typed for entity.use() autocomplete)
@@ -50,26 +50,26 @@ const THRUSTER_BEHAVIOR_KEY = Symbol.for('zylem:behavior:thruster');
  */
 class ThrusterBehaviorSystem implements BehaviorSystem {
 	private movementBehavior: ThrusterMovementBehavior;
+	private attachedRuntimeSlots = new Set<number>();
 
 	constructor(
 		private world: any,
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {
 		this.movementBehavior = new ThrusterMovementBehavior(world);
 	}
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, delta: number): void {
 		const links = this.getBehaviorLinks?.(THRUSTER_BEHAVIOR_KEY);
 		if (!links) return;
 
 		for (const link of links) {
 			const gameEntity = link.entity as any;
 			const thrusterRef = link.ref as any;
-			if (!gameEntity.body) continue;
 
 			const options = thrusterRef.options as ThrusterBehaviorOptions;
 
-			// Ensure entity has thruster components (initialized once)
 			if (!gameEntity.thruster) {
 				gameEntity.thruster = createThrusterMovementComponent(
 					options.linearThrust,
@@ -82,16 +82,10 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
 				gameEntity.$thruster = createThrusterInputComponent() as ThrusterInputComponent;
 			}
 
-			if (!gameEntity.physics) {
-				gameEntity.physics = { body: gameEntity.body };
-			}
-
-			// Create FSM lazily and attach to the BehaviorRef for handle.getFSM()
 			if (!thrusterRef.fsm && gameEntity.$thruster) {
 				thrusterRef.fsm = new ThrusterFSM({ input: gameEntity.$thruster });
 			}
 
-			// Update FSM to sync state with input (auto-transitions)
 			if (thrusterRef.fsm && gameEntity.$thruster) {
 				thrusterRef.fsm.update({
 					thrust: gameEntity.$thruster.thrust,
@@ -101,12 +95,37 @@ class ThrusterBehaviorSystem implements BehaviorSystem {
 				});
 			}
 
+			const handle = (gameEntity.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, options);
+				const input = gameEntity.$thruster as ThrusterInputComponent | undefined;
+				if (input) {
+					this.wasmStage.setThrusterInput(handle, input.thrust, input.rotate);
+				}
+				continue;
+			}
+
+			if (!gameEntity.body) continue;
+			if (!gameEntity.physics) {
+				gameEntity.physics = { body: gameEntity.body };
+			}
 			this.movementBehavior.updateEntity(gameEntity, delta);
 		}
 	}
 
-	destroy(_ecs: IWorld): void {
-		// Cleanup if needed
+	private ensureWasmAttached(handle: number, options: ThrusterBehaviorOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		this.wasmStage.attachThruster(handle, {
+			maxSpeed: 50,
+			acceleration: options.linearThrust,
+			turnRateRadPerSec: options.angularThrust,
+			linearDamping: options.linearDamping ?? 0,
+		});
+		this.attachedRuntimeSlots.add(handle);
+	}
+
+	destroy(_ecs: unknown): void {
+		this.attachedRuntimeSlots.clear();
 	}
 }
 
@@ -127,5 +146,5 @@ export const ThrusterBehavior = defineBehavior<ThrusterBehaviorOptions, Record<s
 	name: 'thruster',
 	defaultOptions,
 	systemFactory: (ctx) =>
-		new ThrusterBehaviorSystem(ctx.world, ctx.getBehaviorLinks),
+		new ThrusterBehaviorSystem(ctx.world, ctx.wasmStage ?? null, ctx.getBehaviorLinks),
 });

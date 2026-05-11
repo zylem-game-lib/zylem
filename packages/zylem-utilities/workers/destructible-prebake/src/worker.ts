@@ -1,7 +1,14 @@
 /**
- * Web Worker: Voronoi / simple fracture for {@link Destructible3DBehavior} prebake.
+ * Web Worker: Voronoi / simple fracture for the Destructible3D behavior prebake.
  *
- * Instantiate with `{ type: 'module' }` and expose URL to the host (see package README / stage config patterns).
+ * Instantiate with `{ type: 'module' }` and pass the worker URL to the host
+ * via `Destructible3DBehaviorOptions.prebakeWorkerUrl` (see the destructible-3d
+ * behavior README in @zylem/game-lib for stage-config patterns).
+ *
+ * Lives in @zylem/utilities (not @zylem/game-lib) so the runtime worker
+ * sits alongside the offline prebake CLI as a sibling tool that produces
+ * destructible fragment data — the game-lib runtime stays focused on the
+ * fracture/repair behavior itself.
  */
 
 import * as Comlink from 'comlink';
@@ -14,7 +21,7 @@ import {
 	plainToBufferGeometry,
 	type PrebakeWorkerRequest,
 	type PrebakeWorkerResponse,
-} from './destructible-prebake-payload';
+} from '@zylem/game-behavior-shared';
 
 const outerMaterial = new MeshBasicMaterial();
 const innerMaterial = new MeshBasicMaterial();

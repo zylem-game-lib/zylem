@@ -45,7 +45,6 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	protected parent: NodeInterface | null = null;
 	protected children: NodeInterface[] = [];
 	public options: Options;
-	public eid: number = 0;
 	public uuid: string = '';
 	public name: string = '';
 	public markedForRemoval: boolean = false;

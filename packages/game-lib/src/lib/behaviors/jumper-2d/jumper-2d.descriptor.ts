@@ -1,4 +1,3 @@
-import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { setVelocityIntent } from '../../actions/capabilities/velocity-intents';
@@ -22,6 +21,7 @@ import {
 	Jumper2DTickEvent,
 } from './jumper-2d.behavior';
 import { Jumper2DFSM, Jumper2DState } from './jumper-2d-fsm';
+import type { WasmStageRuntime } from '../../runtime/wasm-stage-runtime';
 
 export interface Jumper2DBehaviorOptions {
 	jumpHeight?: number;
@@ -104,25 +104,36 @@ class Jumper2DBehaviorSystem implements BehaviorSystem {
 	private initializedEntities = new Set<string>();
 	private timeSinceGroundedMs = new Map<string, number>();
 	private wasJumpHeld = new Map<string, boolean>();
+	private attachedRuntimeSlots = new Set<number>();
 
 	constructor(
 		private world: any,
 		private scene: any,
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {
 		this.groundProbe = new GroundProbe3D(world);
 	}
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, delta: number): void {
 		const links = this.getBehaviorLinks?.(JUMPER_2D_BEHAVIOR_KEY);
 		if (!links) return;
 
 		for (const link of links) {
 			const gameEntity = link.entity as any;
 			const jumperRef = link.ref as any;
-			if (!gameEntity.body) continue;
 
 			const options = jumperRef.options as Jumper2DBehaviorOptions;
+			const handle = (gameEntity.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, options);
+				const input = gameEntity.$jumper2d as JumpInput2D | undefined;
+				const jumpPressed = !!(input?.jumpPressed || input?.jumpHeld);
+				this.wasmStage.setJumper2DInput(handle, jumpPressed);
+				continue;
+			}
+
+			if (!gameEntity.body) continue;
 
 			if (!gameEntity.jumper2d) {
 				gameEntity.jumper2d = createJumpConfig2D(options);
@@ -218,11 +229,25 @@ class Jumper2DBehaviorSystem implements BehaviorSystem {
 		}
 	}
 
-	destroy(_ecs: IWorld): void {
+	private ensureWasmAttached(handle: number, options: Jumper2DBehaviorOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		const jumpForce = Math.sqrt(2 * (options.gravity ?? 20) * (options.jumpHeight ?? 2.5));
+		this.wasmStage.attachJumper2D(handle, {
+			jumpForce,
+			maxJumps: options.maxJumps ?? 1,
+			jumpBufferTime: (options.jumpBufferMs ?? 80) / 1000,
+			coyoteTime: (options.coyoteTimeMs ?? 100) / 1000,
+			gravity: options.gravity ?? 20,
+		});
+		this.attachedRuntimeSlots.add(handle);
+	}
+
+	destroy(_ecs: unknown): void {
 		this.groundProbe.destroy();
 		this.initializedEntities.clear();
 		this.timeSinceGroundedMs.clear();
 		this.wasJumpHeld.clear();
+		this.attachedRuntimeSlots.clear();
 	}
 }
 
@@ -239,7 +264,7 @@ export const Jumper2D = defineBehavior<
 	name: 'jumper-2d',
 	defaultOptions,
 	systemFactory: (ctx) =>
-		new Jumper2DBehaviorSystem(ctx.world, ctx.scene, ctx.getBehaviorLinks),
+		new Jumper2DBehaviorSystem(ctx.world, ctx.scene, ctx.wasmStage ?? null, ctx.getBehaviorLinks),
 	createHandle: (ref) => ({
 		getState: () =>
 			(ref.fsm as Jumper2DFSM | undefined)?.getState() ??

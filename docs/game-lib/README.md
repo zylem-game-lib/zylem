@@ -61,7 +61,7 @@ The table below is the canonical map for where diagrams belong and what each are
 | Graphics | `packages/game-lib/src/lib/graphics` | `docs/game-lib/src/lib/graphics` | `scene-rendering.puml` | scene management, materials, instancing, renderer integration |
 | Input | `packages/game-lib/src/lib/input` | `docs/game-lib/src/lib/input` | `input-subsystem.puml` | provider model, merged input state, keyboard/mouse/gamepad mapping |
 | Collision | `packages/game-lib/src/lib/collision` | `docs/game-lib/src/lib/collision` | `collision-dispatch-architecture.puml` | collision builder, world attachment, callbacks, delegates |
-| Physics | `packages/game-lib/src/lib/physics` | `docs/game-lib/src/lib/physics` | `physics-worker-bridge.puml` | proxy/worker protocol, body handles, transform sync, collision events |
+| Physics | `packages/game-lib/src/lib/physics` | `docs/game-lib/src/lib/physics` | _(no diagrams currently)_ | shared pose/interpolation helpers and collider-desc inspection used by behaviors and `ZylemWorld` |
 | Systems | `packages/game-lib/src/lib/systems` | `docs/game-lib/src/lib/systems` | `frame-update-sequence.puml` | frame order, world step, behavior updates, transform sync |
 | Sounds | `packages/game-lib/src/lib/sounds` | `docs/game-lib/src/lib/sounds` | `audio-utilities-overview.puml` | lightweight sound helpers and audio utility role |
 | Web components | `packages/game-lib/src/web-components` | `docs/game-lib/src/web-components` | `zylem-game-runtime.puml` | `<zylem-game>`, DOM hosting, runtime bootstrapping, display/debug wiring |
@@ -100,9 +100,8 @@ If you are new to the package, a good documentation order is:
 8. `src/lib/actions/action-transform-pipeline.puml`
 9. `src/lib/camera/camera-subsystem.puml`
 10. `src/lib/graphics/scene-rendering.puml`
-11. `src/lib/physics/physics-worker-bridge.puml`
-12. `src/lib/input/input-subsystem.puml`
-13. `src/web-components/zylem-game-runtime.puml`
+11. `src/lib/input/input-subsystem.puml`
+12. `src/web-components/zylem-game-runtime.puml`
 
 ## Documentation conventions
 

@@ -68,10 +68,6 @@
     "./runtime": {
       "types": "./dist/runtime.d.ts",
       "import": "./dist/runtime.js"
-    },
-    "./behavior/destructible-3d/prebake-build": {
-      "types": "./dist/behavior/destructible-3d-prebake-build.d.ts",
-      "import": "./dist/behavior/destructible-3d-prebake-build.js"
     }
   },
   "keywords": [
@@ -103,7 +99,6 @@
     "@dimforge/rapier3d-compat": "^0.11.2",
     "@sinclair/typebox": "^0.34.41",
     "@types/howler": "^2.2.12",
-    "bitecs": "^0.3.40",
     "howler": "^2.2.4",
     "idb-keyval": "^6.2.2",
     "msgpackr": "^1.11.5",
@@ -117,7 +112,6 @@
   "peerDependencies": {
     "@dimforge/rapier3d-compat": "^0.11.2",
     "@zylem/runtime": "^0.1.0",
-    "bitecs": "^0.3.40",
     "howler": "^2.2.4",
     "nanoid": "^5.1.5",
     "three": "^0.180.0",
@@ -129,6 +123,7 @@
     }
   },
   "devDependencies": {
+    "@zylem/game-behavior-shared": "workspace:*",
     "@zylem/runtime": "workspace:*",
     "@types/node": "^20.19.13",
     "@types/stats.js": "^0.17.4",

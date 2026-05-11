@@ -7,7 +7,6 @@ import { RigidBody, Collider } from '@dimforge/rapier3d-compat';
 export interface BaseEntityInterface {
 	uuid: string;
 	name: string;
-	eid: number;
 	group: Group | null | undefined;
 	body: RigidBody | null | undefined;
 	collider: Collider | null | undefined;

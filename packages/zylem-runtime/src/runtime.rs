@@ -4,17 +4,19 @@ use rapier3d::prelude::*;
 use shipyard::{EntityId, View, ViewMut, World};
 
 #[path = "runtime/behaviors/mod.rs"]
-mod behaviors;
+pub mod behaviors;
 #[path = "runtime/components/mod.rs"]
-mod components;
+pub mod components;
 #[allow(dead_code)]
 #[path = "runtime/common.rs"]
-mod common;
+pub mod common;
 #[allow(dead_code)]
 #[path = "runtime/events.rs"]
-mod events;
+pub mod events;
 #[path = "runtime/modes/mod.rs"]
 mod modes;
+#[path = "runtime/stage/mod.rs"]
+pub mod stage;
 
 use components::body_2d::{Body2DKind, PendingBody2DSlot};
 use components::body_3d::PendingBody3DSlot;

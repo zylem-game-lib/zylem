@@ -107,9 +107,6 @@ importers:
       '@zylem/styles':
         specifier: workspace:*
         version: link:../zylem-styles
-      bitecs:
-        specifier: ^0.3.40
-        version: 0.3.40
       howler:
         specifier: ^2.2.4
         version: 2.2.4
@@ -166,6 +163,25 @@ importers:
         specifier: ^2.11.8
         version: 2.11.8(solid-js@1.9.9)(vite@7.0.4(@types/node@20.19.13)(jiti@1.21.7)(tsx@4.20.6))
 
+  packages/game-behavior-shared:
+    dependencies:
+      '@dgreenheck/three-pinata':
+        specifier: ^2.0.1
+        version: 2.0.1(three@0.180.0)
+    devDependencies:
+      '@types/three':
+        specifier: 0.171.0
+        version: 0.171.0
+      three:
+        specifier: ^0.180.0
+        version: 0.180.0
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.6)(typescript@5.8.2)
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+
   packages/game-lib:
     dependencies:
       '@dgreenheck/three-pinata':
@@ -180,9 +196,6 @@ importers:
       '@types/howler':
         specifier: ^2.2.12
         version: 2.2.12
-      bitecs:
-        specifier: ^0.3.40
-        version: 0.3.40
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -223,6 +236,9 @@ importers:
       '@types/three':
         specifier: 0.171.0
         version: 0.171.0
+      '@zylem/game-behavior-shared':
+        specifier: workspace:*
+        version: link:../game-behavior-shared
       '@zylem/runtime':
         specifier: workspace:*
         version: link:../zylem-runtime
@@ -280,9 +296,15 @@ importers:
       '@dgreenheck/three-pinata':
         specifier: ^2.0.1
         version: 2.0.1(three@0.180.0)
+      '@zylem/game-behavior-shared':
+        specifier: workspace:*
+        version: link:../game-behavior-shared
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
+      comlink:
+        specifier: ^4.4.2
+        version: 4.4.2
       three:
         specifier: ^0.180.0
         version: 0.180.0
@@ -1333,9 +1355,6 @@ packages:
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
-
-  bitecs@0.3.40:
-    resolution: {integrity: sha512-wAylY4pNfX8IeIH5phtwt1lUNtHKrkoSNrArI7Ris2Y4nEQWFIVvXdgAuqprEg9bq8Wolmlj0gVfeG6MFmtI2Q==}
 
   braces@3.0.3:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
@@ -3206,8 +3225,6 @@ snapshots:
       require-from-string: 2.0.2
 
   binary-extensions@2.3.0: {}
-
-  bitecs@0.3.40: {}
 
   braces@3.0.3:
     dependencies:

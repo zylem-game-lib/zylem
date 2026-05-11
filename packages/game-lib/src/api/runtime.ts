@@ -60,3 +60,45 @@ export {
 	ZylemRuntimePlatformer3DFsmState,
 } from '../lib/runtime/zylem-wasm-runtime';
 export { createZylemRuntimeStageAdapter } from '../lib/runtime/zylem-stage-runtime';
+
+// ─── Unified-Stage runtime (Phase 2+ migration) ────────────────────────────
+export type {
+	StageBodyConfig,
+	StageColliderConfig,
+	StageColliderShape,
+	StageEvent,
+	StagePose,
+	StageWasmExports,
+	WasmStageRuntimeOptions,
+} from '../lib/runtime/wasm-stage-runtime';
+export {
+	StageBodyKind,
+	StageBoundaryDim,
+	StageEventType,
+	StageRicochetDim,
+	StageRicochetReflection,
+	StageTopDownPlane,
+	STAGE_EVENT_STRIDE,
+	STAGE_INVALID_SLOT,
+	STAGE_POSE_LEN,
+	STAGE_RENDER_STRIDE,
+	WasmStageRuntime,
+	createWasmStageRuntime,
+} from '../lib/runtime/wasm-stage-runtime';
+export type {
+	RuntimeBodyOptions,
+	RuntimeColliderOptions,
+	RuntimeCollisionBundle,
+} from '../lib/collision/runtime-collision-builder';
+export {
+	buildBoxCollider,
+	buildCapsuleCollider,
+	buildConvexHullCollider,
+	buildCylinderCollider,
+	buildHeightfieldCollider,
+	buildRuntimeBody,
+	buildSphereCollider,
+	buildTrimeshCollider,
+	bundleRuntimeCollision,
+	packCollisionGroups,
+} from '../lib/collision/runtime-collision-builder';

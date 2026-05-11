@@ -1,0 +1,15 @@
+{
+	"extends": "../../../../tsconfig.json",
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"rootDir": "src",
+		"composite": false,
+		"lib": ["ES2023", "DOM", "WebWorker"],
+		"types": [],
+		"exactOptionalPropertyTypes": false,
+		"noUncheckedIndexedAccess": false
+	},
+	"include": ["src/**/*.ts"]
+}

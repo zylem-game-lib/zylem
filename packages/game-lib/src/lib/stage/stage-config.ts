@@ -6,6 +6,22 @@ import { ZylemBlueColor } from '../core/utility/vector';
 import type { ZylemShader } from '../graphics/material';
 import type { RuntimeDebugBinding, StageRuntimeAdapter } from '../runtime/zylem-stage-runtime';
 import type { Vec3Components } from '../core/vector';
+import type { WasmStageRuntimeOptions } from '../runtime/wasm-stage-runtime';
+
+/** Source for the unified-Stage wasm runtime: bytes, fetch URL, or a builder. */
+export type StageWasmSource =
+	| ArrayBuffer
+	| RequestInfo
+	| URL
+	| (() => Promise<ArrayBuffer | RequestInfo | URL>);
+
+/** Authoring-side configuration for the unified-Stage wasm runtime. */
+export interface StageWasmRuntimeConfig {
+	/** wasm bytes (ArrayBuffer) or a URL/`fetch` input that resolves to bytes. */
+	source: StageWasmSource;
+	/** Forwarded to {@link WasmStageRuntime} construction. */
+	options?: Omit<WasmStageRuntimeOptions, 'imports'>;
+}
 
 export type StageGLTFAssetLoaderConfig = {
 	meshopt?: boolean;
@@ -28,20 +44,16 @@ export type StageConfigLike = Partial<{
 	variables: Record<string, any>;
 	/** Physics update rate in Hz (default 60). */
 	physicsRate: number;
-	/** Run physics in a Web Worker (default false). */
-	usePhysicsWorker: boolean;
-	/**
-	 * URL to the physics worker script. Required when `usePhysicsWorker` is true.
-	 * In a Vite app, use:
-	 * ```ts
-	 * physicsWorkerUrl: new URL('@zylem/game-lib/dist/physics-worker.js', import.meta.url)
-	 * ```
-	 */
-	physicsWorkerUrl: URL | string;
 	assetLoaders: StageAssetLoaderConfig;
 	runtimeAdapter: StageRuntimeAdapter;
 	/** Binds stage debug policy into wasm runtime adapters (see {@link RuntimeDebugBinding}). */
 	runtimeDebugBinding?: RuntimeDebugBinding;
+	/**
+	 * When set, the stage instantiates a {@link WasmStageRuntime} from the given
+	 * source during `load()`. Behavior descriptors that have been ported to the
+	 * unified-Stage Rust runtime read this via `BehaviorSystemContext.wasmStage`.
+	 */
+	wasmRuntime?: StageWasmRuntimeConfig;
 	/**
 	 * When `false`, the engine's built-in ambient + directional lights are
 	 * suppressed so the stage can be lit entirely via `createLight(...)`
@@ -63,10 +75,6 @@ export class StageConfig {
 		public variables: Record<string, any>,
 		/** Physics update rate in Hz (default 60). */
 		public physicsRate: number = 60,
-		/** Run physics in a Web Worker (default false). */
-		public usePhysicsWorker: boolean = false,
-		/** URL to the physics worker script. Required when usePhysicsWorker is true. */
-		public physicsWorkerUrl: URL | string | undefined = undefined,
 		/** Optional runtime loader configuration for stage-managed assets. */
 		public assetLoaders: StageAssetLoaderConfig = {},
 		/** Optional stage runtime adapter for wasm-owned simulation/rendering. */
@@ -75,6 +83,8 @@ export class StageConfig {
 		public runtimeDebugBinding: RuntimeDebugBinding | undefined = undefined,
 		/** Whether the built-in ambient + directional lights are created. */
 		public defaultLighting: boolean = true,
+		/** Optional unified-Stage wasm runtime configuration. */
+		public wasmRuntime: StageWasmRuntimeConfig | undefined = undefined,
 	) { }
 }
 
@@ -93,12 +103,11 @@ export function createDefaultStageConfig(): StageConfig {
 		new Vector3(0, 0, 0),
 		{},
 		60,
-		false,
-		undefined,
 		{},
 		undefined,
 		undefined,
 		true,
+		undefined,
 	);
 }
 
@@ -150,12 +159,11 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		config.gravity ?? defaults.gravity,
 		config.variables ?? defaults.variables,
 		config.physicsRate ?? defaults.physicsRate,
-		config.usePhysicsWorker ?? defaults.usePhysicsWorker,
-		(config as any).physicsWorkerUrl ?? defaults.physicsWorkerUrl,
 		(config as any).assetLoaders ?? defaults.assetLoaders,
 		(config as any).runtimeAdapter ?? defaults.runtimeAdapter,
 		(config as any).runtimeDebugBinding ?? defaults.runtimeDebugBinding,
 		(config as any).defaultLighting ?? defaults.defaultLighting,
+		(config as any).wasmRuntime ?? defaults.wasmRuntime,
 	);
 
 	// Backward compat: first camera is the legacy `camera` field

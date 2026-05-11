@@ -30,10 +30,7 @@
       "@zylem/game-lib/events": ["src/api/events.ts"],
       "@zylem/game-lib/debug": ["src/api/debug.ts"],
       "@zylem/game-lib/web-components": ["src/api/web-components.ts"],
-      "@zylem/game-lib/runtime": ["src/api/runtime.ts"],
-      "@zylem/game-lib/behavior/destructible-3d/prebake-build": [
-        "src/lib/behaviors/destructible-3d/destructible-prebake-build.ts"
-      ]
+      "@zylem/game-lib/runtime": ["src/api/runtime.ts"]
     }
   },
   "include": ["src/**/*.ts"],

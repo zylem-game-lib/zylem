@@ -53,9 +53,13 @@ classDiagram
   namespace PhysicsAndAudio {
     class ZylemWorld
     class CollisionBuilder
-    class PhysicsProxy
-    class PhysicsWorker
     class Sounds
+  }
+
+  namespace UnifiedStageRuntime {
+    class WasmStageRuntime
+    class StageSimulation
+    class RuntimeCollisionBuilder
   }
 
   namespace ExternalLibraries {
@@ -64,6 +68,7 @@ classDiagram
     class Bitecs
     class Valtio
     class WebAudio
+    class ZylemRuntimeWasm
   }
 
   PublicAPI.ApiMain --> GameAndStageRuntime.Game
@@ -97,13 +102,18 @@ classDiagram
   GameAndStageRuntime.ZylemStage --> RenderingAndInput.CameraManager
   GameAndStageRuntime.ZylemStage --> RenderingAndInput.ZylemScene
   GameAndStageRuntime.ZylemStage --> PhysicsAndAudio.ZylemWorld
+  GameAndStageRuntime.ZylemStage --> UnifiedStageRuntime.WasmStageRuntime
   GameAndStageRuntime.ZylemStage ..> ExternalLibraries.Bitecs
+  UnifiedStageRuntime.WasmStageRuntime --> UnifiedStageRuntime.StageSimulation
+  UnifiedStageRuntime.WasmStageRuntime ..> ExternalLibraries.ZylemRuntimeWasm
+  UnifiedStageRuntime.RuntimeCollisionBuilder --> UnifiedStageRuntime.WasmStageRuntime
+  CoreAndContent.GameEntity --> UnifiedStageRuntime.WasmStageRuntime
+  CoreAndContent.BehaviorSystem --> UnifiedStageRuntime.WasmStageRuntime
   RenderingAndInput.CameraManager --> RenderingAndInput.ZylemCamera
   RenderingAndInput.RendererManager --> RenderingAndInput.ZylemScene
   RenderingAndInput.InstanceManager --> CoreAndContent.GameEntity
   RenderingAndInput.MaterialBuilder --> CoreAndContent.AssetManager
   PhysicsAndAudio.CollisionBuilder --> CoreAndContent.GameEntity
-  PhysicsAndAudio.PhysicsProxy --> PhysicsAndAudio.PhysicsWorker
   PhysicsAndAudio.ZylemWorld ..> ExternalLibraries.Rapier
   RenderingAndInput.ZylemScene ..> ExternalLibraries.Three
   RenderingAndInput.RendererManager ..> ExternalLibraries.Three
@@ -113,3 +123,5 @@ classDiagram
   PhysicsAndAudio.Sounds ..> ExternalLibraries.WebAudio
 
   note for GameAndStageRuntime.Game "Wrapper types collect configuration.\nRuntime types own the live loop."
+  note for UnifiedStageRuntime.WasmStageRuntime "Phase 2+ unified-Stage runtime.\nOwns Shipyard ECS + Rapier (Rust)\nvia FFI; behavior descriptors call\nattach*/query* helpers when present."
+  note for PhysicsAndAudio.ZylemWorld "Legacy TS-side Rapier path.\nKept during incremental migration;\nslated for removal once every entity\nfactory emits StageBodyConfig +\nStageColliderConfig instead."

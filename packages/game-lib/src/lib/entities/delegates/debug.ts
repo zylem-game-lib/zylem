@@ -127,12 +127,6 @@ export class DebugDelegate {
       defaultInfo.physics = physicsInfo;
     }
 
-    if (this.entity.behaviors.length > 0) {
-      defaultInfo.behaviors = this.entity.behaviors.map(
-        b => b.constructor.name,
-      );
-    }
-
     if (hasDebugInfo(this.entity)) {
       const customInfo = this.entity.getDebugInfo();
       return { ...defaultInfo, ...customInfo };

@@ -21,9 +21,6 @@
       "@zylem/game-lib/debug": ["../game-lib/src/api/debug.ts"],
       "@zylem/game-lib/web-components": ["../game-lib/src/api/web-components.ts"],
       "@zylem/game-lib/runtime": ["../game-lib/src/api/runtime.ts"],
-      "@zylem/game-lib/behavior/destructible-3d/prebake-build": [
-        "../game-lib/src/lib/behaviors/destructible-3d/destructible-prebake-build.ts"
-      ],
       "~/*": ["../game-lib/src/*"],
       "@/*": ["../game-lib/src/*"],
       "@lib/debug/*": ["../editor/src/debug/*"],

@@ -95,7 +95,6 @@ const PREDEFINED_ORDER = {
 	],
 	Misc: [
 		'optimized-destructible-ship',
-		'physics-worker',
 		'baileys-world',
 	],
 } as const satisfies Record<ExampleSectionName, readonly string[]>;

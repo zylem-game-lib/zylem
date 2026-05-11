@@ -20,8 +20,6 @@ export const initialStageState = {
 	gravity: new Vector3(0, 0, 0),
 	variables: {},
 	physicsRate: 60,
-	usePhysicsWorker: false,
-	physicsWorkerUrl: undefined as URL | string | undefined,
 	defaultLighting: true,
 	entities: [] as GameEntityInterface[],
 };

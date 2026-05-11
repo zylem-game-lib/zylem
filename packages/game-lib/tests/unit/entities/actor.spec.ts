@@ -3,8 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { EntityAssetLoader } from '../../../src/lib/core/entity-asset-loader';
 import { createActor } from '../../../src/lib/entities/actor';
-import { reconstructColliderDesc } from '../../../src/lib/physics/physics-worker';
-import { serializeColliderDesc } from '../../../src/lib/physics/serialize-descriptors';
+import { inspectColliderDesc } from '../../../src/lib/physics/collider-desc-inspect';
 
 function createModelWithOffsetMeshes(): Group {
 	const root = new Group();
@@ -78,7 +77,7 @@ describe('ZylemActor', () => {
 		actor.group?.position.set(25, -14, 8);
 		actor.synchronizeRuntimeCollider();
 
-		const serialized = serializeColliderDesc(actor.colliderDesc!);
+		const serialized = inspectColliderDesc(actor.colliderDesc!);
 		expect(serialized.shape).toBe('capsule');
 		expect(serialized.dimensions[0]).toBeCloseTo(0, 5);
 		expect(serialized.dimensions[1]).toBeCloseTo(3.5, 5);
@@ -102,7 +101,7 @@ describe('ZylemActor', () => {
 		await flushPromises();
 		actor.synchronizeRuntimeCollider();
 
-		const serialized = serializeColliderDesc(actor.colliderDesc!);
+		const serialized = inspectColliderDesc(actor.colliderDesc!);
 		expect(serialized.shape).toBe('capsule');
 		expect(serialized.dimensions[0]).toBeCloseTo(0, 5);
 		expect(serialized.dimensions[1]).toBeCloseTo(1.75, 5);
@@ -132,7 +131,7 @@ describe('ZylemActor', () => {
 		await flushPromises();
 		actor.synchronizeRuntimeCollider();
 
-		const serialized = serializeColliderDesc(actor.colliderDesc!);
+		const serialized = inspectColliderDesc(actor.colliderDesc!);
 		expect(serialized.shape).toBe('capsule');
 		expect(serialized.dimensions[0]).toBeCloseTo(2, 5);
 		expect(serialized.dimensions[1]).toBeCloseTo(1, 5);
@@ -157,7 +156,7 @@ describe('ZylemActor', () => {
 		await flushPromises();
 		actor.synchronizeRuntimeCollider();
 
-		const serialized = serializeColliderDesc(actor.colliderDesc!);
+		const serialized = inspectColliderDesc(actor.colliderDesc!);
 		expect(serialized.translation).toEqual([5, 2, 1]);
 		expect(serialized.dimensions[1]).toBeCloseTo(1.75, 5);
 	});
@@ -205,7 +204,7 @@ describe('ZylemActor', () => {
 
 		await flushPromises();
 		actor.synchronizeRuntimeCollider();
-		const firstCollider = serializeColliderDesc(actor.colliderDesc!);
+		const firstCollider = inspectColliderDesc(actor.colliderDesc!);
 
 		actor.group?.position.set(0, -12, 0);
 		actor.nodeDestroy({ me: actor, globals: {} } as any);
@@ -215,7 +214,7 @@ describe('ZylemActor', () => {
 		expect(actor.group?.position.y ?? 0).toBe(0);
 
 		actor.synchronizeRuntimeCollider();
-		const secondCollider = serializeColliderDesc(actor.colliderDesc!);
+		const secondCollider = inspectColliderDesc(actor.colliderDesc!);
 		expect(secondCollider.translation).toEqual(firstCollider.translation);
 		expect(secondCollider.dimensions).toEqual(firstCollider.dimensions);
 	});
@@ -236,7 +235,7 @@ describe('ZylemActor', () => {
 		actor.group?.position.set(25, -14, 8);
 		actor.synchronizeRuntimeCollider();
 
-		const serialized = serializeColliderDesc(actor.colliderDesc!);
+		const serialized = inspectColliderDesc(actor.colliderDesc!);
 		expect(serialized.shape).toBe('cuboid');
 		expect(serialized.dimensions[0]).toBeCloseTo(3.5, 5);
 		expect(serialized.dimensions[1]).toBeCloseTo(3, 5);
@@ -246,7 +245,7 @@ describe('ZylemActor', () => {
 		expect(serialized.translation?.[2]).toBeCloseTo(0, 5);
 	});
 
-	it('serializes and reconstructs static trimesh colliders', async () => {
+	it('builds static trimesh colliders with raw mesh geometry', async () => {
 		vi.spyOn(EntityAssetLoader.prototype, 'loadFile').mockImplementation(async () => ({
 			object: createSingleMeshModel(),
 		}));
@@ -260,17 +259,10 @@ describe('ZylemActor', () => {
 		await flushPromises();
 		actor.synchronizeRuntimeCollider();
 
-		const serialized = serializeColliderDesc(actor.colliderDesc!);
-		expect(serialized.shape).toBe('trimesh');
-		expect(serialized.vertices?.length ?? 0).toBeGreaterThan(0);
-		expect(serialized.indices?.length ?? 0).toBeGreaterThan(0);
-
-		const reconstructed = reconstructColliderDesc(serialized);
-		const roundTrip = serializeColliderDesc(reconstructed);
-
-		expect(roundTrip.shape).toBe('trimesh');
-		expect(roundTrip.vertices).toEqual(serialized.vertices);
-		expect(roundTrip.indices).toEqual(serialized.indices);
+		const inspected = inspectColliderDesc(actor.colliderDesc!);
+		expect(inspected.shape).toBe('trimesh');
+		expect(inspected.vertices?.length ?? 0).toBeGreaterThan(0);
+		expect(inspected.indices?.length ?? 0).toBeGreaterThan(0);
 	});
 
 	it('downgrades dynamic trimesh requests to bounds and warns once', async () => {
@@ -289,7 +281,7 @@ describe('ZylemActor', () => {
 		actor.synchronizeRuntimeCollider();
 		actor.synchronizeRuntimeCollider();
 
-		const serialized = serializeColliderDesc(actor.colliderDesc!);
+		const serialized = inspectColliderDesc(actor.colliderDesc!);
 		expect(serialized.shape).toBe('cuboid');
 		expect(warnSpy).toHaveBeenCalledTimes(1);
 	});

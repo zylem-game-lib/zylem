@@ -1,5 +1,3 @@
-import { addEntity, removeEntity } from 'bitecs';
-
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
 import { ZylemCamera } from '../camera/zylem-camera';
@@ -21,6 +19,7 @@ import type {
 } from '../behaviors/behavior-system';
 import { Vessel } from '../core/vessel';
 import type { StageRuntimeAdapter } from '../runtime/zylem-stage-runtime';
+import type { WasmStageRuntime } from '../runtime/wasm-stage-runtime';
 
 type NodeLike = { create: Function };
 export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
@@ -31,11 +30,12 @@ export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promi
 export interface EntityDelegateContext {
 	scene: ZylemScene;
 	world: ZylemWorld;
-	ecs: ReturnType<typeof import('bitecs').createWorld>;
 	instanceManager: InstanceManager | null;
 	/** Resolved camera for entity setup contexts. */
 	camera: ZylemCamera;
 	runtimeAdapter?: StageRuntimeAdapter | null;
+	/** Optional unified-Stage wasm runtime (Phase 2+ of the runtime-only migration). */
+	wasmStage?: WasmStageRuntime | null;
 }
 
 /**
@@ -50,14 +50,11 @@ export class StageEntityDelegate {
 	/** Entities queued before load completes. */
 	children: BaseNode[] = [];
 
-	/** EID → BaseNode map of all live entities. */
-	readonly childrenMap: Map<number, BaseNode> = new Map();
+	/** UUID → BaseNode map of all live entities. */
+	readonly childrenMap: Map<string, BaseNode> = new Map();
 
 	/** UUID → BaseNode map populated when debug mode is active. */
 	readonly debugMap: Map<string, BaseNode> = new Map();
-
-	/** UUID → EID reverse lookup for O(1) removal. */
-	private readonly uuidToEid: Map<string, number> = new Map();
 
 	private pendingEntities: StageEntityInput[] = [];
 	private pendingPromises: Promise<BaseNode>[] = [];
@@ -75,10 +72,11 @@ export class StageEntityDelegate {
 	// Runtime context — set via attach() during stage load
 	private scene: ZylemScene | null = null;
 	private world: ZylemWorld | null = null;
-	private ecs: ReturnType<typeof import('bitecs').createWorld> | null = null;
 	private instanceManager: InstanceManager | null = null;
 	private camera: ZylemCamera | null = null;
 	private runtimeAdapter: StageRuntimeAdapter | null = null;
+	/** Unified-Stage wasm runtime; shared with descriptor `systemFactory` calls. */
+	wasmStage: WasmStageRuntime | null = null;
 
 	private loadingDelegate: StageLoadingDelegate;
 	private entityModelDelegate: StageEntityModelDelegate;
@@ -106,10 +104,10 @@ export class StageEntityDelegate {
 	attach(context: EntityDelegateContext): void {
 		this.scene = context.scene;
 		this.world = context.world;
-		this.ecs = context.ecs;
 		this.instanceManager = context.instanceManager;
 		this.camera = context.camera;
 		this.runtimeAdapter = context.runtimeAdapter ?? null;
+		this.wasmStage = context.wasmStage ?? null;
 	}
 
 	// ─── Spawning ────────────────────────────────────────────────────────────
@@ -119,7 +117,7 @@ export class StageEntityDelegate {
 	 * Safe to call only after `attach` when scene/world exist.
 	 */
 	async spawnEntity(child: BaseNode): Promise<void> {
-		if (!this.scene || !this.world || !this.ecs) {
+		if (!this.scene || !this.world) {
 			return;
 		}
 
@@ -130,8 +128,6 @@ export class StageEntityDelegate {
 					await this.spawnEntity(childEntity);
 				}
 			}
-			const vesselEid = addEntity(this.ecs);
-			child.eid = vesselEid;
 
 			child.nodeSetup({
 				me: child,
@@ -144,12 +140,13 @@ export class StageEntityDelegate {
 		}
 
 		const entity = child.create();
-		const eid = addEntity(this.ecs);
-		entity.eid = eid;
 		const runtimeManaged = this.runtimeAdapter?.ownsEntity(entity) ?? false;
 		const runtimeRendered = runtimeManaged && (this.runtimeAdapter?.rendersEntity(entity) ?? false);
 
-		// Register behavior links and auto-register behavior systems once per key.
+		if (this.wasmStage) {
+			(entity as any).wasmStageRef = this.wasmStage;
+		}
+
 		this.registerBehaviorLinks(entity);
 
 		if (!runtimeManaged) {
@@ -182,7 +179,7 @@ export class StageEntityDelegate {
 	}
 
 	handleLateModelReady(entity: GameEntity<any>): void {
-		if (!this.world || !this.scene || !this.uuidToEid.has(entity.uuid)) {
+		if (!this.world || !this.scene || !this.childrenMap.has(entity.uuid)) {
 			return;
 		}
 		if (this.runtimeAdapter?.ownsEntity(entity)) {
@@ -245,8 +242,7 @@ export class StageEntityDelegate {
 
 	/** Add the entity to internal maps and notify listeners. */
 	addEntityToStage(entity: BaseNode): void {
-		this.childrenMap.set(entity.eid, entity);
-		this.uuidToEid.set(entity.uuid, entity.eid);
+		this.childrenMap.set(entity.uuid, entity);
 		if (debugState.enabled) {
 			this.debugMap.set(entity.uuid, entity);
 		}
@@ -263,18 +259,14 @@ export class StageEntityDelegate {
 
 	/**
 	 * Remove an entity and its resources by its UUID.
-	 * Uses a uuid→eid reverse map for O(1) lookup.
 	 * @returns true if removed, false if not found or stage not ready
 	 */
 	removeEntityByUuid(uuid: string): boolean {
-		if (!this.scene || !this.world || !this.ecs) return false;
+		if (!this.scene || !this.world) return false;
 
 		// @ts-ignore - collisionMap is public Map<string, GameEntity<any>>
 		const mapEntity = this.world.collisionMap.get(uuid) as any | undefined;
-		const eidFromUuid = this.uuidToEid.get(uuid);
-		const entityFromChildren = eidFromUuid !== undefined
-			? this.childrenMap.get(eidFromUuid)
-			: undefined;
+		const entityFromChildren = this.childrenMap.get(uuid);
 		const entity: any = mapEntity ?? entityFromChildren ?? this.debugMap.get(uuid);
 		if (!entity) return false;
 		this.unregisterBehaviorLinks(entity);
@@ -296,13 +288,7 @@ export class StageEntityDelegate {
 			this.scene.scene.remove(entity.mesh);
 		}
 
-		removeEntity(this.ecs, entity.eid);
-
-		// O(1) removal via reverse map
-		if (eidFromUuid !== undefined) {
-			this.childrenMap.delete(eidFromUuid);
-			this.uuidToEid.delete(uuid);
-		}
+		this.childrenMap.delete(uuid);
 		this.debugMap.delete(uuid);
 		return true;
 	}
@@ -326,7 +312,6 @@ export class StageEntityDelegate {
 		return {
 			uuid: child.uuid,
 			name: child.name,
-			eid: child.eid,
 		} as Partial<BaseEntityInterface>;
 	}
 
@@ -478,12 +463,11 @@ export class StageEntityDelegate {
 	 * @param systemOrFactory A BehaviorSystem instance or factory function
 	 */
 	registerSystem(systemOrFactory: BehaviorSystem | BehaviorSystemFactory): void {
-		if (!this.world || !this.ecs || !this.scene) return;
+		if (!this.world || !this.scene) return;
 		let system: BehaviorSystem;
 		if (typeof systemOrFactory === 'function') {
 			system = systemOrFactory({
 				world: this.world,
-				ecs: this.ecs,
 				scene: this.scene,
 				getBehaviorLinks: (key: symbol) =>
 					this.behaviorEntityIndex.get(key)
@@ -503,7 +487,7 @@ export class StageEntityDelegate {
 	 */
 	destroyAll(): void {
 		for (const system of this.behaviorSystems) {
-			system.destroy?.(this.ecs!);
+			system.destroy?.();
 		}
 		this.behaviorSystems.length = 0;
 		this.behaviorSystemByKey.clear();
@@ -519,19 +503,17 @@ export class StageEntityDelegate {
 		});
 		this.childrenMap.clear();
 		this.debugMap.clear();
-		this.uuidToEid.clear();
 		this.entityAddedHandlers = [];
 
 		this._isLoaded = false;
 		this.scene = null;
 		this.world = null;
-		this.ecs = null;
 		this.instanceManager = null;
 		this.camera = null;
 	}
 
 	private registerBehaviorLinks(entity: any): void {
-		if (!this.world || !this.ecs || !this.scene) return;
+		if (!this.world || !this.scene) return;
 		if (typeof entity?.getBehaviorRefs !== 'function') return;
 
 		const refs = entity.getBehaviorRefs();
@@ -555,8 +537,8 @@ export class StageEntityDelegate {
 			if (!system && !this.registeredSystemKeys.has(key)) {
 				const createdSystem = ref.descriptor.systemFactory({
 					world: this.world,
-					ecs: this.ecs,
 					scene: this.scene,
+					wasmStage: this.wasmStage,
 					getBehaviorLinks: (behaviorKey: symbol) =>
 						this.behaviorEntityIndex.get(behaviorKey)
 						?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,

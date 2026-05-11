@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { IWorld } from 'bitecs';
 
 import { ScreenWrapBehavior } from '../../../src/lib/behaviors/screen-wrap/screen-wrap.descriptor';
 
@@ -23,13 +22,12 @@ function runWrapUpdate(x: number, y: number) {
 	};
 	const system = ScreenWrapBehavior.systemFactory({
 		world: {},
-		ecs: {} as IWorld,
 		scene: null,
 		getBehaviorLinks: (key: symbol) =>
 			key === ScreenWrapBehavior.key ? [{ entity, ref }] : [],
 	});
 
-	system.update({} as IWorld, 1 / 60);
+	system.update(undefined, 1 / 60);
 	return { entity, ref };
 }
 

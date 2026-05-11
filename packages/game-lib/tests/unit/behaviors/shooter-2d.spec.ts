@@ -128,11 +128,10 @@ describe('Shooter2DBehavior', () => {
 
 		const system = Shooter2DBehavior.systemFactory({
 			world: null,
-			ecs: {} as any,
 			scene: null,
 			getBehaviorLinks: () => [{ entity: source, ref }],
 		});
-		system.update({} as any, 0.11);
+		system.update(undefined, 0.11);
 
 		const firedAgain = await handle.fire({
 			source,

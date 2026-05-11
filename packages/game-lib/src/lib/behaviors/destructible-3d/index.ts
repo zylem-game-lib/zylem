@@ -5,7 +5,7 @@ export type {
 	PlainFractureOptions,
 	PrebakeWorkerRequest,
 	PrebakeWorkerResponse,
-} from './destructible-prebake-payload';
+} from '@zylem/game-behavior-shared';
 export {
 	DestructibleMesh,
 	FractureOptions,

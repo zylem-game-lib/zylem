@@ -5,7 +5,6 @@
  * Provides `entity.use()` API for composable 3D jumping.
  */
 
-import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { setVelocityIntent } from '../../actions/capabilities/velocity-intents';
@@ -26,6 +25,7 @@ import {
 	type JumpState3D,
 	type JumpContext3D,
 } from './components';
+import type { WasmStageRuntime } from '../../runtime/wasm-stage-runtime';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Options exposed through entity.use()
@@ -133,25 +133,36 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
 	private initializedEntities = new Set<string>();
 	private timeSinceGroundedMs = new Map<string, number>();
 	private wasJumpHeld = new Map<string, boolean>();
+	private attachedRuntimeSlots = new Set<number>();
 
 	constructor(
 		private world: any,
 		private scene: any,
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {
 		this.groundProbe = new GroundProbe3D(world);
 	}
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, delta: number): void {
 		const links = this.getBehaviorLinks?.(JUMPER_BEHAVIOR_KEY);
 		if (!links) return;
 
 		for (const link of links) {
 			const gameEntity = link.entity as any;
 			const jumperRef = link.ref as any;
-			if (!gameEntity.body) continue;
 
 			const options = jumperRef.options as Jumper3DBehaviorOptions;
+			const handle = (gameEntity.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, options);
+				const input = gameEntity.$jumper as JumpInput3D | undefined;
+				const jumpPressed = !!(input?.jumpPressed || input?.jumpHeld);
+				this.wasmStage.setJumper3DInput(handle, jumpPressed);
+				continue;
+			}
+
+			if (!gameEntity.body) continue;
 
 			// ── Lazy component init ────────────────────────────────────────
 			if (!gameEntity.jumper) {
@@ -276,11 +287,23 @@ class Jumper3DBehaviorSystem implements BehaviorSystem {
 		}
 	}
 
-	destroy(_ecs: IWorld): void {
+	private ensureWasmAttached(handle: number, options: Jumper3DBehaviorOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		const jumpForce = Math.sqrt(2 * (options.gravity ?? 20) * (options.jumpHeight ?? 2.5));
+		this.wasmStage.attachJumper3D(handle, {
+			jumpForce,
+			maxJumps: options.maxJumps ?? 1,
+			gravity: options.gravity ?? 20,
+		});
+		this.attachedRuntimeSlots.add(handle);
+	}
+
+	destroy(_ecs: unknown): void {
 		this.groundProbe.destroy();
 		this.initializedEntities.clear();
 		this.timeSinceGroundedMs.clear();
 		this.wasJumpHeld.clear();
+		this.attachedRuntimeSlots.clear();
 	}
 }
 
@@ -336,6 +359,7 @@ export const Jumper3D = defineBehavior<
 		new Jumper3DBehaviorSystem(
 			ctx.world,
 			ctx.scene,
+			ctx.wasmStage ?? null,
 			ctx.getBehaviorLinks,
 		),
 	createHandle: (ref) => ({

@@ -5,11 +5,11 @@
  * Asteroids-style screen wrapping with FSM for edge detection.
  */
 
-import type { IWorld } from 'bitecs';
 import { defineBehavior } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { ScreenWrapFSM } from './screen-wrap-fsm';
 import { createBounds2DRect, wrapPoint2D } from '../shared/bounds-2d';
+import type { WasmStageRuntime } from '../../runtime/wasm-stage-runtime';
 
 /**
  * Screen wrap options (typed for entity.use() autocomplete)
@@ -39,36 +39,60 @@ const SCREEN_WRAP_BEHAVIOR_KEY = Symbol.for('zylem:behavior:screen-wrap');
 
 /**
  * ScreenWrapSystem - Wraps entities around 2D bounds
+ *
+ * Mirrors the Rust `screen_wrap` Stage behavior: when `wasmStage` is present
+ * and the entity has a `runtimeHandle`, the wasm runtime owns the wrap and
+ * this system only mirrors the queried state into the local FSM. Otherwise
+ * the legacy TS path runs against the Rapier `RigidBody` translation.
  */
 class ScreenWrapSystem implements BehaviorSystem {
+	private attachedRuntimeSlots = new Set<number>();
+
 	constructor(
 		private world: any,
+		private wasmStage: WasmStageRuntime | null,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
 	) {}
 
-	update(_ecs: IWorld, delta: number): void {
+	update(_ecs: unknown, _delta: number): void {
 		const links = this.getBehaviorLinks?.(SCREEN_WRAP_BEHAVIOR_KEY);
 		if (!links) return;
 
 		for (const link of links) {
 			const gameEntity = link.entity as any;
 			const wrapRef = link.ref as any;
-			if (!gameEntity.body) continue;
-
 			const options = wrapRef.options as ScreenWrapOptions;
 
-			// Create FSM lazily
 			if (!wrapRef.fsm) {
 				wrapRef.fsm = new ScreenWrapFSM();
 			}
 
+			const handle = (gameEntity.runtimeHandle ?? -1) as number;
+			if (this.wasmStage && handle >= 0) {
+				this.ensureWasmAttached(handle, options);
+				const pose = this.wasmStage.getPose(handle);
+				const query = this.wasmStage.queryScreenWrap(handle);
+				if (pose && query) {
+					const bounds = createBounds2DRect(options);
+					wrapRef.fsm.update(
+						{ x: pose.position[0], y: pose.position[1] },
+						{
+							minX: bounds.minX,
+							maxX: bounds.maxX,
+							minY: bounds.minY,
+							maxY: bounds.maxY,
+							edgeThreshold: options.edgeThreshold,
+						},
+						query.lastWrappedAxes !== 0,
+					);
+					continue;
+				}
+			}
+
+			if (!gameEntity.body) continue;
 			const wrapped = this.wrapEntity(gameEntity, options);
-
-			// Update FSM with position and wrap state
 			const pos = gameEntity.body.translation();
-			const { edgeThreshold } = options;
 			const bounds = createBounds2DRect(options);
-
 			wrapRef.fsm.update(
 				{ x: pos.x, y: pos.y },
 				{
@@ -76,11 +100,23 @@ class ScreenWrapSystem implements BehaviorSystem {
 					maxX: bounds.maxX,
 					minY: bounds.minY,
 					maxY: bounds.maxY,
-					edgeThreshold,
+					edgeThreshold: options.edgeThreshold,
 				},
-				wrapped
+				wrapped,
 			);
 		}
+	}
+
+	private ensureWasmAttached(handle: number, options: ScreenWrapOptions): void {
+		if (!this.wasmStage || this.attachedRuntimeSlots.has(handle)) return;
+		this.wasmStage.attachScreenWrap(handle, {
+			width: options.width,
+			height: options.height,
+			centerX: options.centerX,
+			centerY: options.centerY,
+			edgeThreshold: options.edgeThreshold,
+		});
+		this.attachedRuntimeSlots.add(handle);
 	}
 
 	private wrapEntity(entity: any, options: ScreenWrapOptions): boolean {
@@ -98,8 +134,8 @@ class ScreenWrapSystem implements BehaviorSystem {
 		return result.wrapped;
 	}
 
-	destroy(_ecs: IWorld): void {
-		// Cleanup if needed
+	destroy(_ecs: unknown): void {
+		this.attachedRuntimeSlots.clear();
 	}
 }
 
@@ -122,5 +158,5 @@ export const ScreenWrapBehavior = defineBehavior({
 	name: 'screen-wrap',
 	defaultOptions,
 	systemFactory: (ctx) =>
-		new ScreenWrapSystem(ctx.world, ctx.getBehaviorLinks),
+		new ScreenWrapSystem(ctx.world, ctx.wasmStage ?? null, ctx.getBehaviorLinks),
 });
