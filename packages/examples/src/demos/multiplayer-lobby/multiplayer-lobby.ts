@@ -471,6 +471,7 @@ export default function createDemo() {
 						deviceId,
 						displayName,
 						colorU32,
+						characterClass: 'tank',
 					});
 				},
 				onConnectError: (_ctx, err) => {

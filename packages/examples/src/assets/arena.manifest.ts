@@ -83,4 +83,20 @@ export const ARENA_ASSET_PATHS = {
 	'arena/images/icon-shield.png': 'arena/images/icon-shield.2f3be3a5.png',
 	'arena/images/icon-stealth.png': 'arena/images/icon-stealth.8a2010bf.png',
 	'arena/images/icon-taunt.png': 'arena/images/icon-taunt.ddab895e.png',
+
+	/** Iguano (arena enemy ragdoll) — hashed paths from arena asset manifest. */
+	'arena/models/iguano/iguano.fbx': 'arena/models/iguano.7bedf0a9.fbx',
+	'arena/models/iguano/iguano-run.fbx': 'arena/models/iguano-run.6dac22db.fbx',
+	'arena/models/iguano/iguano-punch.fbx': 'arena/models/iguano-punch.4c0f43a3.fbx',
+	'arena/models/iguano/iguano-bite.fbx': 'arena/models/iguano-bite.95d585a3.fbx',
+	'arena/models/iguano/iguano-fireball.fbx': 'arena/models/iguano-fireball.c2bfee4d.fbx',
+	'arena/models/iguano/iguano-hit.fbx': 'arena/models/iguano-hit.5efe90e4.fbx',
+	'arena/models/iguano/iguano-kick.fbx': 'arena/models/iguano-kick.12529193.fbx',
+	'arena/models/iguano/iguano-walk-left.fbx': 'arena/models/iguano-walk-left.2ad5f2c8.fbx',
+	'arena/models/iguano/iguano-walk-back.fbx': 'arena/models/iguano-walk-back.b95133d9.fbx',
+	'arena/models/iguano/iguano-walk-right.fbx': 'arena/models/iguano-walk-right.4e82916d.fbx',
+	'arena/models/iguano/iguano-run-distruct.fbx': 'arena/models/iguano-run-distruct.6c943e80.fbx',
+	'arena/models/iguano/iguano-death-1.fbx': 'arena/models/iguano-death-1.4cab2ab8.fbx',
+	'arena/models/iguano/iguano-death-2.fbx': 'arena/models/iguano-death-2.451cf357.fbx',
+	'arena/models/iguano/iguano-planting.fbx': 'arena/models/iguano-planting.1141912f.fbx',
 } as const satisfies Record<string, string>;

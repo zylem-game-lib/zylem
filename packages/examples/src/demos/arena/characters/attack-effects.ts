@@ -100,7 +100,7 @@ export function makeSparkTexture(
 	return texture;
 }
 
-interface StageAddTarget {
+export interface StageAddTarget {
 	add: (...entities: unknown[]) => void;
 }
 

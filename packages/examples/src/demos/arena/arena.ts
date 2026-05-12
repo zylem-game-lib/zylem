@@ -11,7 +11,9 @@ import { createArenaMainStage } from './main-stage/main-stage';
 import {
 	bootstrapArenaNetwork,
 	type ArenaNetworkHandle,
+	type BootstrapArenaNetworkConfig,
 } from './main-stage/arena-network';
+import { isCharacterClass } from './characters';
 
 export default function createDemo() {
 	// ─── Lobby ──────────────────────────────────────────────────────────────
@@ -26,20 +28,37 @@ export default function createDemo() {
 	// demo decide when / how to wire networking.
 	let networkHandle: ArenaNetworkHandle | null = null;
 	let networkBootstrapped = false;
+	/** Snapshot taken when the player commits in the lobby; avoids relying on game globals for STDB registration. */
+	let pendingArenaNetworkConfig: BootstrapArenaNetworkConfig | null = null;
 
 	main.stage.onUpdate(() => {
 		if (networkBootstrapped) return;
 		networkBootstrapped = true;
 
+		const snapshot = pendingArenaNetworkConfig;
+		pendingArenaNetworkConfig = null;
+
 		const deviceId =
-			getGlobal<string>('arenaDeviceId') ?? getOrCreateArenaDeviceId();
-		const displayName = getGlobal<string>('arenaDisplayName') ?? 'Player';
-		const colorU32 = getGlobal<number>('arenaColorU32') ?? 0xffffffff;
+			snapshot?.deviceId.trim() ||
+			getGlobal<string>('arenaDeviceId')?.trim() ||
+			getOrCreateArenaDeviceId();
+		const displayName =
+			snapshot?.displayName ??
+			getGlobal<string>('arenaDisplayName') ??
+			'Player';
+		const colorU32 =
+			snapshot?.colorU32 ??
+			getGlobal<number>('arenaColorU32') ??
+			0xffffffff;
+		const rawClass =
+			snapshot?.characterClass ?? getGlobal<string>('arenaCharacterClass');
+		const characterClass = isCharacterClass(rawClass) ? rawClass : 'tank';
 
 		networkHandle = bootstrapArenaNetwork(main, {
 			deviceId,
 			displayName,
 			colorU32,
+			characterClass,
 		});
 	});
 
@@ -47,6 +66,7 @@ export default function createDemo() {
 		networkHandle?.reset();
 		networkHandle = null;
 		networkBootstrapped = false;
+		pendingArenaNetworkConfig = null;
 		main.reset();
 		lobby.dispose();
 	});
@@ -90,10 +110,19 @@ export default function createDemo() {
 		const name = arenaLobbyStore.displayName.trim();
 		if (!name) return;
 		const dev = arenaLobbyStore.deviceId || getOrCreateArenaDeviceId();
+		const characterClass = isCharacterClass(arenaLobbyStore.characterClass)
+			? arenaLobbyStore.characterClass
+			: 'tank';
+		pendingArenaNetworkConfig = {
+			deviceId: dev,
+			displayName: name,
+			colorU32: arenaLobbyStore.colorU32,
+			characterClass,
+		};
 		setGlobal('arenaDeviceId', dev);
 		setGlobal('arenaDisplayName', name);
 		setGlobal('arenaColorU32', arenaLobbyStore.colorU32);
-		setGlobal('arenaCharacterClass', arenaLobbyStore.characterClass);
+		setGlobal('arenaCharacterClass', characterClass);
 		lobbyAdvanced = true;
 		arenaLobbyStore.joinRequested = false;
 		ctx.game?.nextStage();

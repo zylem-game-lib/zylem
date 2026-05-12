@@ -39,6 +39,8 @@ export interface BootstrapArenaNetworkConfig {
 	displayName: string;
 	/** 32-bit RGBA encoded avatar tint. */
 	colorU32: number;
+	/** Character archetype selected in the lobby; sent with `register_player`. */
+	characterClass: CharacterClass;
 }
 
 export interface ArenaNetworkHandle {
@@ -75,16 +77,6 @@ function entityIdsEqual(
 ): boolean {
 	if (b === null || b === undefined) return false;
 	return BigInt(a) === BigInt(b);
-}
-
-/**
- * Resolve the local player's character class from the game globals,
- * defaulting to `tank` when nothing has been set yet (e.g. screenshots
- * or deep links that bypass the lobby overlay).
- */
-function getLocalCharacterClass(): CharacterClass {
-	const raw = getGlobal<string>('arenaCharacterClass');
-	return isCharacterClass(raw) ? raw : 'tank';
 }
 
 /** Forcibly snap a physics body + render group to the supplied transform. */
@@ -186,7 +178,13 @@ export function bootstrapArenaNetwork(
 	let enemies: EnemiesHandle | null = null;
 
 	const deviceId = config.deviceId.trim();
-	const localCharacterClass = getLocalCharacterClass();
+	const registeredCharacterClass = isCharacterClass(config.characterClass)
+		? config.characterClass
+		: 'tank';
+
+	function notifyGuestsForEnteredPlayer(entityId: bigint): void {
+		enemies?.spawnGuestIguanoForNewPlayer(entityId);
+	}
 
 	function reportNetError(context: string, err: unknown): void {
 		const msg = err instanceof Error ? err.message : String(err);
@@ -258,9 +256,7 @@ export function bootstrapArenaNetwork(
 		const color = u32ToColor(player.colorU32);
 		const isLocal = player.deviceId.trim() === deviceId;
 
-		const klass = isLocal
-			? localCharacterClass
-			: resolveRemoteCharacterClass(player.characterClass);
+		const klass = resolveRemoteCharacterClass(player.characterClass);
 
 		const rec = handle.spawnAvatar({
 			entityId: eid,
@@ -311,7 +307,7 @@ export function bootstrapArenaNetwork(
 			entityId: OFFLINE_PLAYER_ENTITY_ID,
 			isLocal: true,
 			displayName,
-			characterClass: localCharacterClass,
+			characterClass: registeredCharacterClass,
 			color: u32ToColor(colorU32),
 			position: { x: 0, y: 0, z: 0 },
 			deviceId,
@@ -333,10 +329,7 @@ export function bootstrapArenaNetwork(
 					deviceId,
 					displayName: config.displayName,
 					colorU32: config.colorU32,
-				});
-				void c.reducers.setPlayerCharacterClass({
-					deviceId,
-					characterClass: localCharacterClass,
+					characterClass: registeredCharacterClass,
 				});
 				aiHost.init(c, identity);
 			},
@@ -358,7 +351,6 @@ export function bootstrapArenaNetwork(
 			handle,
 			aiHost,
 			conn: currentConn,
-			deviceId,
 		});
 		handle.setAttackHitHandler(enemies.resolveAttackHit);
 		handle.setFallRespawnHandler((info) => {
@@ -395,6 +387,7 @@ export function bootstrapArenaNetwork(
 
 		currentConn.db.player.onInsert((_ctx, row) => {
 			spawnAvatarForPlayer(currentConn, row);
+			notifyGuestsForEnteredPlayer(entityIdOf(row.entityId));
 		});
 
 		currentConn.db.player.onUpdate((_ctx, _old, row) => {
@@ -420,6 +413,7 @@ export function bootstrapArenaNetwork(
 				}
 				for (const p of ctx.db.player.iter()) {
 					spawnAvatarForPlayer(currentConn, p);
+					notifyGuestsForEnteredPlayer(entityIdOf(p.entityId));
 				}
 				for (const t of ctx.db.entity_transform.iter()) {
 					const eid = entityIdOf(t.entityId);

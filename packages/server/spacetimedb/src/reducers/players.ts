@@ -1,9 +1,7 @@
 import type { Identity } from 'spacetimedb';
 import { t } from 'spacetimedb/server';
+import { maxHpForArenaCharacterClass, normalizeArenaCharacterClass } from '../arena-character-stats';
 import { spacetime } from '../schema';
-
-/** Default starting / max HP applied to a freshly registered player. */
-export const DEFAULT_MAX_HP = 100;
 
 function spawnIndex(ctx: { db: { player: { iter: () => IterableIterator<unknown> } } }): number {
   let n = 0;
@@ -23,15 +21,18 @@ function spawnPosition(index: number): { x: number; y: number; z: number } {
   };
 }
 
-/** Register or refresh a player: creates transform + player row, or updates identity/name/color on reconnect. */
+/** Register or refresh a player: creates transform + player row, or updates identity/name/color/class on reconnect. */
 export const register_player = spacetime.reducer(
   {
     device_id: t.string(),
     display_name: t.string(),
     color_u32: t.u32(),
+    character_class: t.string(),
   },
-  (ctx, { device_id, display_name, color_u32 }) => {
+  (ctx, { device_id, display_name, color_u32, character_class }) => {
     const sender = ctx.sender as Identity;
+    const klass = normalizeArenaCharacterClass(character_class);
+    const maxHp = maxHpForArenaCharacterClass(klass);
     const existing = ctx.db.player.device_id.find(device_id);
     if (existing !== null) {
       ctx.db.player.device_id.update({
@@ -40,9 +41,9 @@ export const register_player = spacetime.reducer(
         color_u32,
         entity_id: existing.entity_id,
         owner_identity: sender,
-        character_class: existing.character_class,
-        hp: existing.max_hp,
-        max_hp: existing.max_hp,
+        character_class: klass,
+        hp: maxHp,
+        max_hp: maxHp,
         spawn_x: existing.spawn_x,
         spawn_y: existing.spawn_y,
         spawn_z: existing.spawn_z,
@@ -74,9 +75,9 @@ export const register_player = spacetime.reducer(
       color_u32,
       entity_id: inserted.entity_id,
       owner_identity: sender,
-      character_class: 'tank',
-      hp: DEFAULT_MAX_HP,
-      max_hp: DEFAULT_MAX_HP,
+      character_class: klass,
+      hp: maxHp,
+      max_hp: maxHp,
       spawn_x: pos.x,
       spawn_y: pos.y,
       spawn_z: pos.z,
@@ -146,9 +147,14 @@ export const set_player_character_class = spacetime.reducer(
     if (!row.owner_identity.equals(ctx.sender as Identity)) {
       return;
     }
+    const klass = normalizeArenaCharacterClass(character_class);
+    const maxHp = maxHpForArenaCharacterClass(klass);
+    const nextHp = row.hp > maxHp ? maxHp : row.hp;
     ctx.db.player.device_id.update({
       ...row,
-      character_class,
+      character_class: klass,
+      max_hp: maxHp,
+      hp: nextHp,
     });
   },
 );

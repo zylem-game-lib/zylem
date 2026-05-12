@@ -1,7 +1,7 @@
 import { Color, Vector3 } from 'three';
 import { CooldownBehavior, type CooldownHandle } from '@zylem/game-lib/behavior';
 import { type UpdateContext, createCamera, createStage, setCameraFeed, type StageEntity } from '@zylem/game-lib/core';
-import { createBox, createPlane, createText } from '@zylem/game-lib/entity';
+import { createBox, createFog, createPlane, createText } from '@zylem/game-lib/entity';
 import { useArrowsForAxes } from '@zylem/game-lib/input';
 import { ZylemRuntimePlatformer3DFsmState } from '@zylem/game-lib/runtime';
 import {
@@ -122,6 +122,12 @@ export interface ArenaMainStageHandle {
 	mainCamera: ReturnType<typeof createCamera>;
 	/** Live lookup of rendered avatars, keyed by STDB entity id. */
 	avatars: Map<bigint, AvatarRecord>;
+	/**
+	 * Sample the bowl heightfield at world `(x, z)` and return the world-Y
+	 * of the visible ground at that point. Used by the enemies subsystem so
+	 * iguanos sit / walk on the actual terrain instead of a fixed altitude.
+	 */
+	sampleGroundHeight(x: number, z: number): number;
 	/** STDB entity id of the locally-controlled avatar (null before spawn). */
 	getLocalEntityId(): bigint | null;
 	/** Reference to the local avatar actor (null before spawn). */
@@ -455,6 +461,21 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 	stage.add(groundPlane, ...doodads.entities);
 	stage.add(jumbotronScreen, jumbotronFrame);
 
+	// Light purple-red atmosphere fog. Linear distance falloff keeps the
+	// center of the arena clear while the far rim of the bowl fades into
+	// mist; a gentle height mask anchors the densest fog to the ground so
+	// the sky still reads as the background shader, and a slow noise term
+	// gives the haze some drift instead of looking like a static gradient.
+	stage.add(createFog({
+		type: 'exp2',
+		color: '#c79ab0',
+		density: 0.03,
+		start: 0,
+		end: 110,
+		height: { enabled: true, level: 10, falloff: 0.12 },
+		noise: { scale: 0.04, strength: 0.18, speed: 0.08 },
+	}));
+
 	// Sweep the broadcast camera across a bounded 120-degree arc centered
 	// on -Z (i.e. between the jumbotron screen and the origin). Keeping the
 	// camera strictly on the -Z side means the screen at z=-28 is always
@@ -722,6 +743,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		stage,
 		mainCamera,
 		avatars,
+		sampleGroundHeight,
 		getLocalEntityId: () => localEntityId,
 		getLocalActor: () => localActor,
 		spawnAvatar,

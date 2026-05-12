@@ -14,4 +14,5 @@ export default {
   deviceId: __t.string(),
   displayName: __t.string(),
   colorU32: __t.u32(),
+  characterClass: __t.string(),
 };
