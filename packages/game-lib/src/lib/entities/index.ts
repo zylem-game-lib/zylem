@@ -11,6 +11,7 @@ export * from './pyramid';
 export * from './cylinder';
 export * from './pill';
 export * from './particle-system';
+export * from './fog';
 export { createEntity } from './create';
 export * from './delegates/debug';
 

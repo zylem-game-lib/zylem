@@ -31,6 +31,13 @@ export type {
 	SpotLightOptions,
 	LightShadowOptions,
 } from '../lib/entities/light';
+export { createFog, ZylemFog, FOG_TYPE } from '../lib/entities/fog';
+export type {
+	ZylemFogOptions,
+	ZylemFogType,
+	ZylemFogHeightOptions,
+	ZylemFogNoiseOptions,
+} from '../lib/entities/fog';
 
 // Entity primitives & utilities
 export { create } from '../lib/entities/entity';

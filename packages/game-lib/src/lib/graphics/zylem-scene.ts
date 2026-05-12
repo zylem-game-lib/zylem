@@ -17,6 +17,7 @@ import {
 import { MeshBasicNodeMaterial } from 'three/webgpu';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
+import { FOG_TYPE, ZylemFog } from '../entities/fog';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraManager } from '../camera/camera-manager';
 import { RendererManager } from '../camera/renderer-manager';
@@ -300,10 +301,20 @@ export class ZylemScene implements Entity<ZylemScene> {
 	/**
 	 * Add an entity's group or mesh to the scene (for late-loaded models).
 	 * Uses entity's current body position if physics is active.
+	 *
+	 * Fog entities ({@link ZylemFog}) are routed through the normal add
+	 * pipeline so their empty placeholder group is parented for cleanup,
+	 * but they also get an `attachToScene` call that wires `scene.fog`
+	 * and starts the optional material patcher.
 	 */
 	addEntityGroup(entity: GameEntity<any>): void {
 		const target = entity.group ?? entity.mesh;
 		if (!target || this.isAttachedOutsideScene(target)) return;
+
+		const fogEntity = asFogEntity(entity);
+		if (fogEntity) {
+			fogEntity.attachToScene(this.scene);
+		}
 
 		let position = entity.options.position ?? new Vector3(0, 0, 0);
 		if (entity.physicsAttached && entity.body) {
@@ -349,3 +360,22 @@ export class ZylemScene implements Entity<ZylemScene> {
 		}
 	}
 }
+
+/**
+ * Try to view a generic `GameEntity` as a {@link ZylemFog}. Uses the static
+ * `type` symbol rather than `instanceof` to keep the scene module free
+ * of structural coupling to subclass constructors (subclasses & cloned
+ * factories should still match).
+ *
+ * Returns the cast entity on match, or `null` otherwise. We use this
+ * instead of a `type is ZylemFog` predicate because `GameEntity`'s
+ * collision-callback signature creates a contravariant relationship
+ * that TypeScript can't narrow through.
+ */
+function asFogEntity(entity: GameEntity<any>): ZylemFog | null {
+	if ((entity.constructor as { type?: symbol }).type === FOG_TYPE) {
+		return entity as unknown as ZylemFog;
+	}
+	return null;
+}
+
