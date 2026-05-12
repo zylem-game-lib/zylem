@@ -29,6 +29,15 @@ import { createEnemies, type EnemiesHandle } from './enemies';
 const OFFLINE_PLAYER_ENTITY_ID = BigInt(-1);
 
 /**
+ * HP cost of falling off the arena bowl. The main stage locally
+ * teleports the capsule back to spawn before this fires so the next
+ * frame can't continue the tumble; the damage just makes "fall off"
+ * sting instead of being a free reset. A high enough value forces
+ * eventual death (and a 10-second respawn) on repeated mis-jumps.
+ */
+const FALL_DAMAGE_AMOUNT = 50;
+
+/**
  * Configuration consumed by `bootstrapArenaNetwork`. All values are
  * snapshotted at bootstrap time from the lobby globals.
  */
@@ -353,13 +362,28 @@ export function bootstrapArenaNetwork(
 			conn: currentConn,
 		});
 		handle.setAttackHitHandler(enemies.resolveAttackHit);
+		// Falling off the bowl now costs HP instead of a free respawn:
+		// the main stage already teleports the local capsule back to
+		// spawn (so the next frame doesn't tumble through the void),
+		// so all we owe the server is the HP deduction. If the damage
+		// drops HP to 0 the existing `damage_player` → `applyPlayerHp`
+		// → respawn-controller pipeline takes over from there.
 		handle.setFallRespawnHandler((info) => {
-			void currentConn.reducers.respawnPlayer({
+			void currentConn.reducers.damagePlayer({
 				deviceId: info.deviceId,
-				posX: info.spawn.x,
-				posY: info.spawn.y,
-				posZ: info.spawn.z,
+				amount: FALL_DAMAGE_AMOUNT,
 			});
+		});
+		handle.setHealRequestHandler((info) => {
+			// Fan out one reducer call per recipient. `heal_player`
+			// clamps to `max_hp` and ignores dead targets server-side,
+			// so the client is free to over-send without harm.
+			for (const deviceId of info.recipients) {
+				void currentConn.reducers.healPlayer({
+					deviceId,
+					amount: info.amount,
+				});
+			}
 		});
 
 		currentConn.db.entity_transform.onInsert((_ctx, row) => {

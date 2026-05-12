@@ -38,6 +38,7 @@ import ClaimAiHostReducer from "./claim_ai_host_reducer";
 import DamageEnemyReducer from "./damage_enemy_reducer";
 import DamagePlayerReducer from "./damage_player_reducer";
 import DespawnEnemyReducer from "./despawn_enemy_reducer";
+import HealPlayerReducer from "./heal_player_reducer";
 import RegisterPlayerReducer from "./register_player_reducer";
 import RespawnPlayerReducer from "./respawn_player_reducer";
 import SetEnemyTransformReducer from "./set_enemy_transform_reducer";
@@ -121,6 +122,7 @@ const reducersSchema = __reducers(
   __reducerSchema("damage_enemy", DamageEnemyReducer),
   __reducerSchema("damage_player", DamagePlayerReducer),
   __reducerSchema("despawn_enemy", DespawnEnemyReducer),
+  __reducerSchema("heal_player", HealPlayerReducer),
   __reducerSchema("register_player", RegisterPlayerReducer),
   __reducerSchema("respawn_player", RespawnPlayerReducer),
   __reducerSchema("set_enemy_transform", SetEnemyTransformReducer),

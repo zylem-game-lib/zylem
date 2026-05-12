@@ -183,6 +183,37 @@ export const damage_player = spacetime.reducer(
 );
 
 /**
+ * Restore HP to a player, clamped to `max_hp`. Like `damage_player` this
+ * is intentionally not owner-checked so any client (the healer casting
+ * Restore on themselves *or* an ally) may invoke it; the caster picks
+ * the recipient list locally based on proximity.
+ *
+ * Dead players (hp === 0) are intentionally not healed — coming back
+ * from a knockdown is the `respawn_player` flow.
+ */
+export const heal_player = spacetime.reducer(
+  {
+    device_id: t.string(),
+    amount: t.u32(),
+  },
+  (ctx, { device_id, amount }) => {
+    const row = ctx.db.player.device_id.find(device_id);
+    if (row === null || row.hp === 0) {
+      return;
+    }
+    const restored = row.hp + amount;
+    const nextHp = restored > row.max_hp ? row.max_hp : restored;
+    if (nextHp === row.hp) {
+      return;
+    }
+    ctx.db.player.device_id.update({
+      ...row,
+      hp: nextHp,
+    });
+  },
+);
+
+/**
  * Reset a player to full HP at a given spawn position. Owner-checked so
  * only the player themselves can trigger their respawn.
  */

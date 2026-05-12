@@ -23,6 +23,7 @@ export {
 export { client_disconnected } from './reducers/lifecycle';
 export {
   damage_player,
+  heal_player,
   register_player,
   respawn_player,
   set_entity_transform,

@@ -62,6 +62,22 @@ export type ReportAttackHit = (info: {
 	damage: number | undefined;
 }) => void;
 
+/**
+ * Callback emitted at active-frames for any **special** that carries a
+ * `heal` value on its moveset entry (see `CharacterActionEntry.heal`).
+ *
+ * Distinct from `ReportAttackHit` because the consumer iterates allies
+ * around the *caster* (the moveset entry is an AoE around self, not a
+ * forward-projected sphere) and the recipient list is *players*, not
+ * enemies — different reducer, different bookkeeping.
+ */
+export type ReportHealEffect = (info: {
+	/** World-space position of the caster at heal time. */
+	position: { x: number; y: number; z: number };
+	/** HP each eligible recipient should be restored. */
+	amount: number;
+}) => void;
+
 export interface CombatControllerOptions {
 	actor: PlayerEntity;
 	/**
@@ -82,6 +98,12 @@ export interface CombatControllerOptions {
 	 * active-frames fraction (see {@link ATTACK_HIT_FRACTION}).
 	 */
 	onAttackHit?: ReportAttackHit;
+	/**
+	 * Optional sink for heal-effect events. Called once per qualifying
+	 * special action at the same `ATTACK_HIT_FRACTION` so the visible
+	 * burst lands in sync with the gameplay effect.
+	 */
+	onHealEffect?: ReportHealEffect;
 }
 
 export interface CombatControllerTickInput {
@@ -121,7 +143,7 @@ type ActiveAction = {
 	tier: number;
 	startedAt: number;
 	entry: CharacterActionEntry;
-	/** Whether {@link ReportAttackHit} has already fired for this action. */
+	/** Whether {@link ReportAttackHit} / {@link ReportHealEffect} has already fired for this action. */
 	hitEmitted: boolean;
 };
 
@@ -135,7 +157,7 @@ type ActiveAction = {
 export function createCombatController(
 	opts: CombatControllerOptions,
 ): CombatController {
-	const { actor, stage, moveset, cooldowns, onAttackHit } = opts;
+	const { actor, stage, moveset, cooldowns, onAttackHit, onHealEffect } = opts;
 
 	let now = 0;
 	let action: ActiveAction | null = null;
@@ -187,7 +209,7 @@ export function createCombatController(
 		spawnParticles(entry.particles);
 	}
 
-	function maybeEmitHit(): void {
+	function maybeEmitAttackHit(): void {
 		if (!action || action.hitEmitted) return;
 		if (!onAttackHit) return;
 		const elapsed = now - action.startedAt;
@@ -202,6 +224,27 @@ export function createCombatController(
 			},
 			tier: action.tier,
 			damage: action.entry.damage,
+		});
+		action.hitEmitted = true;
+	}
+
+	/**
+	 * Heal active-frames hook. Mirrors `maybeEmitAttackHit` but uses the
+	 * caster's own world position (heals are AoE around self, not a
+	 * forward-projected sphere) and gates on `entry.heal` instead of
+	 * `entry.damage`. Both can theoretically fire in the same frame on
+	 * a hybrid drain spell — they share the `hitEmitted` flag.
+	 */
+	function maybeEmitHealEffect(): void {
+		if (!action || action.hitEmitted) return;
+		if (!onHealEffect) return;
+		const heal = action.entry.heal;
+		if (heal === undefined || heal <= 0) return;
+		const elapsed = now - action.startedAt;
+		if (elapsed < action.entry.duration * ATTACK_HIT_FRACTION) return;
+		onHealEffect({
+			position: actorWorldPosition(),
+			amount: heal,
 		});
 		action.hitEmitted = true;
 	}
@@ -261,7 +304,8 @@ export function createCombatController(
 	return {
 		tick({ delta, inputs }) {
 			now += delta;
-			if (action?.kind === 'attack') maybeEmitHit();
+			if (action?.kind === 'attack') maybeEmitAttackHit();
+			if (action?.kind === 'special') maybeEmitHealEffect();
 			completeActionIfDone();
 
 			const p1 = inputs.p1;

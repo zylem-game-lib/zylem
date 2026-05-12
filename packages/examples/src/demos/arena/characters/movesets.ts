@@ -36,6 +36,15 @@ export interface CharacterActionEntry {
 	duration: number;
 	particles?: ParticleBurstSpec;
 	damage?: number;
+	/**
+	 * HP restored to the caster and any allies within the heal AoE
+	 * (defined by `HEAL_AOE_RADIUS` in `main-stage.ts`) when this
+	 * action's active frames hit. Mutually independent from `damage`:
+	 * an entry may carry both (e.g. a "drain" spell), but the healer's
+	 * `Restore` is heal-only. Omit for actions that don't affect HP
+	 * on allies.
+	 */
+	heal?: number;
 	cooldown?: number;
 	icon?: DemoAssetKey;
 	/**

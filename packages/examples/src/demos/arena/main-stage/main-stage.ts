@@ -26,7 +26,12 @@ import { createDoodads } from './doodads';
 import {
 	createCombatController,
 	type ReportAttackHit,
+	type ReportHealEffect,
 } from './combat-controller';
+import {
+	createRespawnController,
+	type RespawnController,
+} from './respawn-controller';
 import { demoAsset } from '../../../assets/manifest';
 
 const groundTextureUrl = demoAsset('arena/images/ground.png');
@@ -115,6 +120,18 @@ export interface FallRespawnPayload {
 	spawn: { x: number; y: number; z: number };
 }
 
+/**
+ * Payload emitted when a local heal effect resolves: the precomputed
+ * list of `device_id`s the network layer should call `heal_player` on,
+ * and the per-recipient HP amount. The recipient list is computed in
+ * the main stage (which already owns the `avatars` map for radius
+ * checks) so the network layer can stay a thin reducer adapter.
+ */
+export interface HealRequestPayload {
+	recipients: string[];
+	amount: number;
+}
+
 export interface ArenaMainStageHandle {
 	/** Fluent stage wrapper returned by `createStage`. */
 	stage: StageHandle;
@@ -151,6 +168,13 @@ export interface ArenaMainStageHandle {
 	 * via STDB.
 	 */
 	setFallRespawnHandler(handler: ((info: FallRespawnPayload) => void) | null): void;
+	/**
+	 * Register (or clear) a sink for local-player heal-effect events.
+	 * The network layer fans these out to `heal_player` reducer calls
+	 * — one per recipient — so the server applies the HP increment
+	 * with proper `max_hp` clamping.
+	 */
+	setHealRequestHandler(handler: ((info: HealRequestPayload) => void) | null): void;
 	/**
 	 * Refresh the HP displayed on an avatar's nameplate, and play the
 	 * `fallen` animation when HP first hits 0.
@@ -506,7 +530,99 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 	let localActor: PlayerEntity | null = null;
 	let attackHitHandler: ReportAttackHit | null = null;
 	let fallRespawnHandler: ((info: FallRespawnPayload) => void) | null = null;
+	let healRequestHandler: ((info: HealRequestPayload) => void) | null = null;
 	const lastMovement = new Vector3();
+
+	/**
+	 * Squared XZ radius used to pick eligible heal recipients around
+	 * the caster (heals are AoE around self). 6 m feels generous
+	 * without letting healers run off and top up teammates from across
+	 * the bowl — see the {@link AskQuestion} balance question that
+	 * authored this value.
+	 */
+	const HEAL_AOE_RADIUS = 6;
+	const HEAL_AOE_RADIUS_SQ = HEAL_AOE_RADIUS * HEAL_AOE_RADIUS;
+
+	/**
+	 * Resolve the avatars within the heal AoE of `caster` and emit a
+	 * single `HealRequestPayload` to the network layer with their
+	 * device ids. Dead players (hp === 0) are filtered out — they
+	 * require a respawn flow, not a top-up. Done in the main stage so
+	 * the network layer stays a one-line reducer adapter.
+	 */
+	function resolveHealHit(caster: AvatarRecord, info: { position: { x: number; y: number; z: number }; amount: number }): void {
+		if (!healRequestHandler) return;
+		const recipients: string[] = [];
+		for (const peer of avatars.values()) {
+			if (peer.hp <= 0) continue;
+			const g = peer.actor.group;
+			if (!g) continue;
+			const dx = g.position.x - info.position.x;
+			const dz = g.position.z - info.position.z;
+			if (dx * dx + dz * dz > HEAL_AOE_RADIUS_SQ) continue;
+			recipients.push(peer.deviceId);
+		}
+		if (recipients.length === 0) return;
+		healRequestHandler({ recipients, amount: info.amount });
+		// Mark `caster` so the unused-parameter lint doesn't pick a fight.
+		// The reference is here intentionally so future per-class scaling
+		// (e.g. caster class multiplier) has a hook to read from.
+		void caster;
+	}
+
+	/**
+	 * Lying-down model drop (world units). The character FBX rigs author
+	 * the hips bone Y as a *calibration* — its bind-pose value places the
+	 * hip at standing-hip-height-in-world so the body geometry hangs down
+	 * to put visible feet at the group origin (see
+	 * `stripClipRootMotion`'s doc). When the `fallen` clip rotates the
+	 * skeleton horizontal, the bones still emanate from the hip pivot,
+	 * which is now suspended ~half-a-character-height above the ground —
+	 * so the lying body reads as floating in mid-air. Translating the
+	 * loaded FBX child down by this offset (scaled out of the actor's
+	 * 0.02× scale by dividing by `group.scale.y`) snaps the corpse onto
+	 * the ground without touching the wasm-KCC-owned group transform.
+	 */
+	const FALLEN_BODY_DROP_WORLD = 0.5;
+
+	/**
+	 * Apply (or clear) the fallen-pose visual drop on an avatar's loaded
+	 * model child. Safe to call before the FBX finishes loading — it
+	 * just no-ops when `actor.object` isn't ready yet, and the next
+	 * call after load (e.g. a HUD HP refresh) will catch up.
+	 */
+	function setFallenDeathPose(actor: PlayerEntity, dead: boolean): void {
+		const a = actor as unknown as {
+			object: { position: { y: number } } | null;
+			group: { scale: { y: number } } | null;
+		};
+		const model = a.object;
+		const group = a.group;
+		if (!model || !group) return;
+		const scaleY = group.scale.y || 1;
+		model.position.y = dead ? -FALLEN_BODY_DROP_WORLD / scaleY : 0;
+	}
+
+	// Local-player death-respawn lifecycle. Wires its own per-frame tick
+	// into the main stage update so the timer runs even when input is
+	// locked. Re-uses `fallRespawnHandler` for the actual reducer call
+	// since both fall-respawn and death-respawn end up firing
+	// `respawn_player` with the same payload shape.
+	const respawnController: RespawnController = createRespawnController({
+		stage,
+		camera: mainCamera,
+		platformerAdapter,
+		getFallRespawnHandler: () => fallRespawnHandler,
+		onLocalRespawn: () => {
+			// Lift the model out of the lying-down offset immediately so
+			// the standing pose that comes back next frame doesn't render
+			// half-buried while we wait for the server's HP echo.
+			if (localActor) setFallenDeathPose(localActor, false);
+		},
+	});
+	stage.onUpdate(({ delta }: UpdateContext<any>) => {
+		respawnController.tick(delta);
+	});
 
 	/**
 	 * Y-axis threshold below which the local actor is considered to have
@@ -523,6 +639,16 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		entityId: bigint,
 		onLocalTransform?: (payload: LocalTransformPayload) => void,
 	): void {
+		const onHealEffect: ReportHealEffect = (info) => {
+			// `localEntityId` is set by `spawnAvatar` for the local
+			// player before this update loop ever runs, so the lookup
+			// is safe; bail defensively if a stage tear-down race lost
+			// the record.
+			if (localEntityId === null) return;
+			const caster = avatars.get(localEntityId);
+			if (!caster) return;
+			resolveHealHit(caster, info);
+		};
 		const combat = createCombatController({
 			actor,
 			stage,
@@ -534,12 +660,37 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 				// are static scenery now, so hits don't route to them.
 				attackHitHandler?.(info);
 			},
+			onHealEffect,
 		});
 
 		actor.onUpdate(({ inputs, me, delta }: UpdateContext<any>) => {
 			const { p1 } = inputs;
 			const horizontal = p1.axes.Horizontal.value;
 			const vertical = p1.axes.Vertical.value;
+
+			// Death lock: while the local player is in the respawn
+			// sequence we drop all player input, skip the combat
+			// pipeline, and emit a held `fallen` animation so peers and
+			// our own per-frame transform broadcast stay consistent
+			// with the corpse pose. The controller drives its own
+			// camera pull-back / HUD timer on the stage update.
+			if (respawnController.isActive()) {
+				platformerAdapter.pushInput(0, 0, false, false);
+				if (onLocalTransform) {
+					const group = me.group;
+					if (group) {
+						const tr = group.position;
+						const q = group.quaternion;
+						onLocalTransform({
+							position: { x: tr.x, y: tr.y, z: tr.z },
+							rotation: { x: q.x, y: q.y, z: q.z, w: q.w },
+							scale: { x: group.scale.x, y: group.scale.y, z: group.scale.z },
+							animation: { key: 'fallen', pauseAtEnd: true },
+						});
+					}
+				}
+				return;
+			}
 
 			// Fall-respawn: teleport the wasm capsule back to spawn before
 			// any further input processing so the next adapter step
@@ -695,10 +846,37 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		rec.hp = hp;
 		rec.maxHp = maxHp;
 		rec.nameplate.updateText(formatNameplate(rec.displayName, hp, maxHp));
-		if (prevHp > 0 && hp === 0) {
+		const justDied = prevHp > 0 && hp === 0;
+		const justRevived = prevHp === 0 && hp > 0;
+		if (justDied) {
 			(rec.actor as unknown as {
 				playAnimation: (anim: NetworkAnimationState) => void;
 			}).playAnimation({ key: 'fallen', pauseAtEnd: true });
+			// Drop the visible model onto the ground so the lying-down
+			// pose doesn't render at hip-height (see
+			// `FALLEN_BODY_DROP_WORLD`). Applies to every avatar so
+			// peers don't see floating corpses either.
+			setFallenDeathPose(rec.actor, true);
+		} else if (justRevived) {
+			setFallenDeathPose(rec.actor, false);
+		}
+		// Local-player only: drive the death-respawn lifecycle. Remote
+		// avatars play `fallen` (above) and hold pose, but the camera
+		// pull-back / HUD timer / input lock are strictly local effects.
+		if (rec.isLocal) {
+			if (justDied) {
+				respawnController.start({
+					entityId,
+					deviceId: rec.deviceId,
+					spawn: rec.spawn,
+				});
+			} else if (justRevived) {
+				// Heal-before-timer-expiry path (ally heal, etc). The
+				// reducer-driven respawn flow clears state itself, so
+				// this is the only way the controller learns about an
+				// early revive.
+				respawnController.cancel();
+			}
 		}
 	}
 
@@ -710,6 +888,9 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		stage.wrappedStage.removeEntityByUuid(rec.nameplate.uuid);
 		avatars.delete(entityId);
 		if (localEntityId === entityId) {
+			// Local actor going away mid-death (disconnect, stage tear-
+			// down): drop the HUD + camera behavior so they don't leak.
+			respawnController.reset();
 			localEntityId = null;
 			localActor = null;
 			platformerAdapter.setPlayer(null);
@@ -717,12 +898,14 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 	}
 
 	function reset(): void {
+		respawnController.reset();
 		avatars.clear();
 		localEntityId = null;
 		localActor = null;
 		platformerAdapter.setPlayer(null);
 		attackHitHandler = null;
 		fallRespawnHandler = null;
+		healRequestHandler = null;
 		lastMovement.set(0, 0, 0);
 	}
 
@@ -753,6 +936,9 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 		},
 		setFallRespawnHandler(handler) {
 			fallRespawnHandler = handler;
+		},
+		setHealRequestHandler(handler) {
+			healRequestHandler = handler;
 		},
 		applyPlayerHp,
 		reset,

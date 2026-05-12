@@ -96,6 +96,7 @@ export const HEALER_MOVESET: CharacterMoveset = {
 				'Channel a soothing wave that restores hit points to you and any nearby allies.',
 			duration: 1.4,
 			cooldown: 6,
+			heal: 20,
 			icon: 'arena/images/icon-heal.png',
 			particles: {
 				kind: 'burst',
