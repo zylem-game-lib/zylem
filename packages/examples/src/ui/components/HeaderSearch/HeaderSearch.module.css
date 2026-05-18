@@ -12,6 +12,8 @@
 
 .searchInput {
     width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     background: var(--zylem-color-surface-hover);
     border: 1px solid var(--zylem-color-border);
     border-radius: var(--zylem-radius);

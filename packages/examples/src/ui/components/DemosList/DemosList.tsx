@@ -1,7 +1,11 @@
 import { Component, For, Show, createEffect, createMemo } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { createStore } from 'solid-js/store';
-import { appStore, getFilteredExampleSections } from '../../../store/appStore';
+import {
+  appStore,
+  getFilteredExampleSections,
+  setSidePanelOpen,
+} from '../../../store/appStore';
 import DemoListItem from '../DemoListItem/DemoListItem';
 import styles from './DemosList.module.css';
 import {
@@ -39,9 +43,11 @@ const DemosList: Component = () => {
 
   const handleExampleClick = (example: ExampleConfig) => {
     if (appStore.activeExample?.id === example.id) {
+      setSidePanelOpen(false);
       return;
     }
 
+    setSidePanelOpen(false);
     navigate(example.routePath);
   };
 
