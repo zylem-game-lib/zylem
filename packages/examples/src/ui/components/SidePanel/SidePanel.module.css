@@ -4,11 +4,14 @@
     top: 0;
     bottom: 0;
     width: 320px;
+    max-width: 100%;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     z-index: 100;
     background: var(--zylem-color-background);
     border-right: 1px solid var(--zylem-color-border);
+    overflow-x: hidden;
     transform: translateX(0);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
