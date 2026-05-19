@@ -2,15 +2,15 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 0.75rem;
-	padding: 0.75rem 1rem 0;
+	gap: var(--zylem-spacing-md);
+	padding: var(--zylem-spacing-md) var(--zylem-spacing-lg) 0;
 	flex-wrap: wrap;
 }
 
 .toolbarGroup {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: var(--zylem-spacing-sm);
 	flex-wrap: wrap;
 }
 
@@ -64,18 +64,18 @@
 .viewportMeta {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem;
+	gap: var(--zylem-spacing-md);
 	font-size: 0.8rem;
 	opacity: 0.72;
 }
 
 .toolbarCompact {
-	gap: 0.5rem;
-	padding: 0.75rem 0.75rem 0;
+	gap: var(--zylem-spacing-sm);
+	padding: var(--zylem-spacing-md) var(--zylem-spacing-md) 0;
 }
 
 .toolbarCompact .toolbarGroup {
-	gap: 0.35rem;
+	gap: var(--zylem-spacing-xs);
 }
 
 .toolbarCompact .toolbarLabel {
@@ -102,17 +102,17 @@
 	width: 100%;
 	justify-content: space-between;
 	font-size: 0.75rem;
-	padding-inline: 0.2rem;
+	padding-inline: var(--zylem-spacing-xs);
 }
 
 @media (max-width: 720px) {
 	.toolbar {
-		gap: 0.5rem;
-		padding: 0.75rem 0.75rem 0;
+		gap: var(--zylem-spacing-sm);
+		padding: var(--zylem-spacing-md) var(--zylem-spacing-md) 0;
 	}
 
 	.toolbarGroup {
-		gap: 0.35rem;
+		gap: var(--zylem-spacing-xs);
 	}
 
 	.toolbarLabel {
@@ -139,6 +139,6 @@
 		width: 100%;
 		justify-content: space-between;
 		font-size: 0.75rem;
-		padding-inline: 0.2rem;
+		padding-inline: var(--zylem-spacing-xs);
 	}
 }
