@@ -28,13 +28,21 @@ export const tokens = {
     consoleBackground: 'rgba(20, 40, 60, 0.25)',
     consoleText: '#61A6E8',
   },
+  /**
+   * Spacing scale (rem-based t-shirt scale).
+   * Mirrors `--zylem-spacing-*` in `vars.css`. Use for any `gap`,
+   * `padding`, or `margin` value so the UI scales with the root
+   * font-size.
+   */
   spacing: {
-    xs: '2px',
-    sm: '4px',
-    md: '8px',
-    lg: '12px',
-    xl: '16px',
-    xxl: '32px',
+    xxs: '0.125rem',
+    xs: '0.25rem',
+    sm: '0.5rem',
+    md: '0.75rem',
+    lg: '1rem',
+    xl: '1.5rem',
+    xxl: '2rem',
+    xxxl: '3rem',
   },
   sizes: {
     icon: '28px',

@@ -1,110 +1,110 @@
 .sidePanel {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 320px;
-    max-width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    z-index: 100;
-    background: var(--zylem-color-background);
-    border-right: 1px solid var(--zylem-color-border);
-    overflow-x: hidden;
-    transform: translateX(0);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 320px;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  background: var(--zylem-color-background);
+  border-right: 1px solid var(--zylem-color-border);
+  transform: translateX(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .panelContent {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .sidePanelClosed {
-    transform: translateX(-100%);
-}
-
-.panelContentClosed {
+  transform: translateX(-100%);
 }
 
 .toggleButton {
-    position: absolute;
-    left: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 24px;
-    height: 48px;
-    background: var(--zylem-color-surface);
-    border: 1px solid var(--zylem-color-border);
-    border-left: none;
-    border-radius: 0 var(--zylem-radius) var(--zylem-radius) 0;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--zylem-color-text);
-    transition: background 0.2s ease, color 0.2s ease;
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background: var(--zylem-color-surface);
+  border: 1px solid var(--zylem-color-border);
+  border-left: none;
+  border-radius: 0 var(--zylem-radius) var(--zylem-radius) 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--zylem-color-text);
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .toggleButton:hover {
-    background: var(--zylem-color-surface-hover);
-    color: var(--zylem-color-primary);
+  background: var(--zylem-color-surface-hover);
+  color: var(--zylem-color-primary);
 }
 
 .toggleIcon {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .toggleIconClosed {
-    transform: rotate(180deg);
+  transform: rotate(180deg);
 }
 
 @media (max-width: 900px) {
-    .sidePanel {
-        position: relative;
-        top: auto;
-        right: auto;
-        bottom: auto;
-        left: auto;
-        width: 100%;
-        max-height: min(32rem, 56dvh);
-        border-right: none;
-        border-bottom: 1px solid var(--zylem-color-border);
-        overflow: hidden;
-        transform: none;
-    }
+  .sidePanel {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: 100%;
+    max-height: min(32rem, 56dvh);
+    border-right: none;
+    border-bottom: 1px solid var(--zylem-color-border);
+    overflow: hidden;
+    transform: none;
+  }
 
-    .sidePanelClosed {
-        transform: none;
-        max-height: none;
-    }
+  .sidePanelClosed {
+    transform: none;
+    max-height: none;
+  }
 
-    .panelContentClosed {
-        display: none;
-    }
+  .panelContentClosed {
+    display: none;
+  }
 
-    .toggleButton {
-        left: auto;
-        right: 1rem;
-        top: 1rem;
-        transform: none;
-        width: 2.25rem;
-        height: 2.25rem;
-        border: 1px solid color-mix(in srgb, var(--zylem-color-border) 85%, transparent);
-        border-radius: 999px;
-        background: color-mix(in srgb, var(--zylem-color-surface) 92%, black 8%);
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
-    }
+  .toggleButton {
+    left: auto;
+    right: var(--zylem-spacing-lg);
+    top: var(--zylem-spacing-lg);
+    transform: none;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid
+      color-mix(in srgb, var(--zylem-color-border) 85%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--zylem-color-surface) 92%, black 8%);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+  }
 
-    .toggleIcon {
-        transform: rotate(-90deg);
-    }
+  .toggleIcon {
+    transform: rotate(-90deg);
+  }
 
-    .toggleIconClosed {
-        transform: rotate(90deg);
-    }
+  .toggleIconClosed {
+    transform: rotate(90deg);
+  }
 }

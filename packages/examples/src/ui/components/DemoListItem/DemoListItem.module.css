@@ -2,7 +2,7 @@
     width: 100%;
     display: block;
     text-align: left;
-    padding: 0.45rem 1rem;
+    padding: var(--zylem-spacing-sm) var(--zylem-spacing-lg);
     box-sizing: border-box;
     transition: opacity 0.15s ease, transform 0.15s ease;
     color: var(--zylem-color-text);

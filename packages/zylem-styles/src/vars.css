@@ -34,13 +34,18 @@
     --zylem-color-console-background: rgba(20, 40, 60, 0.25);
     --zylem-color-console-text: #61A6E8;
 
-    /* Spacing */
-    --zylem-spacing-xs: 2px;
-    --zylem-spacing-sm: 4px;
-    --zylem-spacing-md: 8px;
-    --zylem-spacing-lg: 12px;
-    --zylem-spacing-xl: 16px;
-    --zylem-spacing-xxl: 32px;
+    /* Spacing - rem-based t-shirt scale.
+       Use these for `gap`, `padding`, and `margin`. They scale with the
+       root font-size (`--zylem-font-size`) so the whole UI respects user
+       font-size preferences. */
+    --zylem-spacing-xxs: 0.125rem;  /* ~2px  - hairline gaps */
+    --zylem-spacing-xs:  0.25rem;   /* ~4px  - very tight */
+    --zylem-spacing-sm:  0.5rem;    /* ~8px  - tight */
+    --zylem-spacing-md:  0.75rem;   /* ~12px - default inner padding/gap */
+    --zylem-spacing-lg:  1rem;      /* ~16px - default block padding */
+    --zylem-spacing-xl:  1.5rem;    /* ~24px - section padding */
+    --zylem-spacing-xxl: 2rem;      /* ~32px - large layout spacing */
+    --zylem-spacing-xxxl: 3rem;     /* ~48px - hero / outer offsets */
 
     /* Sizes */
     --zylem-size-icon: 28px;

@@ -1,5 +1,8 @@
 .shell {
-  --mobile-shell-side-padding: 0.9rem;
+  /* Local layout vars: side-padding is aliased to a spacing token so the
+     mobile shell stays aligned with the rest of the system; bottom-bar
+     height is a layout size, not a spacing value. */
+  --mobile-shell-side-padding: var(--zylem-spacing-md);
   --mobile-shell-bottom-bar-height: 5.25rem;
   position: relative;
   height: 100%;
@@ -43,7 +46,7 @@
   box-shadow:
     0 -20px 50px rgba(0, 0, 0, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transform: translateY(calc(100% + 1rem));
+  transform: translateY(calc(100% + var(--zylem-spacing-lg)));
   opacity: 0;
   pointer-events: none;
   transition:
@@ -60,7 +63,7 @@
 .drawerHandle {
   width: 3rem;
   height: 0.3rem;
-  margin: 0.8rem auto 0.35rem;
+  margin: var(--zylem-spacing-md) auto var(--zylem-spacing-xs);
   border-radius: 999px;
   background: color-mix(
     in srgb,
@@ -72,23 +75,24 @@
 
 .drawerScrollArea {
   overflow: auto;
-  padding: 0.35rem var(--mobile-shell-side-padding) 0.9rem;
+  padding: var(--zylem-spacing-xs) var(--mobile-shell-side-padding)
+    var(--zylem-spacing-md);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--zylem-spacing-lg);
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--zylem-spacing-md);
 }
 
 .sectionHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--zylem-spacing-md);
 }
 
 .sectionTitle {
@@ -109,7 +113,7 @@
 .sectionGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(5.75rem, 1fr));
-  gap: 0.75rem;
+  gap: var(--zylem-spacing-md);
 }
 
 .demoCard {
@@ -123,14 +127,15 @@
 }
 
 .emptyState {
-  padding: 1.75rem 0.5rem 2rem;
+  padding: var(--zylem-spacing-xl) var(--zylem-spacing-sm)
+    var(--zylem-spacing-xxl);
   text-align: center;
   font-size: 0.9rem;
   color: var(--zylem-color-text-secondary);
 }
 
 .searchDock {
-  padding: 0.85rem var(--mobile-shell-side-padding);
+  padding: var(--zylem-spacing-md) var(--mobile-shell-side-padding);
   border-top: 1px solid
     color-mix(in srgb, var(--zylem-color-border) 84%, transparent);
   background: color-mix(in srgb, var(--zylem-color-surface) 88%, black 12%);
@@ -142,7 +147,7 @@
     color-mix(in srgb, var(--zylem-color-border) 85%, transparent);
   border-radius: 0.95rem;
   background: color-mix(in srgb, var(--zylem-color-background) 76%, black 24%);
-  padding: 0.9rem 1rem;
+  padding: var(--zylem-spacing-md) var(--zylem-spacing-lg);
   font: inherit;
   color: var(--zylem-color-text);
   outline: none;
@@ -163,12 +168,12 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.85rem;
+  gap: var(--zylem-spacing-md);
   min-height: calc(
     var(--mobile-shell-bottom-bar-height) + env(safe-area-inset-bottom)
   );
-  padding: 0.85rem var(--mobile-shell-side-padding)
-    calc(0.85rem + env(safe-area-inset-bottom));
+  padding: var(--zylem-spacing-md) var(--mobile-shell-side-padding)
+    calc(var(--zylem-spacing-md) + env(safe-area-inset-bottom));
   border-top: 1px solid
     color-mix(in srgb, var(--zylem-color-border) 84%, transparent);
   background: linear-gradient(
@@ -222,7 +227,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: var(--zylem-spacing-xxs);
 }
 
 .bottomBarCaption {

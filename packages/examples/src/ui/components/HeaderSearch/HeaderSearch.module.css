@@ -1,12 +1,12 @@
 .header {
-    padding: var(--zylem-spacing-xl);
+    padding: var(--zylem-spacing-lg);
     border-bottom: 1px solid var(--zylem-color-border);
 }
 
 .title {
     font-size: 1.25rem;
     font-weight: 700;
-    margin-bottom: var(--zylem-spacing-xl);
+    margin-bottom: var(--zylem-spacing-lg);
     color: var(--zylem-color-primary);
 }
 
@@ -17,7 +17,7 @@
     background: var(--zylem-color-surface-hover);
     border: 1px solid var(--zylem-color-border);
     border-radius: var(--zylem-radius);
-    padding: var(--zylem-spacing-md) var(--zylem-spacing-lg);
+    padding: var(--zylem-spacing-sm) var(--zylem-spacing-md);
     font-size: 0.875rem;
     font-family: var(--zylem-font-family);
     color: var(--zylem-color-text);
@@ -34,12 +34,15 @@
 
 @media (max-width: 900px) {
     .header {
-        padding: 1rem 4rem 1rem 1rem;
+        /* 4rem right padding reserves room for the absolutely-positioned
+           toggle button; it's a layout offset, not generic spacing. */
+        padding: var(--zylem-spacing-lg) 4rem var(--zylem-spacing-lg)
+            var(--zylem-spacing-lg);
     }
 
     .title {
         font-size: 1.1rem;
-        margin-bottom: 0.75rem;
+        margin-bottom: var(--zylem-spacing-md);
     }
 
     .searchInput {
