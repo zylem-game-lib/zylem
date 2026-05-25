@@ -22,12 +22,20 @@ export default function createDemo() {
 			height: 20,
 		});
 
+		const BRAKE_STRENGTH = 3;
 		playerShip.onUpdate(({ me, inputs }) => {
 			const { Horizontal, Vertical } = inputs.p1.axes;
 
-			if (me.$thruster) {
-				me.$thruster.thrust = Math.max(-Vertical.value, 0);
-				me.$thruster.rotate = Horizontal.value;
+			if (!me.$thruster) return;
+
+			const forward = Math.max(-Vertical.value, 0);
+			const braking = Math.max(Vertical.value, 0);
+
+			me.$thruster.thrust = forward;
+			me.$thruster.rotate = Horizontal.value;
+
+			if (me.thruster) {
+				me.thruster.linearDamping = braking * BRAKE_STRENGTH;
 			}
 		});
 
