@@ -7,7 +7,7 @@ import {
   setSidePanelOpen,
 } from '../../../store/appStore';
 import DemoListItem from '../DemoListItem/DemoListItem';
-import styles from './DemosList.module.css';
+import * as styles from './DemosList.css';
 import {
   EXAMPLE_SECTION_ORDER,
   ExampleConfig,

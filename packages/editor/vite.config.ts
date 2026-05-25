@@ -2,6 +2,9 @@ import { defineConfig } from 'vite';
 import solid from 'vite-plugin-solid';
 import path from 'path';
 
+// `@zylem/styles/styles.css` is resolved via the package's `exports` map
+// (`"./styles.css": "./dist/styles.css"`), so no explicit alias is needed
+// here — Vite, Rollup, and esbuild all honor the subpath export.
 export default defineConfig({
 	plugins: [solid()],
 	build: {
@@ -15,12 +18,6 @@ export default defineConfig({
 		rollupOptions: {
 			// Externalize deps that shouldn't be bundled locally
 			external: ['solid-js', 'solid-js/web', '@zylem/styles'],
-		},
-	},
-	resolve: {
-		alias: {
-			// Resolve styles to the built dist folder for proper CSS bundling
-			'@zylem/styles/styles.css': path.resolve(__dirname, '../zylem-styles/dist/styles.css'),
 		},
 	},
 });

@@ -5,8 +5,9 @@ import App, {
 } from '../App';
 import { EditorProvider } from '../components/EditorContext';
 
-// Import bundled CSS (single file with all tokens and component styles)
-import zylemCSS from '../../../zylem-styles/dist/styles.css?raw';
+// Import bundled CSS (single file with all tokens and component styles).
+// Resolves via the `./styles.css` export in `@zylem/styles/package.json`.
+import zylemCSS from '@zylem/styles/styles.css?raw';
 
 /**
  * Configuration options for the ZylemEditorElement

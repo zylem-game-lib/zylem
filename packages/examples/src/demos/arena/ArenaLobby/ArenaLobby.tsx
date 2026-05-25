@@ -26,7 +26,7 @@ import {
   swatchCss,
 } from '../lobby-palette';
 import { demoAsset } from '../../../assets/manifest';
-import styles from './ArenaLobby.module.css';
+import * as styles from './ArenaLobby.css';
 
 const CHARACTER_LABELS: Record<CharacterClass, string> = {
   tank: 'Tank',

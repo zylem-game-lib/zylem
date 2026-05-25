@@ -1,13 +1,19 @@
 import { defineConfig } from 'tsup';
+import { vanillaExtractPlugin } from '@vanilla-extract/esbuild-plugin';
 
 const isProd = process.env.NODE_ENV === 'production';
 const sourcemap = process.env.SOURCEMAP === '1' || !isProd;
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/styles.css'],
+  // `index` exposes the typed `vars`/`sprinkles` API; `styles` is the
+  // side-effect barrel whose CSS chunks (from every `*.css.ts` it pulls
+  // in) get concatenated by esbuild into `dist/styles.css`.
+  entry: { index: 'src/index.ts', styles: 'src/styles.ts' },
   format: ['esm'],
   dts: true,
   clean: true,
   sourcemap,
   minify: isProd,
+  esbuildPlugins: [vanillaExtractPlugin()],
+  loader: { '.css': 'css' },
 });

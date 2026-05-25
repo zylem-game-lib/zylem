@@ -29,7 +29,7 @@ import {
 } from '../../../demos/arena/networking/arena-lobby-store';
 import MultiplayerLobby from '../../../demos/multiplayer-lobby/MultiplayerLobby/MultiplayerLobby';
 import ArenaLobby from '../../../demos/arena/ArenaLobby/ArenaLobby';
-import styles from './DemoViewer.module.css';
+import * as styles from './DemoViewer.css';
 import { subscribe } from 'valtio/vanilla';
 
 declare module 'solid-js' {

@@ -483,7 +483,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 	).setInputConfiguration(useArrowsForAxes('p1'));
 
 	stage.add(groundPlane, ...doodads.entities);
-	stage.add(jumbotronScreen, jumbotronFrame);
+	// stage.add(jumbotronScreen, jumbotronFrame);
 
 	// Light purple-red atmosphere fog. Linear distance falloff keeps the
 	// center of the arena clear while the far rim of the bowl fades into

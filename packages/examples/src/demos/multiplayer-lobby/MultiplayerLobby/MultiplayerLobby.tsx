@@ -10,7 +10,7 @@ import {
   ensureMultiplayerLobbyDeviceId,
   multiplayerLobbyStore,
 } from '../multiplayer-lobby-store';
-import styles from './MultiplayerLobby.module.css';
+import * as styles from './MultiplayerLobby.css';
 
 const SWATCHES: { label: string; u32: number }[] = [
   { label: 'Blue', u32: 0xff4a90e2 },

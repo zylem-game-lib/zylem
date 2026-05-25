@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import glsl from 'vite-plugin-glsl';
 import solidPlugin from 'vite-plugin-solid';
+import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Agent } from 'https';
@@ -84,7 +85,7 @@ const shouldOpenBrowser = !(
 );
 
 export default defineConfig({
-	plugins: [glsl(), solidPlugin()] as any,
+	plugins: [glsl(), vanillaExtractPlugin(), solidPlugin()] as any,
 	build: {
 		target: 'esnext',
 	},

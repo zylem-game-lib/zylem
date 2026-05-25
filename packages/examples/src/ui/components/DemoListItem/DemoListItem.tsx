@@ -1,7 +1,7 @@
 import { Component, createEffect } from 'solid-js';
 import { ExampleConfig } from '../../../examples-config';
 import DemoPreviewImage from '../DemoPreviewImage/DemoPreviewImage';
-import styles from './DemoListItem.module.css';
+import * as styles from './DemoListItem.css';
 
 interface DemoListItemProps {
   example: ExampleConfig;

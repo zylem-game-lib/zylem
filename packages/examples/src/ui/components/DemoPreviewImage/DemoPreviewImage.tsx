@@ -5,7 +5,7 @@ import {
   createMemo,
   createSignal,
 } from 'solid-js';
-import styles from './DemoPreviewImage.module.css';
+import * as styles from './DemoPreviewImage.css';
 
 interface DemoPreviewImageProps {
   exampleId: string;

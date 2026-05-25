@@ -14,6 +14,7 @@ import {
 	type BootstrapArenaNetworkConfig,
 } from './main-stage/arena-network';
 import { isCharacterClass } from './characters';
+// import { attachPerfLogger } from '../../debug/perf-logger';
 
 export default function createDemo() {
 	// ─── Lobby ──────────────────────────────────────────────────────────────
@@ -128,5 +129,6 @@ export default function createDemo() {
 		ctx.game?.nextStage();
 	});
 
+	// attachPerfLogger(game);
 	return game;
 }

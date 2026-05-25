@@ -7,7 +7,7 @@ import {
   onMount,
 } from 'solid-js';
 import { useLocation } from '@solidjs/router';
-import styles from './App.module.css';
+import * as styles from './App.css';
 import SidePanel from './components/SidePanel/SidePanel';
 import DemoViewer from './components/DemoViewer/DemoViewer';
 import MobileWorkspace from './components/MobileWorkspace/MobileWorkspace';
@@ -62,7 +62,7 @@ const ExampleWorkspace: Component = () => {
 
   return (
     <div
-      class={`bg-zylem-background text-zylem-text font-zylem ${styles.appShell} ${useMobileShell() ? styles.appShellMobile : ''}`}
+      class={`${styles.appShell} ${useMobileShell() ? styles.appShellMobile : ''}`}
     >
       <Show
         when={useMobileShell()}

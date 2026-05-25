@@ -28,14 +28,14 @@
     "valtio": "^2.1.7"
   },
   "devDependencies": {
-    "cross-env": "^10.1.0",
     "@playwright/test": "^1.56.1",
     "@types/node": "^20.19.13",
     "@types/three": "0.171.0",
+    "@vanilla-extract/css": "^1.20.1",
+    "@vanilla-extract/sprinkles": "^1.6.5",
+    "@vanilla-extract/vite-plugin": "^5.2.2",
     "@zylem/utilities": "workspace:*",
-    "autoprefixer": "^10.4.22",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.18",
+    "cross-env": "^10.1.0",
     "typescript": "5.8.2",
     "vite": "7.0.4",
     "vite-plugin-glsl": "^1.5.4",

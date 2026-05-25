@@ -8,6 +8,7 @@ import {
   demoViewportStore,
   isMobileShellViewportMode,
 } from '../store/demoViewportStore';
+import { editorOverlay } from './App.css';
 
 if (!customElements.get('zylem-game')) {
   customElements.define('zylem-game', ZylemGameElement);
@@ -35,7 +36,7 @@ const App: Component<RouteSectionProps> = (props) => {
       {props.children}
       <Show when={!screenshotMode()}>
         <zylem-editor
-          class="fixed inset-0 z-[1000] pointer-events-none [&>*]:pointer-events-auto"
+          class={editorOverlay}
           launcher-mode={editorLauncherMode()}
         ></zylem-editor>
       </Show>

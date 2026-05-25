@@ -1,6 +1,6 @@
 import { Component } from 'solid-js';
 import { appStore, setSearchTerm } from '../../../store/appStore';
-import styles from './HeaderSearch.module.css';
+import * as styles from './HeaderSearch.css';
 
 const HeaderSearch: Component = () => {
   return (

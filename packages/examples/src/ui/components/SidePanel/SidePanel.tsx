@@ -2,7 +2,7 @@ import { Component } from 'solid-js';
 import HeaderSearch from '../HeaderSearch/HeaderSearch';
 import DemosList from '../DemosList/DemosList';
 import { appStore, toggleSidePanel } from '../../../store/appStore';
-import styles from './SidePanel.module.css';
+import * as styles from './SidePanel.css';
 
 const SidePanel: Component = () => {
   return (

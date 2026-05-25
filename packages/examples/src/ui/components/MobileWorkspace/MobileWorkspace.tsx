@@ -11,7 +11,7 @@ import {
   setSearchTerm,
   toggleMobileDemoDrawer,
 } from '../../../store/appStore';
-import styles from './MobileWorkspace.module.css';
+import * as styles from './MobileWorkspace.css';
 
 const DemoButtonIcon: Component = () => (
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
