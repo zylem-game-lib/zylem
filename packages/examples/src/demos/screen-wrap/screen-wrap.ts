@@ -4,7 +4,7 @@ import { ThrusterBehavior, ScreenWrapBehavior, useBehavior } from '@zylem/game-l
 import { useArrowsForAxes } from '@zylem/game-lib/input';
 import { demoAsset } from '../../assets/manifest';
 
-const playerShipImg = demoAsset('general/space/player-ship.png');
+const playerShipImg = demoAsset('general/zylem-ship.png');
 
 export default function createDemo() {
 	function playerFactory() {

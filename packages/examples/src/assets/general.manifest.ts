@@ -20,6 +20,7 @@ export const GENERAL_ASSET_PATHS = {
 	'general/player-ship.glb': 'general/models/player-ship.33f2c659.glb',
 	'general/planet-normal-texture.png': 'general/images/planet-normal-texture.c43003bc.png',
 	'general/player-sprite.png': 'general/images/player-sprite.f58eb201.png',
+	'general/zylem-ship.png': 'general/images/zylem-ship.1df8082a.png',
 
 	'general/skybox-default.png': 'general/images/skybox-default.6d3a9f73.png',
 	'general/texture-dirt.png': 'general/images/texture-dirt.7a5fb26b.png',
