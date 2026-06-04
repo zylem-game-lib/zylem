@@ -24,7 +24,7 @@ export {
 	emitRuntimeGoal,
 	emitRuntimeRicochet,
 	emitRuntimeTriggerRegionEnter,
-} from '../lib/behaviors/runtime-pong/runtime-pong.descriptors';
+} from '@zylem/behaviors/runtime-pong';
 export type {
 	RuntimeGoalZone2DEvent,
 	RuntimeGoalZone2DHandle,
@@ -39,7 +39,7 @@ export type {
 	RuntimeTriggerRegion2DHandle,
 	RuntimeTriggerRegion2DOptions,
 	RuntimeWorldBoundary2DOptions,
-} from '../lib/behaviors/runtime-pong/runtime-pong.descriptors';
+} from '@zylem/behaviors/runtime-pong';
 
 // Runtime 2D aliased descriptors (the names new examples like pong.ts use).
 // `RuntimeRicochet2DBehavior` and `RuntimeTriggerRegion2DBehavior` collide
@@ -56,10 +56,10 @@ export {
 	RUNTIME_DYNAMIC_CIRCLE_BODY_2D_BEHAVIOR_KEY,
 	RUNTIME_PLAYER_INPUT_2D_BEHAVIOR_KEY,
 	bindRuntimeDynamicCircleBody2DHandle,
-} from '../lib/behaviors/runtime-2d/runtime-2d.descriptors';
+} from '@zylem/behaviors/runtime-2d';
 export type {
 	RuntimeBoundary2DOptions,
 	RuntimeDynamicCircleBody2DHandle,
 	RuntimeDynamicCircleBody2DOptions,
 	RuntimePlayerInput2DOptions,
-} from '../lib/behaviors/runtime-2d/runtime-2d.descriptors';
+} from '@zylem/behaviors/runtime-2d';

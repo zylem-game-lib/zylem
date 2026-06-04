@@ -53,6 +53,80 @@ importers:
         specifier: ^2.11.8
         version: 2.11.8(solid-js@1.9.9)(vite@7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6))
 
+  packages/behavior-core:
+    dependencies:
+      typescript-fsm:
+        specifier: ^1.6.0
+        version: 1.6.0
+      valtio:
+        specifier: ^2.1.7
+        version: 2.1.7(react@18.3.1)
+    devDependencies:
+      '@dimforge/rapier3d-compat':
+        specifier: ^0.11.2
+        version: 0.11.2
+      '@types/node':
+        specifier: ^20.19.13
+        version: 20.19.13
+      '@types/three':
+        specifier: 0.171.0
+        version: 0.171.0
+      three:
+        specifier: ^0.180.0
+        version: 0.180.0
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2)
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+
+  packages/behaviors:
+    dependencies:
+      '@dgreenheck/three-pinata':
+        specifier: ^2.0.1
+        version: 2.0.1(three@0.180.0)
+      '@zylem/behavior-core':
+        specifier: workspace:*
+        version: link:../behavior-core
+      comlink:
+        specifier: ^4.4.2
+        version: 4.4.2
+      three:
+        specifier: ^0.180.0
+        version: 0.180.0
+      three.quarks:
+        specifier: ^0.17.0
+        version: 0.17.0(three@0.180.0)
+      typescript-fsm:
+        specifier: ^1.6.0
+        version: 1.6.0
+      valtio:
+        specifier: ^2.1.7
+        version: 2.1.7(react@18.3.1)
+    devDependencies:
+      '@dimforge/rapier3d-compat':
+        specifier: ^0.11.2
+        version: 0.11.2
+      '@types/node':
+        specifier: ^20.19.13
+        version: 20.19.13
+      '@types/three':
+        specifier: 0.171.0
+        version: 0.171.0
+      happy-dom:
+        specifier: ^18.0.1
+        version: 18.0.1
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2)
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+      vitest:
+        specifier: ^4.0.9
+        version: 4.0.9(@types/node@20.19.13)(happy-dom@18.0.1)(jiti@2.6.1)(jsdom@27.2.0)(lightningcss@1.32.0)(tsx@4.20.6)
+
   packages/editor:
     dependencies:
       '@kobalte/core':
@@ -196,6 +270,12 @@ importers:
       '@types/howler':
         specifier: ^2.2.12
         version: 2.2.12
+      '@zylem/behavior-core':
+        specifier: workspace:*
+        version: link:../behavior-core
+      '@zylem/behaviors':
+        specifier: workspace:*
+        version: link:../behaviors
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -4225,7 +4305,7 @@ snapshots:
       lines-and-columns: 1.2.4
       mz: 2.7.0
       pirates: 4.0.7
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.16
       ts-interface-checker: 0.1.13
 
   symbol-tree@3.2.4: {}
@@ -4298,7 +4378,7 @@ snapshots:
       source-map: 0.7.6
       sucrase: 3.35.1
       tinyexec: 0.3.2
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.16
       tree-kill: 1.2.2
     optionalDependencies:
       postcss: 8.5.15
@@ -4446,11 +4526,11 @@ snapshots:
       expect-type: 1.2.2
       magic-string: 0.30.21
       pathe: 2.0.3
-      picomatch: 4.0.3
+      picomatch: 4.0.4
       std-env: 3.10.0
       tinybench: 2.9.0
       tinyexec: 0.3.2
-      tinyglobby: 0.2.15
+      tinyglobby: 0.2.16
       tinyrainbow: 3.0.3
       vite: 7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6)
       why-is-node-running: 2.3.0

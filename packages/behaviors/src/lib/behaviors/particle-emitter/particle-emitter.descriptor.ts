@@ -8,7 +8,11 @@ import {
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
 import { VEC3_ZERO, type Vec3Input, normalizeVec3, toThreeVector3 } from '../../core/vector';
-import { getGlobals } from '../../game/game-state';
+function getRefGlobals(
+	ref: BehaviorRef<ParticleEmitterBehaviorOptions>,
+): (() => any) | null {
+	return ((ref as any).__getGlobals ?? null) as (() => any) | null;
+}
 import type { ParticleEffectDefinition } from './particle-effect';
 
 export interface ParticleEmitterBehaviorOptions {
@@ -274,7 +278,7 @@ function handleSystemDestroyed(
 		&& entity.__zylemParticleSystemEntity
 		&& !entity.markedForRemoval
 	) {
-		entity.nodeDestroy?.({ me: entity, globals: getGlobals() });
+		entity.nodeDestroy?.({ me: entity, globals: getRefGlobals(ref)?.() ?? {} });
 	}
 }
 
@@ -355,6 +359,7 @@ class ParticleEmitterBehaviorSystem implements BehaviorSystem {
 	constructor(
 		private readonly scene: { scene: Object3D },
 		private readonly getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
+		private readonly getGlobals?: () => any,
 	) {}
 
 	private getRendererService(): ParticleRendererService {
@@ -376,6 +381,7 @@ class ParticleEmitterBehaviorSystem implements BehaviorSystem {
 		for (const link of links) {
 			const entity = link.entity as ParticleEmitterHostEntity;
 			const ref = link.ref as BehaviorRef<ParticleEmitterBehaviorOptions>;
+			(ref as any).__getGlobals = this.getGlobals;
 			const state = getParticleControlState(ref);
 
 			if (shouldCreateRuntime(state)) {
@@ -434,6 +440,6 @@ export const ParticleEmitterBehavior = defineBehavior<
 	name: 'particle-emitter',
 	defaultOptions,
 	systemFactory: (ctx) =>
-		new ParticleEmitterBehaviorSystem(ctx.scene, ctx.getBehaviorLinks),
+		new ParticleEmitterBehaviorSystem(ctx.scene, ctx.getBehaviorLinks, ctx.getGlobals),
 	createHandle: createParticleEmitterHandle,
 });

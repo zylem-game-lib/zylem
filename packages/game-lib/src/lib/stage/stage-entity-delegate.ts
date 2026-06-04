@@ -6,7 +6,8 @@ import { clearVariables } from './stage-state';
 import { debugState } from '../debug/debug-state';
 import { getGlobals } from '../game/game-state';
 import { BaseNode } from '../core/base-node';
-import { GameEntity } from '../entities/entity';
+import { GameEntity, create } from '../entities/entity';
+import type { CreateEntityFn } from '@zylem/behavior-core';
 import { ZylemActor } from '../entities/actor';
 import { BaseEntityInterface } from '../types/entity-types';
 import { StageLoadingDelegate } from './stage-loading-delegate';
@@ -472,6 +473,8 @@ export class StageEntityDelegate {
 				getBehaviorLinks: (key: symbol) =>
 					this.behaviorEntityIndex.get(key)
 					?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
+				createEntity: create as unknown as CreateEntityFn,
+				getGlobals,
 			});
 		} else {
 			system = systemOrFactory;
@@ -542,6 +545,8 @@ export class StageEntityDelegate {
 					getBehaviorLinks: (behaviorKey: symbol) =>
 						this.behaviorEntityIndex.get(behaviorKey)
 						?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
+					createEntity: create as unknown as CreateEntityFn,
+					getGlobals,
 				});
 				system = createdSystem;
 				this.behaviorSystems.push(createdSystem);

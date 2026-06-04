@@ -1,7 +1,7 @@
 import { Scene } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 
-import { particlePresets } from '../../../src/lib/behaviors/particle-emitter';
+import { particlePresets } from '@zylem/behaviors/particle-emitter';
 import { createParticleSystem } from '../../../src/lib/entities/particle-system';
 import { StageEntityDelegate } from '../../../src/lib/stage/stage-entity-delegate';
 import { StageEntityModelDelegate } from '../../../src/lib/stage/stage-entity-model-delegate';

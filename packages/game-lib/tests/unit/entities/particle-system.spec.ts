@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createParticleSystem } from '../../../src/lib/entities/particle-system';
-import { particlePresets } from '../../../src/lib/behaviors/particle-emitter';
+import { particlePresets } from '@zylem/behaviors/particle-emitter';
 
 describe('ZylemParticleSystem', () => {
 	it('clones without duplicating the built-in particle behavior', () => {

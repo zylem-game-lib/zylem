@@ -18,8 +18,7 @@ import {
 } from 'three.quarks';
 import { describe, expect, it } from 'vitest';
 
-import { ParticleEmitterBehavior } from '../../../src/lib/behaviors/particle-emitter';
-import { particleEffect, particlePresets } from '../../../src/lib/behaviors/particle-emitter/particle-effect';
+import { ParticleEmitterBehavior, particleEffect, particlePresets } from '@zylem/behaviors/particle-emitter';
 import { create } from '../../../src/lib/entities/entity';
 import { createParticleSystem } from '../../../src/lib/entities/particle-system';
 

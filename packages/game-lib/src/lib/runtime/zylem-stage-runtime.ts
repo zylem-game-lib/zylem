@@ -17,7 +17,7 @@ import {
 	type RuntimePlayerInput2DOptions,
 	type RuntimeRicochet2DOptions,
 	type RuntimeTriggerRegion2DOptions,
-} from '../behaviors/runtime-2d/runtime-2d.descriptors';
+} from '@zylem/behaviors/runtime-2d';
 import type { GameEntity, RuntimeEntityColorMode, RuntimeEntityOptions } from '../entities/entity';
 import { RuntimeInstanceManager } from '../graphics/runtime-instance-manager';
 import { InstanceManager } from '../graphics/instance-manager';

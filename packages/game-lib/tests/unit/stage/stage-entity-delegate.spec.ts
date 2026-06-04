@@ -5,7 +5,7 @@ import {
 	Destructible3DBehavior,
 	type Destructible3DHandle,
 	FractureOptions,
-} from '../../../src/lib/behaviors/destructible-3d';
+} from '@zylem/behaviors/destructible-3d';
 import { EntityAssetLoader } from '../../../src/lib/core/entity-asset-loader';
 import { createActor } from '../../../src/lib/entities/actor';
 import { createBox } from '../../../src/lib/entities/box';

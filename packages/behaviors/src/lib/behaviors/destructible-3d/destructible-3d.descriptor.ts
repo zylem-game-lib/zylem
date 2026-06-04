@@ -25,8 +25,7 @@ import * as Comlink from 'comlink';
 
 import { defineBehavior, type BehaviorRef } from '../behavior-descriptor';
 import type { BehaviorEntityLink, BehaviorSystem } from '../behavior-system';
-import { create, type GameEntity } from '../../entities/entity';
-import { getGlobals } from '../../game/game-state';
+import type { CreateEntityFn, GameEntity } from '../../entities/entity';
 import { getBodyRenderPose } from '../../physics/physics-pose';
 
 import {
@@ -36,7 +35,7 @@ import {
 	type DestructiblePrebakeWorkerAPI,
 	pinataFractureOptionsToPlain,
 	plainWorkerResultToTemplateParts,
-} from '@zylem/game-behavior-shared';
+} from '../../destructible-prebake';
 
 export type FractureOptionsInput =
 	NonNullable<ConstructorParameters<typeof PinataFractureOptions>[0]>;
@@ -260,6 +259,18 @@ function getBehaviorScene(
 	ref: BehaviorRef<Destructible3DBehaviorOptions>,
 ): BehaviorScene | null {
 	return ((ref as any).__scene ?? null) as BehaviorScene | null;
+}
+
+function getBehaviorCreateEntity(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+): CreateEntityFn | null {
+	return ((ref as any).__createEntity ?? null) as CreateEntityFn | null;
+}
+
+function getBehaviorGlobals(
+	ref: BehaviorRef<Destructible3DBehaviorOptions>,
+): (() => any) | null {
+	return ((ref as any).__getGlobals ?? null) as (() => any) | null;
 }
 
 function cloneFractureOptionsInput(
@@ -956,6 +967,7 @@ function computeFragmentLinearVelocity(
 }
 
 function createRuntimeFragmentEntity(
+	createEntity: CreateEntityFn,
 	parentEntity: GameEntity<any>,
 	fragment: DestructibleMesh,
 	index: number,
@@ -963,7 +975,7 @@ function createRuntimeFragmentEntity(
 	position: Vector3,
 	rotation: Quaternion,
 ): GameEntity<any> {
-	const entity = create({
+	const entity = createEntity({
 		name: `${parentEntity.name ?? parentEntity.uuid}-fragment-${index}`,
 	});
 
@@ -1038,7 +1050,7 @@ function destroyRuntimeFragmentEntities(
 		try {
 			fragmentEntity.nodeDestroy({
 				me: fragmentEntity,
-				globals: getGlobals(),
+				globals: getBehaviorGlobals(ref)?.() ?? {},
 			} as any);
 		} catch {
 			// Cleanup is best-effort for behavior-managed runtime fragments.
@@ -1205,6 +1217,13 @@ function fractureIndependentEntity(
 		);
 	}
 
+	const createEntity = getBehaviorCreateEntity(ref);
+	if (!createEntity) {
+		throw new Error(
+			'Destructible3DBehavior independent fragments require a host entity factory (BehaviorSystemContext.createEntity).',
+		);
+	}
+
 	const physicsOptions = resolveFragmentPhysicsOptions(ref.options.fragmentPhysics);
 	const rootWorldPosition = getRootWorldPosition(root);
 	const impactPointWorld = getImpactPointWorld(root, fractureOptions);
@@ -1224,6 +1243,7 @@ function fractureIndependentEntity(
 		bakeScaleIntoFragmentGeometry(fragment, fragmentWorldPose.scale);
 
 		const fragmentEntity = createRuntimeFragmentEntity(
+			createEntity,
 			entity,
 			fragment,
 			index,
@@ -1519,6 +1539,8 @@ class Destructible3DSystem implements BehaviorSystem {
 		private world: unknown,
 		private scene: unknown,
 		private getBehaviorLinks?: (key: symbol) => Iterable<BehaviorEntityLink>,
+		private createEntity?: CreateEntityFn,
+		private getGlobals?: () => any,
 	) {
 		this.primeLinks();
 	}
@@ -1586,6 +1608,8 @@ class Destructible3DSystem implements BehaviorSystem {
 		(ref as any).__entity = entity;
 		(ref as any).__world = this.world;
 		(ref as any).__scene = this.scene;
+		(ref as any).__createEntity = this.createEntity;
+		(ref as any).__getGlobals = this.getGlobals;
 
 		if (!ref.__cleanupRegistered) {
 			entity.onCleanup(() => {
@@ -1608,6 +1632,8 @@ export const Destructible3DBehavior = defineBehavior<
 			ctx.world,
 			ctx.scene,
 			ctx.getBehaviorLinks,
+			ctx.createEntity,
+			ctx.getGlobals,
 		),
 	createHandle: createDestructible3DHandle,
 });

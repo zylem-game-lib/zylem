@@ -7,7 +7,7 @@ import {
 	pinataFractureOptionsToPlain,
 	plainFractureOptionsToPinata,
 	plainToBufferGeometry,
-} from '@zylem/game-behavior-shared';
+} from '../../../src/destructible-prebake';
 
 describe('destructible-prebake-payload', () => {
 	it('round-trips FractureOptions through plain JSON-shaped data', () => {

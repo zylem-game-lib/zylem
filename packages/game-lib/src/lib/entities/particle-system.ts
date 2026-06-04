@@ -5,8 +5,8 @@ import {
 	ParticleEmitterBehavior,
 	type ParticleEmitterBehaviorOptions,
 	type ParticleEmitterHandle,
-} from '../behaviors/particle-emitter/particle-emitter.descriptor';
-import type { ParticleEffectDefinition } from '../behaviors/particle-emitter/particle-effect';
+	type ParticleEffectDefinition,
+} from '@zylem/behaviors/particle-emitter';
 import { deepMergeValues } from '../core/clone-utils';
 import { toThreeVector3 } from '../core/vector';
 import { commonDefaults } from './common';

@@ -10,6 +10,9 @@ export default defineConfig(async (env) => {
 			globals: true,
 			projects: [
 				{
+					resolve: {
+						alias: baseConfig.resolve?.alias,
+					},
 					test: {
 						name: 'unit',
 						environment: 'happy-dom',
@@ -19,12 +22,13 @@ export default defineConfig(async (env) => {
 				},
 				{
 					plugins: [solidPlugin({ dev: true, ssr: false })],
+					resolve: {
+						alias: baseConfig.resolve?.alias,
+						conditions: ['browser', 'development'],
+					},
 					test: {
 						name: 'integration',
 						environment: 'jsdom',
-						resolve: {
-							conditions: ['browser', 'development'],
-						},
 						server: {
 							deps: {
 								inline: [

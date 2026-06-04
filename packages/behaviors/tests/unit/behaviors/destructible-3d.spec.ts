@@ -228,6 +228,14 @@ function attachBehaviorRuntime(
 			key === Destructible3DBehavior.key
 				? [{ entity, ref }]
 				: [],
+		createEntity: (options) => {
+			const fragment = new GameEntity<any>();
+			if (options?.name) {
+				fragment.name = options.name;
+			}
+			return fragment;
+		},
+		getGlobals: () => ({}),
 	});
 
 	return {

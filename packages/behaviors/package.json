@@ -1,0 +1,155 @@
+{
+  "name": "@zylem/behaviors",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tree-shakable Zylem behavior descriptors, systems, coordinators, and runtime-agnostic behavior helpers.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/zylem-game-lib/behaviors.git"
+  },
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.32.1"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./destructible-prebake": {
+      "types": "./dist/destructible-prebake.d.ts",
+      "import": "./dist/destructible-prebake.js"
+    },
+    "./cooldown": {
+      "types": "./dist/cooldown.d.ts",
+      "import": "./dist/cooldown.js"
+    },
+    "./destructible-3d": {
+      "types": "./dist/destructible-3d.d.ts",
+      "import": "./dist/destructible-3d.js"
+    },
+    "./first-person": {
+      "types": "./dist/first-person.d.ts",
+      "import": "./dist/first-person.js"
+    },
+    "./jumper-2d": {
+      "types": "./dist/jumper-2d.d.ts",
+      "import": "./dist/jumper-2d.js"
+    },
+    "./jumper-3d": {
+      "types": "./dist/jumper-3d.d.ts",
+      "import": "./dist/jumper-3d.js"
+    },
+    "./particle-emitter": {
+      "types": "./dist/particle-emitter.d.ts",
+      "import": "./dist/particle-emitter.js"
+    },
+    "./particle-emitter/presets": {
+      "types": "./dist/particle-emitter/presets.d.ts",
+      "import": "./dist/particle-emitter/presets.js"
+    },
+    "./platformer-3d": {
+      "types": "./dist/platformer-3d.d.ts",
+      "import": "./dist/platformer-3d.js"
+    },
+    "./ricochet-2d": {
+      "types": "./dist/ricochet-2d.d.ts",
+      "import": "./dist/ricochet-2d.js"
+    },
+    "./ricochet-3d": {
+      "types": "./dist/ricochet-3d.d.ts",
+      "import": "./dist/ricochet-3d.js"
+    },
+    "./runtime-2d": {
+      "types": "./dist/runtime-2d.d.ts",
+      "import": "./dist/runtime-2d.js"
+    },
+    "./runtime-pong": {
+      "types": "./dist/runtime-pong.d.ts",
+      "import": "./dist/runtime-pong.js"
+    },
+    "./screen-visibility": {
+      "types": "./dist/screen-visibility.d.ts",
+      "import": "./dist/screen-visibility.js"
+    },
+    "./screen-wrap": {
+      "types": "./dist/screen-wrap.d.ts",
+      "import": "./dist/screen-wrap.js"
+    },
+    "./shooter-2d": {
+      "types": "./dist/shooter-2d.d.ts",
+      "import": "./dist/shooter-2d.js"
+    },
+    "./thruster": {
+      "types": "./dist/thruster.d.ts",
+      "import": "./dist/thruster.js"
+    },
+    "./top-down-movement": {
+      "types": "./dist/top-down-movement.d.ts",
+      "import": "./dist/top-down-movement.js"
+    },
+    "./world-boundary-2d": {
+      "types": "./dist/world-boundary-2d.d.ts",
+      "import": "./dist/world-boundary-2d.js"
+    },
+    "./world-boundary-3d": {
+      "types": "./dist/world-boundary-3d.d.ts",
+      "import": "./dist/world-boundary-3d.js"
+    },
+    "./coordinators/boundary-ricochet": {
+      "types": "./dist/coordinators/boundary-ricochet.d.ts",
+      "import": "./dist/coordinators/boundary-ricochet.js"
+    },
+    "./coordinators/boundary-ricochet-3d": {
+      "types": "./dist/coordinators/boundary-ricochet-3d.d.ts",
+      "import": "./dist/coordinators/boundary-ricochet-3d.js"
+    },
+    "./coordinators/first-person-shooter": {
+      "types": "./dist/coordinators/first-person-shooter.d.ts",
+      "import": "./dist/coordinators/first-person-shooter.js"
+    },
+    "./coordinators/multidirectional-space-shooter": {
+      "types": "./dist/coordinators/multidirectional-space-shooter.d.ts",
+      "import": "./dist/coordinators/multidirectional-space-shooter.js"
+    },
+    "./coordinators/top-down-shooter": {
+      "types": "./dist/coordinators/top-down-shooter.d.ts",
+      "import": "./dist/coordinators/top-down-shooter.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest --reporter=verbose"
+  },
+  "dependencies": {
+    "@dgreenheck/three-pinata": "^2.0.1",
+    "@zylem/behavior-core": "workspace:*",
+    "comlink": "^4.4.2",
+    "three.quarks": "^0.17.0",
+    "typescript-fsm": "^1.6.0",
+    "valtio": "^2.1.7"
+  },
+  "peerDependencies": {
+    "@dimforge/rapier3d-compat": "^0.11.2",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@dimforge/rapier3d-compat": "^0.11.2",
+    "@types/node": "^20.19.13",
+    "@types/three": "0.171.0",
+    "happy-dom": "^18.0.1",
+    "tsup": "^8.5.1",
+    "typescript": "5.8.2",
+    "vitest": "^4.0.9"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

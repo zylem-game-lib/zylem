@@ -13,7 +13,7 @@ import { ZylemCamera } from '../../../src/lib/camera/zylem-camera';
 import {
 	ScreenVisibilityBehavior,
 	type ScreenVisibilityHandle,
-} from '../../../src/lib/behaviors/screen-visibility';
+} from '@zylem/behaviors/screen-visibility';
 
 function createEntity(size: Vector3, position: Vector3): GameEntity<any> {
 	const entity = new GameEntity<any>();

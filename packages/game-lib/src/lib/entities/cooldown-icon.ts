@@ -29,7 +29,7 @@ import {
 } from './entity';
 import { UpdateContext, SetupContext } from '../core/base-node-life-cycle';
 import { ZylemCamera } from '../camera/zylem-camera';
-import { getCooldown } from '../behaviors/cooldown/cooldown-store';
+import { getCooldown } from '@zylem/behaviors/cooldown';
 import {
   Vec2Input,
   VEC2_ZERO,

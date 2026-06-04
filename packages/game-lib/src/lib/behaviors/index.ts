@@ -1,82 +1,243 @@
 /**
  * Behaviors Module Index
  *
- * Re-exports all ECS components and behaviors.
+ * Behaviors now live in the standalone, tree-shakable `@zylem/behaviors`
+ * package (built on `@zylem/behavior-core`). This barrel re-exports that public
+ * surface so existing `@zylem/game-lib/behavior` consumers keep working.
+ *
+ * IMPORTANT: do NOT use `export * from '@zylem/behaviors'` here. Because
+ * `@zylem/behaviors` is `external` in game-lib's tsup build, esbuild compiles a
+ * star re-export of an external into a runtime `__reExport` helper with no
+ * static export names. Downstream bundlers (e.g. the `examples`/`arena` Vite
+ * builds) then cannot statically resolve named value imports such as
+ * `FractureOptions` and fail with "X is not exported by game-lib/dist/behavior.js".
+ * Explicit named re-exports below are preserved statically and keep a single
+ * runtime copy of `@zylem/behaviors` (no bundling/duplication).
+ *
+ * The lists mirror the full public API of `@zylem/behaviors` (values from its
+ * built `dist/index.js` export block; types are the remaining `dist/index.d.ts`
+ * exports). When behaviors are added/removed in `@zylem/behaviors`, update these
+ * lists to match.
  */
 
-// Core Behavior System Interface
-export type { BehaviorSystem, BehaviorSystemFactory } from './behavior-system';
-
-// Behavior Descriptor Pattern
-export { defineBehavior } from './behavior-descriptor';
-export type {
-	BehaviorDescriptor,
-	BehaviorRef,
-	BehaviorHandle,
-	DefineBehaviorConfig,
-} from './behavior-descriptor';
-
-export { useBehavior } from './use-behavior';
-
-// Core ECS Components
 export {
-	type TransformComponent,
-	type PhysicsBodyComponent,
-	createTransformComponent,
+	BoundaryRicochet3DCoordinator,
+	BoundaryRicochetCoordinator,
+	CooldownBehavior,
+	Destructible3DBehavior,
+	DestructibleMesh,
+	FirstPersonController,
+	FirstPersonControllerBehavior,
+	FirstPersonEvent,
+	FirstPersonFSM,
+	FirstPersonShooterCoordinator,
+	FirstPersonState,
+	FractureOptions,
+	Jumper2D,
+	Jumper2DBehavior,
+	Jumper2DEvent,
+	Jumper2DFSM,
+	Jumper2DState,
+	Jumper2DTickEvent,
+	Jumper3D,
+	Jumper3DBehavior,
+	Jumper3DEvent,
+	Jumper3DFSM,
+	Jumper3DState,
+	JumperTickEvent,
+	MultidirectionalSpaceShooterCoordinator,
+	ParticleEmitterBehavior,
+	Platformer3DBehavior,
+	Platformer3DEvent,
+	Platformer3DFSM,
+	Platformer3DMovementBehavior,
+	Platformer3DState,
+	Ricochet2DBehavior,
+	Ricochet2DEvent,
+	Ricochet2DFSM,
+	Ricochet2DState,
+	Ricochet3DBehavior,
+	Ricochet3DEvent,
+	Ricochet3DFSM,
+	Ricochet3DState,
+	ScreenVisibilityBehavior,
+	ScreenVisibilityFSM,
+	ScreenWrapBehavior,
+	ScreenWrapEvent,
+	ScreenWrapFSM,
+	ScreenWrapState,
+	Shooter2DBehavior,
+	ThrusterBehavior,
+	ThrusterEvent,
+	ThrusterFSM,
+	ThrusterMovementBehavior,
+	ThrusterState,
+	TopDownMovementBehavior,
+	TopDownMovementRuntimeBehavior,
+	TopDownShooterCoordinator,
+	WorldBoundary2DBehavior,
+	WorldBoundary2DEvent,
+	WorldBoundary2DFSM,
+	WorldBoundary2DState,
+	WorldBoundary3DBehavior,
+	WorldBoundary3DEvent,
+	WorldBoundary3DFSM,
+	WorldBoundary3DState,
+	computeWorldBoundary2DHits,
+	computeWorldBoundary3DHits,
+	createFirstPersonInputComponent,
+	createFirstPersonMovementComponent,
+	createFirstPersonStateComponent,
+	createJumpConfig2D,
+	createJumpConfig3D,
+	createJumpInput2D,
+	createJumpInput3D,
+	createJumpState2D,
+	createJumpState3D,
 	createPhysicsBodyComponent,
-} from './components';
+	createPlatformer3DInputComponent,
+	createPlatformer3DMovementComponent,
+	createPlatformer3DStateComponent,
+	createShooter2DStateComponent,
+	createThrusterInputComponent,
+	createThrusterMovementComponent,
+	createThrusterStateComponent,
+	createTopDownMovementComponent,
+	createTopDownMovementInputComponent,
+	createTopDownMovementStateComponent,
+	createTransformComponent,
+	defineBehavior,
+	fireCooldown,
+	getCooldown,
+	getCooldownStore,
+	hasAnyWorldBoundary2DHit,
+	hasAnyWorldBoundary3DHit,
+	particleEffect,
+	particlePresets,
+	registerCooldown,
+	resetCooldown,
+	tickCooldowns,
+	useBehavior,
+} from '@zylem/behaviors';
 
-// Thruster Module (components, FSM, and behaviors)
-export * from './thruster';
-
-// Top-down Movement Module
-export * from './top-down-movement';
-
-// Shooter 2D Module
-export * from './shooter-2d';
-
-// Screen Wrap Module
-export * from './screen-wrap';
-
-// Screen Visibility Module
-export * from './screen-visibility';
-
-// World Boundary 2D Module
-export * from './world-boundary-2d';
-
-// World Boundary 3D Module
-export * from './world-boundary-3d';
-
-// Ricochet 2D Module
-export * from './ricochet-2d';
-
-// Ricochet 3D Module
-export * from './ricochet-3d';
-
-// Platformer 3D Module
-export * from './platformer-3d';
-
-// First Person Controller Module
-export * from './first-person';
-
-// Jumper 3D Module
-export * from './jumper-3d';
-
-// Jumper 2D Module
-export * from './jumper-2d';
-
-// Cooldown Module
-export * from './cooldown';
-
-// Destructible 3D Module
-export * from './destructible-3d';
-
-// Particle Emitter Module
-export * from './particle-emitter';
-
-// Coordinators
-export * from '../coordinators/boundary-ricochet.coordinator';
-export * from '../coordinators/boundary-ricochet-3d.coordinator';
-export * from '../coordinators/first-person-shooter.coordinator';
-export * from '../coordinators/top-down-shooter.coordinator';
-export * from '../coordinators/multidirectional-space-shooter.coordinator';
+export type {
+	Behavior,
+	BehaviorDescriptor,
+	BehaviorHandle,
+	BehaviorRef,
+	BehaviorSystem,
+	BehaviorSystemFactory,
+	BurstParticlePresetOptions,
+	CooldownConfig,
+	CooldownEntry,
+	CooldownHandle,
+	CooldownOptions,
+	DefineBehaviorConfig,
+	Destructible3DBehaviorOptions,
+	Destructible3DColliderOptions,
+	Destructible3DFragmentColliderShape,
+	Destructible3DFragmentPhysicsOptions,
+	Destructible3DHandle,
+	DestructiblePrebakeWorkerAPI,
+	FirstPersonContext,
+	FirstPersonControllerOptions,
+	FirstPersonEntity,
+	FirstPersonInputComponent,
+	FirstPersonMovementComponent,
+	FirstPersonShooterInput,
+	FirstPersonStateComponent,
+	FractureOptionsInput,
+	JumpConfig2D,
+	JumpConfig3D,
+	JumpContext2D,
+	JumpContext3D,
+	JumpInput2D,
+	JumpInput3D,
+	JumpState2D,
+	JumpState3D,
+	Jumper2DBehaviorOptions,
+	Jumper2DEntity,
+	Jumper2DTickResult,
+	Jumper3DBehaviorOptions,
+	Jumper3DEntity,
+	JumperTickResult,
+	MultidirectionalSpaceShooterInput,
+	ParticleEffectDefinition,
+	ParticleEmitterBehaviorOptions,
+	ParticleEmitterHandle,
+	ParticleMagicAgency,
+	ParticleMagicAlignment,
+	ParticleMagicModifierInput,
+	ParticleMagicModifierOptions,
+	ParticleMagicOrder,
+	ParticleMagicRealityEffect,
+	ParticleMagicTemperament,
+	ParticlePresetMaterialOptions,
+	PhysicsBodyComponent,
+	PlainBufferGeometryPayload,
+	PlainFractureOptions,
+	Platformer3DBehaviorOptions,
+	Platformer3DContext,
+	Platformer3DEntity,
+	Platformer3DInputComponent,
+	Platformer3DMovementComponent,
+	Platformer3DStateComponent,
+	PlatformerCollisionContext,
+	PlayerInput,
+	PrebakeWorkerRequest,
+	PrebakeWorkerResponse,
+	Ricochet2DCollisionContext,
+	Ricochet2DHandle,
+	Ricochet2DOptions,
+	Ricochet2DResult,
+	Ricochet3DCallback,
+	Ricochet3DCollisionContext,
+	Ricochet3DHandle,
+	Ricochet3DOptions,
+	Ricochet3DResult,
+	RicochetCallback,
+	ScreenVisibilityChangeContext,
+	ScreenVisibilityHandle,
+	ScreenVisibilityOptions,
+	ScreenVisibilitySize,
+	ScreenVisibilitySnapshot,
+	ScreenWrapOptions,
+	SemanticParticlePresetOptions,
+	Shooter2DBehaviorOptions,
+	Shooter2DFireArgs,
+	Shooter2DHandle,
+	Shooter2DProjectileFactory,
+	Shooter2DSourceEntity,
+	Shooter2DStageLike,
+	Shooter2DStateComponent,
+	Shooter2DTarget,
+	ThrusterBehaviorOptions,
+	ThrusterEntity,
+	ThrusterFSMContext,
+	ThrusterInputComponent,
+	ThrusterMovementComponent,
+	ThrusterStateComponent,
+	TopDownMovementBehaviorOptions,
+	TopDownMovementComponent,
+	TopDownMovementEntity,
+	TopDownMovementHandle,
+	TopDownMovementInputComponent,
+	TopDownMovementStateComponent,
+	TopDownShooterInput,
+	TransformComponent,
+	Vec3Like,
+	ViewmodelConfig,
+	VoronoiOptions,
+	WorldBoundary2DBounds,
+	WorldBoundary2DHandle,
+	WorldBoundary2DHit,
+	WorldBoundary2DHits,
+	WorldBoundary2DOptions,
+	WorldBoundary2DPosition,
+	WorldBoundary3DBounds,
+	WorldBoundary3DHandle,
+	WorldBoundary3DHit,
+	WorldBoundary3DHits,
+	WorldBoundary3DOptions,
+	WorldBoundary3DPosition,
+} from '@zylem/behaviors';
