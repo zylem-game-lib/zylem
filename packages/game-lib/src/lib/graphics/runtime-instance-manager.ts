@@ -37,6 +37,18 @@ interface RuntimeBatchState {
 	colorMode: RuntimeEntityColorMode;
 	/** When true, heat is written to {@link RUNTIME_INSTANCE_HEAT_ATTRIBUTE} and tinted in the shader. */
 	heatTintUsesInstanceHeatAttribute: boolean;
+	/** Reusable scratch objects, hoisted out of the per-frame update to avoid allocation churn. */
+	dummy: Object3D;
+	rotation: Quaternion;
+	colorScratch: Color;
+	hotColor: Color;
+	/**
+	 * Cached per-instance transform from the previous frame (8 floats each:
+	 * position xyz, quaternion xyzw, scale) used to skip rewriting instance
+	 * matrices that have not moved (e.g. bodies that have gone to sleep).
+	 */
+	prevTransforms: Float32Array | null;
+	prevCount: number;
 }
 
 /**
@@ -97,6 +109,12 @@ export class RuntimeInstanceManager {
 			baseColor,
 			colorMode,
 			heatTintUsesInstanceHeatAttribute,
+			dummy: new Object3D(),
+			rotation: new Quaternion(),
+			colorScratch: new Color(),
+			hotColor: new Color(RUNTIME_HEAT_TINT_HOT_HEX),
+			prevTransforms: null,
+			prevCount: 0,
 		};
 		this.batches.set(batch.key, state);
 		this.scene?.add(instancedMesh);
@@ -109,9 +127,9 @@ export class RuntimeInstanceManager {
 			return;
 		}
 
-		const dummy = new Object3D();
-		const rotation = new Quaternion();
-		const color = new Color();
+		const dummy = batch.dummy;
+		const rotation = batch.rotation;
+		const color = batch.colorScratch;
 		const heatAttr = batch.heatTintUsesInstanceHeatAttribute
 			? (batch.geometry.getAttribute(RUNTIME_INSTANCE_HEAT_ATTRIBUTE) as InstancedBufferAttribute | undefined)
 			: undefined;
@@ -120,31 +138,90 @@ export class RuntimeInstanceManager {
 		const activeCount = runtime.exports.zylem_runtime_active_count();
 		batch.instancedMesh.count = activeCount;
 
+		const isHeatTint = batch.colorMode === 'heatTint';
+
+		// Change-detection cache: when the active instance count changes we must
+		// rewrite everything; otherwise we only touch instances that actually moved.
+		const countChanged = batch.prevCount !== activeCount;
+		let prev = batch.prevTransforms;
+		if (!prev || prev.length < activeCount * 8) {
+			prev = new Float32Array(activeCount * 8);
+			batch.prevTransforms = prev;
+		}
+
+		let transformsChanged = false;
+		let colorsChanged = false;
+
 		for (let index = 0; index < activeCount; index++) {
 			const base = index * stride;
-			dummy.position.set(view[base]!, view[base + 1]!, view[base + 2]!);
-			rotation.set(view[base + 3]!, view[base + 4]!, view[base + 5]!, view[base + 6]!).normalize();
-			dummy.quaternion.copy(rotation);
-			dummy.scale.setScalar(batch.colorMode === 'heatTint' ? view[base + 7]! : 1);
-			dummy.updateMatrix();
-			batch.instancedMesh.setMatrixAt(index, dummy.matrix);
+			const px = view[base]!;
+			const py = view[base + 1]!;
+			const pz = view[base + 2]!;
+			const qx = view[base + 3]!;
+			const qy = view[base + 4]!;
+			const qz = view[base + 5]!;
+			const qw = view[base + 6]!;
+			const scale = isHeatTint ? view[base + 7]! : 1;
 
-			if (batch.colorMode === 'heatTint') {
+			const pbase = index * 8;
+			const moved =
+				countChanged ||
+				prev[pbase] !== px ||
+				prev[pbase + 1] !== py ||
+				prev[pbase + 2] !== pz ||
+				prev[pbase + 3] !== qx ||
+				prev[pbase + 4] !== qy ||
+				prev[pbase + 5] !== qz ||
+				prev[pbase + 6] !== qw ||
+				prev[pbase + 7] !== scale;
+
+			if (moved) {
+				dummy.position.set(px, py, pz);
+				rotation.set(qx, qy, qz, qw).normalize();
+				dummy.quaternion.copy(rotation);
+				dummy.scale.setScalar(scale);
+				dummy.updateMatrix();
+				batch.instancedMesh.setMatrixAt(index, dummy.matrix);
+
+				prev[pbase] = px;
+				prev[pbase + 1] = py;
+				prev[pbase + 2] = pz;
+				prev[pbase + 3] = qx;
+				prev[pbase + 4] = qy;
+				prev[pbase + 5] = qz;
+				prev[pbase + 6] = qw;
+				prev[pbase + 7] = scale;
+				transformsChanged = true;
+			}
+
+			if (isHeatTint) {
 				const heat = view[base + 9]!;
 				const clampedHeat = Math.max(0, Math.min(1, heat));
 				if (heatAttr) {
-					heatAttr.array[index] = clampedHeat;
+					if (heatAttr.array[index] !== clampedHeat) {
+						heatAttr.array[index] = clampedHeat;
+						colorsChanged = true;
+					}
 				} else {
-					color.copy(batch.baseColor).lerp(new Color(RUNTIME_HEAT_TINT_HOT_HEX), clampedHeat);
+					color.copy(batch.baseColor).lerp(batch.hotColor, clampedHeat);
 					batch.instancedMesh.setColorAt(index, color);
+					colorsChanged = true;
 				}
 			}
 		}
 
-		batch.instancedMesh.instanceMatrix.needsUpdate = true;
+		batch.prevCount = activeCount;
+
+		// Only flag GPU re-uploads when something actually changed; once the
+		// simulation settles this skips the per-frame instance buffer upload.
+		if (transformsChanged) {
+			batch.instancedMesh.instanceMatrix.needsUpdate = true;
+		}
 		if (heatAttr) {
-			heatAttr.needsUpdate = true;
-		} else if (batch.colorMode === 'heatTint' && batch.instancedMesh.instanceColor) {
+			if (colorsChanged) {
+				heatAttr.needsUpdate = true;
+			}
+		} else if (isHeatTint && colorsChanged && batch.instancedMesh.instanceColor) {
 			batch.instancedMesh.instanceColor.needsUpdate = true;
 		}
 	}

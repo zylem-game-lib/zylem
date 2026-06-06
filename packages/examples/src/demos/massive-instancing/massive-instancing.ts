@@ -7,7 +7,7 @@ import { createBundledZylemRuntimeStageAdapter } from '../../runtime/zylem-runti
 
 const skybox = demoAsset('general/skybox-default.png');
 
-const COUNT = 2500;
+const COUNT = 3000;
 const SPREAD = 30;
 const HEIGHT = 30;
 const HALF_EXTENT = 0.35;
