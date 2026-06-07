@@ -212,12 +212,6 @@ export default function createDemo() {
 		{
 			gravity: new Vector3(0, 0, 0),
 			backgroundColor: new Color('#030712'),
-			assetLoaders: {
-				gltf: {
-					meshopt: true,
-					ktx2TranscoderPath: '/three/basis/',
-				},
-			},
 		},
 		camera,
 	);

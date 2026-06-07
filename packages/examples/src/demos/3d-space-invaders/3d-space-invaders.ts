@@ -76,11 +76,6 @@ export default function createDemo() {
 		{
 			gravity: new Vector3(0, 0, 0),
 			backgroundShader: starfieldShader,
-			assetLoaders: {
-				gltf: {
-					ktx2TranscoderPath: '/three/basis/',
-				},
-			},
 		},
 		camera,
 	);

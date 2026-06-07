@@ -27,6 +27,7 @@ import { LoadingEvent } from '../core/interfaces';
 import { assetManager } from '../core/asset-manager';
 import {
 	parseStageOptions,
+	resolveGLTFLoaderConfig,
 	type StageAssetLoaderConfig,
 	type StageWasmRuntimeConfig,
 } from './stage-config';
@@ -188,6 +189,20 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	}
 
 	/**
+	 * Resolve the active renderer, preferring the shared renderer manager and
+	 * falling back to the camera's own renderer.
+	 */
+	private resolveRenderer(zylemCamera: ZylemCamera) {
+		if (this.rendererManager?.renderer) {
+			return this.rendererManager.renderer;
+		}
+		if (zylemCamera.renderer) {
+			return zylemCamera.renderer;
+		}
+		return null;
+	}
+
+	/**
 	 * Load and initialize the stage's scene and world.
 	 * Uses generator pattern to yield control to event loop for real-time progress.
 	 * @param id DOM element id for the renderer container
@@ -243,9 +258,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			await this.scene.setupCamera(this.scene.scene, zylemCamera);
 		}
 
+		const renderer = this.resolveRenderer(zylemCamera);
 		await assetManager.configureGLTFRuntime({
-			renderer: this.rendererManager?.renderer ?? zylemCamera.renderer ?? null,
-			...this.state.assetLoaders?.gltf,
+			renderer,
+			...resolveGLTFLoaderConfig(this.state.assetLoaders?.gltf),
 		});
 
 		this.entityModelDelegate.attach(

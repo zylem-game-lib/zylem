@@ -33,6 +33,27 @@ export type StageAssetLoaderConfig = {
 };
 
 /**
+ * Default location (served statically) of the Basis Universal transcoder used
+ * by three's `KTX2Loader` to decode `KHR_texture_basisu` textures. Stages apply
+ * this automatically so demos don't need to specify it; `KTX2Loader` only
+ * fetches the transcoder lazily when a KTX2 texture is actually encountered.
+ */
+export const DEFAULT_KTX2_TRANSCODER_PATH = '/three/basis/';
+
+/**
+ * Apply engine defaults (e.g. the KTX2 transcoder path) to a stage's GLTF
+ * loader config. A stage may still override any field explicitly.
+ */
+export function resolveGLTFLoaderConfig(
+	gltf?: StageGLTFAssetLoaderConfig,
+): StageGLTFAssetLoaderConfig {
+	return {
+		...gltf,
+		ktx2TranscoderPath: gltf?.ktx2TranscoderPath ?? DEFAULT_KTX2_TRANSCODER_PATH,
+	};
+}
+
+/**
  * Stage configuration type for user-facing options.
  */
 export type StageConfigLike = Partial<{

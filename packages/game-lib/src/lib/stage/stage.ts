@@ -7,6 +7,7 @@ import { RendererManager } from '../camera/renderer-manager';
 import { assetManager } from '../core/asset-manager';
 import { stageState } from './stage-state';
 import { getStageOptions } from './stage-default';
+import { resolveGLTFLoaderConfig } from './stage-config';
 import { EntityTypeMap } from '../types/entity-type-map';
 import { EventEmitterDelegate, zylemEventBus, type StageEvents } from '../events';
 import { GameInputConfig } from '../game/game-interfaces';
@@ -46,7 +47,7 @@ export class Stage {
 		this.wrappedStage = null;
 
 		const stageConfig = this.options[0] as Partial<ZylemStageConfig> | undefined;
-		assetManager.prepareGLTFRuntime(stageConfig?.assetLoaders?.gltf);
+		assetManager.prepareGLTFRuntime(resolveGLTFLoaderConfig(stageConfig?.assetLoaders?.gltf));
 	}
 
 	/**
