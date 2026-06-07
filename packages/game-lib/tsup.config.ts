@@ -34,7 +34,6 @@ export default defineConfig({
 		'@dimforge/rapier3d',
 		'@zylem/behaviors',
 		'@zylem/behaviors/*',
-		'@zylem/behavior-core',
 		'howler',
 		'solid-js',
 		'valtio',

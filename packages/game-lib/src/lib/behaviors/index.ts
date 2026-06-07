@@ -2,7 +2,7 @@
  * Behaviors Module Index
  *
  * Behaviors now live in the standalone, tree-shakable `@zylem/behaviors`
- * package (built on `@zylem/behavior-core`). This barrel re-exports that public
+ * package (built on `@zylem/behaviors/core`). This barrel re-exports that public
  * surface so existing `@zylem/game-lib/behavior` consumers keep working.
  *
  * IMPORTANT: do NOT use `export * from '@zylem/behaviors'` here. Because

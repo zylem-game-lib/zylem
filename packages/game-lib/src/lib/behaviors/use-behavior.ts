@@ -1,1 +1,1 @@
-export * from '@zylem/behavior-core';
+export * from '@zylem/behaviors/core';

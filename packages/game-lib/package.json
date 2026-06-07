@@ -98,8 +98,7 @@
     "@dgreenheck/three-pinata": "^2.0.1",
     "@dimforge/rapier3d-compat": "^0.11.2",
     "@sinclair/typebox": "^0.34.41",
-    "@zylem/behavior-core": "workspace:*",
-    "@zylem/behaviors": "workspace:*",
+    "@zylem/behaviors": "^0.2.0",
     "@types/howler": "^2.2.12",
     "howler": "^2.2.4",
     "idb-keyval": "^6.2.2",
@@ -125,7 +124,6 @@
     }
   },
   "devDependencies": {
-    "@zylem/game-behavior-shared": "workspace:*",
     "@zylem/runtime": "workspace:*",
     "@types/node": "^20.19.13",
     "@types/stats.js": "^0.17.4",

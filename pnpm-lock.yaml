@@ -14,7 +14,7 @@ importers:
     dependencies:
       '@dgreenheck/three-pinata':
         specifier: ^2.0.1
-        version: 2.0.1(three@0.180.0)
+        version: 2.0.1(three@0.182.0)
       esbuild:
         specifier: ^0.27.2
         version: 0.27.2
@@ -52,80 +52,6 @@ importers:
       vite-plugin-solid:
         specifier: ^2.11.8
         version: 2.11.8(solid-js@1.9.9)(vite@7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6))
-
-  packages/behavior-core:
-    dependencies:
-      typescript-fsm:
-        specifier: ^1.6.0
-        version: 1.6.0
-      valtio:
-        specifier: ^2.1.7
-        version: 2.1.7(react@18.3.1)
-    devDependencies:
-      '@dimforge/rapier3d-compat':
-        specifier: ^0.11.2
-        version: 0.11.2
-      '@types/node':
-        specifier: ^20.19.13
-        version: 20.19.13
-      '@types/three':
-        specifier: 0.171.0
-        version: 0.171.0
-      three:
-        specifier: ^0.180.0
-        version: 0.180.0
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2)
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  packages/behaviors:
-    dependencies:
-      '@dgreenheck/three-pinata':
-        specifier: ^2.0.1
-        version: 2.0.1(three@0.180.0)
-      '@zylem/behavior-core':
-        specifier: workspace:*
-        version: link:../behavior-core
-      comlink:
-        specifier: ^4.4.2
-        version: 4.4.2
-      three:
-        specifier: ^0.180.0
-        version: 0.180.0
-      three.quarks:
-        specifier: ^0.17.0
-        version: 0.17.0(three@0.180.0)
-      typescript-fsm:
-        specifier: ^1.6.0
-        version: 1.6.0
-      valtio:
-        specifier: ^2.1.7
-        version: 2.1.7(react@18.3.1)
-    devDependencies:
-      '@dimforge/rapier3d-compat':
-        specifier: ^0.11.2
-        version: 0.11.2
-      '@types/node':
-        specifier: ^20.19.13
-        version: 20.19.13
-      '@types/three':
-        specifier: 0.171.0
-        version: 0.171.0
-      happy-dom:
-        specifier: ^18.0.1
-        version: 18.0.1
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2)
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-      vitest:
-        specifier: ^4.0.9
-        version: 4.0.9(@types/node@20.19.13)(happy-dom@18.0.1)(jiti@2.6.1)(jsdom@27.2.0)(lightningcss@1.32.0)(tsx@4.20.6)
 
   packages/editor:
     dependencies:
@@ -237,25 +163,6 @@ importers:
         specifier: ^2.11.8
         version: 2.11.8(solid-js@1.9.9)(vite@7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6))
 
-  packages/game-behavior-shared:
-    dependencies:
-      '@dgreenheck/three-pinata':
-        specifier: ^2.0.1
-        version: 2.0.1(three@0.180.0)
-    devDependencies:
-      '@types/three':
-        specifier: 0.171.0
-        version: 0.171.0
-      three:
-        specifier: ^0.180.0
-        version: 0.180.0
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2)
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
   packages/game-lib:
     dependencies:
       '@dgreenheck/three-pinata':
@@ -270,12 +177,9 @@ importers:
       '@types/howler':
         specifier: ^2.2.12
         version: 2.2.12
-      '@zylem/behavior-core':
-        specifier: workspace:*
-        version: link:../behavior-core
       '@zylem/behaviors':
-        specifier: workspace:*
-        version: link:../behaviors
+        specifier: ^0.2.0
+        version: 0.2.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.180.0)
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -316,9 +220,6 @@ importers:
       '@types/three':
         specifier: 0.171.0
         version: 0.171.0
-      '@zylem/game-behavior-shared':
-        specifier: workspace:*
-        version: link:../game-behavior-shared
       '@zylem/runtime':
         specifier: workspace:*
         version: link:../zylem-runtime
@@ -385,10 +286,10 @@ importers:
     dependencies:
       '@dgreenheck/three-pinata':
         specifier: ^2.0.1
-        version: 2.0.1(three@0.180.0)
-      '@zylem/game-behavior-shared':
-        specifier: workspace:*
-        version: link:../game-behavior-shared
+        version: 2.0.1(three@0.182.0)
+      '@zylem/behaviors':
+        specifier: ^0.2.0
+        version: 0.2.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.182.0)
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
@@ -396,8 +297,8 @@ importers:
         specifier: ^4.4.2
         version: 4.4.2
       three:
-        specifier: ^0.180.0
-        version: 0.180.0
+        specifier: ^0.182.0
+        version: 0.182.0
     devDependencies:
       '@types/node':
         specifier: ^20.19.13
@@ -1520,6 +1421,13 @@ packages:
   '@zylem/assets@0.1.1':
     resolution: {integrity: sha512-ALiD4ritqUpH+RQzqPG0YdwTYyWz6/gUXxdQ5XDMqSiOmvKIsU7bVhDh7svRnOaIWtBxV3SrcyLp6uMQwcaEqA==}
 
+  '@zylem/behaviors@0.2.0':
+    resolution: {integrity: sha512-3u5k1750f/3YKwymy5DFUjemOZQ9W508Xflhc3gFswp2dclweL8Y8nsCLlbrv/Dh2tTb064vnPsB2w2UWGVt8w==}
+    engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
+    peerDependencies:
+      '@dimforge/rapier3d-compat': ^0.11.2
+      three: ^0.180.0
+
   acorn@8.15.0:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
     engines: {node: '>=0.4.0'}
@@ -2284,6 +2192,9 @@ packages:
   three@0.180.0:
     resolution: {integrity: sha512-o+qycAMZrh+TsE01GqWUxUIKR1AL0S8pq7zDkYOQw8GqfX8b8VoCKYUoHbhiX5j+7hr8XsuHDVU6+gkQJQKg9w==}
 
+  three@0.182.0:
+    resolution: {integrity: sha512-GbHabT+Irv+ihI1/f5kIIsZ+Ef9Sl5A1Y7imvS5RQjWgtTPfPnZ43JmlYI7NtCRDK9zir20lQpfg8/9Yd02OvQ==}
+
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
 
@@ -2912,6 +2823,10 @@ snapshots:
   '@dgreenheck/three-pinata@2.0.1(three@0.180.0)':
     dependencies:
       three: 0.180.0
+
+  '@dgreenheck/three-pinata@2.0.1(three@0.182.0)':
+    dependencies:
+      three: 0.182.0
 
   '@dimforge/rapier3d-compat@0.11.2': {}
 
@@ -3594,6 +3509,32 @@ snapshots:
   '@webgpu/types@0.1.64': {}
 
   '@zylem/assets@0.1.1': {}
+
+  '@zylem/behaviors@0.2.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.180.0)':
+    dependencies:
+      '@dgreenheck/three-pinata': 2.0.1(three@0.180.0)
+      '@dimforge/rapier3d-compat': 0.11.2
+      comlink: 4.4.2
+      three: 0.180.0
+      three.quarks: 0.17.0(three@0.180.0)
+      typescript-fsm: 1.6.0
+      valtio: 2.1.7(react@18.3.1)
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
+
+  '@zylem/behaviors@0.2.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.182.0)':
+    dependencies:
+      '@dgreenheck/three-pinata': 2.0.1(three@0.182.0)
+      '@dimforge/rapier3d-compat': 0.11.2
+      comlink: 4.4.2
+      three: 0.182.0
+      three.quarks: 0.17.0(three@0.182.0)
+      typescript-fsm: 1.6.0
+      valtio: 2.1.7(react@18.3.1)
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
 
   acorn@8.15.0: {}
 
@@ -4323,7 +4264,14 @@ snapshots:
       quarks.core: 0.17.0
       three: 0.180.0
 
+  three.quarks@0.17.0(three@0.182.0):
+    dependencies:
+      quarks.core: 0.17.0
+      three: 0.182.0
+
   three@0.180.0: {}
+
+  three@0.182.0: {}
 
   tinybench@2.9.0: {}
 

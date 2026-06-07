@@ -7,7 +7,7 @@ import { debugState } from '../debug/debug-state';
 import { getGlobals } from '../game/game-state';
 import { BaseNode } from '../core/base-node';
 import { GameEntity, create } from '../entities/entity';
-import type { CreateEntityFn } from '@zylem/behavior-core';
+import type { CreateEntityFn } from '@zylem/behaviors/core';
 import { ZylemActor } from '../entities/actor';
 import { BaseEntityInterface } from '../types/entity-types';
 import { StageLoadingDelegate } from './stage-loading-delegate';

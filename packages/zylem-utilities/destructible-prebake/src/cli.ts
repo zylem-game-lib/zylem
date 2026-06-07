@@ -16,7 +16,7 @@ import {
 	pinataFractureOptionsToPlain,
 	plainFractureOptionsToPinata,
 	type PlainFractureOptions,
-} from '@zylem/game-behavior-shared';
+} from '@zylem/behaviors/destructible-prebake';
 import { MeshBasicMaterial, type Group } from 'three';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';

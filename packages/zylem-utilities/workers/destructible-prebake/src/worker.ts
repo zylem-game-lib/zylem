@@ -21,7 +21,7 @@ import {
 	plainToBufferGeometry,
 	type PrebakeWorkerRequest,
 	type PrebakeWorkerResponse,
-} from '@zylem/game-behavior-shared';
+} from '@zylem/behaviors/destructible-prebake';
 
 const outerMaterial = new MeshBasicMaterial();
 const innerMaterial = new MeshBasicMaterial();

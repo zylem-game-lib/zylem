@@ -11,7 +11,6 @@ const projectRoot = path.resolve(configDir, '..');
 
 export async function createBaseConfig(_env: ConfigEnv): Promise<UserConfig> {
 	const gameLibRoot = path.resolve(projectRoot, 'packages/game-lib');
-	const behaviorSharedRoot = path.resolve(projectRoot, 'packages/game-behavior-shared');
 	const utilitiesRoot = path.resolve(projectRoot, 'packages/zylem-utilities');
 	const aliases: AliasOptions = {
 		'@lib/debug': path.resolve(gameLibRoot, './src/lib/debug'),
@@ -19,7 +18,6 @@ export async function createBaseConfig(_env: ConfigEnv): Promise<UserConfig> {
 		'@lib/ui': path.resolve(gameLibRoot, './src/lib/ui'),
 		'@lib': path.resolve(gameLibRoot, './src/lib'),
 		'@src': path.resolve(gameLibRoot, './src'),
-		'@zylem/game-behavior-shared': path.resolve(behaviorSharedRoot, './src/index.ts'),
 		'@zylem/utilities/workers/destructible-prebake': path.resolve(
 			utilitiesRoot,
 			'./workers/destructible-prebake/src/worker.ts',
