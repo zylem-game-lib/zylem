@@ -98,7 +98,7 @@
     "@dgreenheck/three-pinata": "^2.0.1",
     "@dimforge/rapier3d-compat": "^0.11.2",
     "@sinclair/typebox": "^0.34.41",
-    "@zylem/behaviors": "^0.2.0",
+    "@zylem/behaviors": "^0.3.0",
     "@types/howler": "^2.2.12",
     "howler": "^2.2.4",
     "idb-keyval": "^6.2.2",
@@ -106,7 +106,6 @@
     "nanoid": "^5.1.5",
     "stats.js": "^0.17.0",
     "three": "^0.184.0",
-    "three.quarks": "^0.17.0",
     "typescript-fsm": "^1.6.0",
     "valtio": "^2.1.7"
   },

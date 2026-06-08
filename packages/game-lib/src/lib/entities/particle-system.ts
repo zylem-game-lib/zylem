@@ -1,6 +1,6 @@
 import { Group, Quaternion, Vector3 } from 'three';
 
-import type { BehaviorHandle, BehaviorRef } from '../behaviors/behavior-descriptor';
+import type { BehaviorHandle, BehaviorRef } from '@zylem/behaviors/core';
 import {
 	ParticleEmitterBehavior,
 	type ParticleEmitterBehaviorOptions,

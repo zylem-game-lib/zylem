@@ -1,6 +1,6 @@
 import type { GameEntity } from '../entities/entity';
 import { BaseAction, type Action } from './action';
-import { setVelocityIntent } from './capabilities/velocity-intents';
+import { setVelocityIntent } from '@zylem/behaviors/core';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MoveBy -- accumulate position delta over duration via velocity

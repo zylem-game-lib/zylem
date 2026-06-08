@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { applyTransformChanges } from '../../../src/lib/actions/capabilities/apply-transform';
 import { rotateInDirection } from '../../../src/lib/actions/capabilities/rotatable';
-import { createTransformStore } from '../../../src/lib/actions/capabilities/transform-store';
+import { createTransformStore } from '@zylem/behaviors/core';
 
 class MockRigidBody {
 	public appliedRotation = { x: 0, y: 0, z: 0, w: 1 };

@@ -179,8 +179,8 @@ importers:
         specifier: ^2.2.12
         version: 2.2.12
       '@zylem/behaviors':
-        specifier: ^0.2.0
-        version: 0.2.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)
+        specifier: ^0.3.0
+        version: 0.3.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -202,9 +202,6 @@ importers:
       three:
         specifier: 0.184.0
         version: 0.184.0
-      three.quarks:
-        specifier: ^0.17.0
-        version: 0.17.0(three@0.184.0)
       typescript-fsm:
         specifier: ^1.6.0
         version: 1.6.0
@@ -289,8 +286,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(three@0.184.0)
       '@zylem/behaviors':
-        specifier: ^0.2.0
-        version: 0.2.0(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)
+        specifier: ^0.3.0
+        version: 0.3.0(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
@@ -1422,8 +1419,8 @@ packages:
   '@zylem/assets@0.1.1':
     resolution: {integrity: sha512-ALiD4ritqUpH+RQzqPG0YdwTYyWz6/gUXxdQ5XDMqSiOmvKIsU7bVhDh7svRnOaIWtBxV3SrcyLp6uMQwcaEqA==}
 
-  '@zylem/behaviors@0.2.0':
-    resolution: {integrity: sha512-3u5k1750f/3YKwymy5DFUjemOZQ9W508Xflhc3gFswp2dclweL8Y8nsCLlbrv/Dh2tTb064vnPsB2w2UWGVt8w==}
+  '@zylem/behaviors@0.3.0':
+    resolution: {integrity: sha512-nTf8ARECNA/XSIIFcf+Odp2yhmDoskYcdk717G3Rg+jQyyO3Qiu3wF0dagiDp7h9biiaQO3HHVoUciIqBuIWDg==}
     engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
     peerDependencies:
       '@dimforge/rapier3d-compat': ^0.11.2
@@ -2034,9 +2031,6 @@ packages:
   pure-rand@7.0.1:
     resolution: {integrity: sha512-oTUZM/NAZS8p7ANR3SHh30kXB+zK2r2BPcEn/awJIbOvq82WoMN4p62AWWp3Hhw50G0xMsw1mhIBLqHw64EcNQ==}
 
-  quarks.core@0.17.0:
-    resolution: {integrity: sha512-MhFT+PokVAdNoawiRUYxLIjArTr5d+Lq/00ssZY60y4ivOVnIKBq9ZeMFzjBHm8UdszYzeyr7pu0a3VJi2mMVQ==}
-
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
 
@@ -2184,11 +2178,6 @@ packages:
 
   thenify@3.3.1:
     resolution: {integrity: sha512-RVZSIV5IG10Hk3enotrhvz0T9em6cyHBLkH/YAZuKqd8hRkKhSfCGIcP2KUY0EPxndzANBmNllzWPwak+bheSw==}
-
-  three.quarks@0.17.0:
-    resolution: {integrity: sha512-d612B1+HUpUUlDOqFjEEv3dtsHCgJ1krWBYyf3yFLdAMTTkYJPwxsDfRHrwLJKclaCACS62GUihoQeRHluAleA==}
-    peerDependencies:
-      three: 0.184.0
 
   three@0.184.0:
     resolution: {integrity: sha512-wtTRjG92pM5eUg/KuUnHsqSAlPM296brTOcLgMRqEeylYTh/CdtvKUvCyyCQTzFuStieWxvZb8mVTMvdPyUpxg==}
@@ -3504,26 +3493,24 @@ snapshots:
 
   '@zylem/assets@0.1.1': {}
 
-  '@zylem/behaviors@0.2.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)':
+  '@zylem/behaviors@0.3.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)':
     dependencies:
       '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
       '@dimforge/rapier3d-compat': 0.11.2
       comlink: 4.4.2
       three: 0.184.0
-      three.quarks: 0.17.0(three@0.184.0)
       typescript-fsm: 1.6.0
       valtio: 2.1.7(react@18.3.1)
     transitivePeerDependencies:
       - '@types/react'
       - react
 
-  '@zylem/behaviors@0.2.0(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)':
+  '@zylem/behaviors@0.3.0(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)':
     dependencies:
       '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
       '@dimforge/rapier3d-compat': 0.12.0
       comlink: 4.4.2
       three: 0.184.0
-      three.quarks: 0.17.0(three@0.184.0)
       typescript-fsm: 1.6.0
       valtio: 2.1.7(react@18.3.1)
     transitivePeerDependencies:
@@ -4091,8 +4078,6 @@ snapshots:
 
   pure-rand@7.0.1: {}
 
-  quarks.core@0.17.0: {}
-
   react-is@17.0.2: {}
 
   react@18.3.1:
@@ -4252,11 +4237,6 @@ snapshots:
   thenify@3.3.1:
     dependencies:
       any-promise: 1.3.0
-
-  three.quarks@0.17.0(three@0.184.0):
-    dependencies:
-      quarks.core: 0.17.0
-      three: 0.184.0
 
   three@0.184.0: {}
 
