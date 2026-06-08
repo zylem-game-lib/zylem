@@ -1,8 +1,8 @@
-import { Color, Fog, FogExp2, Mesh, MeshStandardMaterial, Scene, ShaderMaterial, SphereGeometry, Sprite, SpriteMaterial } from 'three';
+import { Color, Fog, FogExp2, Scene } from 'three';
 import { describe, expect, it } from 'vitest';
 
 import { createFog, ZylemFog } from '../../../src/lib/entities/fog';
-import { FogMaterialPatcher } from '../../../src/lib/graphics/fog/fog-patcher';
+import { FogTSLPatcher } from '../../../src/lib/graphics/fog/fog-tsl';
 
 describe('createFog', () => {
 	it('returns a ZylemFog with default greyish linear fog when called with no args', () => {
@@ -35,10 +35,8 @@ describe('createFog', () => {
 		expect(scene.fog).toBe(fog.threeFog);
 	});
 
-	it('removes scene.fog and unpatches materials on cleanup', () => {
+	it('installs a scene-level fogNode and removes it on cleanup when height/noise enabled', () => {
 		const scene = new Scene();
-		const material = new MeshStandardMaterial({ fog: true });
-		scene.add(new Mesh(new SphereGeometry(1, 8, 8), material));
 
 		const fog = createFog({
 			type: 'linear',
@@ -49,121 +47,80 @@ describe('createFog', () => {
 		fog.attachToScene(scene);
 
 		expect(scene.fog).toBe(fog.threeFog);
-		expect(material.userData.__zylemFogPatched).toBe(true);
+		expect((scene as any).fogNode).toBeTruthy();
 
 		(fog as any)._cleanup({ me: fog, globals: {} });
 
 		expect(scene.fog).toBeNull();
-		expect(material.userData.__zylemFogPatched).toBeUndefined();
+		expect((scene as any).fogNode).toBeNull();
 	});
 
-	it('only patches materials when height or noise is enabled', () => {
+	it('does not install a custom fogNode for plain distance fog', () => {
 		const scene = new Scene();
-		const material = new MeshStandardMaterial({ fog: true });
-		scene.add(new Mesh(new SphereGeometry(1, 8, 8), material));
 
 		const fog = createFog({ type: 'exp2', density: 0.01 });
 		fog.create();
 		fog.attachToScene(scene);
 
 		expect(scene.fog).toBeInstanceOf(FogExp2);
-		expect(material.userData.__zylemFogPatched).toBeUndefined();
+		// Plain fog uses Three's auto-generated node; we don't set scene.fogNode.
+		expect((scene as any).fogNode == null).toBe(true);
 	});
 });
 
-describe('FogMaterialPatcher', () => {
-	it('skips ShaderMaterial (which does not honor `fog: true`)', () => {
-		const patcher = new FogMaterialPatcher({
-			time: 0,
-			heightEnabled: 1,
-			heightLevel: 5,
-			heightFalloff: 0.2,
-			noiseEnabled: 1,
-			noiseScale: 0.05,
-			noiseStrength: 0.15,
-			noiseSpeed: 0.1,
-		});
+describe('FogTSLPatcher', () => {
+	const baseValues = {
+		time: 0,
+		heightEnabled: 1,
+		heightLevel: 5,
+		heightFalloff: 0.2,
+		noiseEnabled: 1,
+		noiseScale: 0.05,
+		noiseStrength: 0.15,
+		noiseSpeed: 0.1,
+	};
 
+	it('assigns a fog node to scene.fogNode on scan', () => {
+		const patcher = new FogTSLPatcher({ ...baseValues });
 		const scene = new Scene();
-		const shaderMat = new ShaderMaterial({ vertexShader: '', fragmentShader: '' });
-		scene.add(new Mesh(new SphereGeometry(1, 4, 4), shaderMat));
+		scene.fog = new Fog(new Color('#9aa3ad'), 10, 250);
 
 		patcher.scan(scene);
-		expect(shaderMat.userData.__zylemFogPatched).toBeUndefined();
+		expect((scene as any).fogNode).toBeTruthy();
 	});
 
-	// Regression: SpriteMaterial uses a custom vertex pathway that never
-	// defines the `transformed` symbol our `<fog_vertex>` replacement reads.
-	// Patching it produces a shader compile error and the sprite stops
-	// rendering — which is how the arena HUD icons + nameplates disappeared.
-	it('skips SpriteMaterial so HUD sprites keep rendering', () => {
-		const patcher = new FogMaterialPatcher({
-			time: 0,
-			heightEnabled: 1,
-			heightLevel: 5,
-			heightFalloff: 0.2,
-			noiseEnabled: 1,
-			noiseScale: 0.05,
-			noiseStrength: 0.15,
-			noiseSpeed: 0.1,
-		});
-
+	it('does nothing when the scene has no fog', () => {
+		const patcher = new FogTSLPatcher({ ...baseValues });
 		const scene = new Scene();
-		const spriteMat = new SpriteMaterial({ fog: true });
-		scene.add(new Sprite(spriteMat));
 
 		patcher.scan(scene);
-		expect(spriteMat.userData.__zylemFogPatched).toBeUndefined();
+		expect((scene as any).fogNode == null).toBe(true);
 	});
 
-	it('tick advances the shared time uniform', () => {
-		const patcher = new FogMaterialPatcher({
-			time: 0,
-			heightEnabled: 0,
-			heightLevel: 5,
-			heightFalloff: 0.2,
-			noiseEnabled: 1,
-			noiseScale: 0.05,
-			noiseStrength: 0.15,
-			noiseSpeed: 0.1,
-		});
-
+	it('is idempotent across repeated scans (same node reference)', () => {
+		const patcher = new FogTSLPatcher({ ...baseValues });
 		const scene = new Scene();
-		const mat = new MeshStandardMaterial({ fog: true });
-		scene.add(new Mesh(new SphereGeometry(1, 4, 4), mat));
+		scene.fog = new Fog(new Color('#9aa3ad'), 10, 250);
+
+		patcher.scan(scene);
+		const first = (scene as any).fogNode;
+		patcher.scan(scene);
 		patcher.scan(scene);
 
+		expect((scene as any).fogNode).toBe(first);
+	});
+
+	it('tick advances time without error and clears the node on unpatchAll', () => {
+		const patcher = new FogTSLPatcher({ ...baseValues });
+		const scene = new Scene();
+		scene.fog = new FogExp2(new Color('#aabbcc'), 0.02);
+
+		patcher.scan(scene);
 		patcher.tick(0.5);
 		patcher.tick(0.25);
+		expect((scene as any).fogNode).toBeTruthy();
 
-		// The patched material's onBeforeCompile injects uniforms into a shader's
-		// uniform map. Trigger compilation manually to read the value.
-		const shader = { uniforms: {} as Record<string, { value: unknown }>, vertexShader: '', fragmentShader: '' };
-		(mat.onBeforeCompile as Function)(shader, null);
-		expect((shader.uniforms.uZylemFogTime as { value: number }).value).toBeCloseTo(0.75, 5);
-	});
-
-	it('does not double-patch materials across repeated scans', () => {
-		const patcher = new FogMaterialPatcher({
-			time: 0,
-			heightEnabled: 1,
-			heightLevel: 5,
-			heightFalloff: 0.2,
-			noiseEnabled: 0,
-			noiseScale: 0.05,
-			noiseStrength: 0.15,
-			noiseSpeed: 0.1,
-		});
-
-		const scene = new Scene();
-		const mat = new MeshStandardMaterial({ fog: true });
-		scene.add(new Mesh(new SphereGeometry(1, 4, 4), mat));
-		patcher.scan(scene);
-		const firstHook = mat.onBeforeCompile;
-
-		patcher.scan(scene);
-		patcher.scan(scene);
-
-		expect(mat.onBeforeCompile).toBe(firstHook);
+		patcher.unpatchAll();
+		expect((scene as any).fogNode).toBeNull();
 	});
 });

@@ -79,15 +79,12 @@ describe('GLTFLoaderAdapter runtime configuration', () => {
 		expect(disposeSpy).not.toHaveBeenCalled();
 	});
 
-	it('uses async KTX2 support detection for WebGPU renderers', async () => {
+	it('uses synchronous KTX2 support detection for WebGPU renderers (r181+)', async () => {
 		const detectSupportSpy = vi
 			.spyOn(KTX2Loader.prototype, 'detectSupport')
 			.mockImplementation(function mockDetectSupport(this: KTX2Loader) {
 				return this;
 			});
-		const detectSupportAsyncSpy = vi
-			.spyOn(KTX2Loader.prototype, 'detectSupportAsync')
-			.mockResolvedValue(undefined as never);
 
 		const loader = new GLTFLoaderAdapter();
 
@@ -96,8 +93,7 @@ describe('GLTFLoaderAdapter runtime configuration', () => {
 			renderer: createWebGPURendererStub(),
 		});
 
-		expect(detectSupportAsyncSpy).toHaveBeenCalledTimes(1);
-		expect(detectSupportSpy).not.toHaveBeenCalled();
+		expect(detectSupportSpy).toHaveBeenCalledTimes(1);
 	});
 
 	it('recreates the KTX2 loader when the transcoder path changes', async () => {

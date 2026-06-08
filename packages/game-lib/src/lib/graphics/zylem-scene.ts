@@ -7,12 +7,12 @@ import {
 	Vector3,
 	GridHelper,
 	BoxGeometry,
-	ShaderMaterial,
 	Mesh,
 	BackSide,
 	Material,
 	Texture,
 	Light,
+	SRGBColorSpace,
 } from 'three';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
@@ -25,7 +25,7 @@ import { debugState } from '../debug/debug-state';
 import { SetupFunction } from '../core/base-node-life-cycle';
 import { getGlobals } from '../game/game-state';
 import { assetManager } from '../core/asset-manager';
-import { ZylemShader, isTSLShader, isGLSLShader } from './material';
+import { ZylemShader, isTSLShader } from './material';
 
 interface SceneState {
 	backgroundColor: Color | string;
@@ -63,14 +63,13 @@ export class ZylemScene implements Entity<ZylemScene> {
 		const isColor = state.backgroundColor instanceof Color;
 		const backgroundColor = (isColor) ? state.backgroundColor : new Color(state.backgroundColor);
 		scene.background = backgroundColor as Color;
-		
-		console.log('ZylemScene state.backgroundShader:', state.backgroundShader);
-		
+
 		if (state.backgroundShader) {
 			this.setupBackgroundShader(scene, state.backgroundShader);
 		} else if (state.backgroundImage) {
-			// Load background image asynchronously via asset manager
-			assetManager.loadTexture(state.backgroundImage).then(texture => {
+			// Load background image asynchronously via asset manager. Tag it sRGB
+			// so it is decoded correctly (otherwise it renders too bright).
+			assetManager.loadTexture(state.backgroundImage, { colorSpace: SRGBColorSpace }).then(texture => {
 				scene.background = texture;
 			});
 		}
@@ -87,56 +86,37 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	/**
-	 * Create a large inverted box with the shader for skybox effect
-	 * Supports both GLSL (ShaderMaterial) and TSL (MeshBasicNodeMaterial) shaders
+	 * Create a large inverted box with the shader for a skybox effect.
+	 *
+	 * WebGPU-only: background shaders must be authored in TSL
+	 * ({@link ZylemTSLShader}). A GLSL shader logs a warning and is ignored
+	 * (the solid background color is kept).
 	 */
 	private setupBackgroundShader(scene: Scene, shader: ZylemShader) {
+		if (!isTSLShader(shader)) {
+			console.warn(
+				'ZylemScene: GLSL background shaders are not supported on the WebGPU renderer. ' +
+					'Provide a TSL shader (ZylemTSLShader) as backgroundShader. Keeping solid background.',
+			);
+			return;
+		}
+
 		// Clear the solid color background
 		scene.background = null;
 
-		if (isTSLShader(shader)) {
-			// TSL shader - use MeshBasicNodeMaterial for WebGPU
-			this.skyboxMaterial = new MeshBasicNodeMaterial();
-			(this.skyboxMaterial as MeshBasicNodeMaterial).colorNode = shader.colorNode;
-			if (shader.transparent) {
-				this.skyboxMaterial.transparent = true;
-			}
-			this.skyboxMaterial.side = BackSide;
-			this.skyboxMaterial.depthWrite = false;
-			console.log('Skybox created with TSL shader');
-		} else if (isGLSLShader(shader)) {
-			// GLSL shader - use ShaderMaterial for WebGL
-			// Skybox vertex shader with depth trick (pos.xyww ensures depth = 1.0)
-			const skyboxVertexShader = `
-				varying vec2 vUv;
-				varying vec3 vWorldPosition;
-				
-				void main() {
-					vUv = uv;
-					vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-					vWorldPosition = worldPosition.xyz;
-					vec4 pos = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-					gl_Position = pos.xyww;  // Ensures depth is always 1.0 (farthest)
-				}
-			`;
-
-			// Create shader material with skybox-specific settings
-			this.skyboxMaterial = new ShaderMaterial({
-				vertexShader: skyboxVertexShader,
-				fragmentShader: shader.fragment,
-				uniforms: {
-					iTime: { value: 0.0 },
-				},
-				side: BackSide,  // Render on inside of geometry
-				depthWrite: false,  // Don't write to depth buffer
-				depthTest: true,  // But do test depth
-			});
-			console.log('Skybox created with GLSL shader');
+		// TSL shader - use MeshBasicNodeMaterial for WebGPU
+		const material = new MeshBasicNodeMaterial();
+		material.colorNode = shader.colorNode;
+		if (shader.transparent) {
+			material.transparent = true;
 		}
+		material.side = BackSide;
+		material.depthWrite = false;
+		this.skyboxMaterial = material;
 
 		// Use BoxGeometry for skybox
 		const geometry = new BoxGeometry(1, 1, 1);
-		const skybox = new Mesh(geometry, this.skyboxMaterial!);
+		const skybox = new Mesh(geometry, this.skyboxMaterial);
 		skybox.scale.setScalar(100000);  // Scale up significantly
 		skybox.frustumCulled = false;  // Always render
 		scene.add(skybox);
@@ -249,7 +229,11 @@ export class ZylemScene implements Entity<ZylemScene> {
 	 * Setup scene lighting
 	 */
 	setupLighting(scene: Scene) {
-		const ambientLight = new AmbientLight(0xffffff, 2);
+		// Ambient is intentionally lower than the directional key light: with
+		// correct sRGB textures under PBR (MeshStandardNodeMaterial), a high
+		// ambient term washes surfaces toward white. The directional light
+		// keeps shading + shadows.
+		const ambientLight = new AmbientLight(0xffffff, 1);
 		scene.add(ambientLight);
 
 		const directionalLight = new DirectionalLight(0xffffff, 2);
@@ -349,15 +333,12 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	/**
-	 * Update skybox shader uniforms (only applies to GLSL ShaderMaterial)
-	 * TSL shaders use the time node which auto-updates
+	 * Per-frame skybox hook. TSL background shaders animate via the `time`
+	 * node, which the renderer advances automatically, so this is a no-op.
+	 * Retained for backward compatibility with callers.
 	 */
-	updateSkybox(delta: number) {
-		if (this.skyboxMaterial && this.skyboxMaterial instanceof ShaderMaterial) {
-			if (this.skyboxMaterial.uniforms?.iTime) {
-				this.skyboxMaterial.uniforms.iTime.value += delta;
-			}
-		}
+	updateSkybox(_delta: number) {
+		// No-op: TSL shaders self-animate via the `time` node.
 	}
 }
 

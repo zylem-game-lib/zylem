@@ -5,3 +5,4 @@ packages:
 overrides:
   '@eslint/plugin-kit@<0.3.4': '>=0.3.4'
   three@<0.125.0: '>=0.125.0'
+  three: 0.184.0

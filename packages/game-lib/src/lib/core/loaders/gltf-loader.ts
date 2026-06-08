@@ -4,15 +4,26 @@
  * Automatically configures DRACOLoader for Draco-compressed meshes.
  */
 
-import { WebGLRenderer } from 'three';
+import { WebGLRenderer, Object3D, Texture } from 'three';
 import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { WebGPURenderer } from 'three/webgpu';
 import { LoaderAdapter, AssetLoadOptions, ModelLoadResult } from '../asset-types';
+import { DEFAULT_TEXTURE_ANISOTROPY } from './texture-loader';
 import { cloneModelObject } from './model-clone';
 import { getUrlFileExtension } from './url-utils';
+
+/** Material texture maps that benefit from anisotropic filtering. */
+const ANISOTROPIC_MAP_KEYS = [
+	'map',
+	'normalMap',
+	'roughnessMap',
+	'metalnessMap',
+	'emissiveMap',
+	'aoMap',
+] as const;
 
 const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/v1/decoders/';
 
@@ -87,11 +98,10 @@ export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 			return;
 		}
 
-		if (renderer instanceof WebGPURenderer) {
-			await this.ktx2Loader.detectSupportAsync(renderer);
-		} else {
-			this.ktx2Loader.detectSupport(renderer);
-		}
+		// r181+: detectSupportAsync() is deprecated. detectSupport() works for
+		// both WebGL and WebGPU once the renderer is initialized (the renderer
+		// manager awaits renderer.init() before configureRuntime runs).
+		this.ktx2Loader.detectSupport(renderer);
 
 		this.configuredRenderer = renderer;
 	}
@@ -118,6 +128,7 @@ export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 			// Parse on main thread using GLTFLoader.parseAsync
 			// The url is passed as the path for resolving relative resources
 			const gltf = await this.loader.parseAsync(buffer, url);
+			this.applyTextureAnisotropy(gltf.scene);
 
 			return {
 				object: gltf.scene,
@@ -135,6 +146,7 @@ export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 			this.loader.load(
 				url,
 				(gltf: GLTF) => {
+					this.applyTextureAnisotropy(gltf.scene);
 					resolve({
 						object: gltf.scene,
 						animations: gltf.animations,
@@ -160,6 +172,29 @@ export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 			animations: result.animations?.map(anim => anim.clone()),
 			gltf: result.gltf
 		};
+	}
+
+	/**
+	 * Apply anisotropic filtering to every texture map on a loaded model's
+	 * materials. GLTFLoader leaves textures at the default `anisotropy = 1`,
+	 * which moires on tiled/oblique surfaces under the sharp WebGPU pipeline.
+	 */
+	private applyTextureAnisotropy(object: Object3D): void {
+		object.traverse((child) => {
+			const material = (child as { material?: unknown }).material;
+			if (!material) return;
+			const materials = Array.isArray(material) ? material : [material];
+			for (const mat of materials) {
+				for (const key of ANISOTROPIC_MAP_KEYS) {
+					const texture = (mat as Record<string, unknown>)[key];
+					if (texture && (texture as Texture).isTexture) {
+						const tex = texture as Texture;
+						tex.anisotropy = DEFAULT_TEXTURE_ANISOTROPY;
+						tex.needsUpdate = true;
+					}
+				}
+			}
+		});
 	}
 
 	private setMeshoptEnabled(enabled: boolean): void {

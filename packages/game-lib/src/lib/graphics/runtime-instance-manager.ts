@@ -10,6 +10,7 @@ import {
 	Quaternion,
 	Vector3,
 } from 'three';
+import { MeshStandardNodeMaterial } from 'three/webgpu';
 
 import type { ZylemRuntimeBufferViews } from '../runtime/zylem-wasm-runtime';
 import type { RuntimeEntityColorMode } from '../entities/entity';
@@ -70,19 +71,24 @@ export class RuntimeInstanceManager {
 		}
 
 		const geometry = batch.geometry.clone();
-		const sourceBaseColor = batch.material instanceof MeshStandardMaterial
+		const sourceBaseColor = isStandardLikeMaterial(batch.material)
 			? batch.material.color
 			: undefined;
 		const baseColor = batch.baseColor?.clone() ?? sourceBaseColor?.clone() ?? new Color(0xffffff);
 		const colorMode = batch.colorMode ?? 'base';
-		const sourceIsStandard = batch.material instanceof MeshStandardMaterial;
+		const sourceIsStandard = isStandardLikeMaterial(batch.material);
 		const material = configureRuntimeInstancedMaterial(
 			batch.material.clone(),
 			baseColor,
 			colorMode,
 		);
+		// The TSL heat-tint path reads a per-instance `instanceHeat` attribute and
+		// requires a node material (WebGPU). Plain materials fall back to per-instance
+		// `setColorAt` below.
 		const heatTintUsesInstanceHeatAttribute =
-			colorMode === 'heatTint' && sourceIsStandard && material instanceof MeshStandardMaterial;
+			colorMode === 'heatTint'
+			&& sourceIsStandard
+			&& material instanceof MeshStandardNodeMaterial;
 		if (heatTintUsesInstanceHeatAttribute) {
 			geometry.setAttribute(
 				RUNTIME_INSTANCE_HEAT_ATTRIBUTE,
@@ -250,15 +256,25 @@ export class RuntimeInstanceManager {
 	}
 }
 
+/** Standard PBR material in either WebGL (`MeshStandardMaterial`) or WebGPU (`MeshStandardNodeMaterial`) form. */
+type StandardLikeMaterial = MeshStandardMaterial | MeshStandardNodeMaterial;
+
+function isStandardLikeMaterial(material: Material): material is StandardLikeMaterial {
+	return (
+		material instanceof MeshStandardMaterial
+		|| material instanceof MeshStandardNodeMaterial
+	);
+}
+
 function configureRuntimeInstancedMaterial(
 	material: Material,
 	baseColor: Color,
 	colorMode: RuntimeEntityColorMode,
 ): Material {
-	if (material instanceof MeshStandardMaterial) {
+	if (isStandardLikeMaterial(material)) {
 		material.vertexColors = false;
 		material.color.copy(baseColor);
-		if (colorMode === 'heatTint') {
+		if (colorMode === 'heatTint' && material instanceof MeshStandardNodeMaterial) {
 			applyMeshStandardRuntimeHeatTint(material, new Color(RUNTIME_HEAT_TINT_HOT_HEX));
 		}
 		material.needsUpdate = true;

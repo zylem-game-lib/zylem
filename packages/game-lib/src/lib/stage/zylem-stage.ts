@@ -246,7 +246,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			await this.scene.setupCameraManager(this.scene.scene, this.cameraManagerRef, this.rendererManager);
 			const primaryCam = this.cameraManagerRef.primaryCamera;
 			if (primaryCam) {
-				this.rendererManager.setupRenderPass(this.scene.scene, primaryCam.camera);
+				this.rendererManager.setupPostProcessing(this.scene.scene, primaryCam.camera);
 			}
 			// Pipeline/follow-camera runs inside `_update` (after transformSystem).
 			// The renderer loop calls `CameraManager.render` (orbit pre-tick +

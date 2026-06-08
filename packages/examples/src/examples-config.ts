@@ -66,7 +66,6 @@ const PREDEFINED_ORDER = {
 		'destructible-behavior',
 		'particle-effects',
 		'zylem-planet-demo',
-		'zylem-planet-demo-webgpu',
 		'simple-instancing',
 		'massive-instancing',
 		'stress-test',

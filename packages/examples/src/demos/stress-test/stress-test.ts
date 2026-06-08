@@ -6,7 +6,7 @@
 import { Color, Vector2, Vector3 } from 'three';
 import { createGame, createStage, createCamera } from '@zylem/game-lib/core';
 import { createBox, createSphere, createPlane } from '@zylem/game-lib/entity';
-import { fireShader, starShader } from '@zylem/game-lib/graphics';
+import { fireTSL, starTSL } from '@zylem/game-lib/graphics';
 
 import { demoAsset } from '../../assets/manifest';
 
@@ -42,7 +42,7 @@ export default function createDemo() {
           z: 1 + Math.random() * 1,
         },
         position: { x: i - 10, y: j + 2, z: 5 },
-        material: { shader: starShader },
+        material: { shader: starTSL },
         custom: {
           superProp: 1,
         },
@@ -51,7 +51,7 @@ export default function createDemo() {
       const nextBox2 = createSphere({
         radius: 0.25 + Math.random() * 0.5,
         position: { x: i - 10, y: 10 + j, z: 3 },
-        material: { shader: fireShader },
+        material: { shader: fireTSL },
       });
       testBoxes.push(nextBox2);
     }
@@ -69,7 +69,7 @@ export default function createDemo() {
   const testSphere = createSphere({
     position: { x: 0, y: 3, z: 10 },
     material: {
-      shader: starShader,
+      shader: starTSL,
     },
   });
 
@@ -87,7 +87,7 @@ export default function createDemo() {
             color: useShader
               ? undefined
               : new Color(Color.NAMES[key as keyof typeof Color.NAMES]),
-            shader: useShader ? starShader : undefined,
+            shader: useShader ? starTSL : undefined,
           },
           radius: 0.2 + Math.random() * 1.5,
           position: { x: j * 2 - 2, y: i + 2 + i * 2, z: 10 + k * 2 },

@@ -8,7 +8,7 @@ import {
 } from 'three';
 
 import type { CleanupContext, UpdateContext } from '../core/base-node-life-cycle';
-import { FogMaterialPatcher, type FogUniformValues } from '../graphics/fog/fog-patcher';
+import { FogTSLPatcher, type FogUniformValues } from '../graphics/fog/fog-tsl';
 import { GameEntity, type GameEntityOptions } from './entity';
 
 /** Three.js fog model. Linear uses start/end; exp² uses density. */
@@ -98,7 +98,7 @@ export class ZylemFog extends GameEntity<ZylemFogGameOptions> {
 	/** Scene the fog is currently attached to (null when detached). */
 	private attachedScene: Scene | null = null;
 
-	private readonly patcher: FogMaterialPatcher;
+	private readonly patcher: FogTSLPatcher;
 	private patcherEnabled: boolean;
 
 	constructor(options: ZylemFogOptions = {}) {
@@ -106,7 +106,7 @@ export class ZylemFog extends GameEntity<ZylemFogGameOptions> {
 		this.options = { ...options } as ZylemFogGameOptions;
 
 		const initialUniforms = this.resolveUniformValues(this.options);
-		this.patcher = new FogMaterialPatcher(initialUniforms);
+		this.patcher = new FogTSLPatcher(initialUniforms);
 		this.patcherEnabled = isPatcherNeeded(this.options);
 	}
 

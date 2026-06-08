@@ -1,21 +1,23 @@
-import { Vector2, WebGLRenderer, Scene, Camera, PerspectiveCamera } from 'three';
-import { WebGPURenderer } from 'three/webgpu';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import RenderPass from '../graphics/render-pass';
+import { Vector2, Scene, Camera } from 'three';
+import { WebGPURenderer, RenderPipeline } from 'three/webgpu';
+import { pass, renderOutput, screenCoordinate, vec2, vec4, fract, sin, dot } from 'three/tsl';
 import type { ZylemCamera } from './zylem-camera';
 
 /**
- * Renderer type option for choosing rendering backend
- * - 'auto': Try WebGPU first, fall back to WebGL
- * - 'webgpu': Force WebGPU (error if not supported)
- * - 'webgl': Force WebGL
+ * Renderer type option.
+ *
+ * @deprecated game-lib now always renders with WebGPU (Three.js
+ * {@link WebGPURenderer}, which keeps its own internal WebGL2 fallback for
+ * devices without WebGPU). This type is retained only so existing public
+ * APIs (e.g. `CameraOptions.rendererType`) keep type-checking; the value is
+ * ignored by the renderer.
  */
 export type RendererType = 'auto' | 'webgpu' | 'webgl';
 
 /**
- * Union type for renderer instances
+ * The renderer instance type. game-lib standardizes on {@link WebGPURenderer}.
  */
-export type ZylemRenderer = WebGLRenderer | WebGPURenderer;
+export type ZylemRenderer = WebGPURenderer;
 
 /**
  * Viewport definition in normalized coordinates (0-1).
@@ -32,7 +34,11 @@ export interface Viewport {
 export const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, width: 1, height: 1 };
 
 /**
- * Check if WebGPU is supported in the current browser
+ * Check if WebGPU is supported in the current browser.
+ *
+ * Informational only — game-lib always constructs a {@link WebGPURenderer},
+ * which transparently falls back to a WebGL2 backend when the WebGPU adapter
+ * is unavailable. Callers can use this to surface device capabilities.
  */
 export async function isWebGPUSupported(): Promise<boolean> {
 	if (!('gpu' in navigator)) return false;
@@ -45,24 +51,41 @@ export async function isWebGPUSupported(): Promise<boolean> {
 }
 
 /**
- * RendererManager owns the shared WebGL/WebGPU renderer, canvas element,
- * effect composer, and render loop. There is one RendererManager per game.
+ * RendererManager owns the shared WebGPU renderer, canvas element, the
+ * optional post-processing pipeline, and the render loop. There is one
+ * RendererManager per game.
  *
  * It iterates active cameras and renders each with its configured viewport.
  */
 export class RendererManager {
 	renderer!: ZylemRenderer;
-	composer!: EffectComposer;
+	/**
+	 * Optional TSL post-processing pipeline. Bound to a single fullscreen
+	 * scene+camera via {@link setupPostProcessing}. When present and the
+	 * frame is a single fullscreen viewport, the pipeline drives the final
+	 * draw instead of `renderer.render(...)`.
+	 */
+	postProcessing: RenderPipeline | null = null;
+	/**
+	 * Supersampling (SSAA) multiplier for the scene pass. `1` renders at native
+	 * resolution (default). Values > 1 render the scene pass larger and let the
+	 * post pipeline downsample it, trading GPU cost for smoother shading/edges
+	 * (this is what the legacy WebGL pipeline did implicitly). Applied on the
+	 * next {@link setupPostProcessing}.
+	 */
+	renderScale = 1;
 	screenResolution: Vector2;
+	/**
+	 * @deprecated Always `'webgpu'`. Retained for backward compatibility.
+	 */
 	rendererType: RendererType;
-	private _isWebGPU = false;
 	private _initialized = false;
 	private _sceneRef: Scene | null = null;
 	private _lastAnimationTimestamp: number | null = null;
 
-	constructor(screenResolution?: Vector2, rendererType: RendererType = 'webgl') {
+	constructor(screenResolution?: Vector2, _rendererType: RendererType = 'webgpu') {
 		this.screenResolution = screenResolution || new Vector2(window.innerWidth, window.innerHeight);
-		this.rendererType = rendererType;
+		this.rendererType = 'webgpu';
 	}
 
 	/**
@@ -73,53 +96,30 @@ export class RendererManager {
 	}
 
 	/**
-	 * Check if using WebGPU renderer
+	 * Whether the active renderer is WebGPU. Always true; retained for
+	 * backward compatibility with callers that branched on backend.
+	 *
+	 * @deprecated game-lib is WebGPU-only.
 	 */
 	get isWebGPU(): boolean {
-		return this._isWebGPU;
+		return true;
 	}
 
 	/**
 	 * Initialize the renderer (must be called before rendering).
 	 * Async because WebGPU requires async initialization.
+	 *
+	 * The renderer keeps Three.js's built-in WebGL2 fallback backend, so it
+	 * still initializes on devices without native WebGPU.
 	 */
 	async initRenderer(): Promise<void> {
 		if (this._initialized) return;
 
-		let useWebGPU = false;
-
-		if (this.rendererType === 'webgpu') {
-			useWebGPU = true;
-		} else if (this.rendererType === 'auto') {
-			useWebGPU = await isWebGPUSupported();
-		}
-
-		if (useWebGPU) {
-			try {
-				this.renderer = new WebGPURenderer({ antialias: true });
-				await this.renderer.init();
-				this._isWebGPU = true;
-				console.log('RendererManager: Using WebGPU renderer');
-			} catch (e) {
-				console.warn('RendererManager: WebGPU init failed, falling back to WebGL', e);
-				this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
-				this._isWebGPU = false;
-			}
-		} else {
-			this.renderer = new WebGLRenderer({ antialias: false, alpha: true });
-			this._isWebGPU = false;
-			console.log('RendererManager: Using WebGL renderer');
-		}
+		this.renderer = new WebGPURenderer({ antialias: true, alpha: true });
+		await this.renderer.init();
 
 		this.renderer.setSize(this.screenResolution.x, this.screenResolution.y);
-		if (this.renderer instanceof WebGLRenderer) {
-			this.renderer.shadowMap.enabled = true;
-		}
-
-		// Initialize composer (WebGPU uses different post-processing)
-		if (!this._isWebGPU) {
-			this.composer = new EffectComposer(this.renderer as WebGLRenderer);
-		}
+		this.renderer.shadowMap.enabled = true;
 
 		this._initialized = true;
 	}
@@ -132,22 +132,48 @@ export class RendererManager {
 	}
 
 	/**
-	 * Setup post-processing render pass for a camera (WebGL only).
+	 * Set up the post-processing pipeline for a scene + camera.
+	 *
+	 * Builds a TSL `pass(scene, camera)` (HalfFloat + MSAA) and composes the
+	 * final output ourselves so a display-space dither can be added: the dither
+	 * breaks up 8-bit gradient banding (e.g. on terrain/sky) that the legacy
+	 * WebGL pipeline hid via implicit supersampling. This is the WebGPU
+	 * replacement for the old `EffectComposer` + `RenderPass`.
 	 */
-	setupRenderPass(scene: Scene, camera: Camera): void {
-		if (this._isWebGPU || !this.composer) return;
-
-		// Dispose old passes before adding new ones (prevents GPU leak on stage transitions)
-		if (this.composer.passes.length > 0) {
-			this.composer.passes.forEach((p: any) => { try { p.dispose?.(); } catch { /* noop */ } });
-			this.composer.passes.length = 0;
+	setupPostProcessing(scene: Scene, camera: Camera): void {
+		this.disposePostProcessing();
+		const post = new RenderPipeline(this.renderer);
+		const scenePass = pass(scene, camera);
+		// Opt-in supersampling: render the pass larger and let it downsample.
+		// `setResolutionScale` lives on the underlying PassNode; the
+		// ShaderNodeObject proxy forwards the call at runtime but doesn't
+		// surface it in its type.
+		if (this.renderScale !== 1) {
+			(scenePass as unknown as { setResolutionScale(n: number): void }).setResolutionScale(this.renderScale);
 		}
+		// Apply the output color transform ourselves (tone map + sRGB) so the
+		// dither is added in display space, where it offsets by ~1 code value.
+		post.outputColorTransform = false;
+		post.outputNode = renderOutput(scenePass).add(outputDitherNode());
+		this.postProcessing = post;
+	}
 
-		const renderResolution = this.screenResolution.clone().divideScalar(2);
-		renderResolution.x |= 0;
-		renderResolution.y |= 0;
-		const pass = new RenderPass(renderResolution, scene, camera);
-		this.composer.addPass(pass);
+	/**
+	 * Set the supersampling (SSAA) multiplier. Takes effect on the next
+	 * {@link setupPostProcessing}. `1` = native resolution (default).
+	 */
+	setRenderScale(scale: number): void {
+		this.renderScale = Math.max(1, Number.isFinite(scale) ? scale : 1);
+	}
+
+	/**
+	 * Dispose the current post-processing pipeline, if any.
+	 */
+	private disposePostProcessing(): void {
+		try {
+			(this.postProcessing as any)?.dispose?.();
+		} catch { /* noop */ }
+		this.postProcessing = null;
 	}
 
 	/**
@@ -176,86 +202,85 @@ export class RendererManager {
 
 	/**
 	 * Render a scene from a single camera's perspective.
-	 * Sets the viewport based on the camera's viewport config.
+	 * Sets the viewport/scissor based on the camera's viewport config so
+	 * split-screen / picture-in-picture layouts render to their region.
+	 *
+	 * @param usePostProcessing When true and a pipeline is configured, the
+	 * post-processing pipeline drives the draw (fullscreen only).
 	 */
-	renderCamera(scene: Scene, camera: ZylemCamera): void {
+	renderCamera(scene: Scene, camera: ZylemCamera, usePostProcessing = false): void {
 		const vp = camera.viewport;
 		const w = this.screenResolution.x;
 		const h = this.screenResolution.y;
 
-		// Set scissor and viewport for this camera
 		const pixelX = Math.floor(vp.x * w);
 		const pixelY = Math.floor(vp.y * h);
 		const pixelW = Math.floor(vp.width * w);
 		const pixelH = Math.floor(vp.height * h);
 
-		if (this.renderer instanceof WebGLRenderer) {
-			this.renderer.setViewport(pixelX, pixelY, pixelW, pixelH);
-			this.renderer.setScissor(pixelX, pixelY, pixelW, pixelH);
-			this.renderer.setScissorTest(true);
-		}
+		this.renderer.setViewport(pixelX, pixelY, pixelW, pixelH);
+		this.renderer.setScissor(pixelX, pixelY, pixelW, pixelH);
+		this.renderer.setScissorTest(true);
 
-		if (this._isWebGPU) {
+		if (usePostProcessing && this.postProcessing) {
+			this.postProcessing.render();
+		} else {
 			this.renderer.render(scene, camera.camera);
-		} else if (this.composer) {
-			this.composer.render(0);
 		}
 	}
 
 	/**
-	 * Render a camera to its offscreen render target (WebGL only).
-	 * Bypasses the EffectComposer since post-processing is not needed
-	 * for render-to-texture output.
+	 * Render a camera to its offscreen render target.
+	 * Bypasses post-processing since render-to-texture output is consumed by
+	 * an in-scene material (jumbotron / security-camera / portal effects).
 	 *
 	 * The camera must have a non-null renderTarget.
 	 */
 	renderCameraToTarget(scene: Scene, camera: ZylemCamera): void {
 		if (!camera.renderTarget) return;
 
-		if (this.renderer instanceof WebGLRenderer) {
-			const prevTarget = this.renderer.getRenderTarget();
-			this.renderer.setRenderTarget(camera.renderTarget);
-			this.renderer.clear();
-			this.renderer.render(scene, camera.camera);
-			this.renderer.setRenderTarget(prevTarget);
-		} else {
-			// WebGPU RTT not yet supported
-			console.warn('RendererManager: Render-to-texture is not yet supported for WebGPU');
-		}
+		const prevTarget = this.renderer.getRenderTarget();
+		this.renderer.setScissorTest(false);
+		this.renderer.setRenderTarget(camera.renderTarget);
+		this.renderer.clear();
+		this.renderer.render(scene, camera.camera);
+		this.renderer.setRenderTarget(prevTarget);
 	}
 
 	/**
 	 * Render a scene from multiple cameras, each with their own viewport.
 	 * Cameras are rendered in order (first = bottom layer, last = top layer).
+	 *
+	 * Post-processing is applied only when there is a single fullscreen
+	 * camera; split-screen layouts render directly per-viewport (a single
+	 * fullscreen post pass cannot honor per-camera scissor regions).
 	 */
 	renderCameras(scene: Scene, cameras: ZylemCamera[]): void {
 		if (!scene || cameras.length === 0) return;
 
-		// Clear the full canvas first
-		if (this.renderer instanceof WebGLRenderer) {
-			this.renderer.setScissorTest(false);
-			this.renderer.clear();
-		}
+		// Clear the full canvas first.
+		this.renderer.setScissorTest(false);
+		this.renderer.clear();
+
+		const canPostProcess =
+			cameras.length === 1 && isFullscreenViewport(cameras[0].viewport);
 
 		for (const cam of cameras) {
-			this.renderCamera(scene, cam);
+			this.renderCamera(scene, cam, canPostProcess);
 		}
 
-		// Restore scissor test state
-		if (this.renderer instanceof WebGLRenderer) {
-			this.renderer.setScissorTest(false);
-		}
+		this.renderer.setScissorTest(false);
 	}
 
 	/**
 	 * Simple single-camera render (backwards compatible).
-	 * Uses the full viewport for a single camera.
+	 * Uses post-processing when configured.
 	 */
 	render(scene: Scene, camera: Camera): void {
-		if (this._isWebGPU) {
+		if (this.postProcessing) {
+			this.postProcessing.render();
+		} else {
 			this.renderer.render(scene, camera);
-		} else if (this.composer) {
-			this.composer.render(0);
 		}
 	}
 
@@ -265,9 +290,6 @@ export class RendererManager {
 	resize(width: number, height: number): void {
 		this.screenResolution.set(width, height);
 		this.renderer.setSize(width, height, false);
-		if (this.composer) {
-			this.composer.setSize(width, height);
-		}
 	}
 
 	/**
@@ -286,18 +308,36 @@ export class RendererManager {
 	}
 
 	/**
-	 * Dispose renderer, composer, and related resources.
+	 * Dispose renderer, post-processing, and related resources.
 	 */
 	dispose(): void {
 		this.stopRenderLoop();
-		try {
-			this.composer?.passes?.forEach((p: any) => p.dispose?.());
-			(this.composer as any)?.dispose?.();
-		} catch { /* noop */ }
+		this.disposePostProcessing();
 		try {
 			this.renderer.dispose();
 		} catch { /* noop */ }
 		this._sceneRef = null;
 		this._initialized = false;
 	}
+}
+
+/** Whether a viewport covers the entire canvas. */
+function isFullscreenViewport(vp: Viewport): boolean {
+	return vp.x === 0 && vp.y === 0 && vp.width === 1 && vp.height === 1;
+}
+
+/**
+ * Triangular-PDF (TPDF) dither of ~+/-1 code value at 8-bit, keyed off pixel
+ * coordinates. Added to the display-space output to break up gradient banding
+ * before the canvas quantizes to 8-bit. Coordinate-based (not time-based) so
+ * it stays static and does not shimmer between frames.
+ */
+function outputDitherNode() {
+	const p = screenCoordinate.xy;
+	const r1 = fract(sin(dot(p, vec2(12.9898, 78.233))).mul(43758.5453));
+	const r2 = fract(
+		sin(dot(p.add(vec2(13.0, 7.0)), vec2(12.9898, 78.233))).mul(43758.5453),
+	);
+	const tpdf = r1.sub(r2).mul(1.0 / 255.0);
+	return vec4(tpdf, tpdf, tpdf, 0.0);
 }
