@@ -27,12 +27,12 @@ import type {
 	BehaviorDescriptor,
 	BehaviorRef,
 	BehaviorHandle,
-} from '../behaviors/behavior-descriptor';
-import type { TransformState } from '../actions/capabilities/transform-store';
-import { createTransformStore } from '../actions/capabilities/transform-store';
+} from '@zylem/behaviors/core';
+import type { TransformState } from '@zylem/behaviors/core';
+import { createTransformStore } from '@zylem/behaviors/core';
 import { makeTransformable } from '../actions/capabilities/transformable';
-import { clearVelocityIntent } from '../actions/capabilities/velocity-intents';
-import type { MoveableEntity } from '../actions/capabilities/moveable';
+import { clearVelocityIntent } from '@zylem/behaviors/core';
+import type { MoveableEntity } from '@zylem/behaviors/core';
 import type { RotatableEntityAPI } from '../actions/capabilities/rotatable';
 import {
 	cloneCollisionComponent,

@@ -1,5 +1,5 @@
 import { RigidBody } from '@dimforge/rapier3d-compat';
-import { TransformState } from './transform-store';
+import { TransformState } from '@zylem/behaviors/core';
 
 interface ComposedAxis {
 	value: number;

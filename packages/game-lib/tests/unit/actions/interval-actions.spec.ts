@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { moveBy } from '../../../src/lib/actions/interval-actions';
-import { createTransformStore } from '../../../src/lib/actions/capabilities/transform-store';
+import { createTransformStore } from '@zylem/behaviors/core';
 import { applyTransformChanges } from '../../../src/lib/actions/capabilities/apply-transform';
-import { clearVelocityIntent } from '../../../src/lib/actions/capabilities/velocity-intents';
+import { clearVelocityIntent } from '@zylem/behaviors/core';
 
 class MockRigidBody {
 	private velocity = { x: 0, y: 0, z: 0 };

@@ -37,7 +37,7 @@ import {
 	type StageWasmExports,
 } from '../runtime/wasm-stage-runtime';
 import type { Vec3Components } from '../core/vector';
-import type { BehaviorSystem, BehaviorSystemFactory } from '../behaviors/behavior-system';
+import type { BehaviorSystem, BehaviorSystemFactory } from '@zylem/behaviors/core';
 import { createRuntimeDebugBindingFromDebugState } from '../runtime/runtime-debug-binding';
 import type {
 	RuntimeDebugBinding,
