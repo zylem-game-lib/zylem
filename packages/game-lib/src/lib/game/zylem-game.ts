@@ -8,9 +8,7 @@ import { InputManager } from '../input/input-manager';
 import { mergeInputConfigs } from '../input/input-presets';
 import { Timer } from '../core/three-addons/Timer';
 import { ZylemCamera } from '~/lib/camera/zylem-camera';
-import { RendererManager, RendererType } from '../camera/renderer-manager';
-import { CameraWrapper } from '../camera/camera';
-import { isCameraWrapper } from '../core/utility/options-parser';
+import { RendererManager } from '../camera/renderer-manager';
 import { Stage } from '../stage/stage';
 import { BaseGlobals, GameInputConfig, ZylemGameConfig } from './game-interfaces';
 import {
@@ -167,12 +165,10 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		// Subscribe to stage loading events via delegate
 		this.loadingDelegate.wireStageLoading(stage, stageIndex);
 
-		// Lazily create the shared renderer manager.
-		// Inspect the stage's camera options to determine the renderer type
-		// (e.g. 'webgpu' vs 'webgl') before initializing the renderer.
+		// Lazily create the shared renderer manager. game-lib always renders
+		// with WebGPU (Three.js keeps its own internal WebGL2 fallback).
 		if (!this.rendererManager) {
-			const rendererType = this.resolveRendererType(stage);
-			this.rendererManager = new RendererManager(undefined, rendererType);
+			this.rendererManager = new RendererManager();
 			await this.rendererManager.initRenderer();
 		}
 
@@ -506,23 +502,6 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			entities: this.buildEntitiesPayload(),
 		};
 		zylemEventBus.emit('state:dispatch', statePayload);
-	}
-
-	/**
-	 * Inspect a stage's options to determine the renderer type.
-	 * Looks for CameraWrapper instances in the stage options and uses
-	 * the first camera's rendererType. Falls back to 'webgl'.
-	 */
-	private resolveRendererType(stage: Stage): RendererType {
-		for (const opt of stage.options) {
-			if (isCameraWrapper(opt)) {
-				const rt = (opt as CameraWrapper).cameraRef.rendererType;
-				if (rt && rt !== 'webgl') {
-					return rt;
-				}
-			}
-		}
-		return 'webgl';
 	}
 
 	/**

@@ -105,7 +105,7 @@
     "msgpackr": "^1.11.5",
     "nanoid": "^5.1.5",
     "stats.js": "^0.17.0",
-    "three": "^0.180.0",
+    "three": "^0.184.0",
     "three.quarks": "^0.17.0",
     "typescript-fsm": "^1.6.0",
     "valtio": "^2.1.7"
@@ -115,7 +115,7 @@
     "@zylem/runtime": "^0.1.0",
     "howler": "^2.2.4",
     "nanoid": "^5.1.5",
-    "three": "^0.180.0",
+    "three": "^0.184.0",
     "valtio": "^2.1.7"
   },
   "peerDependenciesMeta": {
@@ -127,7 +127,7 @@
     "@zylem/runtime": "workspace:*",
     "@types/node": "^20.19.13",
     "@types/stats.js": "^0.17.4",
-    "@types/three": "0.171.0",
+    "@types/three": "^0.184.0",
     "happy-dom": "^18.0.1",
     "jsdom": "^27.2.0",
     "tslib": "^2.8.1",

@@ -1,11 +1,5 @@
-import {
-  Color,
-  MeshPhongMaterial,
-  MeshStandardMaterial,
-  ShaderMaterial,
-  Vector2,
-} from 'three';
-import { MeshBasicNodeMaterial } from 'three/webgpu';
+import { Color, Vector2 } from 'three';
+import { MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
 import { describe, expect, it, vi } from 'vitest';
 import { color } from 'three/tsl';
 
@@ -65,7 +59,7 @@ describe('MaterialBuilder vector inputs', () => {
     );
 
     expect(builder.materials).toHaveLength(1);
-    expect(builder.materials[0]).toBeInstanceOf(MeshPhongMaterial);
+    expect(builder.materials[0]).toBeInstanceOf(MeshStandardNodeMaterial);
   });
 
   it('keeps texture materials active when defaults deep-clone the standard shader', () => {
@@ -84,10 +78,11 @@ describe('MaterialBuilder vector inputs', () => {
 
     expect(merged.material?.shader).not.toBe(standardShader);
     expect(builder.materials).toHaveLength(1);
-    expect(builder.materials[0]).toBeInstanceOf(MeshPhongMaterial);
+    expect(builder.materials[0]).toBeInstanceOf(MeshStandardNodeMaterial);
   });
 
-  it('keeps merged GLSL shader materials active when defaults include a color', () => {
+  it('falls back to a default node material for GLSL shaders (unsupported on WebGPU)', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const merged = deepMergeValues(commonDefaults, {
       material: {
         shader: customGLSLShader,
@@ -98,7 +93,9 @@ describe('MaterialBuilder vector inputs', () => {
     builder.build(merged.material ?? {}, Symbol('material-custom-glsl'));
 
     expect(builder.materials).toHaveLength(1);
-    expect(builder.materials[0]).toBeInstanceOf(ShaderMaterial);
+    expect(builder.materials[0]).toBeInstanceOf(MeshStandardNodeMaterial);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('keeps merged TSL shader materials active when defaults include a color', () => {
@@ -126,6 +123,6 @@ describe('MaterialBuilder vector inputs', () => {
     builder.build(merged.material ?? {}, Symbol('material-default-standard'));
 
     expect(builder.materials).toHaveLength(1);
-    expect(builder.materials[0]).toBeInstanceOf(MeshStandardMaterial);
+    expect(builder.materials[0]).toBeInstanceOf(MeshStandardNodeMaterial);
   });
 });
