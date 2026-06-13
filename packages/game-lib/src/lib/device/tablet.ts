@@ -1,1 +1,0 @@
-// TODO: tablet specific implementation
