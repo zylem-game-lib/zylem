@@ -29,6 +29,8 @@ export type {
 // Stage
 export { createStage } from '../lib/stage/stage';
 export { entitySpawner } from '../lib/stage/entity-spawner';
+export { stageConfig } from '../lib/stage/stage-config';
+export type { StageConfigLike } from '../lib/stage/stage-config';
 export type { StageOptions, LoadingEvent } from '../lib/stage/zylem-stage';
 export type { StageBlueprint } from '../lib/core/blueprints';
 export { StageManager, stageState } from '../lib/stage/stage-manager';

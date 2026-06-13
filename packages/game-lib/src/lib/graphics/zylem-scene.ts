@@ -57,6 +57,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	// Skybox for background shaders (supports both GLSL ShaderMaterial and TSL MeshBasicNodeMaterial)
 	private skyboxMaterial: Material | null = null;
+	private skyboxMesh: Mesh | null = null;
 
 	constructor(id: string, camera: ZylemCamera, state: SceneState) {
 		const scene = new Scene();
@@ -119,6 +120,8 @@ export class ZylemScene implements Entity<ZylemScene> {
 		const skybox = new Mesh(geometry, this.skyboxMaterial);
 		skybox.scale.setScalar(100000);  // Scale up significantly
 		skybox.frustumCulled = false;  // Always render
+		skybox.renderOrder = -1000;  // Render before everything else
+		this.skyboxMesh = skybox;
 		scene.add(skybox);
 	}
 
@@ -138,6 +141,10 @@ export class ZylemScene implements Entity<ZylemScene> {
 		}
 		if (this.skyboxMaterial) {
 			this.skyboxMaterial.dispose();
+		}
+		if (this.skyboxMesh) {
+			this.skyboxMesh.geometry.dispose();
+			this.skyboxMesh = null;
 		}
 		if (this.scene) {
 			// Dispose background texture if present
@@ -333,12 +340,20 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	/**
-	 * Per-frame skybox hook. TSL background shaders animate via the `time`
-	 * node, which the renderer advances automatically, so this is a no-op.
-	 * Retained for backward compatibility with callers.
+	 * Per-frame skybox hook. Ensures the skybox cube follows the active camera
+	 * position so it always appears infinitely far away regardless of camera
+	 * movement. TSL background shaders animate via the `time` node, which the
+	 * renderer advances automatically.
 	 */
 	updateSkybox(_delta: number) {
-		// No-op: TSL shaders self-animate via the `time` node.
+		if (!this.skyboxMesh) return;
+
+		// Follow the active camera position so the skybox never shows parallax.
+		// Use getWorldPosition to correctly handle cameras nested inside rigs.
+		const cam = this.cameraManager?.primaryCamera?.camera ?? this.zylemCamera?.camera;
+		if (cam) {
+			cam.getWorldPosition(this.skyboxMesh.position);
+		}
 	}
 }
 
