@@ -8,7 +8,6 @@ overrides:
   '@eslint/plugin-kit@<0.3.4': '>=0.3.4'
   three@<0.125.0: '>=0.125.0'
   three: 0.184.0
-  '@zylem/behaviors': link:/tmp/zylem-behaviors
 
 importers:
 
@@ -180,8 +179,8 @@ importers:
         specifier: ^2.2.12
         version: 2.2.12
       '@zylem/behaviors':
-        specifier: link:/tmp/zylem-behaviors
-        version: link:../../../../../../../../../tmp/zylem-behaviors
+        specifier: ^0.3.0
+        version: 0.3.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -287,8 +286,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(three@0.184.0)
       '@zylem/behaviors':
-        specifier: link:/tmp/zylem-behaviors
-        version: link:../../../../../../../../../tmp/zylem-behaviors
+        specifier: ^0.3.0
+        version: 0.3.0(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
@@ -1419,6 +1418,13 @@ packages:
 
   '@zylem/assets@0.1.1':
     resolution: {integrity: sha512-ALiD4ritqUpH+RQzqPG0YdwTYyWz6/gUXxdQ5XDMqSiOmvKIsU7bVhDh7svRnOaIWtBxV3SrcyLp6uMQwcaEqA==}
+
+  '@zylem/behaviors@0.3.0':
+    resolution: {integrity: sha512-nTf8ARECNA/XSIIFcf+Odp2yhmDoskYcdk717G3Rg+jQyyO3Qiu3wF0dagiDp7h9biiaQO3HHVoUciIqBuIWDg==}
+    engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
+    peerDependencies:
+      '@dimforge/rapier3d-compat': ^0.11.2
+      three: 0.184.0
 
   acorn@8.15.0:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
@@ -3486,6 +3492,30 @@ snapshots:
       tinyrainbow: 3.0.3
 
   '@zylem/assets@0.1.1': {}
+
+  '@zylem/behaviors@0.3.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)':
+    dependencies:
+      '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
+      '@dimforge/rapier3d-compat': 0.11.2
+      comlink: 4.4.2
+      three: 0.184.0
+      typescript-fsm: 1.6.0
+      valtio: 2.1.7(react@18.3.1)
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
+
+  '@zylem/behaviors@0.3.0(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)':
+    dependencies:
+      '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
+      '@dimforge/rapier3d-compat': 0.12.0
+      comlink: 4.4.2
+      three: 0.184.0
+      typescript-fsm: 1.6.0
+      valtio: 2.1.7(react@18.3.1)
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
 
   acorn@8.15.0: {}
 
