@@ -23,6 +23,7 @@ export const SHOOT_COOLDOWN_SECONDS = 0.18;
 export const SHIP_MODEL_TILT_X = -Math.PI / 2;
 export const SHIP_MODEL_YAW_OFFSET = Math.PI;
 export const ASTEROID_FRAGMENT_TTL_SECONDS = 3.5;
+export const ASTEROID_FADE_IN_MS = 400;
 export const ASTEROID_RESPAWN_DELAY_MIN_SECONDS = 1;
 export const ASTEROID_RESPAWN_DELAY_MAX_SECONDS = 5;
 export const MAX_ACTIVE_ASTEROIDS = 9;

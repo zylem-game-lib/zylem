@@ -451,6 +451,11 @@ export class GameEntity<O extends GameEntityOptions>
 		return action;
 	}
 
+	/** Remove all registered actions (fire-and-forget and persistent). */
+	public clearActions(): void {
+		this._actions.length = 0;
+	}
+
 	/**
 	 * Tick all registered actions. Called automatically before user onUpdate callbacks.
 	 *

@@ -6,9 +6,13 @@ export {
 	rotateBy,
 	delay,
 	callFunc,
+	fadeOpacity,
+	resetEntityOpacity,
 	type MoveByOptions,
 	type MoveToOptions,
 	type RotateByOptions,
+	type FadeOpacityOptions,
+	type OpacityEntity,
 } from '../lib/actions/interval-actions';
 export {
 	throttle,
