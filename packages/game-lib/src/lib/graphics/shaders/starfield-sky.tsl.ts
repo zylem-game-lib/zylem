@@ -100,7 +100,7 @@ const starfieldSkyColorNode = Fn(() => {
 	const skyUV = vec2(lon.div(TAU).add(0.5), lat.div(PI).add(0.5));
 
 	// Background color
-	let color = vec3(bgColor);
+	let color: any = vec3(bgColor);
 
 	// Subtle nebula tint
 	const nebula = sin(skyUV.x.mul(2.0).add(t.mul(0.02)))

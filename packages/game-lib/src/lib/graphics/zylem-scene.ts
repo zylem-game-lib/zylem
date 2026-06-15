@@ -66,7 +66,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 		scene.background = backgroundColor as Color;
 
 		if (state.backgroundShader) {
-			this.setupBackgroundShader(scene, state.backgroundShader);
+			this.setupBackgroundShader(scene, state.backgroundShader, camera);
 		} else if (state.backgroundImage) {
 			// Load background image asynchronously via asset manager. Tag it sRGB
 			// so it is decoded correctly (otherwise it renders too bright).
@@ -93,7 +93,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 	 * ({@link ZylemTSLShader}). A GLSL shader logs a warning and is ignored
 	 * (the solid background color is kept).
 	 */
-	private setupBackgroundShader(scene: Scene, shader: ZylemShader) {
+	private setupBackgroundShader(scene: Scene, shader: ZylemShader, camera?: ZylemCamera) {
 		if (!isTSLShader(shader)) {
 			console.warn(
 				'ZylemScene: GLSL background shaders are not supported on the WebGPU renderer. ' +
@@ -113,12 +113,20 @@ export class ZylemScene implements Entity<ZylemScene> {
 		}
 		material.side = BackSide;
 		material.depthWrite = false;
+		// Never depth-test the skybox: it renders first (renderOrder -1000) as a
+		// pure backdrop, and disabling the test avoids it occluding/z-fighting.
+		material.depthTest = false;
 		this.skyboxMaterial = material;
 
-		// Use BoxGeometry for skybox
+		// Use BoxGeometry for skybox. The box must fit INSIDE the camera's far
+		// plane, otherwise every vertex is clipped and the background never
+		// renders. Size it from the camera's far distance (the box half-diagonal
+		// `scale * sqrt(3) / 2` must stay below `far`), with a safety margin.
+		const cameraFar = (camera as any)?.camera?.far ?? 1000;
+		const skyboxScale = Math.max(10, cameraFar * 0.9);
 		const geometry = new BoxGeometry(1, 1, 1);
 		const skybox = new Mesh(geometry, this.skyboxMaterial);
-		skybox.scale.setScalar(100000);  // Scale up significantly
+		skybox.scale.setScalar(skyboxScale);
 		skybox.frustumCulled = false;  // Always render
 		skybox.renderOrder = -1000;  // Render before everything else
 		this.skyboxMesh = skybox;
