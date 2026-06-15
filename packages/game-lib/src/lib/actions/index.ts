@@ -2,8 +2,8 @@
 export { type Action, BaseAction } from './action';
 
 // Interval actions (fire-and-forget)
-export { moveBy, moveTo, rotateBy, delay, callFunc } from './interval-actions';
-export type { MoveByOptions, MoveToOptions, RotateByOptions } from './interval-actions';
+export { moveBy, moveTo, rotateBy, delay, callFunc, fadeOpacity, resetEntityOpacity } from './interval-actions';
+export type { MoveByOptions, MoveToOptions, RotateByOptions, FadeOpacityOptions } from './interval-actions';
 
 // Persistent actions (entity-scoped state)
 export { throttle, onPress, onRelease } from './persistent-actions';
