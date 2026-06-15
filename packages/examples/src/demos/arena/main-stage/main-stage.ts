@@ -21,7 +21,7 @@ import {
 	buildActionCooldownOptions,
 	buildActionIcons,
 } from '../characters/hud-icons';
-import { arenaShader } from './stage-background-shader.shader';
+import { arenaTSL } from './stage-background.tsl';
 import { createDoodads } from './doodads';
 import {
 	createCombatController,
@@ -475,7 +475,7 @@ export function createArenaMainStage(): ArenaMainStageHandle {
 	const stage = createStage(
 		{
 			gravity: new Vector3(0, -9.82, 0),
-			backgroundShader: arenaShader,
+			backgroundShader: arenaTSL,
 			runtimeAdapter: platformerAdapter,
 		},
 		mainCamera,

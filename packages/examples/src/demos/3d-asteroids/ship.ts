@@ -5,7 +5,7 @@ import { demoAsset } from '../../assets/manifest';
 
 const fisherShipGlb = demoAsset('general/player-ship.glb');
 import { destructiblePrebakeWorkerUrl } from '../_shared/destructible-prebake-worker-url';
-import { shipShieldShader } from './shield.shader';
+import { shipShieldTSL } from './shield.tsl';
 import {
 	BULLET_BOUNDS_X,
 	BULLET_BOUNDS_Y,
@@ -53,7 +53,7 @@ export function createShip(): ShipRuntime {
 		radius: 1.22,
 		position: { x: 0, y: 0, z: 0 },
 		material: {
-			shader: shipShieldShader,
+			shader: shipShieldTSL,
 			opacity: 0.74,
 		},
 		collision: {

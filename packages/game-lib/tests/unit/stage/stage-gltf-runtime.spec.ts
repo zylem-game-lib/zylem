@@ -70,7 +70,7 @@ describe('ZylemStage GLTF runtime configuration', () => {
 		const sharedRenderer = { kind: 'shared-renderer' };
 		const rendererManager = {
 			renderer: sharedRenderer,
-			setupRenderPass: vi.fn(),
+			setupPostProcessing: vi.fn(),
 			startRenderLoop: vi.fn(),
 		};
 
@@ -102,7 +102,7 @@ describe('ZylemStage GLTF runtime configuration', () => {
 
 		expect(setupCameraManagerSpy).toHaveBeenCalledTimes(1);
 		expect(setupCameraSpy).not.toHaveBeenCalled();
-		expect(rendererManager.setupRenderPass).toHaveBeenCalledTimes(1);
+		expect(rendererManager.setupPostProcessing).toHaveBeenCalledTimes(1);
 		expect(rendererManager.startRenderLoop).toHaveBeenCalledTimes(1);
 		expect(configureGLTFRuntimeSpy).toHaveBeenCalledWith({
 			ktx2TranscoderPath: '/three/basis/',

@@ -39,7 +39,7 @@ import {
 	getForwardDirection,
 	getRightDirection,
 } from './shared';
-import { starfieldShader } from '../_shared/starfield.shader';
+import { starfieldTSL } from '../_shared/starfield.tsl';
 
 const GAME_OVER_HUD_DELAY_SECONDS = 0.45;
 
@@ -52,7 +52,7 @@ export default function createDemo() {
 	const stage = createStage(
 		{
 			gravity: new Vector3(0, 0, 0),
-			backgroundShader: starfieldShader,
+			backgroundShader: starfieldTSL,
 		},
 		camera,
 	);

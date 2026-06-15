@@ -1,4 +1,4 @@
-import { makeMoveable, EntityWithBody, MoveableEntity } from './moveable';
+import { makeMoveable, EntityWithBody, MoveableEntity } from '@zylem/behaviors/core';
 import { makeRotatable, RotatableEntity, RotatableEntityAPI } from './rotatable';
 
 /**

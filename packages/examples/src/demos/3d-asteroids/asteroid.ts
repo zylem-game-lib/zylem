@@ -1,5 +1,6 @@
 import { Matrix4, Vector3 } from 'three';
 import { createActor } from '@zylem/game-lib/entity';
+import { fadeOpacity, resetEntityOpacity } from '@zylem/game-lib/actions';
 import { Destructible3DBehavior, FractureOptions, ScreenWrapBehavior, type Destructible3DHandle } from '@zylem/game-lib/behavior';
 import { setGlobal } from '@zylem/game-lib/globals';
 import { demoAsset } from '../../assets/manifest';
@@ -10,6 +11,7 @@ import {
 	ASTEROID_TARGET_SMALL_SHARE,
 	type AsteroidSize,
 	ASTEROID_FRAGMENT_TTL_SECONDS,
+	ASTEROID_FADE_IN_MS,
 	LARGE_ASTEROID_FRAGMENT_COUNT,
 	LARGE_ASTEROID_POOL_SIZE,
 	LARGE_ASTEROID_SCALE,
@@ -137,6 +139,8 @@ export function createAsteroidField({
 		runtime.velocity.set(0, 0, 0);
 		runtime.spin.set(0, 0, 0);
 		runtime.destructible.repair();
+		runtime.entity.clearActions();
+		resetEntityOpacity(runtime.entity, 1, false);
 		parkAsteroid(runtime);
 	}
 
@@ -182,6 +186,16 @@ export function createAsteroidField({
 			Math.random() * Math.PI,
 			Math.random() * Math.PI,
 			Math.random() * Math.PI,
+		);
+		resetEntityOpacity(runtime.entity, 0, true);
+		runtime.entity.clearActions();
+		runtime.entity.runAction(
+			fadeOpacity({
+				from: 0,
+				to: 1,
+				duration: ASTEROID_FADE_IN_MS,
+				restoreOpaque: true,
+			}),
 		);
 	}
 
@@ -608,6 +622,16 @@ export function createAsteroidField({
 
 		runtime.active = false;
 		runtime.destructible.fracture(buildImpactOverride(runtime, impactWorld));
+		const fragments = runtime.destructible.getFragments();
+		runtime.entity.clearActions();
+		runtime.entity.runAction(
+			fadeOpacity({
+				from: 1,
+				to: 0,
+				duration: ASTEROID_FRAGMENT_TTL_SECONDS * 1000,
+				targets: [...fragments],
+			}),
+		);
 		onImpact(impactWorld);
 
 		if (runtime.size === 'large') {

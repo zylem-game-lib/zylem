@@ -6,9 +6,13 @@ export {
 	rotateBy,
 	delay,
 	callFunc,
+	fadeOpacity,
+	resetEntityOpacity,
 	type MoveByOptions,
 	type MoveToOptions,
 	type RotateByOptions,
+	type FadeOpacityOptions,
+	type OpacityEntity,
 } from '../lib/actions/interval-actions';
 export {
 	throttle,
@@ -23,7 +27,7 @@ export {
 	createTransformStore,
 	resetTransformStore,
 	type TransformState,
-} from '../lib/actions/capabilities/transform-store';
+} from '@zylem/behaviors/core';
 export { applyTransformChanges } from '../lib/actions/capabilities/apply-transform';
 
 // Movement actions
@@ -44,7 +48,7 @@ export {
 	setPositionZ,
 	wrapAroundXY,
 	wrapAround3D,
-} from '../lib/actions/capabilities/moveable';
+} from '@zylem/behaviors/core';
 
 // Rotation actions
 export {

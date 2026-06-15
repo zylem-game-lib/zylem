@@ -64,7 +64,7 @@ import {
 	createVultureShipRuntime,
 	updateVultureShip,
 } from './vulture-ship';
-import { starfieldShader } from '../_shared/starfield.shader';
+import { starfieldTSL } from '../_shared/starfield.tsl';
 
 export default function createDemo() {
 	const camera = createCamera({
@@ -75,7 +75,7 @@ export default function createDemo() {
 	const stage = createStage(
 		{
 			gravity: new Vector3(0, 0, 0),
-			backgroundShader: starfieldShader,
+			backgroundShader: starfieldTSL,
 		},
 		camera,
 	);

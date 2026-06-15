@@ -37,7 +37,7 @@ import {
 	type StageWasmExports,
 } from '../runtime/wasm-stage-runtime';
 import type { Vec3Components } from '../core/vector';
-import type { BehaviorSystem, BehaviorSystemFactory } from '../behaviors/behavior-system';
+import type { BehaviorSystem, BehaviorSystemFactory } from '@zylem/behaviors/core';
 import { createRuntimeDebugBindingFromDebugState } from '../runtime/runtime-debug-binding';
 import type {
 	RuntimeDebugBinding,
@@ -246,7 +246,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			await this.scene.setupCameraManager(this.scene.scene, this.cameraManagerRef, this.rendererManager);
 			const primaryCam = this.cameraManagerRef.primaryCamera;
 			if (primaryCam) {
-				this.rendererManager.setupRenderPass(this.scene.scene, primaryCam.camera);
+				this.rendererManager.setupPostProcessing(this.scene.scene, primaryCam.camera);
 			}
 			// Pipeline/follow-camera runs inside `_update` (after transformSystem).
 			// The renderer loop calls `CameraManager.render` (orbit pre-tick +
