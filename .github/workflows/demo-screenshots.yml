@@ -108,8 +108,6 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         if: ${{ steps.screenshot-targets.outputs.mode != 'skip' }}
-        with:
-          version: 10.18.3
 
       - uses: actions/setup-node@v4
         if: ${{ steps.screenshot-targets.outputs.mode != 'skip' }}
