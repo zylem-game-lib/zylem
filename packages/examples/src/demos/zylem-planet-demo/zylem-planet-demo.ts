@@ -1,18 +1,14 @@
-import { Vector3 } from 'three';
 import { createGame, createStage, createCamera, Perspectives } from '@zylem/game-lib/core';
 import { createSphere, createDisk } from '@zylem/game-lib/entity';
-import { planetShader } from './planet.shader';
-import { ringShader } from './ring.shader';
-import { starfieldShader } from '../_shared/starfield.shader';
-import { demoAsset } from '../../assets/manifest';
-
-const zylemPlanetNormalOptimized = demoAsset('general/planet-normal-texture.png');
+import { planetTSL } from './planet.tsl';
+import { ringTSL } from './ring.tsl';
+import { starfieldTSL } from '../_shared/starfield.tsl';
 
 export default function createDemo() {
-  // Planet with blue procedural shader
+  // Planet with blue procedural TSL shader
   const planet = createSphere({
     radius: 20,
-    material: { shader: planetShader, normalMap: zylemPlanetNormalOptimized },
+    material: { shader: planetTSL },
   });
 
   let rotation = 180;
@@ -21,12 +17,12 @@ export default function createDemo() {
     me.setRotationDegreesY(rotation);
   });
 
-  // Ring around planet with red procedural shader
+  // Ring around planet with red procedural TSL shader
   const ring = createDisk({
     innerRadius: 25,
     outerRadius: 36,
     thetaSegments: 64,
-    material: { shader: ringShader },
+    material: { shader: ringTSL },
   }).onSetup(({ me }) => {
     me.setRotationDegreesZ(-23);
   });
@@ -39,7 +35,7 @@ export default function createDemo() {
 
   const stage = createStage(
     {
-      backgroundShader: starfieldShader,
+      backgroundShader: starfieldTSL,
     },
     camera,
   );

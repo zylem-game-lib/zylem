@@ -17,7 +17,7 @@ import type {
 	BehaviorEntityLink,
 	BehaviorSystem,
 	BehaviorSystemFactory,
-} from '../behaviors/behavior-system';
+} from '@zylem/behaviors/core';
 import { Vessel } from '../core/vessel';
 import type { StageRuntimeAdapter } from '../runtime/zylem-stage-runtime';
 import type { WasmStageRuntime } from '../runtime/wasm-stage-runtime';

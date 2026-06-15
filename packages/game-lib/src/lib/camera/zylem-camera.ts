@@ -1,4 +1,4 @@
-import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, Scene, WebGLRenderTarget, Texture, LinearFilter } from 'three';
+import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, Scene, RenderTarget, Texture, LinearFilter } from 'three';
 import { PerspectiveType, Perspectives } from './perspective';
 import { StageEntity } from '../interfaces/entity';
 import { CameraOrbitController, CameraDebugDelegate } from './camera-debug-delegate';
@@ -59,8 +59,11 @@ export class ZylemCamera {
 	 * Offscreen render target for render-to-texture (RTT) cameras.
 	 * When set, the camera renders to this target instead of the screen viewport.
 	 * Created via createRenderTarget() or automatically by setCameraFeed().
+	 *
+	 * Uses the backend-agnostic {@link RenderTarget} so it works with the
+	 * WebGPU renderer (and Three's internal WebGL2 fallback).
 	 */
-	renderTarget: WebGLRenderTarget | null = null;
+	renderTarget: RenderTarget | null = null;
 
 	/**
 	 * @deprecated Use `targets` array instead. Kept for backward compatibility.
@@ -94,7 +97,7 @@ export class ZylemCamera {
 	/** Elapsed time tracker for CameraContext. */
 	private _elapsedTime = 0;
 
-	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10, rendererType: RendererType = 'webgl') {
+	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10, rendererType: RendererType = 'webgpu') {
 		this._perspective = perspective;
 		this.screenResolution = screenResolution;
 		this.frustumSize = frustumSize;
@@ -154,8 +157,8 @@ export class ZylemCamera {
 			this._rendererManager = new RendererManager(this.screenResolution, this.rendererType);
 			await this._rendererManager.initRenderer();
 
-			// Setup render pass for WebGL
-			this._rendererManager.setupRenderPass(scene, this.camera);
+			// Setup the WebGPU post-processing pipeline for this scene/camera
+			this._rendererManager.setupPostProcessing(scene, this.camera);
 
 			// Start render loop — render-only for the camera pipeline (`update(delta)`
 			// stays in `ZylemStage._update`). Orbit damping runs here via
@@ -315,11 +318,11 @@ export class ZylemCamera {
 	 * @param width  Texture width in pixels (default 512)
 	 * @param height Texture height in pixels (default 512)
 	 */
-	createRenderTarget(width: number = 512, height: number = 512): WebGLRenderTarget {
+	createRenderTarget(width: number = 512, height: number = 512): RenderTarget {
 		if (this.renderTarget) {
 			this.renderTarget.dispose();
 		}
-		this.renderTarget = new WebGLRenderTarget(width, height, {
+		this.renderTarget = new RenderTarget(width, height, {
 			minFilter: LinearFilter,
 			magFilter: LinearFilter,
 		});
@@ -418,9 +421,9 @@ export class ZylemCamera {
 		return this._rendererManager?.renderer;
 	}
 
-	/** @deprecated Composer is now owned by RendererManager */
+	/** @deprecated Post-processing is now owned by RendererManager */
 	get composer(): any {
-		return this._rendererManager?.composer;
+		return this._rendererManager?.postProcessing;
 	}
 
 	/** @deprecated Use RendererManager.setPixelRatio() instead */

@@ -1,7 +1,7 @@
 import { Euler, Vector3, MathUtils, Quaternion } from 'three';
 import { RigidBody } from '@dimforge/rapier3d-compat';
-import type { TransformState } from './transform-store';
-import { createTransformStore } from './transform-store';
+import type { TransformState } from '@zylem/behaviors/core';
+import { createTransformStore } from '@zylem/behaviors/core';
 
 export interface RotatableEntity {
 	body: RigidBody | null;

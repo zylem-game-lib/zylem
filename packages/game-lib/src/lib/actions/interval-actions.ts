@@ -1,6 +1,66 @@
+import type { Material, Mesh, Object3D } from 'three';
 import type { GameEntity } from '../entities/entity';
 import { BaseAction, type Action } from './action';
-import { setVelocityIntent } from './capabilities/velocity-intents';
+import { setVelocityIntent } from '@zylem/behaviors/core';
+
+type OpacityMaterial = Material & { opacity: number; transparent: boolean; needsUpdate?: boolean };
+
+/** Minimal entity shape for opacity helpers (avoids GameEntity generic variance). */
+export type OpacityEntity = {
+	group?: Object3D | null;
+	mesh?: Object3D | null;
+};
+
+function collectOpacityMaterials(roots: Object3D[]): OpacityMaterial[] {
+	const materials: OpacityMaterial[] = [];
+	for (const root of roots) {
+		root.traverse((child) => {
+			if (!(child as Mesh).isMesh) {
+				return;
+			}
+			const mesh = child as Mesh;
+			const apply = (material: Material) => {
+				if (!('opacity' in material) || !('transparent' in material)) {
+					return;
+				}
+				materials.push(material as OpacityMaterial);
+			};
+			if (Array.isArray(mesh.material)) {
+				mesh.material.forEach(apply);
+			} else if (mesh.material) {
+				apply(mesh.material);
+			}
+		});
+	}
+	return materials;
+}
+
+function resolveOpacityRoots(
+	entity: OpacityEntity,
+	targets: Object3D[] | undefined,
+): Object3D[] {
+	if (targets && targets.length > 0) {
+		return targets;
+	}
+	const root = entity.group ?? entity.mesh;
+	return root ? [root] : [];
+}
+
+/**
+ * Sets opacity on every fadeable material under an entity's visual root.
+ */
+export function resetEntityOpacity(
+	entity: OpacityEntity,
+	opacity = 1,
+	transparent = false,
+): void {
+	const roots = resolveOpacityRoots(entity, undefined);
+	for (const material of collectOpacityMaterials(roots)) {
+		material.transparent = transparent;
+		material.opacity = opacity;
+		material.needsUpdate = true;
+	}
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MoveBy -- accumulate position delta over duration via velocity
@@ -241,5 +301,84 @@ class CallFuncAction extends BaseAction {
 	reset(): void {
 		super.reset();
 		this.called = false;
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FadeOpacity -- lerp mesh material opacity over duration
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface FadeOpacityOptions {
+	/** Starting opacity (default: 1) */
+	from?: number;
+	/** Ending opacity (default: 0) */
+	to?: number;
+	/** Duration in milliseconds */
+	duration: number;
+	/** Optional Object3D roots to traverse; defaults to entity.group ?? entity.mesh */
+	targets?: Object3D[];
+	/** When complete and `to >= 1`, restore transparent=false on affected materials */
+	restoreOpaque?: boolean;
+}
+
+/**
+ * Fade material opacity on an entity (or explicit targets) over a duration.
+ *
+ * @example
+ * ```ts
+ * entity.runAction(fadeOpacity({ from: 0, to: 1, duration: 400, restoreOpaque: true }));
+ * ```
+ */
+export function fadeOpacity(opts: FadeOpacityOptions): Action {
+	return new FadeOpacityAction(opts);
+}
+
+class FadeOpacityAction extends BaseAction {
+	private readonly from: number;
+	private readonly to: number;
+	private readonly targets: Object3D[] | undefined;
+	private readonly restoreOpaque: boolean;
+	private materials: OpacityMaterial[] | null = null;
+	private finalized = false;
+
+	constructor(opts: FadeOpacityOptions) {
+		super(opts.duration);
+		this.from = opts.from ?? 1;
+		this.to = opts.to ?? 0;
+		this.targets = opts.targets;
+		this.restoreOpaque = opts.restoreOpaque ?? false;
+	}
+
+	protected onTick(entity: GameEntity<any>, _delta: number, progress: number): void {
+		if (!this.materials) {
+			this.materials = collectOpacityMaterials(
+				resolveOpacityRoots(entity, this.targets),
+			);
+			for (const material of this.materials) {
+				material.transparent = true;
+				material.needsUpdate = true;
+			}
+		}
+
+		const opacity = this.from + (this.to - this.from) * progress;
+		for (const material of this.materials) {
+			material.opacity = opacity;
+		}
+
+		if (progress >= 1 && !this.finalized) {
+			this.finalized = true;
+			if (this.restoreOpaque && this.to >= 1) {
+				for (const material of this.materials) {
+					material.transparent = false;
+					material.needsUpdate = true;
+				}
+			}
+		}
+	}
+
+	reset(): void {
+		super.reset();
+		this.materials = null;
+		this.finalized = false;
 	}
 }

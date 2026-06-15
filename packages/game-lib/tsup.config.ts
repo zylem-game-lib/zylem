@@ -39,7 +39,6 @@ export default defineConfig({
 		'valtio',
 		'stats.js',
 		'nanoid',
-		'three.quarks',
 		'lucide-solid',
 		'@kobalte/core',
 	],

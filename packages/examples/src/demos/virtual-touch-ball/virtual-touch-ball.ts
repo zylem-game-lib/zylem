@@ -1,16 +1,13 @@
 import { createBox, createPlane, createSphere, createText } from '@zylem/game-lib/entity';
 import { createCamera, createGame, createStage } from '@zylem/game-lib/core';
 import { defaultTouchControls } from '@zylem/game-lib/input-ui';
-import { fireShader, starShader } from '@zylem/game-lib/graphics';
+import { fireTSL, starTSL, createNodeMaterialFromTSL } from '@zylem/game-lib/graphics';
 import { mergeInputConfigs, useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
 import {
   Color,
   Material,
   Mesh,
   MeshStandardMaterial,
-  ShaderMaterial,
-  Vector2,
-  Vector3,
 } from 'three';
 
 const ARENA_SIZE = 18;
@@ -35,11 +32,11 @@ const COLOR_LOOKS = [
 const SHADER_LOOKS = [
   {
     label: 'Star Bloom',
-    shader: starShader,
+    shader: starTSL,
   },
   {
     label: 'Fire Bloom',
-    shader: fireShader,
+    shader: fireTSL,
   },
 ] as const;
 
@@ -55,19 +52,6 @@ function createArenaWall(options: {
     position: options.position,
     collision: { static: true },
     material: { color: new Color('#21354d') },
-  });
-}
-
-function createShaderMaterial(shader: { vertex: string; fragment: string }) {
-  return new ShaderMaterial({
-    uniforms: {
-      iResolution: { value: new Vector3(512, 512, 1) },
-      iTime: { value: 0 },
-      uvScale: { value: new Vector2(1, 1) },
-    },
-    vertexShader: shader.vertex,
-    fragmentShader: shader.fragment,
-    transparent: true,
   });
 }
 
@@ -107,7 +91,7 @@ export default function createDemo() {
   let standardBallMaterial: MeshStandardMaterial | null = null;
 
   const shaderBallMaterials = SHADER_LOOKS.map(({ shader }) =>
-    createShaderMaterial(shader),
+    createNodeMaterialFromTSL(shader),
   );
   const fallbackShaderMaterial = shaderBallMaterials[0]!;
   const initialColorLook = getColorLook(0);

@@ -1,4 +1,5 @@
 import { Color, Group, BoxGeometry, Matrix4, MeshStandardMaterial } from 'three';
+import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 
 import { RuntimeInstanceManager } from '../../../src/lib/graphics/runtime-instance-manager';
@@ -44,12 +45,11 @@ describe('RuntimeInstanceManager', () => {
 		expect((instancedMesh.material as MeshStandardMaterial).color.getHex()).toBe(0x3388ff);
 	});
 
-	it('heatTint on MeshStandardMaterial uses instanceHeat attribute instead of instanceColor', () => {
+	it('heatTint on a node material uses the instanceHeat attribute instead of instanceColor', () => {
 		const manager = new RuntimeInstanceManager();
 		manager.setScene(new Group());
-		const sourceMaterial = new MeshStandardMaterial({
-			color: new Color(0x3388ff),
-		});
+		const sourceMaterial = new MeshStandardNodeMaterial();
+		sourceMaterial.color = new Color(0x3388ff);
 
 		const instancedMesh = manager.registerBatch({
 			key: 'runtime-heat',
@@ -59,7 +59,7 @@ describe('RuntimeInstanceManager', () => {
 			colorMode: 'heatTint',
 		});
 
-		const mat = instancedMesh.material as MeshStandardMaterial;
+		const mat = instancedMesh.material as MeshStandardNodeMaterial;
 		expect(mat.vertexColors).toBe(false);
 		expect(instancedMesh.instanceColor).toBeNull();
 

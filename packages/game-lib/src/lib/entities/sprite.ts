@@ -1,6 +1,6 @@
 import { ColliderDesc } from '@dimforge/rapier3d-compat';
 import { Color, Euler, Group, Quaternion, Vector3 } from 'three';
-import { TextureLoader, SpriteMaterial, Sprite as ThreeSprite } from 'three';
+import { TextureLoader, SpriteMaterial, Sprite as ThreeSprite, SRGBColorSpace } from 'three';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
 import { EntityBuilder } from './builder';
@@ -13,6 +13,7 @@ import {
 } from '../core/base-node-life-cycle';
 import { DebugDelegate } from './delegates/debug';
 import { standardShader } from '../graphics/shaders/standard.shader';
+import { DEFAULT_TEXTURE_ANISOTROPY } from '../core/loaders/texture-loader';
 import { Vec3Input, VEC3_ONE, toThreeVector3 } from '../core/vector';
 import { deepMergeValues } from '../core/clone-utils';
 
@@ -110,6 +111,9 @@ export class ZylemSprite extends GameEntity<ZylemSpriteOptions> {
     const size = toThreeVector3(this.options.size, VEC3_ONE);
     images.forEach((image, index) => {
       const spriteMap = textureLoader.load(image.file);
+      // Sprite art is color data; tag sRGB so it isn't rendered too bright.
+      spriteMap.colorSpace = SRGBColorSpace;
+      spriteMap.anisotropy = DEFAULT_TEXTURE_ANISOTROPY;
       const material = new SpriteMaterial({
         map: spriteMap,
         transparent: true,

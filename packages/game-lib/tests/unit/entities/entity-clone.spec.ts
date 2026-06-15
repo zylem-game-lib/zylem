@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Color, Vector2, Vector3 } from 'three';
-import { defineBehavior, type BehaviorRef } from '../../../src/lib/behaviors/behavior-descriptor';
+import { defineBehavior, type BehaviorRef } from '@zylem/behaviors/core';
 import { createEntityFactory } from '../../../src/lib/entities/entity-factory';
 import { createBox } from '../../../src/lib/entities/box';
 import {

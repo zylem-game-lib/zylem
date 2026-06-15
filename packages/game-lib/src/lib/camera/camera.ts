@@ -15,9 +15,12 @@ export interface CameraOptions {
 	zoom?: number;
 	screenResolution?: Vec2Input;
 	/**
-	 * Renderer type: 'auto' | 'webgpu' | 'webgl'
-	 * Use 'webgpu' for TSL shaders
-	 * @default 'webgl'
+	 * Renderer type.
+	 *
+	 * @deprecated game-lib always renders with WebGPU (Three.js keeps its own
+	 * internal WebGL2 fallback for devices without WebGPU). This option is
+	 * ignored and retained only for backward compatibility.
+	 * @default 'webgpu'
 	 */
 	rendererType?: RendererType;
 	/**
@@ -230,7 +233,7 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 		options.perspective || 'third-person',
 		screenResolution,
 		frustumSize,
-		options.rendererType || 'webgl'
+		options.rendererType || 'webgpu'
 	);
 
 	// Set camera name if provided

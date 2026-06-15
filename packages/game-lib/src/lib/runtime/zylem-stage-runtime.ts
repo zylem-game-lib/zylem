@@ -2,7 +2,7 @@ import { Color, Quaternion, Vector3, type BufferGeometry, type Material } from '
 
 import { normalizeVec2, normalizeVec3, VEC2_ONE, VEC3_ONE, VEC3_ZERO } from '../core/vector';
 import type { Inputs } from '../input/input';
-import type { BehaviorRef } from '../behaviors/behavior-descriptor';
+import type { BehaviorRef } from '@zylem/behaviors/core';
 import {
 	bindRuntimeDynamicCircleBody2DHandle,
 	emitRuntimeRicochet,
