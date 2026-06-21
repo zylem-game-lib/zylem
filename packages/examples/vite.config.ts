@@ -90,6 +90,10 @@ export default defineConfig({
 		target: 'esnext',
 	},
 	resolve: {
+		// Collapse every `three` / `three/webgpu` / `three/tsl` specifier onto a
+		// single physical copy so the node system (and its shared `three.core`
+		// realm) is never duplicated across the bundle.
+		dedupe: ['three'],
 		alias: [
 			// Examples source
 			{ find: '@examples', replacement: path.resolve(__dirname, './src') },

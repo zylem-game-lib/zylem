@@ -2,6 +2,7 @@ import { Vector2, Scene, Camera } from 'three';
 import { WebGPURenderer, RenderPipeline } from 'three/webgpu';
 import { pass, renderOutput, screenCoordinate, vec2, vec4, fract, sin, dot } from 'three/tsl';
 import type { ZylemCamera } from './zylem-camera';
+import { installThreeConsoleFilter } from '../graphics/three-console-filter';
 
 /**
  * Renderer type option.
@@ -114,6 +115,11 @@ export class RendererManager {
 	 */
 	async initRenderer(): Promise<void> {
 		if (this._initialized) return;
+
+		// Filter the upstream per-frame "THREE.Abstract function." WebGPU
+		// node-update warning before any frames render. See the helper for the
+		// full rationale.
+		installThreeConsoleFilter();
 
 		this.renderer = new WebGPURenderer({ antialias: true, alpha: true });
 		await this.renderer.init();
