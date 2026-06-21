@@ -89,7 +89,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "biome check .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "test": "vitest --reporter=verbose",
     "coverage": "vitest run --coverage"
   },
@@ -131,7 +131,8 @@
     "jsdom": "^27.2.0",
     "tslib": "^2.8.1",
     "tsup": "^8.5.1",
-    "typescript": "5.8.2",
+    "typescript": "6.0.3",
+    "@typescript/native-preview": "latest",
     "vite-plugin-solid": "^2.11.8",
     "vitest": "^4.0.9"
   }

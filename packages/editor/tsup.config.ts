@@ -55,7 +55,9 @@ const rawPlugin: Plugin = {
 export default defineConfig({
     entry: { 'zylem-editor': 'src/index.ts' },
     format: ['esm'],
-    dts: true,
+    // `ignoreDeprecations` works around tsup injecting `baseUrl: '.'` into the
+    // dts compiler options, which classic TypeScript 6 rejects (TS5101).
+    dts: { compilerOptions: { ignoreDeprecations: '6.0' } },
     clean: true,
     sourcemap,
     outDir: 'dist',

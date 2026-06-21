@@ -21,7 +21,10 @@ export default defineConfig({
 		'runtime': 'src/api/runtime.ts',
 	},
 	format: ['esm'],
-	dts: true, // Generate TypeScript declaration files
+	// Generate TypeScript declaration files. `ignoreDeprecations` is required
+	// because tsup injects `baseUrl: '.'` into the dts compiler options, which
+	// classic TypeScript 6 rejects as deprecated (TS5101).
+	dts: { compilerOptions: { ignoreDeprecations: '6.0' } },
 	tsconfig: './tsconfig.build.json', // Use custom tsconfig for build
 	splitting: true,
 	sourcemap,

@@ -32,7 +32,10 @@ export function applyMeshStandardRuntimeHeatTint(
 	const baseRgb = { r: 0, g: 0, b: 0 };
 	material.color.getRGB(baseRgb, LinearSRGBColorSpace);
 
-	const heat = clamp(attribute(RUNTIME_INSTANCE_HEAT_ATTRIBUTE, 'float'), 0.0, 1.0);
+	// Pass the explicit `'float'` type argument so the attribute node is typed
+	// as `Node<"float">` rather than `Node<string>`; the latter expands the TSL
+	// proxy into a union large enough to trip the native compiler (TS2590).
+	const heat = clamp(attribute<'float'>(RUNTIME_INSTANCE_HEAT_ATTRIBUTE, 'float'), 0.0, 1.0);
 	const base = vec3(baseRgb.r, baseRgb.g, baseRgb.b);
 	const hot = vec3(hotRgb.r, hotRgb.g, hotRgb.b);
 
