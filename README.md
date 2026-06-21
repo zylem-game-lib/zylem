@@ -25,52 +25,6 @@ This is a pnpm workspace monorepo containing:
 pnpm install
 ```
 
-### npm registry authentication
-
-The committed `.npmrc` references `${NPM_TOKEN}`:
-
-```ini
-//registry.npmjs.org/:_authToken=${NPM_TOKEN}
-```
-
-Since pnpm v10.34.2 / v11.5.3, pnpm intentionally does **not** expand `${...}`
-placeholders found in a repository-committed `.npmrc` (security advisory
-GHSA-3qhv-2rgh-x77r), so you will see a warning like:
-
-```
-WARN Issue while reading ".npmrc". Failed to replace env in config: ${NPM_TOKEN}
-```
-
-This warning is harmless for installing public packages (no token is required to
-install `@zylem/*` from the public registry). pnpm also does **not** read `.env`,
-so a token defined there never reaches pnpm. Authentication is only needed to
-**publish** (e.g. `pnpm publish:lib`). Provide the token from a trusted location:
-
-- **Local (recommended fallback):** keep your personal token in your user-level
-  `~/.npmrc`, which pnpm reads as a fallback automatically:
-
-  ```ini
-  //registry.npmjs.org/:_authToken=npm_xxxxxxxxxxxxxxxxxxxx
-  ```
-
-  or write it to the global config without editing any file:
-
-  ```bash
-  pnpm config set "//registry.npmjs.org/:_authToken" "$NPM_TOKEN"
-  ```
-
-  With the token present in user/global config, installs and publishes work and
-  the project `.npmrc` line is simply ignored; when it is absent, public installs
-  still work.
-
-- **CI:** export the credential as a host-scoped environment variable (safe
-  because the registry is encoded in the trusted variable name), or run the
-  `pnpm config set` command above before installing:
-
-  ```bash
-  export "pnpm_config_//registry.npmjs.org/:_authToken=$NPM_TOKEN"
-  ```
-
 ### Development
 
 ```bash
