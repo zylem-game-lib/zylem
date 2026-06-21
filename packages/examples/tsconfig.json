@@ -5,7 +5,6 @@
     "types": ["node", "vite/client", "vite-plugin-glsl/ext"],
     "noEmit": true,
     "exactOptionalPropertyTypes": false,
-    "baseUrl": ".",
     "paths": {
       "@zylem/styles": ["../zylem-styles/src/index.ts"],
       "@zylem/game-lib/core": ["../game-lib/src/api/core.ts"],

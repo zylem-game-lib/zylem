@@ -36,7 +36,7 @@
     "@vanilla-extract/vite-plugin": "^5.2.2",
     "@zylem/utilities": "workspace:*",
     "cross-env": "^10.1.0",
-    "typescript": "5.8.2",
+    "typescript": "6.0.3",
     "vite": "7.0.4",
     "vite-plugin-glsl": "^1.5.4",
     "vite-plugin-solid": "^2.11.8"

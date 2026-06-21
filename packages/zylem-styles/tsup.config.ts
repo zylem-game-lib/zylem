@@ -10,7 +10,9 @@ export default defineConfig({
   // in) get concatenated by esbuild into `dist/styles.css`.
   entry: { index: 'src/index.ts', styles: 'src/styles.ts' },
   format: ['esm'],
-  dts: true,
+  // `ignoreDeprecations` works around tsup injecting `baseUrl: '.'` into the
+  // dts compiler options, which classic TypeScript 6 rejects (TS5101).
+  dts: { compilerOptions: { ignoreDeprecations: '6.0' } },
   clean: true,
   sourcemap,
   minify: isProd,

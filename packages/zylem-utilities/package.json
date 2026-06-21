@@ -19,8 +19,8 @@
     "build:cli": "cd destructible-prebake && tsup",
     "build:worker:destructible-prebake": "cd workers/destructible-prebake && tsup",
     "typecheck": "pnpm run typecheck:cli && pnpm run typecheck:worker:destructible-prebake",
-    "typecheck:cli": "tsc -p destructible-prebake/tsconfig.json --noEmit",
-    "typecheck:worker:destructible-prebake": "tsc -p workers/destructible-prebake/tsconfig.json --noEmit"
+    "typecheck:cli": "tsgo -p destructible-prebake/tsconfig.json --noEmit",
+    "typecheck:worker:destructible-prebake": "tsgo -p workers/destructible-prebake/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@dgreenheck/three-pinata": "^2.0.1",
@@ -33,6 +33,7 @@
     "@types/node": "^20.19.13",
     "@types/three": "^0.184.0",
     "tsup": "^8.5.1",
-    "typescript": "5.8.2"
+    "typescript": "6.0.3",
+    "@typescript/native-preview": "latest"
   }
 }

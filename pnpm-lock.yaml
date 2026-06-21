@@ -40,10 +40,10 @@ importers:
         version: 0.6.0(esbuild@0.27.2)(solid-js@1.9.9)
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2)
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@6.0.3)
       typescript:
-        specifier: 5.8.2
-        version: 5.8.2
+        specifier: 6.0.3
+        version: 6.0.3
       vite:
         specifier: 7.0.4
         version: 7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6)
@@ -79,8 +79,8 @@ importers:
         version: 2.1.7(react@18.3.1)
     devDependencies:
       typescript:
-        specifier: 5.8.2
-        version: 5.8.2
+        specifier: 6.0.3
+        version: 6.0.3
       vite:
         specifier: 7.0.4
         version: 7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6)
@@ -152,8 +152,8 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       typescript:
-        specifier: 5.8.2
-        version: 5.8.2
+        specifier: 6.0.3
+        version: 6.0.3
       vite:
         specifier: 7.0.4
         version: 7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6)
@@ -218,6 +218,9 @@ importers:
       '@types/three':
         specifier: ^0.184.0
         version: 0.184.1
+      '@typescript/native-preview':
+        specifier: latest
+        version: 7.0.0-dev.20260620.1
       '@zylem/runtime':
         specifier: workspace:*
         version: link:../zylem-runtime
@@ -232,10 +235,10 @@ importers:
         version: 2.8.1
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2)
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@6.0.3)
       typescript:
-        specifier: 5.8.2
-        version: 5.8.2
+        specifier: 6.0.3
+        version: 6.0.3
       vite-plugin-solid:
         specifier: ^2.11.8
         version: 2.11.8(solid-js@1.9.9)(vite@8.0.14(@types/node@20.19.13)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.20.6))
@@ -256,8 +259,8 @@ importers:
         version: 2.1.0(react@18.3.1)
     devDependencies:
       typescript:
-        specifier: 5.8.2
-        version: 5.8.2
+        specifier: 6.0.3
+        version: 6.0.3
 
   packages/zylem-runtime: {}
 
@@ -275,10 +278,10 @@ importers:
         version: 2.3.22(esbuild@0.27.2)
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2)
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@6.0.3)
       typescript:
-        specifier: 5.8.2
-        version: 5.8.2
+        specifier: 6.0.3
+        version: 6.0.3
 
   packages/zylem-utilities:
     dependencies:
@@ -304,12 +307,15 @@ importers:
       '@types/three':
         specifier: ^0.184.0
         version: 0.184.1
+      '@typescript/native-preview':
+        specifier: latest
+        version: 7.0.0-dev.20260620.1
       tsup:
         specifier: ^8.5.1
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2)
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@6.0.3)
       typescript:
-        specifier: 5.8.2
-        version: 5.8.2
+        specifier: 6.0.3
+        version: 6.0.3
 
 packages:
 
@@ -1354,6 +1360,53 @@ packages:
   '@types/whatwg-mimetype@3.0.2':
     resolution: {integrity: sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA==}
 
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260620.1':
+    resolution: {integrity: sha512-1qwEjLW1JCRkDYrS8OyWdfXoL9bNHV28kP3ouQxytZmNpghWSMKZutsxDjVVbnlsbydBdYqqZMttPuTUlm3y0A==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260620.1':
+    resolution: {integrity: sha512-/Z5Jx8V22RTuHSVR/QCbCT2eFq6NoYc5oLah5/yDoymZaTlmvuwuc50N6y9YXF0zAh+z4QGoyAqd561cAGSNOA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260620.1':
+    resolution: {integrity: sha512-rz7JoRJE5zaL2RoTOHLUliz6UkDqjUngJEF1/GiSR032v8k8tp8GTezxFoosaCssQSf80cjA5wYup5zrCp4zIg==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20260620.1':
+    resolution: {integrity: sha512-wuqpmYeMkOvHEx+log3bi913JRacYRo7DwkABMbD5wQMEy2GCdp3461aQ5sGrRD/lL4rylZJxE5B5aQqyhkQYA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm]
+    os: [linux]
+
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20260620.1':
+    resolution: {integrity: sha512-8zhjBFu0RuL16iFr0TlUU8RRMdmvUY+NuSSxaVeitxmvORFoy0EwIaz+ZK9+xRhfHCIcugi6mEcTqEPv48X3oQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260620.1':
+    resolution: {integrity: sha512-Bax5HY/6NUcbk7h+SLJIbRL8TvGRLP1mbvI9T4ah6wfYKRp3rwBlXHP3N+BEYdzOFTUlzBJLknxcjtxWd5cFPw==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20260620.1':
+    resolution: {integrity: sha512-+revF2e9JCBx1rLQCX+ny8KuZ0Tl5de7+YpYd4PUNKgF5yPi9n2+TmXtci8/3yBl7QRyLWG1td28RMa/8eIynQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [win32]
+
+  '@typescript/native-preview@7.0.0-dev.20260620.1':
+    resolution: {integrity: sha512-W5XiTTbIGZSAJUMJqynchbfcjPcoNn29U8dnd+FK+x+Mj9VT9NNTymZ0YAIf+hU2uYAxx3AGe6/U/2OF2TpQwg==}
+    engines: {node: '>=16.20.0'}
+    hasBin: true
+
   '@vanilla-extract/babel-plugin-debug-ids@1.2.2':
     resolution: {integrity: sha512-MeDWGICAF9zA/OZLOKwhoRlsUW+fiMwnfuOAqFVohL31Agj7Q/RBWAYweqjHLgFBCsdnr6XIfwjJnmb2znEWxw==}
 
@@ -2252,8 +2305,8 @@ packages:
   typescript-fsm@1.6.0:
     resolution: {integrity: sha512-wmDVbIZ/iyytlNOLdwyvLTdnArSZw48IwjbHuIcZo+DA2do27pOM+hZJsjPzcQ0ux/lzkZ1i1PPfP16GOGPYuQ==}
 
-  typescript@5.8.2:
-    resolution: {integrity: sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==}
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -3354,6 +3407,37 @@ snapshots:
 
   '@types/whatwg-mimetype@3.0.2': {}
 
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260620.1':
+    optional: true
+
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260620.1':
+    optional: true
+
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260620.1':
+    optional: true
+
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20260620.1':
+    optional: true
+
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20260620.1':
+    optional: true
+
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260620.1':
+    optional: true
+
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20260620.1':
+    optional: true
+
+  '@typescript/native-preview@7.0.0-dev.20260620.1':
+    optionalDependencies:
+      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260620.1
+      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260620.1
+      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260620.1
+      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260620.1
+      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260620.1
+      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260620.1
+      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260620.1
+
   '@vanilla-extract/babel-plugin-debug-ids@1.2.2':
     dependencies:
       '@babel/core': 7.28.4
@@ -4276,7 +4360,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsup@8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@5.8.2):
+  tsup@8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@6.0.3):
     dependencies:
       bundle-require: 5.1.0(esbuild@0.27.2)
       cac: 6.7.14
@@ -4297,7 +4381,7 @@ snapshots:
       tree-kill: 1.2.2
     optionalDependencies:
       postcss: 8.5.15
-      typescript: 5.8.2
+      typescript: 6.0.3
     transitivePeerDependencies:
       - jiti
       - supports-color
@@ -4314,7 +4398,7 @@ snapshots:
 
   typescript-fsm@1.6.0: {}
 
-  typescript@5.8.2: {}
+  typescript@6.0.3: {}
 
   ufo@1.6.1: {}
 
