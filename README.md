@@ -47,6 +47,20 @@ pnpm typecheck
 pnpm lint
 ```
 
+### Interactive runner
+
+Use the `zylem` command for a guided TUI (built on `@clack/prompts`). It asks
+for an action and then lets you multi-select which workspace packages to apply
+it to:
+
+```bash
+# Pick an action (run / build / test / publish) and target packages
+pnpm zylem
+```
+
+The `build` and `publish` actions automatically load the root `.env` before
+running, so secrets like `NPM_TOKEN` are available to those commands.
+
 ### Render builds with Rust
 
 If your Render deployment needs to build `@zylem/runtime`, use the root
@@ -72,7 +86,9 @@ The SpacetimeDB API remains the separate Render web service.
 
 - **`pnpm run build:production`** — Sets `NODE_ENV=production` for all JS/TS packages, disables `.map` files by default (override with `SOURCEMAP=1`), enables minify where configured, and builds `@zylem/runtime` as **wasm release only** (skips the extra debug native `cargo build` from `pnpm build`).
 - **`pnpm run build:production:verify`** — Runs `scripts/ensure-spacetimedb-toolchain-ci.sh` (Rust wasm + SpacetimeDB CLI when missing), then `typecheck`, `lint`, and `build:production`. Use this in CI or for a full gate before release.
-- For **npm publish** of `@zylem/game-lib`, `pnpm run publish:lib` builds the library with `NODE_ENV=production` first.
+- For **npm publish** of `@zylem/game-lib`, `pnpm run publish:lib` (or `pnpm run publish`) builds the library with `NODE_ENV=production` first.
+
+> **Publishing auth:** `NPM_TOKEN` is read from the root `.env` and injected as the registry auth token only during publish. It is intentionally **not** referenced from the committed `.npmrc`, so everyday `pnpm` commands (`build`, `install`, `dev`, `test`) stay warning-free.
 
 ## 🎮 Using the Library
 
