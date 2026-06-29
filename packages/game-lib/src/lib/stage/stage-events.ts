@@ -1,3 +1,12 @@
+/**
+ * Bridges the reactive `stageState` proxy to DOM `CustomEvent`s.
+ *
+ * Subscribes to stage state and re-broadcasts entity/variable snapshots on the
+ * `window` as `STAGE_STATE_CHANGE` events, so non-valtio consumers (devtools,
+ * external editor UI, framework-agnostic listeners) can observe stage changes
+ * without coupling to valtio. Exists as the outward-facing event surface for
+ * stage state.
+ */
 import { subscribe } from 'valtio/vanilla';
 import { stageState } from './stage-state';
 import type { StageStateInterface } from '../types/stage-types';

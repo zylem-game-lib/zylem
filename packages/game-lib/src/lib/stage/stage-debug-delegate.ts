@@ -1,3 +1,16 @@
+/**
+ * Owns the stage's in-world debug/editor interaction layer.
+ *
+ * Self-manages around the global `debugState`: when debug is enabled it draws
+ * Rapier + runtime collider wireframes, attaches mouse listeners, raycasts into
+ * the physics world to hover/select/delete/spawn entities, and drives the
+ * `DebugEntityCursor` highlight. When disabled it tears down visuals but stays
+ * alive to re-activate. Centralizes all debug-tool plumbing so `ZylemStage`
+ * doesn't have to know about raycasting, DOM input, or debug rendering.
+ */
+
+// TODO: needs an implementation update
+
 import { Ray, RayColliderToi } from '@dimforge/rapier3d-compat';
 import { BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments, Raycaster, Vector2, Vector3 } from 'three';
 import { subscribe } from 'valtio/vanilla';
@@ -34,6 +47,8 @@ export class StageDebugDelegate {
 	private debugCursor: DebugEntityCursor | null = null;
 	private debugLines: LineSegments | null = null;
 	private runtimeDebugLines: LineSegments | null = null;
+	/** Bridge collider-debug buffer currently bound to `runtimeDebugLines`, for zero-copy reuse. */
+	private boundColliderPositions: Float32Array | null = null;
 	private cameraDebugDelegate: StageCameraDebugDelegate | null = null;
 	private debugStateUnsubscribe: (() => void) | null = null;
 
@@ -114,6 +129,7 @@ export class StageDebugDelegate {
 			this.runtimeDebugLines.geometry.dispose();
 			(this.runtimeDebugLines.material as LineBasicMaterial).dispose();
 			this.runtimeDebugLines = null;
+			this.boundColliderPositions = null;
 		}
 		this.debugCursor?.dispose();
 		this.debugCursor = null;
@@ -146,22 +162,48 @@ export class StageDebugDelegate {
 		}
 
 		if (this.runtimeDebugLines) {
-			const runtimeAdapter = this.stage.runtimeAdapter;
-			const runtimeDebug = runtimeAdapter?.getDebugRender?.() ?? null;
-			if (runtimeDebug && runtimeDebug.vertices.length > 0) {
-				this.runtimeDebugLines.geometry.setAttribute(
-					'position',
-					new BufferAttribute(new Float32Array(runtimeDebug.vertices), 3),
-				);
-				this.runtimeDebugLines.geometry.setAttribute(
-					'color',
-					new BufferAttribute(new Float32Array(runtimeDebug.colors), 4),
-				);
-				this.runtimeDebugLines.geometry.attributes.position.needsUpdate = true;
-				this.runtimeDebugLines.geometry.attributes.color.needsUpdate = true;
-				this.runtimeDebugLines.visible = true;
+			// In the bundle/WASM path the Rapier world is empty (physics is owned
+			// by WASM), so collider wireframes come from the bridge, which rebuilds
+			// them from the live interpolated transforms each frame.
+			const bridge = this.stage.physicsBridge;
+			if (bridge) {
+				const dbg = bridge.getColliderDebugRender();
+				if (dbg.vertices.length === 0) {
+					this.runtimeDebugLines.visible = false;
+				} else {
+					const geom = this.runtimeDebugLines.geometry;
+					// The bridge reuses its buffers across frames, so bind them
+					// directly (zero-copy) and only rebind when the backing array
+					// is reallocated (collider count changed). Positions change
+					// every frame; colors are constant.
+					if (this.boundColliderPositions !== dbg.vertices) {
+						geom.setAttribute('position', new BufferAttribute(dbg.vertices, 3));
+						geom.setAttribute('color', new BufferAttribute(dbg.colors, 4));
+						this.boundColliderPositions = dbg.vertices;
+					} else if (dbg.changed) {
+						// Only re-upload when colliders actually moved — the GPU
+						// upload of this buffer is the overlay's dominant cost.
+						geom.attributes.position.needsUpdate = true;
+					}
+					this.runtimeDebugLines.visible = true;
+				}
 			} else {
-				this.runtimeDebugLines.visible = false;
+				const runtimeDebug = this.stage.runtimeAdapter?.getDebugRender?.() ?? null;
+				if (runtimeDebug && runtimeDebug.vertices.length > 0) {
+					this.runtimeDebugLines.geometry.setAttribute(
+						'position',
+						new BufferAttribute(new Float32Array(runtimeDebug.vertices), 3),
+					);
+					this.runtimeDebugLines.geometry.setAttribute(
+						'color',
+						new BufferAttribute(new Float32Array(runtimeDebug.colors), 4),
+					);
+					this.runtimeDebugLines.geometry.attributes.position.needsUpdate = true;
+					this.runtimeDebugLines.geometry.attributes.color.needsUpdate = true;
+					this.runtimeDebugLines.visible = true;
+				} else {
+					this.runtimeDebugLines.visible = false;
+				}
 			}
 		}
 		const tool = getDebugTool();
@@ -171,7 +213,28 @@ export class StageDebugDelegate {
 		let origin: Vector3 | null = null;
 		let direction: Vector3 | null = null;
 
-		if (hasDirectWorld) {
+		// Phase A/B: when WASM owns transforms, bundle entities have no Rapier
+		// colliders, so pick against the rendered bundle meshes directly.
+		const bundleManager = this.stage.renderBundleManager;
+		if (bundleManager) {
+			this.raycaster.setFromCamera(this.mouseNdc, cameraRef.camera);
+			origin = this.raycaster.ray.origin.clone();
+			direction = this.raycaster.ray.direction.clone().normalize();
+
+			const bundleHit = bundleManager.raycast(this.raycaster);
+			if (isCursorTool) {
+				const hoveredUuid = bundleHit?.uuid;
+				if (hoveredUuid) {
+					const entity = this.stage.entityDelegate.debugMap.get(hoveredUuid);
+					if (entity) setHoveredEntity(entity as any);
+				} else {
+					resetHoveredEntity();
+				}
+				if (this.isMouseDown && origin && direction) {
+					this.handleActionOnHit(hoveredUuid ?? null, origin, direction, bundleHit?.distance ?? 0);
+				}
+			}
+		} else if (hasDirectWorld) {
 			this.raycaster.setFromCamera(this.mouseNdc, cameraRef.camera);
 			origin = this.raycaster.ray.origin.clone();
 			direction = this.raycaster.ray.direction.clone().normalize();
@@ -181,21 +244,21 @@ export class StageDebugDelegate {
 				{ x: direction.x, y: direction.y, z: direction.z },
 			);
 			hit = world.world.castRay(rapierRay, this.options.maxRayDistance, true);
-		}
 
-		if (hit && isCursorTool) {
-			// @ts-ignore - access compat object's parent userData mapping back to GameEntity
-			const rigidBody = hit.collider?._parent;
-			const hoveredUuid: string | undefined = rigidBody?.userData?.uuid;
-			if (hoveredUuid) {
-				const entity = this.stage.entityDelegate.debugMap.get(hoveredUuid);
-				if (entity) setHoveredEntity(entity as any);
-			} else {
-				resetHoveredEntity();
-			}
+			if (hit && isCursorTool) {
+				// @ts-ignore - access compat object's parent userData mapping back to GameEntity
+				const rigidBody = hit.collider?._parent;
+				const hoveredUuid: string | undefined = rigidBody?.userData?.uuid;
+				if (hoveredUuid) {
+					const entity = this.stage.entityDelegate.debugMap.get(hoveredUuid);
+					if (entity) setHoveredEntity(entity as any);
+				} else {
+					resetHoveredEntity();
+				}
 
-			if (this.isMouseDown && origin && direction) {
-				this.handleActionOnHit(hoveredUuid ?? null, origin, direction, hit.toi);
+				if (this.isMouseDown && origin && direction) {
+					this.handleActionOnHit(hoveredUuid ?? null, origin, direction, hit.toi);
+				}
 			}
 		}
 		this.isMouseDown = false;

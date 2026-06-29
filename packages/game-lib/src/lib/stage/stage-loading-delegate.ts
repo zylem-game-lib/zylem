@@ -1,11 +1,14 @@
+/**
+ * Fan-out hub for a stage's loading lifecycle events.
+ *
+ * Collects start/progress/complete loading events and broadcasts them both to
+ * direct per-stage subscribers and to the global `gameEventBus` (tagged with
+ * stage name/index) for game-level loading UIs. Exists so the entity-load
+ * generator and stage code can emit progress through one place without knowing
+ * who is listening.
+ */
 import { LoadingEvent } from '../core/interfaces';
 import { gameEventBus, StageLoadingPayload } from '../game/game-event-bus';
-
-/**
- * Event name for stage loading events.
- * Dispatched via window for cross-application communication.
- */
-export const STAGE_LOADING_EVENT = 'STAGE_LOADING_EVENT';
 
 /**
  * Delegate for managing loading events and progress within a stage.

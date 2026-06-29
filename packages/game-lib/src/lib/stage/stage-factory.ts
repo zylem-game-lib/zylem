@@ -1,3 +1,12 @@
+/**
+ * Builds runnable `Stage` instances from serialized `StageBlueprint` data.
+ *
+ * Converts the data-only blueprint representation (used for saving/loading and
+ * the stage manager's sliding-window persistence) into a live `Stage`,
+ * delegating entity reconstruction to `EntityFactory`. Exists as the
+ * deserialization counterpart to blueprints so stages can be persisted and
+ * rehydrated rather than only authored in code.
+ */
 import { StageBlueprint } from '../core/blueprints';
 import { createStage, Stage } from './stage';
 import { EntityFactory } from '../entities/entity-factory';

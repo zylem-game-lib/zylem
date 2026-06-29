@@ -1,3 +1,12 @@
+/**
+ * Bridges async model loading to scene attachment for entities.
+ *
+ * Some entities (e.g. GLTF actors) don't have a renderable group/mesh at spawn
+ * time. This delegate observes those entities, listens for `entity:model:loaded`
+ * events, and adds their group to the scene once the model is ready — notifying
+ * the stage so deferred physics/instancing can finish. Exists to handle the
+ * "spawned now, mesh arrives later" race without complicating spawn code.
+ */
 import { zylemEventBus } from '../events';
 import { ZylemScene } from '../graphics/zylem-scene';
 import { GameEntity } from '../entities/entity';

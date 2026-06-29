@@ -76,11 +76,150 @@ function clearVelocityChannels(store: TransformState): void {
 }
 
 /**
- * Entity that can have transformations applied from a store
+ * Collect per-source velocity intents from the store (channels + legacy
+ * per-axis / whole-vector fallbacks) into a single resolvable list. Shared by
+ * the Rapier and WASM application paths.
+ */
+function collectVelocityIntents(store: TransformState): ResolvedIntent[] {
+	const intents: ResolvedIntent[] = [];
+	if (store.dirty.velocityChannels) {
+		for (const sourceId in store.velocityChannels) {
+			const intent = store.velocityChannels[sourceId];
+			intents.push({
+				sourceId,
+				mode: intent.mode ?? 'replace',
+				priority: intent.priority ?? 0,
+				x: intent.x,
+				y: intent.y,
+				z: intent.z,
+			});
+		}
+	}
+
+	if (store.dirty.velocity) {
+		intents.push({
+			sourceId: '__legacy_velocity__',
+			mode: 'replace',
+			priority: -100,
+			x: store.velocity.x,
+			y: store.velocity.y,
+			z: store.velocity.z,
+		});
+	} else if (store.dirty.velocityX || store.dirty.velocityY || store.dirty.velocityZ) {
+		intents.push({
+			sourceId: '__legacy_per_axis__',
+			mode: 'replace',
+			priority: -100,
+			x: store.dirty.velocityX ? store.velocity.x : undefined,
+			y: store.dirty.velocityY ? store.velocity.y : undefined,
+			z: store.dirty.velocityZ ? store.velocity.z : undefined,
+		});
+	}
+
+	return intents;
+}
+
+function resetTransformDirty(store: TransformState): void {
+	store.dirty.position = false;
+	store.dirty.rotation = false;
+	store.dirty.velocity = false;
+	store.dirty.velocityX = false;
+	store.dirty.velocityY = false;
+	store.dirty.velocityZ = false;
+	clearVelocityChannels(store);
+	store.dirty.angularVelocity = false;
+}
+
+/**
+ * Apply accumulated transform intents through the WASM runtime's FFI setters.
+ * Mirrors the Rapier branch of {@link applyTransformChanges}: velocity is
+ * composed from intents, rotation/angular-velocity are absolute, and position
+ * is treated as a delta against the current runtime pose.
+ */
+function applyTransformChangesViaWasm(
+	runtime: RuntimeTransformTarget,
+	slot: number,
+	store: TransformState,
+): void {
+	const hasPosition = store.dirty.position;
+	const hasRotation = store.dirty.rotation;
+	const hasAngularVelocity = store.dirty.angularVelocity;
+	const hasPerAxis = store.dirty.velocityX || store.dirty.velocityY || store.dirty.velocityZ;
+	const hasLegacyVelocity = store.dirty.velocity;
+	const hasChannels = store.dirty.velocityChannels;
+
+	if (!hasPosition && !hasRotation && !hasAngularVelocity && !hasPerAxis && !hasLegacyVelocity && !hasChannels) {
+		return;
+	}
+
+	const intents = collectVelocityIntents(store);
+	if (intents.length > 0) {
+		const currentVel = runtime.getLinearVelocity(slot) ?? [0, 0, 0];
+		const current = { x: currentVel[0], y: currentVel[1], z: currentVel[2] };
+		if (intents.length > 1) {
+			intents.sort(sortIntents);
+		}
+		const composed = composeVelocity(current, intents);
+		runtime.setLinearVelocity(
+			slot,
+			composed.x.touched ? composed.x.value : current.x,
+			composed.y.touched ? composed.y.value : current.y,
+			composed.z.touched ? composed.z.value : current.z,
+		);
+	}
+
+	if (hasRotation) {
+		const r = store.rotation as { x: number; y: number; z: number; w: number };
+		runtime.setRotation(slot, r.x, r.y, r.z, r.w);
+	}
+
+	if (hasAngularVelocity) {
+		const a = store.angularVelocity as { x: number; y: number; z: number };
+		runtime.setAngularVelocity(slot, a.x, a.y, a.z);
+	}
+
+	if (hasPosition) {
+		const pose = runtime.getPose(slot);
+		if (pose) {
+			runtime.setPosition(
+				slot,
+				pose.position[0] + store.position.x,
+				pose.position[1] + store.position.y,
+				pose.position[2] + store.position.z,
+			);
+		}
+	}
+
+	resetTransformDirty(store);
+}
+
+/**
+ * Minimal slice of the WASM stage runtime used to apply transform intents via
+ * FFI. Kept structural so this module need not import the full runtime type.
+ */
+export interface RuntimeTransformTarget {
+	getLinearVelocity(slot: number, out?: [number, number, number]): [number, number, number] | null;
+	setLinearVelocity(slot: number, x: number, y: number, z: number): boolean;
+	setAngularVelocity(slot: number, x: number, y: number, z: number): boolean;
+	setRotation(slot: number, x: number, y: number, z: number, w: number): boolean;
+	setPosition(slot: number, x: number, y: number, z: number): boolean;
+	getPose(slot: number): { position: [number, number, number]; rotation: [number, number, number, number] } | null;
+}
+
+/**
+ * Entity that can have transformations applied from a store.
+ *
+ * When `body` is present the intents flush to Rapier; otherwise, if the entity
+ * carries a live WASM handle (`runtimeHandle` >= 0 + `wasmStageRef`), they flush
+ * through the unified runtime's FFI setters instead (Phase B).
  */
 export interface TransformableEntity {
 	body: RigidBody | null;
 	transformStore?: TransformState;
+	/** Live WASM slot handle, or -1 when not runtime-attached. */
+	runtimeHandle?: number;
+	/** Unified-Stage runtime the entity is attached to, if any. */
+	wasmStageRef?: RuntimeTransformTarget | null;
 }
 
 /**
@@ -101,7 +240,14 @@ export function applyTransformChanges(
 	entity: TransformableEntity,
 	store: TransformState
 ): void {
-	if (!entity.body) return;
+	if (!entity.body) {
+		// Phase B: no Rapier body — route through the WASM runtime when the
+		// entity is bridge-managed. Falls through to a no-op otherwise.
+		if (entity.wasmStageRef && (entity.runtimeHandle ?? -1) >= 0) {
+			applyTransformChangesViaWasm(entity.wasmStageRef, entity.runtimeHandle!, store);
+		}
+		return;
+	}
 
 	const hasPosition = store.dirty.position;
 	const hasRotation = store.dirty.rotation;
@@ -114,41 +260,7 @@ export function applyTransformChanges(
 		return;
 	}
 
-	const intents: ResolvedIntent[] = [];
-	if (hasChannels) {
-		for (const sourceId in store.velocityChannels) {
-			const intent = store.velocityChannels[sourceId];
-			intents.push({
-				sourceId,
-				mode: intent.mode ?? 'replace',
-				priority: intent.priority ?? 0,
-				x: intent.x,
-				y: intent.y,
-				z: intent.z,
-			});
-		}
-	}
-
-	// Legacy fallback mapped into the same composition pipeline.
-	if (hasLegacyVelocity) {
-		intents.push({
-			sourceId: '__legacy_velocity__',
-			mode: 'replace',
-			priority: -100,
-			x: store.velocity.x,
-			y: store.velocity.y,
-			z: store.velocity.z,
-		});
-	} else if (hasPerAxis) {
-		intents.push({
-			sourceId: '__legacy_per_axis__',
-			mode: 'replace',
-			priority: -100,
-			x: store.dirty.velocityX ? store.velocity.x : undefined,
-			y: store.dirty.velocityY ? store.velocity.y : undefined,
-			z: store.dirty.velocityZ ? store.velocity.z : undefined,
-		});
-	}
+	const intents = collectVelocityIntents(store);
 
 	if (intents.length > 0) {
 		const current = entity.body.linvel();
@@ -187,13 +299,5 @@ export function applyTransformChanges(
 		);
 	}
 
-	// Reset dirty flags for next frame
-	store.dirty.position = false;
-	store.dirty.rotation = false;
-	store.dirty.velocity = false;
-	store.dirty.velocityX = false;
-	store.dirty.velocityY = false;
-	store.dirty.velocityZ = false;
-	clearVelocityChannels(store);
-	store.dirty.angularVelocity = false;
+	resetTransformDirty(store);
 }

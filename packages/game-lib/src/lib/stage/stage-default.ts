@@ -1,3 +1,12 @@
+/**
+ * Reactive, library-wide default config for newly created stages.
+ *
+ * Holds a valtio proxy of baseline stage settings (background, inputs, gravity,
+ * variables) that can be mutated at runtime to influence future stages, plus
+ * `getStageOptions`, which merges those defaults into the option array the
+ * `stage()` builder passes to `Stage`. Exists so defaults are centralized and
+ * tweakable rather than hard-coded at each call site.
+ */
 import { proxy } from 'valtio/vanilla';
 import { Vector3 } from 'three';
 import type { StageOptions, ZylemStageConfig } from './zylem-stage';
@@ -22,16 +31,6 @@ const initialDefaults: Partial<ZylemStageConfig> = {
 const stageDefaultsState = proxy<Partial<ZylemStageConfig>>({
 	...initialDefaults,
 });
-
-/** Replace multiple defaults at once (shallow merge). */
-function setStageDefaults(partial: Partial<ZylemStageConfig>): void {
-	Object.assign(stageDefaultsState, partial);
-}
-
-/** Reset defaults back to library defaults. */
-function resetStageDefaults(): void {
-	Object.assign(stageDefaultsState, initialDefaults);
-}
 
 export function getStageOptions(options: StageOptions): StageOptions {
 	const defaults = getStageDefaultConfig();

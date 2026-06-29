@@ -1,3 +1,13 @@
+/**
+ * Global stage navigation, persistence, and registry.
+ *
+ * Holds a reactive previous/current/next "sliding window" of `StageBlueprint`s
+ * and orchestrates transitions between them: persisting the current stage to
+ * IndexedDB (msgpack-encoded), resolving requested stages from saved data or a
+ * static registry, and pre-loading upcoming stages. Exists as the engine's
+ * data-level stage lifecycle/save system, distinct from the in-scene runtime
+ * `ZylemStage`.
+ */
 import { proxy } from 'valtio/vanilla';
 import { get, set } from 'idb-keyval';
 import { pack, unpack } from 'msgpackr';

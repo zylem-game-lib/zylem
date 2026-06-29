@@ -1,3 +1,12 @@
+/**
+ * Stage configuration: types, defaults, and option parsing.
+ *
+ * Defines the user-facing stage config shape (`StageConfigLike`), the internal
+ * `StageConfig` class, and the engine defaults applied to every stage. Its core
+ * job is `parseStageOptions`, which untangles the heterogeneous `createStage(...)`
+ * argument list (config objects, camera wrappers, sync/async entities) into a
+ * normalized `ParsedStageOptions` that `ZylemStage` can consume directly.
+ */
 import { Color, Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
 import { CameraWrapper } from '../camera/camera';
@@ -21,6 +30,14 @@ export interface StageWasmRuntimeConfig {
 	source: StageWasmSource;
 	/** Forwarded to {@link WasmStageRuntime} construction. */
 	options?: Omit<WasmStageRuntimeOptions, 'imports'>;
+	/**
+	 * Phase A feature flag for the WASM-owned-rendering migration. When `true`,
+	 * the stage routes opted-in entities through a {@link StagePhysicsBridge}
+	 * (WASM owns transforms) and renders them via the {@link RenderBundleManager}
+	 * (WebGPU `BundleGroup`s) instead of the Rapier `ZylemWorld` +
+	 * `syncRenderPoses` path. Off by default so existing stages are unaffected.
+	 */
+	bundleRendering?: boolean;
 }
 
 export type StageGLTFAssetLoaderConfig = {

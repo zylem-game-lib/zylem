@@ -1,3 +1,13 @@
+/**
+ * The stage's entity lifecycle engine.
+ *
+ * Owns everything about entities within a stage: queuing (sync, async, and
+ * factory inputs), progressive load via a yielding generator, spawning into
+ * scene/world/runtime, instanced-mesh batching, deferred-model handling,
+ * removal, name/UUID lookup, and ECS behavior-system registration/indexing.
+ * Extracted from `ZylemStage` so entity bookkeeping lives in one cohesive place
+ * and can be shared with the debug delegate and transform system.
+ */
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
 import { ZylemCamera } from '../camera/zylem-camera';
@@ -21,6 +31,8 @@ import type {
 import { Vessel } from '../core/vessel';
 import type { StageRuntimeAdapter } from '../runtime/zylem-stage-runtime';
 import type { WasmStageRuntime } from '../runtime/wasm-stage-runtime';
+import type { StagePhysicsBridge } from '../runtime/stage-physics-bridge';
+import type { RenderBundleManager } from '../graphics/render-bundle-manager';
 
 type NodeLike = { create: Function };
 export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
@@ -37,6 +49,10 @@ export interface EntityDelegateContext {
 	runtimeAdapter?: StageRuntimeAdapter | null;
 	/** Optional unified-Stage wasm runtime (Phase 2+ of the runtime-only migration). */
 	wasmStage?: WasmStageRuntime | null;
+	/** Phase A physics bridge; when set, entities are WASM-owned on spawn. */
+	physicsBridge?: StagePhysicsBridge | null;
+	/** Phase A render-bundle manager; when set, entities render via `BundleGroup`s. */
+	renderBundleManager?: RenderBundleManager | null;
 }
 
 /**
@@ -78,6 +94,10 @@ export class StageEntityDelegate {
 	private runtimeAdapter: StageRuntimeAdapter | null = null;
 	/** Unified-Stage wasm runtime; shared with descriptor `systemFactory` calls. */
 	wasmStage: WasmStageRuntime | null = null;
+	/** Phase A physics bridge (WASM-owned transforms); null unless `bundleRendering`. */
+	physicsBridge: StagePhysicsBridge | null = null;
+	/** Phase A render-bundle manager; null unless `bundleRendering`. */
+	renderBundleManager: RenderBundleManager | null = null;
 
 	private loadingDelegate: StageLoadingDelegate;
 	private entityModelDelegate: StageEntityModelDelegate;
@@ -109,6 +129,8 @@ export class StageEntityDelegate {
 		this.camera = context.camera;
 		this.runtimeAdapter = context.runtimeAdapter ?? null;
 		this.wasmStage = context.wasmStage ?? null;
+		this.physicsBridge = context.physicsBridge ?? null;
+		this.renderBundleManager = context.renderBundleManager ?? null;
 	}
 
 	// ─── Spawning ────────────────────────────────────────────────────────────
@@ -150,8 +172,19 @@ export class StageEntityDelegate {
 
 		this.registerBehaviorLinks(entity);
 
+		// Bundle-rendering stage: WASM owns transforms (no Rapier). Entities that
+		// render themselves (`runtime.render === 'none'`, e.g. particle systems)
+		// opt out of both the bridge and bundles and are added to the scene as-is.
+		const bundleStage = !runtimeManaged && !!this.physicsBridge && entity instanceof GameEntity;
+		const selfManaged = bundleStage && (entity.options as any)?.runtime?.render === 'none';
+		const bridgeManaged = bundleStage && !selfManaged;
+
 		if (!runtimeManaged) {
-			this.maybeAttachEntityPhysics(entity);
+			if (bridgeManaged) {
+				this.physicsBridge!.attachEntity(entity);
+			} else if (!bundleStage) {
+				this.maybeAttachEntityPhysics(entity);
+			}
 		}
 
 		for (const childNode of child.getChildren()) {
@@ -173,7 +206,14 @@ export class StageEntityDelegate {
 			this.scene.addEntityGroup(entity);
 		}
 		if (!runtimeManaged) {
-			this.tryRegisterInstance(entity);
+			// Bundle rendering replaces the InstanceManager path for bridge-managed
+			// entities; the manager reparents the entity's renderable into a
+			// `BundleGroup` after `scene.addEntityGroup` has placed it.
+			if (bridgeManaged && this.renderBundleManager) {
+				this.renderBundleManager.register(entity);
+			} else if (!bundleStage) {
+				this.tryRegisterInstance(entity);
+			}
 		}
 		this.addEntityToStage(entity);
 		this.entityModelDelegate.observe(entity);
@@ -279,7 +319,14 @@ export class StageEntityDelegate {
 		}
 		this.runtimeAdapter?.unregisterEntity(entity);
 
-		if (!this.runtimeAdapter?.ownsEntity(entity)) {
+		// Phase A: release the WASM slot + bundle membership for bridge entities.
+		const bridgeManaged = this.physicsBridge && entity instanceof GameEntity && entity.runtimeHandle >= 0;
+		if (bridgeManaged) {
+			this.renderBundleManager?.unregister(entity);
+			this.physicsBridge!.detachEntity(entity);
+		}
+
+		if (!this.runtimeAdapter?.ownsEntity(entity) && !bridgeManaged) {
 			this.world.destroyEntity(entity);
 		}
 
@@ -513,6 +560,8 @@ export class StageEntityDelegate {
 		this.world = null;
 		this.instanceManager = null;
 		this.camera = null;
+		this.physicsBridge = null;
+		this.renderBundleManager = null;
 	}
 
 	private registerBehaviorLinks(entity: any): void {

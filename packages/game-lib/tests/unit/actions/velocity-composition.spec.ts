@@ -75,4 +75,44 @@ describe('velocity composition', () => {
 		expect(store.dirty.velocityChannels).toBe(false);
 		expect(Object.keys(store.velocityChannels)).toHaveLength(0);
 	});
+
+	it('routes through the WASM runtime FFI when there is no Rapier body (Phase B)', () => {
+		const calls: { linvel?: [number, number, number]; position?: [number, number, number] } = {};
+		const runtime = {
+			getLinearVelocity: () => [0, 0, 0] as [number, number, number],
+			setLinearVelocity: (_s: number, x: number, y: number, z: number) => {
+				calls.linvel = [x, y, z];
+				return true;
+			},
+			setAngularVelocity: () => true,
+			setRotation: () => true,
+			setPosition: (_s: number, x: number, y: number, z: number) => {
+				calls.position = [x, y, z];
+				return true;
+			},
+			getPose: () => ({ position: [10, 0, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number] }),
+		};
+		const store = createTransformStore();
+
+		setVelocityIntent(store, 'first-person', { x: 4, z: -6 }, { mode: 'replace', priority: 10 });
+		store.position.x = 2;
+		store.dirty.position = true;
+
+		applyTransformChanges(
+			{ body: null, runtimeHandle: 0, wasmStageRef: runtime } as any,
+			store,
+		);
+
+		expect(calls.linvel).toEqual([4, 0, -6]);
+		// position is a delta applied to the current runtime pose (10 + 2).
+		expect(calls.position).toEqual([12, 0, 0]);
+		expect(store.dirty.position).toBe(false);
+	});
+
+	it('is a no-op when there is neither a body nor a runtime handle', () => {
+		const store = createTransformStore();
+		setVelocityIntent(store, 'x', { x: 1 }, { mode: 'replace', priority: 1 });
+		// Should not throw.
+		expect(() => applyTransformChanges({ body: null } as any, store)).not.toThrow();
+	});
 });

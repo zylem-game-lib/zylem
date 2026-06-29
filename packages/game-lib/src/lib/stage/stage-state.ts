@@ -1,6 +1,15 @@
+/**
+ * Reactive state for the active stage plus per-object variable storage.
+ *
+ * Provides the valtio `stageState` proxy (background, inputs, gravity, live
+ * entity list) with internal setters, and a WeakMap/proxy-backed variable store
+ * with public `get/set/create/subscribe/clear` helpers for attaching reactive
+ * key/value data to any stage or entity by path. Exists as the central reactive
+ * data layer the rest of the stage subsystem reads from and writes to.
+ */
 import { Color, Vector3 } from 'three';
 import { proxy, subscribe } from 'valtio/vanilla';
-import { BaseEntityInterface, GameEntityInterface } from '../types/entity-types';
+import { GameEntityInterface } from '../types/entity-types';
 import { StageStateInterface } from '../types/stage-types';
 import { getByPath, setByPath } from '../core/utility/path-utils';
 import { ZylemBlueColor } from '../core/utility/vector';
@@ -51,10 +60,6 @@ const setStageBackgroundImage = (value: string | null) => {
 	stageState.backgroundImage = value;
 };
 
-const setEntitiesToStage = (entities: Partial<BaseEntityInterface>[]) => {
-	stageState.entities = entities;
-};
-
 /** Replace the entire stage variables object (used on stage load). */
 const setStageVariables = (variables: Record<string, any>) => {
 	stageState.variables = { ...variables };
@@ -65,40 +70,9 @@ const resetStageVariables = () => {
 	stageState.variables = {};
 };
 
-const stageStateToString = (state: StageStateInterface) => {
-	let string = `\n`;
-	for (const key in state) {
-		const value = state[key as keyof StageStateInterface];
-		string += `${key}:\n`;
-		if (key === 'entities') {
-			for (const entity of state.entities) {
-				string += `  ${entity.uuid}: ${entity.name}\n`;
-			}
-			continue;
-		}
-		if (typeof value === 'object' && value !== null) {
-			for (const subKey in value as Record<string, any>) {
-				const subValue = value?.[subKey as keyof typeof value];
-				if (subValue) {
-					string += `  ${subKey}: ${subValue}\n`;
-				}
-			}
-		} else if (typeof value === 'string') {
-			string += `  ${key}: ${value}\n`;
-		}
-	}
-	return string;
-};
-
 // ============================================================
 // Object-scoped variable storage (WeakMap-based)
 // ============================================================
-
-/**
- * WeakMap to store variables keyed by object reference.
- * Variables are automatically garbage collected when the target is collected.
- */
-const variableStore = new WeakMap<object, Record<string, unknown>>();
 
 /**
  * Separate proxy store for reactivity. We need a regular Map for subscriptions
@@ -203,31 +177,10 @@ export function clearVariables(target: object): void {
 	variableProxyStore.delete(target);
 }
 
-// ============================================================
-// Legacy stage variable functions (internal, for stage defaults)
-// ============================================================
-
-const setStageVariable = (key: string, value: any) => {
-	stageState.variables[key] = value;
-};
-
-const getStageVariable = (key: string) => {
-	if (stageState.variables.hasOwnProperty(key)) {
-		return stageState.variables[key];
-	} else {
-		console.warn(`Stage variable ${key} not found`);
-	}
-};
-
 export {
 	stageState,
-	
 	setStageBackgroundColor,
 	setStageBackgroundImage,
-	
-	stageStateToString,
-	setStageVariable,
-	getStageVariable,
 	setStageVariables,
 	resetStageVariables,
 };

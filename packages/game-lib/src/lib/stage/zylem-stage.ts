@@ -1,3 +1,14 @@
+/**
+ * The runtime heart of a loaded stage.
+ *
+ * `ZylemStage` is the disposable per-load object that actually owns and drives
+ * the scene, physics world, cameras, optional wasm runtime, and the suite of
+ * delegates (entity, camera, loading, model, debug). It parses options into
+ * config, builds scene/world during `load()`, runs the per-frame update loop
+ * (physics step, behavior systems, entity updates, transform sync, camera
+ * updates, render), and tears everything down on destroy. The author-facing
+ * `Stage` wraps and recreates one of these on each load.
+ */
 import { Color, Vector3 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
@@ -36,6 +47,8 @@ import {
 	createWasmStageRuntime,
 	type StageWasmExports,
 } from '../runtime/wasm-stage-runtime';
+import { StagePhysicsBridge } from '../runtime/stage-physics-bridge';
+import { RenderBundleManager } from '../graphics/render-bundle-manager';
 import type { Vec3Components } from '../core/vector';
 import type { BehaviorSystem, BehaviorSystemFactory } from '@zylem/behaviors/core';
 import { createRuntimeDebugBindingFromDebugState } from '../runtime/runtime-debug-binding';
@@ -105,6 +118,16 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	instanceManager: InstanceManager | null = null;
 	/** Unified-Stage wasm runtime; non-null only when `wasmRuntime` was configured. */
 	wasmStage: WasmStageRuntime | null = null;
+	/**
+	 * Phase A bridge between WASM physics/transforms and the render layer.
+	 * Non-null only when `wasmRuntime.bundleRendering` is enabled.
+	 */
+	physicsBridge: StagePhysicsBridge | null = null;
+	/**
+	 * Phase A render-bundle manager; owns the `BundleGroup`s that draw
+	 * bridge-managed entities. Non-null only when `bundleRendering` is enabled.
+	 */
+	renderBundleManager: RenderBundleManager | null = null;
 
 	debugDelegate: StageDebugDelegate | null = null;
 
@@ -237,6 +260,11 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 		if (this.state.wasmRuntime) {
 			this.wasmStage = await this.loadWasmStage(this.state.wasmRuntime);
+			if (this.state.wasmRuntime.bundleRendering && this.wasmStage) {
+				this.physicsBridge = new StagePhysicsBridge(this.wasmStage, {
+					physicsRate: this.state.physicsRate,
+				});
+			}
 		}
 
 		this.scene.setup();
@@ -273,6 +301,12 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.instanceManager = new InstanceManager();
 		this.instanceManager.setScene(this.scene.scene);
 
+		// Phase A: render bundles draw bridge-managed entities. Created here so the
+		// THREE scene graph (built in `scene.setup()`) is available.
+		if (this.physicsBridge) {
+			this.renderBundleManager = new RenderBundleManager(this.scene.scene);
+		}
+
 		// Attach entity delegate context now that scene/world are ready
 		this.entityDelegate.attach({
 			scene: this.scene,
@@ -281,6 +315,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			camera: zylemCamera,
 			runtimeAdapter: this.runtimeAdapter,
 			wasmStage: this.wasmStage,
+			physicsBridge: this.physicsBridge,
+			renderBundleManager: this.renderBundleManager,
 		});
 
 		this.loadingDelegate.emitStart();
@@ -323,6 +359,14 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			this.logMissingEntities();
 			return;
 		}
+
+		// Phase A: WASM-owned transforms + BundleGroup rendering. Bypasses the
+		// Rapier world step and `syncRenderPoses`; WASM is the source of truth.
+		if (this.physicsBridge && this.renderBundleManager) {
+			this._updateBundlePath(params);
+			return;
+		}
+
 		this.world.update(params);
 
 		// Run registered behavior systems (first `update` arg is unused / reserved)
@@ -389,6 +433,59 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.scene.updateSkybox(delta);
 	}
 
+	/**
+	 * Feature-flagged update loop for the WASM-owned-rendering path.
+	 *
+	 * Order: behavior systems -> children `nodeUpdate` (+ flush transform store)
+	 * -> `bridge.step` (advance WASM physics) -> `renderBundleManager.sync`
+	 * (copy interpolated WASM transforms onto bundle objects) -> camera/scene.
+	 */
+	private _updateBundlePath(params: UpdateContext<ZylemStage>): void {
+		const { delta } = params;
+		const bridge = this.physicsBridge!;
+		const bundles = this.renderBundleManager!;
+
+		for (const system of this.entityDelegate.behaviorSystems) {
+			system.update(undefined, delta);
+		}
+
+		for (const child of this.entityDelegate.childrenMap.values()) {
+			const childParams = this.childUpdateParams;
+			childParams.delta = params.delta;
+			childParams.inputs = params.inputs;
+			childParams.globals = params.globals;
+			childParams.camera = params.camera;
+			childParams.stage = params.stage;
+			childParams.game = params.game;
+			childParams.me = child;
+			child.nodeUpdate(childParams);
+
+			// Transform intents flush to the Rapier body when present; in the
+			// pure-WASM path the body is null, so this is a safe no-op until
+			// Phase B reroutes the store to WASM FFI setters.
+			const transformable = child as unknown as TransformableEntity;
+			if (transformable.transformStore) {
+				applyTransformChanges(transformable, transformable.transformStore);
+			}
+
+			if (child.markedForRemoval) {
+				this.entityDelegate.removeEntityByUuid(child.uuid);
+			}
+		}
+
+		bridge.step(delta);
+		bundles.sync((handle, out) => bridge.getTransform(handle, out));
+
+		if (this.cameraManagerRef) {
+			this.cameraManagerRef.update(delta);
+		} else {
+			this.cameraRef?.update(delta);
+		}
+
+		this.scene!.update({ delta });
+		this.scene!.updateSkybox(delta);
+	}
+
 	public outOfLoop() {
 		this.debugUpdate();
 	}
@@ -404,6 +501,18 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	protected _destroy(params: DestroyContext<ZylemStage>): void {
 		this.runtimeAdapter?.destroy(this.scene && this.world ? this.runtimeContext() : null);
 		this.runtimeAdapter = null;
+
+		// Phase A teardown. The bridge owns disposal of the wasm runtime, so null
+		// `wasmStage` first to avoid the double-dispose below.
+		if (this.renderBundleManager) {
+			this.renderBundleManager.dispose();
+			this.renderBundleManager = null;
+		}
+		if (this.physicsBridge) {
+			this.physicsBridge.dispose();
+			this.physicsBridge = null;
+			this.wasmStage = null;
+		}
 
 		if (this.wasmStage) {
 			this.wasmStage.dispose();

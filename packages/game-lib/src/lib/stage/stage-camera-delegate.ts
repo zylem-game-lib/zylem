@@ -1,3 +1,11 @@
+/**
+ * Encapsulates all camera resolution and construction logic for a stage.
+ *
+ * Owns the rules for deciding which camera a stage should use — an explicit
+ * override, camera wrappers passed via stage options, or a sensible default
+ * third-person camera — and assembles a multi-camera `CameraManager`. Extracted
+ * from `ZylemStage` so camera setup policy lives in one focused place.
+ */
 import { Vector2 } from 'three';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { Perspectives } from '../camera/perspective';

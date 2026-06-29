@@ -1,3 +1,13 @@
+/**
+ * The user-facing stage handle and its fluent authoring API.
+ *
+ * `Stage` is the durable, author-time wrapper game code holds onto: it stores
+ * options, pending entities, and lifecycle/loading callbacks, then constructs
+ * and drives a fresh internal `ZylemStage` on each `load()`. Exists to give a
+ * stable, ergonomic surface (`add`, `onSetup/onUpdate/onDestroy`, camera, input,
+ * and event helpers) that survives stage reloads, while `ZylemStage` owns the
+ * disposable per-load runtime. `createStage(...)` is the entry point.
+ */
 import { BaseNode } from '../core/base-node';
 import { DestroyFunction, SetupContext, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
 import { LoadingEvent, StageOptionItem, StageOptions, ZylemStage, ZylemStageConfig } from './zylem-stage';

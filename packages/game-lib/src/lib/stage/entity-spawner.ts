@@ -1,3 +1,12 @@
+/**
+ * Authoring helper for spawning entities into a live stage at runtime.
+ *
+ * Wraps an entity factory so game code can spawn at absolute coordinates or
+ * relative to an existing entity (using its physics body's position/rotation),
+ * automatically adding the resulting instance to the stage. Exists to keep
+ * gameplay spawn logic (e.g. firing projectiles) declarative and decoupled
+ * from the stage's internal entity-management plumbing.
+ */
 import { Euler, Quaternion, Vector2 } from "three";
 import { GameEntity } from "../entities";
 import { Stage } from "./stage";

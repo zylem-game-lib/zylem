@@ -1,3 +1,12 @@
+/**
+ * Reusable Three.js debug overlay for the stage's editor/debug tooling.
+ *
+ * Renders a translucent box + wireframe AABB around a target Object3D so the
+ * SELECT/DELETE debug tools can visually highlight whichever entity is hovered
+ * or actionable. Kept separate from `StageDebugDelegate` so the visual cursor
+ * has no knowledge of raycasting, input, or debug state — it just draws and
+ * disposes geometry on demand.
+ */
 import {
 	Box3,
 	BoxGeometry,

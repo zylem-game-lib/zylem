@@ -74,6 +74,62 @@ export interface StagePose {
 	rotation: [number, number, number, number];
 }
 
+/**
+ * Decoded view of one entity's slot in the unified render buffer.
+ *
+ * Mirrors the `STAGE_RENDER_STRIDE` (12-float) packing documented in
+ * `runtime/stage/render.rs`:
+ * `[0..3]` position, `[3..7]` rotation xyzw, `[7]` uniform scale,
+ * `[8..12]` custom0..custom3 (per-behavior shading hints).
+ */
+export interface StageRenderSlot {
+	position: [number, number, number];
+	rotation: [number, number, number, number];
+	scale: number;
+	custom: [number, number, number, number];
+}
+
+/**
+ * Read a single entity slot out of a unified-Stage render buffer view.
+ *
+ * @param view   The `Float32Array` over wasm memory (e.g. `WasmStageRuntime.render`).
+ * @param slot   The entity's wasm slot id (its `runtimeHandle`).
+ * @param out    Optional target object to write into (avoids per-call allocation).
+ * @returns The decoded slot, or `null` when the slot is out of range.
+ */
+export function readStageRenderSlot(
+	view: Float32Array,
+	slot: number,
+	out?: StageRenderSlot,
+): StageRenderSlot | null {
+	const base = slot * STAGE_RENDER_STRIDE;
+	if (slot < 0 || base + STAGE_RENDER_STRIDE > view.length) {
+		return null;
+	}
+	const result: StageRenderSlot = out ?? {
+		position: [0, 0, 0],
+		rotation: [0, 0, 0, 1],
+		scale: 1,
+		custom: [0, 0, 0, 0],
+	};
+	result.position[0] = view[base]!;
+	result.position[1] = view[base + 1]!;
+	result.position[2] = view[base + 2]!;
+	result.rotation[0] = view[base + 3]!;
+	result.rotation[1] = view[base + 4]!;
+	result.rotation[2] = view[base + 5]!;
+	result.rotation[3] = view[base + 6]!;
+	// A freshly-zeroed slot reports scale 0; treat that as the identity scale so
+	// entities aren't collapsed before the runtime writes a real value.
+	const scale = view[base + 7]!;
+	result.scale = scale === 0 ? 1 : scale;
+	result.custom[0] = view[base + 8]!;
+	result.custom[1] = view[base + 9]!;
+	result.custom[2] = view[base + 10]!;
+	result.custom[3] = view[base + 11]!;
+	return result;
+}
+
 export interface StageBodyConfig {
 	kind: StageBodyKind;
 	position: readonly [number, number, number];
@@ -567,6 +623,14 @@ export class WasmStageRuntime {
 
 	get renderStride(): number {
 		return STAGE_RENDER_STRIDE;
+	}
+
+	/**
+	 * Decode a single entity slot from the live render buffer. Convenience
+	 * wrapper over {@link readStageRenderSlot} bound to this runtime's view.
+	 */
+	readRenderSlot(slot: number, out?: StageRenderSlot): StageRenderSlot | null {
+		return readStageRenderSlot(this.renderView, slot, out);
 	}
 
 	/** Drain the wasm event buffer into a fresh array of typed events. */
