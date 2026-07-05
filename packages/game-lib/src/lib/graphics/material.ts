@@ -1,4 +1,11 @@
-import { Color, Material, RepeatWrapping, SRGBColorSpace } from 'three';
+import {
+  type Blending,
+  Color,
+  Material,
+  RepeatWrapping,
+  type Side,
+  SRGBColorSpace,
+} from 'three';
 import { MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
 import { shortHash, sortedStringify } from '../core/utility/strings';
 import { standardShader } from './shaders/standard.shader';
@@ -21,7 +28,21 @@ export type ZylemShaderObject = { fragment: string; vertex: string };
  */
 export type ZylemTSLShader = {
   colorNode: any; // TSL node - use any since Three.js types are still evolving
+  /**
+   * Optional TSL node overriding vertex positions (e.g. wave displacement).
+   * Requires geometry with enough vertices to displace (e.g. a subdivided
+   * plane).
+   */
+  positionNode?: any;
+  /** Optional TSL node overriding the surface normal. */
+  normalNode?: any;
   transparent?: boolean;
+  /** Optional three.js blending mode (e.g. `AdditiveBlending`). */
+  blending?: Blending;
+  /** Optional three.js render side (e.g. `DoubleSide`). */
+  side?: Side;
+  /** Optional depth test override (e.g. `false` for overlay holograms). */
+  depthTest?: boolean;
 };
 
 /**
@@ -308,6 +329,21 @@ export function createNodeMaterialFromTSL(
 ): MeshBasicNodeMaterial {
   const material = new MeshBasicNodeMaterial();
   material.colorNode = tslShader.colorNode;
+  if (tslShader.positionNode) {
+    material.positionNode = tslShader.positionNode;
+  }
+  if (tslShader.normalNode) {
+    material.normalNode = tslShader.normalNode;
+  }
+  if (tslShader.blending !== undefined) {
+    material.blending = tslShader.blending;
+  }
+  if (tslShader.side !== undefined) {
+    material.side = tslShader.side;
+  }
+  if (tslShader.depthTest !== undefined) {
+    material.depthTest = tslShader.depthTest;
+  }
   if (opacity !== undefined) {
     (material as unknown as OpacityCapableMaterial).opacity = opacity;
   }

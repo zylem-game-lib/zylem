@@ -1,0 +1,41 @@
+{
+  "name": "@zylem/shaders",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "WebGPU-compatible TSL shaders and postprocessing effects for the Zylem game framework.",
+  "license": "MIT",
+  "author": "Tim Cool",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./postprocessing": {
+      "types": "./dist/postprocessing.d.ts",
+      "import": "./dist/postprocessing.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "biome check .",
+    "typecheck": "tsgo --noEmit"
+  },
+  "peerDependencies": {
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.184.0",
+    "@typescript/native-preview": "latest",
+    "three": "^0.184.0",
+    "tsup": "^8.5.1",
+    "typescript": "6.0.3"
+  }
+}

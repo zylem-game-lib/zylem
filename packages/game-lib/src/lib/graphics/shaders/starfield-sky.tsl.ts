@@ -1,20 +1,21 @@
 /**
  * Starfield skybox shader in TSL (WebGPU).
  *
- * A procedural starfield rendered on a skybox cube. Uses `positionWorld` to
- * derive spherical coordinates, producing a seamless star pattern across all
- * faces. Includes twinkling, multiple star layers at different densities,
- * and a subtle nebula tint.
+ * A procedural starfield rendered as a scene `backgroundNode` skybox. Uses
+ * `positionWorldDirection` (the per-pixel view direction in the background
+ * pass) to derive spherical coordinates, producing a seamless star pattern
+ * in every direction. Includes twinkling, multiple star layers at different
+ * densities, and a subtle nebula tint.
  *
  * This is the game-lib built-in version intended for use as a
  * `backgroundShader`. It differs from the examples `starfield.tsl.ts`
- * (which uses flat `uv()` coordinates) by operating in world-space for
- * proper 3D skybox rendering.
+ * (which uses flat `uv()` coordinates) by operating on the view direction
+ * for proper skybox rendering.
  */
 import {
 	Fn,
 	time,
-	positionWorld,
+	positionWorldDirection,
 	vec2,
 	vec3,
 	vec4,
@@ -26,7 +27,6 @@ import {
 	length,
 	mix,
 	max,
-	normalize,
 	atan,
 	asin,
 	clamp,
@@ -91,7 +91,9 @@ const starLayer = Fn(([skyUV, scale, t]: [any, any, any]) => {
  * Main starfield skybox color node.
  */
 const starfieldSkyColorNode = Fn(() => {
-	const rd = normalize(positionWorld);
+	// In a backgroundNode, positionWorldDirection is the normalized
+	// per-pixel view direction.
+	const rd = positionWorldDirection;
 	const t = time;
 
 	// Convert world direction to spherical UV coordinates

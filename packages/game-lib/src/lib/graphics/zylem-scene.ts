@@ -6,15 +6,10 @@ import {
 	Object3D,
 	Vector3,
 	GridHelper,
-	BoxGeometry,
-	Mesh,
-	BackSide,
-	Material,
 	Texture,
 	Light,
 	SRGBColorSpace,
 } from 'three';
-import { MeshBasicNodeMaterial } from 'three/webgpu';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
 import { FOG_TYPE, ZylemFog } from '../entities/fog';
@@ -55,10 +50,6 @@ export class ZylemScene implements Entity<ZylemScene> {
 	name?: string | undefined;
 	tag?: Set<string> | undefined;
 
-	// Skybox for background shaders (supports both GLSL ShaderMaterial and TSL MeshBasicNodeMaterial)
-	private skyboxMaterial: Material | null = null;
-	private skyboxMesh: Mesh | null = null;
-
 	constructor(id: string, camera: ZylemCamera, state: SceneState) {
 		const scene = new Scene();
 		const isColor = state.backgroundColor instanceof Color;
@@ -66,7 +57,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 		scene.background = backgroundColor as Color;
 
 		if (state.backgroundShader) {
-			this.setupBackgroundShader(scene, state.backgroundShader, camera);
+			this.setupBackgroundShader(scene, state.backgroundShader);
 		} else if (state.backgroundImage) {
 			// Load background image asynchronously via asset manager. Tag it sRGB
 			// so it is decoded correctly (otherwise it renders too bright).
@@ -87,13 +78,17 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	/**
-	 * Create a large inverted box with the shader for a skybox effect.
+	 * Render the shader as a true skybox via the WebGPU renderer's
+	 * `scene.backgroundNode`. The node is evaluated per background pixel at
+	 * infinite depth — inside it, `normalWorld` (from `three/tsl`) is the
+	 * per-pixel view direction, so the sky is stable under camera movement
+	 * with no skybox mesh, far-plane sizing, or camera-follow logic.
 	 *
 	 * WebGPU-only: background shaders must be authored in TSL
 	 * ({@link ZylemTSLShader}). A GLSL shader logs a warning and is ignored
 	 * (the solid background color is kept).
 	 */
-	private setupBackgroundShader(scene: Scene, shader: ZylemShader, camera?: ZylemCamera) {
+	private setupBackgroundShader(scene: Scene, shader: ZylemShader) {
 		if (!isTSLShader(shader)) {
 			console.warn(
 				'ZylemScene: GLSL background shaders are not supported on the WebGPU renderer. ' +
@@ -102,35 +97,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 			return;
 		}
 
-		// Clear the solid color background
+		// Clear the solid color background and install the node-based one.
 		scene.background = null;
-
-		// TSL shader - use MeshBasicNodeMaterial for WebGPU
-		const material = new MeshBasicNodeMaterial();
-		material.colorNode = shader.colorNode;
-		if (shader.transparent) {
-			material.transparent = true;
-		}
-		material.side = BackSide;
-		material.depthWrite = false;
-		// Never depth-test the skybox: it renders first (renderOrder -1000) as a
-		// pure backdrop, and disabling the test avoids it occluding/z-fighting.
-		material.depthTest = false;
-		this.skyboxMaterial = material;
-
-		// Use BoxGeometry for skybox. The box must fit INSIDE the camera's far
-		// plane, otherwise every vertex is clipped and the background never
-		// renders. Size it from the camera's far distance (the box half-diagonal
-		// `scale * sqrt(3) / 2` must stay below `far`), with a safety margin.
-		const cameraFar = (camera as any)?.camera?.far ?? 1000;
-		const skyboxScale = Math.max(10, cameraFar * 0.9);
-		const geometry = new BoxGeometry(1, 1, 1);
-		const skybox = new Mesh(geometry, this.skyboxMaterial);
-		skybox.scale.setScalar(skyboxScale);
-		skybox.frustumCulled = false;  // Always render
-		skybox.renderOrder = -1000;  // Render before everything else
-		this.skyboxMesh = skybox;
-		scene.add(skybox);
+		scene.backgroundNode = shader.colorNode;
 	}
 
 	setup() {
@@ -147,14 +116,8 @@ export class ZylemScene implements Entity<ZylemScene> {
 		} else if (this.zylemCamera && (this.zylemCamera as any).destroy) {
 			(this.zylemCamera as any).destroy();
 		}
-		if (this.skyboxMaterial) {
-			this.skyboxMaterial.dispose();
-		}
-		if (this.skyboxMesh) {
-			this.skyboxMesh.geometry.dispose();
-			this.skyboxMesh = null;
-		}
 		if (this.scene) {
+			this.scene.backgroundNode = null;
 			// Dispose background texture if present
 			if (this.scene.background instanceof Texture) {
 				this.scene.background.dispose();
@@ -347,22 +310,6 @@ export class ZylemScene implements Entity<ZylemScene> {
 		this.scene.add(gridHelper);
 	}
 
-	/**
-	 * Per-frame skybox hook. Ensures the skybox cube follows the active camera
-	 * position so it always appears infinitely far away regardless of camera
-	 * movement. TSL background shaders animate via the `time` node, which the
-	 * renderer advances automatically.
-	 */
-	updateSkybox(_delta: number) {
-		if (!this.skyboxMesh) return;
-
-		// Follow the active camera position so the skybox never shows parallax.
-		// Use getWorldPosition to correctly handle cameras nested inside rigs.
-		const cam = this.cameraManager?.primaryCamera?.camera ?? this.zylemCamera?.camera;
-		if (cam) {
-			cam.getWorldPosition(this.skyboxMesh.position);
-		}
-	}
 }
 
 /**

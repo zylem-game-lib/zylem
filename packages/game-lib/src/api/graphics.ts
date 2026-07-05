@@ -17,13 +17,19 @@ export type {
 	ZylemTSLShader,
 	ZylemShader,
 } from '../lib/graphics/material';
+
+// Postprocessing effect contract (structurally compatible with @zylem/shaders)
+export type { ZylemPostEffect } from '../lib/camera/renderer-manager';
 export { isTSLShader, isGLSLShader, createNodeMaterialFromTSL } from '../lib/graphics/material';
 
 // TSL utilities for shader authoring (WebGPU)
 export { uniform, uv, time, vec3, vec4, float, Fn } from '../lib/graphics/material';
 
-// Extended TSL utilities for skybox / background shader authoring
+// Extended TSL utilities for skybox / background shader authoring.
+// `positionWorldDirection` is the per-pixel view direction inside a
+// background shader.
 export {
+	positionWorldDirection,
 	positionWorld,
 	normalize,
 	mix,

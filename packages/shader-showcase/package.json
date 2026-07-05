@@ -1,0 +1,30 @@
+{
+  "name": "@zylem/shader-showcase",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Showcase app for @zylem/shaders demos, built on @zylem/game-lib.",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "cross-env NODE_ENV=production vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.11.2",
+    "@solidjs/router": "^0.14.10",
+    "@zylem/game-lib": "workspace:*",
+    "@zylem/shaders": "workspace:*",
+    "howler": "^2.2.4",
+    "nanoid": "^5.1.5",
+    "solid-js": "^1.9.9",
+    "three": "^0.184.0",
+    "valtio": "^2.1.7"
+  },
+  "devDependencies": {
+    "@types/three": "^0.184.0",
+    "cross-env": "^10.1.0",
+    "typescript": "6.0.3",
+    "vite": "7.0.4",
+    "vite-plugin-solid": "^2.11.8"
+  }
+}
