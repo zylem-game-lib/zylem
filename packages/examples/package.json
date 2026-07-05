@@ -19,6 +19,7 @@
     "@zylem/assets": "^0.1.1",
     "@zylem/editor": "workspace:*",
     "@zylem/game-lib": "workspace:*",
+    "@zylem/shaders": "workspace:*",
     "@zylem/styles": "workspace:*",
     "howler": "^2.2.4",
     "nanoid": "^5.1.5",

@@ -1,14 +1,13 @@
 import { createGame, createStage, createCamera, Perspectives } from '@zylem/game-lib/core';
 import { createSphere, createDisk } from '@zylem/game-lib/entity';
-import { planetTSL } from './planet.tsl';
-import { ringTSL } from './ring.tsl';
+import { createPlanetRing, createPlanetSurface } from '@zylem/shaders';
 import { starfieldTSL } from '../_shared/starfield.tsl';
 
 export default function createDemo() {
   // Planet with blue procedural TSL shader
   const planet = createSphere({
     radius: 20,
-    material: { shader: planetTSL },
+    material: { shader: createPlanetSurface() },
   });
 
   let rotation = 180;
@@ -22,7 +21,7 @@ export default function createDemo() {
     innerRadius: 25,
     outerRadius: 36,
     thetaSegments: 64,
-    material: { shader: ringTSL },
+    material: { shader: createPlanetRing() },
   }).onSetup(({ me }) => {
     me.setRotationDegreesZ(-23);
   });

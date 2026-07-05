@@ -35,6 +35,22 @@ export interface Viewport {
 export const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, width: 1, height: 1 };
 
 /**
+ * A postprocessing effect for the render pipeline. Receives the current
+ * pipeline node (initially the scene pass) and returns the transformed node.
+ * `ctx.scenePass` is the original scene `PassNode` for effects that need
+ * extra channels (depth, velocity, ...). `ctx.scene`/`ctx.camera` are the
+ * rendered scene and camera, for effects that build their own scene pass
+ * (e.g. pixelation, retro). Such pass-replacing effects should be first in
+ * the effect chain — the default scene pass simply goes unused.
+ *
+ * Structurally compatible with `ZylemPostEffect` from `@zylem/shaders`.
+ */
+export type ZylemPostEffect = (
+	inputNode: any,
+	ctx: { scenePass: any; scene: any; camera: any },
+) => any;
+
+/**
  * Check if WebGPU is supported in the current browser.
  *
  * Informational only — game-lib always constructs a {@link WebGPURenderer},
@@ -83,6 +99,11 @@ export class RendererManager {
 	private _initialized = false;
 	private _sceneRef: Scene | null = null;
 	private _lastAnimationTimestamp: number | null = null;
+	/** Registered postprocessing effects, applied in order over the scene pass. */
+	private _postEffects: ZylemPostEffect[] = [];
+	/** Scene/camera the current pipeline was built for (for rebuilds). */
+	private _postSceneRef: Scene | null = null;
+	private _postCameraRef: Camera | null = null;
 
 	constructor(screenResolution?: Vector2, _rendererType: RendererType = 'webgpu') {
 		this.screenResolution = screenResolution || new Vector2(window.innerWidth, window.innerHeight);
@@ -148,6 +169,8 @@ export class RendererManager {
 	 */
 	setupPostProcessing(scene: Scene, camera: Camera): void {
 		this.disposePostProcessing();
+		this._postSceneRef = scene;
+		this._postCameraRef = camera;
 		const post = new RenderPipeline(this.renderer);
 		const scenePass = pass(scene, camera);
 		// Opt-in supersampling: render the pass larger and let it downsample.
@@ -157,11 +180,33 @@ export class RendererManager {
 		if (this.renderScale !== 1) {
 			(scenePass as unknown as { setResolutionScale(n: number): void }).setResolutionScale(this.renderScale);
 		}
+		// Fold registered postprocessing effects over the scene pass, in order.
+		let pipelineNode: any = scenePass;
+		for (const effect of this._postEffects) {
+			try {
+				pipelineNode = effect(pipelineNode, { scenePass, scene, camera });
+			} catch (error) {
+				console.error('RendererManager: post-processing effect failed, skipping.', error);
+			}
+		}
 		// Apply the output color transform ourselves (tone map + sRGB) so the
 		// dither is added in display space, where it offsets by ~1 code value.
 		post.outputColorTransform = false;
-		post.outputNode = renderOutput(scenePass).add(outputDitherNode());
+		post.outputNode = renderOutput(pipelineNode).add(outputDitherNode());
 		this.postProcessing = post;
+	}
+
+	/**
+	 * Register postprocessing effects (e.g. from `@zylem/shaders`). Effects
+	 * are applied in order between the scene pass and the display output
+	 * transform. If a pipeline is already active it is rebuilt immediately;
+	 * otherwise the effects apply on the next {@link setupPostProcessing}.
+	 */
+	setPostProcessingEffects(effects: ZylemPostEffect[]): void {
+		this._postEffects = [...effects];
+		if (this.postProcessing && this._postSceneRef && this._postCameraRef) {
+			this.setupPostProcessing(this._postSceneRef, this._postCameraRef);
+		}
 	}
 
 	/**
@@ -323,6 +368,9 @@ export class RendererManager {
 			this.renderer.dispose();
 		} catch { /* noop */ }
 		this._sceneRef = null;
+		this._postSceneRef = null;
+		this._postCameraRef = null;
+		this._postEffects = [];
 		this._initialized = false;
 	}
 }

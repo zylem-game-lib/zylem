@@ -2,20 +2,19 @@
  * Gradient sky shader in TSL (WebGPU).
  *
  * A simple but versatile skybox shader that renders a vertical color gradient
- * from ground to horizon to zenith. Uses `positionWorld` to derive a view
- * direction from the skybox cube, giving a proper hemispherical sky appearance
- * regardless of camera orientation.
+ * from ground to horizon to zenith. Uses `positionWorldDirection` (the
+ * per-pixel view direction in the scene's background pass), giving a proper
+ * hemispherical sky appearance regardless of camera orientation or position.
  *
  * Exported as a pre-built shader and as a factory function
  * ({@link createGradientSky}) that accepts custom colors.
  */
 import {
 	Fn,
-	positionWorld,
+	positionWorldDirection,
 	vec3,
 	vec4,
 	float,
-	normalize,
 	smoothstep,
 	mix,
 	clamp,
@@ -39,7 +38,9 @@ export function createGradientSky(
 	zenithColor: [number, number, number] = [0.02, 0.02, 0.08],
 ): ZylemTSLShader {
 	const colorNode = Fn(() => {
-		const rd = normalize(positionWorld);
+		// In a scene backgroundNode, positionWorldDirection is the per-pixel
+		// view direction.
+		const rd = positionWorldDirection;
 
 		// Elevation: -1 (nadir) to +1 (zenith)
 		const elev = asin(clamp(rd.y, -1.0, 1.0)).div(PI_HALF);

@@ -13,6 +13,7 @@ import { CameraWrapper } from '../camera/camera';
 import { isBaseNode, isCameraWrapper, isConfigObject, isEntityInput } from '../core/utility/options-parser';
 import { ZylemBlueColor } from '../core/utility/vector';
 import type { ZylemShader } from '../graphics/material';
+import type { ZylemPostEffect } from '../camera/renderer-manager';
 import type { RuntimeDebugBinding, StageRuntimeAdapter } from '../runtime/zylem-stage-runtime';
 import type { Vec3Components } from '../core/vector';
 import type { WasmStageRuntimeOptions } from '../runtime/wasm-stage-runtime';
@@ -98,6 +99,12 @@ export type StageConfigLike = Partial<{
 	 * entities. Defaults to `true`.
 	 */
 	defaultLighting: boolean;
+	/**
+	 * Postprocessing effects applied in order between the scene pass and the
+	 * display output (e.g. effects from `@zylem/shaders`). Only active for
+	 * single fullscreen-camera rendering.
+	 */
+	postProcessingEffects: ZylemPostEffect[];
 }>;
 
 /**
@@ -123,6 +130,8 @@ export class StageConfig {
 		public defaultLighting: boolean = true,
 		/** Optional unified-Stage wasm runtime configuration. */
 		public wasmRuntime: StageWasmRuntimeConfig | undefined = undefined,
+		/** Postprocessing effects applied over the scene pass, in order. */
+		public postProcessingEffects: ZylemPostEffect[] = [],
 	) { }
 }
 
@@ -202,6 +211,7 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		(config as any).runtimeDebugBinding ?? defaults.runtimeDebugBinding,
 		(config as any).defaultLighting ?? defaults.defaultLighting,
 		(config as any).wasmRuntime ?? defaults.wasmRuntime,
+		(config as any).postProcessingEffects ?? defaults.postProcessingEffects,
 	);
 
 	// Backward compat: first camera is the legacy `camera` field

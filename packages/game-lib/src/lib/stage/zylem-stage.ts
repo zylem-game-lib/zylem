@@ -27,7 +27,7 @@ import { nanoid } from 'nanoid';
 import { Stage } from './stage';
 import { CameraWrapper } from '../camera/camera';
 import { CameraManager } from '../camera/camera-manager';
-import { RendererManager } from '../camera/renderer-manager';
+import { RendererManager, type ZylemPostEffect } from '../camera/renderer-manager';
 import { StageDebugDelegate } from './stage-debug-delegate';
 import { StageCameraDelegate } from './stage-camera-delegate';
 import { StageLoadingDelegate } from './stage-loading-delegate';
@@ -88,6 +88,12 @@ export interface ZylemStageConfig {
 	 * `createLight(...)` entities). Defaults to `true`.
 	 */
 	defaultLighting: boolean;
+	/**
+	 * Postprocessing effects applied in order between the scene pass and the
+	 * display output (e.g. effects from `@zylem/shaders`). Only active for
+	 * single fullscreen-camera rendering.
+	 */
+	postProcessingEffects?: ZylemPostEffect[];
 	stageRef?: Stage;
 }
 
@@ -193,6 +199,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			runtimeDebugBinding: parsed.config.runtimeDebugBinding,
 			defaultLighting: parsed.config.defaultLighting,
 			wasmRuntime: parsed.config.wasmRuntime,
+			postProcessingEffects: parsed.config.postProcessingEffects,
 			entities: [],
 		};
 
@@ -274,6 +281,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			await this.scene.setupCameraManager(this.scene.scene, this.cameraManagerRef, this.rendererManager);
 			const primaryCam = this.cameraManagerRef.primaryCamera;
 			if (primaryCam) {
+				this.rendererManager.setPostProcessingEffects(this.state.postProcessingEffects ?? []);
 				this.rendererManager.setupPostProcessing(this.scene.scene, primaryCam.camera);
 			}
 			// Pipeline/follow-camera runs inside `_update` (after transformSystem).
@@ -430,7 +438,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		}
 
 		this.scene.update({ delta });
-		this.scene.updateSkybox(delta);
 	}
 
 	/**
@@ -483,7 +490,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		}
 
 		this.scene!.update({ delta });
-		this.scene!.updateSkybox(delta);
 	}
 
 	public outOfLoop() {

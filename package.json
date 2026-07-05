@@ -21,6 +21,8 @@
     "dev:examples": "pnpm --filter @zylem/examples dev",
     "dev:examples:screenshot": "node --experimental-strip-types ./packages/examples/repo-actions/screenshot-local.ts",
     "dev:server": "pnpm --filter @zylem/spacetime-server dev",
+    "dev:shader-showcase": "pnpm --filter @zylem/shader-showcase dev",
+    "build:shaders": "pnpm --filter @zylem/shaders build",
     "build:spacetime-server": "pnpm --filter @zylem/spacetime-server build",
     "start:spacetime-server": "pnpm --filter @zylem/spacetime-server start:server",
     "spacetime-server:build-and-start": "pnpm run build:spacetime-server && pnpm run start:spacetime-server",
