@@ -1,8 +1,20 @@
-import { Vector2, Scene, Camera } from 'three';
+import { Vector2, Scene, Camera, RenderTarget, HalfFloatType } from 'three';
 import { WebGPURenderer, RenderPipeline } from 'three/webgpu';
-import { pass, renderOutput, screenCoordinate, vec2, vec4, fract, sin, dot } from 'three/tsl';
+import {
+	pass,
+	renderOutput,
+	screenCoordinate,
+	vec2,
+	vec4,
+	fract,
+	sin,
+	dot,
+	texture as textureNode,
+	uniform as uniformNode,
+} from 'three/tsl';
 import type { ZylemCamera } from './zylem-camera';
 import { installThreeConsoleFilter } from '../graphics/three-console-filter';
+import type { ResolvedStageTransition } from '../graphics/stage-transition';
 
 /**
  * Renderer type option.
@@ -49,6 +61,27 @@ export type ZylemPostEffect = (
 	inputNode: any,
 	ctx: { scenePass: any; scene: any; camera: any },
 ) => any;
+
+/**
+ * Internal state of an in-flight stage transition. The `fromNode` is a
+ * display-space node for the outgoing stage's snapshot texture; progress is
+ * driven by the render loop.
+ */
+interface ActiveStageTransition {
+	resolved: ResolvedStageTransition;
+	/** Float uniform node, 0..1 (eased). */
+	progressUniform: { value: number };
+	/** Display-space node for the outgoing frame. */
+	fromNode: any;
+	elapsed: number;
+	snapshotTarget: RenderTarget | null;
+	/**
+	 * True once the transition has been composed into a pipeline via
+	 * `setupPostProcessing`. Progress only advances after composition, so
+	 * time spent loading the incoming stage does not eat into the blend.
+	 */
+	composed: boolean;
+}
 
 /**
  * Check if WebGPU is supported in the current browser.
@@ -104,6 +137,8 @@ export class RendererManager {
 	/** Scene/camera the current pipeline was built for (for rebuilds). */
 	private _postSceneRef: Scene | null = null;
 	private _postCameraRef: Camera | null = null;
+	/** In-flight stage transition, if any. */
+	private _transition: ActiveStageTransition | null = null;
 
 	constructor(screenResolution?: Vector2, _rendererType: RendererType = 'webgpu') {
 		this.screenResolution = screenResolution || new Vector2(window.innerWidth, window.innerHeight);
@@ -192,8 +227,123 @@ export class RendererManager {
 		// Apply the output color transform ourselves (tone map + sRGB) so the
 		// dither is added in display space, where it offsets by ~1 code value.
 		post.outputColorTransform = false;
-		post.outputNode = renderOutput(pipelineNode).add(outputDitherNode());
+		let displayNode: any = renderOutput(pipelineNode);
+		// While a stage transition is active, blend the outgoing frame
+		// (display-space snapshot texture) into the incoming frame before
+		// the dither.
+		const transition = this._transition;
+		if (transition) {
+			try {
+				displayNode = vec4(
+					transition.resolved.shader({
+						fromNode: transition.fromNode,
+						toNode: displayNode,
+						progress: transition.progressUniform,
+					}),
+				);
+				transition.composed = true;
+			} catch (error) {
+				console.error('RendererManager: stage transition shader failed, skipping.', error);
+			}
+		}
+		post.outputNode = displayNode.add(outputDitherNode());
 		this.postProcessing = post;
+	}
+
+	// ─── Stage transitions ──────────────────────────────────────────────────
+
+	/** Whether a stage transition is currently in flight. */
+	get transitionActive(): boolean {
+		return this._transition !== null;
+	}
+
+	/**
+	 * Arm a stage transition: renders one final frame of the outgoing scene
+	 * into a texture, to be blended with the incoming stage's frames once
+	 * its pipeline is set up. Call before tearing down the outgoing stage.
+	 */
+	beginSnapshotTransition(resolved: ResolvedStageTransition, scene: Scene, camera: Camera): void {
+		this.finishTransition();
+		const size = new Vector2();
+		this.renderer.getDrawingBufferSize(size);
+		const target = new RenderTarget(Math.max(1, size.x), Math.max(1, size.y), {
+			type: HalfFloatType,
+		});
+		const prevTarget = this.renderer.getRenderTarget();
+		try {
+			this.renderer.setScissorTest(false);
+			this.renderer.setRenderTarget(target);
+			this.renderer.render(scene, camera);
+		} catch (error) {
+			console.error('RendererManager: failed to capture transition snapshot.', error);
+		} finally {
+			this.renderer.setRenderTarget(prevTarget);
+		}
+		this._transition = {
+			resolved,
+			progressUniform: uniformNode(0),
+			// Snapshot is linear (render-target output); apply the display
+			// transform so it matches the incoming `renderOutput(...)` side.
+			fromNode: renderOutput(textureNode(target.texture)),
+			elapsed: 0,
+			snapshotTarget: target,
+			composed: false,
+		};
+	}
+
+	/**
+	 * Complete the active transition immediately: rebuild the normal
+	 * pipeline, release transition resources, and fire `onComplete`.
+	 * No-op when no transition is active.
+	 */
+	finishTransition(): void {
+		const transition = this._transition;
+		if (!transition) return;
+		this._transition = null;
+		transition.progressUniform.value = 1;
+		// Rebuild the plain pipeline first so nothing references the
+		// outgoing scene pass when `onComplete` tears the old stage down.
+		if (this._postSceneRef && this._postCameraRef) {
+			this.setupPostProcessing(this._postSceneRef, this._postCameraRef);
+		}
+		try {
+			transition.resolved.onComplete?.();
+		} catch (error) {
+			console.error('RendererManager: transition onComplete failed.', error);
+		}
+		this.releaseTransitionResources(transition);
+	}
+
+	/**
+	 * Drop the active transition without rebuilding the pipeline (renderer
+	 * teardown path). Still fires `onComplete`.
+	 */
+	private cancelTransition(): void {
+		const transition = this._transition;
+		if (!transition) return;
+		this._transition = null;
+		try {
+			transition.resolved.onComplete?.();
+		} catch { /* noop */ }
+		this.releaseTransitionResources(transition);
+	}
+
+	private releaseTransitionResources(transition: ActiveStageTransition): void {
+		try {
+			transition.snapshotTarget?.dispose();
+		} catch { /* noop */ }
+	}
+
+	/** Advance transition progress; called once per render-loop frame. */
+	private advanceTransition(delta: number): void {
+		const transition = this._transition;
+		if (!transition || !transition.composed) return;
+		transition.elapsed += delta;
+		const raw = Math.min(transition.elapsed / transition.resolved.duration, 1);
+		transition.progressUniform.value = transition.resolved.easing(raw);
+		if (raw >= 1) {
+			this.finishTransition();
+		}
 	}
 
 	/**
@@ -237,6 +387,7 @@ export class RendererManager {
 				? 0
 				: Math.max(0, (timestamp - this._lastAnimationTimestamp) / 1000);
 			this._lastAnimationTimestamp = timestamp;
+			this.advanceTransition(deltaSeconds);
 			onFrame(deltaSeconds);
 		});
 	}
@@ -363,6 +514,7 @@ export class RendererManager {
 	 */
 	dispose(): void {
 		this.stopRenderLoop();
+		this.cancelTransition();
 		this.disposePostProcessing();
 		try {
 			this.renderer.dispose();

@@ -1,6 +1,6 @@
 import { ZylemGame, GameLoadingEvent } from './zylem-game';
 import { DestroyFunction, SetupFunction, UpdateFunction } from '../core/base-node-life-cycle';
-import { IGame } from '../core/interfaces';
+import { IGame, StageNavigationOptions } from '../core/interfaces';
 import { setPaused } from '../debug/debug-state';
 import { BaseGlobals, GameInputConfig } from './game-interfaces';
 import { convertNodes, GameOptions, hasStages, extractGlobalsFromOptions } from '../core/utility/nodes';
@@ -235,17 +235,32 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		this.wrappedGame.step(deltaTime);
 	}
 
-	async reset() {
+	/**
+	 * Reload the first stage. Pass `{ transition }` to blend from the current
+	 * stage instead of cutting.
+	 * @example game.reset({ transition: { duration: 1 } });
+	 */
+	async reset(options?: StageNavigationOptions) {
 		if (!this.wrappedGame) {
 			console.error(this.refErrorMessage);
 			return;
 		}
-		await this.wrappedGame.loadStage(this.wrappedGame.stages[0]);
+		if (this.wrappedGame.isLoading()) {
+			return;
+		}
+		await this.wrappedGame.loadStage(this.wrappedGame.stages[0], 0, options?.transition);
 	}
 
-	previousStage() {
+	/**
+	 * Go to the previous stage in the stage array. Pass `{ transition }` to
+	 * blend from the current stage instead of cutting.
+	 */
+	previousStage(options?: StageNavigationOptions) {
 		if (!this.wrappedGame) {
 			console.error(this.refErrorMessage);
+			return;
+		}
+		if (this.wrappedGame.isLoading()) {
 			return;
 		}
 		const currentStageId = this.wrappedGame.currentStageId;
@@ -255,7 +270,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 			console.error('previous stage called on first stage');
 			return;
 		}
-		this.wrappedGame.loadStage(previousStage);
+		this.wrappedGame.loadStage(previousStage, currentIndex - 1, options?.transition);
 	}
 
 	async loadStageFromId(stageId: string) {
@@ -275,9 +290,20 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		}
 	}
 
-	nextStage() {
+	/**
+	 * Go to the next stage. Pass `{ transition }` to blend from the current
+	 * stage instead of cutting.
+	 * @example
+	 * game.nextStage({
+	 *   transition: { duration: 1.2, shader: createStageTransition({ pattern: 'noise' }) },
+	 * });
+	 */
+	nextStage(options?: StageNavigationOptions) {
 		if (!this.wrappedGame) {
 			console.error(this.refErrorMessage);
+			return;
+		}
+		if (this.wrappedGame.isLoading()) {
 			return;
 		}
 		
@@ -289,7 +315,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 			// After transition, current is the new stage
 			if (stageState.current) {
 				StageFactory.createFromBlueprint(stageState.current).then((stage) => {
-					this.wrappedGame?.loadStage(stage);
+					this.wrappedGame?.loadStage(stage, 0, options?.transition);
 				});
 				return;
 			}
@@ -303,7 +329,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 			console.error('next stage called on last stage');
 			return;
 		}
-		this.wrappedGame.loadStage(nextStage);
+		this.wrappedGame.loadStage(nextStage, currentIndex + 1, options?.transition);
 	}
 
 	async goToStage() { }

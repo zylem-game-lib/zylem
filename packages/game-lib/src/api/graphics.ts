@@ -20,6 +20,14 @@ export type {
 
 // Postprocessing effect contract (structurally compatible with @zylem/shaders)
 export type { ZylemPostEffect } from '../lib/camera/renderer-manager';
+
+// Stage transition contract (structurally compatible with @zylem/shaders)
+export type {
+	StageTransitionConfig,
+	StageTransitionEasing,
+	ZylemTransitionShader,
+} from '../lib/graphics/stage-transition';
+export { crossfadeTransitionShader } from '../lib/graphics/stage-transition';
 export { isTSLShader, isGLSLShader, createNodeMaterialFromTSL } from '../lib/graphics/material';
 
 // TSL utilities for shader authoring (WebGPU)

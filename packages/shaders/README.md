@@ -38,8 +38,11 @@ landscape.uniforms.color1.value.set('#ff8800');
 | `createLava(options)` | Mesh surface (UV-mapped) | [three.js webgl_shader_lava](https://github.com/mrdoob/three.js/blob/master/examples/webgl_shader_lava.html) by TheGameMaker |
 | `createShadertoyWaterNoise(options)` | Mesh surface | [Shadertoy Mt2SzR](https://www.shadertoy.com/view/Mt2SzR) |
 | `createShadertoyFire(options)` | Mesh surface (transparent) | [Shadertoy 3tcBzH](https://www.shadertoy.com/view/3tcBzH) |
+| `createStageTransition(options)` | Stage transition (`game.nextStage({ transition })`) | [three.js webgpu_postprocessing_transition](https://threejs.org/examples/#webgpu_postprocessing_transition) |
 
 All factories accept an options object and return the shader with a `uniforms` bag for runtime tweaking.
+
+`createStageTransition` returns a `ZylemTransitionShader` (not a `ZylemTSLShader`): pass it as `game.nextStage({ transition: { shader: createStageTransition({ pattern: 'noise' }) } })`. Patterns: `fade`, `wipe`, `radial`, `noise`, `cells`; pass a grayscale `texture` mix map to drive the wipe instead (dark texels transition first).
 
 `createWaterSurface` also returns a `positionNode` that displaces vertices by the wave heightfield, so apply it to a subdivided plane (e.g. `createPlane({ subdivisions: 160, ... })`). Set `waveAmplitude: 0` for a flat, normal-mapped-only surface, and pass `envMap` (a cube texture) to reflect an environment instead of the built-in horizon/zenith sky gradient.
 

@@ -16,6 +16,7 @@ export const SECTION_ORDER = [
 	'Surface Materials',
 	'Shadertoy',
 	'Postprocessing',
+	'Transitions',
 ] as const;
 
 export type SectionName = (typeof SECTION_ORDER)[number];
@@ -34,6 +35,7 @@ const SECTION_BY_DEMO: Record<SectionName, readonly string[]> = {
 	],
 	Shadertoy: ['shadertoy-gallery'],
 	Postprocessing: ['afterimage', 'vhs-grain', 'pixelation', 'retro'],
+	Transitions: ['stage-transition'],
 };
 
 export interface DemoConfig {

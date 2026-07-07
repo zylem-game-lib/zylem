@@ -41,6 +41,15 @@ export {
 } from '../lib/stage/stage-events';
 export type { StageStateChangeEvent } from '../lib/stage/stage-events';
 
+// Stage transitions
+export type { StageNavigationOptions } from '../lib/core/interfaces';
+export type {
+	StageTransitionConfig,
+	StageTransitionEasing,
+	ZylemTransitionShader,
+} from '../lib/graphics/stage-transition';
+export { crossfadeTransitionShader } from '../lib/graphics/stage-transition';
+
 // Camera
 export { createCamera, CameraWrapper } from '../lib/camera/camera';
 export type { CameraOptions } from '../lib/camera/camera';

@@ -551,7 +551,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.cameraRef = null;
 		this.cameraManagerRef = null;
 
-		// Clear reactive stage variables on unload
+		// Clear reactive stage variables on unload.
 		resetStageVariables();
 		clearVariables(this);
 	}
