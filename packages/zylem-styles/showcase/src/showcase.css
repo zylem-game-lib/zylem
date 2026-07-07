@@ -1,0 +1,112 @@
+/* Chrome for the showcase app itself; component styles come from @zylem/styles. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--zylem-color-background);
+  color: var(--zylem-color-text);
+  font-family: var(--zylem-font-family);
+  font-size: var(--zylem-font-size);
+  min-height: 100vh;
+}
+
+.showcase {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--zylem-spacing-lg);
+}
+
+.showcase h1 {
+  color: var(--zylem-color-primary);
+  font-size: 2rem;
+  margin-bottom: var(--zylem-spacing-lg);
+  border-bottom: 2px solid var(--zylem-color-border);
+  padding-bottom: var(--zylem-spacing-md);
+}
+
+.showcase-nav {
+  display: flex;
+  gap: var(--zylem-spacing-sm);
+  flex-wrap: wrap;
+  margin-bottom: 48px;
+}
+
+.showcase-nav a {
+  color: var(--zylem-color-text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  padding: 4px 10px;
+  border: 1px solid var(--zylem-color-border);
+  border-radius: var(--zylem-radius);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.showcase-nav a:hover {
+  color: var(--zylem-color-primary);
+  border-color: var(--zylem-color-primary);
+}
+
+.section {
+  margin-bottom: 48px;
+}
+
+.section h2 {
+  color: var(--zylem-color-primary);
+  font-size: 1.25rem;
+  margin-bottom: var(--zylem-spacing-md);
+}
+
+.section h3 {
+  color: var(--zylem-color-text-secondary);
+  font-size: 1rem;
+  margin: var(--zylem-spacing-md) 0;
+}
+
+.demo-row {
+  display: flex;
+  gap: var(--zylem-spacing-md);
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-bottom: var(--zylem-spacing-md);
+}
+
+.demo-container {
+  background: var(--zylem-color-background-translucent);
+  padding: var(--zylem-spacing-lg);
+  border-radius: var(--zylem-radius);
+  border: 1px solid var(--zylem-color-primary);
+}
+
+.code-label {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--zylem-color-text-secondary);
+  margin-top: 4px;
+}
+
+.color-token {
+  min-width: 280px;
+  height: 48px;
+  border-radius: var(--zylem-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--zylem-color-border);
+}
+
+#console .zylem-console-container {
+  flex: 1;
+  padding: 0;
+}
+
+.color-token-label {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--zylem-color-text);
+  padding: 4px 8px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}

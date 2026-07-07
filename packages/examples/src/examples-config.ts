@@ -73,7 +73,6 @@ const PREDEFINED_ORDER = {
 		'architecture-test',
 	],
 	'Game Demos': [
-		'arena',
 		'3d-asteroids',
 		'3d-space-invaders',
 	],
@@ -103,10 +102,10 @@ const PREDEFINED_ORDER = {
 const allExamples = Object.entries(allModules)
 	.map(([path, load]) => {
 		// Only accept demos where the folder name matches the file name, e.g.
-		//   ./demos/arena/arena.ts                 -> id: 'arena'
+		//   ./demos/fps/fps.ts                     -> id: 'fps'
 		//   ./demos/3d-asteroids/3d-asteroids.ts   -> id: '3d-asteroids'
-		// Helper files like `./demos/arena/main-stage/...` aren't matched by
-		// the glob (it's only one level deep), but sibling helpers like
+		// Nested helper files aren't matched by the glob (it's only one level
+		// deep), but sibling helpers like
 		// `./demos/multiplayer-lobby/multiplayer-lobby-store.ts` would be —
 		// the folder/filename equality check filters them out.
 		const match = path.match(/\/([^/]+)\/([^/]+)\.ts$/);

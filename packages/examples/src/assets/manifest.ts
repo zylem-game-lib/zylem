@@ -28,7 +28,6 @@
  */
 
 import { GENERAL_ASSET_PATHS } from './general.manifest';
-import { ARENA_ASSET_PATHS } from './arena.manifest';
 import { BAILEYS_WORLD_ASSET_PATHS } from './baileys-world.manifest';
 
 const PRODUCTION_BASE_URL = 'https://assets.zylem.cloud/demos';
@@ -65,7 +64,6 @@ const DEMOS_ASSET_BASE_URL = resolveBaseUrl();
  */
 const ASSET_PATHS = {
 	...GENERAL_ASSET_PATHS,
-	...ARENA_ASSET_PATHS,
 	...BAILEYS_WORLD_ASSET_PATHS,
 } as const satisfies Record<string, string>;
 
