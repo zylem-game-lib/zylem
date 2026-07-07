@@ -1,6 +1,6 @@
 import type { Identity } from 'spacetimedb';
-import type { ErrorContext } from '../../spacetimedb-generated';
-import { DbConnection } from '../../spacetimedb-generated';
+import type { ErrorContext } from './spacetimedb-generated';
+import { DbConnection } from './spacetimedb-generated';
 
 /** Published database name (see `packages/server` `publish:local`). */
 export const MULTIPLAYER_LOBBY_MODULE_NAME = 'multiplayer-lobby';

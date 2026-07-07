@@ -23,12 +23,7 @@ import {
   multiplayerLobbyStore,
   resetMultiplayerLobbyForExampleSwitch,
 } from '../../../demos/multiplayer-lobby/multiplayer-lobby-store';
-import {
-  arenaLobbyStore,
-  resetArenaLobbyForExampleSwitch,
-} from '../../../demos/arena/networking/arena-lobby-store';
 import MultiplayerLobby from '../../../demos/multiplayer-lobby/MultiplayerLobby/MultiplayerLobby';
-import ArenaLobby from '../../../demos/arena/ArenaLobby/ArenaLobby';
 import * as styles from './DemoViewer.css';
 import { subscribe } from 'valtio/vanilla';
 
@@ -86,7 +81,6 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   const [progress, setProgress] = createSignal(0);
   const [message, setMessage] = createSignal('');
   const [multiplayerLobbyRev, setMultiplayerLobbyRev] = createSignal(0);
-  const [arenaLobbyRev, setArenaLobbyRev] = createSignal(0);
 
   const isMobileLayout = () => props.layout === 'mobile';
   const screenshotMode = createMemo(() =>
@@ -121,13 +115,6 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
       true,
     );
     onCleanup(unsubLobby);
-
-    const unsubArenaLobby = subscribe(
-      arenaLobbyStore,
-      () => setArenaLobbyRev((n) => n + 1),
-      true,
-    );
-    onCleanup(unsubArenaLobby);
 
     zylemEventBus.on('loading:start', handleLoadingEvent);
     zylemEventBus.on('loading:progress', handleLoadingEvent);
@@ -168,9 +155,6 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
       if (id === 'multiplayer-lobby') {
         resetMultiplayerLobbyForExampleSwitch();
       }
-      if (id === 'arena') {
-        resetArenaLobbyForExampleSwitch();
-      }
     });
   });
 
@@ -195,15 +179,6 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
       !screenshotMode() &&
       appStore.activeExample?.id === 'multiplayer-lobby' &&
       !multiplayerLobbyStore.lobbyDismissed
-    );
-  };
-
-  const showArenaLobby = () => {
-    void arenaLobbyRev();
-    return (
-      !screenshotMode() &&
-      appStore.activeExample?.id === 'arena' &&
-      !arenaLobbyStore.lobbyDismissed
     );
   };
 
@@ -271,9 +246,6 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
                     <Show when={showMultiplayerLobby()}>
                       <MultiplayerLobby />
                     </Show>
-                    <Show when={showArenaLobby()}>
-                      <ArenaLobby />
-                    </Show>
                     <Show when={loading()}>
                       <div
                         class={styles.loadingOverlay}
@@ -313,9 +285,6 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
                 </Show>
                 <Show when={showMultiplayerLobby()}>
                   <MultiplayerLobby />
-                </Show>
-                <Show when={showArenaLobby()}>
-                  <ArenaLobby />
                 </Show>
                 <Show when={loading()}>
                   <div class={styles.loadingOverlay} data-demo-loading-overlay>

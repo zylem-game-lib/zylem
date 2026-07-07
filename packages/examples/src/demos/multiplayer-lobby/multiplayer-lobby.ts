@@ -10,8 +10,8 @@ import {
 	type ZylemRuntimeStaticBoxCollider,
 } from '@zylem/game-lib/runtime';
 import { Platformer3DRuntimeAdapter } from '../../runtime/platformer-3d-runtime';
-import type { ErrorContext } from '../../spacetimedb-generated';
-import type { EntityTransform, Player } from '../../spacetimedb-generated/types';
+import type { ErrorContext } from './spacetimedb-generated';
+import type { EntityTransform, Player } from './spacetimedb-generated/types';
 import { playgroundActor } from '../../utils';
 import { TransformableEntity } from '~/lib/actions/capabilities/apply-transform';
 import { GameEntity } from '~/lib/entities';
@@ -27,7 +27,12 @@ import {
 	preflightMultiplayerLobbySpacetimeUri,
 } from './multiplayer-lobby-stdb-client';
 
-type PlayerEntity = TransformableEntity & GameEntity<any> & StageEntity;
+type PlayerEntity = TransformableEntity &
+	GameEntity<any> &
+	StageEntity & {
+		/** Provided by ZylemActor (playgroundActor returns `any`, so declared here). */
+		playAnimation: (options: NetworkAnimationState) => void;
+	};
 type StageHandle = ReturnType<typeof createStage>;
 
 type AvatarRecord = {
@@ -377,7 +382,7 @@ export default function createDemo() {
 				stickToViewport: true,
 				screenPosition: new Vector2(0.5, 0.08),
 				fontColor: '#ffaaaa',
-				fontSize: 13,
+				fontSize: 10,
 				backgroundColor: 'rgba(0,0,0,0.7)',
 				padding: 10,
 			});
@@ -582,9 +587,9 @@ export default function createDemo() {
 				height: 600,
 			},
 			globals: {
-			multiplayerLobbyDeviceId: '',
-			multiplayerLobbyDisplayName: '',
-			multiplayerLobbyColorU32: 0xff4a90e2,
+				multiplayerLobbyDeviceId: '',
+				multiplayerLobbyDisplayName: '',
+				multiplayerLobbyColorU32: 0xff4a90e2,
 			},
 		},
 		lobbyStage,
