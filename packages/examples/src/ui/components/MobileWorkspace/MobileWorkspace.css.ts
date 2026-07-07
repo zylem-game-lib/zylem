@@ -1,5 +1,5 @@
 import { globalStyle, style } from '@vanilla-extract/css';
-import { vars } from '@zylem/styles';
+import { vars } from '@zylem/ui';
 
 // Layout-local custom properties: side-padding is aliased to a spacing
 // token so the mobile shell stays aligned with the rest of the system;

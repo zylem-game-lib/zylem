@@ -18,7 +18,7 @@ import {
 	type ZylemRuntimeStaticBoxCollider,
 } from '@zylem/game-lib/runtime';
 
-import runtimeWasmUrl from '../../../zylem-runtime/target/wasm32-unknown-unknown/release/zylem_runtime.wasm?url';
+import runtimeWasmUrl from '@zylem/runtime/wasm?url';
 
 export type {
 	ZylemRuntimeBufferViews,
@@ -56,7 +56,7 @@ export {
 	ZylemRuntimeEventType,
 } from '@zylem/game-lib/runtime';
 
-/** URL to the built `zylem_runtime.wasm` in this monorepo (Vite `?url`). */
+/** URL to the prebuilt `zylem_runtime.wasm` from the @zylem/runtime package (Vite `?url`). */
 export const ZYLEM_RUNTIME_WASM_URL: string = runtimeWasmUrl;
 
 /**

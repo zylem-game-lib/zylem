@@ -100,11 +100,8 @@ export default defineConfig({
 
 			// Editor package aliases REMOVED - using built package
 
-			// Styles aliases - Strict ordering required
-			// 1. Force styles.css to resolve to the bundled dist file
-			{ find: '@zylem/styles/styles.css', replacement: path.resolve(__dirname, '../zylem-styles/dist/styles.css') },
-			// 2. Fallback for other imports (e.g. source files)
-			{ find: '@zylem/styles', replacement: path.resolve(__dirname, '../zylem-styles/src') },
+			// Styles aliases REMOVED - `@zylem/ui` resolves from node_modules
+			// via its `exports` map (`.` and `./styles.css`).
 		],
 	},
 	assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb', '**/*.wasm'],

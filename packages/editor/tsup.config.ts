@@ -14,7 +14,7 @@ const rawPlugin: Plugin = {
         // Intercept ?raw imports and return the file content as a JS module.
         // Delegates to esbuild's resolver so both relative paths
         // (`./foo.css?raw`) and package-subpath specifiers
-        // (`@zylem/styles/styles.css?raw`, honoring `package.json` `exports`)
+        // (`@zylem/ui/styles.css?raw`, honoring `package.json` `exports`)
         // resolve correctly.
         build.onResolve({ filter: /\?raw$/ }, async (args) => {
             const bare = args.path.replace(/\?raw$/, '');
@@ -69,10 +69,10 @@ export default defineConfig({
         /^@zylem\/game-lib(\/.*)?$/,
     ],
     // tsup treats `dependencies` as external by default, which would
-    // forward `@zylem/styles/styles.css?raw` to the consumer's bundler.
+    // forward `@zylem/ui/styles.css?raw` to the consumer's bundler.
     // We want the bundled editor to inline the CSS string itself so the
     // shadow-DOM injection in `zylem-editor.tsx` works even when the
     // consumer has no `?raw` loader. Keep the package bundled; the
     // `rawPlugin` then handles the `?raw` subpath resolution.
-    noExternal: [/^@zylem\/styles(\/.*)?$/],
+    noExternal: [/^@zylem\/ui(\/.*)?$/],
 });

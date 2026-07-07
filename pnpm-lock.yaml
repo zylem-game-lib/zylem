@@ -68,9 +68,9 @@ importers:
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
-      '@zylem/styles':
-        specifier: workspace:*
-        version: link:../zylem-styles
+      '@zylem/ui':
+        specifier: ^0.1.0
+        version: 0.1.0(solid-js@1.9.9)
       lucide-solid:
         specifier: ^0.511.0
         version: 0.511.0(solid-js@1.9.9)
@@ -108,12 +108,15 @@ importers:
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
+      '@zylem/runtime':
+        specifier: ^0.1.1
+        version: 0.1.1
       '@zylem/shaders':
         specifier: workspace:*
         version: link:../shaders
-      '@zylem/styles':
-        specifier: workspace:*
-        version: link:../zylem-styles
+      '@zylem/ui':
+        specifier: ^0.1.0
+        version: 0.1.0(solid-js@1.9.9)
       howler:
         specifier: ^2.2.4
         version: 2.2.4
@@ -228,8 +231,8 @@ importers:
         specifier: latest
         version: 7.0.0-dev.20260620.1
       '@zylem/runtime':
-        specifier: workspace:*
-        version: link:../zylem-runtime
+        specifier: ^0.1.1
+        version: 0.1.1
       happy-dom:
         specifier: ^18.0.1
         version: 18.0.1
@@ -331,45 +334,6 @@ importers:
       typescript:
         specifier: 6.0.3
         version: 6.0.3
-
-  packages/zylem-runtime: {}
-
-  packages/zylem-styles:
-    dependencies:
-      '@vanilla-extract/css':
-        specifier: ^1.20.1
-        version: 1.20.1
-      '@vanilla-extract/sprinkles':
-        specifier: ^1.6.5
-        version: 1.6.5(@vanilla-extract/css@1.20.1)
-    devDependencies:
-      '@kobalte/core':
-        specifier: ^0.13.11
-        version: 0.13.11(solid-js@1.9.9)
-      '@vanilla-extract/esbuild-plugin':
-        specifier: ^2.3.22
-        version: 2.3.22(esbuild@0.27.2)
-      '@vanilla-extract/vite-plugin':
-        specifier: ^5.2.2
-        version: 5.2.2(@types/node@20.19.13)(esbuild@0.27.2)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6)(vite@7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6))
-      lucide-solid:
-        specifier: ^0.511.0
-        version: 0.511.0(solid-js@1.9.9)
-      solid-js:
-        specifier: ^1.9.9
-        version: 1.9.9
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.15)(tsx@4.20.6)(typescript@6.0.3)
-      typescript:
-        specifier: 6.0.3
-        version: 6.0.3
-      vite:
-        specifier: 7.0.4
-        version: 7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6)
-      vite-plugin-solid:
-        specifier: ^2.11.8
-        version: 2.11.8(solid-js@1.9.9)(vite@7.0.4(@types/node@20.19.13)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.20.6))
 
   packages/zylem-utilities:
     dependencies:
@@ -1559,14 +1523,6 @@ packages:
   '@vanilla-extract/css@1.20.1':
     resolution: {integrity: sha512-5I9RNo5uZW9tsBnqrWzJqELegOqTHBrZyDFnES0gR9gJJHBB9dom1N0bwITM9tKwBcfKrTX4a6DHVeQdJ2ubQA==}
 
-  '@vanilla-extract/esbuild-plugin@2.3.22':
-    resolution: {integrity: sha512-unxruCeuGR2BpmEuSV49++V4whdX7uPWADIiPwAe6zEOXwPrXQK+VtXjjZ/yN40vGfE7OJP/4WSDM5RuYX4LoQ==}
-    peerDependencies:
-      esbuild: '>=0.17.6'
-    peerDependenciesMeta:
-      esbuild:
-        optional: true
-
   '@vanilla-extract/integration@8.0.10':
     resolution: {integrity: sha512-01IB5gbrgTe8IIrtfRXXTmACl5D8Enzqp2cKbCWaMKXmnoilXXVCPbJoA96q88PXkNDXsXepCxUugMvEmL3c7A==}
 
@@ -1621,6 +1577,18 @@ packages:
     peerDependencies:
       '@dimforge/rapier3d-compat': ^0.11.2
       three: 0.184.0
+
+  '@zylem/runtime@0.1.1':
+    resolution: {integrity: sha512-BO7Evvb+F/eWh24f8Er5IrkSla1sNY4En6c+wFu8+WSybCaHVIQareCWSpyfty7C455TSWieendw/i2ncdzNlA==}
+    engines: {node: '>=20.10.0'}
+
+  '@zylem/ui@0.1.0':
+    resolution: {integrity: sha512-ZN6Y0QJq/o1Jvnx2lJUNbt2jvyGlAsLL1aWcWitWwRERLsmIFWeCyiD/HPI/dTFYMvriqPWEya0cdiqDtOY2gA==}
+    peerDependencies:
+      solid-js: ^1.9.9
+    peerDependenciesMeta:
+      solid-js:
+        optional: true
 
   acorn@8.15.0:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
@@ -3664,15 +3632,6 @@ snapshots:
     transitivePeerDependencies:
       - babel-plugin-macros
 
-  '@vanilla-extract/esbuild-plugin@2.3.22(esbuild@0.27.2)':
-    dependencies:
-      '@vanilla-extract/integration': 8.0.10
-    optionalDependencies:
-      esbuild: 0.27.2
-    transitivePeerDependencies:
-      - babel-plugin-macros
-      - supports-color
-
   '@vanilla-extract/integration@8.0.10':
     dependencies:
       '@babel/core': 7.28.4
@@ -3781,6 +3740,17 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
       - react
+
+  '@zylem/runtime@0.1.1': {}
+
+  '@zylem/ui@0.1.0(solid-js@1.9.9)':
+    dependencies:
+      '@vanilla-extract/css': 1.20.1
+      '@vanilla-extract/sprinkles': 1.6.5(@vanilla-extract/css@1.20.1)
+    optionalDependencies:
+      solid-js: 1.9.9
+    transitivePeerDependencies:
+      - babel-plugin-macros
 
   acorn@8.15.0: {}
 

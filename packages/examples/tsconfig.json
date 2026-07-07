@@ -6,7 +6,6 @@
     "noEmit": true,
     "exactOptionalPropertyTypes": false,
     "paths": {
-      "@zylem/styles": ["../zylem-styles/src/index.ts"],
       "@zylem/game-lib/core": ["../game-lib/src/api/core.ts"],
       "@zylem/game-lib/entity": ["../game-lib/src/api/entity.ts"],
       "@zylem/game-lib/behavior": ["../game-lib/src/api/behavior.ts"],
@@ -29,6 +28,6 @@
       "@state/*": ["../game-lib/src/state/*"]
     }
   },
-  "include": ["src", "repo-actions", "*.html", "../editor/src", "../zylem-styles/src"],
+  "include": ["src", "repo-actions", "*.html", "../editor/src"],
   "references": [{ "path": "../game-lib" }]
 }

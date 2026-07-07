@@ -36,7 +36,7 @@ import { StageEntity } from '@zylem/game-lib/core';
  */
 type DemoPlayer = any;
 
-import runtimeWasmUrl from '../../../../zylem-runtime/target/wasm32-unknown-unknown/release/zylem_runtime.wasm?url';
+import runtimeWasmUrl from '@zylem/runtime/wasm?url';
 
 /**
  * Static heightfield mirror passed in from the demo so the KCC can walk on
