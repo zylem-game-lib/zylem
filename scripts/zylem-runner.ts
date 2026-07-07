@@ -48,8 +48,9 @@ const ENV_ACTIONS: Action[] = ['build', 'publish'];
 
 /**
  * Packages eligible for `publish`. Only @zylem/game-lib is published to npm;
- * other packages are either private or not intended for the public registry
- * (e.g. @zylem/styles has no `private` flag but is not published here).
+ * other packages are either private or not intended for the public registry.
+ * (Shared styles live in the external `@zylem/ui` package, published from
+ * the zylem-game-lib/ui repo.)
  */
 const PUBLISHABLE_PACKAGES = new Set<string>(['@zylem/game-lib']);
 

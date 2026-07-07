@@ -16,8 +16,8 @@ interface ImportMetaEnv {
     readonly VITE_DEMOS_ASSET_BASE_URL?: string;
 }
 
-// Declare CSS modules for @zylem/styles
-declare module '@zylem/styles/styles.css?raw' {
+// Declare CSS modules for @zylem/ui
+declare module '@zylem/ui/styles.css?raw' {
     const css: string;
     export default css;
 }

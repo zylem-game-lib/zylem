@@ -1,5 +1,5 @@
 import { globalStyle, style } from '@vanilla-extract/css';
-import { vars } from '@zylem/styles';
+import { vars } from '@zylem/ui';
 
 export const previewFrame = style({
   position: 'relative',

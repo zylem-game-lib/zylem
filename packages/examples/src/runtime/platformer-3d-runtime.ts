@@ -15,7 +15,7 @@ import {
 	type ZylemRuntimeStaticBoxCollider,
 } from '@zylem/game-lib/runtime';
 
-import runtimeWasmUrl from '../../../zylem-runtime/target/wasm32-unknown-unknown/release/zylem_runtime.wasm?url';
+import runtimeWasmUrl from '@zylem/runtime/wasm?url';
 
 /**
  * Static heightfield mirror for the wasm KCC. Pulled out of a

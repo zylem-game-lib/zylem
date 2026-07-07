@@ -20,7 +20,7 @@
   "dependencies": {
     "@kobalte/core": "^0.13.11",
     "@solidjs/router": "^0.14.0",
-    "@zylem/styles": "workspace:*",
+    "@zylem/ui": "^0.1.0",
     "lucide-solid": "^0.511.0",
     "solid-js": "^1.9.9",
     "valtio": "^2.1.7"

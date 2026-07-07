@@ -1,5 +1,5 @@
 import { style } from '@vanilla-extract/css';
-import { vars, sprinkles } from '@zylem/styles';
+import { vars, sprinkles } from '@zylem/ui';
 
 export const listItem = style([
   sprinkles({

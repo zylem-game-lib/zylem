@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
-// Declare CSS module for @zylem/styles package import
-declare module '@zylem/styles/styles.css?raw' {
+// Declare CSS module for @zylem/ui package import
+declare module '@zylem/ui/styles.css?raw' {
     const css: string;
     export default css;
 }

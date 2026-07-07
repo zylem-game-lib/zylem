@@ -1,5 +1,5 @@
 import { globalStyle, style } from '@vanilla-extract/css';
-import { vars, sprinkles } from '@zylem/styles';
+import { vars, sprinkles } from '@zylem/ui';
 
 /**
  * Full-bleed shell that hosts the active demo / `DemoViewer`. Mirrors the

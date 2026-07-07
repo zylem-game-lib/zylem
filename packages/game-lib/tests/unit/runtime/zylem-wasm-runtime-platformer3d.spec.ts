@@ -8,8 +8,8 @@
  */
 
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
@@ -30,17 +30,14 @@ import {
 	ZylemRuntimePlatformer3DFsmState,
 } from '../../../src/lib/runtime/zylem-wasm-runtime';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
 const REL_WASM = 'wasm32-unknown-unknown/release/zylem_runtime.wasm';
-const WORKSPACE_WASM_PATH = path.resolve(
-	__dirname,
-	`../../../../zylem-runtime/target/${REL_WASM}`,
-);
+// Prebuilt wasm shipped by the @zylem/runtime npm package.
+const PACKAGE_WASM_PATH = require.resolve('@zylem/runtime/wasm');
 const CARGO_TARGET_DIR = process.env.CARGO_TARGET_DIR;
 const WASM_CANDIDATES: readonly string[] = CARGO_TARGET_DIR
-	? [path.resolve(CARGO_TARGET_DIR, REL_WASM), WORKSPACE_WASM_PATH]
-	: [WORKSPACE_WASM_PATH];
+	? [path.resolve(CARGO_TARGET_DIR, REL_WASM), PACKAGE_WASM_PATH]
+	: [PACKAGE_WASM_PATH];
 
 const DT = 1 / 60;
 
@@ -63,7 +60,7 @@ async function loadWasmBytes(): Promise<ArrayBuffer> {
 		}
 	}
 	throw new Error(
-		`Failed to load zylem-runtime wasm. Tried:\n${errors.join('\n')}\nRun \`cargo build --manifest-path packages/zylem-runtime/Cargo.toml --target wasm32-unknown-unknown --release\` first.`,
+		`Failed to load zylem-runtime wasm. Tried:\n${errors.join('\n')}\nEnsure the @zylem/runtime package is installed (pnpm install), or set CARGO_TARGET_DIR to a locally built runtime.`,
 	);
 }
 

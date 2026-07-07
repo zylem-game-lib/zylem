@@ -13,9 +13,13 @@ This is a pnpm workspace monorepo containing:
 - **[@zylem/game-lib](./packages/game-lib)** - Core game engine library (published to npm)
 - **[@zylem/editor](./packages/editor)** - SolidJS-based debug UI and editor
 - **[@zylem/examples](./packages/examples)** - Example applications and playground
-- **[@zylem/styles](./packages/zylem-styles)** - Shared style package for Zylem UI builds
-- **[@zylem/runtime](./packages/zylem-runtime)** - Rust runtime scaffolding for simulation and future wasm builds
 - **[@zylem/spacetime-server](./packages/server)** - SpacetimeDB multiplayer server (scaffold)
+
+External packages published to npm from their own repositories:
+
+- [@zylem/ui](https://github.com/zylem-game-lib/ui) - Shared styles and Solid components
+- [@zylem/runtime](https://github.com/zylem-game-lib/runtime) - Rust/wasm simulation runtime (prebuilt `zylem_runtime.wasm` + TS loader)
+- [@zylem/behaviors](https://github.com/zylem-game-lib/behaviors) - Tree-shakable behavior descriptors and systems
 
 ## 🚀 Quick Start
 
@@ -61,30 +65,22 @@ pnpm zylem
 The `build` and `publish` actions automatically load the root `.env` before
 running, so secrets like `NPM_TOKEN` are available to those commands.
 
-### Render builds with Rust
+### Render builds
 
-If your Render deployment needs to build `@zylem/runtime`, use the root
-Render-safe build script:
+Render deployments use the root build script:
 
 ```bash
 pnpm build:render
 ```
 
-That script installs Rust with `rustup` when `cargo` is missing, adds the
-`wasm32-unknown-unknown` target, then runs the normal monorepo build.
-
-For the split Render Blueprint, the static examples site uses:
-
-```bash
-pnpm build:render:examples
-```
-
-That builds the Rust runtime to `.wasm` first, then bundles the examples SPA.
-The SpacetimeDB API remains the separate Render web service.
+The wasm runtime ships prebuilt inside the `@zylem/runtime` npm package, so
+no Rust toolchain is required — the script just installs dependencies and
+bundles the examples SPA. The SpacetimeDB API remains the separate Render
+web service.
 
 ### Production builds
 
-- **`pnpm run build:production`** — Sets `NODE_ENV=production` for all JS/TS packages, disables `.map` files by default (override with `SOURCEMAP=1`), enables minify where configured, and builds `@zylem/runtime` as **wasm release only** (skips the extra debug native `cargo build` from `pnpm build`).
+- **`pnpm run build:production`** — Sets `NODE_ENV=production` for all JS/TS packages, disables `.map` files by default (override with `SOURCEMAP=1`), and enables minify where configured. The wasm runtime comes prebuilt from the `@zylem/runtime` npm package.
 - **`pnpm run build:production:verify`** — Runs `scripts/ensure-spacetimedb-toolchain-ci.sh` (Rust wasm + SpacetimeDB CLI when missing), then `typecheck`, `lint`, and `build:production`. Use this in CI or for a full gate before release.
 - For **npm publish** of `@zylem/game-lib`, `pnpm run publish:lib` (or `pnpm run publish`) builds the library with `NODE_ENV=production` first.
 
