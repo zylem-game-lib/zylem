@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import { UpdateFunction, SetupFunction, DestroyFunction } from './base-node-life-cycle';
+import type { StageTransitionConfig } from '../graphics/stage-transition';
 
 export type LoadingEvent = {
 	type: 'start' | 'progress' | 'complete';
@@ -9,11 +10,19 @@ export type LoadingEvent = {
 	current?: number;
 };
 
+/**
+ * Options for stage navigation (`nextStage` / `previousStage` / `reset`).
+ */
+export interface StageNavigationOptions {
+	/** Visual transition to blend from the outgoing stage to the incoming one. */
+	transition?: StageTransitionConfig;
+}
+
 export interface IGame<TGlobals extends Record<string, unknown> = any> {
     start: () => Promise<this>;
-    nextStage: () => void;
-    previousStage: () => void;
-    reset: () => Promise<void>;
+    nextStage: (options?: StageNavigationOptions) => void;
+    previousStage: (options?: StageNavigationOptions) => void;
+    reset: (options?: StageNavigationOptions) => Promise<void>;
     pause: () => Promise<void>;
     resume: () => Promise<void>;
     onLoading: (callback: (event: LoadingEvent) => void) => void;

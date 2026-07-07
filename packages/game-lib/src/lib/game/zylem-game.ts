@@ -24,6 +24,10 @@ import { gameEventBus, GameStateUpdatedPayload } from './game-event-bus';
 import { zylemEventBus, type StateDispatchPayload, type StageConfigPayload, type EntityConfigPayload } from '../events';
 import { GameRendererObserver } from './game-renderer-observer';
 import { ZylemStage } from '../core';
+import {
+	resolveStageTransition,
+	type StageTransitionConfig,
+} from '../graphics/stage-transition';
 
 export type { GameLoadingEvent };
 
@@ -61,6 +65,13 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	gameCanvas: GameCanvas | null = null;
 	private animationFrameId: number | null = null;
 	private isDisposed = false;
+	/**
+	 * True while a `loadStage` is in progress. Used to reject re-entrant stage
+	 * navigation (e.g. a button press during a transition), which would race
+	 * two loads on `stageMap`/the render loop and, because `currentStageId` is
+	 * transiently `''`, misresolve the target stage.
+	 */
+	private loadInFlight = false;
 	/**
 	 * True once `start()` has been invoked for this game's initial stage.
 	 * Used by `loadStage` to decide whether to drive the stage's `_setup`
@@ -158,8 +169,58 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.debugDelegate = new GameDebugDelegate();
 	}
 
-	async loadStage(stage: Stage, stageIndex: number = 0): Promise<void> {
+	/** Whether a stage load is currently in progress. */
+	isLoading(): boolean {
+		return this.loadInFlight;
+	}
+
+	async loadStage(
+		stage: Stage,
+		stageIndex: number = 0,
+		transition?: StageTransitionConfig,
+	): Promise<void> {
+		if (this.loadInFlight) {
+			console.warn('loadStage ignored: a stage load is already in progress');
+			return;
+		}
+		this.loadInFlight = true;
+		try {
+			await this.performLoadStage(stage, stageIndex, transition);
+		} finally {
+			this.loadInFlight = false;
+		}
+	}
+
+	private async performLoadStage(
+		stage: Stage,
+		stageIndex: number = 0,
+		transition?: StageTransitionConfig,
+	): Promise<void> {
+		const resolved = transition ? resolveStageTransition(transition) : null;
+		const outgoing = this.currentStage() ?? null;
+		const outgoingRuntime = outgoing?.wrappedStage ?? null;
+		const outgoingScene = outgoingRuntime?.scene?.scene ?? null;
+		const outgoingCamera =
+			outgoingRuntime?.cameraManagerRef?.primaryCamera?.camera
+			?? outgoingRuntime?.cameraRef?.camera
+			?? null;
+		// A transition needs an initialized renderer and a live outgoing stage
+		// to blend from (the initial stage load has neither).
+		const canTransition = Boolean(
+			resolved
+			&& this.rendererManager?.initialized
+			&& outgoing
+			&& outgoingScene
+			&& outgoingCamera,
+		);
+
+		if (canTransition) {
+			// Freeze the outgoing stage's final frame before tearing it
+			// down; the blend starts once the new stage renders.
+			this.rendererManager!.beginSnapshotTransition(resolved!, outgoingScene!, outgoingCamera!);
+		}
 		this.unloadCurrentStage();
+
 		const config = stage.options[0] as any;
 		
 		// Subscribe to stage loading events via delegate
@@ -332,6 +393,17 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 		if (this.customUpdate) {
 			this.customUpdate(params);
+		}
+
+		// The game update callback may have triggered a stage change (e.g.
+		// `game.nextStage()` with a transition, which synchronously detaches
+		// the current stage). If so, don't push an update into the now-detached
+		// or not-yet-loaded stage this frame.
+		const activeStage = this.currentStage();
+		if (activeStage !== stage || !activeStage?.wrappedStage) {
+			this.totalTime += clampedDelta;
+			state.time = this.totalTime;
+			return;
 		}
 
 		const stageParams = this.stageUpdateParams;

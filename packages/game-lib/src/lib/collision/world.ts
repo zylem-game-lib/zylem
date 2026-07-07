@@ -179,6 +179,9 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		const rigidBody = this.world.createRigidBody(entity.bodyDesc);
 		entity.body = rigidBody;
 		entity.physicsAttached = true;
+		// Tag ownership so a stale world never frees handles this (or another)
+		// world now owns — see `destroyEntityDirect`.
+		entity.physicsWorldRef = this;
 		entity.body.userData = { uuid: entity.uuid, ref: entity };
 		registerDirectBodyPoseHistory(rigidBody);
 		this.patchDirectBodyPoseTracking(rigidBody);
@@ -219,6 +222,17 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	private destroyEntityDirect(entity: GameEntity<any>) {
+		// If this entity was re-registered into a different world (e.g. a shared
+		// instance reused by an incoming stage), the handles here belong to that
+		// other world. Removing them from THIS world would throw inside a wasm
+		// borrow and poison Rapier, so only prune our own tracking and leave the
+		// live handles (and physics state) intact.
+		const ownedByThisWorld = (entity as any).physicsWorldRef === this;
+		if (!ownedByThisWorld) {
+			this.removeEntityFromTracking(entity.uuid);
+			return;
+		}
+
 		if ((entity as any).characterController) {
 			try { (entity as any).characterController.free(); } catch { /* noop */ }
 			(entity as any).characterController = null;
@@ -520,6 +534,11 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		entity.collider = undefined;
 		entity.colliders = [];
 		(entity as any).characterController = null;
+		// Only release ownership if we still own it; a re-registered instance
+		// has already had its ref reassigned to the new world.
+		if ((entity as any).physicsWorldRef === this) {
+			(entity as any).physicsWorldRef = null;
+		}
 	}
 
 }

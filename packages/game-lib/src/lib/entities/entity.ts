@@ -174,6 +174,13 @@ export class GameEntity<O extends GameEntityOptions>
 	public bodyDesc: RigidBodyDesc | null = null;
 	public body: RigidBody | null = null;
 	public physicsAttached = false;
+	/**
+	 * The physics world that currently owns this entity's body/colliders.
+	 * Tagged on registration and checked on teardown so a stale world never
+	 * frees handles another world now owns (which would throw inside a wasm
+	 * borrow and poison Rapier). Untyped to avoid a circular import.
+	 */
+	public physicsWorldRef: unknown = null;
 	public colliderDesc: ColliderDesc | undefined;
 	public collider: Collider | undefined;
 	public custom: Record<string, any> = {};

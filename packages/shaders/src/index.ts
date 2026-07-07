@@ -9,6 +9,7 @@ export type {
 	ZylemPostEffect,
 	ZylemShaderUniforms,
 	ZylemTSLShader,
+	ZylemTransitionShader,
 } from './types';
 
 // Shaders
@@ -87,6 +88,13 @@ export {
 	type ShadertoyFireOptions,
 	type ShadertoyFireUniforms,
 } from './shaders/shadertoy-fire.tsl';
+export {
+	createStageTransition,
+	type StageTransitionOptions,
+	type StageTransitionPattern,
+	type StageTransitionUniforms,
+	type ZylemStageTransition,
+} from './shaders/stage-transition.tsl';
 
 // Shadertoy runtime transpiler
 export {

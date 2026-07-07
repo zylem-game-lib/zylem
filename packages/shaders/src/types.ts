@@ -60,3 +60,19 @@ export type ZylemPostEffect = (
 	inputNode: any,
 	ctx: { scenePass: any; scene: any; camera: any },
 ) => any;
+
+/**
+ * A stage transition shader: blends the outgoing and incoming stage frames
+ * during a stage switch. Receives the outgoing frame node (`fromNode`), the
+ * incoming frame node (`toNode`), and a float `progress` uniform node
+ * (0 = fully outgoing, 1 = fully incoming); returns the blended color node.
+ *
+ * Structurally compatible with `ZylemTransitionShader` in
+ * `@zylem/game-lib`, so transitions from this package plug directly into
+ * `game.nextStage({ transition: { shader } })`.
+ */
+export type ZylemTransitionShader = (ctx: {
+	fromNode: any;
+	toNode: any;
+	progress: any;
+}) => any;
