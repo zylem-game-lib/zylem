@@ -1,16 +1,21 @@
 {
   "name": "@zylem/editor",
-  "private": true,
   "version": "0.6.4",
   "type": "module",
   "main": "./dist/zylem-editor.js",
   "module": "./dist/zylem-editor.js",
-  "types": "./src/index.ts",
+  "types": "./dist/zylem-editor.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/zylem-editor.d.ts",
       "import": "./dist/zylem-editor.js"
     }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "dev": "vite --host",
@@ -26,7 +31,7 @@
     "valtio": "^2.1.7"
   },
   "peerDependencies": {
-    "@zylem/game-lib": "workspace:*"
+    "@zylem/game-lib": "workspace:^"
   },
   "devDependencies": {
     "typescript": "6.0.3",
