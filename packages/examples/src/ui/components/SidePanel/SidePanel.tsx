@@ -7,7 +7,7 @@ import * as styles from './SidePanel.css';
 const SidePanel: Component = () => {
   return (
     <aside
-      class={`${styles.sidePanel} ${!appStore.sidePanelOpen ? styles.sidePanelClosed : ''} sidebar`}
+      class={`${styles.sidePanel} ${!appStore.sidePanelOpen ? styles.sidePanelClosed : ''}`}
       data-side-panel
     >
       <HeaderSearch />

@@ -46,13 +46,22 @@ export const toolbarButton = style({
   justifyContent: 'center',
   width: '2.4rem',
   height: '2.4rem',
-  border: `1px solid color-mix(in srgb, ${vars.colors.border} 80%, transparent)`,
-  background: `color-mix(in srgb, ${vars.colors.surface} 88%, black 12%)`,
-  color: vars.colors.text,
-  borderRadius: '999px',
+  border: '1px solid rgba(150, 210, 255, 0.5)',
+  background: vars.material.buttonGlass,
+  boxShadow: vars.effects.shadowButton,
+  color: '#e8f4ff',
+  textShadow: '0 1px 1px rgba(0, 0, 0, 0.6)',
+  borderRadius: vars.radii.control,
   padding: 0,
   fontSize: '0.8rem',
   cursor: 'pointer',
+  transition: `box-shadow ${vars.motion.fast} ${vars.motion.easeOut}, background ${vars.motion.fast} ${vars.motion.easeOut}`,
+  selectors: {
+    '&:hover': {
+      background: vars.material.buttonGlassHover,
+      boxShadow: `${vars.effects.shadowButton}, ${vars.effects.glowPrimary}`,
+    },
+  },
 });
 
 export const buttonText = style({
@@ -75,9 +84,10 @@ globalStyle(`${buttonIcon} svg`, {
 });
 
 export const toolbarButtonActive = style({
-  background: vars.colors.primary,
-  borderColor: vars.colors.primary,
-  color: 'white',
+  background: vars.material.buttonGlassActive,
+  borderColor: 'rgba(190, 255, 203, 0.7)',
+  color: '#f2fff5',
+  boxShadow: `${vars.effects.shadowButton}, ${vars.effects.glowActive}`,
 });
 
 export const viewportMeta = style({

@@ -1,4 +1,5 @@
 import { type Component, For, Match, Show, Switch, createSignal } from 'solid-js';
+import { Button, Panel, Slider } from '@zylem/ui/components';
 import type {
 	ColorControl,
 	GlslControl,
@@ -10,24 +11,22 @@ import type {
 const RangeRow: Component<{ control: RangeControl }> = props => {
 	const [value, setValue] = createSignal(props.control.value);
 	return (
-		<label class="control-row">
+		<div class="control-row">
 			<span class="control-label">
 				{props.control.label}
 				<span class="control-value">{formatNumber(value())}</span>
 			</span>
-			<input
-				type="range"
-				min={props.control.min}
-				max={props.control.max}
-				step={props.control.step}
+			<Slider
 				value={value()}
-				onInput={event => {
-					const next = Number(event.currentTarget.value);
+				minValue={props.control.min}
+				maxValue={props.control.max}
+				step={props.control.step}
+				onChange={next => {
 					setValue(next);
 					props.control.onChange(next);
 				}}
 			/>
-		</label>
+		</div>
 	);
 };
 
@@ -64,8 +63,9 @@ const GlslRow: Component<{ control: GlslControl }> = props => {
 					setApplied(false);
 				}}
 			/>
-			<button
-				type="button"
+			<Button
+				size="sm"
+				variant="primary"
 				onClick={() => {
 					const result = props.control.apply(code());
 					setError(result);
@@ -73,7 +73,7 @@ const GlslRow: Component<{ control: GlslControl }> = props => {
 				}}
 			>
 				Apply shader
-			</button>
+			</Button>
 			<Show when={error()}>
 				<div class="control-error">{error()}</div>
 			</Show>
@@ -102,13 +102,12 @@ const ControlRow: Component<{ control: ShowcaseControl }> = props => {
 
 const ControlsPanel: Component<{ demo: ShowcaseDemo; title: string }> = props => {
 	return (
-		<aside class="controls-panel">
-			<h2>{props.title}</h2>
+		<Panel class="controls-panel zylem-scroll" title={props.title}>
 			<Show when={props.demo.description}>
 				<p class="controls-description">{props.demo.description}</p>
 			</Show>
 			<For each={props.demo.controls}>{control => <ControlRow control={control} />}</For>
-		</aside>
+		</Panel>
 	);
 };
 

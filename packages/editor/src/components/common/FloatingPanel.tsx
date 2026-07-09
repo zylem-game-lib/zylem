@@ -1,7 +1,5 @@
 import { createSignal, onCleanup, onMount, Show, type JSX, type Component, type Accessor } from 'solid-js';
-import PanelBottomOpen from 'lucide-solid/icons/panel-bottom-open';
-import PanelBottomClose from 'lucide-solid/icons/panel-bottom-close';
-import X from 'lucide-solid/icons/x';
+import { WindowControls } from '@zylem/ui/components';
 import { createPanelDocking, DockPreviewOverlay } from './panel-docking';
 
 // Minimum drag threshold to distinguish from clicks
@@ -282,30 +280,12 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                 onPointerDown={handleTitleBarPointerDown}
             >
                 <span class="floating-panel-title">{props.title ?? 'Panel'}</span>
-                <div class="floating-panel-controls">
-                    <Show when={props.collapsible}>
-                        <button
-                            class="floating-panel-button"
-                            onClick={toggleCollapse}
-                            title={isCollapsed() ? 'Expand panel' : 'Collapse panel'}
-                            type="button"
-                        >
-                            {isCollapsed() ? <PanelBottomOpen size={12} /> : <PanelBottomClose size={12} />}
-                        </button>
-                    </Show>
-                    <Show when={props.onClose}>
-                        <button
-                            class="floating-panel-button"
-                            onClick={props.onClose}
-                            type="button"
-                            aria-label="Close panel"
-                            title="Close panel"
-                            data-testid="floating-panel-close"
-                        >
-                            <X size={12} />
-                        </button>
-                    </Show>
-                </div>
+                <WindowControls
+                    collapsed={isCollapsed()}
+                    onCollapse={props.collapsible ? toggleCollapse : undefined}
+                    onClose={props.onClose}
+                    closeTestId="floating-panel-close"
+                />
             </div>
 
             {/* Content area */}

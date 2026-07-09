@@ -1,3 +1,4 @@
+import { Console as UIConsole } from '@zylem/ui/components';
 import { createSignal, onCleanup, type Component } from 'solid-js';
 import { subscribe } from 'valtio/vanilla';
 import { consoleState, clearConsole } from '..';
@@ -45,24 +46,11 @@ export const Console: Component = () => {
     unsubscribe();
   });
 
-  const handleInput = (event: Event) => {
-    const target = event.target as HTMLTextAreaElement;
-    setConsoleContent(target.value);
-  };
-
   return (
-    <div class="zylem-console-container">
-      <div class="zylem-console-wrapper">
-        <textarea
-          value={consoleContent()}
-          onInput={handleInput}
-          class="zylem-console"
-          spellcheck={false}
-        />
-        <button onClick={clearConsole} class="zylem-console-clear zylem-button">
-          Clear
-        </button>
-      </div>
-    </div>
+    <UIConsole
+      value={consoleContent()}
+      onInput={setConsoleContent}
+      onClear={clearConsole}
+    />
   );
 };

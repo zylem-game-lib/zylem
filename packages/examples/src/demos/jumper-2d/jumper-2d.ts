@@ -1,7 +1,7 @@
 import { Color, Vector3 } from 'three';
 import { createBox, createSprite } from '@zylem/game-lib/entity';
 import { createCamera, createGame, createStage, Perspectives } from '@zylem/game-lib/core';
-import { Jumper2D } from '@zylem/game-lib/behavior';
+import { Jumper2DBehavior } from '@zylem/game-lib/behavior';
 import { mergeInputConfigs, useArrowsForAxes, useWASDForAxes } from '@zylem/game-lib/input';
 import { demoAsset } from '../../assets/manifest';
 
@@ -44,7 +44,7 @@ export default function createDemo() {
 		me.body?.lockRotations(true, true);
 	});
 
-	player.use(Jumper2D, {
+	player.use(Jumper2DBehavior, {
 		jumpHeight: 3.5,
 		gravity: 18,
 		maxJumps: 2,

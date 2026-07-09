@@ -23,6 +23,42 @@ export const STAGE_EVENT_STRIDE = 6;
 /** Fixed pose-scratch stride in floats. Must match `POSE_SCRATCH_LEN` in Rust. */
 export const STAGE_POSE_LEN = 7;
 
+/**
+ * Per-slot stride of the batched input buffer. Must match `STAGE_INPUT_STRIDE`
+ * in Rust. Layout: `[axisA, axisB, axisC, axisD, buttons, reserved, reserved,
+ * flags]` — set `flags` to 1 after writing; the runtime consumes and clears it
+ * on every step.
+ */
+export const STAGE_INPUT_STRIDE = 8;
+
+/** Input-buffer button bitmask values (float-encoded in slot index 4). */
+export const STAGE_INPUT_BUTTON_JUMP = 1;
+export const STAGE_INPUT_BUTTON_RUN = 2;
+
+/**
+ * Per-slot stride of the behavior snapshot buffer. Must match
+ * `STAGE_SNAPSHOT_STRIDE` in Rust. Layout: `[grounded, fsmState, jumpCount,
+ * verticalVelocity, speed, yaw, pitch, flags]` — `flags` is 1 when the slot
+ * has behavior data.
+ */
+export const STAGE_SNAPSHOT_STRIDE = 8;
+
+/**
+ * Decoded per-slot behavior snapshot, written by the runtime after every
+ * step. Values reflect the state at the end of the previous `step()` call
+ * (one-frame read lag on the TS side, since behavior systems run before
+ * `wasmStage.step`).
+ */
+export interface StageBehaviorSnapshot {
+	grounded: boolean;
+	fsmState: number;
+	jumpCount: number;
+	verticalVelocity: number;
+	speed: number;
+	yaw: number;
+	pitch: number;
+}
+
 export const enum StageBodyKind {
 	Dynamic = 0,
 	Static = 1,
@@ -264,6 +300,14 @@ export interface StageWasmExports {
 	zylem_stage_render_len(): number;
 	zylem_stage_render_stride(): number;
 
+	zylem_stage_input_ptr(): number;
+	zylem_stage_input_len(): number;
+	zylem_stage_input_stride(): number;
+
+	zylem_stage_snapshot_ptr(): number;
+	zylem_stage_snapshot_len(): number;
+	zylem_stage_snapshot_stride(): number;
+
 	zylem_stage_event_ptr(): number;
 	zylem_stage_event_len(): number;
 	zylem_stage_event_count(): number;
@@ -319,7 +363,10 @@ export interface StageWasmExports {
 	zylem_stage_set_jumper_2d_input(slot: number, jumpPressed: number): void;
 	zylem_stage_query_jumper_2d(slot: number): number;
 
-	zylem_stage_attach_jumper_3d(slot: number, jumpForce: number, maxJumps: number, gravity: number): number;
+	zylem_stage_attach_jumper_3d(
+		slot: number, jumpForce: number, maxJumps: number, gravity: number,
+		coyoteTime: number, jumpBufferTime: number,
+	): number;
 	zylem_stage_set_jumper_3d_input(slot: number, jump: number): void;
 	zylem_stage_query_jumper_3d(slot: number): number;
 
@@ -334,10 +381,29 @@ export interface StageWasmExports {
 		slot: number, halfHeight: number, radius: number,
 		walkSpeed: number, runSpeed: number, jumpForce: number,
 		maxJumps: number, gravity: number,
+		coyoteTime: number, jumpBufferTime: number,
+		jumpCutMultiplier: number, multiJumpWindow: number,
+		maxSlopeDeg: number, minSlopeSlideDeg: number,
+		autostepHeight: number, autostepMinWidth: number,
+		snapToGround: number, characterOffset: number,
 	): number;
 	zylem_stage_set_platformer_3d_input_axes(slot: number, moveX: number, moveZ: number): void;
 	zylem_stage_set_platformer_3d_input_buttons(slot: number, jump: number, run: number): void;
 	zylem_stage_query_platformer_3d(slot: number): number;
+
+	zylem_stage_attach_platformer_2d(
+		slot: number, halfHeight: number, radius: number,
+		walkSpeed: number, runSpeed: number, jumpForce: number,
+		maxJumps: number, gravity: number,
+		coyoteTime: number, jumpBufferTime: number,
+		jumpCutMultiplier: number, multiJumpWindow: number,
+		maxSlopeDeg: number, minSlopeSlideDeg: number,
+		autostepHeight: number, autostepMinWidth: number,
+		snapToGround: number, characterOffset: number,
+	): number;
+	zylem_stage_set_platformer_2d_input_axes(slot: number, moveX: number): void;
+	zylem_stage_set_platformer_2d_input_buttons(slot: number, jump: number, run: number): void;
+	zylem_stage_query_platformer_2d(slot: number): number;
 
 	zylem_stage_attach_first_person(
 		slot: number, walkSpeed: number, runSpeed: number,
@@ -369,6 +435,8 @@ export class WasmStageRuntime {
 	readonly exports: StageWasmExports;
 	private readonly memory: WebAssembly.Memory;
 	private renderView: Float32Array = new Float32Array(0);
+	private inputView: Float32Array = new Float32Array(0);
+	private snapshotView: Float32Array = new Float32Array(0);
 	private eventView: Float32Array = new Float32Array(0);
 	private poseView: Float32Array = new Float32Array(0);
 	private vec3View: Float32Array = new Float32Array(0);
@@ -395,6 +463,10 @@ export class WasmStageRuntime {
 		const buffer = this.memory.buffer;
 		const renderPtr = this.exports.zylem_stage_render_ptr();
 		const renderLen = this.exports.zylem_stage_render_len();
+		const inputPtr = this.exports.zylem_stage_input_ptr();
+		const inputLen = this.exports.zylem_stage_input_len();
+		const snapshotPtr = this.exports.zylem_stage_snapshot_ptr();
+		const snapshotLen = this.exports.zylem_stage_snapshot_len();
 		const eventPtr = this.exports.zylem_stage_event_ptr();
 		const eventLen = this.exports.zylem_stage_event_len();
 		const posePtr = this.exports.zylem_stage_pose_ptr();
@@ -406,6 +478,8 @@ export class WasmStageRuntime {
 		const scratchCap = this.exports.zylem_stage_scratch_capacity();
 
 		this.renderView = renderLen > 0 ? new Float32Array(buffer, renderPtr, renderLen) : new Float32Array(0);
+		this.inputView = inputLen > 0 ? new Float32Array(buffer, inputPtr, inputLen) : new Float32Array(0);
+		this.snapshotView = snapshotLen > 0 ? new Float32Array(buffer, snapshotPtr, snapshotLen) : new Float32Array(0);
 		this.eventView = eventLen > 0 ? new Float32Array(buffer, eventPtr, eventLen) : new Float32Array(0);
 		this.poseView = poseLen > 0 ? new Float32Array(buffer, posePtr, poseLen) : new Float32Array(0);
 		this.vec3View = vec3Ptr !== 0 ? new Float32Array(buffer, vec3Ptr, 3) : new Float32Array(0);
@@ -653,6 +727,95 @@ export class WasmStageRuntime {
 		return events;
 	}
 
+	// ─── Batched input / snapshot buffers ─────────────────────────────
+
+	/** Writable view over the slot-indexed input buffer ({@link STAGE_INPUT_STRIDE} floats/slot). */
+	get input(): Float32Array {
+		return this.inputView;
+	}
+
+	get inputStride(): number {
+		return STAGE_INPUT_STRIDE;
+	}
+
+	/** Read-only view over the per-slot behavior snapshot buffer ({@link STAGE_SNAPSHOT_STRIDE} floats/slot). */
+	get snapshot(): Float32Array {
+		return this.snapshotView;
+	}
+
+	get snapshotStride(): number {
+		return STAGE_SNAPSHOT_STRIDE;
+	}
+
+	/**
+	 * Write the primary movement axes for a slot into the batched input
+	 * buffer and mark the slot dirty. Field-scoped (doesn't touch look
+	 * deltas or buttons) so multiple behaviors composed on one entity can
+	 * each write their part.
+	 */
+	writeInputAxes(slot: number, axisA: number, axisB: number): boolean {
+		const base = slot * STAGE_INPUT_STRIDE;
+		const view = this.inputView;
+		if (slot < 0 || base + STAGE_INPUT_STRIDE > view.length) return false;
+		view[base] = axisA;
+		view[base + 1] = axisB;
+		view[base + 7] = 1;
+		return true;
+	}
+
+	/** Write the look deltas (first-person yaw/pitch) for a slot. */
+	writeInputLook(slot: number, yawDelta: number, pitchDelta: number): boolean {
+		const base = slot * STAGE_INPUT_STRIDE;
+		const view = this.inputView;
+		if (slot < 0 || base + STAGE_INPUT_STRIDE > view.length) return false;
+		view[base + 2] = yawDelta;
+		view[base + 3] = pitchDelta;
+		view[base + 7] = 1;
+		return true;
+	}
+
+	/**
+	 * Set or clear one button bit ({@link STAGE_INPUT_BUTTON_JUMP} /
+	 * {@link STAGE_INPUT_BUTTON_RUN}) in a slot's input bitmask.
+	 */
+	writeInputButton(slot: number, buttonMask: number, pressed: boolean): boolean {
+		const base = slot * STAGE_INPUT_STRIDE;
+		const view = this.inputView;
+		if (slot < 0 || base + STAGE_INPUT_STRIDE > view.length) return false;
+		const current = view[base + 4]! | 0;
+		view[base + 4] = pressed ? (current | buttonMask) : (current & ~buttonMask);
+		view[base + 7] = 1;
+		return true;
+	}
+
+	/**
+	 * Decode a slot's behavior snapshot from the buffer written at the end of
+	 * the previous step. Returns `null` when the slot has no behavior data.
+	 */
+	readSnapshot(slot: number, out?: StageBehaviorSnapshot): StageBehaviorSnapshot | null {
+		const base = slot * STAGE_SNAPSHOT_STRIDE;
+		const view = this.snapshotView;
+		if (slot < 0 || base + STAGE_SNAPSHOT_STRIDE > view.length) return null;
+		if (view[base + 7] === 0) return null;
+		const result: StageBehaviorSnapshot = out ?? {
+			grounded: false,
+			fsmState: 0,
+			jumpCount: 0,
+			verticalVelocity: 0,
+			speed: 0,
+			yaw: 0,
+			pitch: 0,
+		};
+		result.grounded = view[base]! > 0.5;
+		result.fsmState = view[base + 1]! | 0;
+		result.jumpCount = view[base + 2]! | 0;
+		result.verticalVelocity = view[base + 3]!;
+		result.speed = view[base + 4]!;
+		result.yaw = view[base + 5]!;
+		result.pitch = view[base + 6]!;
+		return result;
+	}
+
 	// ─── Behavior helpers ─────────────────────────────────────────────
 
 	get queryScratch(): Float32Array {
@@ -798,8 +961,14 @@ export class WasmStageRuntime {
 		};
 	}
 
-	attachJumper3D(slot: number, opts: { jumpForce: number; maxJumps: number; gravity: number }): boolean {
-		return this.exports.zylem_stage_attach_jumper_3d(slot, opts.jumpForce, opts.maxJumps >>> 0, opts.gravity) !== 0;
+	attachJumper3D(
+		slot: number,
+		opts: { jumpForce: number; maxJumps: number; gravity: number; coyoteTime?: number; jumpBufferTime?: number },
+	): boolean {
+		return this.exports.zylem_stage_attach_jumper_3d(
+			slot, opts.jumpForce, opts.maxJumps >>> 0, opts.gravity,
+			opts.coyoteTime ?? 0.1, opts.jumpBufferTime ?? 0.08,
+		) !== 0;
 	}
 
 	setJumper3DInput(slot: number, jump: boolean): void {
@@ -835,13 +1004,25 @@ export class WasmStageRuntime {
 
 	attachPlatformer3D(
 		slot: number,
-		opts: { halfHeight: number; radius: number; walkSpeed: number; runSpeed: number; jumpForce: number; maxJumps: number; gravity: number },
+		opts: {
+			halfHeight: number; radius: number; walkSpeed: number; runSpeed: number;
+			jumpForce: number; maxJumps: number; gravity: number;
+			coyoteTime?: number; jumpBufferTime?: number; jumpCutMultiplier?: number;
+			multiJumpWindow?: number; slopeClimbAngle?: number; slopeSlideAngle?: number;
+			autostepHeight?: number; autostepMinWidth?: number;
+			snapToGroundDistance?: number; characterOffset?: number;
+		},
 	): boolean {
 		return (
 			this.exports.zylem_stage_attach_platformer_3d(
 				slot, opts.halfHeight, opts.radius,
 				opts.walkSpeed, opts.runSpeed, opts.jumpForce,
 				opts.maxJumps >>> 0, opts.gravity,
+				opts.coyoteTime ?? 0.1, opts.jumpBufferTime ?? 0.1,
+				opts.jumpCutMultiplier ?? 0.5, opts.multiJumpWindow ?? 0.15,
+				opts.slopeClimbAngle ?? 50, opts.slopeSlideAngle ?? 40,
+				opts.autostepHeight ?? 0.3, opts.autostepMinWidth ?? 0.1,
+				opts.snapToGroundDistance ?? 0.3, opts.characterOffset ?? 0.05,
 			) !== 0
 		);
 	}
@@ -862,6 +1043,50 @@ export class WasmStageRuntime {
 			jumpCount: v[1]! | 0,
 			fsmState: v[2]! | 0,
 			speed: v[3]!,
+		};
+	}
+
+	attachPlatformer2D(
+		slot: number,
+		opts: {
+			halfHeight: number; radius: number; walkSpeed: number; runSpeed: number;
+			jumpForce: number; maxJumps: number; gravity: number;
+			coyoteTime?: number; jumpBufferTime?: number; jumpCutMultiplier?: number;
+			multiJumpWindow?: number; slopeClimbAngle?: number; slopeSlideAngle?: number;
+			autostepHeight?: number; autostepMinWidth?: number;
+			snapToGroundDistance?: number; characterOffset?: number;
+		},
+	): boolean {
+		return (
+			this.exports.zylem_stage_attach_platformer_2d(
+				slot, opts.halfHeight, opts.radius,
+				opts.walkSpeed, opts.runSpeed, opts.jumpForce,
+				opts.maxJumps >>> 0, opts.gravity,
+				opts.coyoteTime ?? 0.1, opts.jumpBufferTime ?? 0.1,
+				opts.jumpCutMultiplier ?? 0.5, opts.multiJumpWindow ?? 0.15,
+				opts.slopeClimbAngle ?? 50, opts.slopeSlideAngle ?? 40,
+				opts.autostepHeight ?? 0.25, opts.autostepMinWidth ?? 0.05,
+				opts.snapToGroundDistance ?? 0.2, opts.characterOffset ?? 0.05,
+			) !== 0
+		);
+	}
+
+	setPlatformer2DInputAxes(slot: number, moveX: number): void {
+		this.exports.zylem_stage_set_platformer_2d_input_axes(slot, moveX);
+	}
+
+	setPlatformer2DInputButtons(slot: number, jump: boolean, run: boolean): void {
+		this.exports.zylem_stage_set_platformer_2d_input_buttons(slot, jump ? 1 : 0, run ? 1 : 0);
+	}
+
+	queryPlatformer2D(slot: number): { grounded: boolean; jumpCount: number; fsmState: number; verticalVelocity: number } | null {
+		if (this.exports.zylem_stage_query_platformer_2d(slot) === 0) return null;
+		const v = this.queryView;
+		return {
+			grounded: v[0]! > 0.5,
+			jumpCount: v[1]! | 0,
+			fsmState: v[2]! | 0,
+			verticalVelocity: v[3]!,
 		};
 	}
 

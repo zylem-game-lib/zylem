@@ -1,6 +1,9 @@
 import { style } from '@vanilla-extract/css';
 import { vars } from '@zylem/ui';
 
+// Carries the glass-panel treatment itself (instead of the library `sidebar`
+// class) so the aside can stay overflow-visible and the `left: 100%` toggle
+// hangs outside the panel without creating scrollbars.
 export const sidePanel = style({
   position: 'absolute',
   left: 0,
@@ -12,10 +15,16 @@ export const sidePanel = style({
   display: 'flex',
   flexDirection: 'column',
   zIndex: 100,
-  background: vars.colors.background,
-  borderRight: `1px solid ${vars.colors.border}`,
+  background: vars.material.glassPanelDark,
+  borderRight: '1px solid rgba(97, 166, 232, 0.28)',
+  backdropFilter: `blur(${vars.effects.blurSm}) saturate(1.1)`,
   transform: 'translateX(0)',
   transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  '@supports': {
+    'not (backdrop-filter: blur(1px))': {
+      background: vars.colors.surface,
+    },
+  },
   '@media': {
     'screen and (max-width: 900px)': {
       position: 'relative',

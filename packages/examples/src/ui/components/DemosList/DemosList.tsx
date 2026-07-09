@@ -6,6 +6,7 @@ import {
   getFilteredExampleSections,
   setSidePanelOpen,
 } from '../../../store/appStore';
+import { EmptyState } from '@zylem/ui/components';
 import DemoListItem from '../DemoListItem/DemoListItem';
 import * as styles from './DemosList.css';
 import {
@@ -63,9 +64,9 @@ const DemosList: Component = () => {
       <Show
         when={filteredSections().length > 0}
         fallback={
-          <div class={styles.emptyState}>
+          <EmptyState class={styles.emptyState}>
             No demos match "{appStore.searchTerm.trim()}".
-          </div>
+          </EmptyState>
         }
       >
         <For each={filteredSections()}>

@@ -1,3 +1,11 @@
+@import '@zylem/ui/styles.css';
+
+/*
+ * Shader showcase — HyperGlass theme. Chrome (sidebar, panel, buttons,
+ * sliders) comes from @zylem/ui; this file only keeps app-specific layout
+ * and the shader control rows.
+ */
+
 * {
 	margin: 0;
 	padding: 0;
@@ -6,12 +14,8 @@
 
 :root {
 	color-scheme: dark;
-	--bg: #0b0e14;
-	--panel: #121722;
-	--panel-border: #1f2937;
-	--text: #e5eaf2;
-	--text-dim: #8a94a6;
-	--accent: #38bdf8;
+	--text-dim: var(--zylem-color-text-secondary);
+	--accent: var(--zylem-color-primary);
 }
 
 html,
@@ -19,11 +23,9 @@ body {
 	width: 100%;
 	height: 100%;
 	overflow: hidden;
-	background: var(--bg);
-	color: var(--text);
-	font-family:
-		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-		Cantarell, sans-serif;
+	background: var(--zylem-color-background);
+	color: var(--zylem-color-text);
+	font-family: var(--zylem-font-family);
 }
 
 #root {
@@ -37,54 +39,24 @@ body {
 	height: 100%;
 }
 
-/* Sidebar */
-.sidebar {
+/* Sidebar (library `.sidebar` provides the glass treatment) */
+.showcase-sidebar {
 	width: 240px;
 	flex-shrink: 0;
-	background: var(--panel);
-	border-right: 1px solid var(--panel-border);
-	padding: 20px 14px;
-	overflow-y: auto;
-	display: flex;
-	flex-direction: column;
+	padding: 20px 6px;
 	gap: 18px;
 }
 
 .sidebar-title {
-	color: var(--text);
+	color: var(--zylem-color-text);
 	text-decoration: none;
 	font-size: 14px;
 	font-weight: 600;
 	letter-spacing: 0.02em;
+	padding: 0 10px;
 }
 
 .sidebar-title-main {
-	color: var(--accent);
-}
-
-.sidebar-section-name {
-	font-size: 11px;
-	text-transform: uppercase;
-	letter-spacing: 0.1em;
-	color: var(--text-dim);
-	margin-bottom: 6px;
-}
-
-.sidebar-link {
-	display: block;
-	padding: 7px 10px;
-	border-radius: 6px;
-	color: var(--text);
-	text-decoration: none;
-	font-size: 13.5px;
-}
-
-.sidebar-link:hover {
-	background: rgba(255, 255, 255, 0.06);
-}
-
-.sidebar-link.active {
-	background: rgba(56, 189, 248, 0.15);
 	color: var(--accent);
 }
 
@@ -131,7 +103,7 @@ body {
 }
 
 .landing h1 {
-	color: var(--text);
+	color: var(--zylem-color-text);
 	font-size: 26px;
 	font-weight: 600;
 }
@@ -141,7 +113,7 @@ body {
 	font-size: 0.95em;
 }
 
-/* Controls panel */
+/* Controls panel (library Panel provides the glass chrome) */
 .controls-panel {
 	position: absolute;
 	top: 16px;
@@ -149,25 +121,15 @@ body {
 	width: 280px;
 	max-height: calc(100% - 32px);
 	overflow-y: auto;
-	background: rgba(18, 23, 34, 0.92);
-	border: 1px solid var(--panel-border);
-	border-radius: 10px;
-	padding: 16px;
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	backdrop-filter: blur(6px);
-}
-
-.controls-panel h2 {
-	font-size: 15px;
-	font-weight: 600;
 }
 
 .controls-description {
 	font-size: 12.5px;
 	line-height: 1.45;
 	color: var(--text-dim);
+	margin-bottom: 10px;
 }
 
 .control-row {
@@ -175,22 +137,18 @@ body {
 	flex-direction: column;
 	gap: 5px;
 	font-size: 12.5px;
+	padding: 6px 0;
 }
 
 .control-label {
 	display: flex;
 	justify-content: space-between;
-	color: var(--text);
+	color: var(--zylem-color-text);
 }
 
 .control-value {
 	color: var(--text-dim);
 	font-variant-numeric: tabular-nums;
-}
-
-.control-row input[type='range'] {
-	width: 100%;
-	accent-color: var(--accent);
 }
 
 .control-row-color {
@@ -202,8 +160,9 @@ body {
 .control-row-color input[type='color'] {
 	width: 44px;
 	height: 26px;
-	border: none;
-	background: none;
+	border: 1px solid rgba(97, 166, 232, 0.4);
+	border-radius: var(--zylem-radius-control);
+	background: var(--zylem-material-field-glass);
 	cursor: pointer;
 }
 
@@ -211,34 +170,29 @@ body {
 	width: 100%;
 	min-height: 180px;
 	resize: vertical;
-	background: #0a0d13;
-	color: var(--text);
-	border: 1px solid var(--panel-border);
-	border-radius: 6px;
+	background: var(--zylem-material-field-glass);
+	color: var(--zylem-color-text);
+	border: 1px solid rgba(97, 166, 232, 0.32);
+	border-radius: var(--zylem-radius-control);
+	box-shadow: var(--zylem-effect-shadow-inset);
 	padding: 8px;
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-size: 11.5px;
 	line-height: 1.45;
+	outline: none;
 }
 
-.control-row-glsl button {
+.control-row-glsl textarea:focus {
+	border-color: rgba(97, 166, 232, 0.6);
+	box-shadow: var(--zylem-effect-shadow-inset), var(--zylem-effect-focus-ring);
+}
+
+.control-row-glsl .zylem-button {
 	align-self: flex-start;
-	background: var(--accent);
-	color: #06222e;
-	font-weight: 600;
-	font-size: 12.5px;
-	border: none;
-	border-radius: 6px;
-	padding: 7px 12px;
-	cursor: pointer;
-}
-
-.control-row-glsl button:hover {
-	filter: brightness(1.1);
 }
 
 .control-error {
-	color: #f87171;
+	color: #ff8472;
 	font-size: 12px;
 	white-space: pre-wrap;
 }

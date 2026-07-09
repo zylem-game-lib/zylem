@@ -76,9 +76,9 @@ function clearVelocityChannels(store: TransformState): void {
 }
 
 /**
- * Collect per-source velocity intents from the store (channels + legacy
- * per-axis / whole-vector fallbacks) into a single resolvable list. Shared by
- * the Rapier and WASM application paths.
+ * Collect per-source velocity intents from the store (channels + per-axis
+ * fallbacks) into a single resolvable list. Shared by the Rapier and WASM
+ * application paths.
  */
 function collectVelocityIntents(store: TransformState): ResolvedIntent[] {
 	const intents: ResolvedIntent[] = [];
@@ -96,16 +96,7 @@ function collectVelocityIntents(store: TransformState): ResolvedIntent[] {
 		}
 	}
 
-	if (store.dirty.velocity) {
-		intents.push({
-			sourceId: '__legacy_velocity__',
-			mode: 'replace',
-			priority: -100,
-			x: store.velocity.x,
-			y: store.velocity.y,
-			z: store.velocity.z,
-		});
-	} else if (store.dirty.velocityX || store.dirty.velocityY || store.dirty.velocityZ) {
+	if (store.dirty.velocityX || store.dirty.velocityY || store.dirty.velocityZ) {
 		intents.push({
 			sourceId: '__legacy_per_axis__',
 			mode: 'replace',
@@ -122,7 +113,6 @@ function collectVelocityIntents(store: TransformState): ResolvedIntent[] {
 function resetTransformDirty(store: TransformState): void {
 	store.dirty.position = false;
 	store.dirty.rotation = false;
-	store.dirty.velocity = false;
 	store.dirty.velocityX = false;
 	store.dirty.velocityY = false;
 	store.dirty.velocityZ = false;
@@ -145,10 +135,9 @@ function applyTransformChangesViaWasm(
 	const hasRotation = store.dirty.rotation;
 	const hasAngularVelocity = store.dirty.angularVelocity;
 	const hasPerAxis = store.dirty.velocityX || store.dirty.velocityY || store.dirty.velocityZ;
-	const hasLegacyVelocity = store.dirty.velocity;
 	const hasChannels = store.dirty.velocityChannels;
 
-	if (!hasPosition && !hasRotation && !hasAngularVelocity && !hasPerAxis && !hasLegacyVelocity && !hasChannels) {
+	if (!hasPosition && !hasRotation && !hasAngularVelocity && !hasPerAxis && !hasChannels) {
 		return;
 	}
 
@@ -253,10 +242,9 @@ export function applyTransformChanges(
 	const hasRotation = store.dirty.rotation;
 	const hasAngularVelocity = store.dirty.angularVelocity;
 	const hasPerAxis = store.dirty.velocityX || store.dirty.velocityY || store.dirty.velocityZ;
-	const hasLegacyVelocity = store.dirty.velocity;
 	const hasChannels = store.dirty.velocityChannels;
 
-	if (!hasPosition && !hasRotation && !hasAngularVelocity && !hasPerAxis && !hasLegacyVelocity && !hasChannels) {
+	if (!hasPosition && !hasRotation && !hasAngularVelocity && !hasPerAxis && !hasChannels) {
 		return;
 	}
 

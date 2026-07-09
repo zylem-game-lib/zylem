@@ -26,30 +26,16 @@ export const title = style({
   },
 });
 
-export const searchInput = style({
+// Layout wrapper for the shared `SearchInput` component; visual treatment
+// comes from the HyperGlass `.zylem-search` global styles.
+export const searchField = style({
   width: '100%',
-  maxWidth: '100%',
-  boxSizing: 'border-box',
-  background: vars.colors.surfaceHover,
-  border: `1px solid ${vars.colors.border}`,
-  borderRadius: vars.borders.radius,
-  padding: `${vars.spacing.sm} ${vars.spacing.md}`,
-  fontSize: '0.875rem',
-  fontFamily: vars.typography.fontFamily,
-  color: vars.colors.text,
-  selectors: {
-    '&:focus': {
-      outline: 'none',
-      borderColor: vars.colors.primary,
-    },
-  },
+});
+
+globalStyle(`${searchField} input`, {
   '@media': {
     'screen and (max-width: 900px)': {
       fontSize: '1rem',
     },
   },
-});
-
-globalStyle(`${searchInput}::placeholder`, {
-  color: vars.colors.textSecondary,
 });

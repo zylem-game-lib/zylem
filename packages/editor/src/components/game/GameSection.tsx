@@ -1,3 +1,4 @@
+import { Button } from '@zylem/ui/components';
 import type { Component } from 'solid-js';
 import { Show } from 'solid-js';
 import { useEditor } from '../EditorContext';
@@ -43,8 +44,8 @@ export const GameSection: Component = () => {
                 </section>
             </Show>
             <section class="zylem-toolbar">
-                <button
-                    class="zylem-toolbar-btn zylem-button"
+                <Button
+                    size="sm"
                     onClick={() => {
                         printToConsole(
                             `Global State: ${JSON.stringify(game.globals, null, 2)}`,
@@ -52,15 +53,15 @@ export const GameSection: Component = () => {
                     }}
                 >
                     Print Global State
-                </button>
-                <button
-                    class="zylem-toolbar-btn zylem-button"
+                </Button>
+                <Button
+                    size="sm"
                     onClick={() => {
                         printToConsole(`All State: ${JSON.stringify(game, null, 2)}`);
                     }}
                 >
                     Print All
-                </button>
+                </Button>
             </section>
         </div>
     );
