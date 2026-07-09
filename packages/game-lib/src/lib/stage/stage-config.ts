@@ -37,6 +37,13 @@ export interface StageWasmRuntimeConfig {
 	 * (WASM owns transforms) and renders them via the {@link RenderBundleManager}
 	 * (WebGPU `BundleGroup`s) instead of the Rapier `ZylemWorld` +
 	 * `syncRenderPoses` path. Off by default so existing stages are unaffected.
+	 *
+	 * REQUIRED for the behavior wasm fast path: `runtimeHandle` is only
+	 * assigned by the bridge, so behavior descriptors (platformer, jumper,
+	 * thruster, ...) run their Rust-side systems only when this flag is set.
+	 * Without it, wasm-simulated poses would have no read-back into the
+	 * Three.js scene and entities would be double-simulated by the TS Rapier
+	 * world — so behaviors deliberately fall back to their TS systems.
 	 */
 	bundleRendering?: boolean;
 }

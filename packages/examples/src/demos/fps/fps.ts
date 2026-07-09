@@ -2,7 +2,7 @@ import { Euler, Vector3 } from 'three';
 import { createGame, createStage, createCamera, gameConfig, Perspectives, FirstPersonPerspective } from '@zylem/game-lib/core';
 import { createActor } from '@zylem/game-lib/entity';
 import { useWASDForAxes, useMouseLook } from '@zylem/game-lib/input';
-import { FirstPersonShooterCoordinator, FirstPersonController, Jumper3D } from '@zylem/game-lib/behavior';
+import { FirstPersonShooterCoordinator, FirstPersonBehavior, Jumper3DBehavior } from '@zylem/game-lib/behavior';
 
 import { createFloor, createArenaLevel } from './level';
 
@@ -51,7 +51,7 @@ export default function createDemo() {
 
   // --- Behaviors ---
 
-  const fpsController = player.use(FirstPersonController, {
+  const fpsController = player.use(FirstPersonBehavior, {
     perspective: fps,
     walkSpeed: 8,
     runSpeed: 16,
@@ -63,7 +63,7 @@ export default function createDemo() {
     },
   });
 
-  const jumper = player.use(Jumper3D, {
+  const jumper = player.use(Jumper3DBehavior, {
     jumpHeight: 2.5,
     gravity: 20,
     maxJumps: 2,

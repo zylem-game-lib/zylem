@@ -5,6 +5,7 @@ export const listContainer = style({
   flex: 1,
   minHeight: 0,
   overflowY: 'auto',
+  overflowX: 'hidden',
   overscrollBehavior: 'contain',
   padding: `${vars.spacing.sm} 0 ${vars.spacing.lg}`,
 });
@@ -71,8 +72,7 @@ export const sectionItems = style({
   flexDirection: 'column',
 });
 
+// Margin wrapper for the shared `EmptyState` component.
 export const emptyState = style({
-  padding: vars.spacing.lg,
-  color: `color-mix(in srgb, ${vars.colors.text} 66%, white 34%)`,
-  fontSize: '0.92rem',
+  margin: vars.spacing.lg,
 });

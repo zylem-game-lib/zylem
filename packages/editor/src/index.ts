@@ -16,3 +16,12 @@ export {
     gameState,
     stageState,
 } from './components';
+export {
+    attachEditorStateBridge,
+    dispatchToEditor,
+    mountZylemEditor,
+    type EditorStateBridge,
+    type EditorStateBridgeOptions,
+    type MountedZylemEditor,
+    type MountZylemEditorOptions,
+} from './host/editor-host';

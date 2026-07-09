@@ -10,6 +10,7 @@
  */
 
 import { createSignal, onCleanup, onMount, type Component, type JSX } from 'solid-js';
+import { WindowControls } from '@zylem/ui/components';
 import {
     reattachPanel,
     updateDetachedPanelPosition,
@@ -325,14 +326,7 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
                 }}
             >
                 <span class="floating-panel-title">{getPanelTitle(props.panelId)}</span>
-                <button
-                    class="floating-panel-button zylem-button"
-                    onClick={handleClose}
-                    type="button"
-                    title="Dock back to panel"
-                >
-                    ✕
-                </button>
+                <WindowControls onClose={handleClose} closeLabel="Dock back to panel" />
             </div>
 
             {/* Content area */}

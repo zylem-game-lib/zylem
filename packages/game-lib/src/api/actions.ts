@@ -25,7 +25,6 @@ export { sequence, parallel, repeat, repeatForever } from '../lib/actions/compos
 // Transform store utilities
 export {
 	createTransformStore,
-	resetTransformStore,
 	type TransformState,
 } from '@zylem/behaviors/core';
 export { applyTransformChanges } from '../lib/actions/capabilities/apply-transform';

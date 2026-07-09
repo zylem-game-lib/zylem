@@ -1,14 +1,16 @@
 /**
  * Editor State Store
  *
- * SolidJS store that listens for state dispatch events from @zylem/editor.
- * Can also dispatch updates back to the editor.
+ * SolidJS store that mirrors state dispatched from @zylem/editor.
+ * The window listener + game-lib sync lives in the shared
+ * `attachEditorStateBridge` helper from @zylem/editor; this store adds a
+ * reactive mirror on top and can dispatch updates back to the editor.
  */
 
 import { createStore } from 'solid-js/store';
 import {
-    EDITOR_STATE_DISPATCH,
-    EDITOR_STATE_RECEIVE,
+    attachEditorStateBridge,
+    dispatchToEditor,
     type EditorUpdatePayload,
 } from '@zylem/editor';
 import { debugState, setDebugTool, setPaused, type DebugTools } from '@zylem/game-lib/debug';
@@ -76,34 +78,22 @@ export const resetEditorState = () => {
     });
 };
 
-/**
- * Dispatch state updates to the editor.
- * Use this when external app state changes need to sync back to editor UI.
- */
-export const dispatchToEditor = (payload: EditorUpdatePayload): void => {
-    if (typeof window === 'undefined') return;
+export { dispatchToEditor };
 
-    window.dispatchEvent(
-        new CustomEvent(EDITOR_STATE_RECEIVE, {
-            detail: payload,
-            bubbles: true,
-        }),
-    );
-};
-
-// Listen for state dispatch events from @zylem/editor
+// The shared bridge syncs editor dispatches into game-lib's debug state;
+// mirror the payload into the Solid store so UI stays reactive.
 if (typeof window !== 'undefined') {
-    window.addEventListener(EDITOR_STATE_DISPATCH, ((event: CustomEvent<EditorUpdatePayload>) => {
-        const payload = event.detail;
-        if (payload.gameState?.debugFlag !== undefined) {
-            setDebugFlag(payload.gameState.debugFlag);
-        }
-        if (payload.toolbarState?.tool !== undefined) {
-            setTool(payload.toolbarState.tool);
-        }
-        if (payload.toolbarState?.paused !== undefined) {
-            setPausedState(payload.toolbarState.paused);
-        }
-    }) as EventListener);
+    attachEditorStateBridge({
+        onStateDispatch: (payload: EditorUpdatePayload) => {
+            if (payload.gameState?.debugFlag !== undefined) {
+                setEditorStateStore('gameState', 'debugFlag', payload.gameState.debugFlag);
+            }
+            if (payload.toolbarState?.tool !== undefined) {
+                setEditorStateStore('toolbarState', 'tool', payload.toolbarState.tool);
+            }
+            if (payload.toolbarState?.paused !== undefined) {
+                setEditorStateStore('toolbarState', 'paused', payload.toolbarState.paused);
+            }
+        },
+    });
 }
-

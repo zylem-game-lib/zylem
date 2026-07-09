@@ -9,37 +9,37 @@ import {
 	on,
 	onCleanup,
 } from 'solid-js';
+import { Sidebar as UISidebar, sidebarItemClass } from '@zylem/ui/components';
 import type { ShowcaseDemo } from '../demo-types';
 import { type DemoConfig, demoSections, getDemoByRoutePath } from '../showcase-config';
 import ControlsPanel from './ControlsPanel';
 
 const Sidebar: Component<{ activeId: string | null }> = props => {
 	return (
-		<nav class="sidebar">
+		<UISidebar class="showcase-sidebar">
 			<A href="/" class="sidebar-title">
 				<span class="sidebar-title-main">Zylem</span> Shader Showcase
 			</A>
 			<For each={demoSections}>
 				{section => (
 					<Show when={section.demos.length > 0}>
-						<div class="sidebar-section">
-							<div class="sidebar-section-name">{section.name}</div>
+						<UISidebar.Section title={section.name}>
 							<For each={section.demos}>
 								{demo => (
 									<A
 										href={demo.routePath}
-										class="sidebar-link"
-										classList={{ active: props.activeId === demo.id }}
+										class={sidebarItemClass}
+										classList={{ 'is-active': props.activeId === demo.id }}
 									>
 										{demo.name}
 									</A>
 								)}
 							</For>
-						</div>
+						</UISidebar.Section>
 					</Show>
 				)}
 			</For>
-		</nav>
+		</UISidebar>
 	);
 };
 
@@ -84,7 +84,7 @@ const Workspace: Component = () => {
 	);
 
 	return (
-		<div class="app-shell">
+		<div class="app-shell zylem-hyperglass-root">
 			<Sidebar activeId={activeConfig()?.id ?? null} />
 			<main class="viewer">
 				<Show when={activeConfig()} fallback={<Landing />}>

@@ -1,3 +1,4 @@
+import { Button } from '@zylem/ui/components';
 import type { Component } from 'solid-js';
 import { Show } from 'solid-js';
 import { useEditor } from '../EditorContext';
@@ -33,14 +34,14 @@ export const StageSection: Component = () => {
                 </section>
             </Show>
             <section class="zylem-toolbar">
-                <button
-                    class="zylem-toolbar-btn zylem-button"
+                <Button
+                    size="sm"
                     onClick={() => {
                         printToConsole(`Stage State: ${stageStateToString(stageState)}`);
                     }}
                 >
                     Print Stage State
-                </button>
+                </Button>
             </section>
         </div>
     );
