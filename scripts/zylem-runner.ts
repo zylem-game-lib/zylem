@@ -2,8 +2,8 @@
  * Zylem interactive runner.
  *
  * Invoked via `pnpm run zylem`. Presents a clack-based TUI that asks for an
- * action (run / build / test / bump / publish) and then lets the user select
- * which packages to apply it to.
+ * action (run / build / test / bump / publish / deps) and then lets the user
+ * select which packages to apply it to.
  *
  * The script supports two repo layouts and is shared verbatim across the
  * zylem, behaviors, runtime, and zylem-ui repos:
@@ -17,8 +17,14 @@
  * namespaces, or parameter properties.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import {
+	existsSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	writeFileSync,
+} from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import {
@@ -33,8 +39,9 @@ import {
 	text,
 } from '@clack/prompts';
 
-type Action = 'run' | 'build' | 'test' | 'bump' | 'publish';
+type Action = 'run' | 'build' | 'test' | 'bump' | 'publish' | 'deps';
 type BumpLevel = 'patch' | 'minor' | 'major';
+type DepsMode = 'dev' | 'prod';
 
 interface PackageInfo {
 	name: string;
@@ -44,8 +51,16 @@ interface PackageInfo {
 	scripts: Record<string, string>;
 }
 
+interface SwitchableHit {
+	pkgPath: string;
+	pkgDir: string;
+	repoRoot: string;
+	/** package name -> current version string in the manifest */
+	deps: Map<string, string>;
+}
+
 /** Maps an action to the package.json script it executes. */
-const ACTION_SCRIPT: Record<Action, string> = {
+const ACTION_SCRIPT: Record<Exclude<Action, 'deps'>, string> = {
 	run: 'dev',
 	build: 'build',
 	test: 'test',
@@ -55,6 +70,35 @@ const ACTION_SCRIPT: Record<Action, string> = {
 
 /** Actions that should load the repo .env before spawning. */
 const ENV_ACTIONS: Action[] = ['build', 'bump', 'publish'];
+
+/**
+ * Cross-repo @zylem packages that can flip between local `link:` (dev) and
+ * published semver (prod). Paths are relative to the zylem-projects workspace
+ * root (parent of the individual repos).
+ */
+const SWITCHABLE_PACKAGES: Record<string, string> = {
+	'@zylem/ui': 'zylem-ui',
+	'@zylem/editor': 'zylem/packages/editor',
+	'@zylem/game-lib': 'zylem/packages/game-lib',
+	'@zylem/shaders': 'zylem/packages/shaders',
+	'@zylem/runtime': 'runtime',
+	'@zylem/behaviors': 'behaviors',
+};
+
+const SIBLING_REPO_DIRS = [
+	'zylem',
+	'creator',
+	'behaviors',
+	'zylem-ui',
+	'runtime',
+	'arena',
+] as const;
+
+const DEP_SECTIONS = [
+	'dependencies',
+	'devDependencies',
+	'peerDependencies',
+] as const;
 
 const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 const IS_MONOREPO = existsSync(join(ROOT_DIR, 'packages'));
@@ -150,7 +194,7 @@ function discoverPackages(root: string): PackageInfo[] {
 }
 
 /** Whether a package can perform the given action. */
-function supportsAction(pkg: PackageInfo, action: Action): boolean {
+function supportsAction(pkg: PackageInfo, action: Exclude<Action, 'deps'>): boolean {
 	if (action === 'publish' || action === 'bump') {
 		return !pkg.isPrivate;
 	}
@@ -170,20 +214,25 @@ function runCommand(
 	command: string,
 	args: string[],
 	env: Record<string, string | undefined>,
+	cwd: string = ROOT_DIR,
 ): Promise<number> {
-	return new Promise((resolve) => {
-		const child = spawn(command, args, { stdio: 'inherit', env, cwd: ROOT_DIR });
-		child.on('close', (code) => resolve(code ?? 0));
+	return new Promise((resolvePromise) => {
+		const child = spawn(command, args, { stdio: 'inherit', env, cwd });
+		child.on('close', (code) => resolvePromise(code ?? 0));
 		child.on('error', (error) => {
 			log.error(`Failed to start \`${command}\`: ${error.message}`);
-			resolve(1);
+			resolvePromise(1);
 		});
 	});
 }
 
 /** Run a command silently and return its stdout, or null on failure. */
-function captureCommand(command: string, args: string[]): string | null {
-	const result = spawnSync(command, args, { cwd: ROOT_DIR, encoding: 'utf8' });
+function captureCommand(
+	command: string,
+	args: string[],
+	cwd: string = ROOT_DIR,
+): string | null {
+	const result = spawnSync(command, args, { cwd, encoding: 'utf8' });
 	if (result.status !== 0) {
 		return null;
 	}
@@ -227,6 +276,360 @@ function writeVersion(pkg: PackageInfo, newVersion: string): boolean {
 function bail(message: string): never {
 	cancel(message);
 	process.exit(1);
+}
+
+/**
+ * Resolve the zylem-projects workspace root (parent of sibling repos). Falls
+ * back to ROOT_DIR when siblings are not present.
+ */
+function resolveWorkspaceRoot(): string {
+	const parent = dirname(ROOT_DIR);
+	const hits = SIBLING_REPO_DIRS.filter((name) =>
+		existsSync(join(parent, name)),
+	);
+	if (hits.length >= 2) {
+		return parent;
+	}
+	return ROOT_DIR;
+}
+
+function isSwitchableValue(value: unknown): value is string {
+	if (typeof value !== 'string') {
+		return false;
+	}
+	if (value.startsWith('workspace:')) {
+		return false;
+	}
+	if (value.startsWith('link:')) {
+		return true;
+	}
+	// Registry ranges / tags (caret, tilde, exact, latest, etc.).
+	return true;
+}
+
+function collectPackageJsonPaths(repoRoot: string): string[] {
+	const out: string[] = [];
+	const skip = new Set([
+		'node_modules',
+		'.git',
+		'dist',
+		'target',
+		'.pnpm-store',
+		'coverage',
+	]);
+
+	const walk = (dir: string) => {
+		let entries;
+		try {
+			entries = readdirSync(dir, { withFileTypes: true });
+		} catch {
+			return;
+		}
+		for (const entry of entries) {
+			if (skip.has(entry.name)) {
+				continue;
+			}
+			const full = join(dir, entry.name);
+			if (entry.isDirectory()) {
+				walk(full);
+			} else if (entry.name === 'package.json') {
+				out.push(full);
+			}
+		}
+	};
+
+	if (existsSync(join(repoRoot, 'package.json'))) {
+		out.push(join(repoRoot, 'package.json'));
+	}
+	// Walk one level of common monorepo roots, then recurse.
+	for (const sub of ['packages', 'apps', 'web', 'server']) {
+		const subDir = join(repoRoot, sub);
+		if (existsSync(subDir) && statSync(subDir).isDirectory()) {
+			walk(subDir);
+		}
+	}
+	// Also walk repo root children that aren't skipped (e.g. behaviors/web).
+	try {
+		for (const entry of readdirSync(repoRoot, { withFileTypes: true })) {
+			if (!entry.isDirectory() || skip.has(entry.name)) {
+				continue;
+			}
+			if (['packages', 'apps', 'web', 'server'].includes(entry.name)) {
+				continue; // already walked
+			}
+			const nested = join(repoRoot, entry.name, 'package.json');
+			if (existsSync(nested)) {
+				out.push(nested);
+			}
+			// One more level for apps/* style without packages/
+			const nestedDir = join(repoRoot, entry.name);
+			for (const child of ['web', 'apps', 'packages']) {
+				const childDir = join(nestedDir, child);
+				if (existsSync(childDir) && statSync(childDir).isDirectory()) {
+					walk(childDir);
+				}
+			}
+		}
+	} catch {
+		// ignore
+	}
+
+	return [...new Set(out)];
+}
+
+function scanSwitchableHits(workspaceRoot: string): SwitchableHit[] {
+	const repoRoots: string[] = [];
+	for (const name of SIBLING_REPO_DIRS) {
+		const dir = join(workspaceRoot, name);
+		if (existsSync(join(dir, 'package.json')) || existsSync(join(dir, 'packages'))) {
+			repoRoots.push(dir);
+		}
+	}
+	// Always include ROOT_DIR if somehow outside the sibling set.
+	if (!repoRoots.includes(ROOT_DIR) && existsSync(join(ROOT_DIR, 'package.json'))) {
+		repoRoots.push(ROOT_DIR);
+	}
+
+	const hits: SwitchableHit[] = [];
+	for (const repoRoot of repoRoots) {
+		for (const pkgPath of collectPackageJsonPaths(repoRoot)) {
+			let json: Record<string, unknown>;
+			try {
+				json = JSON.parse(readFileSync(pkgPath, 'utf8'));
+			} catch {
+				continue;
+			}
+			const deps = new Map<string, string>();
+			for (const section of DEP_SECTIONS) {
+				const block = json[section];
+				if (!block || typeof block !== 'object') {
+					continue;
+				}
+				for (const [name, value] of Object.entries(
+					block as Record<string, unknown>,
+				)) {
+					if (!(name in SWITCHABLE_PACKAGES)) {
+						continue;
+					}
+					if (!isSwitchableValue(value)) {
+						continue;
+					}
+					deps.set(name, value);
+				}
+			}
+			if (deps.size === 0) {
+				continue;
+			}
+			hits.push({
+				pkgPath,
+				pkgDir: dirname(pkgPath),
+				repoRoot,
+				deps,
+			});
+		}
+	}
+	return hits;
+}
+
+function fetchNpmLatest(name: string): string | null {
+	const out = captureCommand('npm', ['view', name, 'version']);
+	if (!out) {
+		return null;
+	}
+	const version = out.trim();
+	return version === '' ? null : version;
+}
+
+function normalizeProdRange(input: string): string {
+	const trimmed = input.trim();
+	if (
+		trimmed.startsWith('^') ||
+		trimmed.startsWith('~') ||
+		trimmed.startsWith('>=') ||
+		trimmed.startsWith('<') ||
+		trimmed === 'latest' ||
+		trimmed.startsWith('workspace:') ||
+		trimmed.startsWith('link:')
+	) {
+		return trimmed;
+	}
+	return `^${trimmed}`;
+}
+
+function stripRangeToVersion(range: string): string {
+	return range.replace(/^[\^~>=<\s]+/, '').trim();
+}
+
+/**
+ * Replace `"@zylem/foo": "<old>"` with a new value in raw package.json text,
+ * preserving surrounding formatting.
+ */
+function rewriteDepValue(
+	raw: string,
+	name: string,
+	oldValue: string,
+	newValue: string,
+): string {
+	const needle = `"${name}": "${oldValue}"`;
+	const replacement = `"${name}": "${newValue}"`;
+	if (!raw.includes(needle)) {
+		return raw;
+	}
+	return raw.split(needle).join(replacement);
+}
+
+function linkSpec(workspaceRoot: string, consumerDir: string, name: string): string {
+	const localRel = SWITCHABLE_PACKAGES[name];
+	if (localRel === undefined) {
+		throw new Error(`Unknown switchable package: ${name}`);
+	}
+	const localAbs = resolve(workspaceRoot, localRel);
+	let rel = relative(consumerDir, localAbs);
+	if (!rel.startsWith('.')) {
+		rel = `./${rel}`;
+	}
+	// pnpm link: paths use forward slashes.
+	return `link:${rel.split('\\').join('/')}`;
+}
+
+async function runDepsAction(
+	env: Record<string, string | undefined>,
+): Promise<number> {
+	const workspaceRoot = resolveWorkspaceRoot();
+	const hits = scanSwitchableHits(workspaceRoot);
+	if (hits.length === 0) {
+		bail('No switchable @zylem/* dependencies found in sibling repos.');
+	}
+
+	const uniquePackages = [
+		...new Set(hits.flatMap((hit) => [...hit.deps.keys()])),
+	].sort();
+
+	log.info(
+		`Found ${hits.length} package.json file(s) with: ${uniquePackages.join(', ')}`,
+	);
+
+	const mode = (await select({
+		message: 'Dependency mode',
+		options: [
+			{
+				value: 'dev',
+				label: 'dev',
+				hint: 'link local sibling packages',
+			},
+			{
+				value: 'prod',
+				label: 'prod',
+				hint: 'use published npm versions',
+			},
+		],
+		initialValue: 'prod',
+	})) as DepsMode | symbol;
+	if (isCancel(mode)) {
+		bail('Cancelled.');
+	}
+	const chosenMode = mode as DepsMode;
+
+	const versions = new Map<string, string>();
+	if (chosenMode === 'prod') {
+		for (const name of uniquePackages) {
+			const latest = fetchNpmLatest(name);
+			const fallback =
+				latest ??
+				stripRangeToVersion(
+					hits.find((h) => h.deps.has(name))?.deps.get(name) ?? '0.0.0',
+				);
+			const answer = (await text({
+				message: `Version for ${name}`,
+				placeholder: fallback,
+				defaultValue: fallback,
+				initialValue: fallback,
+			})) as string | symbol;
+			if (isCancel(answer)) {
+				bail('Cancelled.');
+			}
+			const chosen =
+				typeof answer === 'string' && answer.trim() !== ''
+					? answer.trim()
+					: fallback;
+			versions.set(name, normalizeProdRange(chosen));
+		}
+	}
+
+	const proceed = await confirm({
+		message: `Switch ${hits.length} package.json file(s) to ${chosenMode}?`,
+	});
+	if (isCancel(proceed) || proceed === false) {
+		bail('Cancelled.');
+	}
+
+	const affectedInstallRoots = new Set<string>();
+	for (const hit of hits) {
+		let raw = readFileSync(hit.pkgPath, 'utf8');
+		let changed = false;
+		for (const [name, oldValue] of hit.deps) {
+			const newValue =
+				chosenMode === 'dev'
+					? linkSpec(workspaceRoot, hit.pkgDir, name)
+					: (versions.get(name) ?? oldValue);
+			if (newValue === oldValue) {
+				continue;
+			}
+			const next = rewriteDepValue(raw, name, oldValue, newValue);
+			if (next !== raw) {
+				raw = next;
+				changed = true;
+				log.step(
+					`${relative(workspaceRoot, hit.pkgPath)}: ${name} ${oldValue} -> ${newValue}`,
+				);
+			} else {
+				log.warn(
+					`Could not rewrite ${name} in ${relative(workspaceRoot, hit.pkgPath)}`,
+				);
+			}
+		}
+		if (changed) {
+			writeFileSync(hit.pkgPath, raw);
+			affectedInstallRoots.add(resolveInstallRoot(hit.pkgDir, hit.repoRoot));
+		}
+	}
+
+	if (affectedInstallRoots.size === 0) {
+		log.info('No package.json files needed changes.');
+		return 0;
+	}
+
+	for (const installRoot of [...affectedInstallRoots].sort()) {
+		log.step(`pnpm install in ${relative(workspaceRoot, installRoot) || '.'}`);
+		const code = await runCommand('pnpm', ['install'], env, installRoot);
+		if (code !== 0) {
+			return code;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Prefer the nearest directory that owns a pnpm-lock.yaml (covers nested
+ * packages like behaviors/web that are not part of the parent workspace).
+ * Fall back to the sibling repo root.
+ */
+function resolveInstallRoot(pkgDir: string, repoRoot: string): string {
+	let dir = pkgDir;
+	while (true) {
+		if (existsSync(join(dir, 'pnpm-lock.yaml'))) {
+			return dir;
+		}
+		if (dir === repoRoot) {
+			break;
+		}
+		const parent = dirname(dir);
+		if (parent === dir) {
+			break;
+		}
+		dir = parent;
+	}
+	return repoRoot;
 }
 
 /**
@@ -347,6 +750,11 @@ async function main(): Promise<void> {
 				hint: 'bump semver, rebuild, commit, and tag',
 			},
 			{ value: 'publish', label: 'publish', hint: 'publish public packages' },
+			{
+				value: 'deps',
+				label: 'deps',
+				hint: 'switch @zylem/* deps between link (dev) and published (prod)',
+			},
 		],
 		initialValue: 'run',
 	})) as Action | symbol;
@@ -356,7 +764,21 @@ async function main(): Promise<void> {
 	}
 	const chosenAction = action as Action;
 
-	const available = packages.filter((pkg) => supportsAction(pkg, chosenAction));
+	const env: Record<string, string | undefined> = { ...process.env };
+
+	if (chosenAction === 'deps') {
+		const exitCode = await runDepsAction(env);
+		if (exitCode !== 0) {
+			bail(`\`deps\` exited with code ${exitCode}.`);
+		}
+		outro('Done: deps.');
+		return;
+	}
+
+	const packageAction = chosenAction as Exclude<Action, 'deps'>;
+	const available = packages.filter((pkg) =>
+		supportsAction(pkg, packageAction),
+	);
 	if (available.length === 0) {
 		bail(`No packages support \`${chosenAction}\`.`);
 	}
@@ -374,7 +796,7 @@ async function main(): Promise<void> {
 				hint:
 					chosenAction === 'publish' || chosenAction === 'bump'
 						? `public, v${pkg.version}`
-						: (pkg.scripts[ACTION_SCRIPT[chosenAction]] ?? ''),
+						: (pkg.scripts[ACTION_SCRIPT[packageAction]] ?? ''),
 			})),
 			required: true,
 		})) as string[] | symbol;
@@ -392,7 +814,6 @@ async function main(): Promise<void> {
 		bail('Cancelled.');
 	}
 
-	const env: Record<string, string | undefined> = { ...process.env };
 	if (ENV_ACTIONS.includes(chosenAction)) {
 		Object.assign(env, parseEnvFile(ROOT_DIR));
 		if (chosenAction === 'build') {
@@ -453,7 +874,7 @@ async function main(): Promise<void> {
 				args.push('--filter', name);
 			}
 		}
-		args.push('run', ACTION_SCRIPT[chosenAction]);
+		args.push('run', ACTION_SCRIPT[packageAction]);
 		log.step(`pnpm ${args.join(' ')}`);
 		exitCode = await runCommand('pnpm', args, env);
 	}
