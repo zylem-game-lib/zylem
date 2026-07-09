@@ -1,6 +1,6 @@
 {
   "name": "@zylem/shaders",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "WebGPU-compatible TSL shaders and postprocessing effects for the Zylem game framework.",
   "license": "MIT",
