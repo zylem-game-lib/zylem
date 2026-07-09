@@ -69,8 +69,8 @@ importers:
         specifier: workspace:^
         version: link:../game-lib
       '@zylem/ui':
-        specifier: link:../../../zylem-ui
-        version: link:../../../zylem-ui
+        specifier: ^0.1.1
+        version: 0.1.1(solid-js@1.9.9)
       lucide-solid:
         specifier: ^0.511.0
         version: 0.511.0(solid-js@1.9.9)
@@ -109,14 +109,14 @@ importers:
         specifier: workspace:*
         version: link:../game-lib
       '@zylem/runtime':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.1.2
+        version: 0.1.2
       '@zylem/shaders':
         specifier: workspace:*
         version: link:../shaders
       '@zylem/ui':
-        specifier: link:../../../zylem-ui
-        version: link:../../../zylem-ui
+        specifier: ^0.1.1
+        version: 0.1.1(solid-js@1.9.9)
       howler:
         specifier: ^2.2.4
         version: 2.2.4
@@ -188,8 +188,8 @@ importers:
         specifier: ^2.2.12
         version: 2.2.12
       '@zylem/behaviors':
-        specifier: ^0.4.0
-        version: 0.4.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)
+        specifier: ^0.4.1
+        version: 0.4.1(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -231,8 +231,8 @@ importers:
         specifier: latest
         version: 7.0.0-dev.20260620.1
       '@zylem/runtime':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.1.2
+        version: 0.1.2
       happy-dom:
         specifier: ^18.0.1
         version: 18.0.1
@@ -286,8 +286,8 @@ importers:
         specifier: workspace:*
         version: link:../shaders
       '@zylem/ui':
-        specifier: link:../../../zylem-ui
-        version: link:../../../zylem-ui
+        specifier: ^0.1.1
+        version: 0.1.1(solid-js@1.9.9)
       howler:
         specifier: ^2.2.4
         version: 2.2.4
@@ -344,8 +344,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(three@0.184.0)
       '@zylem/behaviors':
-        specifier: ^0.3.0
-        version: 0.3.0(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)
+        specifier: ^0.4.1
+        version: 0.4.1(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
@@ -1532,6 +1532,11 @@ packages:
   '@vanilla-extract/private@1.0.9':
     resolution: {integrity: sha512-gT2jbfZuaaCLrAxwXbRgIhGhcXbRZCG3v4TTUnjw0EJ7ArdBRxkq4msNJkbuRkCgfIK5ATmprB5t9ljvLeFDEA==}
 
+  '@vanilla-extract/recipes@0.5.7':
+    resolution: {integrity: sha512-Fvr+htdyb6LVUu+PhH61UFPhwkjgDEk8L4Zq9oIdte42sntpKrgFy90MyTRtGwjVALmrJ0pwRUVr8UoByYeW8A==}
+    peerDependencies:
+      '@vanilla-extract/css': ^1.0.0
+
   '@vanilla-extract/sprinkles@1.6.5':
     resolution: {integrity: sha512-HOYidLONR/SeGk8NBAeI64I4gYdsMX9vJmniL13ZcLVwawyK0s2GUENEAcGA+GYLIoeyQB61UqmhqPodJry7zA==}
     peerDependencies:
@@ -1574,23 +1579,24 @@ packages:
   '@zylem/assets@0.1.1':
     resolution: {integrity: sha512-ALiD4ritqUpH+RQzqPG0YdwTYyWz6/gUXxdQ5XDMqSiOmvKIsU7bVhDh7svRnOaIWtBxV3SrcyLp6uMQwcaEqA==}
 
-  '@zylem/behaviors@0.3.0':
-    resolution: {integrity: sha512-nTf8ARECNA/XSIIFcf+Odp2yhmDoskYcdk717G3Rg+jQyyO3Qiu3wF0dagiDp7h9biiaQO3HHVoUciIqBuIWDg==}
+  '@zylem/behaviors@0.4.1':
+    resolution: {integrity: sha512-4hibmmPWPrzZBaL8O2Ru/X7qEHzTW/FhjVZucpmkn5fHeH1TUIbWXvhxDT0su3FDM+kqjfHZc8yTAPOqAWHmzQ==}
     engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
     peerDependencies:
       '@dimforge/rapier3d-compat': ^0.11.2
       three: 0.184.0
 
-  '@zylem/behaviors@0.4.0':
-    resolution: {integrity: sha512-85ZHjxzJi2f53rQRbIhdtbOLicKZie/aWpYvo+0WevO/QGc7W59VMQrp3IKlvPU0kF5QNG4IoiqnnNOUrV0DXw==}
-    engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
-    peerDependencies:
-      '@dimforge/rapier3d-compat': ^0.11.2
-      three: 0.184.0
-
-  '@zylem/runtime@0.1.1':
-    resolution: {integrity: sha512-BO7Evvb+F/eWh24f8Er5IrkSla1sNY4En6c+wFu8+WSybCaHVIQareCWSpyfty7C455TSWieendw/i2ncdzNlA==}
+  '@zylem/runtime@0.1.2':
+    resolution: {integrity: sha512-XINxnrzIIkq7jbA0Cn/vos/OGxBL5ioA5KjKum2gAWh6xq/EXP1ZmI33ah3fpNDFD2zUZFCT7S0diyi4gNf9+A==}
     engines: {node: '>=20.10.0'}
+
+  '@zylem/ui@0.1.1':
+    resolution: {integrity: sha512-7bdrvYlyAK+AJILZ213axKg1TjP+8dXk8RGTMHci+3pL4mytduEtlq8+Va+9ofavey0eYev9PDGt434ObDB1lA==}
+    peerDependencies:
+      solid-js: ^1.9.9
+    peerDependenciesMeta:
+      solid-js:
+        optional: true
 
   acorn@8.15.0:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
@@ -3652,6 +3658,10 @@ snapshots:
 
   '@vanilla-extract/private@1.0.9': {}
 
+  '@vanilla-extract/recipes@0.5.7(@vanilla-extract/css@1.20.1)':
+    dependencies:
+      '@vanilla-extract/css': 1.20.1
+
   '@vanilla-extract/sprinkles@1.6.5(@vanilla-extract/css@1.20.1)':
     dependencies:
       '@vanilla-extract/css': 1.20.1
@@ -3719,19 +3729,7 @@ snapshots:
 
   '@zylem/assets@0.1.1': {}
 
-  '@zylem/behaviors@0.3.0(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)':
-    dependencies:
-      '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
-      '@dimforge/rapier3d-compat': 0.12.0
-      comlink: 4.4.2
-      three: 0.184.0
-      typescript-fsm: 1.6.0
-      valtio: 2.1.7(react@18.3.1)
-    transitivePeerDependencies:
-      - '@types/react'
-      - react
-
-  '@zylem/behaviors@0.4.0(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)':
+  '@zylem/behaviors@0.4.1(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)':
     dependencies:
       '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
       '@dimforge/rapier3d-compat': 0.11.2
@@ -3743,7 +3741,31 @@ snapshots:
       - '@types/react'
       - react
 
-  '@zylem/runtime@0.1.1': {}
+  '@zylem/behaviors@0.4.1(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)':
+    dependencies:
+      '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
+      '@dimforge/rapier3d-compat': 0.12.0
+      comlink: 4.4.2
+      three: 0.184.0
+      typescript-fsm: 1.6.0
+      valtio: 2.1.7(react@18.3.1)
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
+
+  '@zylem/runtime@0.1.2': {}
+
+  '@zylem/ui@0.1.1(solid-js@1.9.9)':
+    dependencies:
+      '@kobalte/core': 0.13.11(solid-js@1.9.9)
+      '@vanilla-extract/css': 1.20.1
+      '@vanilla-extract/recipes': 0.5.7(@vanilla-extract/css@1.20.1)
+      '@vanilla-extract/sprinkles': 1.6.5(@vanilla-extract/css@1.20.1)
+      lucide-solid: 0.511.0(solid-js@1.9.9)
+    optionalDependencies:
+      solid-js: 1.9.9
+    transitivePeerDependencies:
+      - babel-plugin-macros
 
   acorn@8.15.0: {}
 
