@@ -9,7 +9,7 @@ import {
 	ZylemRuntimePlatformer3DFsmState,
 	type ZylemRuntimeStaticBoxCollider,
 } from '@zylem/game-lib/runtime';
-import { Platformer3DRuntimeAdapter } from '../../runtime/platformer-3d-runtime';
+import { Platformer3DRuntimeAdapter } from '../_shared/platformer-3d-runtime';
 import type { ErrorContext } from './spacetimedb-generated';
 import type { EntityTransform, Player } from './spacetimedb-generated/types';
 import { playgroundActor } from '../../utils';
