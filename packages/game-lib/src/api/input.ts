@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/input` public API.
+ * @public
+ */
 // Input presets
 export {
 	useArrowsForAxes,

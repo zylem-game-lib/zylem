@@ -68,7 +68,20 @@
     "./runtime": {
       "types": "./dist/runtime.d.ts",
       "import": "./dist/runtime.js"
-    }
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js"
+    },
+    "./api/rollup": "./dist/api/game-lib.d.ts",
+    "./api/report": "./dist/api/game-lib.api.md",
+    "./api/model": "./dist/api/game-lib.api.json",
+    "./api/typedoc": "./dist/api/game-lib.typedoc.json",
+    "./schema/entity": "./dist/schema/entity.schema.json",
+    "./schema/stage": "./dist/schema/stage.schema.json",
+    "./schema/game-config": "./dist/schema/game-config.schema.json",
+    "./schema/stage-config": "./dist/schema/stage-config.schema.json",
+    "./schema/input-config": "./dist/schema/input-config.schema.json"
   },
   "keywords": [
     "game",
@@ -86,20 +99,24 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && pnpm api:extract && pnpm api:typedoc && pnpm schema:emit",
     "dev": "tsup --watch",
+    "api:extract": "mkdir -p dist/api temp && api-extractor run --local --verbose",
+    "api:typedoc": "mkdir -p dist/api && typedoc --options typedoc.json",
+    "schema:emit": "node --experimental-strip-types ./scripts/emit-json-schemas.ts",
+    "prepublishOnly": "NODE_ENV=production pnpm build",
     "lint": "biome check .",
     "typecheck": "tsgo --noEmit",
     "test": "vitest --reporter=verbose",
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "comlink": "^4.4.2",
     "@dgreenheck/three-pinata": "^2.0.1",
     "@dimforge/rapier3d-compat": "^0.11.2",
     "@sinclair/typebox": "^0.34.41",
-    "@zylem/behaviors": "^0.4.1",
     "@types/howler": "^2.2.12",
+    "@zylem/behaviors": "^0.4.1",
+    "comlink": "^4.4.2",
     "howler": "^2.2.4",
     "idb-keyval": "^6.2.2",
     "msgpackr": "^1.11.5",
@@ -123,16 +140,18 @@
     }
   },
   "devDependencies": {
-    "@zylem/runtime": "^0.1.2",
+    "@microsoft/api-extractor": "^7.58.9",
     "@types/node": "^20.19.13",
     "@types/stats.js": "^0.17.4",
     "@types/three": "^0.184.0",
+    "@typescript/native-preview": "latest",
+    "@zylem/runtime": "^0.1.2",
     "happy-dom": "^18.0.1",
     "jsdom": "^27.2.0",
     "tslib": "^2.8.1",
     "tsup": "^8.5.1",
+    "typedoc": "^0.28.20",
     "typescript": "6.0.3",
-    "@typescript/native-preview": "latest",
     "vite-plugin-solid": "^2.11.8",
     "vitest": "^4.0.9"
   }

@@ -19,6 +19,9 @@ export default defineConfig({
 		'debug': 'src/api/debug.ts',
 		'web-components': 'src/api/web-components.ts',
 		'runtime': 'src/api/runtime.ts',
+		'schema': 'src/api/schema.ts',
+		// Docs-only synthetic entry for API Extractor (not a consumer import path).
+		'public': 'src/api/public.ts',
 	},
 	format: ['esm'],
 	// Generate TypeScript declaration files. `ignoreDeprecations` is required

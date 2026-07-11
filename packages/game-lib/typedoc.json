@@ -1,0 +1,33 @@
+{
+	"$schema": "https://typedoc.org/schema.json",
+	"entryPoints": [
+		"src/api/core.ts",
+		"src/api/entity.ts",
+		"src/api/behavior.ts",
+		"src/api/actions.ts",
+		"src/api/input.ts",
+		"src/api/input-ui.ts",
+		"src/api/graphics.ts",
+		"src/api/events.ts",
+		"src/api/globals.ts",
+		"src/api/audio.ts",
+		"src/api/debug.ts",
+		"src/api/web-components.ts",
+		"src/api/runtime.ts",
+		"src/api/schema.ts"
+	],
+	"entryPointStrategy": "resolve",
+	"json": "dist/api/game-lib.typedoc.json",
+	"pretty": true,
+	"excludeExternals": true,
+	"excludePrivate": true,
+	"excludeInternal": true,
+	"excludeProtected": false,
+	"readme": "none",
+	"tsconfig": "tsconfig.build.json",
+	"validation": {
+		"notExported": false,
+		"invalidLink": false,
+		"notDocumented": false
+	}
+}

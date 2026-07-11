@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/actions` public API.
+ * @public
+ */
 // Actions API (Cocos2d-inspired)
 export { type Action } from '../lib/actions/action';
 export {

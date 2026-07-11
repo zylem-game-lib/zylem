@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/entity` public API.
+ * @public
+ */
 // Entity factories
 export { createBox, ZylemBox, BOX_TYPE } from '../lib/entities/box';
 export { createSphere, ZylemSphere, SPHERE_TYPE } from '../lib/entities/sphere';

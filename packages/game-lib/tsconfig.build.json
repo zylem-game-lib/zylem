@@ -29,7 +29,8 @@
       "@zylem/game-lib/events": ["./src/api/events.ts"],
       "@zylem/game-lib/debug": ["./src/api/debug.ts"],
       "@zylem/game-lib/web-components": ["./src/api/web-components.ts"],
-      "@zylem/game-lib/runtime": ["./src/api/runtime.ts"]
+      "@zylem/game-lib/runtime": ["./src/api/runtime.ts"],
+      "@zylem/game-lib/schema": ["./src/api/schema.ts"]
     }
   },
   "include": ["src/**/*.ts"],

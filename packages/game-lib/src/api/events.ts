@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/events` public API.
+ * @public
+ */
 export {
 	EventEmitterDelegate,
 	zylemEventBus,

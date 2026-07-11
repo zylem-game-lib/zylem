@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/behavior` public API.
+ * @public
+ */
 // Aggregate behavior barrel.
 // `lib/behaviors/index.ts` covers the FSM-based behaviors (thruster,
 // shooter-2d, world-boundary, ricochet, jumper, platformer, particle

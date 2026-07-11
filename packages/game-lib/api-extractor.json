@@ -1,0 +1,52 @@
+{
+	"$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+	"mainEntryPointFilePath": "<projectFolder>/dist/public.d.ts",
+	"bundledPackages": [],
+	"compiler": {
+		"tsconfigFilePath": "<projectFolder>/tsconfig.build.json",
+		"skipLibCheck": true
+	},
+	"apiReport": {
+		"enabled": true,
+		"reportFolder": "<projectFolder>/dist/api",
+		"reportTempFolder": "<projectFolder>/temp",
+		"reportFileName": "game-lib.api.md"
+	},
+	"docModel": {
+		"enabled": true,
+		"apiJsonFilePath": "<projectFolder>/dist/api/game-lib.api.json"
+	},
+	"dtsRollup": {
+		"enabled": true,
+		"untrimmedFilePath": "<projectFolder>/dist/api/game-lib.d.ts"
+	},
+	"tsdocMetadata": {
+		"enabled": false
+	},
+	"messages": {
+		"extractorMessageReporting": {
+			"ae-missing-release-tag": {
+				"logLevel": "warning"
+			},
+			"ae-forgotten-export": {
+				"logLevel": "warning"
+			},
+			"ae-different-release-tags": {
+				"logLevel": "warning"
+			},
+			"ae-unresolved-link": {
+				"logLevel": "warning"
+			}
+		},
+		"compilerMessageReporting": {
+			"default": {
+				"logLevel": "warning"
+			}
+		},
+		"tsdocMessageReporting": {
+			"default": {
+				"logLevel": "none"
+			}
+		}
+	}
+}

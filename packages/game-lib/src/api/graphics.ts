@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/graphics` public API.
+ * @public
+ */
 // TSL shaders (WebGPU)
 export { fireTSL } from '../lib/graphics/shaders/fire.tsl';
 export { starTSL } from '../lib/graphics/shaders/star.tsl';

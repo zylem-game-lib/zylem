@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/debug` public API.
+ * @public
+ */
 export {
 	debugState,
 	setDebugTool,

@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/input-ui` public API.
+ * @public
+ */
 export {
 	defaultTouchControls,
 	joystickBaseSvg,

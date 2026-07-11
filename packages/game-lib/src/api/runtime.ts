@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/runtime` public API.
+ * @public
+ */
 export type {
 	ZylemRuntimeEvent,
 	ZylemRuntimeDynamicCircleBody2DConfig,

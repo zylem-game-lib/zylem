@@ -1,3 +1,7 @@
+/**
+ * `@zylem/game-lib/globals` public API.
+ * @public
+ */
 // Game-state (global) helpers
 export {
 	setGlobal,
