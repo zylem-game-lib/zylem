@@ -32,6 +32,7 @@ export class StageCameraDebugDelegate implements CameraDebugDelegate {
 
 	resolveTarget(uuid: string): Object3D | null {
 		const entity: any = this.stage.entityDelegate.debugMap.get(uuid)
+			|| this.stage.entityDelegate.childrenMap.get(uuid)
 			|| this.stage.world?.collisionMap.get(uuid)
 			|| null;
 		const target = entity?.group ?? entity?.mesh ?? null;

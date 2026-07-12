@@ -31,6 +31,10 @@ export interface EntityConfigPayload {
 	position: { x: number; y: number; z: number };
 	rotation: { x: number; y: number; z: number };
 	scale: { x: number; y: number; z: number };
+	/** PNG data URL of a framed entity preview, when available. */
+	thumbnail?: string | null;
+	/** World-space AABB size used for thumbnail rulers. */
+	bounds?: { width: number; height: number; depth: number };
 }
 
 /** Payload for state dispatch events from game to editor. */

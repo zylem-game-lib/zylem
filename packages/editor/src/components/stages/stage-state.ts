@@ -82,14 +82,21 @@ zylemEventBus.on('state:dispatch', (payload: StateDispatchPayload) => {
 
     // Update entities if present
     if (payload.entities) {
-        stageState.entities = payload.entities.map((e: EntityConfigPayload) => ({
-            uuid: e.uuid,
-            name: e.name,
-            type: e.type,
-            position: e.position,
-            rotation: e.rotation,
-            scale: e.scale,
-        }));
+        stageState.entities = payload.entities.map((e: EntityConfigPayload) => {
+            const next: Partial<BaseEntityInterface> = {
+                uuid: e.uuid,
+                name: e.name,
+                type: e.type,
+                position: e.position,
+                rotation: e.rotation,
+                scale: e.scale,
+                thumbnail: e.thumbnail ?? null,
+            };
+            if (e.bounds) {
+                next.bounds = e.bounds;
+            }
+            return next;
+        });
     }
 });
 

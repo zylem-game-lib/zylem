@@ -1,6 +1,7 @@
 import { state, setGlobal, getGlobals, initGlobals, resetGlobals } from './game-state';
 
 import { debugState, isPaused, setDebugFlag } from '../debug/debug-state';
+import { entityThumbnailCache } from '../debug/entity-thumbnail';
 
 import { Game } from './game';
 import { UpdateContext, SetupContext, DestroyContext } from '../core/base-node-life-cycle';
@@ -83,6 +84,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	private loadingDelegate: GameLoadingDelegate = new GameLoadingDelegate();
 	private rendererObserver: GameRendererObserver = new GameRendererObserver();
 	private eventBusUnsubscribes: (() => void)[] = [];
+	private thumbnailUnsubscribes: (() => void)[] = [];
 	private readonly gameUpdateParams = {} as UpdateContext<
 		ZylemGame<TGlobals>,
 		TGlobals
@@ -233,12 +235,16 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			await this.rendererManager.initRenderer();
 		}
 
+		entityThumbnailCache.setRenderer(this.rendererManager.renderer);
+
 		// Start stage loading with shared renderer manager
 		await stage.load(this.id, config?.camera as ZylemCamera | null, this.rendererManager);
 
 		this.stageMap.set(stage.wrappedStage!.uuid, stage);
 		this.currentStageId = stage.wrappedStage!.uuid;
 		this.defaultCamera = stage.wrappedStage!.cameraRef!;
+
+		this.wireEntityThumbnails(stage);
 		
 		// Trigger renderer observer with renderer manager
 		this.rendererObserver.setStage(stage.wrappedStage ?? null);
@@ -300,6 +306,9 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		if (!this.currentStageId) return;
 		const current = this.getStage(this.currentStageId);
 		if (!current) return;
+
+		this.clearEntityThumbnailWiring();
+		entityThumbnailCache.clear();
 
 		// Disconnect input config callback from outgoing stage
 		current.onInputConfigChanged = null;
@@ -457,6 +466,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 		// Dispose the shared renderer manager
 		if (this.rendererManager) {
+			entityThumbnailCache.setRenderer(null);
 			this.rendererManager.dispose();
 			this.rendererManager = null;
 		}
@@ -539,6 +549,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			const rotation = (child as any).rotation ?? { x: 0, y: 0, z: 0 };
 			const scale = (child as any).scale ?? { x: 1, y: 1, z: 1 };
 
+			const thumb = entityThumbnailCache.get(child.uuid);
+
 			entities.push({
 				uuid: child.uuid,
 				name: child.name || 'Unnamed',
@@ -546,10 +558,66 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 				position: { x: position.x ?? 0, y: position.y ?? 0, z: position.z ?? 0 },
 				rotation: { x: rotation.x ?? 0, y: rotation.y ?? 0, z: rotation.z ?? 0 },
 				scale: { x: scale.x ?? 1, y: scale.y ?? 1, z: scale.z ?? 1 },
+				thumbnail: thumb?.dataUrl ?? null,
+				bounds: thumb?.bounds,
 			});
 		});
 
 		return entities;
+	}
+
+	/**
+	 * Generate entity thumbnails as entities become available, then refresh editor state.
+	 */
+	private wireEntityThumbnails(stage: Stage): void {
+		this.clearEntityThumbnailWiring();
+		if (!stage.wrappedStage) return;
+
+		const queueThumbnail = (child: { uuid: string; group?: any; mesh?: any }) => {
+			const object = child.group ?? child.mesh ?? null;
+			if (!object) return;
+			void entityThumbnailCache.ensure(child.uuid, object).then((result) => {
+				if (result) {
+					this.emitStateDispatch('@entity:thumbnail');
+				}
+			});
+		};
+
+		const unsubAdded = stage.wrappedStage.onEntityAdded((child) => {
+			queueThumbnail(child as any);
+		}, { replayExisting: true });
+		this.thumbnailUnsubscribes.push(unsubAdded);
+
+		const onModelLoaded = (payload: { entityId: string; success: boolean }) => {
+			if (!payload.success) return;
+			const child = stage.wrappedStage?.entityDelegate.childrenMap.get(payload.entityId);
+			if (child) {
+				entityThumbnailCache.invalidate(payload.entityId);
+				queueThumbnail(child as any);
+			}
+		};
+		zylemEventBus.on('entity:model:loaded', onModelLoaded);
+		this.thumbnailUnsubscribes.push(() => {
+			zylemEventBus.off('entity:model:loaded', onModelLoaded);
+		});
+
+		const onDestroyed = (payload: { entityId: string }) => {
+			entityThumbnailCache.invalidate(payload.entityId);
+			this.emitStateDispatch('@entity:destroyed');
+		};
+		zylemEventBus.on('entity:destroyed', onDestroyed);
+		this.thumbnailUnsubscribes.push(() => {
+			zylemEventBus.off('entity:destroyed', onDestroyed);
+		});
+	}
+
+	private clearEntityThumbnailWiring(): void {
+		this.thumbnailUnsubscribes.forEach((fn) => {
+			try {
+				fn();
+			} catch { /* noop */ }
+		});
+		this.thumbnailUnsubscribes = [];
 	}
 
 	/**
