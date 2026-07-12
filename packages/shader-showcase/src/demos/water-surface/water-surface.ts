@@ -4,8 +4,7 @@
  */
 import { createCamera, createGame, createStage, Perspectives } from '@zylem/game-lib/core';
 import { createPlane, createSphere } from '@zylem/game-lib/entity';
-import { createGradientSky } from '@zylem/game-lib/graphics';
-import { createWaterSurface } from '@zylem/shaders';
+import { createGradientSky, createWaterSurface } from '@zylem/shaders';
 import { Color } from 'three';
 import type { ShowcaseDemo } from '../../demo-types';
 import { colorControl, rangeControl } from '../_shared/controls';

@@ -3,6 +3,9 @@
  * for the Zylem game framework.
  */
 
+// Third-party procedural TSL textures
+export * from 'tsl-textures';
+
 // Shared contracts
 export type {
 	ZylemParameterizedShader,
@@ -13,6 +16,13 @@ export type {
 } from './types';
 
 // Shaders
+export { fireTSL } from './shaders/fire.tsl';
+export { starTSL } from './shaders/star.tsl';
+export { debugTSL } from './shaders/debug.tsl';
+export {
+	createGradientSky,
+	gradientSkyTSL,
+} from './shaders/gradient-sky.tsl';
 export {
 	createMagicalLandscape,
 	type MagicalLandscapeOptions,

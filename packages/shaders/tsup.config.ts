@@ -18,9 +18,10 @@ export default defineConfig({
 	clean: true,
 	minify: isProd,
 	outDir: 'dist',
-	// Never bundle three: consumers must share a single three instance with
-	// game-lib (TSL nodes are not interchangeable across copies of three).
-	external: [/^three($|\/)/],
+	// Never bundle Three.js or tsl-textures. Consumers must share a single
+	// Three.js instance with game-lib (TSL nodes are not interchangeable across
+	// copies), while tsl-textures remains independently tree-shakeable.
+	external: [/^three($|\/)/, /^tsl-textures($|\/)/],
 	outExtension() {
 		return { js: '.js' };
 	},

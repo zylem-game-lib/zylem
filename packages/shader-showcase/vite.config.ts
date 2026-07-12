@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const devPort = Number(process.env.PORT ?? '1339');
+const devPort = Number(process.env.PORT ?? '3332');
 
 export default defineConfig({
 	plugins: [solidPlugin()] as any,
@@ -26,7 +26,7 @@ export default defineConfig({
 		exclude: ['@zylem/ui'],
 	},
 	server: {
-		port: Number.isFinite(devPort) ? devPort : 1339,
+		port: Number.isFinite(devPort) ? devPort : 3332,
 		fs: {
 			// Allow serving files from sibling packages (workspace deps)
 			allow: [path.resolve(__dirname, '..')],
