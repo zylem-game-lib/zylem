@@ -12,10 +12,14 @@ export interface Vector3Like {
 export interface BaseEntityInterface {
 	uuid: string;
 	name: string;
-	type?: string;
-	position?: Vector3Like;
-	rotation?: Vector3Like;
-	scale?: Vector3Like;
+	type?: string | undefined;
+	position?: Vector3Like | undefined;
+	rotation?: Vector3Like | undefined;
+	scale?: Vector3Like | undefined;
+	/** PNG data URL of a framed entity preview. */
+	thumbnail?: string | null | undefined;
+	/** World-space AABB size for thumbnail rulers. */
+	bounds?: { width: number; height: number; depth: number } | undefined;
 }
 
 export interface StageConfigState {

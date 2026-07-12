@@ -11,7 +11,7 @@ import Globe from 'lucide-solid/icons/globe';
 
 /**
  * Map entity type strings to lucide-solid icons.
- * Will be replaced with thumbnail previews in the future.
+ * Used as a fallback when a thumbnail preview is unavailable.
  */
 const ICON_MAP: Record<string, Component<{ class?: string }>> = {
 	Box: Box as Component<{ class?: string }>,

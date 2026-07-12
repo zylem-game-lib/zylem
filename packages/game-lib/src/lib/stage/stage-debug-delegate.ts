@@ -17,7 +17,10 @@ import { subscribe } from 'valtio/vanilla';
 import { ZylemStage } from './zylem-stage';
 import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
 import { debugState, getDebugTool, getHoveredEntity, resetHoveredEntity, setHoveredEntity, setSelectedEntity } from '../debug/debug-state';
+import { registerEntityFocusContext } from '../debug/entity-focus';
 import { DebugEntityCursor } from './debug-entity-cursor';
+import type { GameEntity } from '../entities/entity';
+import type { BaseNode } from '../core/base-node';
 
 export type AddEntityFactory = (params: { position: Vector3; normal?: Vector3 }) => Promise<any> | any;
 
@@ -51,6 +54,7 @@ export class StageDebugDelegate {
 	private boundColliderPositions: Float32Array | null = null;
 	private cameraDebugDelegate: StageCameraDebugDelegate | null = null;
 	private debugStateUnsubscribe: (() => void) | null = null;
+	private focusContextUnregister: (() => void) | null = null;
 
 	constructor(stage: ZylemStage, options?: StageDebugDelegateOptions) {
 		this.stage = stage;
@@ -64,6 +68,46 @@ export class StageDebugDelegate {
 		this.debugStateUnsubscribe = subscribe(debugState, () => {
 			this.syncWithDebugState();
 		});
+
+		this.focusContextUnregister = registerEntityFocusContext({
+			resolveEntity: (uuid) => this.resolveEntity(uuid),
+			frameObject: (object) => {
+				this.ensureCameraDebugDelegate();
+				this.stage.cameraRef?.frameObject(object);
+			},
+			ensureDebugReady: () => {
+				if (!debugState.enabled) {
+					debugState.enabled = true;
+				}
+				this.activate();
+				this.populateDebugMap();
+			},
+		});
+	}
+
+	private resolveEntity(uuid: string): GameEntity<any> | null {
+		const fromDebug = this.stage.entityDelegate.debugMap.get(uuid);
+		if (fromDebug) return fromDebug as GameEntity<any>;
+
+		const fromChildren = this.stage.entityDelegate.childrenMap.get(uuid);
+		if (fromChildren) return fromChildren as GameEntity<any>;
+
+		const fromCollision = this.stage.world?.collisionMap.get(uuid) as GameEntity<any> | undefined;
+		return fromCollision ?? null;
+	}
+
+	/** Copy all stage children into debugMap so raycast/select tools work after enabling debug mid-session. */
+	private populateDebugMap(): void {
+		this.stage.entityDelegate.childrenMap.forEach((entity: BaseNode, uuid: string) => {
+			this.stage.entityDelegate.debugMap.set(uuid, entity);
+		});
+	}
+
+	private ensureCameraDebugDelegate(): void {
+		if (this.stage.cameraRef && !this.cameraDebugDelegate) {
+			this.cameraDebugDelegate = new StageCameraDebugDelegate(this.stage);
+			this.stage.cameraRef.setDebugDelegate(this.cameraDebugDelegate);
+		}
 	}
 
 	private syncWithDebugState(): void {
@@ -81,10 +125,8 @@ export class StageDebugDelegate {
 			this.domListenersAttached = true;
 		}
 
-		if (this.stage.cameraRef && !this.cameraDebugDelegate) {
-			this.cameraDebugDelegate = new StageCameraDebugDelegate(this.stage);
-			this.stage.cameraRef.setDebugDelegate(this.cameraDebugDelegate);
-		}
+		this.populateDebugMap();
+		this.ensureCameraDebugDelegate();
 	}
 
 	/** Tear down visuals and camera debug delegate when debug is turned off. */
@@ -290,6 +332,8 @@ export class StageDebugDelegate {
 
 	/** Full teardown — unsubscribes from debugState and cleans up all resources. */
 	dispose(): void {
+		this.focusContextUnregister?.();
+		this.focusContextUnregister = null;
 		this.debugStateUnsubscribe?.();
 		this.debugStateUnsubscribe = null;
 		this.deactivate();
@@ -303,8 +347,8 @@ export class StageDebugDelegate {
 		switch (tool) {
 			case 'select': {
 				if (hoveredUuid) {
-					const entity = this.stage.entityDelegate.debugMap.get(hoveredUuid);
-					if (entity) setSelectedEntity(entity as any);
+					const entity = this.resolveEntity(hoveredUuid);
+					if (entity) setSelectedEntity(entity);
 				}
 				break;
 			}

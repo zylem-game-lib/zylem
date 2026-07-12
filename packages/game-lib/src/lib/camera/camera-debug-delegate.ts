@@ -1,5 +1,6 @@
 import { Object3D, Vector3, Quaternion, Camera, Scene } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { frameObjectFromDirection } from '../debug/frame-object';
 
 export interface CameraDebugState {
 	enabled: boolean;
@@ -145,6 +146,32 @@ export class CameraOrbitController {
 	 */
 	get debugState(): CameraDebugState {
 		return this.debugStateSnapshot;
+	}
+
+	/**
+	 * Frame the camera on an Object3D: center orbit target on its AABB and
+	 * move the camera to a framing distance along the current view direction.
+	 */
+	frameTarget(object: Object3D): void {
+		if (!this.orbitControls && (this.debugStateSnapshot.enabled || this._userOrbitEnabled)) {
+			this.enableOrbitControls();
+		}
+		if (!this.orbitControls) {
+			this.enableOrbitControls();
+		}
+
+		this.orbitTarget = object;
+
+		const direction = new Vector3()
+			.subVectors(this.camera.position, this.orbitControls!.target)
+			.normalize();
+		if (direction.lengthSq() < 1e-8) {
+			direction.set(1, 1, 1).normalize();
+		}
+
+		const bounds = frameObjectFromDirection(object, this.camera, direction);
+		this.orbitControls!.target.copy(bounds.center);
+		this.orbitControls!.update();
 	}
 
 	private applyDebugState(state: CameraDebugState) {

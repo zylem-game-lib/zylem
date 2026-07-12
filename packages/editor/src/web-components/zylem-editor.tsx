@@ -8,6 +8,7 @@ import { EditorProvider } from '../components/EditorContext';
 // Import bundled CSS (single file with all tokens and component styles).
 // Resolves via the `./styles.css` export in `@zylem/ui/package.json`.
 import zylemCSS from '@zylem/ui/styles.css?raw';
+import { entityPreviewCSS } from '../components/entities/entity-preview.css';
 
 /**
  * Configuration options for the ZylemEditorElement
@@ -145,7 +146,7 @@ export class ZylemEditorElement extends HTMLElement {
     if (this._config.includeStyles !== false) {
       const styleElement = document.createElement('style');
 
-      styleElement.textContent = zylemCSS;
+      styleElement.textContent = `${zylemCSS}\n${entityPreviewCSS}`;
       this.shadowRoot!.appendChild(styleElement);
     }
 

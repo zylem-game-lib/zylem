@@ -366,6 +366,13 @@ export class ZylemCamera {
 		this.orbitController?.setDebugDelegate(delegate);
 	}
 
+	/**
+	 * Frame the debug orbit camera on an Object3D (AABB fit).
+	 */
+	frameObject(object: Object3D): void {
+		this.orbitController?.frameTarget(object);
+	}
+
 	// ─── Movement helpers (backward compat) ─────────────────────────────────
 
 	/**
