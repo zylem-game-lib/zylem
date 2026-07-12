@@ -1,10 +1,14 @@
 import { Euler, Vector3, MathUtils, Quaternion } from 'three';
-import { RigidBody } from '@dimforge/rapier3d-compat';
 import type { TransformState } from '@zylem/behaviors/core';
 import { createTransformStore } from '@zylem/behaviors/core';
 
+/** Structural slice of the physics body used by rotation helpers. */
+export interface RotatableBodyLike {
+	rotation(): { x: number; y: number; z: number; w: number };
+}
+
 export interface RotatableEntity {
-	body: RigidBody | null;
+	body: RotatableBodyLike | null;
 	group: any;
 	transformStore?: TransformState;
 }

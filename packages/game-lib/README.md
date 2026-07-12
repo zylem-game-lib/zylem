@@ -15,9 +15,23 @@ This library is intended for hobbyist developers who want to play with 3D web te
 The goal is to give you tools to build simple 3D games. It's basically comprised of:
 
 - Rendering via ThreeJS with some capability to handle postprocessing built-in. [ThreeJS](https://threejs.org/)
-- Collision handling, triggers, and rigid body physics via RapierRS [RapierRS](https://rapier.rs/)
+- Collision handling, triggers, and rigid body physics simulated in WebAssembly (Rapier compiled to WASM via [@zylem/runtime](https://www.npmjs.com/package/@zylem/runtime), driven through [@zylem/behaviors](https://www.npmjs.com/package/@zylem/behaviors))
 - Game state management with Valtio [Valtio](https://valtio.dev/)
 - Simplified input handling (gamepad, keyboard, mouse)
+
+**Architecture layers**
+
+Zylem is split into three packages, each a strict layer over the one below:
+
+| Layer | Package | Owns |
+| --- | --- | --- |
+| Game framework | `@zylem/game-lib` | Three.js rendering, input, assets, stages, game state |
+| Simulation | `@zylem/behaviors` | `createSimulation()`, entity registry, behavior FSMs, event translation, runtime ownership |
+| Runtime | `@zylem/runtime` | WASM module: ECS + Rapier physics, batched input/render/snapshot/event buffers |
+
+Each frame, game-lib forwards behavior inputs into the simulation, calls `simulation.update(delta)` (fixed-timestep physics inside WASM), then syncs interpolated render poses onto Three.js objects. Disposal follows the same chain: `Game.dispose()` → `Simulation.dispose()` → WASM stage destroy.
+
+Games normally never touch the runtime directly; for debug tooling there is an escape hatch: `game.experimental.getRuntime()` returns the underlying `Simulation`.
 
 > Note: This project is still in alpha. There are unfinished features and some APIs that may change.
 

@@ -1,12 +1,9 @@
 import {
-	ActiveCollisionTypes,
-	ColliderDesc,
-	RigidBodyDesc,
-	RigidBodyType,
-} from '@dimforge/rapier3d-compat';
-import { Vector3 } from 'three';
+	StageBodyKind,
+	type SimulationBodyDefinition,
+	type SimulationColliderDefinition,
+} from '@zylem/behaviors/core';
 import {
-	VEC2_ZERO,
 	VEC3_ONE,
 	VEC3_ZERO,
 	type Vec2Input,
@@ -15,8 +12,7 @@ import {
 	normalizeVec3,
 } from '../../core/vector';
 import {
-	getOrCreateCollisionGroupId,
-	createCollisionFilter,
+	packCollisionGroups,
 	type CollisionOptions,
 } from '../../collision/collision-builder';
 import { deepCloneValue } from '../../core/clone-utils';
@@ -26,14 +22,14 @@ import { deepCloneValue } from '../../core/clone-utils';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * A built collision component containing a rigid body description and collider description.
- * Returned by collision factory functions (boxCollision, sphereCollision, etc.)
- * and consumed by GameEntity.add().
+ * A built collision component containing plain body and collider definitions
+ * for the behaviors `Simulation`. Returned by collision factory functions
+ * (boxCollision, sphereCollision, etc.) and consumed by GameEntity.add().
  */
 export interface CollisionComponent {
 	__kind: 'collision';
-	bodyDesc: RigidBodyDesc;
-	colliderDesc: ColliderDesc;
+	bodyDesc: SimulationBodyDefinition;
+	colliderDesc: SimulationColliderDefinition;
 	cloneComponent: () => CollisionComponent;
 }
 
@@ -65,47 +61,45 @@ interface BaseCollisionOptions {
 	collisionFilter?: string[];
 }
 
-function buildBodyDesc(isStatic: boolean): RigidBodyDesc {
-	const type = isStatic ? RigidBodyType.Fixed : RigidBodyType.Dynamic;
-	return new RigidBodyDesc(type)
-		.setTranslation(0, 0, 0)
-		.setGravityScale(1.0)
-		.setCanSleep(false)
-		.setCcdEnabled(true);
+function buildBodyDef(isStatic: boolean): SimulationBodyDefinition {
+	return {
+		kind: isStatic ? StageBodyKind.Static : StageBodyKind.Dynamic,
+		position: [0, 0, 0],
+		gravityScale: 1,
+		canSleep: false,
+		ccdEnabled: true,
+	};
 }
 
 function applyCollisionOptions(
-	colliderDesc: ColliderDesc,
+	colliderDef: SimulationColliderDefinition,
 	opts: BaseCollisionOptions,
 ): void {
 	if (opts.offset) {
 		const offset = normalizeVec3(opts.offset, VEC3_ZERO);
-		colliderDesc.setTranslation(offset.x, offset.y, offset.z);
+		colliderDef.offset = [offset.x, offset.y, offset.z];
 	}
 	if (opts.sensor) {
-		colliderDesc.setSensor(true);
-		colliderDesc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;
+		colliderDef.sensor = true;
 	}
 	if (opts.collisionType) {
-		const groupId = getOrCreateCollisionGroupId(opts.collisionType);
-		let filter = 0b1111111111111111;
-		if (opts.collisionFilter) {
-			filter = createCollisionFilter(opts.collisionFilter);
-		}
-		colliderDesc.setCollisionGroups((groupId << 16) | filter);
+		colliderDef.collisionGroups = packCollisionGroups(
+			opts.collisionType,
+			opts.collisionFilter,
+		);
 	}
 }
 
 function makeComponent(
-	colliderDesc: ColliderDesc,
+	colliderDef: SimulationColliderDefinition,
 	opts: BaseCollisionOptions,
 	cloneComponentFactory: () => CollisionComponent,
 ): CollisionComponent {
-	applyCollisionOptions(colliderDesc, opts);
+	applyCollisionOptions(colliderDef, opts);
 	return {
 		__kind: 'collision',
-		bodyDesc: buildBodyDesc(opts.static ?? false),
-		colliderDesc,
+		bodyDesc: buildBodyDef(opts.static ?? false),
+		colliderDesc: colliderDef,
 		cloneComponent: cloneComponentFactory,
 	};
 }
@@ -124,9 +118,11 @@ export interface BoxCollisionOptions extends BaseCollisionOptions {
  */
 export function boxCollision(opts: BoxCollisionOptions = {}): CollisionComponent {
 	const size = normalizeVec3(opts.size, VEC3_ONE);
-	const desc = ColliderDesc.cuboid(size.x / 2, size.y / 2, size.z / 2);
+	const def: SimulationColliderDefinition = {
+		shape: { type: 'box', halfExtents: [size.x / 2, size.y / 2, size.z / 2] },
+	};
 	const clonedOpts = deepCloneValue(opts);
-	return makeComponent(desc, opts, () => boxCollision(clonedOpts));
+	return makeComponent(def, opts, () => boxCollision(clonedOpts));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -142,9 +138,11 @@ export interface SphereCollisionOptions extends BaseCollisionOptions {
  * Create a sphere (ball) collision component.
  */
 export function sphereCollision(opts: SphereCollisionOptions = {}): CollisionComponent {
-	const desc = ColliderDesc.ball(opts.radius ?? 1);
+	const def: SimulationColliderDefinition = {
+		shape: { type: 'sphere', radius: opts.radius ?? 1 },
+	};
 	const clonedOpts = deepCloneValue(opts);
-	return makeComponent(desc, opts, () => sphereCollision(clonedOpts));
+	return makeComponent(def, opts, () => sphereCollision(clonedOpts));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -164,9 +162,11 @@ export interface ConeCollisionOptions extends BaseCollisionOptions {
 export function coneCollision(opts: ConeCollisionOptions = {}): CollisionComponent {
 	const radius = opts.radius ?? 1;
 	const height = opts.height ?? 2;
-	const desc = ColliderDesc.cone(height / 2, radius);
+	const def: SimulationColliderDefinition = {
+		shape: { type: 'cone', halfHeight: height / 2, radius },
+	};
 	const clonedOpts = deepCloneValue(opts);
-	return makeComponent(desc, opts, () => coneCollision(clonedOpts));
+	return makeComponent(def, opts, () => coneCollision(clonedOpts));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -186,9 +186,11 @@ export interface PyramidCollisionOptions extends BaseCollisionOptions {
 export function pyramidCollision(opts: PyramidCollisionOptions = {}): CollisionComponent {
 	const radius = opts.radius ?? 1;
 	const height = opts.height ?? 2;
-	const desc = ColliderDesc.cone(height / 2, radius);
+	const def: SimulationColliderDefinition = {
+		shape: { type: 'cone', halfHeight: height / 2, radius },
+	};
 	const clonedOpts = deepCloneValue(opts);
-	return makeComponent(desc, opts, () => pyramidCollision(clonedOpts));
+	return makeComponent(def, opts, () => pyramidCollision(clonedOpts));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,9 +212,11 @@ export interface CylinderCollisionOptions extends BaseCollisionOptions {
 export function cylinderCollision(opts: CylinderCollisionOptions = {}): CollisionComponent {
 	const radius = Math.max(opts.radiusTop ?? 1, opts.radiusBottom ?? 1);
 	const height = opts.height ?? 2;
-	const desc = ColliderDesc.cylinder(height / 2, radius);
+	const def: SimulationColliderDefinition = {
+		shape: { type: 'cylinder', halfHeight: height / 2, radius },
+	};
 	const clonedOpts = deepCloneValue(opts);
-	return makeComponent(desc, opts, () => cylinderCollision(clonedOpts));
+	return makeComponent(def, opts, () => cylinderCollision(clonedOpts));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -232,9 +236,11 @@ export interface PillCollisionOptions extends BaseCollisionOptions {
 export function pillCollision(opts: PillCollisionOptions = {}): CollisionComponent {
 	const radius = opts.radius ?? 0.5;
 	const length = opts.length ?? 1;
-	const desc = ColliderDesc.capsule(length / 2, radius);
+	const def: SimulationColliderDefinition = {
+		shape: { type: 'capsule', halfHeight: length / 2, radius },
+	};
 	const clonedOpts = deepCloneValue(opts);
-	return makeComponent(desc, opts, () => pillCollision(clonedOpts));
+	return makeComponent(def, opts, () => pillCollision(clonedOpts));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -257,21 +263,23 @@ export interface PlaneCollisionOptions extends BaseCollisionOptions {
 export function planeCollision(opts: PlaneCollisionOptions = {}): CollisionComponent {
 	const tile = normalizeVec2(opts.tile, { x: 10, y: 10 });
 	const subdivisions = opts.subdivisions ?? 10;
-	const size = new Vector3(tile.x, 1, tile.y);
 
 	const totalVerts = (subdivisions + 1) * (subdivisions + 1);
 	const heightData = opts.heightData ?? new Float32Array(totalVerts);
 
-	const desc = ColliderDesc.heightfield(
-		subdivisions,
-		subdivisions,
-		heightData,
-		size,
-	);
+	const def: SimulationColliderDefinition = {
+		shape: {
+			type: 'heightfield',
+			rows: subdivisions,
+			cols: subdivisions,
+			heights: heightData,
+			scale: [tile.x, 1, tile.y],
+		},
+	};
 
 	const effectiveOpts = { ...opts, static: opts.static ?? true };
 	const clonedOpts = deepCloneValue(effectiveOpts);
-	return makeComponent(desc, effectiveOpts, () => planeCollision(clonedOpts));
+	return makeComponent(def, effectiveOpts, () => planeCollision(clonedOpts));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -289,10 +297,11 @@ export interface ZoneCollisionOptions extends BaseCollisionOptions {
  */
 export function zoneCollision(opts: ZoneCollisionOptions = {}): CollisionComponent {
 	const size = normalizeVec3(opts.size, VEC3_ONE);
-	const desc = ColliderDesc.cuboid(size.x / 2, size.y / 2, size.z / 2);
-	desc.setSensor(true);
-	desc.activeCollisionTypes = ActiveCollisionTypes.KINEMATIC_FIXED;
+	const def: SimulationColliderDefinition = {
+		shape: { type: 'box', halfExtents: [size.x / 2, size.y / 2, size.z / 2] },
+		sensor: true,
+	};
 	const effectiveOpts = { ...opts, static: opts.static ?? true, sensor: true };
 	const clonedOpts = deepCloneValue(effectiveOpts);
-	return makeComponent(desc, effectiveOpts, () => zoneCollision(clonedOpts));
+	return makeComponent(def, effectiveOpts, () => zoneCollision(clonedOpts));
 }

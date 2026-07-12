@@ -8,35 +8,26 @@ import {
 } from '@zylem/game-lib/core';
 import { createZone } from '@zylem/game-lib/entity';
 import { useArrowsForAxes } from '@zylem/game-lib/input';
-import { ZylemRuntimePlatformer3DFsmState } from '@zylem/game-lib/runtime';
+import { Platformer3DBehavior, Platformer3DState } from '@zylem/game-lib/behavior';
 import {
 	playgroundPlane,
 	playgroundActor,
 	playgroundPlatforms,
 } from '../../utils';
 import { demoAsset } from '../../assets/manifest';
-import {
-	Platformer3DRuntimeAdapter,
-	buildPlatformerGroundHeightfield,
-	staticBoxesFromEntities,
-} from '../_shared/platformer-3d-runtime';
 
 const skybox = demoAsset('general/skybox-default.png');
 
 /**
  * Loose alias for the player entity in this demo. The actor returned by
- * `playgroundActor` is typed `any`, and the platformer adapter only needs
- * `group`, `options`, and `physicsAttached` from it; we intentionally avoid
- * importing the internal `GameEntity` class.
+ * `playgroundActor` is typed `any`; we intentionally avoid importing the
+ * internal `GameEntity` class.
  */
 type DemoPlayer = any;
 
 export default function createDemo() {
 	const groundPlane = playgroundPlane('dirt');
 	const player = playgroundActor('player') as DemoPlayer & StageEntity;
-	// Mark the player as runtime-owned so the stage-entity-delegate skips
-	// creating a TS Rapier body for it (we drive its pose from wasm).
-	(player.options as any).runtime = { simulation: 'runtime' };
 
 	const platforms = playgroundPlatforms();
 
@@ -45,25 +36,20 @@ export default function createDemo() {
 		perspective: 'third-person',
 	});
 
-	const platformerAdapter = new Platformer3DRuntimeAdapter({
-		player,
-		capsule: {
-			// Spawn well clear of the start platform so the initial fall settles
-			// visibly. Capsule dimensions match the actor's collision spec
-			// (size.y = 3.8 → halfHeight + radius = 1.9).
-			position: [0, 5, 0],
-			halfHeight: 1.4,
-			radius: 0.5,
-		},
-		staticColliders: staticBoxesFromEntities(platforms),
-		heightfield: buildPlatformerGroundHeightfield(groundPlane),
+	// The platformer controller (KCC + jump FSM) runs inside the wasm runtime;
+	// this attaches it to the actor's simulation body.
+	const platformer = player.use(Platformer3DBehavior, {
+		walkSpeed: 6,
+		runSpeed: 12,
+		jumpForce: 12,
+		maxJumps: 2,
+		gravity: 9.82,
 	});
 
 	const stage = createStage(
 		{
 			gravity: new Vector3(0, -9.82, 0),
 			backgroundImage: skybox,
-			runtimeAdapter: platformerAdapter,
 		},
 		camera,
 	).setInputConfiguration(useArrowsForAxes('p1'));
@@ -113,38 +99,42 @@ export default function createDemo() {
 		const jumpHeld = p1.buttons.A.held > 0;
 		const runHeld = p1.shoulders.LTrigger.held > 0;
 
-		platformerAdapter.pushInput(horizontal, vertical, jumpHeld, runHeld);
+		if (me.$platformer) {
+			me.$platformer.moveX = horizontal;
+			me.$platformer.moveZ = vertical;
+			me.$platformer.jump = jumpHeld;
+			me.$platformer.run = runHeld;
+		}
 
-		// Drive the actor's facing visually. The wasm capsule is upright-only;
-		// there's no rotation FFI yet, so we track yaw demo-side.
+		// Drive the actor's facing visually — the wasm capsule is upright-only.
 		if (Math.abs(horizontal) > 0.2 || Math.abs(vertical) > 0.2) {
 			lastMovement.set(horizontal, 0, vertical);
 		}
 		if (lastMovement.lengthSq() > 0) {
 			const yaw = Math.atan2(-lastMovement.x, lastMovement.z);
-			platformerAdapter.setFacing(yaw);
+			me.setRotationY(yaw);
 		}
 
-		// Read FSM state from the previous step (pushInput above feeds the
-		// *next* step). One-frame animation lag is negligible.
-		const state = platformerAdapter.currentState();
+		// FSM state comes from the previous wasm step's snapshot buffer.
+		// One-frame animation lag is negligible.
+		const state = platformer.getState();
 		switch (state) {
-			case ZylemRuntimePlatformer3DFsmState.Running:
+			case Platformer3DState.Running:
 				me.playAnimation({ key: 'running' });
 				break;
-			case ZylemRuntimePlatformer3DFsmState.Walking:
+			case Platformer3DState.Walking:
 				me.playAnimation({ key: 'walking' });
 				break;
-			case ZylemRuntimePlatformer3DFsmState.Jumping:
+			case Platformer3DState.Jumping:
 				me.playAnimation({ key: 'jumping-up', pauseAtEnd: true });
 				break;
-			case ZylemRuntimePlatformer3DFsmState.Falling:
+			case Platformer3DState.Falling:
 				me.playAnimation({ key: 'jumping-up', pauseAtEnd: true });
 				break;
-			case ZylemRuntimePlatformer3DFsmState.Landing:
+			case Platformer3DState.Landing:
 				me.playAnimation({ key: 'jumping-down', pauseAtEnd: true });
 				break;
-			case ZylemRuntimePlatformer3DFsmState.Idle:
+			case Platformer3DState.Idle:
 			default:
 				me.playAnimation({ key: 'idle' });
 				break;

@@ -3,13 +3,11 @@ import { createGame, createStage, createCamera } from '@zylem/game-lib/core';
 import { createBox, createSphere, createText } from '@zylem/game-lib/entity';
 import { getGlobal, setGlobal } from '@zylem/game-lib/globals';
 import {
-	RuntimeBoundary2DBehavior,
-	RuntimeDynamicCircleBody2DBehavior,
-	RuntimePlayerInput2DBehavior,
-	RuntimeRicochet2DBehavior,
+	BoundaryRicochetCoordinator,
+	Ricochet2DBehavior,
+	WorldBoundary2DBehavior,
 } from '@zylem/game-lib/behavior';
 import { ricochetSound, pingPongBeep } from '@zylem/game-lib/audio';
-import { createBundledZylemRuntimeStageAdapter } from '../../runtime/zylem-runtime';
 
 export default function createDemo() {
 	const gameBounds = { top: 5, bottom: -5, left: -15, right: 15 };
@@ -19,17 +17,9 @@ export default function createDemo() {
 		position: { x: 0, y: 0, z: 0 },
 		radius: 0.1,
 		color: new Color(Color.NAMES.white),
-		runtime: {
-			simulation: 'runtime',
-			render: 'mesh',
-		},
 	});
 
-	const ballRuntime = ball.use(RuntimeDynamicCircleBody2DBehavior, {
-		initialVelocity: [5, 0],
-	});
-
-	const ballRicochet = ball.use(RuntimeRicochet2DBehavior, {
+	const ballRicochet = ball.use(Ricochet2DBehavior, {
 		minSpeed: 5,
 		maxSpeed: 10,
 		speedMultiplier: 1.05,
@@ -37,58 +27,69 @@ export default function createDemo() {
 		maxAngleDeg: 60,
 	});
 
-	ball.use(RuntimeBoundary2DBehavior, {
+	const ballBoundary = ball.use(WorldBoundary2DBehavior, {
 		boundaries: gameBounds,
 	});
 
-	ballRicochet.onRicochet((event) => {
-		if (event.kind === 'wall') {
-			ricochetSound();
-		} else {
-			pingPongBeep();
-		}
+	const ballCoordinator = new BoundaryRicochetCoordinator(
+		ball as any,
+		ballBoundary,
+		ballRicochet,
+	);
+
+	ball.onSetup(({ me }) => {
+		me.moveXY(5, 0);
+	});
+
+	ball.onUpdate(() => {
+		ballCoordinator.update();
+	});
+
+	ballRicochet.onRicochet(() => {
+		ricochetSound();
 	});
 
 	const paddleSize = { x: 0.2, y: 1.5, z: 1 };
 	const paddleMaterial = { color: new Color(Color.NAMES.white) };
 	const paddleSpeed = 5;
 
-	const paddle1 = createBox({
-		name: 'paddle1',
-		position: { x: -8, y: 0, z: 0 },
-		size: paddleSize,
-		material: paddleMaterial,
-		runtime: {
-			simulation: 'runtime',
-			render: 'mesh',
-		},
-	});
+	function createPaddle(name: string, x: number, player: 'p1' | 'p2') {
+		const paddle = createBox({
+			name,
+			position: { x, y: 0, z: 0 },
+			size: paddleSize,
+			material: paddleMaterial,
+		});
 
-	paddle1.use(RuntimeBoundary2DBehavior, {
-		boundaries: gameBounds,
-	});
-	paddle1.use(RuntimePlayerInput2DBehavior, {
-		player: 'p1',
-		speed: paddleSpeed,
-	});
+		const paddleBoundary = paddle.use(WorldBoundary2DBehavior, {
+			boundaries: gameBounds,
+		});
 
-	const paddle2 = createBox({
-		name: 'paddle2',
-		position: { x: 8, y: 0, z: 0 },
-		size: paddleSize,
-		material: paddleMaterial,
-		runtime: {
-			simulation: 'runtime',
-			render: 'mesh',
-		},
-	});
+		paddle.onUpdate(({ me, inputs }) => {
+			const { Up, Down } = inputs[player].directions;
+			const { Vertical } = inputs[player].axes;
+			const value = (Up.held ? 1 : 0) - (Down.held ? 1 : 0) || -Vertical.value;
+			let moveY = value * paddleSpeed;
+			({ moveY } = paddleBoundary.getMovement(0, moveY));
+			me.moveXY(0, moveY);
+		});
 
-	paddle2.use(RuntimeBoundary2DBehavior, {
-		boundaries: gameBounds,
-	});
-	paddle2.use(RuntimePlayerInput2DBehavior, {
-		player: 'p2',
-		speed: paddleSpeed,
+		return paddle;
+	}
+
+	const paddle1 = createPaddle('paddle1', -8, 'p1');
+	const paddle2 = createPaddle('paddle2', 8, 'p2');
+
+	// Paddle hits reflect the ball with an angled bounce.
+	ball.onCollision(({ entity, other }) => {
+		if (other.name !== 'paddle1' && other.name !== 'paddle2') return;
+		ballRicochet.applyRicochet({
+			entity,
+			otherEntity: other,
+			otherSize: paddleSize,
+			contact: { normal: { x: other.name === 'paddle1' ? 1 : -1, y: 0 } },
+		});
+		pingPongBeep();
 	});
 
 	const camera = createCamera({
@@ -121,7 +122,6 @@ export default function createDemo() {
 	const stage1 = createStage(
 		{
 			backgroundColor: new Color(Color.NAMES.black),
-			runtimeAdapter: createBundledZylemRuntimeStageAdapter(),
 		},
 		camera,
 	);
@@ -156,8 +156,13 @@ export default function createDemo() {
 	const goalScore = 3;
 	let justScored = false;
 
+	function resetBall(velocityX: number) {
+		ball.setPosition(0, 0, 0);
+		ball.moveXY(velocityX, 0);
+	}
+
 	stage1.onUpdate(() => {
-		const position = ballRuntime.getRuntimePosition();
+		const position = ball.getPosition?.();
 		if (!position) return;
 
 		if (justScored && Math.abs(position.x) < 0.5) {
@@ -169,13 +174,11 @@ export default function createDemo() {
 
 		if (position.x >= 12) {
 			setGlobal('p1Score', (getGlobal<number>('p1Score') ?? 0) + 1);
-			ballRuntime.setRuntimePosition(0, 0, 0);
-			ballRuntime.setRuntimeVelocity(-5, 0);
+			resetBall(-5);
 			justScored = true;
 		} else if (position.x <= -12) {
 			setGlobal('p2Score', (getGlobal<number>('p2Score') ?? 0) + 1);
-			ballRuntime.setRuntimePosition(0, 0, 0);
-			ballRuntime.setRuntimeVelocity(5, 0);
+			resetBall(5);
 			justScored = true;
 		}
 	});
@@ -183,13 +186,13 @@ export default function createDemo() {
 	game.onGlobalChanges<[number, number]>(['p1Score', 'p2Score'], ([p1, p2]) => {
 		if (p1 >= goalScore) {
 			setGlobal('winner', 'p1');
-			ballRuntime.setRuntimePosition(0, 1, 0);
-			ballRuntime.setRuntimeVelocity(0, 0);
+			ball.setPosition(0, 1, 0);
+			ball.moveXY(0, 0);
 		}
 		if (p2 >= goalScore) {
 			setGlobal('winner', 'p2');
-			ballRuntime.setRuntimePosition(0, 1, 0);
-			ballRuntime.setRuntimeVelocity(0, 0);
+			ball.setPosition(0, 1, 0);
+			ball.moveXY(0, 0);
 		}
 	});
 

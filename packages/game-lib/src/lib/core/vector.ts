@@ -1,8 +1,7 @@
 import { Vector2 as ThreeVector2, Vector3 as ThreeVector3 } from 'three';
-import { Vector3 as RapierVector3 } from '@dimforge/rapier3d-compat';
 
 export type Vec2 = ThreeVector2;
-export type Vec3 = ThreeVector3 | RapierVector3;
+export type Vec3 = ThreeVector3 | Vec3Components;
 
 export type Vec2Components = { x: number; y: number };
 export type Vec3Components = { x: number; y: number; z: number };
@@ -174,12 +173,4 @@ export function toThreeVector3(
 ): ThreeVector3 {
   const { x, y, z } = normalizeVec3(input, defaults);
   return new ThreeVector3(x, y, z);
-}
-
-export function toRapierVector3(
-  input?: Vec3Input | null,
-  defaults: Vec3Input | Partial<Vec3Components> = VEC3_ZERO,
-): RapierVector3 {
-  const { x, y, z } = normalizeVec3(input, defaults);
-  return new RapierVector3(x, y, z);
 }

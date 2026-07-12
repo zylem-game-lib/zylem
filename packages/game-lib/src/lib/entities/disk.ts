@@ -1,4 +1,4 @@
-import { ColliderDesc } from '@dimforge/rapier3d-compat';
+import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import { Group, RingGeometry } from 'three';
 import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
@@ -23,12 +23,13 @@ const diskDefaults: ZylemDiskOptions = {
 };
 
 export class DiskCollisionBuilder extends EntityCollisionBuilder {
-	collider(options: ZylemDiskOptions): ColliderDesc {
+	collider(options: ZylemDiskOptions): SimulationColliderDefinition {
 		const outerRadius = options.outerRadius ?? 1;
 		const height = 0.1; // thin disk
 		// Use cylinder collider for disk (very flat)
-		let colliderDesc = ColliderDesc.cylinder(height / 2, outerRadius);
-		return colliderDesc;
+		return {
+			shape: { type: 'cylinder', halfHeight: height / 2, radius: outerRadius },
+		};
 	}
 }
 

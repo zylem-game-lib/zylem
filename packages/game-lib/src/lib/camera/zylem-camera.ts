@@ -3,14 +3,14 @@ import { PerspectiveType, Perspectives } from './perspective';
 import { StageEntity } from '../interfaces/entity';
 import { CameraOrbitController, CameraDebugDelegate } from './camera-debug-delegate';
 import { RendererManager, DEFAULT_VIEWPORT } from './renderer-manager';
-import type { ZylemRenderer, RendererType, Viewport } from './renderer-manager';
+import type { ZylemRenderer, Viewport } from './renderer-manager';
 import { CameraPipeline } from './camera-pipeline';
 import { createPerspective } from './perspectives';
 import type { CameraContext, TransformLike, CameraPose } from './types';
 
 // Re-export for backwards compatibility
 export type { CameraDebugState, CameraDebugDelegate } from './camera-debug-delegate';
-export type { RendererType, ZylemRenderer } from './renderer-manager';
+export type { ZylemRenderer } from './renderer-manager';
 export { isWebGPUSupported } from './renderer-manager';
 
 /**
@@ -32,7 +32,6 @@ export class ZylemCamera {
 	screenResolution: Vector2;
 	_perspective: PerspectiveType;
 	frustumSize = 10;
-	rendererType: RendererType;
 	sceneRef: Scene | null = null;
 
 	/** Name for camera manager lookup. */
@@ -97,11 +96,10 @@ export class ZylemCamera {
 	/** Elapsed time tracker for CameraContext. */
 	private _elapsedTime = 0;
 
-	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10, rendererType: RendererType = 'webgpu') {
+	constructor(perspective: PerspectiveType, screenResolution: Vector2, frustumSize: number = 10) {
 		this._perspective = perspective;
 		this.screenResolution = screenResolution;
 		this.frustumSize = frustumSize;
-		this.rendererType = rendererType;
 
 		// Create Three.js camera based on perspective
 		const aspectRatio = screenResolution.x / screenResolution.y;
@@ -154,7 +152,7 @@ export class ZylemCamera {
 	 */
 	async setupLegacy(scene: Scene): Promise<void> {
 		if (!this._rendererManager) {
-			this._rendererManager = new RendererManager(this.screenResolution, this.rendererType);
+			this._rendererManager = new RendererManager(this.screenResolution);
 			await this._rendererManager.initRenderer();
 
 			// Setup the WebGPU post-processing pipeline for this scene/camera

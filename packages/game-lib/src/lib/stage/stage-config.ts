@@ -14,39 +14,7 @@ import { isBaseNode, isCameraWrapper, isConfigObject, isEntityInput } from '../c
 import { ZylemBlueColor } from '../core/utility/vector';
 import type { ZylemShader } from '../graphics/material';
 import type { ZylemPostEffect } from '../camera/renderer-manager';
-import type { RuntimeDebugBinding, StageRuntimeAdapter } from '../runtime/zylem-stage-runtime';
 import type { Vec3Components } from '../core/vector';
-import type { WasmStageRuntimeOptions } from '../runtime/wasm-stage-runtime';
-
-/** Source for the unified-Stage wasm runtime: bytes, fetch URL, or a builder. */
-export type StageWasmSource =
-	| ArrayBuffer
-	| RequestInfo
-	| URL
-	| (() => Promise<ArrayBuffer | RequestInfo | URL>);
-
-/** Authoring-side configuration for the unified-Stage wasm runtime. */
-export interface StageWasmRuntimeConfig {
-	/** wasm bytes (ArrayBuffer) or a URL/`fetch` input that resolves to bytes. */
-	source: StageWasmSource;
-	/** Forwarded to {@link WasmStageRuntime} construction. */
-	options?: Omit<WasmStageRuntimeOptions, 'imports'>;
-	/**
-	 * Phase A feature flag for the WASM-owned-rendering migration. When `true`,
-	 * the stage routes opted-in entities through a {@link StagePhysicsBridge}
-	 * (WASM owns transforms) and renders them via the {@link RenderBundleManager}
-	 * (WebGPU `BundleGroup`s) instead of the Rapier `ZylemWorld` +
-	 * `syncRenderPoses` path. Off by default so existing stages are unaffected.
-	 *
-	 * REQUIRED for the behavior wasm fast path: `runtimeHandle` is only
-	 * assigned by the bridge, so behavior descriptors (platformer, jumper,
-	 * thruster, ...) run their Rust-side systems only when this flag is set.
-	 * Without it, wasm-simulated poses would have no read-back into the
-	 * Three.js scene and entities would be double-simulated by the TS Rapier
-	 * world — so behaviors deliberately fall back to their TS systems.
-	 */
-	bundleRendering?: boolean;
-}
 
 export type StageGLTFAssetLoaderConfig = {
 	meshopt?: boolean;
@@ -91,15 +59,6 @@ export type StageConfigLike = Partial<{
 	/** Physics update rate in Hz (default 60). */
 	physicsRate: number;
 	assetLoaders: StageAssetLoaderConfig;
-	runtimeAdapter: StageRuntimeAdapter;
-	/** Binds stage debug policy into wasm runtime adapters (see {@link RuntimeDebugBinding}). */
-	runtimeDebugBinding?: RuntimeDebugBinding;
-	/**
-	 * When set, the stage instantiates a {@link WasmStageRuntime} from the given
-	 * source during `load()`. Behavior descriptors that have been ported to the
-	 * unified-Stage Rust runtime read this via `BehaviorSystemContext.wasmStage`.
-	 */
-	wasmRuntime?: StageWasmRuntimeConfig;
 	/**
 	 * When `false`, the engine's built-in ambient + directional lights are
 	 * suppressed so the stage can be lit entirely via `createLight(...)`
@@ -129,14 +88,8 @@ export class StageConfig {
 		public physicsRate: number = 60,
 		/** Optional runtime loader configuration for stage-managed assets. */
 		public assetLoaders: StageAssetLoaderConfig = {},
-		/** Optional stage runtime adapter for wasm-owned simulation/rendering. */
-		public runtimeAdapter: StageRuntimeAdapter | undefined = undefined,
-		/** Optional debug signals for wasm runtime adapters. */
-		public runtimeDebugBinding: RuntimeDebugBinding | undefined = undefined,
 		/** Whether the built-in ambient + directional lights are created. */
 		public defaultLighting: boolean = true,
-		/** Optional unified-Stage wasm runtime configuration. */
-		public wasmRuntime: StageWasmRuntimeConfig | undefined = undefined,
 		/** Postprocessing effects applied over the scene pass, in order. */
 		public postProcessingEffects: ZylemPostEffect[] = [],
 	) { }
@@ -158,10 +111,7 @@ export function createDefaultStageConfig(): StageConfig {
 		{},
 		60,
 		{},
-		undefined,
-		undefined,
 		true,
-		undefined,
 	);
 }
 
@@ -214,10 +164,7 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		config.variables ?? defaults.variables,
 		config.physicsRate ?? defaults.physicsRate,
 		(config as any).assetLoaders ?? defaults.assetLoaders,
-		(config as any).runtimeAdapter ?? defaults.runtimeAdapter,
-		(config as any).runtimeDebugBinding ?? defaults.runtimeDebugBinding,
 		(config as any).defaultLighting ?? defaults.defaultLighting,
-		(config as any).wasmRuntime ?? defaults.wasmRuntime,
 		(config as any).postProcessingEffects ?? defaults.postProcessingEffects,
 	);
 

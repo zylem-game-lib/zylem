@@ -1,10 +1,8 @@
-import RAPIER from '@dimforge/rapier3d-compat';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ZylemWorld, type CollisionPair } from '../../../src/lib/collision/world';
 import { createBox } from '../../../src/lib/entities/box';
 import { createSphere } from '../../../src/lib/entities/sphere';
-import { getDirectBodyPoseHistory } from '../../../src/lib/physics/physics-pose';
 
 function registerEntities(world: ZylemWorld, ...entities: Array<ReturnType<typeof createSphere> | ReturnType<typeof createBox>>) {
 	for (const entity of entities) {
@@ -12,13 +10,35 @@ function registerEntities(world: ZylemWorld, ...entities: Array<ReturnType<typeo
 	}
 }
 
+/**
+ * Seed the world's live collision pairs (normally fed by simulation events)
+ * and run one dispatch pass, mirroring what `update()` does each frame.
+ */
 function applyPairs(
 	world: ZylemWorld,
 	pairs: CollisionPair[],
 	nowMs: number,
 	delta = 1 / 60,
 ) {
-	(world as any).processCollisionPairs(pairs, delta, nowMs);
+	const live = (world as any).livePairs as Map<string, { uuidA: string; uuidB: string; contactCount: number; intersectionCount: number }>;
+	live.clear();
+	for (const pair of pairs) {
+		if (pair.uuidA === pair.uuidB) continue;
+		const uuidA = pair.uuidA < pair.uuidB ? pair.uuidA : pair.uuidB;
+		const uuidB = pair.uuidA < pair.uuidB ? pair.uuidB : pair.uuidA;
+		const key = `${uuidA}|${uuidB}`;
+		let entry = live.get(key);
+		if (!entry) {
+			entry = { uuidA, uuidB, contactCount: 0, intersectionCount: 0 };
+			live.set(key, entry);
+		}
+		if (pair.contactType === 'contact') {
+			entry.contactCount += 1;
+		} else {
+			entry.intersectionCount += 1;
+		}
+	}
+	(world as any).processCollisionPairs(delta, nowMs);
 }
 
 function bidirectionalContact(uuidA: string, uuidB: string): CollisionPair[] {
@@ -68,14 +88,9 @@ describe('ZylemWorld collision dispatch', () => {
 
 });
 
-describe('ZylemWorld fixed-step pose history', () => {
-	beforeAll(async () => {
-		await RAPIER.init();
-	});
-
-	it('tracks previous and current poses for direct-mode interpolation', () => {
-		const physicsWorld = new RAPIER.World({ x: 0, y: 0, z: 0 });
-		const world = new ZylemWorld(physicsWorld, 60);
+describe('ZylemWorld simulation-backed physics', () => {
+	it('tracks previous and current poses for render interpolation', async () => {
+		const world = await ZylemWorld.create({ x: 0, y: -9.81, z: 0 }, 60);
 		const ball = createSphere({ name: 'ball' });
 
 		world.addEntity(ball as any);
@@ -83,37 +98,37 @@ describe('ZylemWorld fixed-step pose history', () => {
 
 		world.update({ delta: 1 / 120 } as any);
 
-		let history = getDirectBodyPoseHistory(ball.body!);
+		// Half a fixed step: no step taken yet, history collapses to spawn pose.
+		let history = ball.body!.getPoseHistory();
 		expect(world.interpolationAlpha).toBeCloseTo(0.5, 5);
-		expect(history).not.toBeNull();
-		expect(history!.previous.position.x).toBeCloseTo(0, 5);
-		expect(history!.current.position.x).toBeCloseTo(0, 5);
+		expect(history.previous.position.x).toBeCloseTo(0, 5);
+		expect(history.current.position.x).toBeCloseTo(0, 5);
 
 		world.update({ delta: 1 / 120 } as any);
 
-		history = getDirectBodyPoseHistory(ball.body!);
+		history = ball.body!.getPoseHistory();
 		expect(world.interpolationAlpha).toBeCloseTo(0, 5);
-		expect(history).not.toBeNull();
-		expect(history!.current.position.x).toBeGreaterThan(history!.previous.position.x);
+		expect(history.current.position.x).toBeGreaterThan(history.previous.position.x);
+
+		world.destroy();
 	});
 
-	it('collapses pose history after explicit body translations', () => {
-		const physicsWorld = new RAPIER.World({ x: 0, y: 0, z: 0 });
-		const world = new ZylemWorld(physicsWorld, 60);
+	it('collapses pose history after explicit body translations', async () => {
+		const world = await ZylemWorld.create({ x: 0, y: -9.81, z: 0 }, 60);
 		const ball = createSphere({ name: 'teleport-ball' });
 
 		world.addEntity(ball as any);
 		ball.body?.setTranslation({ x: 4, y: -2, z: 1 }, true);
 
-		const history = getDirectBodyPoseHistory(ball.body!);
-		expect(history).not.toBeNull();
-		expect(history!.previous.position).toEqual({ x: 4, y: -2, z: 1 });
-		expect(history!.current.position).toEqual({ x: 4, y: -2, z: 1 });
+		const history = ball.body!.getPoseHistory();
+		expect(history.previous.position).toEqual({ x: 4, y: -2, z: 1 });
+		expect(history.current.position).toEqual({ x: 4, y: -2, z: 1 });
+
+		world.destroy();
 	});
 
-	it('clears entity physics references when bodies are destroyed', () => {
-		const physicsWorld = new RAPIER.World({ x: 0, y: 0, z: 0 });
-		const world = new ZylemWorld(physicsWorld, 60);
+	it('clears entity physics references when bodies are destroyed', async () => {
+		const world = await ZylemWorld.create({ x: 0, y: -9.81, z: 0 }, 60);
 		const box = createBox({ name: 'cleanup-box' });
 
 		world.addEntity(box as any);
@@ -123,8 +138,8 @@ describe('ZylemWorld fixed-step pose history', () => {
 		world.destroyEntity(box as any);
 
 		expect(box.body).toBeNull();
-		expect(box.collider).toBeUndefined();
-		expect(box.colliders).toEqual([]);
 		expect(box.physicsAttached).toBe(false);
+
+		world.destroy();
 	});
 });

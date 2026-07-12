@@ -103,9 +103,6 @@ importers:
 
   packages/examples:
     dependencies:
-      '@dimforge/rapier3d-compat':
-        specifier: ^0.11.2
-        version: 0.11.2
       '@solidjs/router':
         specifier: ^0.14.10
         version: 0.14.10(solid-js@1.9.9)
@@ -118,9 +115,6 @@ importers:
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
-      '@zylem/runtime':
-        specifier: ^0.1.2
-        version: 0.1.2
       '@zylem/shaders':
         specifier: workspace:*
         version: link:../shaders
@@ -188,9 +182,6 @@ importers:
       '@dgreenheck/three-pinata':
         specifier: ^2.0.1
         version: 2.0.1(three@0.184.0)
-      '@dimforge/rapier3d-compat':
-        specifier: ^0.11.2
-        version: 0.11.2
       '@sinclair/typebox':
         specifier: ^0.34.41
         version: 0.34.41
@@ -198,8 +189,8 @@ importers:
         specifier: ^2.2.12
         version: 2.2.12
       '@zylem/behaviors':
-        specifier: ^0.4.1
-        version: 0.4.1(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)
+        specifier: file:../../../behaviors
+        version: file:../behaviors(react@18.3.1)(three@0.184.0)
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -243,9 +234,6 @@ importers:
       '@typescript/native-preview':
         specifier: latest
         version: 7.0.0-dev.20260620.1
-      '@zylem/runtime':
-        specifier: ^0.1.2
-        version: 0.1.2
       happy-dom:
         specifier: ^18.0.1
         version: 18.0.1
@@ -367,8 +355,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(three@0.184.0)
       '@zylem/behaviors':
-        specifier: ^0.4.1
-        version: 0.4.1(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)
+        specifier: file:../../../behaviors
+        version: file:../behaviors(react@18.3.1)(three@0.184.0)
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
@@ -1675,15 +1663,14 @@ packages:
   '@zylem/assets@0.1.1':
     resolution: {integrity: sha512-ALiD4ritqUpH+RQzqPG0YdwTYyWz6/gUXxdQ5XDMqSiOmvKIsU7bVhDh7svRnOaIWtBxV3SrcyLp6uMQwcaEqA==}
 
-  '@zylem/behaviors@0.4.1':
-    resolution: {integrity: sha512-4hibmmPWPrzZBaL8O2Ru/X7qEHzTW/FhjVZucpmkn5fHeH1TUIbWXvhxDT0su3FDM+kqjfHZc8yTAPOqAWHmzQ==}
+  '@zylem/behaviors@file:../behaviors':
+    resolution: {directory: ../behaviors, type: directory}
     engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
     peerDependencies:
-      '@dimforge/rapier3d-compat': ^0.11.2
       three: 0.184.0
 
-  '@zylem/runtime@0.1.2':
-    resolution: {integrity: sha512-XINxnrzIIkq7jbA0Cn/vos/OGxBL5ioA5KjKum2gAWh6xq/EXP1ZmI33ah3fpNDFD2zUZFCT7S0diyi4gNf9+A==}
+  '@zylem/runtime@file:../runtime':
+    resolution: {directory: ../runtime, type: directory}
     engines: {node: '>=20.10.0'}
 
   '@zylem/ui@0.2.0':
@@ -4110,10 +4097,10 @@ snapshots:
 
   '@zylem/assets@0.1.1': {}
 
-  '@zylem/behaviors@0.4.1(@dimforge/rapier3d-compat@0.11.2)(react@18.3.1)(three@0.184.0)':
+  '@zylem/behaviors@file:../behaviors(react@18.3.1)(three@0.184.0)':
     dependencies:
       '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
-      '@dimforge/rapier3d-compat': 0.11.2
+      '@zylem/runtime': file:../runtime
       comlink: 4.4.2
       three: 0.184.0
       typescript-fsm: 1.6.0
@@ -4122,19 +4109,7 @@ snapshots:
       - '@types/react'
       - react
 
-  '@zylem/behaviors@0.4.1(@dimforge/rapier3d-compat@0.12.0)(react@18.3.1)(three@0.184.0)':
-    dependencies:
-      '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
-      '@dimforge/rapier3d-compat': 0.12.0
-      comlink: 4.4.2
-      three: 0.184.0
-      typescript-fsm: 1.6.0
-      valtio: 2.1.7(react@18.3.1)
-    transitivePeerDependencies:
-      - '@types/react'
-      - react
-
-  '@zylem/runtime@0.1.2': {}
+  '@zylem/runtime@file:../runtime': {}
 
   '@zylem/ui@0.2.0(solid-js@1.9.9)':
     dependencies:

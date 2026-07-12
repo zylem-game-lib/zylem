@@ -1,5 +1,4 @@
-import { Color } from 'three';
-import { Vector3 } from '@dimforge/rapier3d-compat';
+import { Color, Vector3 } from 'three';
 import type { Vec3 } from '../vector';
 import { VEC3_ONE, VEC3_ZERO } from '../vector';
 

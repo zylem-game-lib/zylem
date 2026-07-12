@@ -1,4 +1,4 @@
-import { ColliderDesc } from '@dimforge/rapier3d-compat';
+import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import { PlaneGeometry, Vector2, Vector3 } from 'three';
 import { TexturePath } from '../graphics/material';
 import { BaseNode } from '../core/base-node';
@@ -98,22 +98,24 @@ function resolvePlaneSubdivisions(
 }
 
 export class PlaneCollisionBuilder extends EntityCollisionBuilder {
-  collider(options: ZylemPlaneOptions): ColliderDesc {
+  collider(options: ZylemPlaneOptions): SimulationColliderDefinition {
     const tile = toThreeVector2(options.tile, VEC2_ONE);
     const { subdivisionsX, subdivisionsZ } = resolvePlaneSubdivisions(options);
     const size = new Vector3(tile.x, 1, tile.y);
 
     const heightData = ((options._builders
-      ?.meshBuilder as unknown) as PlaneMeshBuilder)?.heightData;
-    const scale = new Vector3(size.x, 1, size.z);
-    let colliderDesc = ColliderDesc.heightfield(
-      subdivisionsX,
-      subdivisionsZ,
-      heightData,
-      scale,
-    );
+      ?.meshBuilder as unknown) as PlaneMeshBuilder)?.heightData
+      ?? new Float32Array((subdivisionsX + 1) * (subdivisionsZ + 1));
 
-    return colliderDesc;
+    return {
+      shape: {
+        type: 'heightfield',
+        rows: subdivisionsX,
+        cols: subdivisionsZ,
+        heights: heightData,
+        scale: [size.x, 1, size.z],
+      },
+    };
   }
 }
 

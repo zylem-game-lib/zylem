@@ -1,9 +1,7 @@
 import { Color, Vector2, Vector3 } from 'three';
-import { Vector3 as RapierVector3 } from '@dimforge/rapier3d-compat';
 import {
   isVec2Input,
   isVec3Input,
-  toRapierVector3,
   toThreeVector2,
   toThreeVector3,
 } from './vector';
@@ -33,10 +31,6 @@ export function deepCloneValue<T>(value: T): T {
     value instanceof Vector3
   ) {
     return value.clone() as T;
-  }
-
-  if (value instanceof RapierVector3) {
-    return new RapierVector3(value.x, value.y, value.z) as T;
   }
 
   if (value instanceof Float32Array) {
@@ -91,11 +85,6 @@ export function deepMergeValues<T>(base: T, overrides?: Partial<T>): T {
 
     if (currentValue instanceof Vector3 && isVec3Input(overrideValue)) {
       result[key] = toThreeVector3(overrideValue, currentValue);
-      continue;
-    }
-
-    if (currentValue instanceof RapierVector3 && isVec3Input(overrideValue)) {
-      result[key] = toRapierVector3(overrideValue, currentValue);
       continue;
     }
 

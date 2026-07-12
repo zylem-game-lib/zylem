@@ -12,20 +12,20 @@
  */
 
 import {
-	StageBodyConfig,
 	StageBodyKind,
-	StageColliderConfig,
-	StageColliderShape,
-} from '../runtime/wasm-stage-runtime';
-import { Vec3, Vec3Input, normalizeVec3, VEC3_ZERO, VEC3_ONE } from '../core/vector';
-import {
-	createCollisionFilter,
-	getOrCreateCollisionGroupId,
-} from './collision-builder';
+	type StageBodyConfig,
+	type StageBodyKindValue,
+	type StageColliderConfig,
+	type StageColliderShape,
+} from '@zylem/behaviors/core';
+import { Vec3Input, normalizeVec3, VEC3_ZERO, VEC3_ONE } from '../core/vector';
+import { packCollisionGroups } from './collision-builder';
+
+export { packCollisionGroups };
 
 /** Body-level options the host can override per entity. */
 export interface RuntimeBodyOptions {
-	kind?: StageBodyKind;
+	kind?: StageBodyKindValue;
 	position?: Vec3Input;
 	rotation?: readonly [number, number, number, number];
 	linearDamping?: number;
@@ -74,17 +74,6 @@ export function buildRuntimeBody(options: RuntimeBodyOptions = {}): StageBodyCon
 		lockRotation: options.lockRotation ?? DEFAULT_BODY.lockRotation,
 		lockTranslation: options.lockTranslation ?? DEFAULT_BODY.lockTranslation,
 	};
-}
-
-export function packCollisionGroups(
-	collisionType?: string,
-	collisionFilter?: string[],
-): number {
-	if (!collisionType) return 0xffffffff;
-	const groupId = getOrCreateCollisionGroupId(collisionType);
-	const filter = collisionFilter ? createCollisionFilter(collisionFilter) : 0xffff;
-	const membership = 1 << groupId;
-	return ((membership & 0xffff) << 16) | (filter & 0xffff);
 }
 
 function buildCollider(shape: StageColliderShape, options: RuntimeColliderOptions): StageColliderConfig {

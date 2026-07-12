@@ -36,8 +36,6 @@ export default defineConfig({
 	outDir: 'dist',
 	external: [
 		'three',
-		'@dimforge/rapier3d-compat',
-		'@dimforge/rapier3d',
 		'@zylem/behaviors',
 		'@zylem/behaviors/*',
 		'howler',
