@@ -2,7 +2,11 @@ packages:
   - 'packages/*'
   - 'packages/server/spacetimedb'
 
+catalog:
+  '@zylem/ui': ^0.2.0
+
 overrides:
   '@eslint/plugin-kit@<0.3.4': '>=0.3.4'
   three@<0.125.0: '>=0.125.0'
   three: 0.184.0
+  baseline-browser-mapping: ^2.10.43

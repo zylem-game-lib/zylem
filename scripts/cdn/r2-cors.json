@@ -1,8 +1,10 @@
 [
 	{
 		"AllowedOrigins": [
-			"http://localhost:1337",
-			"http://127.0.0.1:1337",
+			"http://localhost:3331",
+			"http://127.0.0.1:3331",
+			"http://localhost:3332",
+			"http://127.0.0.1:3332",
 			"https://zylem.onrender.com",
 			"https://zylem-staging.onrender.com",
 			"https://zylem.com",

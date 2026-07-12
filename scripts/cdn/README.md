@@ -8,8 +8,9 @@ for applying / verifying them.
 ## Files
 
 - [`r2-cors.json`](./r2-cors.json) — CORS rules applied to the bucket.
-  - `AllowedOrigins` covers the local dev server (`http://localhost:1337`),
-    the Render staging + production hosts, and the apex `zylem.com` domain.
+  - `AllowedOrigins` covers the local examples (`http://localhost:3331`) and
+    shader-showcase (`http://localhost:3332`) servers, the Render staging +
+    production hosts, and the apex `zylem.com` domain.
     Extend it whenever you add a new origin (e.g. a preview deploy).
   - `AllowedMethods` is `GET` + `HEAD` only — the bucket is read-only from
     the browser; uploads happen out-of-band via wrangler / API token.
@@ -39,11 +40,11 @@ After applying (or whenever a CORS error returns), run:
 ```sh
 # 1. Headers on a real GET (browser-equivalent)
 curl -sSI 'https://assets.zylem.cloud/demos/arena/images/ground.1843023e.png' \
-  -H 'origin: http://localhost:1337'
+  -H 'origin: http://localhost:3331'
 
 # 2. Preflight (what the browser sends before fetch / image load)
 curl -sS -X OPTIONS 'https://assets.zylem.cloud/demos/arena/images/ground.1843023e.png' \
-  -H 'origin: http://localhost:1337' \
+  -H 'origin: http://localhost:3331' \
   -H 'access-control-request-method: GET' \
   -i
 ```
@@ -51,7 +52,7 @@ curl -sS -X OPTIONS 'https://assets.zylem.cloud/demos/arena/images/ground.184302
 A correctly-configured response includes:
 
 ```
-Access-Control-Allow-Origin: http://localhost:1337
+Access-Control-Allow-Origin: http://localhost:3331
 Access-Control-Allow-Methods: GET, HEAD
 Access-Control-Max-Age: 3600
 Vary: Origin

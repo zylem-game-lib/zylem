@@ -14,7 +14,7 @@ const additionalAllowedHosts = (process.env.__VITE_ADDITIONAL_SERVER_ALLOWED_HOS
 	.map(host => host.trim())
 	.filter(Boolean);
 const allowedHosts = [...new Set([...defaultAllowedHosts, ...additionalAllowedHosts])];
-const devPort = Number(process.env.PORT ?? '1337');
+const devPort = Number(process.env.PORT ?? '3331');
 
 /**
  * HTTPS agent that resolves hostnames via direct DNS queries (Cloudflare
@@ -81,7 +81,8 @@ const cdnProxyAgent = new Agent({
 const shouldOpenBrowser = !(
 	process.env.CI === 'true' ||
 	process.env.RENDER === 'true' ||
-	process.env.PORT
+	process.env.PORT ||
+	process.env.BROWSER === 'none'
 );
 
 export default defineConfig({
@@ -114,7 +115,7 @@ export default defineConfig({
 		exclude: ['@zylem/ui'],
 	},
 	server: {
-		port: Number.isFinite(devPort) ? devPort : 1337,
+		port: Number.isFinite(devPort) ? devPort : 3331,
 		open: shouldOpenBrowser,
 		allowedHosts,
 		fs: {

@@ -10,8 +10,8 @@
     "optimize:gltf": "node ./repo-actions/optimize-gltf-assets.mjs",
     "destructible-prebake": "zylem-destructible-prebake",
     "test:e2e": "playwright test",
-    "screenshot": "node --experimental-strip-types ./repo-actions/screenshot.ts",
-    "screenshot:local": "node --experimental-strip-types ./repo-actions/screenshot-local.ts"
+    "screenshot": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./repo-actions/screenshot.ts",
+    "screenshot:local": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./repo-actions/screenshot-local.ts"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.11.2",
@@ -21,7 +21,7 @@
     "@zylem/game-lib": "workspace:*",
     "@zylem/runtime": "^0.1.2",
     "@zylem/shaders": "workspace:*",
-    "@zylem/ui": "^0.1.1",
+    "@zylem/ui": "catalog:",
     "howler": "^2.2.4",
     "nanoid": "^5.1.5",
     "solid-js": "^1.9.9",

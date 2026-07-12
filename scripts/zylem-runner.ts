@@ -17,16 +17,10 @@
  * namespaces, or parameter properties.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import {
-	existsSync,
-	readdirSync,
-	readFileSync,
-	statSync,
-	writeFileSync,
-} from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
 	cancel,
 	confirm,
@@ -39,7 +33,7 @@ import {
 	text,
 } from '@clack/prompts';
 
-type Action = 'run' | 'build' | 'test' | 'bump' | 'publish' | 'deps';
+type Action = 'run' | 'build' | 'test' | 'screenshot' | 'bump' | 'publish' | 'deps';
 type BumpLevel = 'patch' | 'minor' | 'major';
 type DepsMode = 'dev' | 'prod';
 
@@ -59,11 +53,16 @@ interface SwitchableHit {
 	deps: Map<string, string>;
 }
 
+interface ScreenshotWorkflowModule {
+	collectDemoIds: () => string[];
+}
+
 /** Maps an action to the package.json script it executes. */
 const ACTION_SCRIPT: Record<Exclude<Action, 'deps'>, string> = {
 	run: 'dev',
 	build: 'build',
 	test: 'test',
+	screenshot: 'screenshot:local',
 	bump: 'build',
 	publish: 'build',
 };
@@ -94,11 +93,7 @@ const SIBLING_REPO_DIRS = [
 	'arena',
 ] as const;
 
-const DEP_SECTIONS = [
-	'dependencies',
-	'devDependencies',
-	'peerDependencies',
-] as const;
+const DEP_SECTIONS = ['dependencies', 'devDependencies', 'peerDependencies'] as const;
 
 const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 const IS_MONOREPO = existsSync(join(ROOT_DIR, 'packages'));
@@ -214,7 +209,7 @@ function runCommand(
 	command: string,
 	args: string[],
 	env: Record<string, string | undefined>,
-	cwd: string = ROOT_DIR,
+	cwd: string = ROOT_DIR
 ): Promise<number> {
 	return new Promise((resolvePromise) => {
 		const child = spawn(command, args, { stdio: 'inherit', env, cwd });
@@ -227,11 +222,7 @@ function runCommand(
 }
 
 /** Run a command silently and return its stdout, or null on failure. */
-function captureCommand(
-	command: string,
-	args: string[],
-	cwd: string = ROOT_DIR,
-): string | null {
+function captureCommand(command: string, args: string[], cwd: string = ROOT_DIR): string | null {
 	const result = spawnSync(command, args, { cwd, encoding: 'utf8' });
 	if (result.status !== 0) {
 		return null;
@@ -244,11 +235,7 @@ function bumpVersion(version: string, level: BumpLevel): string | null {
 	if (!match) {
 		return null;
 	}
-	const [major, minor, patch] = [
-		Number(match[1]),
-		Number(match[2]),
-		Number(match[3]),
-	];
+	const [major, minor, patch] = [Number(match[1]), Number(match[2]), Number(match[3])];
 	if (level === 'major') {
 		return `${major + 1}.0.0`;
 	}
@@ -284,9 +271,7 @@ function bail(message: string): never {
  */
 function resolveWorkspaceRoot(): string {
 	const parent = dirname(ROOT_DIR);
-	const hits = SIBLING_REPO_DIRS.filter((name) =>
-		existsSync(join(parent, name)),
-	);
+	const hits = SIBLING_REPO_DIRS.filter((name) => existsSync(join(parent, name)));
 	if (hits.length >= 2) {
 		return parent;
 	}
@@ -309,14 +294,7 @@ function isSwitchableValue(value: unknown): value is string {
 
 function collectPackageJsonPaths(repoRoot: string): string[] {
 	const out: string[] = [];
-	const skip = new Set([
-		'node_modules',
-		'.git',
-		'dist',
-		'target',
-		'.pnpm-store',
-		'coverage',
-	]);
+	const skip = new Set(['node_modules', '.git', 'dist', 'target', '.pnpm-store', 'coverage']);
 
 	const walk = (dir: string) => {
 		let entries;
@@ -405,9 +383,7 @@ function scanSwitchableHits(workspaceRoot: string): SwitchableHit[] {
 				if (!block || typeof block !== 'object') {
 					continue;
 				}
-				for (const [name, value] of Object.entries(
-					block as Record<string, unknown>,
-				)) {
+				for (const [name, value] of Object.entries(block as Record<string, unknown>)) {
 					if (!(name in SWITCHABLE_PACKAGES)) {
 						continue;
 					}
@@ -464,12 +440,7 @@ function stripRangeToVersion(range: string): string {
  * Replace `"@zylem/foo": "<old>"` with a new value in raw package.json text,
  * preserving surrounding formatting.
  */
-function rewriteDepValue(
-	raw: string,
-	name: string,
-	oldValue: string,
-	newValue: string,
-): string {
+function rewriteDepValue(raw: string, name: string, oldValue: string, newValue: string): string {
 	const needle = `"${name}": "${oldValue}"`;
 	const replacement = `"${name}": "${newValue}"`;
 	if (!raw.includes(needle)) {
@@ -492,22 +463,16 @@ function linkSpec(workspaceRoot: string, consumerDir: string, name: string): str
 	return `link:${rel.split('\\').join('/')}`;
 }
 
-async function runDepsAction(
-	env: Record<string, string | undefined>,
-): Promise<number> {
+async function runDepsAction(env: Record<string, string | undefined>): Promise<number> {
 	const workspaceRoot = resolveWorkspaceRoot();
 	const hits = scanSwitchableHits(workspaceRoot);
 	if (hits.length === 0) {
 		bail('No switchable @zylem/* dependencies found in sibling repos.');
 	}
 
-	const uniquePackages = [
-		...new Set(hits.flatMap((hit) => [...hit.deps.keys()])),
-	].sort();
+	const uniquePackages = [...new Set(hits.flatMap((hit) => [...hit.deps.keys()]))].sort();
 
-	log.info(
-		`Found ${hits.length} package.json file(s) with: ${uniquePackages.join(', ')}`,
-	);
+	log.info(`Found ${hits.length} package.json file(s) with: ${uniquePackages.join(', ')}`);
 
 	const mode = (await select({
 		message: 'Dependency mode',
@@ -536,9 +501,7 @@ async function runDepsAction(
 			const latest = fetchNpmLatest(name);
 			const fallback =
 				latest ??
-				stripRangeToVersion(
-					hits.find((h) => h.deps.has(name))?.deps.get(name) ?? '0.0.0',
-				);
+				stripRangeToVersion(hits.find((h) => h.deps.has(name))?.deps.get(name) ?? '0.0.0');
 			const answer = (await text({
 				message: `Version for ${name}`,
 				placeholder: fallback,
@@ -548,10 +511,7 @@ async function runDepsAction(
 			if (isCancel(answer)) {
 				bail('Cancelled.');
 			}
-			const chosen =
-				typeof answer === 'string' && answer.trim() !== ''
-					? answer.trim()
-					: fallback;
+			const chosen = typeof answer === 'string' && answer.trim() !== '' ? answer.trim() : fallback;
 			versions.set(name, normalizeProdRange(chosen));
 		}
 	}
@@ -579,13 +539,9 @@ async function runDepsAction(
 			if (next !== raw) {
 				raw = next;
 				changed = true;
-				log.step(
-					`${relative(workspaceRoot, hit.pkgPath)}: ${name} ${oldValue} -> ${newValue}`,
-				);
+				log.step(`${relative(workspaceRoot, hit.pkgPath)}: ${name} ${oldValue} -> ${newValue}`);
 			} else {
-				log.warn(
-					`Could not rewrite ${name} in ${relative(workspaceRoot, hit.pkgPath)}`,
-				);
+				log.warn(`Could not rewrite ${name} in ${relative(workspaceRoot, hit.pkgPath)}`);
 			}
 		}
 		if (changed) {
@@ -638,7 +594,7 @@ function resolveInstallRoot(pkgDir: string, repoRoot: string): string {
  */
 async function bumpPackage(
 	pkg: PackageInfo,
-	env: Record<string, string | undefined>,
+	env: Record<string, string | undefined>
 ): Promise<number> {
 	const level = (await select({
 		message: `Bump ${pkg.name} (current: ${pkg.version})`,
@@ -657,9 +613,7 @@ async function bumpPackage(
 		message: `Message for ${pkg.name} bump`,
 		placeholder: 'What changed?',
 		validate: (value) =>
-			value === undefined || value.trim() === ''
-				? 'A message is required.'
-				: undefined,
+			value === undefined || value.trim() === '' ? 'A message is required.' : undefined,
 	})) as string | symbol;
 	if (isCancel(message)) {
 		bail('Cancelled.');
@@ -671,22 +625,16 @@ async function bumpPackage(
 		return 1;
 	}
 	if (!writeVersion(pkg, newVersion)) {
-		log.error(
-			`Could not find "version": "${pkg.version}" in ${pkg.name}'s package.json.`,
-		);
+		log.error(`Could not find "version": "${pkg.version}" in ${pkg.name}'s package.json.`);
 		return 1;
 	}
 	log.step(`${pkg.name}: ${pkg.version} -> ${newVersion}`);
 
 	log.step(`Building ${pkg.name}`);
-	const buildCode = await runCommand(
-		'pnpm',
-		scriptArgs(pkg, ACTION_SCRIPT.build),
-		env,
-	);
+	const buildCode = await runCommand('pnpm', scriptArgs(pkg, ACTION_SCRIPT.build), env);
 	if (buildCode !== 0) {
 		log.error(
-			`Build failed; the version bump in package.json was left in place. Fix the build or revert before committing.`,
+			`Build failed; the version bump in package.json was left in place. Fix the build or revert before committing.`
 		);
 		return buildCode;
 	}
@@ -694,11 +642,7 @@ async function bumpPackage(
 	// Stage only the bumped manifest (and the lockfile if pnpm touched it).
 	const pkgJsonRel = relative(ROOT_DIR, join(pkg.dir, 'package.json'));
 	const stage = [pkgJsonRel];
-	const lockStatus = captureCommand('git', [
-		'status',
-		'--porcelain',
-		'pnpm-lock.yaml',
-	]);
+	const lockStatus = captureCommand('git', ['status', '--porcelain', 'pnpm-lock.yaml']);
 	if (lockStatus !== null && lockStatus.trim() !== '') {
 		stage.push('pnpm-lock.yaml');
 	}
@@ -708,11 +652,7 @@ async function bumpPackage(
 	}
 
 	const commitMessage = `${pkg.name}@${newVersion}: ${(message as string).trim()}`;
-	const commitCode = await runCommand(
-		'git',
-		['commit', '-m', commitMessage],
-		env,
-	);
+	const commitCode = await runCommand('git', ['commit', '-m', commitMessage], env);
 	if (commitCode !== 0) {
 		return commitCode;
 	}
@@ -734,9 +674,20 @@ async function main(): Promise<void> {
 		bail(
 			IS_MONOREPO
 				? 'No workspace packages found under packages/.'
-				: 'No package.json found at the repo root.',
+				: 'No package.json found at the repo root.'
 		);
 	}
+
+	const screenshotPackage = packages.find(
+		(pkg) => pkg.name === '@zylem/examples' && Boolean(pkg.scripts[ACTION_SCRIPT.screenshot])
+	);
+	const screenshotWorkflowPath = screenshotPackage
+		? join(screenshotPackage.dir, 'repo-actions', 'screenshot-workflow.ts')
+		: null;
+	const supportsScreenshots =
+		screenshotPackage !== undefined &&
+		screenshotWorkflowPath !== null &&
+		existsSync(screenshotWorkflowPath);
 
 	const action = (await select({
 		message: 'What would you like to do?',
@@ -744,6 +695,15 @@ async function main(): Promise<void> {
 			{ value: 'run', label: 'run', hint: 'start dev / watch mode' },
 			{ value: 'build', label: 'build', hint: 'compile packages' },
 			{ value: 'test', label: 'test', hint: 'run test suites' },
+			...(supportsScreenshots
+				? [
+						{
+							value: 'screenshot' as const,
+							label: 'screenshot',
+							hint: 'capture selected examples',
+						},
+					]
+				: []),
 			{
 				value: 'bump',
 				label: 'bump',
@@ -775,10 +735,59 @@ async function main(): Promise<void> {
 		return;
 	}
 
+	if (chosenAction === 'screenshot' && screenshotPackage && screenshotWorkflowPath) {
+		const workflow = (await import(
+			pathToFileURL(screenshotWorkflowPath).href
+		)) as ScreenshotWorkflowModule;
+		const demoIds = workflow.collectDemoIds();
+		if (demoIds.length === 0) {
+			bail('No examples are available to screenshot.');
+		}
+
+		const ALL_EXAMPLES = '__all__';
+		const selected = (await multiselect({
+			message: 'Select examples to screenshot',
+			options: [
+				{
+					value: ALL_EXAMPLES,
+					label: 'All examples',
+					hint: `${demoIds.length} demos`,
+				},
+				...demoIds.map((demoId) => ({
+					value: demoId,
+					label: demoId,
+				})),
+			],
+			required: true,
+		})) as string[] | symbol;
+		if (isCancel(selected)) {
+			bail('Cancelled.');
+		}
+		const captureAll = (selected as string[]).includes(ALL_EXAMPLES);
+		const selectedDemoIds = (selected as string[]).filter((value) => value !== ALL_EXAMPLES);
+
+		const proceed = await confirm({
+			message: captureAll
+				? `Capture screenshots for all ${demoIds.length} examples?`
+				: `Capture ${selectedDemoIds.length} example screenshot(s)?`,
+		});
+		if (isCancel(proceed) || proceed === false) {
+			bail('Cancelled.');
+		}
+
+		const args = scriptArgs(screenshotPackage, ACTION_SCRIPT.screenshot);
+		args.push('--', ...(captureAll ? ['--all'] : selectedDemoIds));
+		log.step(`pnpm ${args.join(' ')}`);
+		const exitCode = await runCommand('pnpm', args, env);
+		if (exitCode !== 0) {
+			bail(`\`screenshot\` exited with code ${exitCode}.`);
+		}
+		outro('Done: screenshot.');
+		return;
+	}
+
 	const packageAction = chosenAction as Exclude<Action, 'deps'>;
-	const available = packages.filter((pkg) =>
-		supportsAction(pkg, packageAction),
-	);
+	const available = packages.filter((pkg) => supportsAction(pkg, packageAction));
 	if (available.length === 0) {
 		bail(`No packages support \`${chosenAction}\`.`);
 	}
@@ -844,11 +853,7 @@ async function main(): Promise<void> {
 				continue;
 			}
 			log.step(`Building ${name}`);
-			exitCode = await runCommand(
-				'pnpm',
-				scriptArgs(pkg, ACTION_SCRIPT.build),
-				env,
-			);
+			exitCode = await runCommand('pnpm', scriptArgs(pkg, ACTION_SCRIPT.build), env);
 			if (exitCode !== 0) {
 				break;
 			}
@@ -858,7 +863,7 @@ async function main(): Promise<void> {
 				IS_MONOREPO
 					? ['--filter', name, 'publish', '--access', 'public']
 					: ['publish', '--access', 'public'],
-				env,
+				env
 			);
 			if (exitCode !== 0) {
 				break;

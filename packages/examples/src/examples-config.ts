@@ -50,6 +50,7 @@ const PREDEFINED_ORDER = {
 		'readme-example',
 		'input',
 		'rect',
+		'line-demo',
 		'variable-test',
 		'empty-game',
 		'basic-ball',

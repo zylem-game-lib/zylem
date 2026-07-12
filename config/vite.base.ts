@@ -53,7 +53,7 @@ export async function createBaseConfig(_env: ConfigEnv): Promise<UserConfig> {
 		],
 		assetsInclude: ['**/*.fbx', '**/*.gltf', '**/*.glb'],
 		server: {
-			port: 1337,
+			port: 3331,
 		},
 		preview: {
 			port: 4173,
