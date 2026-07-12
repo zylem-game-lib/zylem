@@ -40,23 +40,9 @@ import {
 	parseStageOptions,
 	resolveGLTFLoaderConfig,
 	type StageAssetLoaderConfig,
-	type StageWasmRuntimeConfig,
 } from './stage-config';
-import {
-	WasmStageRuntime,
-	createWasmStageRuntime,
-	type StageWasmExports,
-} from '../runtime/wasm-stage-runtime';
-import { StagePhysicsBridge } from '../runtime/stage-physics-bridge';
-import { RenderBundleManager } from '../graphics/render-bundle-manager';
 import type { Vec3Components } from '../core/vector';
 import type { BehaviorSystem, BehaviorSystemFactory } from '@zylem/behaviors/core';
-import { createRuntimeDebugBindingFromDebugState } from '../runtime/runtime-debug-binding';
-import type {
-	RuntimeDebugBinding,
-	StageRuntimeAdapter,
-	StageRuntimeContext,
-} from '../runtime/zylem-stage-runtime';
 import { applyTransformChanges, TransformableEntity } from '../actions/capabilities/apply-transform';
 import { StageEntityDelegate, StageEntityInput } from './stage-entity-delegate';
 export type { LoadingEvent };
@@ -72,16 +58,6 @@ export interface ZylemStageConfig {
 	physicsRate: number;
 	/** Optional runtime loader configuration for stage-managed assets. */
 	assetLoaders?: StageAssetLoaderConfig;
-	/** Optional runtime adapter for wasm-driven simulation/rendering. */
-	runtimeAdapter?: StageRuntimeAdapter;
-	/** Optional debug binding for wasm runtime adapters (heat tint, etc.). */
-	runtimeDebugBinding?: RuntimeDebugBinding;
-	/**
-	 * Optional unified-Stage wasm runtime configuration. When set, the stage
-	 * instantiates a {@link WasmStageRuntime} during `load()` and exposes it
-	 * to behavior systems via `BehaviorSystemContext.wasmStage`.
-	 */
-	wasmRuntime?: StageWasmRuntimeConfig;
 	/**
 	 * When `false`, suppress the engine's built-in ambient + directional
 	 * lights so the stage owns its lighting rig entirely (usually via
@@ -122,18 +98,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
 	instanceManager: InstanceManager | null = null;
-	/** Unified-Stage wasm runtime; non-null only when `wasmRuntime` was configured. */
-	wasmStage: WasmStageRuntime | null = null;
-	/**
-	 * Phase A bridge between WASM physics/transforms and the render layer.
-	 * Non-null only when `wasmRuntime.bundleRendering` is enabled.
-	 */
-	physicsBridge: StagePhysicsBridge | null = null;
-	/**
-	 * Phase A render-bundle manager; owns the `BundleGroup`s that draw
-	 * bridge-managed entities. Non-null only when `bundleRendering` is enabled.
-	 */
-	renderBundleManager: RenderBundleManager | null = null;
 
 	debugDelegate: StageDebugDelegate | null = null;
 
@@ -146,7 +110,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	cameraManagerRef: CameraManager | null = null;
 	/** Shared renderer manager (injected by the game) */
 	rendererManager: RendererManager | null = null;
-	runtimeAdapter: StageRuntimeAdapter | null = null;
 
 	// Delegates
 	private cameraDelegate: StageCameraDelegate;
@@ -195,19 +158,12 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			variables: parsed.config.variables,
 			physicsRate: parsed.config.physicsRate,
 			assetLoaders: parsed.config.assetLoaders,
-			runtimeAdapter: parsed.config.runtimeAdapter,
-			runtimeDebugBinding: parsed.config.runtimeDebugBinding,
 			defaultLighting: parsed.config.defaultLighting,
-			wasmRuntime: parsed.config.wasmRuntime,
 			postProcessingEffects: parsed.config.postProcessingEffects,
 			entities: [],
 		};
 
 		this.gravity = parsed.config.gravity ?? new Vector3(0, 0, 0);
-		this.runtimeAdapter = parsed.config.runtimeAdapter ?? null;
-		if (this.runtimeAdapter && !this.state.runtimeDebugBinding) {
-			this.state.runtimeDebugBinding = createRuntimeDebugBindingFromDebugState();
-		}
 	}
 
 	private setState() {
@@ -262,17 +218,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.scene = new ZylemScene(id, zylemCamera, this.state);
 
 		const gravity = this.gravity ?? new Vector3(0, 0, 0);
-		const physicsWorld = await ZylemWorld.loadPhysics(gravity);
-		this.world = new ZylemWorld(physicsWorld, this.state.physicsRate);
-
-		if (this.state.wasmRuntime) {
-			this.wasmStage = await this.loadWasmStage(this.state.wasmRuntime);
-			if (this.state.wasmRuntime.bundleRendering && this.wasmStage) {
-				this.physicsBridge = new StagePhysicsBridge(this.wasmStage, {
-					physicsRate: this.state.physicsRate,
-				});
-			}
-		}
+		this.world = await ZylemWorld.create(gravity, this.state.physicsRate);
 
 		this.scene.setup();
 
@@ -309,31 +255,18 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.instanceManager = new InstanceManager();
 		this.instanceManager.setScene(this.scene.scene);
 
-		// Phase A: render bundles draw bridge-managed entities. Created here so the
-		// THREE scene graph (built in `scene.setup()`) is available.
-		if (this.physicsBridge) {
-			this.renderBundleManager = new RenderBundleManager(this.scene.scene);
-		}
-
 		// Attach entity delegate context now that scene/world are ready
 		this.entityDelegate.attach({
 			scene: this.scene,
 			world: this.world,
 			instanceManager: this.instanceManager,
 			camera: zylemCamera,
-			runtimeAdapter: this.runtimeAdapter,
-			wasmStage: this.wasmStage,
-			physicsBridge: this.physicsBridge,
-			renderBundleManager: this.renderBundleManager,
 		});
 
 		this.loadingDelegate.emitStart();
 		await this.entityDelegate.runEntityLoadGenerator();
 
 		this.entityDelegate.isLoaded = true;
-		if (this.runtimeAdapter) {
-			await this.runtimeAdapter.init(this.runtimeContext());
-		}
 		this.loadingDelegate.emitComplete();
 	}
 
@@ -368,16 +301,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			return;
 		}
 
-		// Phase A: WASM-owned transforms + BundleGroup rendering. Bypasses the
-		// Rapier world step and `syncRenderPoses`; WASM is the source of truth.
-		if (this.physicsBridge && this.renderBundleManager) {
-			this._updateBundlePath(params);
-			return;
-		}
-
-		this.world.update(params);
-
-		// Run registered behavior systems (first `update` arg is unused / reserved)
+		// Behavior systems run first: they write this frame's inputs into the
+		// wasm runtime (and read last step's snapshots for their handles).
+		// (First `update` arg is unused / reserved.)
 		for (const system of this.entityDelegate.behaviorSystems) {
 			system.update(undefined, delta);
 		}
@@ -404,26 +330,15 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			}
 		}
 
-		// Sync physics to rendering AFTER transforms are applied
+		// Step the wasm simulation (fixed timestep + collision dispatch) after
+		// behaviors and entities have written their inputs/intents.
+		this.world.update(params);
+
+		// Sync physics to rendering AFTER the simulation stepped
 		syncRenderPoses({
 			_childrenMap: this.entityDelegate.childrenMap,
 			_world: this.world,
 		} as unknown as StageSystem);
-
-		// Step the unified-Stage wasm runtime (Phase 2+ migration). Behaviors that
-		// have been ported call into `wasmStage` from inside their systemFactory
-		// and rely on the post-step buffers being fresh.
-		if (this.wasmStage) {
-			this.wasmStage.step(delta);
-		}
-
-		if (this.runtimeAdapter) {
-			this.runtimeAdapter.step({
-				...this.runtimeContext(),
-				delta,
-				inputs: params.inputs,
-			});
-		}
 
 		// Sync instanced mesh transforms
 		this.instanceManager?.update();
@@ -440,58 +355,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.scene.update({ delta });
 	}
 
-	/**
-	 * Feature-flagged update loop for the WASM-owned-rendering path.
-	 *
-	 * Order: behavior systems -> children `nodeUpdate` (+ flush transform store)
-	 * -> `bridge.step` (advance WASM physics) -> `renderBundleManager.sync`
-	 * (copy interpolated WASM transforms onto bundle objects) -> camera/scene.
-	 */
-	private _updateBundlePath(params: UpdateContext<ZylemStage>): void {
-		const { delta } = params;
-		const bridge = this.physicsBridge!;
-		const bundles = this.renderBundleManager!;
-
-		for (const system of this.entityDelegate.behaviorSystems) {
-			system.update(undefined, delta);
-		}
-
-		for (const child of this.entityDelegate.childrenMap.values()) {
-			const childParams = this.childUpdateParams;
-			childParams.delta = params.delta;
-			childParams.inputs = params.inputs;
-			childParams.globals = params.globals;
-			childParams.camera = params.camera;
-			childParams.stage = params.stage;
-			childParams.game = params.game;
-			childParams.me = child;
-			child.nodeUpdate(childParams);
-
-			// Transform intents flush to the Rapier body when present; in the
-			// pure-WASM path the body is null, so this is a safe no-op until
-			// Phase B reroutes the store to WASM FFI setters.
-			const transformable = child as unknown as TransformableEntity;
-			if (transformable.transformStore) {
-				applyTransformChanges(transformable, transformable.transformStore);
-			}
-
-			if (child.markedForRemoval) {
-				this.entityDelegate.removeEntityByUuid(child.uuid);
-			}
-		}
-
-		bridge.step(delta);
-		bundles.sync((handle, out) => bridge.getTransform(handle, out));
-
-		if (this.cameraManagerRef) {
-			this.cameraManagerRef.update(delta);
-		} else {
-			this.cameraRef?.update(delta);
-		}
-
-		this.scene!.update({ delta });
-	}
-
 	public outOfLoop() {
 		this.debugUpdate();
 	}
@@ -505,26 +368,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	/** Cleanup owned resources when the stage is destroyed. */
 	protected _destroy(params: DestroyContext<ZylemStage>): void {
-		this.runtimeAdapter?.destroy(this.scene && this.world ? this.runtimeContext() : null);
-		this.runtimeAdapter = null;
-
-		// Phase A teardown. The bridge owns disposal of the wasm runtime, so null
-		// `wasmStage` first to avoid the double-dispose below.
-		if (this.renderBundleManager) {
-			this.renderBundleManager.dispose();
-			this.renderBundleManager = null;
-		}
-		if (this.physicsBridge) {
-			this.physicsBridge.dispose();
-			this.physicsBridge = null;
-			this.wasmStage = null;
-		}
-
-		if (this.wasmStage) {
-			this.wasmStage.dispose();
-			this.wasmStage = null;
-		}
-
 		// Delegate handles entity + behavior system cleanup
 		this.entityDelegate.destroyAll();
 
@@ -604,45 +447,6 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	logMissingEntities() {
 		console.warn('Zylem world or scene is null');
-	}
-
-	private runtimeContext(): StageRuntimeContext {
-		return {
-			scene: this.scene!,
-			world: this.world!,
-			camera: this.cameraRef!,
-			debug: this.state.runtimeDebugBinding,
-		};
-	}
-
-	/**
-	 * Resolve a {@link StageWasmRuntimeConfig} into a live {@link WasmStageRuntime}.
-	 * Accepts wasm bytes (`ArrayBuffer`), a fetch URL, or a deferred async
-	 * builder so demos can `?url`-import a Vite asset without forcing the engine
-	 * to bundle the wasm itself.
-	 */
-	private async loadWasmStage(config: StageWasmRuntimeConfig): Promise<WasmStageRuntime> {
-		const rawSource = typeof config.source === 'function'
-			? await (config.source as () => Promise<ArrayBuffer | RequestInfo | URL>)()
-			: config.source;
-
-		const baseOpts = config.options ?? {};
-		const initialCapacity = baseOpts.initialCapacity ?? 256;
-		const gravityVec = this.gravity instanceof Vector3
-			? this.gravity
-			: new Vector3(this.gravity?.x ?? 0, this.gravity?.y ?? 0, this.gravity?.z ?? 0);
-		const gravity = baseOpts.gravity ?? ([gravityVec.x, gravityVec.y, gravityVec.z] as const);
-
-		if (rawSource instanceof ArrayBuffer) {
-			return createWasmStageRuntime(rawSource, { initialCapacity, gravity });
-		}
-
-		const response = await fetch(rawSource as RequestInfo | URL);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch wasm-stage runtime: ${response.status} ${response.statusText}`);
-		}
-		const bytes = await response.arrayBuffer();
-		return createWasmStageRuntime(bytes, { initialCapacity, gravity });
 	}
 
 	// ─── Camera management forwarding ─────────────────────────────────────

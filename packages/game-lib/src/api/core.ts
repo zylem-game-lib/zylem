@@ -81,7 +81,7 @@ export type { PerspectiveType } from '../lib/camera/perspective';
 /** @public */
 export { Perspectives } from '../lib/camera/perspective';
 /** @public */
-export type { RendererType, ZylemRenderer, Viewport } from '../lib/camera/renderer-manager';
+export type { ZylemRenderer, Viewport } from '../lib/camera/renderer-manager';
 /** @public */
 export { isWebGPUSupported } from '../lib/camera/renderer-manager';
 /** @public */
@@ -174,7 +174,6 @@ export {
 	VEC3_ZERO,
 	normalizeVec2,
 	normalizeVec3,
-	toRapierVector3,
 	toThreeVector2,
 	toThreeVector3,
 } from '../lib/core/vector';

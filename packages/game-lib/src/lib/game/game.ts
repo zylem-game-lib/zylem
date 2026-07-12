@@ -15,6 +15,7 @@ import { StageManager, stageState } from '../stage/stage-manager';
 import { StageFactory } from '../stage/stage-factory';
 import { initGlobals, clearGlobalSubscriptions, resetGlobals, onGlobalChange as onGlobalChangeInternal, onGlobalChanges as onGlobalChangesInternal } from './game-state';
 import { EventEmitterDelegate, zylemEventBus, type GameEvents } from '../events';
+import type { Simulation } from '@zylem/behaviors/core';
 
 export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private wrappedGame: ZylemGame<TGlobals> | null = null;
@@ -209,6 +210,22 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	getCurrentStage(): Stage | null {
 		return this.wrappedGame?.currentStage() ?? null;
 	}
+
+	/**
+	 * Experimental escape hatches. APIs here are unstable and may change or be
+	 * removed without a major version bump.
+	 */
+	readonly experimental = {
+		/**
+		 * The `@zylem/behaviors` {@link Simulation} backing the current stage's
+		 * physics world, or `null` before a stage is loaded. Intended for debug
+		 * tooling and the editor; games should not need it.
+		 */
+		getRuntime: (): Simulation | null => {
+			const stage = this.getCurrentStage();
+			return stage?.wrappedStage?.world?.simulation ?? null;
+		},
+	};
 
 	async pause() {
 		setPaused(true);

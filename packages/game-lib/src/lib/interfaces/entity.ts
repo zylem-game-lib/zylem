@@ -1,5 +1,5 @@
-import { Collider, KinematicCharacterController, RigidBody } from "@dimforge/rapier3d-compat";
 import { Group, Mesh } from "three";
+import type { SimulationBody } from "../collision/simulation-body";
 
 export type LifecycleFunction<T> = (params?: any) => void;
 
@@ -18,15 +18,11 @@ export interface Entity<T = any> {
 
 export interface StageEntity extends Entity {
 	uuid: string;
-	body: RigidBody;
+	body: SimulationBody;
 	group: Group;
 	mesh: Mesh;
 	instanceId: number;
-	collider: Collider;
 	controlledRotation: boolean;
-	/** When true, a Rapier KinematicCharacterController is allocated on this entity. Opt-in; default false. */
-	useCharacterController?: boolean;
-	characterController: KinematicCharacterController;
 	name: string;
 	markedForRemoval: boolean;
 }

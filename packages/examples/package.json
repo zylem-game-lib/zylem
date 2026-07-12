@@ -14,12 +14,10 @@
     "screenshot:local": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./repo-actions/screenshot-local.ts"
   },
   "dependencies": {
-    "@dimforge/rapier3d-compat": "^0.11.2",
     "@solidjs/router": "^0.14.10",
     "@zylem/assets": "^0.1.1",
     "@zylem/editor": "workspace:*",
     "@zylem/game-lib": "workspace:*",
-    "@zylem/runtime": "^0.1.2",
     "@zylem/shaders": "workspace:*",
     "@zylem/ui": "catalog:",
     "howler": "^2.2.4",

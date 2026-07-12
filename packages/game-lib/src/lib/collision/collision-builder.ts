@@ -1,16 +1,12 @@
 import {
-  ActiveCollisionTypes,
-  ColliderDesc,
-  RigidBodyDesc,
-  RigidBodyType,
-  Vector3,
-} from '@dimforge/rapier3d-compat';
+  StageBodyKind,
+  type SimulationBodyDefinition,
+  type SimulationColliderDefinition,
+} from '@zylem/behaviors/core';
 import {
-  Vec3,
   Vec3Input,
   VEC3_ZERO,
   VEC3_ONE,
-  toRapierVector3,
   normalizeVec3,
 } from '../core/vector';
 
@@ -47,28 +43,45 @@ export function createCollisionFilter(allowedTypes: string[]): number {
   return filter;
 }
 
+/**
+ * Pack a collision type + filter into the runtime's interaction-groups u32
+ * (high 16 bits = membership mask, low 16 bits = filter mask).
+ */
+export function packCollisionGroups(
+  collisionType?: string,
+  collisionFilter?: string[],
+): number {
+  if (!collisionType) return 0xffffffff;
+  const groupId = getOrCreateCollisionGroupId(collisionType);
+  const filter = collisionFilter ? createCollisionFilter(collisionFilter) : 0xffff;
+  const membership = 1 << groupId;
+  return ((membership & 0xffff) << 16) | (filter & 0xffff);
+}
+
+/**
+ * Builds plain body + collider definitions consumable by the behaviors
+ * `Simulation` (`simulation.spawn(...)`). No physics-engine types appear
+ * here — everything is data until the world uploads it to the wasm runtime.
+ */
 export class CollisionBuilder {
   static: boolean = false;
   sensor: boolean = false;
-  gravity: Vec3 = new Vector3(0, 0, 0);
 
-  build(options: Partial<CollisionOptions>): [RigidBodyDesc, ColliderDesc] {
-    const bodyDesc = this.bodyDesc({
+  build(options: Partial<CollisionOptions>): [SimulationBodyDefinition, SimulationColliderDefinition] {
+    const bodyDef = this.bodyDesc({
       isDynamicBody: !this.static,
     });
     const collider = this.collider(options);
-    const type = options.collisionType;
-    if (type) {
-      let groupId = getOrCreateCollisionGroupId(type);
-      let filter = 0b1111111111111111;
-      if (options.collisionFilter) {
-        filter = createCollisionFilter(options.collisionFilter);
-      }
-      collider.setCollisionGroups((groupId << 16) | filter);
+    if (this.sensor) {
+      collider.sensor = true;
     }
-    const { KINEMATIC_FIXED, DEFAULT } = ActiveCollisionTypes;
-    collider.activeCollisionTypes = this.sensor ? KINEMATIC_FIXED : DEFAULT;
-    return [bodyDesc, collider];
+    if (options.collisionType) {
+      collider.collisionGroups = packCollisionGroups(
+        options.collisionType,
+        options.collisionFilter,
+      );
+    }
+    return [bodyDef, collider];
   }
 
   withCollision(collisionOptions: Partial<CollisionOptions>): this {
@@ -77,22 +90,22 @@ export class CollisionBuilder {
     return this;
   }
 
-  collider(options: CollisionOptions): ColliderDesc {
-    const size = toRapierVector3(options.size, VEC3_ONE);
-    const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
-    let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
+  collider(options: CollisionOptions): SimulationColliderDefinition {
+    const size = normalizeVec3(options.size, VEC3_ONE);
     const position = normalizeVec3(options.position, VEC3_ZERO);
-    colliderDesc.setTranslation(position.x, position.y, position.z);
-    return colliderDesc;
+    return {
+      shape: { type: 'box', halfExtents: [size.x / 2, size.y / 2, size.z / 2] },
+      offset: [position.x, position.y, position.z],
+    };
   }
 
-  bodyDesc({ isDynamicBody = true }): RigidBodyDesc {
-    const type = isDynamicBody ? RigidBodyType.Dynamic : RigidBodyType.Fixed;
-    const bodyDesc = new RigidBodyDesc(type)
-      .setTranslation(0, 0, 0)
-      .setGravityScale(1.0)
-      .setCanSleep(false)
-      .setCcdEnabled(true);
-    return bodyDesc;
+  bodyDesc({ isDynamicBody = true }): SimulationBodyDefinition {
+    return {
+      kind: isDynamicBody ? StageBodyKind.Dynamic : StageBodyKind.Static,
+      position: [0, 0, 0],
+      gravityScale: 1,
+      canSleep: false,
+      ccdEnabled: true,
+    };
   }
 }

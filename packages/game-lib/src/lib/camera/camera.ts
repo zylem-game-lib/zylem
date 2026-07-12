@@ -1,7 +1,7 @@
 import { Vector2, Vector3, Texture } from "three";
 import { PerspectiveType } from "./perspective";
 import { ZylemCamera } from "./zylem-camera";
-import { RendererType, Viewport, DEFAULT_VIEWPORT } from "./renderer-manager";
+import { Viewport, DEFAULT_VIEWPORT } from "./renderer-manager";
 import { StageEntity } from "../interfaces/entity";
 import type { CameraBehavior, CameraAction, CameraPerspective, CameraPipelineState } from "./types";
 import { createPerspective } from "./perspectives";
@@ -14,15 +14,6 @@ export interface CameraOptions {
 	target?: Vec3Input;
 	zoom?: number;
 	screenResolution?: Vec2Input;
-	/**
-	 * Renderer type.
-	 *
-	 * @deprecated game-lib always renders with WebGPU (Three.js keeps its own
-	 * internal WebGL2 fallback for devices without WebGPU). This option is
-	 * ignored and retained only for backward compatibility.
-	 * @default 'webgpu'
-	 */
-	rendererType?: RendererType;
 	/**
 	 * Enable orbital controls for this camera.
 	 * Can be toggled at runtime via enableOrbitalControls() / disableOrbitalControls().
@@ -232,8 +223,7 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 	const zylemCamera = new ZylemCamera(
 		options.perspective || 'third-person',
 		screenResolution,
-		frustumSize,
-		options.rendererType || 'webgpu'
+		frustumSize
 	);
 
 	// Set camera name if provided

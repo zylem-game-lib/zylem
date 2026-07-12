@@ -1,4 +1,4 @@
-import { ActiveCollisionTypes, ColliderDesc } from '@dimforge/rapier3d-compat';
+import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import {
 	Box3,
 	BufferAttribute,
@@ -70,12 +70,6 @@ type TransparentMaterial = Material & {
 	needsUpdate: boolean;
 };
 
-type TrimeshMetadata = {
-	shape: 'trimesh';
-	vertices: number[];
-	indices: number[];
-};
-
 type ModelBounds = {
 	size: Vector3;
 	center: Vector3;
@@ -143,37 +137,24 @@ function resolveCollisionShape(
 	return normalized;
 }
 
-function tagTrimeshCollider(
-	colliderDesc: ColliderDesc,
-	vertices: Float32Array,
-	indices: Uint32Array,
-): ColliderDesc {
-	(colliderDesc as any).__zylemShapeData = {
-		shape: 'trimesh',
-		vertices: Array.from(vertices),
-		indices: Array.from(indices),
-	} as TrimeshMetadata;
-	return colliderDesc;
-}
-
 function createCapsuleColliderFromDimensions(
 	size: { x: number; y: number; z: number },
 	translation: { x: number; y: number; z: number },
-): ColliderDesc {
+): SimulationColliderDefinition {
 	const fullWidth = size.x || 0.5;
 	const fullHeight = size.y || 1;
 	const fullDepth = size.z || 0.5;
 	const radius = Math.max(fullWidth, fullDepth) / 2;
 	const halfTotalHeight = fullHeight / 2;
 	const halfCylinder = Math.max(0, halfTotalHeight - radius);
-	const colliderDesc = ColliderDesc.capsule(halfCylinder, radius);
-	colliderDesc.setSensor(false);
-	colliderDesc.setTranslation(translation.x, translation.y, translation.z);
-	colliderDesc.activeCollisionTypes = ActiveCollisionTypes.DEFAULT;
-	return colliderDesc;
+	return {
+		shape: { type: 'capsule', halfHeight: halfCylinder, radius },
+		offset: [translation.x, translation.y, translation.z],
+		sensor: false,
+	};
 }
 
-function createCapsuleCollider(options: ZylemActorOptions): ColliderDesc {
+function createCapsuleCollider(options: ZylemActorOptions): SimulationColliderDefinition {
 	const size = normalizeVec3(options.collision?.size ?? options.size, {
 		x: 0.5,
 		y: 1,
@@ -192,7 +173,7 @@ function createCapsuleCollider(options: ZylemActorOptions): ColliderDesc {
 	);
 }
 
-function createExplicitBoxCollider(options: ZylemActorOptions): ColliderDesc | null {
+function createExplicitBoxCollider(options: ZylemActorOptions): SimulationColliderDefinition | null {
 	const collisionSize = options.collision?.size;
 	if (!collisionSize) {
 		return null;
@@ -202,17 +183,17 @@ function createExplicitBoxCollider(options: ZylemActorOptions): ColliderDesc | n
 	const halfWidth = normalizedSize.x / 2;
 	const halfHeight = normalizedSize.y / 2;
 	const halfDepth = normalizedSize.z / 2;
-	const colliderDesc = ColliderDesc.cuboid(halfWidth, halfHeight, halfDepth);
 	const collisionPosition = getCollisionPosition(options);
 
-	colliderDesc.setSensor(false);
-	colliderDesc.setTranslation(
-		collisionPosition?.x ?? 0,
-		collisionPosition?.y ?? halfHeight,
-		collisionPosition?.z ?? 0,
-	);
-	colliderDesc.activeCollisionTypes = ActiveCollisionTypes.DEFAULT;
-	return colliderDesc;
+	return {
+		shape: { type: 'box', halfExtents: [halfWidth, halfHeight, halfDepth] },
+		offset: [
+			collisionPosition?.x ?? 0,
+			collisionPosition?.y ?? halfHeight,
+			collisionPosition?.z ?? 0,
+		],
+		sensor: false,
+	};
 }
 
 function computeActorSpaceMatrix(
@@ -354,7 +335,7 @@ function createBoundsColliderFromModel(
 	modelRoot: Object3D | null,
 	actorRoot: Object3D | null,
 	options: ZylemActorOptions,
-): ColliderDesc {
+): SimulationColliderDefinition {
 	const explicitCollider = createExplicitBoxCollider(options);
 	if (explicitCollider) {
 		return explicitCollider;
@@ -369,20 +350,19 @@ function createBoundsColliderFromModel(
 		return createCapsuleCollider(options);
 	}
 
-	const colliderDesc = ColliderDesc.cuboid(
-		bounds.size.x / 2,
-		bounds.size.y / 2,
-		bounds.size.z / 2,
-	);
 	const collisionPosition = getCollisionPosition(options);
-	colliderDesc.setSensor(false);
-	colliderDesc.setTranslation(
-		collisionPosition?.x ?? bounds.center.x,
-		collisionPosition?.y ?? bounds.center.y,
-		collisionPosition?.z ?? bounds.center.z,
-	);
-	colliderDesc.activeCollisionTypes = ActiveCollisionTypes.DEFAULT;
-	return colliderDesc;
+	return {
+		shape: {
+			type: 'box',
+			halfExtents: [bounds.size.x / 2, bounds.size.y / 2, bounds.size.z / 2],
+		},
+		offset: [
+			collisionPosition?.x ?? bounds.center.x,
+			collisionPosition?.y ?? bounds.center.y,
+			collisionPosition?.z ?? bounds.center.z,
+		],
+		sensor: false,
+	};
 }
 
 function createCapsuleColliderFromModel(
@@ -391,7 +371,7 @@ function createCapsuleColliderFromModel(
 	alignmentRoot: Object3D | null,
 	alignmentActorRoot: Object3D | null,
 	options: ZylemActorOptions,
-): ColliderDesc {
+): SimulationColliderDefinition {
 	if (hasExplicitCollisionSize(options)) {
 		return createCapsuleCollider(options);
 	}
@@ -442,7 +422,7 @@ function createTrimeshColliderFromModel(
 	modelRoot: Object3D | null,
 	actorRoot: Object3D | null,
 	options: ZylemActorOptions,
-): ColliderDesc {
+): SimulationColliderDefinition {
 	const explicitCollider = createExplicitBoxCollider(options);
 	if (explicitCollider) {
 		return explicitCollider;
@@ -457,22 +437,18 @@ function createTrimeshColliderFromModel(
 		return createCapsuleCollider(options);
 	}
 
-	const colliderDesc = tagTrimeshCollider(
-		ColliderDesc.trimesh(trimesh.vertices, trimesh.indices),
-		trimesh.vertices,
-		trimesh.indices,
-	);
 	const collisionPosition = getCollisionPosition(options);
-	if (collisionPosition) {
-		colliderDesc.setTranslation(
-			collisionPosition.x - trimesh.center.x,
-			collisionPosition.y - trimesh.center.y,
-			collisionPosition.z - trimesh.center.z,
-		);
-	}
-	colliderDesc.setSensor(false);
-	colliderDesc.activeCollisionTypes = ActiveCollisionTypes.DEFAULT;
-	return colliderDesc;
+	return {
+		shape: { type: 'trimesh', vertices: trimesh.vertices, indices: trimesh.indices },
+		offset: collisionPosition
+			? [
+				collisionPosition.x - trimesh.center.x,
+				collisionPosition.y - trimesh.center.y,
+				collisionPosition.z - trimesh.center.z,
+			]
+			: [0, 0, 0],
+		sensor: false,
+	};
 }
 
 function disposeObjectResources(object: Object3D | null): void {
@@ -507,7 +483,7 @@ class ActorCollisionBuilder extends EntityCollisionBuilder {
 		this.collisionShape = data.collisionShape ?? 'capsule';
 	}
 
-	collider(options: ZylemActorOptions): ColliderDesc {
+	collider(options: ZylemActorOptions): SimulationColliderDefinition {
 		const resolvedShape = resolveCollisionShape(
 			this.collisionShape,
 			Boolean(options.collision?.static),
@@ -601,7 +577,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 
 	synchronizeRuntimeCollider(): void {
 		const resolvedShape = this.getResolvedCollisionShape();
-		let colliderDesc: ColliderDesc;
+		let colliderDesc: SimulationColliderDefinition;
 
 		if (resolvedShape === 'bounds') {
 			colliderDesc = createBoundsColliderFromModel(

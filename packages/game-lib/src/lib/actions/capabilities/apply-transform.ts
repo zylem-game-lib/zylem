@@ -1,5 +1,17 @@
-import { RigidBody } from '@dimforge/rapier3d-compat';
 import { TransformState } from '@zylem/behaviors/core';
+
+/**
+ * Structural slice of the simulation body facade used to flush transform
+ * intents. `SimulationBody` satisfies this shape.
+ */
+export interface TransformableBodyLike {
+	linvel(): { x: number; y: number; z: number };
+	translation(): { x: number; y: number; z: number };
+	setLinvel(velocity: { x: number; y: number; z: number }, wakeUp: boolean): void;
+	setTranslation(translation: { x: number; y: number; z: number }, wakeUp: boolean): void;
+	setRotation(rotation: { x: number; y: number; z: number; w: number }, wakeUp: boolean): void;
+	setAngvel(velocity: { x: number; y: number; z: number }, wakeUp: boolean): void;
+}
 
 interface ComposedAxis {
 	value: number;
@@ -198,16 +210,17 @@ export interface RuntimeTransformTarget {
 /**
  * Entity that can have transformations applied from a store.
  *
- * When `body` is present the intents flush to Rapier; otherwise, if the entity
- * carries a live WASM handle (`runtimeHandle` >= 0 + `wasmStageRef`), they flush
- * through the unified runtime's FFI setters instead (Phase B).
+ * When `body` (the simulation body facade) is present the intents flush
+ * through it; otherwise, if the entity carries a live WASM slot
+ * (`runtimeHandle` >= 0 + `wasmStageRef`), they flush through the runtime's
+ * FFI setters directly.
  */
 export interface TransformableEntity {
-	body: RigidBody | null;
+	body: TransformableBodyLike | null;
 	transformStore?: TransformState;
 	/** Live WASM slot handle, or -1 when not runtime-attached. */
 	runtimeHandle?: number;
-	/** Unified-Stage runtime the entity is attached to, if any. */
+	/** Runtime adapter the entity is attached to, if any. */
 	wasmStageRef?: RuntimeTransformTarget | null;
 }
 
@@ -230,8 +243,8 @@ export function applyTransformChanges(
 	store: TransformState
 ): void {
 	if (!entity.body) {
-		// Phase B: no Rapier body — route through the WASM runtime when the
-		// entity is bridge-managed. Falls through to a no-op otherwise.
+		// No body facade — route through the WASM runtime directly when the
+		// entity carries a live slot. Falls through to a no-op otherwise.
 		if (entity.wasmStageRef && (entity.runtimeHandle ?? -1) >= 0) {
 			applyTransformChangesViaWasm(entity.wasmStageRef, entity.runtimeHandle!, store);
 		}

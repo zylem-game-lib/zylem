@@ -1,5 +1,13 @@
 import { Vector3 } from 'three';
-import RAPIER, { World } from '@dimforge/rapier3d-compat';
+import {
+	createSimulation,
+	StageBodyKind,
+	type EntityHandle,
+	type Simulation,
+	type SimulationBodyDefinition,
+	type SimulationColliderDefinition,
+	type SimulationEvent,
+} from '@zylem/behaviors/core';
 
 import { Entity } from '../interfaces/entity';
 import type { Vec3Components } from '../core/vector';
@@ -11,20 +19,13 @@ import {
 	type CollisionDispatchMetadata,
 	type CollisionPhase,
 } from '../entities/entity';
-import {
-	commitDirectBodyPoseHistoryStep,
-	collapseDirectBodyPoseHistory,
-	prepareDirectBodyPoseHistoryStep,
-	registerDirectBodyPoseHistory,
-} from '../physics/physics-pose';
+import { SimulationBody, type SimulationStepClock } from './simulation-body';
 
 /**
  * Collision pair surfaced by the world after each physics step.
  *
- * Originally part of the now-removed worker IPC protocol; kept here as a
- * runtime-internal type because it is the canonical shape consumed by
- * collision dispatch and a couple of unit tests. The wasm-runtime path
- * will replace this surface entirely once the migration is complete.
+ * Kept as a runtime-internal type because it is the canonical shape consumed
+ * by collision dispatch and a couple of unit tests.
  */
 export interface CollisionPair {
 	uuidA: string;
@@ -93,63 +94,115 @@ export function buildCollisionSnapshot(
 	return snapshot;
 }
 
+/** Live contact/intersection bookkeeping per collision-pair key. */
+interface LivePairEntry {
+	uuidA: string;
+	uuidB: string;
+	contactCount: number;
+	intersectionCount: number;
+}
+
 /**
  * Physics world wrapper.
  *
- * Owns a single Rapier world that lives on the main thread and is advanced
- * with a fixed-timestep accumulator. The off-thread JS Web Worker physics
- * path that previously sat alongside this implementation has been removed;
- * the long-term off-main-thread story is the wasm runtime adapter, which
- * sits behind {@link StageRuntimeAdapter} rather than inside this class.
+ * Owns a `@zylem/behaviors` {@link Simulation} (wasm ECS + physics) and
+ * translates its handle-based API into game-lib's uuid/entity world model:
+ * spawning entities from their body/collider definitions, tracking live
+ * collision pairs from simulation events, and dispatching game collision
+ * callbacks each frame.
  */
 export class ZylemWorld implements Entity<ZylemWorld> {
 	type = 'World';
 
-	world: World;
+	readonly simulation: Simulation;
 
 	collisionMap: Map<string, GameEntity<any>> = new Map();
 	collisionBehaviorMap: Map<string, GameEntity<any>> = new Map();
 	_removalMap: Map<string, GameEntity<any>> = new Map();
 	private activeCollisionPairs: Map<string, CollisionSnapshotEntry> = new Map();
+	private livePairs: Map<string, LivePairEntry> = new Map();
+	private handleIdToUuid: Map<number, string> = new Map();
 	private currentCollisionTimeMs = 0;
+	private readonly zeroGravity: boolean;
 
 	/** Fixed timestep in seconds used for each physics step. */
 	readonly fixedTimestep: number;
-	/** Unprocessed time carried over between frames. */
-	private accumulator = 0;
-	/** Maximum number of physics steps allowed per frame to prevent spiral-of-death. */
-	private static readonly MAX_STEPS_PER_FRAME = 5;
 	/**
 	 * Interpolation alpha (0..1) representing the fraction of an unprocessed
-	 * timestep remaining after the last physics step. Can be used to interpolate
+	 * timestep remaining after the last physics step. Used to interpolate
 	 * rendering transforms between the previous and current physics state.
 	 */
 	interpolationAlpha = 0;
 
-	private readonly trackedDirectBodies = new WeakSet<RAPIER.RigidBody>();
-
-	static async loadPhysics(gravity: Vector3 | Vec3Components) {
-		await RAPIER.init();
-		const physicsWorld = new RAPIER.World(gravity);
-		return physicsWorld;
-	}
+	/** Shared step counter handed to every {@link SimulationBody}. */
+	private readonly stepClock: SimulationStepClock = { steps: 0 };
 
 	/**
-	 * @param world The Rapier physics world instance.
+	 * Create the wasm-backed physics world for a stage.
+	 * @param gravity World gravity.
 	 * @param physicsRate Physics update rate in Hz (default 60).
 	 */
-	constructor(world: World, physicsRate = 60) {
-		this.world = world;
+	static async create(
+		gravity: Vector3 | Vec3Components,
+		physicsRate = 60,
+	): Promise<ZylemWorld> {
+		const g = {
+			x: gravity?.x ?? 0,
+			y: gravity?.y ?? 0,
+			z: gravity?.z ?? 0,
+		};
+		const simulation = await createSimulation({
+			gravity: [g.x, g.y, g.z],
+			fixedTimestep: 1 / physicsRate,
+			initialCapacity: 256,
+		});
+		return new ZylemWorld(simulation, physicsRate, g.x === 0 && g.y === 0 && g.z === 0);
+	}
+
+	constructor(simulation: Simulation, physicsRate = 60, zeroGravity = false) {
+		this.simulation = simulation;
 		this.fixedTimestep = 1 / physicsRate;
-		if (world) {
-			this.world.integrationParameters.dt = this.fixedTimestep;
-		}
+		this.zeroGravity = zeroGravity;
 	}
 
 	// ─── Entity Management ───────────────────────────────────────────────
 
 	addEntity(entity: any) {
-		this.addEntityDirect(entity);
+		const bodyDef: SimulationBodyDefinition = { ...(entity.bodyDesc ?? {}) };
+		const colliders: SimulationColliderDefinition[] =
+			entity.colliderDescs?.length
+				? entity.colliderDescs
+				: entity.colliderDesc
+					? [entity.colliderDesc]
+					: [];
+
+		// Match legacy behavior: in a zero-gravity world every body is fully
+		// locked (entities move only through explicit teleports), and
+		// controlled actors never tumble from physics.
+		if (this.zeroGravity) {
+			bodyDef.lockTranslation = [true, true, true];
+			bodyDef.lockRotation = [true, true, true];
+		}
+		if (entity.controlledRotation || entity instanceof ZylemActor) {
+			bodyDef.lockRotation = [true, true, true];
+		}
+
+		const handle = this.simulation.spawn({ body: bodyDef, colliders });
+		if (!handle) {
+			console.warn(`ZylemWorld: failed to spawn entity ${entity.uuid} into simulation`);
+			return;
+		}
+
+		entity.body = new SimulationBody(this.simulation, handle, this.stepClock);
+		entity.physicsAttached = true;
+		entity.physicsWorldRef = this;
+		entity.simulationHandle = handle;
+		entity.runtimeHandle = handle.slot;
+		entity.runtimeAttached = true;
+		entity.wasmStageRef = this.simulation.adapter;
+
+		this.handleIdToUuid.set(handle.id, entity.uuid);
+		this.collisionMap.set(entity.uuid, entity);
 	}
 
 	setForRemoval(entity: any) {
@@ -159,7 +212,22 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	destroyEntity(entity: GameEntity<any>) {
-		this.destroyEntityDirect(entity);
+		// If this entity was re-registered into a different world (e.g. a shared
+		// instance reused by an incoming stage), the handle here belongs to that
+		// other world's simulation. Only prune our own tracking in that case.
+		const ownedByThisWorld = (entity as any).physicsWorldRef === this;
+		if (!ownedByThisWorld) {
+			this.removeEntityFromTracking(entity.uuid);
+			return;
+		}
+
+		const handle = (entity as any).simulationHandle as EntityHandle | undefined;
+		if (handle) {
+			try { this.simulation.despawn(handle); } catch { /* noop */ }
+			this.handleIdToUuid.delete(handle.id);
+		}
+		this.removeEntityFromTracking(entity.uuid);
+		this.clearEntityPhysicsState(entity);
 	}
 
 	setup() { }
@@ -167,164 +235,72 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	// ─── Update ──────────────────────────────────────────────────────────
 
 	/**
-	 * Advance the physics simulation using the fixed-timestep accumulator.
+	 * Advance the physics simulation. The fixed-timestep accumulator lives
+	 * inside the Simulation; this method translates its events into game
+	 * collision dispatch.
 	 */
 	update(params: UpdateContext<any>) {
-		this.updateDirect(params);
-	}
-
-	// ─── Direct Mode Implementation ──────────────────────────────────────
-
-	private addEntityDirect(entity: any) {
-		const rigidBody = this.world.createRigidBody(entity.bodyDesc);
-		entity.body = rigidBody;
-		entity.physicsAttached = true;
-		// Tag ownership so a stale world never frees handles this (or another)
-		// world now owns — see `destroyEntityDirect`.
-		entity.physicsWorldRef = this;
-		entity.body.userData = { uuid: entity.uuid, ref: entity };
-		registerDirectBodyPoseHistory(rigidBody);
-		this.patchDirectBodyPoseTracking(rigidBody);
-		if (this.world.gravity.x === 0 && this.world.gravity.y === 0 && this.world.gravity.z === 0) {
-			entity.body.lockTranslations(true, true);
-			entity.body.lockRotations(true, true);
-		}
-
-		const collider = this.world.createCollider(entity.colliderDesc, entity.body);
-		entity.collider = collider;
-		entity.colliders = [collider];
-
-		if (entity.colliderDescs?.length > 1) {
-			for (let i = 1; i < entity.colliderDescs.length; i++) {
-				const additionalCollider = this.world.createCollider(entity.colliderDescs[i], entity.body);
-				entity.colliders.push(additionalCollider);
-			}
-		}
-
-		// Rotation lock applies to every controlled actor (including platformer
-		// entities that drive their body via setLinvel). The character-controller
-		// allocation below is opt-in per entity — platformer 3D does not use it,
-		// and allocating it for every actor was producing orphan Rapier resources.
-		if (entity.controlledRotation || entity instanceof ZylemActor) {
-			entity.body.lockRotations(true, true);
-		}
-
-		if (entity.useCharacterController) {
-			entity.characterController = this.world.createCharacterController(0.01);
-			entity.characterController.setMaxSlopeClimbAngle(45 * Math.PI / 180);
-			entity.characterController.setMinSlopeSlideAngle(30 * Math.PI / 180);
-			entity.characterController.enableSnapToGround(0.01);
-			entity.characterController.setSlideEnabled(true);
-			entity.characterController.setApplyImpulsesToDynamicBodies(true);
-			entity.characterController.setCharacterMass(1);
-		}
-		this.collisionMap.set(entity.uuid, entity);
-	}
-
-	private destroyEntityDirect(entity: GameEntity<any>) {
-		// If this entity was re-registered into a different world (e.g. a shared
-		// instance reused by an incoming stage), the handles here belong to that
-		// other world. Removing them from THIS world would throw inside a wasm
-		// borrow and poison Rapier, so only prune our own tracking and leave the
-		// live handles (and physics state) intact.
-		const ownedByThisWorld = (entity as any).physicsWorldRef === this;
-		if (!ownedByThisWorld) {
-			this.removeEntityFromTracking(entity.uuid);
-			return;
-		}
-
-		if ((entity as any).characterController) {
-			try { (entity as any).characterController.free(); } catch { /* noop */ }
-			(entity as any).characterController = null;
-		}
-		if (entity.colliders?.length) {
-			for (const collider of entity.colliders) {
-				try { this.world.removeCollider(collider, true); } catch { /* noop */ }
-			}
-		} else if (entity.collider) {
-			try { this.world.removeCollider(entity.collider, true); } catch { /* noop */ }
-		}
-		if (entity.body) {
-			try { this.world.removeRigidBody(entity.body); } catch { /* noop */ }
-			this.removeEntityFromTracking(entity.uuid);
-		}
-		this.clearEntityPhysicsState(entity);
-	}
-
-	private updateDirect(params: UpdateContext<any>) {
 		const { delta } = params;
-		if (!this.world) {
-			return;
-		}
 
 		this.currentCollisionTimeMs += delta * 1000;
 		this.processPendingRemovals();
-		this.accumulator += delta;
 
-		const maxAccumulator = this.fixedTimestep * ZylemWorld.MAX_STEPS_PER_FRAME;
-		this.accumulator = Math.min(this.accumulator, maxAccumulator);
+		const frame = this.simulation.update(delta);
+		this.stepClock.steps += frame.stepsTaken;
+		this.interpolationAlpha = frame.alpha;
 
-		while (this.accumulator >= this.fixedTimestep) {
-			this.captureDirectBodyPreviousPoses();
-			this.world.step();
-			this.captureDirectBodyCurrentPoses();
-			this.accumulator -= this.fixedTimestep;
-		}
-
-		this.processCollisionPairs(
-			this.collectCollisionPairsFromWorld(),
-			delta,
-			this.currentCollisionTimeMs,
-		);
-		this.interpolationAlpha = this.accumulator / this.fixedTimestep;
+		this.applyCollisionEvents(frame.events);
+		this.processCollisionPairs(delta, this.currentCollisionTimeMs);
 	}
 
-	private captureDirectBodyPreviousPoses() {
-		for (const [, collider] of this.collisionMap) {
-			const body = (collider as GameEntity<any>).body as RAPIER.RigidBody | null;
-			if (body) {
-				prepareDirectBodyPoseHistoryStep(body);
+	// ─── Collision event translation ─────────────────────────────────────
+
+	private applyCollisionEvents(events: SimulationEvent[]): void {
+		for (const event of events) {
+			if (event.type !== 'collisionStarted' && event.type !== 'collisionStopped') {
+				continue;
+			}
+			const uuidA = event.a ? this.handleIdToUuid.get(event.a.id) : undefined;
+			const uuidB = event.b ? this.handleIdToUuid.get(event.b.id) : undefined;
+			if (!uuidA || !uuidB || uuidA === uuidB) {
+				continue;
+			}
+
+			const key = createCollisionSnapshotKey(uuidA, uuidB);
+			let entry = this.livePairs.get(key);
+			if (!entry) {
+				entry = {
+					uuidA: uuidA < uuidB ? uuidA : uuidB,
+					uuidB: uuidA < uuidB ? uuidB : uuidA,
+					contactCount: 0,
+					intersectionCount: 0,
+				};
+				this.livePairs.set(key, entry);
+			}
+
+			const deltaCount = event.type === 'collisionStarted' ? 1 : -1;
+			if (event.sensor) {
+				entry.intersectionCount = Math.max(0, entry.intersectionCount + deltaCount);
+			} else {
+				entry.contactCount = Math.max(0, entry.contactCount + deltaCount);
+			}
+			if (entry.contactCount === 0 && entry.intersectionCount === 0) {
+				this.livePairs.delete(key);
 			}
 		}
 	}
 
-	private captureDirectBodyCurrentPoses() {
-		for (const [, collider] of this.collisionMap) {
-			const body = (collider as GameEntity<any>).body as RAPIER.RigidBody | null;
-			if (body) {
-				commitDirectBodyPoseHistoryStep(body);
-			}
+	private snapshotLivePairs(): Map<string, CollisionSnapshotEntry> {
+		const snapshot = new Map<string, CollisionSnapshotEntry>();
+		for (const [key, entry] of this.livePairs) {
+			snapshot.set(key, {
+				uuidA: entry.uuidA,
+				uuidB: entry.uuidB,
+				hasContact: entry.contactCount > 0,
+				hasIntersection: entry.intersectionCount > 0,
+			});
 		}
-	}
-
-	private patchDirectBodyPoseTracking(body: RAPIER.RigidBody) {
-		if (this.trackedDirectBodies.has(body)) {
-			return;
-		}
-
-		const trackedBody = body as RAPIER.RigidBody & {
-			setTranslation: (
-				translation: { x: number; y: number; z: number },
-				wakeUp: boolean,
-			) => void;
-			setRotation: (
-				rotation: { x: number; y: number; z: number; w: number },
-				wakeUp: boolean,
-			) => void;
-		};
-		const originalSetTranslation = body.setTranslation.bind(body);
-		const originalSetRotation = body.setRotation.bind(body);
-
-		trackedBody.setTranslation = (translation, wakeUp) => {
-			originalSetTranslation(translation, wakeUp);
-			collapseDirectBodyPoseHistory(body);
-		};
-		trackedBody.setRotation = (rotation, wakeUp) => {
-			originalSetRotation(rotation, wakeUp);
-			collapseDirectBodyPoseHistory(body);
-		};
-
-		this.trackedDirectBodies.add(body);
+		return snapshot;
 	}
 
 	// ─── Shared collision behavior processing ────────────────────────────
@@ -366,52 +342,11 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 				this.activeCollisionPairs.delete(key);
 			}
 		}
-	}
-
-	private collectCollisionPairsFromWorld(): CollisionPair[] {
-		const pairs: CollisionPair[] = [];
-		if (!this.world) {
-			return pairs;
-		}
-
-		for (const [, collider] of this.collisionMap) {
-			const gameEntity = collider as GameEntity<any>;
-			const body = gameEntity.body as RAPIER.RigidBody | null;
-			if (!body) {
-				continue;
+		for (const [key, pair] of this.livePairs) {
+			if (pair.uuidA === uuid || pair.uuidB === uuid) {
+				this.livePairs.delete(key);
 			}
-
-			const primaryCollider = body.collider(0);
-			if (!primaryCollider) {
-				continue;
-			}
-
-			this.world.contactsWith(primaryCollider, (otherCollider) => {
-				const otherBody = otherCollider.parent();
-				const otherUuid = (otherBody?.userData as any)?.uuid as string | undefined;
-				if (otherUuid) {
-					pairs.push({
-						uuidA: gameEntity.uuid,
-						uuidB: otherUuid,
-						contactType: 'contact',
-					});
-				}
-			});
-
-			this.world.intersectionsWith(primaryCollider, (otherCollider) => {
-				const otherBody = otherCollider.parent();
-				const otherUuid = (otherBody?.userData as any)?.uuid as string | undefined;
-				if (otherUuid) {
-					pairs.push({
-						uuidA: gameEntity.uuid,
-						uuidB: otherUuid,
-						contactType: 'intersection',
-					});
-				}
-			});
 		}
-
-		return pairs;
 	}
 
 	private entityHasCollisionPhaseListener(
@@ -433,11 +368,10 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 	}
 
 	private processCollisionPairs(
-		pairs: CollisionPair[],
 		delta: number,
 		nowMs: number = this.currentCollisionTimeMs,
 	) {
-		const snapshot = buildCollisionSnapshot(pairs);
+		const snapshot = this.snapshotLivePairs();
 
 		for (const [key, pair] of snapshot) {
 			const entityA = this.collisionMap.get(pair.uuidA);
@@ -511,29 +445,55 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		}
 	}
 
+	// ─── Diagnostics ─────────────────────────────────────────────────────
+
+	/**
+	 * Physics raycast resolved to game entities. Used by debug tooling
+	 * (hover/select/delete picking).
+	 */
+	raycast(
+		origin: { x: number; y: number; z: number },
+		direction: { x: number; y: number; z: number },
+		maxDistance: number,
+	): { uuid: string | null; distance: number; normal: [number, number, number] } | null {
+		const hit = this.simulation.castRay(
+			[origin.x, origin.y, origin.z],
+			[direction.x, direction.y, direction.z],
+			maxDistance,
+			true,
+		);
+		if (!hit) return null;
+		return {
+			uuid: hit.entity ? this.handleIdToUuid.get(hit.entity.id) ?? null : null,
+			distance: hit.distance,
+			normal: hit.normal,
+		};
+	}
+
 	// ─── Cleanup ─────────────────────────────────────────────────────────
 
 	destroy() {
 		try {
 			for (const [, entity] of this.collisionMap) {
-				try { this.destroyEntityDirect(entity); } catch { /* noop */ }
+				try { this.clearEntityPhysicsState(entity); } catch { /* noop */ }
 			}
-			try { this.world?.free(); } catch { /* noop */ }
-			// @ts-ignore
-			this.world = undefined as any;
+			try { this.simulation.dispose(); } catch { /* noop */ }
 			this.collisionMap.clear();
 			this.collisionBehaviorMap.clear();
 			this._removalMap.clear();
 			this.activeCollisionPairs.clear();
+			this.livePairs.clear();
+			this.handleIdToUuid.clear();
 		} catch { /* noop */ }
 	}
 
 	private clearEntityPhysicsState(entity: GameEntity<any>): void {
 		entity.physicsAttached = false;
 		entity.body = null;
-		entity.collider = undefined;
-		entity.colliders = [];
-		(entity as any).characterController = null;
+		entity.runtimeHandle = -1;
+		entity.runtimeAttached = false;
+		entity.wasmStageRef = null;
+		(entity as any).simulationHandle = undefined;
 		// Only release ownership if we still own it; a re-registered instance
 		// has already had its ref reassigned to the new world.
 		if ((entity as any).physicsWorldRef === this) {

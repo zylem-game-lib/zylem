@@ -12,7 +12,9 @@ import { createBox } from '../../../src/lib/entities/box';
 import { StageEntityDelegate } from '../../../src/lib/stage/stage-entity-delegate';
 import { StageEntityModelDelegate } from '../../../src/lib/stage/stage-entity-model-delegate';
 import { StageLoadingDelegate } from '../../../src/lib/stage/stage-loading-delegate';
-import type { StageRuntimeAdapter } from '../../../src/lib/runtime/zylem-stage-runtime';
+
+/** Minimal simulation stub satisfying `attach()`'s adapter lookup. */
+const fakeSimulation = { adapter: {} } as any;
 
 function createDeferredModel() {
 	let resolve!: (value: { object: any }) => void;
@@ -64,7 +66,7 @@ describe('StageEntityDelegate', () => {
 
 		delegate.attach({
 			scene: scene as any,
-			world: world as any,
+			world: { ...world, simulation: fakeSimulation } as any,
 			instanceManager: null,
 			camera: {} as any,
 		});
@@ -80,50 +82,6 @@ describe('StageEntityDelegate', () => {
 
 		expect(scene.addEntityGroup).toHaveBeenCalledOnce();
 		expect(addedPositions[0]).toEqual({ x: 5, y: 6, z: 0 });
-	});
-
-	it('routes runtime-backed entities away from TS physics and scene registration', async () => {
-		const delegate = new StageEntityDelegate(
-			new StageLoadingDelegate(),
-			new StageEntityModelDelegate(),
-		);
-		const runtimeAdapter = {
-			init: vi.fn(),
-			step: vi.fn(),
-			destroy: vi.fn(),
-			ownsEntity: vi.fn((entity: any) => entity.options?.runtime?.simulation === 'runtime'),
-			rendersEntity: vi.fn((entity: any) => entity.options?.runtime?.render === 'instanced'),
-			registerEntity: vi.fn(),
-			unregisterEntity: vi.fn(),
-		} satisfies StageRuntimeAdapter;
-		const scene = {
-			addEntityGroup: vi.fn(),
-		};
-		const world = {
-			addEntity: vi.fn(),
-		};
-
-		delegate.attach({
-			scene: scene as any,
-			world: world as any,
-			instanceManager: null,
-			camera: {} as any,
-			runtimeAdapter,
-		});
-
-		const entity = createBox({
-			position: new Vector3(1, 2, 3),
-			runtime: {
-				simulation: 'runtime',
-				render: 'instanced',
-			},
-		});
-
-		await delegate.spawnEntity(entity);
-
-		expect(world.addEntity).not.toHaveBeenCalled();
-		expect(scene.addEntityGroup).not.toHaveBeenCalled();
-		expect(runtimeAdapter.registerEntity).toHaveBeenCalledWith(entity);
 	});
 
 	it('attaches deferred actor physics after the model finishes loading', async () => {
@@ -164,7 +122,7 @@ describe('StageEntityDelegate', () => {
 
 		delegate.attach({
 			scene: scene as any,
-			world: { addEntity } as any,
+			world: { addEntity, simulation: fakeSimulation } as any,
 			instanceManager: null,
 			camera: {} as any,
 		});
@@ -220,7 +178,7 @@ describe('StageEntityDelegate', () => {
 
 		delegate.attach({
 			scene: scene as any,
-			world: { addEntity } as any,
+			world: { addEntity, simulation: fakeSimulation } as any,
 			instanceManager: null,
 			camera: {} as any,
 		});
@@ -277,7 +235,7 @@ describe('StageEntityDelegate', () => {
 
 		delegate.attach({
 			scene: scene as any,
-			world: world as any,
+			world: { ...world, simulation: fakeSimulation } as any,
 			instanceManager: null,
 			camera: {} as any,
 		});

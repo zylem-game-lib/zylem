@@ -1,11 +1,11 @@
 import { Mesh, Material, ShaderMaterial, Group, Color, Vector3 } from 'three';
-import {
-	Collider,
-	ColliderDesc,
-	RigidBody,
-	RigidBodyDesc,
-	Vector,
-} from '@dimforge/rapier3d-compat';
+import type {
+	BehaviorRuntime,
+	SimulationBodyDefinition,
+	SimulationColliderDefinition,
+} from '@zylem/behaviors/core';
+import type { SimulationBody } from '../collision/simulation-body';
+import type { Vector } from '@zylem/behaviors/core';
 import { Vec3, Vec3Input, VEC3_ZERO, normalizeVec3 } from '../core/vector';
 import { MaterialBuilder, MaterialOptions } from '../graphics/material';
 import { CollisionOptions } from '../collision/collision-builder';
@@ -171,25 +171,22 @@ export class GameEntity<O extends GameEntityOptions>
 	public group: Group | undefined;
 	public mesh: Mesh | undefined;
 	public materials: Material[] | undefined;
-	public bodyDesc: RigidBodyDesc | null = null;
-	public body: RigidBody | null = null;
+	public bodyDesc: SimulationBodyDefinition | null = null;
+	public body: SimulationBody | null = null;
 	public physicsAttached = false;
 	/**
 	 * The physics world that currently owns this entity's body/colliders.
 	 * Tagged on registration and checked on teardown so a stale world never
-	 * frees handles another world now owns (which would throw inside a wasm
-	 * borrow and poison Rapier). Untyped to avoid a circular import.
+	 * frees handles another world now owns (which would poison the wasm
+	 * simulation). Untyped to avoid a circular import.
 	 */
 	public physicsWorldRef: unknown = null;
-	public colliderDesc: ColliderDesc | undefined;
-	public collider: Collider | undefined;
+	public colliderDesc: SimulationColliderDefinition | undefined;
 	public custom: Record<string, any> = {};
 
 	// Compound entity support: multiple colliders and meshes
 	/** All collider descriptions for this entity (including primary) */
-	public colliderDescs: ColliderDesc[] = [];
-	/** All colliders attached to this entity's rigid body */
-	public colliders: Collider[] = [];
+	public colliderDescs: SimulationColliderDefinition[] = [];
 	/** Additional meshes for compound visual entities (added via add()) */
 	public compoundMeshes: Mesh[] = [];
 
@@ -210,24 +207,21 @@ export class GameEntity<O extends GameEntityOptions>
 	public instanceId: number = -1;
 	/** Whether this entity uses instanced rendering */
 	public isInstanced: boolean = false;
-	/** Runtime slot index when owned by a stage runtime adapter (legacy alias for runtimeHandle). */
-	public runtimeSlot: number = -1;
 	/**
-	 * Stable u32 handle into the wasm `StageSimulation`. Returned by
-	 * `WasmStageRuntime.createEntity()`; -1 means the entity is not currently
-	 * attached to the runtime. Replaces `runtimeSlot` and the legacy
-	 * `entity.body` / `entity.collider` fields once Phase 3 lands.
+	 * Raw wasm slot index for this entity in the stage's `Simulation`; -1 when
+	 * not attached. Behavior systems address the runtime's batched buffers by
+	 * this slot.
 	 */
 	public runtimeHandle: number = -1;
-	/** True once the entity has been attached to the wasm `StageSimulation`. */
+	/** True once the entity has been spawned into the wasm simulation. */
 	public runtimeAttached = false;
 	/**
-	 * Optional reference to the stage's {@link WasmStageRuntime}. Set by
-	 * `StageEntityDelegate.spawnEntity()` so {@link GameEntity.getPose} /
-	 * {@link GameEntity.setPose} can route through the unified-Stage runtime
-	 * without each call site needing to thread the wasm handle around.
+	 * The stage simulation's low-level runtime adapter. Set by
+	 * `ZylemWorld.addEntity()` so {@link GameEntity.getPose} /
+	 * {@link GameEntity.setPose} and behavior descriptors can route through
+	 * the runtime without threading the handle around.
 	 */
-	public wasmStageRef: import('../runtime/wasm-stage-runtime').WasmStageRuntime | null = null;
+	public wasmStageRef: BehaviorRuntime | null = null;
 
 	// Event delegate for dispatch/listen API
 	protected eventDelegate = new EventEmitterDelegate<EntityEvents>();
@@ -283,10 +277,8 @@ export class GameEntity<O extends GameEntityOptions>
 	}
 
 	/**
-	 * Read the entity's pose. Prefers the unified-Stage wasm runtime when
-	 * the entity has a live `runtimeHandle`; otherwise falls back to the
-	 * legacy TS Rapier `RigidBody` translation/rotation. Returns `null` when
-	 * neither source is available.
+	 * Read the entity's pose from the wasm simulation. Returns `null` when
+	 * the entity has not been spawned into the runtime yet.
 	 */
 	public getPose(): { position: Vec3; rotation: { x: number; y: number; z: number; w: number } } | null {
 		if (this.wasmStageRef && this.runtimeHandle >= 0) {
@@ -298,7 +290,7 @@ export class GameEntity<O extends GameEntityOptions>
 				};
 			}
 		}
-		const body = this.body as RigidBody | null | undefined;
+		const body = this.body;
 		if (!body) return null;
 		const t = body.translation();
 		const r = body.rotation();
@@ -309,8 +301,7 @@ export class GameEntity<O extends GameEntityOptions>
 	}
 
 	/**
-	 * Write the entity's pose. Routes through the unified-Stage wasm runtime
-	 * when present; otherwise writes to the legacy TS Rapier `RigidBody`.
+	 * Write the entity's pose into the wasm simulation.
 	 *
 	 * Either or both of `position` and `rotation` may be omitted to leave
 	 * that component unchanged.
@@ -331,7 +322,7 @@ export class GameEntity<O extends GameEntityOptions>
 			}
 			return ok;
 		}
-		const body = this.body as RigidBody | null | undefined;
+		const body = this.body;
 		if (!body) return false;
 		if (input.position) {
 			const p = normalizeVec3(input.position);
@@ -407,7 +398,7 @@ export class GameEntity<O extends GameEntityOptions>
 			this.colliderDescs.push(collision.colliderDesc);
 			// Apply entity position to the body
 				const pos = normalizeVec3(this.options?.position, VEC3_ZERO);
-				this.bodyDesc.setTranslation(pos.x, pos.y, pos.z);
+				this.bodyDesc.position = [pos.x, pos.y, pos.z];
 			} else {
 			// Subsequent collisions add extra colliders to the same body
 			this.colliderDescs.push(collision.colliderDesc);

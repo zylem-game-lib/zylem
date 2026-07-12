@@ -1,9 +1,42 @@
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
+
 import { EntityAssetLoader } from '../../../src/lib/core/entity-asset-loader';
 import { createActor } from '../../../src/lib/entities/actor';
-import { inspectColliderDesc } from '../../../src/lib/physics/collider-desc-inspect';
+
+/**
+ * Flatten a plain collider definition into the same shape/dimensions layout
+ * the legacy Rapier `inspectColliderDesc` helper produced, so the assertions
+ * below stay expressed in familiar terms.
+ */
+function inspectColliderDesc(def: SimulationColliderDefinition): {
+	shape: string;
+	dimensions: number[];
+	translation?: number[];
+	vertices?: ArrayLike<number>;
+	indices?: ArrayLike<number>;
+} {
+	const shape = def.shape;
+	const translation = def.offset ? [...def.offset] : [0, 0, 0];
+	switch (shape.type) {
+		case 'capsule':
+			return { shape: 'capsule', dimensions: [shape.halfHeight, shape.radius], translation };
+		case 'box':
+			return { shape: 'cuboid', dimensions: [...shape.halfExtents], translation };
+		case 'trimesh':
+			return {
+				shape: 'trimesh',
+				dimensions: [],
+				translation,
+				vertices: shape.vertices,
+				indices: shape.indices,
+			};
+		default:
+			return { shape: shape.type, dimensions: [], translation };
+	}
+}
 
 function createModelWithOffsetMeshes(): Group {
 	const root = new Group();

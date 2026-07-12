@@ -1,4 +1,4 @@
-import { ColliderDesc } from '@dimforge/rapier3d-compat';
+import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import { Color, Euler, Group, Quaternion, Vector3 } from 'three';
 import { TextureLoader, SpriteMaterial, Sprite as ThreeSprite, SRGBColorSpace } from 'three';
 import { BaseNode } from '../core/base-node';
@@ -42,14 +42,14 @@ const spriteDefaults: ZylemSpriteOptions = {
 };
 
 export class SpriteCollisionBuilder extends EntityCollisionBuilder {
-  collider(options: ZylemSpriteOptions): ColliderDesc {
+  collider(options: ZylemSpriteOptions): SimulationColliderDefinition {
     const size = toThreeVector3(
       options.collisionSize,
       options.size ?? VEC3_ONE,
     );
-    const half = { x: size.x / 2, y: size.y / 2, z: size.z / 2 };
-    let colliderDesc = ColliderDesc.cuboid(half.x, half.y, half.z);
-    return colliderDesc;
+    return {
+      shape: { type: 'box', halfExtents: [size.x / 2, size.y / 2, size.z / 2] },
+    };
   }
 }
 

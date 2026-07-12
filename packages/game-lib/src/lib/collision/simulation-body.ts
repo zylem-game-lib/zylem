@@ -1,0 +1,193 @@
+/**
+ * `SimulationBody` — game-lib's Rapier-`RigidBody`-shaped facade over a
+ * `@zylem/behaviors` {@link Simulation} entity.
+ *
+ * Every physics entity spawned into {@link ZylemWorld} gets one of these as
+ * `entity.body`. It routes reads/writes through the Simulation's handle-based
+ * API and implements `PhysicsRenderPoseProvider` so `syncRenderPoses` can
+ * interpolate between the previous and current fixed-step poses.
+ */
+import type {
+	EntityHandle,
+	Simulation,
+	StageBodyInfo,
+	StagePose,
+	StageRenderSlot,
+} from '@zylem/behaviors/core';
+import {
+	clonePhysicsPose,
+	interpolatePhysicsPose,
+	type PhysicsPose,
+	type PhysicsPoseHistory,
+	type PhysicsQuaternion,
+	type PhysicsRenderPoseProvider,
+	type PhysicsVector3,
+} from '../physics/physics-pose';
+
+/** Shared step counter owned by the world; lets bodies know a step has run. */
+export interface SimulationStepClock {
+	steps: number;
+}
+
+const ZERO_VEC: PhysicsVector3 = { x: 0, y: 0, z: 0 };
+
+export class SimulationBody implements PhysicsRenderPoseProvider {
+	private readonly poseScratch: StagePose = {
+		position: [0, 0, 0],
+		rotation: [0, 0, 0, 1],
+	};
+	private readonly renderScratch: StageRenderSlot = {
+		position: [0, 0, 0],
+		rotation: [0, 0, 0, 1],
+		scale: 1,
+		custom: [0, 0, 0, 0],
+	};
+	private readonly previousScratch: StageRenderSlot = {
+		position: [0, 0, 0],
+		rotation: [0, 0, 0, 1],
+		scale: 1,
+		custom: [0, 0, 0, 0],
+	};
+
+	constructor(
+		private readonly simulation: Simulation,
+		public readonly handle: EntityHandle,
+		private readonly clock: SimulationStepClock,
+	) { }
+
+	// ─── Reads ───────────────────────────────────────────────────────────
+
+	translation(): PhysicsVector3 {
+		const pose = this.simulation.getPose(this.handle, this.poseScratch);
+		if (!pose) return { ...ZERO_VEC };
+		return { x: pose.position[0], y: pose.position[1], z: pose.position[2] };
+	}
+
+	rotation(): PhysicsQuaternion {
+		const pose = this.simulation.getPose(this.handle, this.poseScratch);
+		if (!pose) return { x: 0, y: 0, z: 0, w: 1 };
+		return {
+			x: pose.rotation[0],
+			y: pose.rotation[1],
+			z: pose.rotation[2],
+			w: pose.rotation[3],
+		};
+	}
+
+	linvel(): PhysicsVector3 {
+		const vel = this.simulation.getLinearVelocity(this.handle);
+		if (!vel) return { ...ZERO_VEC };
+		return { x: vel[0], y: vel[1], z: vel[2] };
+	}
+
+	angvel(): PhysicsVector3 {
+		const vel = this.simulation.adapter.getAngularVelocity(this.handle.slot);
+		if (!vel) return { ...ZERO_VEC };
+		return { x: vel[0], y: vel[1], z: vel[2] };
+	}
+
+	// ─── Writes ──────────────────────────────────────────────────────────
+
+	setTranslation(translation: PhysicsVector3, _wakeUp: boolean = true): void {
+		this.simulation.setPosition(this.handle, translation.x, translation.y, translation.z);
+	}
+
+	setRotation(rotation: PhysicsQuaternion, _wakeUp: boolean = true): void {
+		this.simulation.setRotation(this.handle, rotation.x, rotation.y, rotation.z, rotation.w);
+	}
+
+	setLinvel(velocity: PhysicsVector3, _wakeUp: boolean = true): void {
+		this.simulation.setLinearVelocity(this.handle, velocity.x, velocity.y, velocity.z);
+	}
+
+	setAngvel(velocity: PhysicsVector3, _wakeUp: boolean = true): void {
+		this.simulation.setAngularVelocity(this.handle, velocity.x, velocity.y, velocity.z);
+	}
+
+	applyImpulse(impulse: PhysicsVector3, _wakeUp: boolean = true): void {
+		this.simulation.applyImpulse(this.handle, impulse.x, impulse.y, impulse.z);
+	}
+
+	/**
+	 * Damping is fixed at body-creation time in the wasm runtime; there is no
+	 * live setter FFI yet, so this is accepted (for `MoveableBodyLike`
+	 * compatibility) but has no effect.
+	 */
+	setLinearDamping(_damping: number): void { }
+
+	// ─── Introspection (debug overlays) ──────────────────────────────────
+
+	private bodyInfo(): StageBodyInfo | null {
+		return this.simulation.getBodyInfo(this.handle);
+	}
+
+	bodyType(): number {
+		return this.bodyInfo()?.bodyType ?? 0;
+	}
+
+	mass(): number {
+		return this.bodyInfo()?.mass ?? 0;
+	}
+
+	isSleeping(): boolean {
+		return this.bodyInfo()?.isSleeping ?? false;
+	}
+
+	isEnabled(): boolean {
+		return this.bodyInfo()?.isEnabled ?? true;
+	}
+
+	// ─── Render interpolation ─────────────────────────────────────────────
+
+	private livePose(): PhysicsPose {
+		const pose = this.simulation.getPose(this.handle, this.poseScratch);
+		if (!pose) {
+			return {
+				position: { ...ZERO_VEC },
+				rotation: { x: 0, y: 0, z: 0, w: 1 },
+			};
+		}
+		return {
+			position: { x: pose.position[0], y: pose.position[1], z: pose.position[2] },
+			rotation: {
+				x: pose.rotation[0],
+				y: pose.rotation[1],
+				z: pose.rotation[2],
+				w: pose.rotation[3],
+			},
+		};
+	}
+
+	private static slotToPose(slot: StageRenderSlot): PhysicsPose {
+		return {
+			position: { x: slot.position[0], y: slot.position[1], z: slot.position[2] },
+			rotation: {
+				x: slot.rotation[0],
+				y: slot.rotation[1],
+				z: slot.rotation[2],
+				w: slot.rotation[3],
+			},
+		};
+	}
+
+	getPoseHistory(): PhysicsPoseHistory {
+		// Before the first fixed step the render buffers hold zeros, so fall
+		// back to the live body pose (set at spawn time).
+		if (this.clock.steps === 0) {
+			const pose = this.livePose();
+			return { previous: clonePhysicsPose(pose), current: pose };
+		}
+		const current = this.simulation.readRenderSlot(this.handle, this.renderScratch);
+		const previous = this.simulation.readPreviousRenderSlot(this.handle, this.previousScratch);
+		const currentPose = current ? SimulationBody.slotToPose(current) : this.livePose();
+		const previousPose = previous
+			? SimulationBody.slotToPose(previous)
+			: clonePhysicsPose(currentPose);
+		return { previous: previousPose, current: currentPose };
+	}
+
+	getRenderPose(alpha: number): PhysicsPose {
+		const history = this.getPoseHistory();
+		return interpolatePhysicsPose(history.previous, history.current, alpha);
+	}
+}

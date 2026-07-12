@@ -1,4 +1,4 @@
-import { ColliderDesc } from '@dimforge/rapier3d-compat';
+import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import { GameEntity, GameEntityOptions } from './entity';
 import { BufferGeometry, Group, Material, Mesh, Color } from 'three';
 import { CollisionBuilder } from '../collision/collision-builder';
@@ -7,7 +7,7 @@ import { MaterialBuilder, MaterialOptions } from '../graphics/material';
 import { Vec3, VEC3_ZERO, normalizeVec3 } from '../core/vector';
 
 export abstract class EntityCollisionBuilder extends CollisionBuilder {
-  abstract collider(options: GameEntityOptions): ColliderDesc;
+  abstract collider(options: GameEntityOptions): SimulationColliderDefinition;
 }
 
 export abstract class EntityMeshBuilder extends MeshBuilder {
@@ -119,7 +119,7 @@ export abstract class EntityBuilder<
       entity.colliderDescs.push(colliderDesc);
 
       const { x, y, z } = normalizeVec3(this.options.position, VEC3_ZERO);
-      entity.bodyDesc.setTranslation(x, y, z);
+      entity.bodyDesc.position = [x, y, z];
     }
     if (this.options.collisionType) {
       entity.collisionType = this.options.collisionType;

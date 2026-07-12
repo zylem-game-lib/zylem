@@ -1,80 +1,32 @@
 /**
  * `@zylem/game-lib/runtime` public API.
+ *
+ * The simulation layer is owned by `@zylem/behaviors`; game-lib re-exports the
+ * pieces hosts need for advanced/diagnostic use (the same types surfaced by
+ * `game.experimental.getRuntime()`), plus the plain-data collider builders.
  * @public
  */
 export type {
-	ZylemRuntimeEvent,
-	ZylemRuntimeDynamicCircleBody2DConfig,
-	ZylemRuntimeGameplay2DConfig,
-	ZylemRuntimeGameplay2DTriggerAabb,
-	ZylemRuntimeGameplay2DWorldBounds,
-	ZylemRuntimeGameplay3DConfig,
-	ZylemRuntimeGameplay3DDebugRender,
-	ZylemRuntimeKinematicAabbBody2DConfig,
-	ZylemRuntimePlatformer3DConfig,
-	ZylemRuntimePlatformerCapsuleConfig,
-	ZylemRenderSlot,
-	ZylemRuntimeBufferViews,
-	ZylemRuntimeExports,
-	ZylemRuntimeInstancedBatchConfig,
-	ZylemRuntimeStaticBoxCollider,
-	ZylemRuntimeStaticHeightfieldCollider,
-	ZylemSummarySnapshot,
-} from '../lib/runtime/zylem-wasm-runtime';
-export type {
-	RuntimeDebugBinding,
-	StageRuntimeAdapter,
-	StageRuntimeContext,
-	StageRuntimeStepContext,
-} from '../lib/runtime/zylem-stage-runtime';
-export { createRuntimeDebugBindingFromDebugState } from '../lib/runtime/runtime-debug-binding';
-export {
-	addZylemRuntimeStaticHeightfieldCollider,
-	attachZylemRuntimeBufferViews,
-	bootstrapZylemRuntimeInstancing,
-	bootstrapZylemRuntimeGameplay2D,
-	bootstrapZylemRuntimeGameplay3D,
-	configureZylemRuntimePlatformer3D,
-	createZylemRuntimeInstancedBatchSession,
-	createZylemRuntimeGameplay2DSession,
-	createZylemRuntimeGameplay3DSession,
-	createZylemRuntimeSession,
-	getZylemRuntimeGameplay3DDebugRender,
-	getZylemRuntimeGameplay3DGrounded,
-	getZylemRuntimeGameplay3DJumpCount,
-	getZylemRuntimeGameplay3DState,
-	loadZylemRuntimeWasm,
-	readZylemRuntimeEvents,
-	readZylemRuntimeGameplay3DEvents,
-	readRenderSlot,
-	readSummary,
-	setZylemRuntimeGameplay2DInputAxis,
-	setZylemRuntimeGameplay2DSlotPosition,
-	setZylemRuntimeGameplay2DSlotVelocity,
-	setZylemRuntimeGameplay3DInputAxes,
-	setZylemRuntimeGameplay3DInputButtons,
-	setZylemRuntimeGameplay3DSlotPosition,
-	writeInputSlot,
-	writeInputSlotFromParts,
-	ZYLEM_RUNTIME_EVENT_STRIDE,
-	ZYLEM_RUNTIME_INPUT_STRIDE,
-	ZYLEM_RUNTIME_RENDER_STRIDE,
-	ZYLEM_RUNTIME_SUMMARY_LEN,
-	ZylemRuntimeEventType,
-	ZylemRuntimePlatformer3DFsmState,
-} from '../lib/runtime/zylem-wasm-runtime';
-export { createZylemRuntimeStageAdapter } from '../lib/runtime/zylem-stage-runtime';
-
-// ─── Unified-Stage runtime (Phase 2+ migration) ────────────────────────────
-export type {
+	BehaviorRuntime,
+	EntityDefinition,
+	EntityHandle,
+	Simulation,
+	SimulationBodyDefinition,
+	SimulationColliderDefinition,
+	SimulationEvent,
+	SimulationFrame,
+	SimulationOptions,
 	StageBodyConfig,
+	StageBodyInfo,
+	StageBodyKindValue,
 	StageColliderConfig,
 	StageColliderShape,
+	StageDebugRender,
 	StageEvent,
 	StagePose,
-	StageWasmExports,
-	WasmStageRuntimeOptions,
-} from '../lib/runtime/wasm-stage-runtime';
+	StageRaycastHit,
+	StageRenderSlot,
+} from '@zylem/behaviors/core';
 export {
 	StageBodyKind,
 	StageBoundaryDim,
@@ -82,13 +34,12 @@ export {
 	StageRicochetDim,
 	StageRicochetReflection,
 	StageTopDownPlane,
-	STAGE_EVENT_STRIDE,
-	STAGE_INVALID_SLOT,
-	STAGE_POSE_LEN,
-	STAGE_RENDER_STRIDE,
-	WasmStageRuntime,
-	createWasmStageRuntime,
-} from '../lib/runtime/wasm-stage-runtime';
+	createSimulation,
+} from '@zylem/behaviors/core';
+
+export type { SimulationStepClock } from '../lib/collision/simulation-body';
+export { SimulationBody } from '../lib/collision/simulation-body';
+
 export type {
 	RuntimeBodyOptions,
 	RuntimeColliderOptions,

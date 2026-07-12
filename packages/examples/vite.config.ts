@@ -112,15 +112,27 @@ export default defineConfig({
 		// @zylem/ui/components resolves to TypeScript source; keep it out of
 		// esbuild prebundling (which would apply the React JSX transform) so
 		// vite-plugin-solid compiles it instead.
-		exclude: ['@zylem/ui'],
+		// @zylem/behaviors and @zylem/runtime are excluded so the runtime's
+		// `new URL('./zylem_runtime.wasm', import.meta.url)` keeps resolving
+		// next to the real module instead of vite's prebundle cache, and so
+		// behaviors' nested @zylem/runtime file: dep resolves correctly.
+		exclude: ['@zylem/ui', '@zylem/behaviors', '@zylem/runtime'],
 	},
 	server: {
 		port: Number.isFinite(devPort) ? devPort : 3331,
 		open: shouldOpenBrowser,
 		allowedHosts,
 		fs: {
-			// Allow serving files from sibling packages (e.g. game-lib source for workers)
-			allow: [path.resolve(__dirname, '..')],
+			// Allow serving files from sibling packages (e.g. game-lib source for
+			// workers) and the sibling behaviors/runtime repos (file: deps that
+			// ship the wasm module).
+			allow: [
+				// Monorepo root: packages plus node_modules/.pnpm (where the
+				// file:-copied @zylem/runtime dist and its wasm live).
+				path.resolve(__dirname, '../..'),
+				path.resolve(__dirname, '../../../behaviors'),
+				path.resolve(__dirname, '../../../runtime'),
+			],
 		},
 		// Same-origin proxy for the demos CDN. Lets dev builds load
 		// `assets.zylem.cloud` without tripping CORS while we wait for the

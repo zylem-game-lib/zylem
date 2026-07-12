@@ -18,6 +18,7 @@ describe('particle emitter stage integration', () => {
 			collisionMap: new Map<string, any>(),
 			addEntity: vi.fn(),
 			destroyEntity: vi.fn(),
+			simulation: { adapter: {} },
 		};
 		const scene = {
 			scene: sceneRoot,

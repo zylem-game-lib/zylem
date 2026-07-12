@@ -17,17 +17,6 @@ import { installThreeConsoleFilter } from '../graphics/three-console-filter';
 import type { ResolvedStageTransition } from '../graphics/stage-transition';
 
 /**
- * Renderer type option.
- *
- * @deprecated game-lib now always renders with WebGPU (Three.js
- * {@link WebGPURenderer}, which keeps its own internal WebGL2 fallback for
- * devices without WebGPU). This type is retained only so existing public
- * APIs (e.g. `CameraOptions.rendererType`) keep type-checking; the value is
- * ignored by the renderer.
- */
-export type RendererType = 'auto' | 'webgpu' | 'webgl';
-
-/**
  * The renderer instance type. game-lib standardizes on {@link WebGPURenderer}.
  */
 export type ZylemRenderer = WebGPURenderer;
@@ -125,10 +114,6 @@ export class RendererManager {
 	 */
 	renderScale = 1;
 	screenResolution: Vector2;
-	/**
-	 * @deprecated Always `'webgpu'`. Retained for backward compatibility.
-	 */
-	rendererType: RendererType;
 	private _initialized = false;
 	private _sceneRef: Scene | null = null;
 	private _lastAnimationTimestamp: number | null = null;
@@ -140,9 +125,8 @@ export class RendererManager {
 	/** In-flight stage transition, if any. */
 	private _transition: ActiveStageTransition | null = null;
 
-	constructor(screenResolution?: Vector2, _rendererType: RendererType = 'webgpu') {
+	constructor(screenResolution?: Vector2) {
 		this.screenResolution = screenResolution || new Vector2(window.innerWidth, window.innerHeight);
-		this.rendererType = 'webgpu';
 	}
 
 	/**

@@ -1,5 +1,5 @@
 import { Group } from 'three';
-import { RigidBody, Collider } from '@dimforge/rapier3d-compat';
+import type { SimulationBody } from '../collision/simulation-body';
 
 /**
  * Base entity interface - shared across modules to prevent circular dependencies
@@ -8,8 +8,7 @@ export interface BaseEntityInterface {
 	uuid: string;
 	name: string;
 	group: Group | null | undefined;
-	body: RigidBody | null | undefined;
-	collider: Collider | null | undefined;
+	body: SimulationBody | null | undefined;
 }
 
 /**
@@ -38,4 +37,4 @@ interface CollisionEntityInterface extends GameEntityInterface {
 	onCollision?: (other: GameEntityInterface) => void;
 	onEnter?: (other: GameEntityInterface) => void;
 	onExit?: (other: GameEntityInterface) => void;
-} 
+}

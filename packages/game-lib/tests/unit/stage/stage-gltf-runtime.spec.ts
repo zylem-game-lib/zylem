@@ -13,9 +13,11 @@ function createCamera(): ZylemCamera {
 	return new ZylemCamera(Perspectives.ThirdPerson, new Vector2(800, 600));
 }
 
-function mockPhysicsWorld() {
+function mockWorld() {
 	return {
-		integrationParameters: {},
+		simulation: { adapter: {} },
+		update: () => {},
+		destroy: () => {},
 	} as any;
 }
 
@@ -28,7 +30,7 @@ describe('ZylemStage GLTF runtime configuration', () => {
 		const legacyRenderer = { kind: 'legacy-renderer' };
 		const order: string[] = [];
 
-		vi.spyOn(ZylemWorld, 'loadPhysics').mockResolvedValue(mockPhysicsWorld());
+		vi.spyOn(ZylemWorld, 'create').mockResolvedValue(mockWorld());
 		vi.spyOn(ZylemScene.prototype, 'setupCamera').mockImplementation(
 			async function mockSetupCamera(_scene, camera) {
 				camera.setRendererManager({ renderer: legacyRenderer } as any);
@@ -70,11 +72,12 @@ describe('ZylemStage GLTF runtime configuration', () => {
 		const sharedRenderer = { kind: 'shared-renderer' };
 		const rendererManager = {
 			renderer: sharedRenderer,
+			setPostProcessingEffects: vi.fn(),
 			setupPostProcessing: vi.fn(),
 			startRenderLoop: vi.fn(),
 		};
 
-		vi.spyOn(ZylemWorld, 'loadPhysics').mockResolvedValue(mockPhysicsWorld());
+		vi.spyOn(ZylemWorld, 'create').mockResolvedValue(mockWorld());
 		const setupCameraSpy = vi.spyOn(
 			ZylemScene.prototype,
 			'setupCamera',
