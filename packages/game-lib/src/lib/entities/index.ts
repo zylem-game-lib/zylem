@@ -12,6 +12,7 @@ export * from './cylinder';
 export * from './pill';
 export * from './particle-system';
 export * from './fog';
+export * from './line';
 export { createEntity } from './create';
 export * from './delegates/debug';
 

@@ -6,8 +6,10 @@
 
 export {
 	Vector2Schema,
+	Vector3TupleSchema,
 	TextEntityDataSchema,
 	SpriteEntityDataSchema,
+	LineEntityDataSchema,
 	EntitySchema,
 	StageSchema,
 	EntityJsonSchema,
@@ -39,6 +41,7 @@ export type {
 	StageBlueprint,
 	TextEntityData,
 	SpriteEntityData,
+	LineEntityData,
 	EntityJson,
 	StageJson,
 	GameInputConfigJson,

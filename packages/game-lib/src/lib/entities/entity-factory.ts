@@ -2,6 +2,7 @@ import { EntityBlueprint } from '../core/blueprints';
 import { GameEntity, GameEntityOptions } from './entity';
 import { createText } from './text';
 import { createSprite } from './sprite';
+import { createLine } from './line';
 
 type EntityCreator = (options: any) => GameEntity<any>;
 
@@ -32,6 +33,7 @@ export const EntityFactory = {
 
 EntityFactory.register('text', (opts) => createText(opts) as unknown as GameEntity<any>);
 EntityFactory.register('sprite', (opts) => createSprite(opts) as unknown as GameEntity<any>);
+EntityFactory.register('line', (opts) => createLine(opts) as unknown as GameEntity<any>);
 
 /**
  * Factory interface for generating entity copies

@@ -36,6 +36,8 @@ export type {
 	LightShadowOptions,
 } from '../lib/entities/light';
 export { createFog, ZylemFog, FOG_TYPE } from '../lib/entities/fog';
+export { createLine, ZylemLine, LINE_TYPE, pickZylemLine } from '../lib/entities/line';
+export type { ZylemLineOptions, LinePickResult } from '../lib/entities/line';
 export type {
 	ZylemFogOptions,
 	ZylemFogType,

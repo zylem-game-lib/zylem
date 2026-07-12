@@ -2,15 +2,6 @@
  * `@zylem/game-lib/graphics` public API.
  * @public
  */
-// TSL shaders (WebGPU)
-export { fireTSL } from '../lib/graphics/shaders/fire.tsl';
-export { starTSL } from '../lib/graphics/shaders/star.tsl';
-export { debugTSL } from '../lib/graphics/shaders/debug.tsl';
-
-// Background / skybox shaders (WebGPU)
-export { gradientSkyTSL, createGradientSky } from '../lib/graphics/shaders/gradient-sky.tsl';
-export { starfieldSkyTSL } from '../lib/graphics/shaders/starfield-sky.tsl';
-
 // Default-shader sentinel (used internally to detect "no custom shader").
 export { standardShader } from '../lib/graphics/shaders/standard.shader';
 export { objectVertexShader } from '../lib/graphics/shaders/vertex/object.shader';

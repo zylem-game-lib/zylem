@@ -25,12 +25,6 @@ export * from './schema';
 // `graphics` overlaps `core` on stage-transition symbols — re-export the
 // graphics-only surface explicitly to avoid duplicate `export *` conflicts.
 export {
-	fireTSL,
-	starTSL,
-	debugTSL,
-	gradientSkyTSL,
-	createGradientSky,
-	starfieldSkyTSL,
 	standardShader,
 	objectVertexShader,
 	isTSLShader,

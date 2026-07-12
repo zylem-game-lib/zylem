@@ -5,8 +5,10 @@
 
 export {
 	Vector2Schema,
+	Vector3TupleSchema,
 	TextEntityDataSchema,
 	SpriteEntityDataSchema,
+	LineEntityDataSchema,
 	EntitySchema,
 	StageSchema,
 	EntityJsonSchema,
@@ -15,6 +17,7 @@ export {
 	type StageBlueprint,
 	type TextEntityData,
 	type SpriteEntityData,
+	type LineEntityData,
 	type EntityJson,
 	type StageJson,
 } from './blueprints';
