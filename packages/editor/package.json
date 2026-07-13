@@ -34,6 +34,7 @@
     "@zylem/game-lib": "workspace:^"
   },
   "devDependencies": {
+    "@zylem/game-lib": "workspace:*",
     "typescript": "6.0.3",
     "vite": "7.0.4",
     "vite-plugin-solid": "^2.11.8"
