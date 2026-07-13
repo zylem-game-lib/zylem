@@ -6,17 +6,22 @@ import { EntityThumbnail } from './EntityThumbnail';
 import { dispatchEditorUpdate } from '../editor-events';
 import { setDebugStore } from '../editor-store';
 import { setSelectedEntityId } from './entities-state';
+import { printToConsole } from '..';
 import type { BaseEntityInterface } from '../../types';
 
 /**
- * Handle entity button click — select the entity and frame the debug camera.
+ * Handle entity button click — log entity info to the editor console, select
+ * the entity, and best-effort frame the debug camera when a live stage focus
+ * context exists (no-op in stub mode).
  */
 function handleEntityClick(entity: Partial<BaseEntityInterface>): void {
 	if (!entity.uuid) return;
-	const focused = focusEntity(entity.uuid);
-	if (!focused) return;
 
+	const { thumbnail: _thumbnail, ...entityInfo } = entity;
+	printToConsole(`Entity: ${JSON.stringify(entityInfo, null, 2)}`);
 	setSelectedEntityId(entity.uuid);
+	focusEntity(entity.uuid);
+
 	if (debugState.enabled) {
 		setDebugStore('debug', true);
 		dispatchEditorUpdate({ gameState: { debugFlag: true } });
@@ -36,7 +41,9 @@ export const EntitiesSection: Component = () => {
 							<button
 								class="entity-grid-item"
 								type="button"
-								title={entity.name ? `${entity.name} (${entity.uuid})` : entity.uuid}
+								title={
+									entity.name ? `${entity.name} (${entity.uuid})` : entity.uuid
+								}
 								onClick={() => handleEntityClick(entity)}
 							>
 								<EntityThumbnail
@@ -45,7 +52,6 @@ export const EntitiesSection: Component = () => {
 									thumbnail={entity.thumbnail}
 									bounds={entity.bounds}
 								/>
-								<span class="entity-grid-name">{entity.name ?? entity.type ?? 'Entity'}</span>
 							</button>
 						)}
 					</For>

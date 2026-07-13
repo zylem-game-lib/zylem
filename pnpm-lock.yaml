@@ -75,9 +75,6 @@ importers:
       '@solidjs/router':
         specifier: ^0.14.0
         version: 0.14.10(solid-js@1.9.9)
-      '@zylem/game-lib':
-        specifier: workspace:^
-        version: link:../game-lib
       '@zylem/ui':
         specifier: 'catalog:'
         version: 0.2.0(solid-js@1.9.9)
@@ -91,6 +88,9 @@ importers:
         specifier: ^2.1.7
         version: 2.1.7(react@18.3.1)
     devDependencies:
+      '@zylem/game-lib':
+        specifier: workspace:*
+        version: link:../game-lib
       typescript:
         specifier: 6.0.3
         version: 6.0.3
