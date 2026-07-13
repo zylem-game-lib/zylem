@@ -4,12 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-catalogs:
-  default:
-    '@zylem/ui':
-      specifier: ^0.2.0
-      version: 0.2.0
-
 overrides:
   '@eslint/plugin-kit@<0.3.4': '>=0.3.4'
   three@<0.125.0: '>=0.125.0'
@@ -76,7 +70,7 @@ importers:
         specifier: ^0.14.0
         version: 0.14.10(solid-js@1.9.9)
       '@zylem/ui':
-        specifier: 'catalog:'
+        specifier: ^0.2.0
         version: 0.2.0(solid-js@1.9.9)
       lucide-solid:
         specifier: ^0.511.0
@@ -119,7 +113,7 @@ importers:
         specifier: workspace:*
         version: link:../shaders
       '@zylem/ui':
-        specifier: 'catalog:'
+        specifier: ^0.2.0
         version: 0.2.0(solid-js@1.9.9)
       howler:
         specifier: ^2.2.4
@@ -189,8 +183,8 @@ importers:
         specifier: ^2.2.12
         version: 2.2.12
       '@zylem/behaviors':
-        specifier: file:../../../behaviors
-        version: file:../behaviors(react@18.3.1)(three@0.184.0)
+        specifier: ^0.5.1
+        version: 0.5.1(react@18.3.1)(three@0.184.0)
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -290,7 +284,7 @@ importers:
         specifier: workspace:*
         version: link:../shaders
       '@zylem/ui':
-        specifier: 'catalog:'
+        specifier: ^0.2.0
         version: 0.2.0(solid-js@1.9.9)
       howler:
         specifier: ^2.2.4
@@ -355,8 +349,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(three@0.184.0)
       '@zylem/behaviors':
-        specifier: file:../../../behaviors
-        version: file:../behaviors(react@18.3.1)(three@0.184.0)
+        specifier: ^0.5.1
+        version: 0.5.1(react@18.3.1)(three@0.184.0)
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
@@ -1663,15 +1657,11 @@ packages:
   '@zylem/assets@0.1.1':
     resolution: {integrity: sha512-ALiD4ritqUpH+RQzqPG0YdwTYyWz6/gUXxdQ5XDMqSiOmvKIsU7bVhDh7svRnOaIWtBxV3SrcyLp6uMQwcaEqA==}
 
-  '@zylem/behaviors@file:../behaviors':
-    resolution: {directory: ../behaviors, type: directory}
+  '@zylem/behaviors@0.5.1':
+    resolution: {integrity: sha512-wI1zs0JPExCPH4r3LdF0AY0wdIGuZdbBxJmJgx0h29ACPMoVn6fAB2yPEsao1WMci4mvxambFvKeRUZHjMq7qQ==}
     engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
     peerDependencies:
       three: 0.184.0
-
-  '@zylem/runtime@file:../runtime':
-    resolution: {directory: ../runtime, type: directory}
-    engines: {node: '>=20.10.0'}
 
   '@zylem/ui@0.2.0':
     resolution: {integrity: sha512-/aZUo1vmWCekIZBDChljyexvS6+Th2KxuO8eeWBmA+eLlY25W7B9LFIWIcx7V6681iP5uk4lpH5LPfd2wetctQ==}
@@ -4097,10 +4087,10 @@ snapshots:
 
   '@zylem/assets@0.1.1': {}
 
-  '@zylem/behaviors@file:../behaviors(react@18.3.1)(three@0.184.0)':
+  '@zylem/behaviors@0.5.1(react@18.3.1)(three@0.184.0)':
     dependencies:
       '@dgreenheck/three-pinata': 2.0.1(three@0.184.0)
-      '@zylem/runtime': file:../runtime
+      '@zylem/runtime': link:../runtime
       comlink: 4.4.2
       three: 0.184.0
       typescript-fsm: 1.6.0
@@ -4108,8 +4098,6 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
       - react
-
-  '@zylem/runtime@file:../runtime': {}
 
   '@zylem/ui@0.2.0(solid-js@1.9.9)':
     dependencies:
