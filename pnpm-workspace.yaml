@@ -8,5 +8,6 @@ catalog:
 overrides:
   '@eslint/plugin-kit@<0.3.4': '>=0.3.4'
   three@<0.125.0: '>=0.125.0'
-  three: 0.184.0
+  three: 0.185.1
+  '@types/three': 0.185.1
   baseline-browser-mapping: ^2.10.43

@@ -94,6 +94,7 @@ export const playgroundActor: any = (
 		scale: actorTypeToScale[type],
 		models: [actorTypeToPath[type]],
 		animations: actorTypeToAnimations[type].map(animation => ({ key: animation, path: animationMap[type][animation]! })),
+		stripRootMotionY: true,
 		material: {
 			color: color ?? new Color(Color.NAMES.lightgreen),
 		},

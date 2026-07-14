@@ -1,10 +1,20 @@
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import {
+	AnimationClip,
+	Bone,
+	BoxGeometry,
+	Group,
+	Mesh,
+	MeshStandardMaterial,
+	Vector3,
+	VectorKeyframeTrack,
+} from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 
 import { EntityAssetLoader } from '../../../src/lib/core/entity-asset-loader';
 import { createActor } from '../../../src/lib/entities/actor';
+import { AnimationDelegate } from '../../../src/lib/entities/delegates/animation';
 
 /**
  * Flatten a plain collider definition into the same shape/dimensions layout
@@ -68,6 +78,27 @@ function createVisibleModelWithShiftedOrigin(): Group {
 	const mesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial());
 	mesh.position.set(5, 2, 1);
 	root.add(mesh);
+	return root;
+}
+
+function createElevatedMeshModel(): Group {
+	const root = new Group();
+	const mesh = new Mesh(
+		new BoxGeometry(1, 2, 1),
+		new MeshStandardMaterial(),
+	);
+	mesh.position.set(0, 2, 0);
+	root.add(mesh);
+	return root;
+}
+
+function createRigWithHips(hipsY = 37): Group {
+	const root = new Group();
+	const hips = new Bone();
+	hips.name = 'mixamorig:Hips';
+	hips.position.y = hipsY;
+	root.add(hips);
+	root.add(new Mesh(new BoxGeometry(1, 2, 1), new MeshStandardMaterial()));
 	return root;
 }
 
@@ -317,5 +348,131 @@ describe('ZylemActor', () => {
 		const serialized = inspectColliderDesc(actor.colliderDesc!);
 		expect(serialized.shape).toBe('cuboid');
 		expect(warnSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it('grounds elevated visual models to the group origin', async () => {
+		vi.spyOn(EntityAssetLoader.prototype, 'loadFile').mockImplementation(async () => ({
+			object: createElevatedMeshModel(),
+		}));
+
+		const actor = createActor({
+			models: ['mascot.fbx'],
+			scale: new Vector3(1, 1, 1),
+			collision: { static: false },
+			collisionShape: 'capsule',
+		});
+
+		await flushPromises();
+
+		expect(actor.object?.position.y).toBeCloseTo(-1, 5);
+	});
+
+	it('grounds visual models after animations load', async () => {
+		const clip = new AnimationClip('idle', 1, []);
+		vi.spyOn(EntityAssetLoader.prototype, 'loadFile').mockImplementation(async () => ({
+			object: createElevatedMeshModel(),
+			animation: clip,
+		}));
+
+		const actor = createActor({
+			models: ['mascot.fbx'],
+			animations: [{ key: 'idle', path: 'mascot-walk.fbx' }],
+			scale: new Vector3(1, 1, 1),
+			collision: { static: false },
+			collisionShape: 'capsule',
+		});
+
+		await flushPromises();
+
+		expect(actor.object?.position.y).toBeCloseTo(-1, 5);
+	});
+
+	it('auto-enables stripRootMotionY when the model file matches any animation', async () => {
+		const loadAnimations = vi.spyOn(AnimationDelegate.prototype, 'loadAnimations')
+			.mockResolvedValue(undefined);
+		vi.spyOn(EntityAssetLoader.prototype, 'loadFile').mockImplementation(async () => ({
+			object: createRigWithHips(37),
+			animation: new AnimationClip('idle', 1, []),
+		}));
+
+		createActor({
+			models: ['idle.fbx'],
+			animations: [
+				{ key: 'idle', path: 'idle.fbx' },
+				{ key: 'walk', path: 'walk.fbx' },
+			],
+			collision: { static: false },
+			collisionShape: 'capsule',
+		});
+
+		await flushPromises();
+
+		expect(loadAnimations).toHaveBeenCalledWith(
+			[
+				{ key: 'idle', path: 'idle.fbx' },
+				{ key: 'walk', path: 'walk.fbx' },
+			],
+			{ stripRootMotionY: true, referenceAnimationPath: 'idle.fbx' },
+		);
+	});
+
+	it('resolves referenceRootY from the model clip when stripping without an explicit value', async () => {
+		const root = new Group();
+		const hips = new Bone();
+		hips.name = 'mixamorig:Hips';
+		root.add(hips);
+
+		const clipA = new AnimationClip('a', 1, [
+			new VectorKeyframeTrack('mixamorig:Hips.position', [0, 1], [0, 90, 0, 0, 100, 0]),
+		]);
+		const clipB = new AnimationClip('b', 1, [
+			new VectorKeyframeTrack('mixamorig:Hips.position', [0, 1], [0, 85, 0, 0, 95, 0]),
+		]);
+
+		vi.spyOn(EntityAssetLoader.prototype, 'loadFile')
+			.mockResolvedValueOnce({ animation: clipA })
+			.mockResolvedValueOnce({ animation: clipB });
+
+		const delegate = new AnimationDelegate(root);
+		await delegate.loadAnimations(
+			[{ key: 'idle', path: 'a.fbx' }, { key: 'walk', path: 'b.fbx' }],
+			{ stripRootMotionY: true, referenceAnimationPath: 'a.fbx' },
+		);
+
+		for (const clip of delegate.animations) {
+			const track = clip.tracks.find((t) => t.name.endsWith('.position'));
+			expect(track?.values[1]).toBe(90);
+			expect(track?.values[4]).toBe(90);
+		}
+	});
+
+	it('normalizes root Y across clips to explicit referenceRootY when stripping', async () => {
+		const root = new Group();
+		const hips = new Bone();
+		hips.name = 'mixamorig:Hips';
+		root.add(hips);
+
+		const clipA = new AnimationClip('a', 1, [
+			new VectorKeyframeTrack('mixamorig:Hips.position', [0, 1], [0, 90, 0, 0, 100, 0]),
+		]);
+		const clipB = new AnimationClip('b', 1, [
+			new VectorKeyframeTrack('mixamorig:Hips.position', [0, 1], [0, 85, 0, 0, 95, 0]),
+		]);
+
+		vi.spyOn(EntityAssetLoader.prototype, 'loadFile')
+			.mockResolvedValueOnce({ animation: clipA })
+			.mockResolvedValueOnce({ animation: clipB });
+
+		const delegate = new AnimationDelegate(root);
+		await delegate.loadAnimations(
+			[{ key: 'idle', path: 'a.fbx' }, { key: 'walk', path: 'b.fbx' }],
+			{ stripRootMotionY: true, referenceRootY: 42 },
+		);
+
+		for (const clip of delegate.animations) {
+			const track = clip.tracks.find((t) => t.name.endsWith('.position'));
+			expect(track?.values[1]).toBe(42);
+			expect(track?.values[4]).toBe(42);
+		}
 	});
 });

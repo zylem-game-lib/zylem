@@ -25,9 +25,13 @@ const skybox = demoAsset('general/skybox-default.png');
  */
 type DemoPlayer = any;
 
+/** Matches `playgroundPlatforms()` start platform: center y=1, height 0.5. */
+const START_PLATFORM_TOP_Y = 1 + 0.5 / 2;
+const PLAYER_SPAWN = { x: 0, y: START_PLATFORM_TOP_Y, z: 15.5 };
+
 export default function createDemo() {
 	const groundPlane = playgroundPlane('dirt');
-	const player = playgroundActor('player') as DemoPlayer & StageEntity;
+	const player = playgroundActor('player', undefined, PLAYER_SPAWN) as DemoPlayer & StageEntity;
 
 	const platforms = playgroundPlatforms();
 
@@ -89,6 +93,7 @@ export default function createDemo() {
 	const lastMovement = new Vector3();
 	player.onSetup(({ me }: { me: DemoPlayer }) => {
 		camera.cameraRef.target = me;
+		me.setPosition(PLAYER_SPAWN.x, PLAYER_SPAWN.y, PLAYER_SPAWN.z);
 	});
 
 	player.onUpdate(({ inputs, me }: UpdateContext<any>) => {
@@ -111,7 +116,7 @@ export default function createDemo() {
 			lastMovement.set(horizontal, 0, vertical);
 		}
 		if (lastMovement.lengthSq() > 0) {
-			const yaw = Math.atan2(-lastMovement.x, lastMovement.z);
+			const yaw = Math.atan2(lastMovement.x, lastMovement.z);
 			me.setRotationY(yaw);
 		}
 

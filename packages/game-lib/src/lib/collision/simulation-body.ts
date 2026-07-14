@@ -115,6 +115,14 @@ export class SimulationBody implements PhysicsRenderPoseProvider {
 	 */
 	setLinearDamping(_damping: number): void { }
 
+	/**
+	 * Gravity scale is fixed at body-creation time in the wasm runtime; there is
+	 * no live setter FFI yet, so this is accepted for Rapier compat but has no
+	 * effect. Prefer `gravityScale` on the body definition at spawn time when
+	 * possible.
+	 */
+	setGravityScale(_scale: number, _wakeUp: boolean = true): void { }
+
 	// ─── Introspection (debug overlays) ──────────────────────────────────
 
 	private bodyInfo(): StageBodyInfo | null {

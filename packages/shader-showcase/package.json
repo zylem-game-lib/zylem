@@ -14,15 +14,15 @@
     "@solidjs/router": "^0.14.10",
     "@zylem/game-lib": "workspace:*",
     "@zylem/shaders": "workspace:*",
-    "@zylem/ui": "catalog:",
+    "@zylem/ui": "link:../../../zylem-ui",
     "howler": "^2.2.4",
     "nanoid": "^5.1.5",
     "solid-js": "^1.9.9",
-    "three": "^0.184.0",
+    "three": "^0.185.0",
     "valtio": "^2.1.7"
   },
   "devDependencies": {
-    "@types/three": "^0.184.0",
+    "@types/three": "^0.185.0",
     "cross-env": "^10.1.0",
     "typescript": "6.0.3",
     "vite": "7.0.4",

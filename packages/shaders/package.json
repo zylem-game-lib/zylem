@@ -29,13 +29,13 @@
     "typecheck": "tsgo --noEmit"
   },
   "peerDependencies": {
-    "three": "^0.184.0"
+    "three": "^0.185.0"
   },
   "devDependencies": {
-    "@types/three": "^0.184.0",
+    "@types/three": "^0.185.0",
     "@types/tsl-textures": "^3.0.0",
     "@typescript/native-preview": "latest",
-    "three": "^0.184.0",
+    "three": "^0.185.0",
     "tsup": "^8.5.1",
     "typescript": "6.0.3"
   },

@@ -1,6 +1,7 @@
 import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import {
 	Box3,
+	Bone,
 	BufferAttribute,
 	Object3D,
 	SkinnedMesh,
@@ -98,6 +99,147 @@ const actorDefaults: ZylemActorOptions = {
 
 function getActorScale(options: ZylemActorOptions): Vector3 {
 	return toThreeVector3(options.scale, VEC3_ONE);
+}
+
+/** Minimum feet offset (group-local Y) before applying a visual grounding correction. */
+const VISUAL_GROUND_EPSILON = 1e-4;
+
+/** Mixamo-style foot bones (exclude toe bases — toe tips sit below the sole). */
+const FOOT_BONE_PATTERN = /foot$/i;
+
+const _visualGroundScratch = new Vector3();
+const _visualGroundBoxCorner = new Vector3();
+const _skinnedVertex = new Vector3();
+const _skinnedWeighted = new Vector3();
+const _skinnedBoneMatrix = new Matrix4();
+
+/**
+ * Lowest world-space Y among deformed skinned-mesh vertices (current pose).
+ */
+function computeSkinnedMeshesMinWorldY(modelRoot: Object3D): number | null {
+	let minWorldY = Infinity;
+	let foundSkinnedMesh = false;
+
+	modelRoot.traverse((node) => {
+		if (!(node as SkinnedMesh).isSkinnedMesh) {
+			return;
+		}
+
+		const mesh = node as SkinnedMesh;
+		const geometry = mesh.geometry;
+		const position = geometry.attributes.position as BufferAttribute | undefined;
+		const skinIndex = geometry.attributes.skinIndex as BufferAttribute | undefined;
+		const skinWeight = geometry.attributes.skinWeight as BufferAttribute | undefined;
+		const skeleton = mesh.skeleton;
+		if (!position || !skinIndex || !skinWeight || !skeleton) {
+			return;
+		}
+
+		foundSkinnedMesh = true;
+		skeleton.update();
+		mesh.updateMatrixWorld(true);
+
+		const boneMatrices = skeleton.boneMatrices;
+		if (!boneMatrices) {
+			return;
+		}
+		for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex++) {
+			_skinnedVertex.fromBufferAttribute(position, vertexIndex).applyMatrix4(mesh.bindMatrix);
+			_skinnedWeighted.set(0, 0, 0);
+
+			for (let weightIndex = 0; weightIndex < 4; weightIndex++) {
+				const weight = skinWeight.getComponent(vertexIndex, weightIndex);
+				if (weight === 0) {
+					continue;
+				}
+
+				const boneIndex = skinIndex.getComponent(vertexIndex, weightIndex);
+				_skinnedBoneMatrix.fromArray(boneMatrices, boneIndex * 16);
+				_skinnedWeighted.addScaledVector(
+					_visualGroundBoxCorner.copy(_skinnedVertex).applyMatrix4(_skinnedBoneMatrix),
+					weight,
+				);
+			}
+
+			_skinnedWeighted
+				.applyMatrix4(mesh.bindMatrixInverse)
+				.applyMatrix4(mesh.matrixWorld);
+			minWorldY = Math.min(minWorldY, _skinnedWeighted.y);
+		}
+	});
+
+	if (!foundSkinnedMesh || !Number.isFinite(minWorldY)) {
+		return null;
+	}
+
+	return minWorldY;
+}
+
+/**
+ * Returns world-space gap between the feet and the group origin (body anchor).
+ */
+function computeVisualFeetGapWorld(modelRoot: Object3D, group: Group): number | null {
+	group.updateMatrixWorld(true);
+	const groupWorldY = group.getWorldPosition(_visualGroundScratch).y;
+
+	let minWorldY = computeSkinnedMeshesMinWorldY(modelRoot) ?? Infinity;
+
+	modelRoot.traverse((node) => {
+		if (!(node as Bone).isBone || !FOOT_BONE_PATTERN.test(node.name)) {
+			return;
+		}
+		node.getWorldPosition(_visualGroundScratch);
+		minWorldY = Math.min(minWorldY, _visualGroundScratch.y);
+	});
+
+	if (!Number.isFinite(minWorldY)) {
+		modelRoot.traverse((node) => {
+			if (!(node as SkinnedMesh).isSkinnedMesh) {
+				return;
+			}
+			const mesh = node as SkinnedMesh;
+			mesh.computeBoundingBox();
+			if (!mesh.boundingBox) {
+				return;
+			}
+			const { min, max } = mesh.boundingBox;
+			for (const corner of [
+				[min.x, min.y, min.z],
+				[min.x, min.y, max.z],
+				[min.x, max.y, min.z],
+				[min.x, max.y, max.z],
+				[max.x, min.y, min.z],
+				[max.x, min.y, max.z],
+				[max.x, max.y, min.z],
+				[max.x, max.y, max.z],
+			]) {
+				_visualGroundBoxCorner.set(corner[0], corner[1], corner[2]);
+				_visualGroundBoxCorner.applyMatrix4(mesh.matrixWorld);
+				minWorldY = Math.min(minWorldY, _visualGroundBoxCorner.y);
+			}
+		});
+	}
+
+	if (!Number.isFinite(minWorldY)) {
+		const worldBox = new Box3().setFromObject(modelRoot);
+		if (worldBox.isEmpty()) {
+			return null;
+		}
+		minWorldY = worldBox.min.y;
+	}
+
+	return minWorldY - groupWorldY;
+}
+
+function shouldStripRootMotionForActor(
+	options: ZylemActorOptions,
+	modelFile: string | undefined,
+	animationPaths: string[],
+): boolean {
+	if (options.stripRootMotionY !== undefined) {
+		return options.stripRootMotionY;
+	}
+	return Boolean(modelFile && animationPaths.some((path) => path === modelFile));
 }
 
 function getCollisionPosition(
@@ -786,18 +928,34 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 					this.applyMaterialOverrides();
 
 					this._animationDelegate = new AnimationDelegate(this._object);
-					void this._animationDelegate.loadAnimations(
-						this.options.animations || [],
-						{ stripRootMotionY: this.options.stripRootMotionY ?? false },
-					).then(() => {
-						if (loadGeneration !== this._loadGeneration) {
-							return;
-						}
-						this.dispatch('entity:animation:loaded', {
-							entityId: this.uuid,
-							animationCount: this.options.animations?.length || 0,
+					const animations = this.options.animations || [];
+					const modelFile = this.options.models?.[0];
+					const animationPaths = animations.map((animation) => animation.path);
+					const stripRootMotionY = shouldStripRootMotionForActor(
+						this.options,
+						modelFile,
+						animationPaths,
+					);
+					if (animations.length > 0) {
+						void this._animationDelegate.loadAnimations(
+							animations,
+							{
+								stripRootMotionY,
+								referenceAnimationPath: modelFile,
+							},
+						).then(() => {
+							if (loadGeneration !== this._loadGeneration) {
+								return;
+							}
+							this.alignVisualModelToGround();
+							this.dispatch('entity:animation:loaded', {
+								entityId: this.uuid,
+								animationCount: animations.length,
+							});
 						});
-					});
+					} else {
+						this.alignVisualModelToGround();
+					}
 				}
 
 				this.dispatch('entity:model:loaded', {
@@ -819,6 +977,28 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 					errorMessage: error instanceof Error ? error.message : String(error),
 				});
 			});
+	}
+
+	/**
+	 * Shift the visible model so its feet sit at the group origin (y = 0).
+	 * The physics body / render slot stay at the feet anchor; only `_object`
+	 * is offset so Mixamo-style hip calibration does not float the mesh.
+	 */
+	private alignVisualModelToGround(): void {
+		if (!this._object || !this.group) {
+			return;
+		}
+
+		this._animationDelegate?.update(0);
+		this._object.updateMatrixWorld(true);
+
+		const gapWorld = computeVisualFeetGapWorld(this._object, this.group);
+		if (gapWorld === null || Math.abs(gapWorld) < VISUAL_GROUND_EPSILON) {
+			return;
+		}
+
+		const scaleY = this.group.scale.y || 1;
+		this._object.position.y -= gapWorld / scaleY;
 	}
 
 	private applyMaterialOverrides(): void {
