@@ -1,4 +1,4 @@
-import { proxy } from 'valtio';
+import { proxy } from 'valtio/vanilla';
 import type { GameEntity } from '../entities/entity';
 
 export type DebugTools = 'select' | 'translate' | 'rotate' | 'scale' | 'delete' | 'none';

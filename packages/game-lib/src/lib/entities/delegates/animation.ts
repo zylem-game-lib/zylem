@@ -61,6 +61,7 @@ function stripClipRootMotion(
 	clip: AnimationClip,
 	targetByName: Map<string, Object3D>,
 	stripY: boolean,
+	referenceRootY?: number,
 ): AnimationClip {
 	for (const track of clip.tracks) {
 		if (!shouldStripRootMotion(track, targetByName)) {
@@ -72,7 +73,7 @@ function stripClipRootMotion(
 		}
 
 		const baseX = track.values[0];
-		const baseY = track.values[1];
+		const baseY = referenceRootY ?? track.values[1];
 		const baseZ = track.values[2];
 		for (let i = 0; i < track.values.length; i += 3) {
 			track.values[i] = baseX;
@@ -84,6 +85,25 @@ function stripClipRootMotion(
 	}
 
 	return clip;
+}
+
+/**
+ * Read the first-frame Y from a clip's root / hips translation track.
+ */
+function extractClipRootMotionY(
+	clip: AnimationClip,
+	targetByName: Map<string, Object3D>,
+): number | null {
+	for (const track of clip.tracks) {
+		if (!shouldStripRootMotion(track, targetByName)) {
+			continue;
+		}
+		if (!track.values || track.values.length < 3) {
+			continue;
+		}
+		return track.values[1];
+	}
+	return null;
 }
 
 /**
@@ -99,6 +119,17 @@ export interface AnimationLoadOptions {
 	 * calibration; see {@link stripClipRootMotion}.
 	 */
 	stripRootMotionY?: boolean;
+	/**
+	 * When {@link stripRootMotionY} is true, lock every clip's root Y
+	 * track to this value instead of each clip's own first-frame Y.
+	 * Prevents locomotion clips from lifting the mesh when cross-fading.
+	 */
+	referenceRootY?: number;
+	/**
+	 * When {@link referenceRootY} is omitted, prefer this animation path
+	 * (typically the model / idle clip) for the shared root Y value.
+	 */
+	referenceAnimationPath?: string;
 }
 
 export class AnimationDelegate {
@@ -124,6 +155,8 @@ export class AnimationDelegate {
 		if (!animations.length) return;
 
 		const stripY = options.stripRootMotionY ?? false;
+		const referenceRootY = options.referenceRootY;
+		const referenceAnimationPath = options.referenceAnimationPath;
 
 		const results = await Promise.all(animations.map(a => this._assetLoader.loadFile(a.path)));
 		const targetByName = new Map<string, Object3D>();
@@ -133,19 +166,44 @@ export class AnimationDelegate {
 			}
 		});
 		
-		// Build animations list while preserving original key mapping
-		// Filter to only successful loads and pair with their original keys
-		const loadedAnimations: { key: string; clip: AnimationClip }[] = [];
+		const loadedRaw: { key: string; clip: AnimationClip; path: string }[] = [];
 		results.forEach((result, i) => {
 			if (result.animation) {
-				loadedAnimations.push({
+				loadedRaw.push({
 					key: animations[i].key || i.toString(),
-					clip: stripClipRootMotion(result.animation, targetByName, stripY),
+					clip: result.animation,
+					path: animations[i].path,
 				});
 			}
 		});
 
-		if (!loadedAnimations.length) return;
+		if (!loadedRaw.length) return;
+
+		let resolvedReferenceY = referenceRootY;
+		if (stripY && resolvedReferenceY === undefined) {
+			const preferredIndex = referenceAnimationPath
+				? loadedRaw.findIndex((item) => item.path === referenceAnimationPath)
+				: 0;
+			const searchOrder = preferredIndex >= 0
+				? [
+					preferredIndex,
+					...loadedRaw.map((_, index) => index).filter((index) => index !== preferredIndex),
+				]
+				: loadedRaw.map((_, index) => index);
+
+			for (const index of searchOrder) {
+				const rootY = extractClipRootMotionY(loadedRaw[index].clip, targetByName);
+				if (rootY !== null) {
+					resolvedReferenceY = rootY;
+					break;
+				}
+			}
+		}
+
+		const loadedAnimations = loadedRaw.map(({ key, clip }) => ({
+			key,
+			clip: stripClipRootMotion(clip, targetByName, stripY, resolvedReferenceY),
+		}));
 
 		this._animations = loadedAnimations.map(a => a.clip);
 		this._mixer = new AnimationMixer(this.target);

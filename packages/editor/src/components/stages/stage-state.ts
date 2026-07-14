@@ -3,7 +3,7 @@
  * Manages stage configuration and entity list.
  */
 
-import { proxy } from 'valtio';
+import { proxy } from 'valtio/vanilla';
 import { editorEvents } from '../events';
 import { zylemEventBus, type StateDispatchPayload, type EntityConfigPayload } from '@zylem/game-lib/events';
 import type { BaseEntityInterface, StageStateInterface } from '../../types';

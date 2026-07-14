@@ -98,6 +98,8 @@ export default defineConfig({
 		// Solid runtime instead of its own copy.
 		dedupe: ['three', 'solid-js'],
 		alias: [
+			// Solid-only: route valtio's React-coupled root entry to vanilla.
+			{ find: /^valtio$/, replacement: 'valtio/vanilla' },
 			// Examples source
 			{ find: '@examples', replacement: path.resolve(__dirname, './src') },
 

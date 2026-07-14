@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { proxy } from 'valtio';
+import { proxy } from 'valtio/vanilla';
 
 const DEVICE_KEY = 'zylem-multiplayer-lobby-device-id';
 

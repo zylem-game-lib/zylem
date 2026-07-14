@@ -3,7 +3,7 @@
  * Manages debug state and entity selection/hover.
  */
 
-import { proxy } from 'valtio';
+import { proxy } from 'valtio/vanilla';
 import { editorEvents } from '../events';
 
 export type DebugTools = 'select' | 'translate' | 'rotate' | 'scale' | 'delete' | 'none';

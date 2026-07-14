@@ -3,7 +3,7 @@
  * Manages global game variables and state.
  */
 
-import { proxy } from 'valtio';
+import { proxy } from 'valtio/vanilla';
 import { editorEvents } from '../events';
 import { zylemEventBus, type StateDispatchPayload } from '@zylem/game-lib/events';
 

@@ -40,7 +40,7 @@ export default defineConfig({
 		'@zylem/behaviors/*',
 		'howler',
 		'solid-js',
-		'valtio',
+		/^valtio/,
 		'stats.js',
 		'nanoid',
 		'lucide-solid',
