@@ -22,6 +22,8 @@ export interface StageEntity extends Entity {
 	group: Group;
 	mesh: Mesh;
 	instanceId: number;
+	isInstanced?: boolean;
+	isBundled?: boolean;
 	controlledRotation: boolean;
 	name: string;
 	markedForRemoval: boolean;

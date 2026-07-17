@@ -33,7 +33,7 @@ describe('particle emitter stage integration', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: world as any,
-			instanceManager: null,
+			renderStrategy: null,
 			camera: {} as any,
 		});
 

@@ -13,7 +13,7 @@ import { Color, Vector3 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
-import { InstanceManager } from '../graphics/instance-manager';
+import { RenderStrategyManager } from '../graphics/render-strategy-manager';
 import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, setStageVariables, clearVariables, initialStageState } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
@@ -29,6 +29,12 @@ import { CameraWrapper } from '../camera/camera';
 import { CameraManager } from '../camera/camera-manager';
 import { RendererManager, type ZylemPostEffect } from '../camera/renderer-manager';
 import { StageDebugDelegate } from './stage-debug-delegate';
+import {
+	finishStageFrame,
+	profileStageFrameSection,
+	beginStageFrameSection,
+	endStageFrameSection,
+} from './stage-frame-profiler';
 import { StageCameraDelegate } from './stage-camera-delegate';
 import { StageLoadingDelegate } from './stage-loading-delegate';
 import { StageEntityModelDelegate } from './stage-entity-model-delegate';
@@ -97,7 +103,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	world: ZylemWorld | null;
 	scene: ZylemScene | null;
-	instanceManager: InstanceManager | null = null;
+	renderStrategy: RenderStrategyManager | null = null;
 
 	debugDelegate: StageDebugDelegate | null = null;
 
@@ -251,15 +257,15 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			(entity) => this.entityDelegate.handleLateModelReady(entity),
 		);
 
-		// Initialize instance manager for mesh batching
-		this.instanceManager = new InstanceManager();
-		this.instanceManager.setScene(this.scene.scene);
+		// Initialize managed render paths (bundles + instancing)
+		this.renderStrategy = new RenderStrategyManager();
+		this.renderStrategy.setScene(this.scene.scene);
 
 		// Attach entity delegate context now that scene/world are ready
 		this.entityDelegate.attach({
 			scene: this.scene,
 			world: this.world,
-			instanceManager: this.instanceManager,
+			renderStrategy: this.renderStrategy,
 			camera: zylemCamera,
 		});
 
@@ -301,58 +307,77 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			return;
 		}
 
+		const world = this.world;
+		const scene = this.scene;
+
 		// Behavior systems run first: they write this frame's inputs into the
 		// wasm runtime (and read last step's snapshots for their handles).
 		// (First `update` arg is unused / reserved.)
-		for (const system of this.entityDelegate.behaviorSystems) {
-			system.update(undefined, delta);
-		}
-
-		for (const child of this.entityDelegate.childrenMap.values()) {
-			const childParams = this.childUpdateParams;
-			childParams.delta = params.delta;
-			childParams.inputs = params.inputs;
-			childParams.globals = params.globals;
-			childParams.camera = params.camera;
-			childParams.stage = params.stage;
-			childParams.game = params.game;
-			childParams.me = child;
-			child.nodeUpdate(childParams);
-
-			// Apply pending transformations after update callbacks
-			const transformable = child as unknown as TransformableEntity;
-			if (transformable.transformStore) {
-				applyTransformChanges(transformable, transformable.transformStore);
+		profileStageFrameSection('behaviorSystems', () => {
+			for (const system of this.entityDelegate.behaviorSystems) {
+				system.update(undefined, delta);
 			}
+		});
 
-			if (child.markedForRemoval) {
-				this.entityDelegate.removeEntityByUuid(child.uuid);
+		profileStageFrameSection('entityLoop', () => {
+			for (const child of this.entityDelegate.childrenMap.values()) {
+				const childParams = this.childUpdateParams;
+				childParams.delta = params.delta;
+				childParams.inputs = params.inputs;
+				childParams.globals = params.globals;
+				childParams.camera = params.camera;
+				childParams.stage = params.stage;
+				childParams.game = params.game;
+				childParams.me = child;
+				child.nodeUpdate(childParams);
+
+				// Apply pending transformations after update callbacks
+				const transformable = child as unknown as TransformableEntity;
+				if (transformable.transformStore) {
+					applyTransformChanges(transformable, transformable.transformStore);
+				}
+
+				if (child.markedForRemoval) {
+					this.entityDelegate.removeEntityByUuid(child.uuid);
+				}
 			}
-		}
+		});
 
 		// Step the wasm simulation (fixed timestep + collision dispatch) after
 		// behaviors and entities have written their inputs/intents.
-		this.world.update(params);
+		profileStageFrameSection('worldUpdate', () => {
+			world.update(params);
+		});
 
 		// Sync physics to rendering AFTER the simulation stepped
-		syncRenderPoses({
-			_childrenMap: this.entityDelegate.childrenMap,
-			_world: this.world,
-		} as unknown as StageSystem);
+		profileStageFrameSection('syncRenderPoses', () => {
+			syncRenderPoses({
+				_childrenMap: this.entityDelegate.childrenMap,
+				_world: world,
+			} as unknown as StageSystem);
+		});
 
-		// Sync instanced mesh transforms
-		this.instanceManager?.update();
+		// Sync managed render paths from the slot-indexed render buffer (pack instancing only).
+		profileStageFrameSection('renderStrategy', () => {
+			this.renderStrategy?.update(world.interpolationAlpha);
+		});
 
 		// Update cameras here — strictly AFTER transformSystem writes
 		// `group.position` — so follow-cameras read this frame's synced pose,
 		// not the previous frame's. The renderer loop is render-only.
-		if (this.cameraManagerRef) {
-			this.cameraManagerRef.update(delta);
-		} else {
-			this.cameraRef?.update(delta);
-		}
+		profileStageFrameSection('camera', () => {
+			if (this.cameraManagerRef) {
+				this.cameraManagerRef.update(delta);
+			} else {
+				this.cameraRef?.update(delta);
+			}
+		});
 
-		this.scene.update({ delta });
+		profileStageFrameSection('scene', () => {
+			scene.update({ delta });
+		});
+
+		finishStageFrame();
 	}
 
 	public outOfLoop() {
@@ -362,7 +387,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	/** Update debug overlays and helpers if enabled. */
 	public debugUpdate() {
 		if (debugState.enabled) {
+			beginStageFrameSection('debugUpdate');
 			this.debugDelegate?.update();
+			endStageFrameSection();
 		}
 	}
 
@@ -380,9 +407,9 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 		this.entityModelDelegate.dispose();
 
-		// Dispose instance manager
-		this.instanceManager?.dispose();
-		this.instanceManager = null;
+		// Dispose managed render paths
+		this.renderStrategy?.dispose();
+		this.renderStrategy = null;
 
 		// Stop renderer render loop if using renderer manager
 		if (this.rendererManager) {

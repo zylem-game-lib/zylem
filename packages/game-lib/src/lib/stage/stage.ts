@@ -22,6 +22,8 @@ import { EntityTypeMap } from '../types/entity-type-map';
 import { EventEmitterDelegate, zylemEventBus, type StageEvents } from '../events';
 import { GameInputConfig } from '../game/game-interfaces';
 import { mergeInputConfigs } from '../input/input-presets';
+import { usesManagedRenderPath } from '../graphics/render-category';
+import type { BaseEntityInterface } from '../types/entity-types';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
@@ -92,9 +94,37 @@ export class Stage {
 		const zylemCamera = camera instanceof CameraWrapper ? camera.cameraRef : camera;
 		await this.wrappedStage!.load(id, zylemCamera, rendererManager);
 
+		// Coalesce entity-list writes: per-add `[...entities, next]` through the
+		// valtio proxy is O(n²) and dominates load for large stages. Buffer
+		// adds and flush once per microtask. Skip managed-render entities
+		// (pack/environment) — thousands of identical instances are not useful
+		// in the editor entity list.
+		let pendingEntities: Partial<BaseEntityInterface>[] | null = null;
+		let flushScheduled = false;
+		const flushPendingEntities = () => {
+			flushScheduled = false;
+			if (!pendingEntities?.length) {
+				pendingEntities = null;
+				return;
+			}
+			const batch = pendingEntities;
+			pendingEntities = null;
+			stageState.entities = [...stageState.entities, ...batch];
+		};
+
 		this.wrappedStage!.onEntityAdded((child) => {
+			if (usesManagedRenderPath((child as { options?: unknown }).options as any)) {
+				return;
+			}
 			const next = this.wrappedStage!.buildEntityState(child);
-			stageState.entities = [...stageState.entities, next];
+			if (!pendingEntities) {
+				pendingEntities = [];
+			}
+			pendingEntities.push(next);
+			if (!flushScheduled) {
+				flushScheduled = true;
+				queueMicrotask(flushPendingEntities);
+			}
 		}, { replayExisting: true });
 
 		// Apply lifecycle callbacks to wrapped stage

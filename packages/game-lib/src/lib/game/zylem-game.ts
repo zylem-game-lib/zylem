@@ -29,6 +29,7 @@ import {
 	resolveStageTransition,
 	type StageTransitionConfig,
 } from '../graphics/stage-transition';
+import { usesManagedRenderPath } from '../graphics/render-category';
 
 export type { GameLoadingEvent };
 
@@ -85,6 +86,17 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	private rendererObserver: GameRendererObserver = new GameRendererObserver();
 	private eventBusUnsubscribes: (() => void)[] = [];
 	private thumbnailUnsubscribes: (() => void)[] = [];
+	/**
+	 * Trailing-debounce timer for entity-driven state dispatches. Building a
+	 * `state:dispatch` payload is O(entities) (and downstream editor stores
+	 * re-proxy/reconcile every entity), so bursts of thumbnail/destroy events
+	 * must coalesce into a single dispatch instead of one per entity.
+	 */
+	private entityDispatchTimer: ReturnType<typeof setTimeout> | null = null;
+	private pendingEntityDispatchPath: string | null = null;
+
+	/** Debounce window (ms) for coalescing entity-driven state dispatches. */
+	private static readonly ENTITY_DISPATCH_DEBOUNCE_MS = 150;
 	private readonly gameUpdateParams = {} as UpdateContext<
 		ZylemGame<TGlobals>,
 		TGlobals
@@ -540,6 +552,12 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 		const entities: EntityConfigPayload[] = [];
 		stage.wrappedStage.entityDelegate.childrenMap.forEach((child) => {
+			// Pack/environment entities can number in the thousands and are not
+			// useful in the editor entity panel — omit them from state:dispatch.
+			if (usesManagedRenderPath((child as { options?: unknown }).options as any)) {
+				return;
+			}
+
 			// Get type string from the entity's constructor
 			const entityType = (child.constructor as any).type;
 			const typeStr = entityType ? String(entityType).replace('Symbol(', '').replace(')', '') : 'Unknown';
@@ -573,12 +591,16 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.clearEntityThumbnailWiring();
 		if (!stage.wrappedStage) return;
 
-		const queueThumbnail = (child: { uuid: string; group?: any; mesh?: any }) => {
+		const queueThumbnail = (child: { uuid: string; group?: any; mesh?: any; options?: any }) => {
+			// Managed-render entities (instanced packs / bundles) can number in
+			// the thousands and are visually identical; per-entity offscreen
+			// thumbnail renders + PNG encodes would swamp the main thread.
+			if (usesManagedRenderPath(child.options)) return;
 			const object = child.group ?? child.mesh ?? null;
 			if (!object) return;
 			void entityThumbnailCache.ensure(child.uuid, object).then((result) => {
 				if (result) {
-					this.emitStateDispatch('@entity:thumbnail');
+					this.queueEntityStateDispatch('@entity:thumbnail');
 				}
 			});
 		};
@@ -603,7 +625,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 		const onDestroyed = (payload: { entityId: string }) => {
 			entityThumbnailCache.invalidate(payload.entityId);
-			this.emitStateDispatch('@entity:destroyed');
+			this.queueEntityStateDispatch('@entity:destroyed');
 		};
 		zylemEventBus.on('entity:destroyed', onDestroyed);
 		this.thumbnailUnsubscribes.push(() => {
@@ -618,6 +640,28 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			} catch { /* noop */ }
 		});
 		this.thumbnailUnsubscribes = [];
+		if (this.entityDispatchTimer !== null) {
+			clearTimeout(this.entityDispatchTimer);
+			this.entityDispatchTimer = null;
+		}
+		this.pendingEntityDispatchPath = null;
+	}
+
+	/**
+	 * Coalesce entity-driven state dispatches (thumbnail resolutions, entity
+	 * destruction) into one trailing `emitStateDispatch` per burst.
+	 */
+	private queueEntityStateDispatch(path: string): void {
+		this.pendingEntityDispatchPath = path;
+		if (this.entityDispatchTimer !== null) return;
+		this.entityDispatchTimer = setTimeout(() => {
+			this.entityDispatchTimer = null;
+			const pendingPath = this.pendingEntityDispatchPath;
+			this.pendingEntityDispatchPath = null;
+			if (pendingPath && !this.isDisposed) {
+				this.emitStateDispatch(pendingPath);
+			}
+		}, ZylemGame.ENTITY_DISPATCH_DEBOUNCE_MS);
 	}
 
 	/**

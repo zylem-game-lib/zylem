@@ -7,6 +7,8 @@
  * API and implements `PhysicsRenderPoseProvider` so `syncRenderPoses` can
  * interpolate between the previous and current fixed-step poses.
  */
+import { Quaternion } from 'three';
+
 import type {
 	EntityHandle,
 	Simulation,
@@ -15,6 +17,7 @@ import type {
 	StageRenderSlot,
 } from '@zylem/behaviors/core';
 import {
+	clampInterpolationAlpha,
 	clonePhysicsPose,
 	interpolatePhysicsPose,
 	type PhysicsPose,
@@ -31,6 +34,9 @@ export interface SimulationStepClock {
 
 const ZERO_VEC: PhysicsVector3 = { x: 0, y: 0, z: 0 };
 
+const _slerpPrevious = new Quaternion();
+const _slerpCurrent = new Quaternion();
+
 export class SimulationBody implements PhysicsRenderPoseProvider {
 	private readonly poseScratch: StagePose = {
 		position: [0, 0, 0],
@@ -41,12 +47,14 @@ export class SimulationBody implements PhysicsRenderPoseProvider {
 		rotation: [0, 0, 0, 1],
 		scale: 1,
 		custom: [0, 0, 0, 0],
+		isSleeping: false,
 	};
 	private readonly previousScratch: StageRenderSlot = {
 		position: [0, 0, 0],
 		rotation: [0, 0, 0, 1],
 		scale: 1,
 		custom: [0, 0, 0, 0],
+		isSleeping: false,
 	};
 
 	constructor(
@@ -197,5 +205,88 @@ export class SimulationBody implements PhysicsRenderPoseProvider {
 	getRenderPose(alpha: number): PhysicsPose {
 		const history = this.getPoseHistory();
 		return interpolatePhysicsPose(history.previous, history.current, alpha);
+	}
+
+	/**
+	 * True when the latest render buffer marks this body as sleeping.
+	 * Used by instancing to skip matrix writes for settled piles.
+	 */
+	isRenderSleeping(): boolean {
+		const current = this.simulation.readRenderSlot(this.handle, this.renderScratch);
+		return current?.isSleeping === true;
+	}
+
+	/**
+	 * Zero-allocation render-pose read for hot paths (instanced rendering of
+	 * thousands of bodies). Interpolates the previous → current fixed-step
+	 * poses straight from the shared render buffer into the provided
+	 * out-parameters — no intermediate pose objects.
+	 */
+	writeRenderPose(
+		alpha: number,
+		outPosition: { x: number; y: number; z: number },
+		outRotation: { x: number; y: number; z: number; w: number },
+	): void {
+		// Before the first fixed step the render buffers hold zeros; use the
+		// live body pose (set at spawn time) with no interpolation.
+		if (this.clock.steps === 0) {
+			this.writeLivePose(outPosition, outRotation);
+			return;
+		}
+
+		const current = this.simulation.readRenderSlot(this.handle, this.renderScratch);
+		if (!current) {
+			this.writeLivePose(outPosition, outRotation);
+			return;
+		}
+		const previous =
+			this.simulation.readPreviousRenderSlot(this.handle, this.previousScratch) ?? current;
+
+		const t = clampInterpolationAlpha(alpha);
+		outPosition.x = previous.position[0] + (current.position[0] - previous.position[0]) * t;
+		outPosition.y = previous.position[1] + (current.position[1] - previous.position[1]) * t;
+		outPosition.z = previous.position[2] + (current.position[2] - previous.position[2]) * t;
+
+		_slerpPrevious.set(
+			previous.rotation[0],
+			previous.rotation[1],
+			previous.rotation[2],
+			previous.rotation[3],
+		);
+		_slerpCurrent.set(
+			current.rotation[0],
+			current.rotation[1],
+			current.rotation[2],
+			current.rotation[3],
+		);
+		_slerpPrevious.slerp(_slerpCurrent, t);
+		outRotation.x = _slerpPrevious.x;
+		outRotation.y = _slerpPrevious.y;
+		outRotation.z = _slerpPrevious.z;
+		outRotation.w = _slerpPrevious.w;
+	}
+
+	private writeLivePose(
+		outPosition: { x: number; y: number; z: number },
+		outRotation: { x: number; y: number; z: number; w: number },
+	): void {
+		const pose = this.simulation.getPose(this.handle, this.poseScratch);
+		if (pose) {
+			outPosition.x = pose.position[0];
+			outPosition.y = pose.position[1];
+			outPosition.z = pose.position[2];
+			outRotation.x = pose.rotation[0];
+			outRotation.y = pose.rotation[1];
+			outRotation.z = pose.rotation[2];
+			outRotation.w = pose.rotation[3];
+		} else {
+			outPosition.x = 0;
+			outPosition.y = 0;
+			outPosition.z = 0;
+			outRotation.x = 0;
+			outRotation.y = 0;
+			outRotation.z = 0;
+			outRotation.w = 1;
+		}
 	}
 }

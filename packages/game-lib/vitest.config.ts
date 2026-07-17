@@ -16,7 +16,10 @@ export default defineConfig(async (env) => {
 					test: {
 						name: 'unit',
 						environment: 'happy-dom',
-						setupFiles: [path.resolve(import.meta.dirname, './tests/setup/canvas-2d.ts')],
+						setupFiles: [
+							path.resolve(import.meta.dirname, './tests/setup/canvas-2d.ts'),
+							path.resolve(import.meta.dirname, './tests/setup/wasm-fetch.ts'),
+						],
 						include: [path.resolve(import.meta.dirname, './tests/unit/**/*.spec.ts')],
 						exclude: [path.resolve(import.meta.dirname, './tests/integration/**/*.spec.ts')],
 					}

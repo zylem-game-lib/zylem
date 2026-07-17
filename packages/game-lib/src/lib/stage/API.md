@@ -228,7 +228,7 @@ export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promi
 export interface EntityDelegateContext {
   scene: ZylemScene;
   world: ZylemWorld;
-  instanceManager: InstanceManager | null;
+  renderStrategy: RenderStrategyManager | null;
   camera: ZylemCamera;
   runtimeAdapter?: StageRuntimeAdapter | null;
   wasmStage?: WasmStageRuntime | null;
@@ -591,7 +591,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
   world: ZylemWorld | null;
   scene: ZylemScene | null;
-  instanceManager: InstanceManager | null;
+  renderStrategy: RenderStrategyManager | null;
   /** Unified-Stage wasm runtime; non-null only when wasmRuntime was configured. */
   wasmStage: WasmStageRuntime | null;
 

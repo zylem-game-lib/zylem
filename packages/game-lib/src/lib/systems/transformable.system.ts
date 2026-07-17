@@ -26,6 +26,11 @@ export function syncRenderPoses(stage: StageSystem): void {
 			continue;
 		}
 
+		// Instanced and bundled entities are synced by RenderStrategyManager / bundles.
+		if (stageEntity.isInstanced || stageEntity.isBundled) {
+			continue;
+		}
+
 		const body = stageEntity.body;
 		const target = stageEntity.group ?? stageEntity.mesh;
 		const renderPose = target

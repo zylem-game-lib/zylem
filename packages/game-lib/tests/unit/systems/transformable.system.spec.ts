@@ -85,4 +85,64 @@ describe('syncRenderPoses', () => {
 		expect(child.position.y).toBe(2);
 		expect(child.position.z).toBe(1);
 	});
+
+	it('skips instanced entities so InstanceManager owns their transforms', () => {
+		const body = createFakeBody();
+		registerDirectBodyPoseHistory(body);
+		prepareDirectBodyPoseHistoryStep(body);
+		body._translation = { x: 9, y: 9, z: 9 };
+		commitDirectBodyPoseHistoryStep(body);
+
+		const key = 'instanced-entity';
+		const target = new Group();
+		target.position.set(0, 0, 0);
+		const entity = {
+			uuid: key,
+			body,
+			group: target,
+			mesh: undefined,
+			isInstanced: true,
+			markedForRemoval: false,
+			controlledRotation: false,
+		};
+
+		syncRenderPoses({
+			_childrenMap: new Map([[key, entity as any]]),
+			_world: { interpolationAlpha: 1 },
+		} as any);
+
+		expect(target.position.x).toBe(0);
+		expect(target.position.y).toBe(0);
+		expect(target.position.z).toBe(0);
+	});
+
+	it('skips bundled entities so RenderBundleManager owns their transforms', () => {
+		const body = createFakeBody();
+		registerDirectBodyPoseHistory(body);
+		prepareDirectBodyPoseHistoryStep(body);
+		body._translation = { x: 9, y: 9, z: 9 };
+		commitDirectBodyPoseHistoryStep(body);
+
+		const key = 'bundled-entity';
+		const target = new Group();
+		target.position.set(0, 0, 0);
+		const entity = {
+			uuid: key,
+			body,
+			group: target,
+			mesh: undefined,
+			isBundled: true,
+			markedForRemoval: false,
+			controlledRotation: false,
+		};
+
+		syncRenderPoses({
+			_childrenMap: new Map([[key, entity as any]]),
+			_world: { interpolationAlpha: 1 },
+		} as any);
+
+		expect(target.position.x).toBe(0);
+		expect(target.position.y).toBe(0);
+		expect(target.position.z).toBe(0);
+	});
 });

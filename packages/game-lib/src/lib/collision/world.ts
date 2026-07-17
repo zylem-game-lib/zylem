@@ -154,7 +154,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		const simulation = await createSimulation({
 			gravity: [g.x, g.y, g.z],
 			fixedTimestep: 1 / physicsRate,
-			initialCapacity: 256,
+			initialCapacity: 4096,
 		});
 		return new ZylemWorld(simulation, physicsRate, g.x === 0 && g.y === 0 && g.z === 0);
 	}
@@ -163,6 +163,10 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		this.simulation = simulation;
 		this.fixedTimestep = 1 / physicsRate;
 		this.zeroGravity = zeroGravity;
+		// Collision-event collection is expensive with many touching bodies;
+		// keep it off until the first collision listener registers.
+		// (Optional call: unit tests construct with a bare mock simulation.)
+		this.simulation?.setEventsEnabled?.(false);
 	}
 
 	// ─── Entity Management ───────────────────────────────────────────────
@@ -245,12 +249,32 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		this.currentCollisionTimeMs += delta * 1000;
 		this.processPendingRemovals();
 
+		// Enable wasm event collection lazily, before stepping, so the frame
+		// a listener first appears still receives events. Once on, stays on
+		// (the wasm re-emits started edges for live overlaps when enabling,
+		// so late listeners observe current state).
+		const hasListeners = this.hasCollisionPhaseListeners();
+		if (hasListeners && !this.simulation.areEventsEnabled) {
+			this.simulation.setEventsEnabled?.(true);
+		}
+
 		const frame = this.simulation.update(delta);
 		this.stepClock.steps += frame.stepsTaken;
 		this.interpolationAlpha = frame.alpha;
 
-		this.applyCollisionEvents(frame.events);
-		this.processCollisionPairs(delta, this.currentCollisionTimeMs);
+		if (hasListeners) {
+			this.applyCollisionEvents(frame.events);
+			this.processCollisionPairs(delta, this.currentCollisionTimeMs);
+		}
+	}
+
+	private hasCollisionPhaseListeners(): boolean {
+		for (const entity of this.collisionMap.values()) {
+			if (entity?.collisionDelegate?.collision?.length) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	// ─── Collision event translation ─────────────────────────────────────

@@ -1,4 +1,4 @@
-import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Scene, Vector3 } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -9,6 +9,7 @@ import {
 import { EntityAssetLoader } from '../../../src/lib/core/entity-asset-loader';
 import { createActor } from '../../../src/lib/entities/actor';
 import { createBox } from '../../../src/lib/entities/box';
+import { RenderStrategyManager } from '../../../src/lib/graphics/render-strategy-manager';
 import { StageEntityDelegate } from '../../../src/lib/stage/stage-entity-delegate';
 import { StageEntityModelDelegate } from '../../../src/lib/stage/stage-entity-model-delegate';
 import { StageLoadingDelegate } from '../../../src/lib/stage/stage-loading-delegate';
@@ -67,7 +68,7 @@ describe('StageEntityDelegate', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: { ...world, simulation: fakeSimulation } as any,
-			instanceManager: null,
+			renderStrategy: null,
 			camera: {} as any,
 		});
 
@@ -123,7 +124,7 @@ describe('StageEntityDelegate', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: { addEntity, simulation: fakeSimulation } as any,
-			instanceManager: null,
+			renderStrategy: null,
 			camera: {} as any,
 		});
 
@@ -179,7 +180,7 @@ describe('StageEntityDelegate', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: { addEntity, simulation: fakeSimulation } as any,
-			instanceManager: null,
+			renderStrategy: null,
 			camera: {} as any,
 		});
 
@@ -236,7 +237,7 @@ describe('StageEntityDelegate', () => {
 		delegate.attach({
 			scene: scene as any,
 			world: { ...world, simulation: fakeSimulation } as any,
-			instanceManager: null,
+			renderStrategy: null,
 			camera: {} as any,
 		});
 
@@ -265,5 +266,131 @@ describe('StageEntityDelegate', () => {
 		expect(warnSpy).not.toHaveBeenCalled();
 		expect(secondHandle.isFractured()).toBe(false);
 		expect(secondHandle.getFragments()).toHaveLength(0);
+	});
+
+	it('registers pack entities with render strategy and skips scene add', async () => {
+		const modelDelegate = new StageEntityModelDelegate();
+		const onEntityReady = vi.fn();
+		const delegate = new StageEntityDelegate(
+			new StageLoadingDelegate(),
+			modelDelegate,
+		);
+		const scene = new Scene();
+		const renderStrategy = new RenderStrategyManager();
+		renderStrategy.setScene(scene);
+		const addEntityGroup = vi.fn();
+		const world = {
+			addEntity(entity: any) {
+				entity.physicsAttached = true;
+				entity.body = {
+					translation: () => ({ x: 0, y: 0, z: 0 }),
+					rotation: () => ({ x: 0, y: 0, z: 0, w: 1 }),
+				};
+			},
+		};
+
+		modelDelegate.attach(
+			{ addEntityGroup, scene } as any,
+			(entity) => {
+				onEntityReady(entity);
+				delegate.handleLateModelReady(entity);
+			},
+		);
+
+		delegate.attach({
+			scene: { addEntityGroup, scene } as any,
+			world: { ...world, simulation: fakeSimulation } as any,
+			renderStrategy,
+			camera: {} as any,
+		});
+
+		const entity = createBox({ category: 'pack' });
+		await delegate.spawnEntity(entity);
+
+		expect(entity.isInstanced).toBe(true);
+		expect(addEntityGroup).not.toHaveBeenCalled();
+		expect(onEntityReady).not.toHaveBeenCalled();
+	});
+
+	it('registers environment entities into bundles and forces static collision', async () => {
+		const delegate = new StageEntityDelegate(
+			new StageLoadingDelegate(),
+			new StageEntityModelDelegate(),
+		);
+		const scene = new Scene();
+		const renderStrategy = new RenderStrategyManager();
+		renderStrategy.setScene(scene);
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const addEntityGroup = vi.fn();
+		const world = {
+			addEntity(entity: any) {
+				entity.physicsAttached = true;
+				entity.body = {
+					translation: () => ({ x: 0, y: 0, z: 0 }),
+					rotation: () => ({ x: 0, y: 0, z: 0, w: 1 }),
+				};
+			},
+		};
+
+		delegate.attach({
+			scene: { addEntityGroup, scene } as any,
+			world: { ...world, simulation: fakeSimulation } as any,
+			renderStrategy,
+			camera: {} as any,
+		});
+
+		const entity = createBox({ category: 'environment' });
+		await delegate.spawnEntity(entity);
+
+		expect(warnSpy).toHaveBeenCalled();
+		expect(entity.options.collision?.static).toBe(true);
+		expect(entity.isBundled).toBe(true);
+		expect(addEntityGroup).not.toHaveBeenCalled();
+	});
+
+	it('awaits all spawns before runEntityLoadGenerator resolves', async () => {
+		const delegate = new StageEntityDelegate(
+			new StageLoadingDelegate(),
+			new StageEntityModelDelegate(),
+		);
+		const addEntity = vi.fn((entity: any) => {
+			entity.physicsAttached = true;
+			entity.body = {
+				translation: () => ({ x: 0, y: 0, z: 0 }),
+				rotation: () => ({ x: 0, y: 0, z: 0, w: 1 }),
+			};
+		});
+		const scene = { addEntityGroup: vi.fn() };
+		const world = { addEntity };
+
+		delegate.attach({
+			scene: scene as any,
+			world: { ...world, simulation: fakeSimulation } as any,
+			renderStrategy: null,
+			camera: {} as any,
+		});
+
+		const entities = Array.from({ length: 8 }, (_, i) =>
+			createBox({ name: `box-${i}` }),
+		);
+		for (const entity of entities) {
+			(delegate as any).children.push(entity);
+		}
+
+		let inFlightSpawns = 0;
+		let maxInFlight = 0;
+		const originalSpawn = delegate.spawnEntity.bind(delegate);
+		vi.spyOn(delegate, 'spawnEntity').mockImplementation(async (child) => {
+			inFlightSpawns++;
+			maxInFlight = Math.max(maxInFlight, inFlightSpawns);
+			await originalSpawn(child);
+			inFlightSpawns--;
+		});
+
+		expect((delegate as any).children.length).toBe(8);
+		await delegate.runEntityLoadGenerator();
+
+		expect(addEntity).toHaveBeenCalledTimes(8);
+		expect(maxInFlight).toBe(1);
 	});
 });

@@ -69,6 +69,7 @@ const PREDEFINED_ORDER = {
 		'zylem-planet-demo',
 		'simple-instancing',
 		'massive-instancing',
+		'bundle-rendering',
 		'stress-test',
 		'architecture-test',
 	],

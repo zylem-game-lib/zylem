@@ -47,6 +47,8 @@ export type { StageConfigLike } from '../lib/stage/stage-config';
 /** @public */
 export type { StageOptions, LoadingEvent } from '../lib/stage/zylem-stage';
 /** @public */
+export { setStageFrameProfilerEnabled } from '../lib/stage/stage-frame-profiler';
+/** @public */
 export type { StageBlueprint } from '../lib/core/blueprints';
 /** @public */
 export { StageManager, stageState } from '../lib/stage/stage-manager';
@@ -154,7 +156,13 @@ export type {
 	RetroResolution,
 } from '../lib/game/game-retro-resolutions';
 
-// Vector helpers
+export type { RenderCategory } from '../lib/graphics/render-category';
+/** @public */
+export { resolveRenderCategory, usesManagedRenderPath, isManagedRenderEntity } from '../lib/graphics/render-category';
+/** @public */
+export { RenderBundleManager } from '../lib/graphics/render-bundle-manager';
+/** @public */
+export { RenderStrategyManager } from '../lib/graphics/render-strategy-manager';
 /** @public */
 export type { Vect3 } from '../lib/core/utility/vector';
 /** @public */

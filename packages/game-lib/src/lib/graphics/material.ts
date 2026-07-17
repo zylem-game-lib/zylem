@@ -90,14 +90,14 @@ export interface MaterialOptions {
   useTSL?: boolean;
 }
 
-type BatchGeometryMap = Map<symbol, number>;
+type SharedGeometryMap = Map<symbol, number>;
 
-interface BatchMaterialMapObject {
-  geometryMap: BatchGeometryMap;
-  material: Material;
+interface SharedMaterialMapEntry {
+	geometryMap: SharedGeometryMap;
+	material: Material;
 }
 
-type BatchKey = ReturnType<typeof shortHash>;
+type MaterialCacheKey = ReturnType<typeof shortHash>;
 
 export type TexturePath = string | null;
 
@@ -108,15 +108,15 @@ type OpacityCapableMaterial = Material & {
 };
 
 export class MaterialBuilder {
-  static batchMaterialMap: Map<BatchKey, BatchMaterialMapObject> = new Map();
+  static sharedMaterialMap: Map<MaterialCacheKey, SharedMaterialMapEntry> = new Map();
 
   /**
-   * Clear the static batch material cache.
+   * Clear the static shared material cache.
    * Should be called during game disposal to prevent stale material references
    * from persisting across demo/stage switches.
    */
-  static clearBatchCache(): void {
-    MaterialBuilder.batchMaterialMap.clear();
+  static clearSharedMaterialCache(): void {
+    MaterialBuilder.sharedMaterialMap.clear();
   }
 
   materials: Material[] = [];
@@ -133,9 +133,9 @@ export class MaterialBuilder {
     this.useTSL = useTSL;
   }
 
-  batchMaterial(options: Partial<MaterialOptions>, entityType: symbol) {
-    const batchKey = shortHash(sortedStringify(options));
-    const mappedObject = MaterialBuilder.batchMaterialMap.get(batchKey);
+  trackSharedMaterial(options: Partial<MaterialOptions>, entityType: symbol) {
+    const cacheKey = shortHash(sortedStringify(options));
+    const mappedObject = MaterialBuilder.sharedMaterialMap.get(cacheKey);
     if (mappedObject) {
       const count = mappedObject.geometryMap.get(entityType);
       if (count) {
@@ -144,7 +144,7 @@ export class MaterialBuilder {
         mappedObject.geometryMap.set(entityType, 1);
       }
     } else {
-      MaterialBuilder.batchMaterialMap.set(batchKey, {
+      MaterialBuilder.sharedMaterialMap.set(cacheKey, {
         geometryMap: new Map([[entityType, 1]]),
         material: this.materials[0],
       });
@@ -194,7 +194,7 @@ export class MaterialBuilder {
       this.setNormalMap(normalMap, repeat);
     }
 
-    this.batchMaterial(options, entityType);
+    this.trackSharedMaterial(options, entityType);
   }
 
   withColor(color: Color, useTSL: boolean = false, opacity?: number): this {

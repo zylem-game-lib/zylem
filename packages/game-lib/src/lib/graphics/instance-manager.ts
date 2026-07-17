@@ -1,12 +1,13 @@
 import { BufferGeometry, InstancedMesh, Material, Matrix4, Object3D, Vector3, Quaternion } from 'three';
 import type { GameEntity, GameEntityOptions } from '../entities/entity';
 import { shortHash, sortedStringify } from '../core/utility/strings';
+import { getBodyRenderPose } from '../physics/physics-pose';
 
 /**
- * Represents a batch of entities sharing the same geometry and material
+ * Entities sharing the same geometry and material, drawn via one InstancedMesh.
  */
-export interface BatchGroup {
-	/** Unique key identifying this batch */
+export interface PackGroup {
+	/** Unique key identifying this pack */
 	key: string;
 	/** The instanced mesh for rendering */
 	instancedMesh: InstancedMesh;
@@ -16,7 +17,7 @@ export interface BatchGroup {
 	material: Material;
 	/** Map of entity UUID to instance index */
 	entityMap: Map<string, number>;
-	/** List of entities in this batch (by their index) */
+	/** List of entities in this pack (by their index) */
 	entities: (GameEntity<any> | null)[];
 	/** Indices that have been freed and can be reused */
 	freeIndices: number[];
@@ -28,10 +29,8 @@ export interface BatchGroup {
 	capacity: number;
 }
 
-/**
- * Configuration for batch key generation
- */
-export interface BatchKeyConfig {
+/** Configuration for pack key generation */
+export interface PackKeyConfig {
 	geometryType: string;
 	dimensions: Record<string, number>;
 	materialPath?: string | null;
@@ -39,30 +38,22 @@ export interface BatchKeyConfig {
 	colorHex?: number;
 }
 
-/**
- * Manages instanced mesh batching for entities
- */
+/** Manages instanced mesh packs for `category: 'pack'` entities */
 export class InstanceManager {
-	private batches: Map<string, BatchGroup> = new Map();
-	private entityToBatch: Map<string, string> = new Map(); // entity UUID -> batch key
+	private packs: Map<string, PackGroup> = new Map();
+	private entityToPack: Map<string, string> = new Map();
 	private scene: Object3D | null = null;
 
-	/** Default initial capacity for new batches */
+	/** Default initial capacity for new packs */
 	static DEFAULT_CAPACITY = 128;
-	/** Factor to grow batch when full */
+	/** Factor to grow a pack when full */
 	static GROWTH_FACTOR = 2;
 
-	/**
-	 * Set the scene to add instanced meshes to
-	 */
 	setScene(scene: Object3D): void {
 		this.scene = scene;
 	}
 
-	/**
-	 * Generate a batch key from configuration
-	 */
-	static generateBatchKey(config: BatchKeyConfig): string {
+	static generatePackKey(config: PackKeyConfig): string {
 		const keyData = {
 			geo: `${config.geometryType}:${sortedStringify(config.dimensions)}`,
 			mat: config.materialPath || 'none',
@@ -72,18 +63,20 @@ export class InstanceManager {
 		return shortHash(sortedStringify(keyData));
 	}
 
-	static generateEntityBatchKey(entity: Pick<GameEntity<GameEntityOptions>, 'options' | 'materials'> & { constructor: any }): string {
+	static generateEntityPackKey(
+		entity: Pick<GameEntity<GameEntityOptions>, 'options' | 'materials'> & { constructor: any },
+	): string {
 		const options = entity.options as GameEntityOptions & {
-			runtime?: { batchKeyOverride?: string };
+			runtime?: { packKeyOverride?: string };
 		};
-		if (options.runtime?.batchKeyOverride) {
-			return options.runtime.batchKeyOverride;
+		if (options.runtime?.packKeyOverride) {
+			return options.runtime.packKeyOverride;
 		}
 
 		const entityType = entity.constructor?.type?.description || 'unknown';
 		const size = (options.size as Record<string, number> | undefined) || { x: 1, y: 1, z: 1 };
 		const matOptions = options.material || {};
-		return InstanceManager.generateBatchKey({
+		return InstanceManager.generatePackKey({
 			geometryType: entityType,
 			dimensions: { x: size.x, y: size.y, z: size.z },
 			materialPath: matOptions.path || null,
@@ -93,153 +86,167 @@ export class InstanceManager {
 	}
 
 	/**
-	 * Register an entity with the instance manager
+	 * Register an entity with the instance manager.
 	 * @returns The instance index, or -1 if registration failed
 	 */
 	register(
 		entity: GameEntity<any>,
 		geometry: BufferGeometry,
 		material: Material,
-		batchKey: string
+		packKey: string,
 	): number {
-		let batch = this.batches.get(batchKey);
+		let pack = this.packs.get(packKey);
 
-		if (!batch) {
-			batch = this.createBatch(batchKey, geometry, material);
+		if (!pack) {
+			pack = this.createPack(packKey, geometry, material);
 		}
 
-		// Get an index for this entity
 		let index: number;
-		if (batch.freeIndices.length > 0) {
-			index = batch.freeIndices.pop()!;
+		if (pack.freeIndices.length > 0) {
+			index = pack.freeIndices.pop()!;
 		} else {
-			index = batch.entities.length;
-			if (index >= batch.capacity) {
-				this.growBatch(batch);
+			index = pack.entities.length;
+			if (index >= pack.capacity) {
+				this.growPack(pack);
 			}
-			batch.entities.push(null);
+			pack.entities.push(null);
 		}
 
-		// Store entity reference
-		batch.entities[index] = entity;
-		batch.entityMap.set(entity.uuid, index);
-		this.entityToBatch.set(entity.uuid, batchKey);
+		pack.entities[index] = entity;
+		pack.entityMap.set(entity.uuid, index);
+		this.entityToPack.set(entity.uuid, packKey);
 
-		// Update visible instance count
-		batch.instancedMesh.count = Math.max(batch.instancedMesh.count, index + 1);
-
-		// Add to active list
-		batch.activeIndices.push(index);
-
-		// Mark dirty for initial transform sync
-		batch.dirtyIndices.add(index);
+		pack.instancedMesh.count = Math.max(pack.instancedMesh.count, index + 1);
+		pack.activeIndices.push(index);
+		pack.dirtyIndices.add(index);
 
 		return index;
 	}
 
-	/**
-	 * Unregister an entity from the instance manager
-	 */
 	unregister(entity: GameEntity<any>): void {
-		const batchKey = this.entityToBatch.get(entity.uuid);
-		if (!batchKey) return;
+		const packKey = this.entityToPack.get(entity.uuid);
+		if (!packKey) return;
 
-		const batch = this.batches.get(batchKey);
-		if (!batch) return;
+		const pack = this.packs.get(packKey);
+		if (!pack) return;
 
-		const index = batch.entityMap.get(entity.uuid);
+		const index = pack.entityMap.get(entity.uuid);
 		if (index === undefined) return;
 
-		// Clear the entity slot
-		batch.entities[index] = null;
-		batch.entityMap.delete(entity.uuid);
-		this.entityToBatch.delete(entity.uuid);
-		batch.freeIndices.push(index);
-		// Remove from active list (swap and pop for O(1))
-		const idxInActive = batch.activeIndices.indexOf(index);
+		pack.entities[index] = null;
+		pack.entityMap.delete(entity.uuid);
+		this.entityToPack.delete(entity.uuid);
+		pack.freeIndices.push(index);
+
+		const idxInActive = pack.activeIndices.indexOf(index);
 		if (idxInActive !== -1) {
-			const last = batch.activeIndices.pop()!;
-			if (idxInActive < batch.activeIndices.length) {
-				batch.activeIndices[idxInActive] = last;
+			const last = pack.activeIndices.pop()!;
+			if (idxInActive < pack.activeIndices.length) {
+				pack.activeIndices[idxInActive] = last;
 			}
 		}
-		batch.dirtyIndices.delete(index);
+		pack.dirtyIndices.delete(index);
 
-		// Hide the instance by scaling to zero
 		const matrix = new Matrix4();
 		matrix.makeScale(0, 0, 0);
-		batch.instancedMesh.setMatrixAt(index, matrix);
-		batch.instancedMesh.instanceMatrix.needsUpdate = true;
+		pack.instancedMesh.setMatrixAt(index, matrix);
+		pack.instancedMesh.instanceMatrix.needsUpdate = true;
 	}
 
-	/**
-	 * Mark an entity's transform as dirty (needs syncing)
-	 */
 	markDirty(entity: GameEntity<any>): void {
-		const batchKey = this.entityToBatch.get(entity.uuid);
-		if (!batchKey) return;
+		const packKey = this.entityToPack.get(entity.uuid);
+		if (!packKey) return;
 
-		const batch = this.batches.get(batchKey);
-		if (!batch) return;
+		const pack = this.packs.get(packKey);
+		if (!pack) return;
 
-		const index = batch.entityMap.get(entity.uuid);
+		const index = pack.entityMap.get(entity.uuid);
 		if (index !== undefined) {
-			batch.dirtyIndices.add(index);
+			pack.dirtyIndices.add(index);
 		}
 	}
 
 	/**
-	 * Update all dirty instance transforms
-	 * Call this once per frame
+	 * Update all active instance transforms.
+	 * Call once per frame after the simulation step and render-buffer sync.
 	 */
-	/**
-	 * Update all active instance transforms
-	 * Call this once per frame
-	 */
-	update(): void {
+	update(interpolationAlpha = 0): void {
 		const matrix = new Matrix4();
 		const pos = new Vector3();
 		const quat = new Quaternion();
 		const scale = new Vector3(1, 1, 1);
 
-		for (const batch of this.batches.values()) {
-			if (batch.activeIndices.length === 0) continue;
+		for (const pack of this.packs.values()) {
+			if (pack.activeIndices.length === 0) continue;
 
 			let needsUpdate = false;
-			// Check if we have explicit dirty updates
-			if (batch.dirtyIndices.size > 0) {
-				for (const index of batch.dirtyIndices) {
-					this.updateInstanceMatrix(batch, index, matrix, pos, quat, scale);
+			for (const index of pack.activeIndices) {
+				const entity = pack.entities[index];
+				if (!entity) continue;
+
+				const isDirty = pack.dirtyIndices.has(index);
+				const hasBody = !!entity.body;
+				if (!isDirty && !hasBody) {
+					continue;
 				}
-				batch.dirtyIndices.clear();
+				// Sleeping dynamics don't move — skip matrix writes unless
+				// explicitly dirtied (spawn / unregister).
+				if (!isDirty && hasBody) {
+					const sleepBody = entity.body as { isRenderSleeping?: () => boolean };
+					if (
+						typeof sleepBody.isRenderSleeping === 'function' &&
+						sleepBody.isRenderSleeping()
+					) {
+						continue;
+					}
+				}
+
+				this.updateInstanceMatrix(pack, index, matrix, pos, quat, scale, interpolationAlpha);
 				needsUpdate = true;
 			}
 
-			// Also update all active dynamic entities (assumed dynamic if they have a body)
-			for (const index of batch.activeIndices) {
-				const entity = batch.entities[index];
-				// Optimization: Only update if it has a physics body (dynamic)
-				if (entity && entity.body) {
-					this.updateInstanceMatrix(batch, index, matrix, pos, quat, scale);
-					needsUpdate = true;
-				}
-			}
+			pack.dirtyIndices.clear();
 
 			if (needsUpdate) {
-				batch.instancedMesh.instanceMatrix.needsUpdate = true;
+				pack.instancedMesh.instanceMatrix.needsUpdate = true;
 			}
 		}
 	}
 
-	private updateInstanceMatrix(batch: BatchGroup, index: number, matrix: Matrix4, pos: Vector3, quat: Quaternion, scale: Vector3) {
-		const entity = batch.entities[index];
+	private updateInstanceMatrix(
+		pack: PackGroup,
+		index: number,
+		matrix: Matrix4,
+		pos: Vector3,
+		quat: Quaternion,
+		scale: Vector3,
+		interpolationAlpha: number,
+	) {
+		const entity = pack.entities[index];
 		if (!entity) return;
 
 		if (entity.body) {
-			const translation = entity.body.translation();
-			const rotation = entity.body.rotation();
-			pos.set(translation.x, translation.y, translation.z);
-			quat.set(rotation.x, rotation.y, rotation.z, rotation.w);
+			const body = entity.body as {
+				writeRenderPose?: (
+					alpha: number,
+					outPosition: Vector3,
+					outRotation: Quaternion,
+				) => void;
+			};
+			if (typeof body.writeRenderPose === 'function') {
+				// Zero-alloc fast path: interpolate straight from the shared
+				// wasm render buffer into the preallocated temporaries.
+				body.writeRenderPose(interpolationAlpha, pos, quat);
+			} else {
+				const renderPose = getBodyRenderPose(entity.body, interpolationAlpha);
+				pos.set(renderPose.position.x, renderPose.position.y, renderPose.position.z);
+				quat.set(
+					renderPose.rotation.x,
+					renderPose.rotation.y,
+					renderPose.rotation.z,
+					renderPose.rotation.w,
+				);
+			}
 			matrix.compose(pos, quat, scale);
 		} else if (entity.mesh) {
 			entity.mesh.updateMatrix();
@@ -249,73 +256,64 @@ export class InstanceManager {
 			matrix.copy(entity.group.matrix);
 		}
 
-		batch.instancedMesh.setMatrixAt(index, matrix);
+		pack.instancedMesh.setMatrixAt(index, matrix);
 	}
 
-	/**
-	 * Get batch info for an entity
-	 */
-	getBatchInfo(entity: GameEntity<any>): { batchKey: string; instanceId: number } | null {
-		const batchKey = this.entityToBatch.get(entity.uuid);
-		if (!batchKey) return null;
+	getPackInfo(entity: GameEntity<any>): { packKey: string; instanceId: number } | null {
+		const packKey = this.entityToPack.get(entity.uuid);
+		if (!packKey) return null;
 
-		const batch = this.batches.get(batchKey);
-		if (!batch) return null;
+		const pack = this.packs.get(packKey);
+		if (!pack) return null;
 
-		const instanceId = batch.entityMap.get(entity.uuid);
+		const instanceId = pack.entityMap.get(entity.uuid);
 		if (instanceId === undefined) return null;
 
-		return { batchKey, instanceId };
+		return { packKey, instanceId };
 	}
 
-	/**
-	 * Get statistics about current batching
-	 */
-	getStats(): { batchCount: number; totalInstances: number; batches: { key: string; count: number; capacity: number }[] } {
+	getStats(): {
+		packCount: number;
+		totalInstances: number;
+		packs: { key: string; count: number; capacity: number }[];
+	} {
 		let totalInstances = 0;
-		const batches: { key: string; count: number; capacity: number }[] = [];
+		const packs: { key: string; count: number; capacity: number }[] = [];
 
-		for (const [key, batch] of this.batches) {
-			const count = batch.entityMap.size;
+		for (const [key, pack] of this.packs) {
+			const count = pack.entityMap.size;
 			totalInstances += count;
-			batches.push({ key, count, capacity: batch.capacity });
+			packs.push({ key, count, capacity: pack.capacity });
 		}
 
-		return { batchCount: this.batches.size, totalInstances, batches };
+		return { packCount: this.packs.size, totalInstances, packs };
 	}
 
-	/**
-	 * Dispose all batches and release resources
-	 */
 	dispose(): void {
-		for (const batch of this.batches.values()) {
+		for (const pack of this.packs.values()) {
 			if (this.scene) {
-				this.scene.remove(batch.instancedMesh);
+				this.scene.remove(pack.instancedMesh);
 			}
-			batch.instancedMesh.dispose();
-			batch.geometry.dispose();
+			pack.instancedMesh.dispose();
+			pack.geometry.dispose();
 		}
-		this.batches.clear();
-		this.entityToBatch.clear();
+		this.packs.clear();
+		this.entityToPack.clear();
 	}
 
-	/**
-	 * Create a new batch group
-	 */
-	private createBatch(key: string, geometry: BufferGeometry, material: Material): BatchGroup {
+	private createPack(key: string, geometry: BufferGeometry, material: Material): PackGroup {
 		const capacity = InstanceManager.DEFAULT_CAPACITY;
 		const instancedMesh = new InstancedMesh(geometry, material, capacity);
-		instancedMesh.count = 0; // Start with zero visible instances
-		instancedMesh.frustumCulled = false; // Let individual instances handle culling
+		instancedMesh.count = 0;
+		instancedMesh.frustumCulled = false;
 
-		// Initialize all matrices to hidden (zero scale)
 		const hiddenMatrix = new Matrix4().makeScale(0, 0, 0);
 		for (let i = 0; i < capacity; i++) {
 			instancedMesh.setMatrixAt(i, hiddenMatrix);
 		}
 		instancedMesh.instanceMatrix.needsUpdate = true;
 
-		const batch: BatchGroup = {
+		const pack: PackGroup = {
 			key,
 			instancedMesh,
 			geometry,
@@ -328,47 +326,40 @@ export class InstanceManager {
 			capacity,
 		};
 
-		this.batches.set(key, batch);
+		this.packs.set(key, pack);
 
 		if (this.scene) {
 			this.scene.add(instancedMesh);
 		}
 
-		return batch;
+		return pack;
 	}
 
-	/**
-	 * Grow a batch's capacity
-	 */
-	private growBatch(batch: BatchGroup): void {
-		const newCapacity = batch.capacity * InstanceManager.GROWTH_FACTOR;
+	private growPack(pack: PackGroup): void {
+		const newCapacity = pack.capacity * InstanceManager.GROWTH_FACTOR;
 
-		// Create new instanced mesh with larger capacity
-		const newInstancedMesh = new InstancedMesh(batch.geometry, batch.material, newCapacity);
-		newInstancedMesh.count = batch.instancedMesh.count;
+		const newInstancedMesh = new InstancedMesh(pack.geometry, pack.material, newCapacity);
+		newInstancedMesh.count = pack.instancedMesh.count;
 		newInstancedMesh.frustumCulled = false;
 
-		// Copy existing matrices
 		const matrix = new Matrix4();
-		for (let i = 0; i < batch.capacity; i++) {
-			batch.instancedMesh.getMatrixAt(i, matrix);
+		for (let i = 0; i < pack.capacity; i++) {
+			pack.instancedMesh.getMatrixAt(i, matrix);
 			newInstancedMesh.setMatrixAt(i, matrix);
 		}
 
-		// Initialize new slots as hidden
 		const hiddenMatrix = new Matrix4().makeScale(0, 0, 0);
-		for (let i = batch.capacity; i < newCapacity; i++) {
+		for (let i = pack.capacity; i < newCapacity; i++) {
 			newInstancedMesh.setMatrixAt(i, hiddenMatrix);
 		}
 		newInstancedMesh.instanceMatrix.needsUpdate = true;
 
-		// Swap meshes
 		if (this.scene) {
-			this.scene.remove(batch.instancedMesh);
+			this.scene.remove(pack.instancedMesh);
 			this.scene.add(newInstancedMesh);
 		}
-		batch.instancedMesh.dispose();
-		batch.instancedMesh = newInstancedMesh;
-		batch.capacity = newCapacity;
+		pack.instancedMesh.dispose();
+		pack.instancedMesh = newInstancedMesh;
+		pack.capacity = newCapacity;
 	}
 }

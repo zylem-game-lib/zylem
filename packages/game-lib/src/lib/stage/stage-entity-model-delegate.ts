@@ -10,6 +10,7 @@
 import { zylemEventBus } from '../events';
 import { ZylemScene } from '../graphics/zylem-scene';
 import { GameEntity } from '../entities/entity';
+import { usesManagedRenderPath } from '../graphics/render-category';
 
 /**
  * Delegate for handling deferred model loading in entities.
@@ -40,8 +41,10 @@ export class StageEntityModelDelegate {
 	 */
 	observe(entity: GameEntity<any>): void {
 		if (entity.group || entity.mesh) {
-			this.scene?.addEntityGroup(entity);
-			this.onEntityReady?.(entity);
+			if (!usesManagedRenderPath(entity.options)) {
+				this.scene?.addEntityGroup(entity);
+				this.onEntityReady?.(entity);
+			}
 			return;
 		}
 		this.pendingEntities.set(entity.uuid, entity);
@@ -65,7 +68,9 @@ export class StageEntityModelDelegate {
 		}
 
 		this.scene?.addEntityGroup(entity);
-		this.onEntityReady?.(entity);
+		if (!usesManagedRenderPath(entity.options)) {
+			this.onEntityReady?.(entity);
+		}
 		this.pendingEntities.delete(entityId);
 	}
 

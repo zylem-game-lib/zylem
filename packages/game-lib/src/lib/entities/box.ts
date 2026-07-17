@@ -47,6 +47,8 @@ export function createBox(...args: Array<BoxOptions>): ZylemBox {
 			size: options.size,
 			static: options.collision?.static,
 			sensor: options.collision?.sensor,
+			canSleep: options.collision?.canSleep,
+			ccdEnabled: options.collision?.ccdEnabled,
 			collisionType: options.collisionType,
 			collisionFilter: options.collisionFilter,
 		}),

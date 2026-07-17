@@ -53,6 +53,10 @@ interface BaseCollisionOptions {
 	static?: boolean;
 	/** Whether this collider is a sensor */
 	sensor?: boolean;
+	/** Allow the body to sleep when at rest (recommended for bulk dynamic scenes) */
+	canSleep?: boolean;
+	/** Continuous collision detection (expensive at scale; disable for small boxes) */
+	ccdEnabled?: boolean;
 	/** Position offset relative to the entity origin */
 	offset?: Vec3Input;
 	/** Collision type string for group filtering */
@@ -61,13 +65,13 @@ interface BaseCollisionOptions {
 	collisionFilter?: string[];
 }
 
-function buildBodyDef(isStatic: boolean): SimulationBodyDefinition {
+function buildBodyDef(isStatic: boolean, opts: BaseCollisionOptions): SimulationBodyDefinition {
 	return {
 		kind: isStatic ? StageBodyKind.Static : StageBodyKind.Dynamic,
 		position: [0, 0, 0],
 		gravityScale: 1,
-		canSleep: false,
-		ccdEnabled: true,
+		canSleep: opts.canSleep ?? false,
+		ccdEnabled: opts.ccdEnabled ?? true,
 	};
 }
 
@@ -98,7 +102,7 @@ function makeComponent(
 	applyCollisionOptions(colliderDef, opts);
 	return {
 		__kind: 'collision',
-		bodyDesc: buildBodyDef(opts.static ?? false),
+		bodyDesc: buildBodyDef(opts.static ?? false, opts),
 		colliderDesc: colliderDef,
 		cloneComponent: cloneComponentFactory,
 	};

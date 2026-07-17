@@ -93,14 +93,14 @@ export type IBuilder<BuilderOptions = any> = {
 };
 
 export type GameEntitySimulationMode = 'ts' | 'runtime';
-export type GameEntityRenderMode = 'mesh' | 'instanced';
+/** Scene-direct, WebGPU bundle (static), or instanced pack. Default `none`. */
+export type RenderCategory = 'none' | 'environment' | 'pack';
 export type RuntimeEntityBodyMode = 'dynamic' | 'static' | 'none';
 export type RuntimeEntityColorMode = 'base' | 'heatTint';
 
 export interface RuntimeEntityOptions {
 	simulation?: GameEntitySimulationMode;
-	render?: GameEntityRenderMode;
-	batchKeyOverride?: string;
+	packKeyOverride?: string;
 	body?: RuntimeEntityBodyMode;
 	colorMode?: RuntimeEntityColorMode;
 }
@@ -110,7 +110,8 @@ export type GameEntityOptions = {
 	color?: Color;
 	size?: Vec3Input;
 	position?: Vec3Input;
-	batched?: boolean;
+	/** Render path: `environment` (bundle), `pack` (instanced), or `none` (default). */
+	category?: RenderCategory;
 	runtime?: RuntimeEntityOptions;
 	collision?: Partial<CollisionOptions>;
 	material?: Partial<MaterialOptions>;
@@ -200,16 +201,20 @@ export class GameEntity<O extends GameEntityOptions>
 	};
 	public collisionType?: string;
 
-	// Instancing support
-	/** Batch key for instanced rendering (null if not instanced) */
-	public batchKey: string | null = null;
-	/** Index within the instanced mesh batch */
+	// Managed render paths (instancing / bundles)
+	/** Pack key for instanced rendering (null if not instanced) */
+	public packKey: string | null = null;
+	/** Bundle key for WebGPU bundle rendering (null if not bundled) */
+	public bundleKey: string | null = null;
+	/** Index within the instanced mesh pack */
 	public instanceId: number = -1;
 	/** Whether this entity uses instanced rendering */
 	public isInstanced: boolean = false;
+	/** Whether this entity is drawn via a WebGPU render bundle */
+	public isBundled: boolean = false;
 	/**
 	 * Raw wasm slot index for this entity in the stage's `Simulation`; -1 when
-	 * not attached. Behavior systems address the runtime's batched buffers by
+	 * not attached. Behavior systems address the runtime's slot-indexed buffers by
 	 * this slot.
 	 */
 	public runtimeHandle: number = -1;
@@ -232,7 +237,7 @@ export class GameEntity<O extends GameEntityOptions>
 	private trackAddedComponents: boolean = false;
 	private trackedComponents: TrackedEntityComponent[] = [];
 
-	// Transform store for batched physics updates (auto-created in create())
+	// Transform store for physics intent accumulation (auto-created in create())
 	public transformStore: TransformState;
 
 	// Movement & rotation methods are assigned at runtime by makeTransformable.

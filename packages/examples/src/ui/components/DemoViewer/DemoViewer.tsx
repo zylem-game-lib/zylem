@@ -75,6 +75,7 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
   const location = useLocation();
   let gameRef: ZylemGameElement | undefined;
   let viewportFrameRef: HTMLDivElement | undefined;
+  let demoLoadGeneration = 0;
 
   const [example, setExample] = createSignal<any>(null);
   const [loading, setLoading] = createSignal(false);
@@ -162,12 +163,14 @@ const ExampleRunner: Component<DemoViewerProps> = (props) => {
     const activeExample = appStore.activeExample;
     if (!activeExample) return;
 
+    const generation = ++demoLoadGeneration;
     setLoading(true);
     setProgress(0);
     setMessage('Loading...');
     setExample(null);
 
     activeExample.load().then((gameModule) => {
+      if (generation !== demoLoadGeneration) return;
       setExample(gameModule.default());
       editorEvents.emit({ type: 'debug', payload: { enabled: true } });
     });
