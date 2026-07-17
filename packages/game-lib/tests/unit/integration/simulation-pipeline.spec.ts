@@ -30,7 +30,7 @@ describe('simulation pipeline (real wasm)', () => {
 		delegate.attach({
 			scene: scene as any,
 			world,
-			instanceManager: null,
+			renderStrategy: null,
 			camera: {} as any,
 		});
 

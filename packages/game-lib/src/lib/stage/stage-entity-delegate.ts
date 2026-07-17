@@ -11,7 +11,9 @@
 import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
 import { ZylemCamera } from '../camera/zylem-camera';
-import { InstanceManager } from '../graphics/instance-manager';
+import { RenderStrategyManager } from '../graphics/render-strategy-manager';
+import { resolveRenderCategory, isManagedRenderEntity } from '../graphics/render-category';
+import { StageBodyKind } from '@zylem/behaviors/core';
 import { clearVariables } from './stage-state';
 import { debugState } from '../debug/debug-state';
 import { getGlobals } from '../game/game-state';
@@ -40,7 +42,7 @@ export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promi
 export interface EntityDelegateContext {
 	scene: ZylemScene;
 	world: ZylemWorld;
-	instanceManager: InstanceManager | null;
+	renderStrategy: RenderStrategyManager | null;
 	/** Resolved camera for entity setup contexts. */
 	camera: ZylemCamera;
 }
@@ -79,7 +81,7 @@ export class StageEntityDelegate {
 	// Runtime context — set via attach() during stage load
 	private scene: ZylemScene | null = null;
 	private world: ZylemWorld | null = null;
-	private instanceManager: InstanceManager | null = null;
+	private renderStrategy: RenderStrategyManager | null = null;
 	private camera: ZylemCamera | null = null;
 	/**
 	 * The behaviors runtime adapter backing the world's Simulation; shared with
@@ -113,7 +115,7 @@ export class StageEntityDelegate {
 	attach(context: EntityDelegateContext): void {
 		this.scene = context.scene;
 		this.world = context.world;
-		this.instanceManager = context.instanceManager;
+		this.renderStrategy = context.renderStrategy;
 		this.camera = context.camera;
 		this.wasmStage = context.world.simulation.adapter;
 	}
@@ -150,6 +152,7 @@ export class StageEntityDelegate {
 		const entity = child.create();
 
 		this.registerBehaviorLinks(entity);
+		this.ensureEnvironmentStatic(entity);
 		this.maybeAttachEntityPhysics(entity);
 
 		for (const childNode of child.getChildren()) {
@@ -164,8 +167,10 @@ export class StageEntityDelegate {
 			camera: this.camera!,
 		});
 
-		this.scene.addEntityGroup(entity);
-		this.tryRegisterInstance(entity);
+		this.tryRegisterRenderStrategy(entity);
+		if (!isManagedRenderEntity(entity)) {
+			this.scene.addEntityGroup(entity);
+		}
 		this.addEntityToStage(entity);
 		this.entityModelDelegate.observe(entity);
 	}
@@ -174,37 +179,44 @@ export class StageEntityDelegate {
 		if (!this.world || !this.scene || !this.childrenMap.has(entity.uuid)) {
 			return;
 		}
+		this.ensureEnvironmentStatic(entity);
 		this.maybeAttachEntityPhysics(entity);
-		this.tryRegisterInstance(entity);
+		this.tryRegisterRenderStrategy(entity);
+		if (!isManagedRenderEntity(entity)) {
+			this.scene.addEntityGroup(entity);
+		}
 	}
 
-	// ─── Instance batching ───────────────────────────────────────────────────
+	// ─── Render strategy registration ────────────────────────────────────────
 
 	/**
-	 * Register an entity for instanced rendering if opted in with `batched: true`.
+	 * Register an entity for bundle or instanced rendering when opted in via
+	 * `category: 'environment'` or `category: 'pack'`.
 	 */
-	private tryRegisterInstance(entity: GameEntity<any>): void {
-		if (!this.instanceManager) return;
-		if (entity.isInstanced) return;
+	private tryRegisterRenderStrategy(entity: GameEntity<any>): void {
+		if (!this.renderStrategy) return;
+		this.renderStrategy.register(entity);
+	}
 
-		const options = entity.options as any;
-		if (options?.batched !== true) return;
-		if (!entity.mesh?.geometry || !entity.materials?.length) return;
+	/**
+	 * Environment bundles require static bodies. Force static collision and
+	 * patch any already-built body description.
+	 */
+	private ensureEnvironmentStatic(entity: GameEntity<any>): void {
+		if (resolveRenderCategory(entity.options) !== 'environment') {
+			return;
+		}
 
-		const geometry = entity.mesh.geometry;
-		const material = entity.materials[0];
-		const batchKey = InstanceManager.generateEntityBatchKey(entity);
+		const collision = entity.options.collision ?? {};
+		if (collision.static !== true) {
+			console.warn(
+				`category 'environment' forces static collision for entity '${entity.name || entity.uuid}'`,
+			);
+			entity.options.collision = { ...collision, static: true };
+		}
 
-		const instanceId = this.instanceManager.register(entity, geometry, material, batchKey);
-
-		if (instanceId >= 0) {
-			entity.batchKey = batchKey;
-			entity.instanceId = instanceId;
-			entity.isInstanced = true;
-
-			if (entity.mesh) {
-				entity.mesh.visible = false;
-			}
+		if (entity.bodyDesc && entity.bodyDesc.kind !== StageBodyKind.Static) {
+			entity.bodyDesc.kind = StageBodyKind.Static;
 		}
 	}
 
@@ -258,8 +270,8 @@ export class StageEntityDelegate {
 
 		this.entityModelDelegate.unobserve(uuid);
 
-		if (entity.isInstanced && this.instanceManager) {
-			this.instanceManager.unregister(entity);
+		if (isManagedRenderEntity(entity)) {
+			this.renderStrategy?.unregister(entity);
 		}
 
 		this.world.destroyEntity(entity);
@@ -376,40 +388,6 @@ export class StageEntityDelegate {
 		}
 	}
 
-	// ─── Loading generator ───────────────────────────────────────────────────
-
-	/**
-	 * Generator that yields between entity loads for real-time progress updates.
-	 */
-	private *entityLoadGenerator(): Generator<{ current: number; total: number; name: string }> {
-		const total = this.children.length + this.pendingEntities.length + this.pendingPromises.length;
-		let current = 0;
-
-		for (const child of this.children) {
-			this.spawnEntity(child);
-			current++;
-			yield { current, total, name: child.name || 'unknown' };
-		}
-
-		if (this.pendingEntities.length) {
-			this.enqueue(...this.pendingEntities);
-			current += this.pendingEntities.length;
-			this.pendingEntities = [];
-			yield { current, total, name: 'pending entities' };
-		}
-
-		if (this.pendingPromises.length) {
-			for (const promise of this.pendingPromises) {
-				promise.then((entity) => {
-					this.spawnEntity(entity);
-				}).catch((e) => console.error('Failed to resolve pending stage entity', e));
-			}
-			current += this.pendingPromises.length;
-			this.pendingPromises = [];
-			yield { current, total, name: 'async entities' };
-		}
-	}
-
 	/** Yields to the event loop via MessageChannel (~0.1ms vs ~4ms for setTimeout). */
 	private yieldToEventLoop(): Promise<void> {
 		return new Promise((resolve) => {
@@ -420,20 +398,54 @@ export class StageEntityDelegate {
 	}
 
 	/**
-	 * Runs the entity load generator, yielding to the event loop in batches.
-	 * Emits progress events through the loading delegate.
+	 * Spawns all queued entities, awaiting each attach before the stage is
+	 * marked loaded so the game loop never steps wasm while bodies are still
+	 * being added. Yields to the event loop in batches for loading UI updates.
 	 */
 	async runEntityLoadGenerator(): Promise<void> {
-		const gen = this.entityLoadGenerator();
-		let i = 0;
 		const BATCH_SIZE = 5;
-		for (const progress of gen) {
-			this.loadingDelegate.emitProgress(`Loaded ${progress.name}`, progress.current, progress.total);
-			if (++i % BATCH_SIZE === 0) {
+		let current = 0;
+
+		if (this.pendingEntities.length) {
+			const pending = [...this.pendingEntities];
+			this.pendingEntities = [];
+			this.enqueue(...pending);
+		}
+
+		const pendingPromises = [...this.pendingPromises];
+		this.pendingPromises = [];
+		const total = this.children.length + pendingPromises.length;
+
+		for (const child of this.children) {
+			await this.spawnEntity(child);
+			current++;
+			this.loadingDelegate.emitProgress(
+				`Loaded ${child.name || 'unknown'}`,
+				current,
+				total,
+			);
+			if (current % BATCH_SIZE === 0) {
 				await this.yieldToEventLoop();
 			}
 		}
-		if (i % BATCH_SIZE !== 0) {
+
+		for (const promise of pendingPromises) {
+			try {
+				const entity = await promise;
+				if (entity) {
+					await this.spawnEntity(entity);
+				}
+			} catch (e) {
+				console.error('Failed to resolve pending stage entity', e);
+			}
+			current++;
+			this.loadingDelegate.emitProgress('Loaded async entity', current, total);
+			if (current % BATCH_SIZE === 0) {
+				await this.yieldToEventLoop();
+			}
+		}
+
+		if (current % BATCH_SIZE !== 0) {
 			await this.yieldToEventLoop();
 		}
 	}
@@ -492,7 +504,7 @@ export class StageEntityDelegate {
 		this._isLoaded = false;
 		this.scene = null;
 		this.world = null;
-		this.instanceManager = null;
+		this.renderStrategy = null;
 		this.camera = null;
 		this.wasmStage = null;
 	}

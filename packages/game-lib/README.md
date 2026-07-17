@@ -27,7 +27,7 @@ Zylem is split into three packages, each a strict layer over the one below:
 | --- | --- | --- |
 | Game framework | `@zylem/game-lib` | Three.js rendering, input, assets, stages, game state |
 | Simulation | `@zylem/behaviors` | `createSimulation()`, entity registry, behavior FSMs, event translation, runtime ownership |
-| Runtime | `@zylem/runtime` | WASM module: ECS + Rapier physics, batched input/render/snapshot/event buffers |
+| Runtime | `@zylem/runtime` | WASM module: ECS + Rapier physics, slot-indexed input/render/snapshot/event buffers |
 
 Each frame, game-lib forwards behavior inputs into the simulation, calls `simulation.update(delta)` (fixed-timestep physics inside WASM), then syncs interpolated render poses onto Three.js objects. Disposal follows the same chain: `Game.dispose()` → `Simulation.dispose()` → WASM stage destroy.
 

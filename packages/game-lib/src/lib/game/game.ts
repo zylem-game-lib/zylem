@@ -16,6 +16,7 @@ import { StageFactory } from '../stage/stage-factory';
 import { initGlobals, clearGlobalSubscriptions, resetGlobals, onGlobalChange as onGlobalChangeInternal, onGlobalChanges as onGlobalChangesInternal } from './game-state';
 import { EventEmitterDelegate, zylemEventBus, type GameEvents } from '../events';
 import type { Simulation } from '@zylem/behaviors/core';
+import { MaterialBuilder } from '../graphics/material';
 
 export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 	private wrappedGame: ZylemGame<TGlobals> | null = null;
@@ -370,6 +371,7 @@ export class Game<TGlobals extends BaseGlobals> implements IGame<TGlobals> {
 		// Clear all remaining global subscriptions and reset globals
 		clearGlobalSubscriptions();
 		resetGlobals();
+		MaterialBuilder.clearSharedMaterialCache();
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────

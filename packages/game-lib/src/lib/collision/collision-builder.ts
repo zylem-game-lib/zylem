@@ -16,6 +16,8 @@ import {
 export interface CollisionOptions {
   static?: boolean;
   sensor?: boolean;
+  canSleep?: boolean;
+  ccdEnabled?: boolean;
   size?: Vec3Input;
   position?: Vec3Input;
   collisionType?: string;

@@ -16,13 +16,13 @@ export default function createDemo() {
   const box1 = createBox({
     position: { x: -2, y: 5, z: 0 },
     material: { color: new Color(0xff0000) },
-    batched: true,
+    category: 'pack',
   });
 
   const box2 = createBox({
     position: { x: 2, y: 5, z: 0 },
     material: { color: new Color(0xff0000) }, // Same color -> Same batch
-    batched: true,
+    category: 'pack',
   });
 
   // 2. Ground
@@ -36,7 +36,7 @@ export default function createDemo() {
   const box3 = createBox({
     position: { x: 2, y: 5, z: 5 },
     material: { color: new Color(0xff0000) }, // Same color -> Same batch
-    batched: true,
+    category: 'pack',
   });
 
   const game = createGame(

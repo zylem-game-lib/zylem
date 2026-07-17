@@ -12,6 +12,7 @@ import {
 } from 'three';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
+import { isManagedRenderEntity } from './render-category';
 import { FOG_TYPE, ZylemFog } from '../entities/fog';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraManager } from '../camera/camera-manager';
@@ -270,6 +271,10 @@ export class ZylemScene implements Entity<ZylemScene> {
 	 * and starts the optional material patcher.
 	 */
 	addEntityGroup(entity: GameEntity<any>): void {
+		if (isManagedRenderEntity(entity)) {
+			return;
+		}
+
 		const target = entity.group ?? entity.mesh;
 		if (!target || this.isAttachedOutsideScene(target)) return;
 
