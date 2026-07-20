@@ -71,8 +71,8 @@ importers:
         specifier: ^0.14.0
         version: 0.14.10(solid-js@1.9.9)
       '@zylem/ui':
-        specifier: ^0.2.0
-        version: 0.2.0(solid-js@1.9.9)
+        specifier: link:../../../zylem-ui
+        version: link:../../../zylem-ui
       lucide-solid:
         specifier: ^0.511.0
         version: 0.511.0(solid-js@1.9.9)
@@ -114,8 +114,8 @@ importers:
         specifier: workspace:*
         version: link:../shaders
       '@zylem/ui':
-        specifier: ^0.2.0
-        version: 0.2.0(solid-js@1.9.9)
+        specifier: link:../../../zylem-ui
+        version: link:../../../zylem-ui
       howler:
         specifier: ^2.2.4
         version: 2.2.4
@@ -184,8 +184,8 @@ importers:
         specifier: ^2.2.12
         version: 2.2.12
       '@zylem/behaviors':
-        specifier: ^0.5.2
-        version: 0.5.2(react@18.3.1)(three@0.185.1)
+        specifier: link:../../../behaviors
+        version: link:../../../behaviors
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -285,8 +285,8 @@ importers:
         specifier: workspace:*
         version: link:../shaders
       '@zylem/ui':
-        specifier: ^0.2.0
-        version: 0.2.0(solid-js@1.9.9)
+        specifier: link:../../../zylem-ui
+        version: link:../../../zylem-ui
       howler:
         specifier: ^2.2.4
         version: 2.2.4
@@ -350,8 +350,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(three@0.185.1)
       '@zylem/behaviors':
-        specifier: ^0.5.2
-        version: 0.5.2(react@18.3.1)(three@0.185.1)
+        specifier: link:../../../behaviors
+        version: link:../../../behaviors
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
@@ -1611,11 +1611,6 @@ packages:
   '@vanilla-extract/private@1.0.9':
     resolution: {integrity: sha512-gT2jbfZuaaCLrAxwXbRgIhGhcXbRZCG3v4TTUnjw0EJ7ArdBRxkq4msNJkbuRkCgfIK5ATmprB5t9ljvLeFDEA==}
 
-  '@vanilla-extract/recipes@0.5.7':
-    resolution: {integrity: sha512-Fvr+htdyb6LVUu+PhH61UFPhwkjgDEk8L4Zq9oIdte42sntpKrgFy90MyTRtGwjVALmrJ0pwRUVr8UoByYeW8A==}
-    peerDependencies:
-      '@vanilla-extract/css': ^1.0.0
-
   '@vanilla-extract/sprinkles@1.6.5':
     resolution: {integrity: sha512-HOYidLONR/SeGk8NBAeI64I4gYdsMX9vJmniL13ZcLVwawyK0s2GUENEAcGA+GYLIoeyQB61UqmhqPodJry7zA==}
     peerDependencies:
@@ -1657,24 +1652,6 @@ packages:
 
   '@zylem/assets@0.1.1':
     resolution: {integrity: sha512-ALiD4ritqUpH+RQzqPG0YdwTYyWz6/gUXxdQ5XDMqSiOmvKIsU7bVhDh7svRnOaIWtBxV3SrcyLp6uMQwcaEqA==}
-
-  '@zylem/behaviors@0.5.2':
-    resolution: {integrity: sha512-BpmlUTF7Chi1rGyJekgb9rs5KCfpFU7wsPqhg6ebKyd0XKBmb6/dRoh15HYmD65KXNZrR8O+2ZneSXIP+uu3XA==}
-    engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
-    peerDependencies:
-      three: 0.185.1
-
-  '@zylem/runtime@0.2.2':
-    resolution: {integrity: sha512-bl3zMhxY0s2OIDjQI8jBjTlNMUf8TgbcyIQp1ZBN1gL1ZXhwFvmJVjp4YpSbGkAVtdi/aqEargYwNLvSxrV1Ww==}
-    engines: {node: '>=20.10.0'}
-
-  '@zylem/ui@0.2.0':
-    resolution: {integrity: sha512-/aZUo1vmWCekIZBDChljyexvS6+Th2KxuO8eeWBmA+eLlY25W7B9LFIWIcx7V6681iP5uk4lpH5LPfd2wetctQ==}
-    peerDependencies:
-      solid-js: ^1.9.9
-    peerDependenciesMeta:
-      solid-js:
-        optional: true
 
   acorn@8.15.0:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
@@ -4021,10 +3998,6 @@ snapshots:
 
   '@vanilla-extract/private@1.0.9': {}
 
-  '@vanilla-extract/recipes@0.5.7(@vanilla-extract/css@1.20.1)':
-    dependencies:
-      '@vanilla-extract/css': 1.20.1
-
   '@vanilla-extract/sprinkles@1.6.5(@vanilla-extract/css@1.20.1)':
     dependencies:
       '@vanilla-extract/css': 1.20.1
@@ -4091,32 +4064,6 @@ snapshots:
       tinyrainbow: 3.0.3
 
   '@zylem/assets@0.1.1': {}
-
-  '@zylem/behaviors@0.5.2(react@18.3.1)(three@0.185.1)':
-    dependencies:
-      '@dgreenheck/three-pinata': 2.0.1(three@0.185.1)
-      '@zylem/runtime': 0.2.2
-      comlink: 4.4.2
-      three: 0.185.1
-      typescript-fsm: 1.6.0
-      valtio: 2.1.7(react@18.3.1)
-    transitivePeerDependencies:
-      - '@types/react'
-      - react
-
-  '@zylem/runtime@0.2.2': {}
-
-  '@zylem/ui@0.2.0(solid-js@1.9.9)':
-    dependencies:
-      '@kobalte/core': 0.13.11(solid-js@1.9.9)
-      '@vanilla-extract/css': 1.20.1
-      '@vanilla-extract/recipes': 0.5.7(@vanilla-extract/css@1.20.1)
-      '@vanilla-extract/sprinkles': 1.6.5(@vanilla-extract/css@1.20.1)
-      lucide-solid: 0.511.0(solid-js@1.9.9)
-    optionalDependencies:
-      solid-js: 1.9.9
-    transitivePeerDependencies:
-      - babel-plugin-macros
 
   acorn@8.15.0: {}
 

@@ -4,6 +4,7 @@ import solidPlugin from 'vite-plugin-solid';
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { zylemVersionsPlugin } from './vite-plugins/zylem-versions-plugin.ts';
 import { Agent } from 'https';
 import { Resolver } from 'dns';
 
@@ -86,7 +87,7 @@ const shouldOpenBrowser = !(
 );
 
 export default defineConfig({
-	plugins: [glsl(), vanillaExtractPlugin(), solidPlugin()] as any,
+	plugins: [zylemVersionsPlugin(__dirname), glsl(), vanillaExtractPlugin(), solidPlugin()] as any,
 	build: {
 		target: 'esnext',
 	},

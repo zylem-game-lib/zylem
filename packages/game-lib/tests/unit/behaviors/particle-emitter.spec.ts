@@ -155,6 +155,34 @@ describe('ParticleEmitterBehavior', () => {
 		expect(systemA).not.toBe(systemB);
 	});
 
+	it('emits burst particles immediately on start()', () => {
+		const preset = particlePresets.fire.spark();
+		const system = preset.create() as any;
+		system.start();
+
+		const buffers = (system as any).buffers;
+		const lifetime = buffers.instanceLifetime as Float32Array;
+		const speed = buffers.instanceSpeed as Float32Array;
+		const storageNodes = Object.values((system as any).attributes) as Array<{
+			value: {
+				isStorageInstancedBufferAttribute?: boolean;
+				version: number;
+			};
+		}>;
+
+		expect(lifetime[1]).toBeGreaterThan(0);
+		expect(speed[0]).toBeGreaterThan(0);
+		expect(system.emitted).toBeGreaterThan(0);
+		expect(storageNodes).toHaveLength(6);
+		for (const node of storageNodes) {
+			expect(node.value.isStorageInstancedBufferAttribute).toBe(true);
+			expect(node.value.version).toBeGreaterThan(0);
+		}
+		const drawable = system.children.find((child: any) => child.isSprite) as any;
+		expect(drawable?.isSprite).toBe(true);
+		expect(drawable?.count).toBeGreaterThan(0);
+	});
+
 	it('accepts textured material options through preset helpers', () => {
 		const texture = new Texture();
 		const preset = particlePresets.burst({
