@@ -116,7 +116,7 @@ export default function createDemo() {
 			lastMovement.set(horizontal, 0, vertical);
 		}
 		if (lastMovement.lengthSq() > 0) {
-			const yaw = Math.atan2(-lastMovement.x, lastMovement.z);
+			const yaw = Math.atan2(lastMovement.x, lastMovement.z);
 			me.setRotationY(yaw);
 		}
 
