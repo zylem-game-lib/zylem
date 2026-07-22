@@ -180,14 +180,19 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 					? [entity.colliderDesc]
 					: [];
 
-		// Match legacy behavior: in a zero-gravity world every body is fully
-		// locked (entities move only through explicit teleports), and
-		// controlled actors never tumble from physics.
+		// Match legacy behavior: in a zero-gravity world bodies default to
+		// fully locked (entities move only through explicit teleports), and
+		// controlled actors never tumble from physics. Author-specified locks
+		// (via `collision.lockRotations` / `collision.lockTranslations`)
+		// always take precedence.
 		if (this.zeroGravity) {
-			bodyDef.lockTranslation = [true, true, true];
-			bodyDef.lockRotation = [true, true, true];
+			bodyDef.lockTranslation = bodyDef.lockTranslation ?? [true, true, true];
+			bodyDef.lockRotation = bodyDef.lockRotation ?? [true, true, true];
 		}
-		if (entity.controlledRotation || entity instanceof ZylemActor) {
+		if (
+			(entity.controlledRotation || entity instanceof ZylemActor) &&
+			entity.bodyDesc?.lockRotation === undefined
+		) {
 			bodyDef.lockRotation = [true, true, true];
 		}
 

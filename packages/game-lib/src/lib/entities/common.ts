@@ -3,6 +3,7 @@ import { standardShader } from '../graphics/shaders/standard.shader';
 import { GameEntityOptions } from './entity';
 import { BaseNode } from '../core/base-node';
 import { deepMergeValues } from '../core/clone-utils';
+import { hasExplicitPositionInArgs, markExplicitSpawnPosition } from './spawn-placement';
 
 export const commonDefaults: Partial<GameEntityOptions> = {
   position: new Vector3(0, 0, 0),
@@ -29,6 +30,9 @@ export function mergeArgs<T extends GameEntityOptions>(
   let merged: Partial<T> = deepMergeValues(defaults);
   for (const opt of configArgs) {
     merged = deepMergeValues(merged, opt);
+  }
+  if (hasExplicitPositionInArgs(args)) {
+    markExplicitSpawnPosition(merged as GameEntityOptions);
   }
   return merged as T;
 }

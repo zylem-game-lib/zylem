@@ -49,8 +49,14 @@ export interface InputGamepad {
 	};
 	/** Screen-space cursor position (normalized 0..1). Only populated by MouseProvider. */
 	pointer?: {
+		/** Window-normalized X (0 = left, 1 = right). */
 		x: number;
+		/** Window-normalized Y (0 = top, 1 = bottom). */
 		y: number;
+		/** Canvas-center-relative X (−1 = left edge, +1 = right edge). */
+		centerX: number;
+		/** Canvas-center-relative Y (−1 = top edge, +1 = bottom edge). */
+		centerY: number;
 	};
 }
 

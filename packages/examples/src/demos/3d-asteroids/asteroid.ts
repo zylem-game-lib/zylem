@@ -427,6 +427,7 @@ export function createAsteroidField({
 				size: collisionSize,
 			},
 			position: { x: position.x, y: position.y, z: 0 },
+			visible: false,
 		});
 
 		asteroid.use(ScreenWrapBehavior, {

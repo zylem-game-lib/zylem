@@ -177,6 +177,9 @@ export default function createDemo() {
 			name: `${slugify(lane.label)}-projectile`,
 			radius: 0.46,
 			position: { x: lane.spawnPosition.x, y: lane.spawnPosition.y, z: lane.spawnPosition.z },
+			// Weightless, non-tumbling shot; gravity scale and locks must be
+			// set at body-spawn time (no live setters in the wasm runtime).
+			collision: { gravityScale: 0, lockRotations: true },
 			material: {
 				color: lane.accent.clone().offsetHSL(0, 0, 0.08),
 			},

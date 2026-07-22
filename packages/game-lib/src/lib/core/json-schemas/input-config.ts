@@ -112,6 +112,9 @@ export const MouseConfigSchema = Type.Object(
 		mapping: Type.Optional(MouseMappingSchema),
 		pointerLock: Type.Optional(Type.Boolean()),
 		sensitivity: Type.Optional(Type.Number()),
+		lookMode: Type.Optional(Type.Union([Type.Literal('delta'), Type.Literal('screenCenter')])),
+		maxLookDegrees: Type.Optional(Type.Number()),
+		lookSensitivity: Type.Optional(Type.Number()),
 	},
 	{ title: 'MouseConfig', additionalProperties: false },
 );

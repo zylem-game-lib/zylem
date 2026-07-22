@@ -24,6 +24,12 @@ export interface StageEntity extends Entity {
 	instanceId: number;
 	isInstanced?: boolean;
 	isBundled?: boolean;
+	/**
+	 * When true, `syncRenderPoses` leaves the entity's Three.js transform alone.
+	 * Used for camera-parented viewmodels so physics pose sync cannot overwrite
+	 * the local offset.
+	 */
+	skipRenderPoseSync?: boolean;
 	controlledRotation: boolean;
 	name: string;
 	markedForRemoval: boolean;

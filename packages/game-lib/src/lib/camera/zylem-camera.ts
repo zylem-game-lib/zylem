@@ -90,6 +90,9 @@ export class ZylemCamera {
 	/** When true, debug-mode orbital controls are not attached to this camera. */
 	_skipDebugOrbit = false;
 
+	/** Dedicated debug-view camera (e.g. `__debug__`); uses simplified orbit path. */
+	isDebugViewCamera = false;
+
 	/** Reference to the shared renderer manager (set during setup). */
 	private _rendererManager: RendererManager | null = null;
 
@@ -137,6 +140,10 @@ export class ZylemCamera {
 				null // no camera rig
 			);
 			this.orbitController.setScene(scene);
+
+			if (this.isDebugViewCamera) {
+				this.orbitController.setDebugViewCamera(true);
+			}
 
 			// If orbital controls were requested, enable them
 			if (this._useOrbitalControls) {
@@ -354,6 +361,28 @@ export class ZylemCamera {
 	}
 
 	// ─── Debug delegate ─────────────────────────────────────────────────────
+
+	/**
+	 * Set the default orbit target for debug mode (e.g. origin anchor).
+	 */
+	setDefaultOrbitTarget(target: Object3D): void {
+		this.orbitController?.setDefaultOrbitTarget(target);
+	}
+
+	/**
+	 * Seed the debug orbit camera to an initial pose.
+	 */
+	seedDebugOrbitPose(position: Vector3, lookAt: Vector3): void {
+		if (this.isDebugViewCamera && this.isDebugOrbitPoseSeeded()) {
+			return;
+		}
+		this.orbitController?.seedOrbitPose(position, lookAt);
+	}
+
+	/** Whether the debug orbit camera has received its initial pose. */
+	isDebugOrbitPoseSeeded(): boolean {
+		return this.orbitController?.isDebugOrbitPoseSeeded ?? false;
+	}
 
 	/**
 	 * Attach a delegate to react to debug state changes.

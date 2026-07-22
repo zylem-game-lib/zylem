@@ -18,6 +18,7 @@ import { registerEntityFocusContext } from '../debug/entity-focus';
 import { DebugEntityCursor } from './debug-entity-cursor';
 import type { GameEntity } from '../entities/entity';
 import type { BaseNode } from '../core/base-node';
+import type { ZylemCamera } from '../camera/zylem-camera';
 
 export type AddEntityFactory = (params: { position: Vector3; normal?: Vector3 }) => Promise<any> | any;
 
@@ -67,7 +68,7 @@ export class StageDebugDelegate {
 			resolveEntity: (uuid) => this.resolveEntity(uuid),
 			frameObject: (object) => {
 				this.ensureCameraDebugDelegate();
-				this.stage.cameraRef?.frameObject(object);
+				this.getDebugViewCamera()?.frameObject(object);
 			},
 			ensureDebugReady: () => {
 				if (!debugState.enabled) {
@@ -77,6 +78,14 @@ export class StageDebugDelegate {
 				this.populateDebugMap();
 			},
 		});
+	}
+
+	/** Camera used for debug orbit / raycasts (active primary, usually `__debug__`). */
+	private getDebugViewCamera(): ZylemCamera | null {
+		return this.stage.cameraManagerRef?.primaryCamera
+			?? this.stage.cameraManagerRef?.debugCamera
+			?? this.stage.cameraRef
+			?? null;
 	}
 
 	private resolveEntity(uuid: string): GameEntity<any> | null {
@@ -98,10 +107,13 @@ export class StageDebugDelegate {
 	}
 
 	private ensureCameraDebugDelegate(): void {
-		if (this.stage.cameraRef && !this.cameraDebugDelegate) {
+		const debugCam = this.stage.cameraManagerRef?.debugCamera ?? null;
+		if (!debugCam) return;
+
+		if (!this.cameraDebugDelegate) {
 			this.cameraDebugDelegate = new StageCameraDebugDelegate(this.stage);
-			this.stage.cameraRef.setDebugDelegate(this.cameraDebugDelegate);
 		}
+		debugCam.setDebugDelegate(this.cameraDebugDelegate);
 	}
 
 	private syncWithDebugState(): void {
@@ -112,25 +124,46 @@ export class StageDebugDelegate {
 		}
 	}
 
-	/** Initialize DOM listeners and camera debug delegate when debug is turned on. */
+	/** Initialize DOM listeners and switch rendering to the debug orbit camera. */
 	private activate(): void {
 		if (!this.domListenersAttached) {
-			this.attachDomListeners();
-			this.domListenersAttached = true;
+			this.domListenersAttached = this.attachDomListeners();
 		}
 
 		this.populateDebugMap();
+		this.stage.cameraManagerRef?.activateDebugCamera();
+		const debugCam = this.stage.cameraManagerRef?.debugCamera ?? null;
+		this.rebindPostProcessing(debugCam);
 		this.ensureCameraDebugDelegate();
+
+		if (document.pointerLockElement) {
+			document.exitPointerLock();
+		}
 	}
 
-	/** Tear down visuals and camera debug delegate when debug is turned off. */
+	/** Tear down visuals and restore the gameplay primary camera. */
 	private deactivate(): void {
 		this.disposeDebugVisuals();
 
-		if (this.stage.cameraRef) {
+		const debugCam = this.stage.cameraManagerRef?.debugCamera;
+		if (debugCam) {
+			debugCam.setDebugDelegate(null);
+		}
+		if (this.stage.cameraRef && this.stage.cameraRef !== debugCam) {
 			this.stage.cameraRef.setDebugDelegate(null);
 		}
 		this.cameraDebugDelegate = null;
+		this.stage.cameraManagerRef?.deactivateDebugCamera();
+		const restored = this.stage.cameraManagerRef?.primaryCamera ?? this.stage.cameraRef ?? null;
+		this.rebindPostProcessing(restored);
+	}
+
+	private rebindPostProcessing(camera: ZylemCamera | null): void {
+		const scene = this.stage.scene?.scene;
+		const rm = this.stage.rendererManager;
+		if (scene && rm && camera) {
+			rm.setupPostProcessing(scene, camera.camera);
+		}
 	}
 
 	private initDebugVisuals(): void {
@@ -165,13 +198,14 @@ export class StageDebugDelegate {
 			return;
 		}
 
-		if (!this.stage.scene || !this.stage.world || !this.stage.cameraRef) return;
+		const viewCamera = this.getDebugViewCamera();
+		if (!this.stage.scene || !this.stage.world || !viewCamera) return;
 
 		if (!this.debugLines) {
 			this.initDebugVisuals();
 		}
 
-		const { world, cameraRef } = this.stage;
+		const { world } = this.stage;
 
 		// Collider wireframes come straight from the wasm simulation.
 		if (this.debugLines) {
@@ -196,7 +230,7 @@ export class StageDebugDelegate {
 		const tool = getDebugTool();
 		const isCursorTool = tool === 'select' || tool === 'delete';
 
-		this.raycaster.setFromCamera(this.mouseNdc, cameraRef.camera);
+		this.raycaster.setFromCamera(this.mouseNdc, viewCamera.camera);
 		const origin = this.raycaster.ray.origin.clone();
 		const direction = this.raycaster.ray.direction.clone().normalize();
 
@@ -286,9 +320,9 @@ export class StageDebugDelegate {
 		}
 	}
 
-	private attachDomListeners() {
-		const canvas = this.stage.cameraRef?.renderer.domElement ?? this.stage.scene?.zylemCamera.renderer.domElement;
-		if (!canvas) return;
+	private attachDomListeners(): boolean {
+		const canvas = this.stage.rendererManager?.getDomElement();
+		if (!canvas) return false;
 
 		const onMouseMove = (e: MouseEvent) => {
 			const rect = canvas.getBoundingClientRect();
@@ -306,5 +340,6 @@ export class StageDebugDelegate {
 
 		this.domDisposeFns.push(() => canvas.removeEventListener('mousemove', onMouseMove));
 		this.domDisposeFns.push(() => canvas.removeEventListener('mousedown', onMouseDown));
+		return true;
 	}
 }

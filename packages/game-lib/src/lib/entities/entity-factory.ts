@@ -62,8 +62,10 @@ export interface TemplateFactory<E extends GameEntity<O>, O extends GameEntityOp
  * const asteroidFactory = createEntityFactory(asteroidTemplate);
  * const asteroids = asteroidFactory.generate(10);
  * 
- * asteroids.forEach((asteroid, i) => {
- *     asteroid.setPosition(Math.random() * 20 - 10, Math.random() * 15 - 7.5, 0);
+ * asteroids.forEach((asteroid) => {
+ *     asteroid.onSetup(({ me }) => {
+ *         me.setPosition(Math.random() * 20 - 10, Math.random() * 15 - 7.5, 0);
+ *     });
  *     stage.add(asteroid);
  * });
  * ```

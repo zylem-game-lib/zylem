@@ -92,7 +92,15 @@ export function createEntity<
     );
   }
 
-  return finalizeEntityCloneSupport(builder.build(), options =>
+  const entity = builder.build();
+  const spawnPositionExplicit =
+    configuration != null &&
+    typeof configuration === 'object' &&
+    'position' in configuration;
+  if (spawnPositionExplicit) {
+    entity._spawnPositionExplicit = true;
+  }
+  return finalizeEntityCloneSupport(entity, options =>
     cloneFactory(options as Partial<CreateOptions> | undefined),
   );
 }

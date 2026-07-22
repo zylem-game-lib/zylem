@@ -1,4 +1,4 @@
-import { Vector2, Scene } from 'three';
+import { Vector2, Scene, Object3D, Vector3 } from 'three';
 import { ZylemCamera } from './zylem-camera';
 import { RendererManager } from './renderer-manager';
 import { Perspectives } from './perspective';
@@ -23,6 +23,12 @@ export class CameraManager {
 
 	/** Auto-created debug camera with orbit controls */
 	private _debugCamera: ZylemCamera | null = null;
+
+	/** Gameplay primary camera saved while the debug camera is active. */
+	private _preDebugPrimary: ZylemCamera | null = null;
+
+	/** Scene anchor at world origin for debug orbit when nothing is selected. */
+	private _debugOrbitTargetAnchor: Object3D | null = null;
 
 	/** Reference to the shared renderer manager */
 	private _rendererManager: RendererManager | null = null;
@@ -56,6 +62,13 @@ export class CameraManager {
 	 */
 	get debugCamera(): ZylemCamera | null {
 		return this._debugCamera;
+	}
+
+	/**
+	 * Gameplay primary camera that was active before debug mode was enabled.
+	 */
+	get preDebugPrimary(): ZylemCamera | null {
+		return this._preDebugPrimary;
 	}
 
 	/**
@@ -193,20 +206,58 @@ export class CameraManager {
 		this._sceneRef = scene;
 		this._rendererManager = rendererManager;
 
-		// Create the debug camera
+		// Create the debug camera (registered in `cameras`, not activated)
 		this.createDebugCamera(rendererManager.screenResolution);
 
-		// Setup all registered cameras
+		// Origin anchor for debug orbit when nothing is selected
+		this._debugOrbitTargetAnchor = new Object3D();
+		this._debugOrbitTargetAnchor.name = '__debug_orbit_target__';
+		scene.add(this._debugOrbitTargetAnchor);
+
+		// Setup all registered cameras (including __debug__)
 		for (const camera of this.cameras.values()) {
 			camera.setRendererManager(rendererManager);
 			await camera.setup(scene, rendererManager);
 		}
 
-		// Setup the debug camera
-		if (this._debugCamera) {
-			this._debugCamera.setRendererManager(rendererManager);
-			await this._debugCamera.setup(scene, rendererManager);
+		if (this._debugCamera && this._debugOrbitTargetAnchor) {
+			this._debugCamera.setDefaultOrbitTarget(this._debugOrbitTargetAnchor);
 		}
+	}
+
+	/**
+	 * Switch the primary viewport to the debug orbit camera, remembering the
+	 * previous primary so gameplay cameras (e.g. first-person) can be restored.
+	 */
+	activateDebugCamera(): boolean {
+		if (!this._debugCamera) return false;
+		const primary = this.primaryCamera;
+		if (primary === this._debugCamera) return true;
+		this._preDebugPrimary = primary;
+		const activated = this.setActiveCamera(this._debugCamera);
+		if (activated) {
+			this.seedDebugCameraPose(primary);
+		}
+		return activated;
+	}
+
+	/**
+	 * Restore the gameplay primary camera that was active before
+	 * {@link activateDebugCamera}.
+	 */
+	deactivateDebugCamera(): boolean {
+		if (!this._debugCamera) return false;
+		const restore = this._preDebugPrimary;
+		this._preDebugPrimary = null;
+		if (restore && restore !== this._debugCamera) {
+			return this.setActiveCamera(restore);
+		}
+		for (const cam of this.cameras.values()) {
+			if (cam !== this._debugCamera) {
+				return this.setActiveCamera(cam);
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -281,23 +332,54 @@ export class CameraManager {
 		for (const camera of this.cameras.values()) {
 			camera.destroy();
 		}
-		this._debugCamera?.destroy();
+		// __debug__ is registered in `cameras` when created; only destroy here
+		// if createDebugCamera never registered it.
+		if (this._debugCamera && !this.cameras.has('__debug__')) {
+			this._debugCamera.destroy();
+		}
 		this.cameras.clear();
 		this._activeCameras = [];
 		this._debugCamera = null;
+		this._preDebugPrimary = null;
+		if (this._debugOrbitTargetAnchor && this._sceneRef) {
+			this._sceneRef.remove(this._debugOrbitTargetAnchor);
+		}
+		this._debugOrbitTargetAnchor = null;
 		this._rendererManager = null;
 		this._sceneRef = null;
 	}
 
 	/**
 	 * Create the always-available debug camera with orbit controls.
+	 * Registered for lookup/activation, but not added to the active list.
 	 */
 	private createDebugCamera(screenResolution: Vector2): void {
 		this._debugCamera = new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
 		this._debugCamera.name = '__debug__';
+		this._debugCamera.isDebugViewCamera = true;
 		this._debugCamera.enableOrbitalControls();
-		// Debug camera is NOT added to the active cameras by default;
-		// it's activated via the debug system
+		this.cameras.set('__debug__', this._debugCamera);
+	}
+
+	/**
+	 * Seed the debug camera orbit pose on first activation, framing the origin
+	 * or offsetting from the saved gameplay primary.
+	 */
+	private seedDebugCameraPose(gameplayPrimary: ZylemCamera | null): void {
+		if (!this._debugCamera || this._debugCamera.isDebugOrbitPoseSeeded()) return;
+
+		const origin = new Vector3(0, 0, 0);
+		const defaultPosition = new Vector3(0, 6, 12);
+
+		if (gameplayPrimary && gameplayPrimary !== this._debugCamera) {
+			const camPos = gameplayPrimary.camera.position;
+			const offset = new Vector3().subVectors(camPos, origin);
+			if (offset.lengthSq() > 1) {
+				defaultPosition.copy(offset.normalize().multiplyScalar(12).add(new Vector3(0, 4, 0)));
+			}
+		}
+
+		this._debugCamera.seedDebugOrbitPose(defaultPosition, origin);
 	}
 
 	/**
@@ -306,6 +388,9 @@ export class CameraManager {
 	private resolveCamera(nameOrRef: string | ZylemCamera): ZylemCamera | null {
 		if (typeof nameOrRef === 'string') {
 			return this.cameras.get(nameOrRef) ?? null;
+		}
+		if (nameOrRef === this._debugCamera) {
+			return this._debugCamera;
 		}
 		// Check if the reference exists in our registry
 		for (const cam of this.cameras.values()) {

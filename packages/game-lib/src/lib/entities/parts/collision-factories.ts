@@ -12,8 +12,10 @@ import {
 	normalizeVec3,
 } from '../../core/vector';
 import {
+	normalizeLockAxes,
 	packCollisionGroups,
 	type CollisionOptions,
+	type LockAxesInput,
 } from '../../collision/collision-builder';
 import { deepCloneValue } from '../../core/clone-utils';
 
@@ -63,16 +65,31 @@ interface BaseCollisionOptions {
 	collisionType?: string;
 	/** Allowed collision types for filtering */
 	collisionFilter?: string[];
+	/** Gravity scale applied at body spawn (no live setter FFI; default 1). */
+	gravityScale?: number;
+	/** Lock rotation axes at body spawn: `true` for all, or per-axis tuple. */
+	lockRotations?: LockAxesInput;
+	/** Lock translation axes at body spawn: `true` for all, or per-axis tuple. */
+	lockTranslations?: LockAxesInput;
 }
 
 function buildBodyDef(isStatic: boolean, opts: BaseCollisionOptions): SimulationBodyDefinition {
-	return {
+	const def: SimulationBodyDefinition = {
 		kind: isStatic ? StageBodyKind.Static : StageBodyKind.Dynamic,
 		position: [0, 0, 0],
-		gravityScale: 1,
+		gravityScale: opts.gravityScale ?? 1,
 		canSleep: opts.canSleep ?? false,
 		ccdEnabled: opts.ccdEnabled ?? true,
 	};
+	const lockRotation = normalizeLockAxes(opts.lockRotations);
+	if (lockRotation) {
+		def.lockRotation = lockRotation;
+	}
+	const lockTranslation = normalizeLockAxes(opts.lockTranslations);
+	if (lockTranslation) {
+		def.lockTranslation = lockTranslation;
+	}
+	return def;
 }
 
 function applyCollisionOptions(

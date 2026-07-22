@@ -57,11 +57,32 @@ export class SimulationBody implements PhysicsRenderPoseProvider {
 		isSleeping: false,
 	};
 
+	/**
+	 * First step at which the shared render buffers are coherent for this
+	 * body. After a spawn or an explicit pose write (teleport), the current
+	 * slot isn't written until the next fixed step and the previous-step
+	 * copy lags one more; interpolating across that gap would sweep the
+	 * mesh from a stale pose (often the origin). Until this step is
+	 * reached, render reads collapse to the live body pose.
+	 */
+	private interpolationValidAfterStep: number;
+
 	constructor(
 		private readonly simulation: Simulation,
 		public readonly handle: EntityHandle,
 		private readonly clock: SimulationStepClock,
-	) { }
+	) {
+		this.interpolationValidAfterStep = clock.steps + 2;
+	}
+
+	/** Suppress interpolation until the render buffers catch up. */
+	private markPoseDiscontinuity(): void {
+		this.interpolationValidAfterStep = this.clock.steps + 2;
+	}
+
+	private isInterpolationStale(): boolean {
+		return this.clock.steps < this.interpolationValidAfterStep;
+	}
 
 	// ─── Reads ───────────────────────────────────────────────────────────
 
@@ -98,10 +119,12 @@ export class SimulationBody implements PhysicsRenderPoseProvider {
 
 	setTranslation(translation: PhysicsVector3, _wakeUp: boolean = true): void {
 		this.simulation.setPosition(this.handle, translation.x, translation.y, translation.z);
+		this.markPoseDiscontinuity();
 	}
 
 	setRotation(rotation: PhysicsQuaternion, _wakeUp: boolean = true): void {
 		this.simulation.setRotation(this.handle, rotation.x, rotation.y, rotation.z, rotation.w);
+		this.markPoseDiscontinuity();
 	}
 
 	setLinvel(velocity: PhysicsVector3, _wakeUp: boolean = true): void {
@@ -114,6 +137,32 @@ export class SimulationBody implements PhysicsRenderPoseProvider {
 
 	applyImpulse(impulse: PhysicsVector3, _wakeUp: boolean = true): void {
 		this.simulation.applyImpulse(this.handle, impulse.x, impulse.y, impulse.z);
+	}
+
+	/**
+	 * Rotation locks are fixed at body-creation time in the wasm runtime
+	 * (`SimulationBodyDefinition.lockRotation`); there is no live setter FFI
+	 * yet. Accepted for Rapier compat — when locking, the angular velocity is
+	 * zeroed to approximate the intent. Prefer lock flags on the body
+	 * definition at spawn time.
+	 */
+	lockRotations(locked: boolean, _wakeUp: boolean = true): void {
+		if (locked) {
+			this.setAngvel({ x: 0, y: 0, z: 0 });
+		}
+	}
+
+	/**
+	 * Translation locks are fixed at body-creation time in the wasm runtime
+	 * (`SimulationBodyDefinition.lockTranslation`); there is no live setter
+	 * FFI yet. Accepted for Rapier compat — when locking, the linear velocity
+	 * is zeroed to approximate the intent. Prefer lock flags on the body
+	 * definition at spawn time.
+	 */
+	lockTranslations(locked: boolean, _wakeUp: boolean = true): void {
+		if (locked) {
+			this.setLinvel({ x: 0, y: 0, z: 0 });
+		}
 	}
 
 	/**
@@ -187,9 +236,10 @@ export class SimulationBody implements PhysicsRenderPoseProvider {
 	}
 
 	getPoseHistory(): PhysicsPoseHistory {
-		// Before the first fixed step the render buffers hold zeros, so fall
-		// back to the live body pose (set at spawn time).
-		if (this.clock.steps === 0) {
+		// After a spawn or teleport the render buffers are stale (zeros or a
+		// despawned entity's pose) until two fixed steps have run; collapse
+		// to the live body pose so nothing interpolates from the stale slot.
+		if (this.isInterpolationStale()) {
 			const pose = this.livePose();
 			return { previous: clonePhysicsPose(pose), current: pose };
 		}
@@ -227,9 +277,9 @@ export class SimulationBody implements PhysicsRenderPoseProvider {
 		outPosition: { x: number; y: number; z: number },
 		outRotation: { x: number; y: number; z: number; w: number },
 	): void {
-		// Before the first fixed step the render buffers hold zeros; use the
-		// live body pose (set at spawn time) with no interpolation.
-		if (this.clock.steps === 0) {
+		// Render buffers are stale until two fixed steps after spawn/teleport;
+		// use the live body pose with no interpolation.
+		if (this.isInterpolationStale()) {
 			this.writeLivePose(outPosition, outRotation);
 			return;
 		}

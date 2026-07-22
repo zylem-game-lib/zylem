@@ -106,6 +106,18 @@ describe('ZylemWorld simulation-backed physics', () => {
 
 		world.update({ delta: 1 / 120 } as any);
 
+		// One step after spawn we are still inside the post-spawn discontinuity
+		// window: history stays collapsed to the live pose (which has moved).
+		history = ball.body!.getPoseHistory();
+		expect(world.interpolationAlpha).toBeCloseTo(0, 5);
+		expect(history.current.position.x).toBeGreaterThan(0);
+		expect(history.previous.position.x).toBeCloseTo(history.current.position.x, 5);
+
+		// Two more half-steps -> second fixed step; render buffers are now
+		// coherent and interpolation resumes.
+		world.update({ delta: 1 / 120 } as any);
+		world.update({ delta: 1 / 120 } as any);
+
 		history = ball.body!.getPoseHistory();
 		expect(world.interpolationAlpha).toBeCloseTo(0, 5);
 		expect(history.current.position.x).toBeGreaterThan(history.previous.position.x);
@@ -125,6 +137,43 @@ describe('ZylemWorld simulation-backed physics', () => {
 		expect(history.current.position).toEqual({ x: 4, y: -2, z: 1 });
 
 		world.destroy();
+	});
+
+	it('applies zero-gravity lock defaults but respects author-specified locks', () => {
+		const spawnCalls: any[] = [];
+		const mockSimulation = {
+			spawn(definition: any) {
+				spawnCalls.push(definition);
+				return { id: spawnCalls.length, slot: spawnCalls.length - 1 };
+			},
+			adapter: {},
+			setEventsEnabled() {},
+		};
+		const world = new ZylemWorld(mockSimulation as any, 60, true);
+
+		const defaultEntity: any = {
+			uuid: 'default-locks',
+			bodyDesc: { kind: 0, position: [0, 0, 0] },
+			colliderDesc: { shape: { type: 'sphere', radius: 1 } },
+		};
+		world.addEntity(defaultEntity);
+
+		const authoredEntity: any = {
+			uuid: 'authored-locks',
+			bodyDesc: {
+				kind: 0,
+				position: [0, 0, 0],
+				lockTranslation: [false, false, true],
+				lockRotation: [true, true, true],
+			},
+			colliderDesc: { shape: { type: 'sphere', radius: 1 } },
+		};
+		world.addEntity(authoredEntity);
+
+		expect(spawnCalls[0].body.lockTranslation).toEqual([true, true, true]);
+		expect(spawnCalls[0].body.lockRotation).toEqual([true, true, true]);
+		expect(spawnCalls[1].body.lockTranslation).toEqual([false, false, true]);
+		expect(spawnCalls[1].body.lockRotation).toEqual([true, true, true]);
 	});
 
 	it('clears entity physics references when bodies are destroyed', async () => {

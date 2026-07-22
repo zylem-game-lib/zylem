@@ -10,6 +10,21 @@ import {
   normalizeVec3,
 } from '../core/vector';
 
+/** Per-axis lock input: `true` locks all axes, or pass an [x, y, z] tuple. */
+export type LockAxesInput = boolean | readonly [boolean, boolean, boolean];
+
+/**
+ * Normalize a lock input to the wasm tuple form. Returns undefined when the
+ * author didn't specify locks, so world-level defaults can still apply.
+ */
+export function normalizeLockAxes(
+  value?: LockAxesInput,
+): readonly [boolean, boolean, boolean] | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === 'boolean') return [value, value, value];
+  return value;
+}
+
 /**
  * Options for configuring entity collision behavior.
  */
@@ -22,6 +37,12 @@ export interface CollisionOptions {
   position?: Vec3Input;
   collisionType?: string;
   collisionFilter?: string[];
+  /** Gravity scale applied at body spawn (no live setter FFI; default 1). */
+  gravityScale?: number;
+  /** Lock rotation axes at body spawn: `true` for all, or per-axis tuple. */
+  lockRotations?: LockAxesInput;
+  /** Lock translation axes at body spawn: `true` for all, or per-axis tuple. */
+  lockTranslations?: LockAxesInput;
 }
 
 const typeToGroup = new Map<string, number>();
@@ -68,6 +89,9 @@ export function packCollisionGroups(
 export class CollisionBuilder {
   static: boolean = false;
   sensor: boolean = false;
+  gravityScale?: number;
+  lockRotations?: LockAxesInput;
+  lockTranslations?: LockAxesInput;
 
   build(options: Partial<CollisionOptions>): [SimulationBodyDefinition, SimulationColliderDefinition] {
     const bodyDef = this.bodyDesc({
@@ -89,6 +113,9 @@ export class CollisionBuilder {
   withCollision(collisionOptions: Partial<CollisionOptions>): this {
     this.sensor = collisionOptions?.sensor ?? this.sensor;
     this.static = collisionOptions?.static ?? this.static;
+    this.gravityScale = collisionOptions?.gravityScale ?? this.gravityScale;
+    this.lockRotations = collisionOptions?.lockRotations ?? this.lockRotations;
+    this.lockTranslations = collisionOptions?.lockTranslations ?? this.lockTranslations;
     return this;
   }
 
@@ -102,12 +129,21 @@ export class CollisionBuilder {
   }
 
   bodyDesc({ isDynamicBody = true }): SimulationBodyDefinition {
-    return {
+    const def: SimulationBodyDefinition = {
       kind: isDynamicBody ? StageBodyKind.Dynamic : StageBodyKind.Static,
       position: [0, 0, 0],
-      gravityScale: 1,
+      gravityScale: this.gravityScale ?? 1,
       canSleep: false,
       ccdEnabled: true,
     };
+    const lockRotation = normalizeLockAxes(this.lockRotations);
+    if (lockRotation) {
+      def.lockRotation = lockRotation;
+    }
+    const lockTranslation = normalizeLockAxes(this.lockTranslations);
+    if (lockTranslation) {
+      def.lockTranslation = lockTranslation;
+    }
+    return def;
   }
 }

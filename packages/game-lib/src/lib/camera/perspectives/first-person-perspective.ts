@@ -123,6 +123,11 @@ export class FirstPersonPerspective implements CameraPerspective {
 		this._pitch = MathUtils.clamp(pitch, -this.opts.pitchLimit, this.opts.pitchLimit);
 	}
 
+	/** Set eye height above the followed target (used when syncing from FirstPersonBehavior). */
+	setEyeHeight(height: number): void {
+		this.opts.eyeHeight = height;
+	}
+
 	/** Current yaw in radians. */
 	get yaw(): number { return this._yaw; }
 

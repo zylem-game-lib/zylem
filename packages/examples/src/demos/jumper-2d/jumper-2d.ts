@@ -37,6 +37,10 @@ export default function createDemo() {
 		name: 'zylem-man-jumper',
 		position: { x: -8, y: -3, z: 0 },
 		size: { x: 2, y: 2, z: 1 },
+		// Keep X/Y free so platform contact response works (the zero-gravity
+		// stage would otherwise lock all translations); Z stays locked to the
+		// 2D plane and the jumper behavior supplies its own gravity.
+		collision: { lockTranslations: [false, false, true], lockRotations: true },
 		images: [{ name: 'zylem-man', file: zylemManSprite }],
 	});
 
