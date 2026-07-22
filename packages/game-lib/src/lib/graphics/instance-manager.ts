@@ -1,5 +1,6 @@
 import { BufferGeometry, InstancedMesh, Material, Matrix4, Object3D, Vector3, Quaternion } from 'three';
 import type { GameEntity, GameEntityOptions } from '../entities/entity';
+import { isSpawnPlacementPending } from '../entities/spawn-placement';
 import { shortHash, sortedStringify } from '../core/utility/strings';
 import { getBodyRenderPose } from '../physics/physics-pose';
 
@@ -183,6 +184,13 @@ export class InstanceManager {
 			for (const index of pack.activeIndices) {
 				const entity = pack.entities[index];
 				if (!entity) continue;
+
+				if (isSpawnPlacementPending(entity)) {
+					matrix.makeScale(0, 0, 0);
+					pack.instancedMesh.setMatrixAt(index, matrix);
+					needsUpdate = true;
+					continue;
+				}
 
 				const isDirty = pack.dirtyIndices.has(index);
 				const hasBody = !!entity.body;

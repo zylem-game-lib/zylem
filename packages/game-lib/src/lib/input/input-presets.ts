@@ -121,7 +121,29 @@ export function useMouseLook(player: InputPlayer, options?: { sensitivity?: numb
 		[player]: {
 			mouse: {
 				pointerLock: true,
+				lookMode: 'delta',
 				sensitivity: options?.sensitivity,
+			} satisfies MouseConfig,
+		},
+	} as GameInputConfig;
+}
+
+/**
+ * Enables screen-center mouse look (free cursor, no pointer lock).
+ * Cursor offset from the game canvas center maps to yaw/pitch up to `maxLookDegrees`.
+ * @example stage.setInputConfiguration(useScreenCenterLook('p1'));
+ */
+export function useScreenCenterLook(
+	player: InputPlayer,
+	options?: { maxLookDegrees?: number; lookSensitivity?: number },
+): GameInputConfig {
+	return {
+		[player]: {
+			mouse: {
+				pointerLock: false,
+				lookMode: 'screenCenter',
+				maxLookDegrees: options?.maxLookDegrees ?? 45,
+				lookSensitivity: options?.lookSensitivity,
 			} satisfies MouseConfig,
 		},
 	} as GameInputConfig;

@@ -1,8 +1,33 @@
 import { InputProvider, AnalogState, ButtonState, InputGamepad } from './input';
 import { compileMapping, mergeAnalogState, mergeButtonState, PropertyPath } from './input-state';
 import { MouseConfig } from '../game/game-interfaces';
+import { debugState } from '../debug/debug-state';
+import { subscribe } from 'valtio/vanilla';
 
 const DEFAULT_SENSITIVITY = 0.002;
+
+function clamp(value: number, min: number, max: number): number {
+	return Math.max(min, Math.min(max, value));
+}
+
+function resolveGameCanvas(root: HTMLElement): HTMLCanvasElement | null {
+	if (root instanceof HTMLCanvasElement) {
+		return root;
+	}
+	const direct = root.querySelector('canvas');
+	if (direct instanceof HTMLCanvasElement) {
+		return direct;
+	}
+	for (const el of root.querySelectorAll('*')) {
+		const shadow = (el as HTMLElement).shadowRoot;
+		if (!shadow) continue;
+		const nested = shadow.querySelector('canvas');
+		if (nested instanceof HTMLCanvasElement) {
+			return nested;
+		}
+	}
+	return null;
+}
 
 /**
  * Maps mouse movement and button input to the InputGamepad interface.
@@ -12,7 +37,8 @@ const DEFAULT_SENSITIVITY = 0.002;
  *  - Left click   -> shoulders.LTrigger
  *  - Right click  -> shoulders.RTrigger
  *
- * Supports optional pointer lock for FPS-style camera control.
+ * Supports optional pointer lock for FPS-style camera control, or
+ * screen-center look (free cursor mapped from canvas center).
  */
 export class MouseProvider implements InputProvider {
 	private buttonStates = new Map<number, ButtonState>();
@@ -22,24 +48,52 @@ export class MouseProvider implements InputProvider {
 	private movementX = 0;
 	private movementY = 0;
 
-	private pointerX = 0;
-	private pointerY = 0;
+	private pointerX = 0.5;
+	private pointerY = 0.5;
+	private pointerCenterX = 0;
+	private pointerCenterY = 0;
 
 	private mouseButtonDown = new Set<number>();
 
 	private sensitivity: number;
 	private usePointerLock: boolean;
+	private lookMode: 'delta' | 'screenCenter';
 	private isLocked = false;
 
 	private targetElement: HTMLElement;
+	private debugUnsubscribe: (() => void) | null = null;
+
+	private updatePointerPosition(clientX: number, clientY: number): void {
+		this.pointerX = clientX / window.innerWidth;
+		this.pointerY = clientY / window.innerHeight;
+
+		const canvas = resolveGameCanvas(this.targetElement);
+		if (canvas) {
+			const rect = canvas.getBoundingClientRect();
+			if (rect.width > 0 && rect.height > 0) {
+				const cx = rect.left + rect.width / 2;
+				const cy = rect.top + rect.height / 2;
+				this.pointerCenterX = clamp((clientX - cx) / (rect.width / 2), -1, 1);
+				this.pointerCenterY = clamp((clientY - cy) / (rect.height / 2), -1, 1);
+				return;
+			}
+		}
+
+		this.pointerCenterX = clamp((this.pointerX - 0.5) * 2, -1, 1);
+		this.pointerCenterY = clamp((this.pointerY - 0.5) * 2, -1, 1);
+	}
 
 	// --- bound event handlers ---
 
 	private onMouseMove = (e: MouseEvent) => {
+		this.updatePointerPosition(e.clientX, e.clientY);
+
+		if (debugState.enabled || this.lookMode === 'screenCenter') {
+			return;
+		}
+
 		this.movementX += e.movementX;
 		this.movementY += e.movementY;
-		this.pointerX = e.clientX / window.innerWidth;
-		this.pointerY = e.clientY / window.innerHeight;
 	};
 
 	private onMouseDown = (e: MouseEvent) => {
@@ -50,7 +104,7 @@ export class MouseProvider implements InputProvider {
 		if (!isGameCanvas) return;
 
 		this.mouseButtonDown.add(e.button);
-		if (this.usePointerLock && !this.isLocked) {
+		if (this.usePointerLock && !this.isLocked && !debugState.enabled) {
 			this.targetElement.requestPointerLock();
 		}
 	};
@@ -69,6 +123,7 @@ export class MouseProvider implements InputProvider {
 
 	constructor(config?: MouseConfig, targetElement?: HTMLElement) {
 		this.sensitivity = config?.sensitivity ?? DEFAULT_SENSITIVITY;
+		this.lookMode = config?.lookMode ?? 'delta';
 		this.usePointerLock = config?.pointerLock ?? false;
 		this.compiledMapping = compileMapping(config?.mapping ?? null);
 
@@ -84,6 +139,11 @@ export class MouseProvider implements InputProvider {
 
 		if (this.usePointerLock) {
 			document.addEventListener('pointerlockchange', this.onPointerLockChange);
+			this.debugUnsubscribe = subscribe(debugState, () => {
+				if (debugState.enabled && document.pointerLockElement === this.targetElement) {
+					document.exitPointerLock();
+				}
+			});
 		}
 	}
 
@@ -94,6 +154,8 @@ export class MouseProvider implements InputProvider {
 		this.targetElement.removeEventListener('mouseup', this.onMouseUp);
 		this.targetElement.removeEventListener('contextmenu', this.onContextMenu);
 		document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+		this.debugUnsubscribe?.();
+		this.debugUnsubscribe = null;
 
 		if (this.isLocked) {
 			document.exitPointerLock();
@@ -218,12 +280,24 @@ export class MouseProvider implements InputProvider {
 	// --- InputProvider interface ---
 
 	getInput(delta: number): Partial<InputGamepad> {
+		if (debugState.enabled) {
+			this.movementX = 0;
+			this.movementY = 0;
+		}
+
+		const zeroAxis: AnalogState = { value: 0, held: 0 };
+		const useDeltaLook = this.lookMode === 'delta';
+
 		const input: Partial<InputGamepad> = {
 			axes: {
-				Horizontal: { value: 0, held: 0 },
-				Vertical: { value: 0, held: 0 },
-				SecondaryHorizontal: this.handleMovementAxis('x', delta),
-				SecondaryVertical: this.handleMovementAxis('y', delta),
+				Horizontal: zeroAxis,
+				Vertical: zeroAxis,
+				SecondaryHorizontal: useDeltaLook
+					? this.handleMovementAxis('x', delta)
+					: zeroAxis,
+				SecondaryVertical: useDeltaLook
+					? this.handleMovementAxis('y', delta)
+					: zeroAxis,
 			},
 			shoulders: {
 				LTrigger: this.handleMouseButton(0, delta),
@@ -232,6 +306,8 @@ export class MouseProvider implements InputProvider {
 			pointer: {
 				x: this.pointerX,
 				y: this.pointerY,
+				centerX: this.pointerCenterX,
+				centerY: this.pointerCenterY,
 			},
 		};
 

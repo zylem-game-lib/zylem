@@ -21,6 +21,14 @@ import { BaseNode } from '../core/base-node';
 import { GameEntity, create } from '../entities/entity';
 import type { CreateEntityFn } from '@zylem/behaviors/core';
 import { ZylemActor } from '../entities/actor';
+import {
+	confirmSpawnPlacement,
+	beginSpawnPlacement,
+	endSpawnPlacement,
+	finalizeSpawnPlacement,
+	markSpawnPlacementReady,
+	syncRenderPositionFromBody,
+} from '../entities/spawn-placement';
 import { BaseEntityInterface } from '../types/entity-types';
 import { StageLoadingDelegate } from './stage-loading-delegate';
 import { StageEntityModelDelegate } from './stage-entity-model-delegate';
@@ -151,6 +159,7 @@ export class StageEntityDelegate {
 
 		const entity = child.create();
 
+		beginSpawnPlacement(entity);
 		this.registerBehaviorLinks(entity);
 		this.ensureEnvironmentStatic(entity);
 		this.maybeAttachEntityPhysics(entity);
@@ -171,8 +180,10 @@ export class StageEntityDelegate {
 		if (!isManagedRenderEntity(entity)) {
 			this.scene.addEntityGroup(entity);
 		}
+		finalizeSpawnPlacement(entity);
 		this.addEntityToStage(entity);
 		this.entityModelDelegate.observe(entity);
+		endSpawnPlacement(entity);
 	}
 
 	handleLateModelReady(entity: GameEntity<any>): void {
@@ -185,6 +196,7 @@ export class StageEntityDelegate {
 		if (!isManagedRenderEntity(entity)) {
 			this.scene.addEntityGroup(entity);
 		}
+		finalizeSpawnPlacement(entity);
 	}
 
 	// ─── Render strategy registration ────────────────────────────────────────

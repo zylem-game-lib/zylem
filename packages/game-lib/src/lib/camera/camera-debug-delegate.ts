@@ -50,6 +50,15 @@ export class CameraOrbitController {
 	/** Whether user-configured orbital controls are enabled (independent of debug) */
 	private _userOrbitEnabled = false;
 
+	/** Dedicated debug-view camera (e.g. `__debug__`); skips gameplay save/restore. */
+	private _isDebugViewCamera = false;
+
+	/** Default orbit target when nothing is selected (typically origin anchor). */
+	private _defaultOrbitTarget: Object3D | null = null;
+
+	/** Whether the initial debug orbit pose has been seeded. */
+	private _debugPoseSeeded = false;
+
 	constructor(camera: Camera, domElement: HTMLElement, cameraRig?: Object3D | null) {
 		this.camera = camera;
 		this.domElement = domElement;
@@ -61,6 +70,45 @@ export class CameraOrbitController {
 	 */
 	setScene(scene: Scene | null): void {
 		this.sceneRef = scene;
+	}
+
+	/**
+	 * Mark this controller as belonging to the dedicated debug-view camera.
+	 * Skips gameplay save/restore and rig detach when toggling debug mode.
+	 */
+	setDebugViewCamera(isDebugView: boolean): void {
+		this._isDebugViewCamera = isDebugView;
+	}
+
+	/**
+	 * Default orbit target used when debug selection is empty (e.g. origin anchor).
+	 */
+	setDefaultOrbitTarget(target: Object3D | null): void {
+		this._defaultOrbitTarget = target;
+		if (target && !this.orbitTarget && this.debugStateSnapshot.enabled) {
+			this.orbitTarget = target;
+		}
+	}
+
+	/**
+	 * Seed the debug camera to an orbit pose around a look-at point.
+	 */
+	seedOrbitPose(position: Vector3, lookAt: Vector3): void {
+		this.camera.position.copy(position);
+		this.camera.lookAt(lookAt);
+		if (this.orbitControls) {
+			this.orbitControls.target.copy(lookAt);
+			this.orbitControls.update();
+		}
+		this._debugPoseSeeded = true;
+	}
+
+	get isDebugViewCamera(): boolean {
+		return this._isDebugViewCamera;
+	}
+
+	get isDebugOrbitPoseSeeded(): boolean {
+		return this._debugPoseSeeded;
 	}
 
 	/**
@@ -180,6 +228,25 @@ export class CameraOrbitController {
 			enabled: state.enabled,
 			selected: [...state.selected],
 		};
+
+		if (this._isDebugViewCamera) {
+			if (state.enabled && !wasEnabled) {
+				this.enableOrbitControls();
+				if (this._debugPoseSeeded) {
+					this.restoreDebugCameraState();
+				}
+				this.updateOrbitTargetFromSelection(state.selected);
+			} else if (!state.enabled && wasEnabled) {
+				this.saveDebugCameraState();
+				if (!this._userOrbitEnabled) {
+					this.disableOrbitControls();
+				}
+			} else if (state.enabled) {
+				this.updateOrbitTargetFromSelection(state.selected);
+			}
+			return;
+		}
+
 		if (state.enabled && !wasEnabled) {
 			// Entering debug mode: save game camera state, detach from rig, restore debug camera state if available
 			this.saveCameraState();
@@ -227,11 +294,16 @@ export class CameraOrbitController {
 	}
 
 	private updateOrbitTargetFromSelection(selected: string[]) {
-		// Default to origin when no entity is selected
+		// Default to origin anchor when no entity is selected
 		if (!this.debugDelegate || selected.length === 0) {
-			this.orbitTarget = null;
+			this.orbitTarget = this._defaultOrbitTarget;
 			if (this.orbitControls) {
-				this.orbitControls.target.set(0, 0, 0);
+				if (this.orbitTarget) {
+					this.orbitTarget.getWorldPosition(this.orbitTargetWorldPos);
+					this.orbitControls.target.copy(this.orbitTargetWorldPos);
+				} else {
+					this.orbitControls.target.set(0, 0, 0);
+				}
 			}
 			return;
 		}
@@ -247,7 +319,15 @@ export class CameraOrbitController {
 				return;
 			}
 		}
-		this.orbitTarget = null;
+		this.orbitTarget = this._defaultOrbitTarget;
+		if (this.orbitControls) {
+			if (this.orbitTarget) {
+				this.orbitTarget.getWorldPosition(this.orbitTargetWorldPos);
+				this.orbitControls.target.copy(this.orbitTargetWorldPos);
+			} else {
+				this.orbitControls.target.set(0, 0, 0);
+			}
+		}
 	}
 
 	private detachDebugDelegate() {

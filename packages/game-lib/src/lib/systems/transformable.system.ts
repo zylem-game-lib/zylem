@@ -27,7 +27,12 @@ export function syncRenderPoses(stage: StageSystem): void {
 		}
 
 		// Instanced and bundled entities are synced by RenderStrategyManager / bundles.
-		if (stageEntity.isInstanced || stageEntity.isBundled) {
+		// Camera-parented viewmodels own their local transform.
+		if (
+			stageEntity.isInstanced
+			|| stageEntity.isBundled
+			|| stageEntity.skipRenderPoseSync
+		) {
 			continue;
 		}
 

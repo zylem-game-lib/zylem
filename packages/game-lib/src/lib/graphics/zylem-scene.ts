@@ -12,6 +12,7 @@ import {
 } from 'three';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
+import { syncPendingPlacementVisibility } from '../entities/spawn-placement';
 import { isManagedRenderEntity } from './render-category';
 import { FOG_TYPE, ZylemFog } from '../entities/fog';
 import { ZylemCamera } from '../camera/zylem-camera';
@@ -298,6 +299,7 @@ export class ZylemScene implements Entity<ZylemScene> {
 		}
 
 		this.add(target, position);
+		syncPendingPlacementVisibility(entity);
 	}
 
 	private isAttachedOutsideScene(object: Object3D): boolean {

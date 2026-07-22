@@ -145,4 +145,34 @@ describe('syncRenderPoses', () => {
 		expect(target.position.y).toBe(0);
 		expect(target.position.z).toBe(0);
 	});
+
+	it('skips entities with skipRenderPoseSync so camera-parented viewmodels keep local transforms', () => {
+		const body = createFakeBody();
+		registerDirectBodyPoseHistory(body);
+		prepareDirectBodyPoseHistoryStep(body);
+		body._translation = { x: 9, y: 9, z: 9 };
+		commitDirectBodyPoseHistoryStep(body);
+
+		const key = 'viewmodel-entity';
+		const target = new Group();
+		target.position.set(0.28, -0.28, -0.5);
+		const entity = {
+			uuid: key,
+			body,
+			group: target,
+			mesh: undefined,
+			skipRenderPoseSync: true,
+			markedForRemoval: false,
+			controlledRotation: false,
+		};
+
+		syncRenderPoses({
+			_childrenMap: new Map([[key, entity as any]]),
+			_world: { interpolationAlpha: 1 },
+		} as any);
+
+		expect(target.position.x).toBeCloseTo(0.28);
+		expect(target.position.y).toBeCloseTo(-0.28);
+		expect(target.position.z).toBeCloseTo(-0.5);
+	});
 });

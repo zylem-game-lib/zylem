@@ -83,6 +83,12 @@ export interface MouseConfig {
 	pointerLock?: boolean;
 	/** Sensitivity multiplier for mouse movement (default 0.002). */
 	sensitivity?: number;
+	/** How mouse position drives look: delta (movement) or screenCenter (cursor offset from viewport center). */
+	lookMode?: 'delta' | 'screenCenter';
+	/** Max yaw/pitch in degrees when `lookMode` is `screenCenter` (default 45). */
+	maxLookDegrees?: number;
+	/** Screen-center follow rate toward cursor-mapped target (lower = snappier; default 2). */
+	lookSensitivity?: number;
 }
 
 export interface GameInputPlayerConfig {

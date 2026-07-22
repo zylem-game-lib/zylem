@@ -10,6 +10,7 @@
 import { zylemEventBus } from '../events';
 import { ZylemScene } from '../graphics/zylem-scene';
 import { GameEntity } from '../entities/entity';
+import { finalizeSpawnPlacement, syncPendingPlacementVisibility } from '../entities/spawn-placement';
 import { usesManagedRenderPath } from '../graphics/render-category';
 
 /**
@@ -43,6 +44,8 @@ export class StageEntityModelDelegate {
 		if (entity.group || entity.mesh) {
 			if (!usesManagedRenderPath(entity.options)) {
 				this.scene?.addEntityGroup(entity);
+				syncPendingPlacementVisibility(entity);
+				finalizeSpawnPlacement(entity);
 				this.onEntityReady?.(entity);
 			}
 			return;
@@ -68,6 +71,8 @@ export class StageEntityModelDelegate {
 		}
 
 		this.scene?.addEntityGroup(entity);
+		syncPendingPlacementVisibility(entity);
+		finalizeSpawnPlacement(entity);
 		if (!usesManagedRenderPath(entity.options)) {
 			this.onEntityReady?.(entity);
 		}

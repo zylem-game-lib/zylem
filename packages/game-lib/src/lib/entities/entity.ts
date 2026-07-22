@@ -43,6 +43,12 @@ import type { NodeInterface } from '../core/node-interface';
 import { commonDefaults } from './common';
 import type { Action } from '../actions/action';
 import { deepCloneValue, deepMergeValues } from '../core/clone-utils';
+import {
+	confirmSpawnPlacement,
+	markSpawnPlacementReady,
+	revealSpawnPlacement,
+	syncRenderPositionFromBody,
+} from './spawn-placement';
 
 export interface CollisionContext<
 	T,
@@ -110,6 +116,17 @@ export type GameEntityOptions = {
 	color?: Color;
 	size?: Vec3Input;
 	position?: Vec3Input;
+	/**
+	 * Spawn visibility behavior:
+	 * - `undefined` (default): hidden while `spawnEntity` runs, revealed once
+	 *   the spawn finalizes — even if no position was assigned.
+	 * - `true` (strict): stays hidden until the first `setPosition`/`setPose`,
+	 *   for spawner patterns that place the entity frames after spawn.
+	 * - `false`: never hidden during spawn.
+	 */
+	hideUntilPositioned?: boolean;
+	/** Explicit render visibility. When false, entity stays hidden until {@link GameEntity.reveal}. */
+	visible?: boolean;
 	/** Render path: `environment` (bundle), `pack` (instanced), or `none` (default). */
 	category?: RenderCategory;
 	runtime?: RuntimeEntityOptions;
@@ -240,6 +257,15 @@ export class GameEntity<O extends GameEntityOptions>
 	// Transform store for physics intent accumulation (auto-created in create())
 	public transformStore: TransformState;
 
+	/** Hide render target until spawn placement is confirmed. */
+	public _spawnPlacementPending = false;
+	/** Author passed `position` in create options. */
+	public _spawnPositionExplicit = false;
+	/** setPosition / setPose assigned a spawn placement during this spawn. */
+	public _spawnPlacementReady = false;
+	/** True while {@link StageEntityDelegate.spawnEntity} is running for this entity. */
+	public _spawnInProgress = false;
+
 	// Movement & rotation methods are assigned at runtime by makeTransformable.
 	// The `implements` clause above ensures the type contract; declarations below
 	// satisfy the compiler while the constructor fills them in.
@@ -279,6 +305,60 @@ export class GameEntity<O extends GameEntityOptions>
 		super();
 		this.transformStore = createTransformStore();
 		makeTransformable(this);
+		this.wrapSpawnPlacementMutators();
+	}
+
+	private wrapSpawnPlacementMutators(): void {
+		const afterPositionMutation = () => {
+			markSpawnPlacementReady(this);
+			if (this._spawnInProgress) {
+				return;
+			}
+			syncRenderPositionFromBody(this);
+			confirmSpawnPlacement(this);
+		};
+
+		const wrapPositionMutator = (
+			method: (x: number, y: number, z: number) => void,
+		) => {
+			return (x: number, y: number, z: number) => {
+				if (!this.body && !(this.wasmStageRef && this.runtimeHandle >= 0)) {
+					return;
+				}
+				method(x, y, z);
+				afterPositionMutation();
+			};
+		};
+
+		const wrapAxisMutator = (method: (value: number) => void) => {
+			return (value: number) => {
+				if (!this.body && !(this.wasmStageRef && this.runtimeHandle >= 0)) {
+					return;
+				}
+				method(value);
+				afterPositionMutation();
+			};
+		};
+
+		this.setPosition = wrapPositionMutator(this.setPosition.bind(this));
+		this.setPositionX = wrapAxisMutator(this.setPositionX.bind(this));
+		this.setPositionY = wrapAxisMutator(this.setPositionY.bind(this));
+		this.setPositionZ = wrapAxisMutator(this.setPositionZ.bind(this));
+
+		const originalSetPose = this.setPose.bind(this);
+		this.setPose = (input) => {
+			const ok = originalSetPose(input);
+			if (ok && input.position != null) {
+				afterPositionMutation();
+			}
+			return ok;
+		};
+	}
+
+	/** Make the entity visible, clearing spawn placement pending state. */
+	public reveal(): void {
+		this.options.visible = true;
+		revealSpawnPlacement(this);
 	}
 
 	/**

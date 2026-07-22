@@ -37,6 +37,7 @@ import { EntityBuilder, EntityCollisionBuilder } from './builder';
 import { commonDefaults } from './common';
 import { standardShader } from '../graphics/shaders/standard.shader';
 import { deepMergeValues } from '../core/clone-utils';
+import { syncPendingPlacementVisibility } from './spawn-placement';
 
 type AnimationObject = {
 	key?: string;
@@ -924,6 +925,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 					this.group = new Group();
 					this.group.add(this._object);
 					this.group.scale.copy(getActorScale(this.options));
+					syncPendingPlacementVisibility(this);
 
 					this.applyMaterialOverrides();
 
