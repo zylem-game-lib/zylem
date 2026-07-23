@@ -113,7 +113,7 @@
     "@dgreenheck/three-pinata": "^2.0.1",
     "@sinclair/typebox": "^0.34.41",
     "@types/howler": "^2.2.12",
-    "@zylem/behaviors": "link:../../../behaviors",
+    "@zylem/behaviors": "^0.5.8",
     "comlink": "^4.4.2",
     "howler": "^2.2.4",
     "idb-keyval": "^6.2.2",
