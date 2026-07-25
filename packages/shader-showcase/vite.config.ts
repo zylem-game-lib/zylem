@@ -18,18 +18,31 @@ export default defineConfig({
 		// @zylem/ui (compiled from its shipped TSX source) shares the app's
 		// Solid runtime instead of its own copy.
 		dedupe: ['three', 'solid-js'],
+		alias: [
+			// Solid-only: route valtio's React-coupled root entry to vanilla.
+			{ find: /^valtio$/, replacement: 'valtio/vanilla' },
+		],
 	},
+	assetsInclude: ['**/*.wasm'],
 	optimizeDeps: {
 		// @zylem/ui/components resolves to TypeScript source; keep it out of
 		// esbuild prebundling (which would apply the React JSX transform) so
 		// vite-plugin-solid compiles it instead.
-		exclude: ['@zylem/ui'],
+		// @zylem/behaviors and @zylem/runtime are excluded so the runtime's
+		// `new URL('./zylem_runtime.wasm', import.meta.url)` keeps resolving
+		// next to the real module instead of vite's prebundle cache.
+		exclude: ['@zylem/ui', '@zylem/behaviors', '@zylem/runtime'],
 	},
 	server: {
 		port: Number.isFinite(devPort) ? devPort : 3332,
 		fs: {
-			// Allow serving files from sibling packages (workspace deps)
-			allow: [path.resolve(__dirname, '..')],
+			// Allow serving files from sibling packages (workspace deps) and the
+			// linked behaviors/runtime repos that ship the wasm module.
+			allow: [
+				path.resolve(__dirname, '../..'),
+				path.resolve(__dirname, '../../../behaviors'),
+				path.resolve(__dirname, '../../../runtime'),
+			],
 		},
 	},
 	root: __dirname,
