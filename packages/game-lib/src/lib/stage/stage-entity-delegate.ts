@@ -15,6 +15,7 @@ import { RenderStrategyManager } from '../graphics/render-strategy-manager';
 import { resolveRenderCategory, isManagedRenderEntity } from '../graphics/render-category';
 import { StageBodyKind } from '@zylem/behaviors/core';
 import { clearVariables } from './stage-state';
+import { zylemEventBus } from '../events';
 import { debugState } from '../debug/debug-state';
 import { getGlobals } from '../game/game-state';
 import { BaseNode } from '../core/base-node';
@@ -296,6 +297,7 @@ export class StageEntityDelegate {
 
 		this.childrenMap.delete(uuid);
 		this.debugMap.delete(uuid);
+		zylemEventBus.emit('entity:destroyed', { entityId: uuid });
 		return true;
 	}
 
@@ -503,15 +505,23 @@ export class StageEntityDelegate {
 		this.behaviorEntityIndex.clear();
 		this.behaviorLinksByUuid.clear();
 
+		const destroyedUuids: string[] = [];
 		this.childrenMap.forEach((child) => {
 			try {
 				child.nodeDestroy({ me: child, globals: getGlobals() });
 			} catch { /* noop */ }
 			clearVariables(child);
+			destroyedUuids.push(child.uuid);
 		});
 		this.childrenMap.clear();
 		this.debugMap.clear();
 		this.entityAddedHandlers = [];
+
+		// Bulk teardown bypasses removeEntityByUuid, so announce the removals
+		// here too or listeners (thumbnail cache, editor entity list) leak.
+		for (const uuid of destroyedUuids) {
+			zylemEventBus.emit('entity:destroyed', { entityId: uuid });
+		}
 
 		this._isLoaded = false;
 		this.scene = null;

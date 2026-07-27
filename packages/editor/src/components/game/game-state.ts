@@ -5,7 +5,6 @@
 
 import { proxy } from 'valtio/vanilla';
 import { editorEvents } from '../events';
-import { zylemEventBus, type StateDispatchPayload } from '@zylem/game-lib/events';
 
 /** Game config state from game-lib */
 export interface GameConfigState {
@@ -63,26 +62,8 @@ editorEvents.on<Partial<GameState>>('game', (event) => {
     }
 });
 
-// Subscribe to state dispatch events from game-lib via zylemEventBus
-zylemEventBus.on('state:dispatch', (payload: StateDispatchPayload) => {
-    const { scope, path, value, config } = payload;
-    if (scope === 'game') {
-        // Update the local globals state
-        gameState.globals[path] = value;
-    }
-    // Capture config if present
-    if (config) {
-        gameState.config = {
-            id: config.id,
-            aspectRatio: config.aspectRatio,
-            fullscreen: config.fullscreen,
-            bodyBackground: config.bodyBackground,
-            internalResolution: config.internalResolution,
-            debug: config.debug,
-        };
-    }
-    // TODO: Handle 'stage' and 'entity' scopes when needed
-});
+// Game-lib updates (config, global variables) arrive through the typed
+// bridge — see src/bridge/editor-bridge.ts.
 
 // Backwards compatibility alias
 export { gameState as state };

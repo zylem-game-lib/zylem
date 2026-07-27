@@ -13,8 +13,9 @@ import { BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments, Rayca
 import { subscribe } from 'valtio/vanilla';
 import { ZylemStage } from './zylem-stage';
 import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
-import { debugState, getDebugTool, getHoveredEntity, resetHoveredEntity, setHoveredEntity, setSelectedEntity } from '../debug/debug-state';
+import { debugState, getDebugTool, getHoveredEntityId, registerDebugEntityResolver, resetHoveredEntity, setHoveredEntityId, setSelectedEntityId } from '../debug/debug-state';
 import { registerEntityFocusContext } from '../debug/entity-focus';
+import { publishGameNotice } from '../bridge/game-bridge';
 import { DebugEntityCursor } from './debug-entity-cursor';
 import type { GameEntity } from '../entities/entity';
 import type { BaseNode } from '../core/base-node';
@@ -50,6 +51,9 @@ export class StageDebugDelegate {
 	private cameraDebugDelegate: StageCameraDebugDelegate | null = null;
 	private debugStateUnsubscribe: (() => void) | null = null;
 	private focusContextUnregister: (() => void) | null = null;
+	private entityResolverUnregister: (() => void) | null = null;
+	private lastDebugEnabled: boolean | null = null;
+	private warnedMissingAddFactory = false;
 
 	constructor(stage: ZylemStage, options?: StageDebugDelegateOptions) {
 		this.stage = stage;
@@ -58,11 +62,17 @@ export class StageDebugDelegate {
 			addEntityFactory: options?.addEntityFactory ?? null,
 		};
 
-		// Self-managing: sync with current state then subscribe for changes
+		// Self-managing: sync with current state then subscribe for changes.
+		// `debugState` also carries per-frame hover/selection writes, so only
+		// an actual `enabled` transition may run the (expensive) activate path.
 		this.syncWithDebugState();
 		this.debugStateUnsubscribe = subscribe(debugState, () => {
 			this.syncWithDebugState();
 		});
+
+		this.entityResolverUnregister = registerDebugEntityResolver((uuid) =>
+			this.resolveEntity(uuid),
+		);
 
 		this.focusContextUnregister = registerEntityFocusContext({
 			resolveEntity: (uuid) => this.resolveEntity(uuid),
@@ -74,10 +84,21 @@ export class StageDebugDelegate {
 				if (!debugState.enabled) {
 					debugState.enabled = true;
 				}
+				// Activate now so the caller can frame immediately, and record
+				// the transition so the queued subscription doesn't repeat it.
+				this.lastDebugEnabled = true;
 				this.activate();
-				this.populateDebugMap();
 			},
 		});
+	}
+
+	/**
+	 * Supply the factory the `add` tool uses to spawn entities at the clicked
+	 * point. Without one the tool warns instead of silently doing nothing.
+	 */
+	setAddEntityFactory(factory: AddEntityFactory | null): void {
+		this.options.addEntityFactory = factory;
+		this.warnedMissingAddFactory = false;
 	}
 
 	/** Camera used for debug orbit / raycasts (active primary, usually `__debug__`). */
@@ -116,8 +137,18 @@ export class StageDebugDelegate {
 		debugCam.setDebugDelegate(this.cameraDebugDelegate);
 	}
 
+	/**
+	 * Activate/deactivate only when `debugState.enabled` actually flips.
+	 * Hover and selection write to `debugState` every frame, and `activate()`
+	 * rebuilds post-processing, so reacting to every notification would
+	 * rebuild the render pipeline once per frame.
+	 */
 	private syncWithDebugState(): void {
-		if (debugState.enabled) {
+		const enabled = debugState.enabled;
+		if (enabled === this.lastDebugEnabled) return;
+		this.lastDebugEnabled = enabled;
+
+		if (enabled) {
 			this.activate();
 		} else {
 			this.deactivate();
@@ -228,7 +259,16 @@ export class StageDebugDelegate {
 		}
 
 		const tool = getDebugTool();
-		const isCursorTool = tool === 'select' || tool === 'delete';
+		// Hover tools paint the cursor highlight; the add tool only needs the
+		// ray's hit position on click.
+		const isHoverTool = tool === 'select' || tool === 'delete';
+		const isActionTool = isHoverTool || tool === 'add';
+
+		if (!isActionTool) {
+			this.isMouseDown = false;
+			this.debugCursor?.hide();
+			return;
+		}
 
 		this.raycaster.setFromCamera(this.mouseNdc, viewCamera.camera);
 		const origin = this.raycaster.ray.origin.clone();
@@ -236,27 +276,24 @@ export class StageDebugDelegate {
 
 		const hit = world.raycast(origin, direction, this.options.maxRayDistance);
 
-		if (hit && isCursorTool) {
-			const hoveredUuid = hit.uuid;
-			if (hoveredUuid) {
-				const entity = this.stage.entityDelegate.debugMap.get(hoveredUuid);
-				if (entity) setHoveredEntity(entity as any);
-			} else {
-				resetHoveredEntity();
+		if (hit) {
+			if (isHoverTool) {
+				setHoveredEntityId(hit.uuid ?? null);
 			}
-
 			if (this.isMouseDown) {
-				this.handleActionOnHit(hoveredUuid ?? null, origin, direction, hit.distance);
+				this.handleActionOnHit(hit.uuid ?? null, origin, direction, hit.distance);
 			}
+		} else if (isHoverTool) {
+			resetHoveredEntity();
 		}
 		this.isMouseDown = false;
 
-		const hoveredUuid = getHoveredEntity();
+		const hoveredUuid = isHoverTool ? getHoveredEntityId() : null;
 		if (!hoveredUuid) {
 			this.debugCursor?.hide();
 			return;
 		}
-		const hoveredEntity: any = this.stage.entityDelegate.debugMap.get(`${hoveredUuid}`);
+		const hoveredEntity: any = this.resolveEntity(hoveredUuid);
 		const targetObject = hoveredEntity?.group ?? hoveredEntity?.mesh ?? null;
 		if (!targetObject) {
 			this.debugCursor?.hide();
@@ -280,6 +317,8 @@ export class StageDebugDelegate {
 	dispose(): void {
 		this.focusContextUnregister?.();
 		this.focusContextUnregister = null;
+		this.entityResolverUnregister?.();
+		this.entityResolverUnregister = null;
 		this.debugStateUnsubscribe?.();
 		this.debugStateUnsubscribe = null;
 		this.deactivate();
@@ -292,9 +331,8 @@ export class StageDebugDelegate {
 		const tool = getDebugTool();
 		switch (tool) {
 			case 'select': {
-				if (hoveredUuid) {
-					const entity = this.resolveEntity(hoveredUuid);
-					if (entity) setSelectedEntity(entity);
+				if (hoveredUuid && this.resolveEntity(hoveredUuid)) {
+					setSelectedEntityId(hoveredUuid);
 				}
 				break;
 			}
@@ -304,8 +342,18 @@ export class StageDebugDelegate {
 				}
 				break;
 			}
-			case 'scale': {
-				if (!this.options.addEntityFactory) break;
+			case 'add': {
+				if (!this.options.addEntityFactory) {
+					if (!this.warnedMissingAddFactory) {
+						this.warnedMissingAddFactory = true;
+						const message =
+							'Add tool: no `addEntityFactory` configured for this stage, '
+							+ 'so there is nothing to spawn.';
+						console.warn(message);
+						publishGameNotice('warn', message);
+					}
+					break;
+				}
 				const hitPosition = origin.clone().add(direction.clone().multiplyScalar(toi));
 				const newNode = this.options.addEntityFactory({ position: hitPosition });
 				if (newNode) {

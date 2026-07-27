@@ -67,6 +67,9 @@ export default defineConfig({
         'solid-js',
         'solid-js/web',
         /^@zylem\/game-lib(\/.*)?$/,
+        // Keep the bridge external so the editor and game share the exact
+        // same module instance (the registry is realm-safe regardless).
+        /^@zylem\/bridge(\/.*)?$/,
     ],
     // tsup treats `dependencies` as external by default, which would
     // forward `@zylem/ui/styles.css?raw` to the consumer's bundler.

@@ -61,6 +61,10 @@
       "types": "./dist/debug.d.ts",
       "import": "./dist/debug.js"
     },
+    "./bridge": {
+      "types": "./dist/bridge.d.ts",
+      "import": "./dist/bridge.js"
+    },
     "./web-components": {
       "types": "./dist/web-components.d.ts",
       "import": "./dist/web-components.js"
@@ -114,6 +118,7 @@
     "@sinclair/typebox": "^0.34.41",
     "@types/howler": "^2.2.12",
     "@zylem/behaviors": "^0.5.8",
+    "@zylem/bridge": "workspace:*",
     "comlink": "^4.4.2",
     "howler": "^2.2.4",
     "idb-keyval": "^6.2.2",

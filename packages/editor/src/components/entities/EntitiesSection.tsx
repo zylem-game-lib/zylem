@@ -1,31 +1,28 @@
 import type { Component } from 'solid-js';
 import { For } from 'solid-js';
-import { focusEntity, debugState } from '@zylem/game-lib/debug';
 import { useEditor } from '../EditorContext';
 import { EntityThumbnail } from './EntityThumbnail';
-import { dispatchEditorUpdate } from '../editor-events';
+import { sendEntityFocus, sendEntitySelect } from '../../bridge/editor-bridge';
 import { setDebugStore } from '../editor-store';
 import { setSelectedEntityId } from './entities-state';
+import { getEntityThumbnail } from './thumbnail-store';
 import { printToConsole } from '..';
 import type { BaseEntityInterface } from '../../types';
 
 /**
  * Handle entity button click — log entity info to the editor console, select
- * the entity, and best-effort frame the debug camera when a live stage focus
- * context exists (no-op in stub mode).
+ * the entity, and ask the game (via the bridge) to frame the debug camera on
+ * it (no-op in stub mode).
  */
 function handleEntityClick(entity: Partial<BaseEntityInterface>): void {
 	if (!entity.uuid) return;
 
-	const { thumbnail: _thumbnail, ...entityInfo } = entity;
-	printToConsole(`Entity: ${JSON.stringify(entityInfo, null, 2)}`);
+	printToConsole(`Entity: ${JSON.stringify(entity, null, 2)}`);
 	setSelectedEntityId(entity.uuid);
-	focusEntity(entity.uuid);
-
-	if (debugState.enabled) {
-		setDebugStore('debug', true);
-		dispatchEditorUpdate({ gameState: { debugFlag: true } });
-	}
+	sendEntitySelect(entity.uuid);
+	// Focusing enables debug mode game-side; mirror that in the editor store.
+	sendEntityFocus(entity.uuid);
+	setDebugStore('debug', true);
 }
 
 export const EntitiesSection: Component = () => {
@@ -49,8 +46,8 @@ export const EntitiesSection: Component = () => {
 								<EntityThumbnail
 									type={entity.type ?? 'Box'}
 									name={entity.name}
-									thumbnail={entity.thumbnail}
-									bounds={entity.bounds}
+									thumbnail={getEntityThumbnail(entity.uuid)?.url}
+									bounds={getEntityThumbnail(entity.uuid)?.bounds ?? entity.bounds}
 								/>
 							</button>
 						)}

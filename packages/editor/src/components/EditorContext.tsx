@@ -91,7 +91,10 @@ export function EditorProvider(props: EditorProviderProps) {
 		setStage('inputs', reconcile(stageState.inputs));
 		setStage('variables', reconcile(stageState.variables));
 		setStage('gravity', reconcile(stageState.gravity));
-		setStage('entities', reconcile(stageState.entities));
+		// Key by uuid so reconcile matches entities by identity rather than
+		// array position; without it, removing one entity re-diffs every entry
+		// after it.
+		setStage('entities', reconcile(stageState.entities, { key: 'uuid' }));
 	});
 
 	onCleanup(() => {

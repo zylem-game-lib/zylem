@@ -12,7 +12,17 @@ import { debugState, type DebugTools } from './entities/entities-state';
 const STORAGE_KEY = 'zylem-editor-state';
 
 // Default panel order
-const DEFAULT_PANEL_ORDER = ['game-config', 'stage-config', 'entities', 'console'];
+const DEFAULT_PANEL_ORDER = ['game-config', 'stage-config', 'entities', 'console', 'bridge'];
+
+/**
+ * Merge panels added since a user's layout was persisted. Without this, an
+ * existing localStorage `panelOrder` would permanently hide new panels.
+ */
+const withNewPanels = (stored: string[] | undefined): string[] => {
+	if (!stored) return [...DEFAULT_PANEL_ORDER];
+	const missing = DEFAULT_PANEL_ORDER.filter((id) => !stored.includes(id));
+	return missing.length > 0 ? [...stored, ...missing] : stored;
+};
 
 export interface DetachedPanelState {
 	position: { x: number; y: number };
@@ -65,7 +75,7 @@ export const [debugStore, setDebugStore] = createStore({
 	panelPosition: persisted.panelPosition ?? null,
 	toggleButtonPosition: persisted.toggleButtonPosition ?? { x: 0, y: 0 },
 	// Detachable panel state
-	panelOrder: persisted.panelOrder ?? [...DEFAULT_PANEL_ORDER],
+	panelOrder: withNewPanels(persisted.panelOrder),
 	detachedPanels: persisted.detachedPanels ?? {} as Record<string, DetachedPanelState>,
 	openSections: persisted.openSections ?? ['console'],
 	// Z-index ordering (last item = on top)

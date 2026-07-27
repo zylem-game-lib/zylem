@@ -5,15 +5,6 @@
 // Event bus for external state sync
 export { editorEvents, type EditorEvent, type EditorEventType } from './events';
 
-// Editor-to-app events (window CustomEvents)
-export {
-	dispatchEditorUpdate,
-	EDITOR_UPDATE_EVENT,
-	EDITOR_STATE_DISPATCH,
-	EDITOR_STATE_RECEIVE,
-	type EditorUpdatePayload,
-} from './editor-events';
-
 // State modules - re-exported from UI section directories
 export {
 	debugState,
@@ -57,4 +48,17 @@ export {
 export { EditorProvider, useEditor, type EditorContextValue } from './EditorContext';
 
 // Console
-export { consoleState, printToConsole, clearConsole, getConsoleContent } from './console/console-state';
+export { consoleState, printToConsole, clearConsole, getConsoleContent, MAX_CONSOLE_MESSAGES } from './console/console-state';
+
+// Bridge debug panel
+export {
+	bridgePanelState,
+	startBridgeCapture,
+	stopBridgeCapture,
+	setBridgeCapturePaused,
+	clearBridgeLog,
+	MAX_BRIDGE_LOG_ENTRIES,
+	type BridgeLogEntry,
+	type BridgePanelState,
+	type BridgeStatsRow,
+} from './bridge/bridge-panel-state';

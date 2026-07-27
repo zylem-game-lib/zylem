@@ -16,6 +16,7 @@
   "dependencies": {
     "@solidjs/router": "^0.14.10",
     "@zylem/assets": "^0.1.1",
+    "@zylem/bridge": "workspace:*",
     "@zylem/editor": "workspace:*",
     "@zylem/game-lib": "workspace:*",
     "@zylem/shaders": "workspace:*",

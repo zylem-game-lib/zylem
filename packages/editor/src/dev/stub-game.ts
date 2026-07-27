@@ -1,17 +1,14 @@
 /**
  * Standalone stub harness for `pnpm dev:editor`.
  *
- * Mounts an empty `<zylem-game>` shell (no WebGL Game instance), emits dummy
- * `state:dispatch` payloads so editor panels have data, and wires
- * `attachEditorStateBridge` so toolbar actions update game-lib debug state.
+ * Mounts an empty `<zylem-game>` shell (no WebGL Game instance) and publishes
+ * dummy payloads through the shared `@zylem/bridge` channel so editor panels
+ * have data, then wires `attachEditorStateBridge` so toolbar actions are
+ * observable in the console.
  */
 
 import '@zylem/game-lib/web-components';
-import {
-	zylemEventBus,
-	type EntityConfigPayload,
-	type StateDispatchPayload,
-} from '@zylem/game-lib/events';
+import { getZylemBridge, type EntitySummaryPayload } from '@zylem/bridge';
 import { attachEditorStateBridge } from '../host/editor-host';
 
 /**
@@ -26,7 +23,7 @@ function stubThumbnail(label: string, fill: string): string {
 	return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-const STUB_ENTITIES: EntityConfigPayload[] = [
+const STUB_ENTITIES: EntitySummaryPayload[] = [
 	{
 		uuid: 'stub-box-001',
 		name: 'Player',
@@ -69,21 +66,23 @@ const STUB_ENTITIES: EntityConfigPayload[] = [
 	},
 ];
 
-function buildStubPayload(): StateDispatchPayload {
-	return {
-		scope: 'game',
-		path: 'score',
-		value: 42,
-		previousValue: 0,
-		config: {
-			id: 'stub-game',
-			aspectRatio: 16 / 9,
-			fullscreen: false,
-			bodyBackground: '#0d0d10',
-			internalResolution: { width: 1280, height: 720 },
-			debug: true,
-		},
-		stageConfig: {
+/**
+ * Publish the full stub game state through the bridge channel.
+ */
+function publishStubState(): void {
+	const { channel } = getZylemBridge();
+
+	channel.send('game:config', {
+		id: 'stub-game',
+		aspectRatio: 16 / 9,
+		fullscreen: false,
+		bodyBackground: '#0d0d10',
+		internalResolution: { width: 1280, height: 720 },
+		debug: true,
+	});
+
+	channel.send('stage:snapshot', {
+		stage: {
 			id: 'stub-stage',
 			backgroundColor: '#1a1a22',
 			backgroundImage: null,
@@ -99,7 +98,13 @@ function buildStubPayload(): StateDispatchPayload {
 			},
 		},
 		entities: STUB_ENTITIES,
-	};
+	});
+
+	channel.send('game:variable', {
+		path: 'score',
+		value: 42,
+		previousValue: 0,
+	});
 }
 
 /**
@@ -118,18 +123,15 @@ export function createStubGameElement(): HTMLElement {
 }
 
 /**
- * Wire the editor↔game bridge and emit one dummy `state:dispatch` payload.
+ * Wire the editor↔game bridge and publish the dummy game state.
  * Call after `<zylem-editor>` is in the DOM so subscribers are ready.
  */
 export function bootstrapStubGame(): void {
 	attachEditorStateBridge({
 		onStateDispatch(payload) {
-			console.debug('[editor stub] state dispatch', payload);
+			console.debug('[editor stub] editor command', payload);
 		},
 	});
 
-	// Defer one tick so editor module-level bus subscribers are attached.
-	queueMicrotask(() => {
-		zylemEventBus.emit('state:dispatch', buildStubPayload());
-	});
+	publishStubState();
 }

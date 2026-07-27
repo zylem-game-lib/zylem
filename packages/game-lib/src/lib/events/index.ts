@@ -6,7 +6,4 @@ export {
 	type StageEvents,
 	type EntityEvents,
 	type GameLoadingPayload,
-	type StateDispatchPayload,
-	type StageConfigPayload,
-	type EntityConfigPayload,
 } from './zylem-events';

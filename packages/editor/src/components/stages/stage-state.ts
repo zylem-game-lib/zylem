@@ -5,7 +5,6 @@
 
 import { proxy } from 'valtio/vanilla';
 import { editorEvents } from '../events';
-import { zylemEventBus, type StateDispatchPayload, type EntityConfigPayload } from '@zylem/game-lib/events';
 import type { BaseEntityInterface, StageStateInterface } from '../../types';
 
 export const stageState = proxy<StageStateInterface>({
@@ -66,37 +65,6 @@ editorEvents.on<BaseEntityInterface[]>('entities', (event) => {
     stageState.entities = event.payload;
 });
 
-// Subscribe to state dispatch events from game-lib via zylemEventBus
-zylemEventBus.on('state:dispatch', (payload: StateDispatchPayload) => {
-    // Update stage config if present
-    if (payload.stageConfig) {
-        stageState.config = {
-            id: payload.stageConfig.id,
-            backgroundColor: payload.stageConfig.backgroundColor,
-            backgroundImage: payload.stageConfig.backgroundImage,
-            gravity: payload.stageConfig.gravity,
-            inputs: payload.stageConfig.inputs,
-            variables: payload.stageConfig.variables,
-        };
-    }
-
-    // Update entities if present
-    if (payload.entities) {
-        stageState.entities = payload.entities.map((e: EntityConfigPayload) => {
-            const next: Partial<BaseEntityInterface> = {
-                uuid: e.uuid,
-                name: e.name,
-                type: e.type,
-                position: e.position,
-                rotation: e.rotation,
-                scale: e.scale,
-                thumbnail: e.thumbnail ?? null,
-            };
-            if (e.bounds) {
-                next.bounds = e.bounds;
-            }
-            return next;
-        });
-    }
-});
+// Stage snapshots and entity upserts/thumbnails/removals arrive through the
+// typed bridge — see src/bridge/editor-bridge.ts.
 
