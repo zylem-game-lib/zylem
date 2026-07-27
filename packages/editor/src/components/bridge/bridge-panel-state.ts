@@ -57,6 +57,12 @@ export const bridgePanelState = proxy<BridgePanelState>({
 let nextId = 0;
 let unsubscribeTrace: (() => void) | null = null;
 let statsTimer: ReturnType<typeof setInterval> | null = null;
+/**
+ * Whether this panel turned the shared tracer on. Tracing can also be enabled
+ * from the console or `__ZYLEM_BRIDGE_DEBUG__`, and closing the panel must not
+ * silently switch that off for the whole page.
+ */
+let enabledTracer = false;
 
 const formatTime = (t: number): string => {
 	const seconds = t / 1_000;
@@ -103,7 +109,8 @@ export function startBridgeCapture(): () => void {
 	if (bridgePanelState.capturing) return stopBridgeCapture;
 	bridgePanelState.capturing = true;
 
-	bridgeDebug.enable();
+	enabledTracer = !bridgeDebug.isEnabled();
+	if (enabledTracer) bridgeDebug.enable();
 	unsubscribeTrace = bridgeDebug.subscribe(record);
 	refreshStats();
 	statsTimer = setInterval(refreshStats, 500);
@@ -118,7 +125,11 @@ export function stopBridgeCapture(): void {
 		clearInterval(statsTimer);
 		statsTimer = null;
 	}
-	bridgeDebug.disable();
+	// Only undo what this panel turned on; leave console-enabled tracing alone.
+	if (enabledTracer) {
+		bridgeDebug.disable();
+		enabledTracer = false;
+	}
 	bridgePanelState.capturing = false;
 }
 

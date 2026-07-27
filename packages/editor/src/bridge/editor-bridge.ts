@@ -163,6 +163,21 @@ function applyStageSnapshot(snapshot: StageSnapshotPayload): void {
 			inputs: snapshot.stage.inputs,
 			variables: snapshot.stage.variables,
 		};
+		stageState.backgroundColor = snapshot.stage.backgroundColor;
+		stageState.backgroundImage = snapshot.stage.backgroundImage;
+		stageState.gravity = snapshot.stage.gravity;
+		stageState.inputs = snapshot.stage.inputs;
+		stageState.variables = snapshot.stage.variables;
+	} else {
+		// A null stage means "no stage loaded". Leaving the previous config in
+		// place would show the old stage's background, gravity, and variables
+		// next to an entity list from a different context.
+		stageState.config = null;
+		stageState.backgroundColor = null;
+		stageState.backgroundImage = null;
+		stageState.gravity = { x: 0, y: 0, z: 0 };
+		stageState.inputs = {};
+		stageState.variables = {};
 	}
 	stageState.entities = snapshot.entities.map(toEntityInterface);
 	entityIndex.clear();
@@ -210,6 +225,11 @@ function applyEntityUpsert(entities: EntitySummaryPayload[]): void {
 }
 
 function applyEntityRemoved(uuids: string[]): void {
+	// Release thumbnails first, and unconditionally: a thumbnail can arrive
+	// for an entity that never made it into the list (or already left it), and
+	// its blob URL would otherwise be held until the next stage snapshot.
+	removeEntityThumbnails(uuids);
+
 	const removed = new Set(uuids);
 	const current = stageState.entities;
 	// Compact in place, then rebuild the index for the shifted positions.
@@ -227,7 +247,6 @@ function applyEntityRemoved(uuids: string[]): void {
 	current.forEach((entity, index) => {
 		if (entity.uuid) entityIndex.set(entity.uuid, index);
 	});
-	removeEntityThumbnails(uuids);
 }
 
 function applyThumbnails(thumbnails: EntityThumbnailPayload[]): void {

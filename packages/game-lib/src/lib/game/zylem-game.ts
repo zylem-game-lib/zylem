@@ -23,7 +23,7 @@ import { GameDebugDelegate } from './game-debug-delegate';
 import { GameLoadingDelegate, GameLoadingEvent } from './game-loading-delegate';
 import { gameEventBus, GameStateUpdatedPayload } from './game-event-bus';
 import { zylemEventBus } from '../events';
-import { GameBridge } from '../bridge/game-bridge';
+import { GameBridge, readEntityScale } from '../bridge/game-bridge';
 import type { GameEntity } from '../entities/entity';
 import { getZylemBridge } from '@zylem/bridge';
 import type {
@@ -576,10 +576,11 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		const entityType = (child.constructor as any).type;
 		const typeStr = entityType ? String(entityType).replace('Symbol(', '').replace(')', '') : 'Unknown';
 
-		// Get transform data
+		// Get transform data. Scale lives on the render object rather than the
+		// entity, so read it the same way `entity:transform` writes it.
 		const position = (child as any).position ?? { x: 0, y: 0, z: 0 };
 		const rotation = (child as any).rotation ?? { x: 0, y: 0, z: 0 };
-		const scale = (child as any).scale ?? { x: 1, y: 1, z: 1 };
+		const scale = readEntityScale(child);
 
 		const thumb = entityThumbnailCache.get(child.uuid);
 
@@ -589,7 +590,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			type: typeStr,
 			position: { x: position.x ?? 0, y: position.y ?? 0, z: position.z ?? 0 },
 			rotation: { x: rotation.x ?? 0, y: rotation.y ?? 0, z: rotation.z ?? 0 },
-			scale: { x: scale.x ?? 1, y: scale.y ?? 1, z: scale.z ?? 1 },
+			scale,
 			thumbnail: thumb?.dataUrl ?? null,
 			bounds: thumb?.bounds,
 		};

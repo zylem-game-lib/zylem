@@ -14,6 +14,7 @@ import {
 	announceBridgeReady,
 	getZylemBridge,
 	type BridgeChannel,
+	type BridgeVec3,
 	type EntitySummaryPayload,
 	type EntityThumbnailPayload,
 	type GameConfigPayload,
@@ -26,6 +27,40 @@ import {
 import { debugState, setDebugTool, setPaused, setSelectedEntityId } from '../debug/debug-state';
 import { focusEntity } from '../debug/entity-focus';
 import type { GameEntity } from '../entities/entity';
+
+/** A THREE `Vector3`-shaped value, as carried by a render object. */
+type ScaleVector = BridgeVec3 & {
+	set?: (x: number, y: number, z: number) => void;
+};
+
+/**
+ * The THREE object carrying an entity's render transform. Scale is not part
+ * of the `GameEntity` mutator surface (unlike position and rotation), so it
+ * has to be read and written on the render object directly.
+ */
+function renderScaleOf(entity: any): ScaleVector | undefined {
+	const object = entity?.group ?? entity?.mesh;
+	return object?.scale;
+}
+
+/** Read an entity's scale, defaulting to unit scale. */
+export function readEntityScale(entity: any): BridgeVec3 {
+	const scale: Partial<BridgeVec3> = entity?.scale ?? renderScaleOf(entity) ?? {};
+	return {
+		x: scale.x ?? 1,
+		y: scale.y ?? 1,
+		z: scale.z ?? 1,
+	};
+}
+
+/** Write an entity's scale, preferring a `setScale` mutator when present. */
+export function applyEntityScale(entity: any, scale: BridgeVec3): void {
+	if (typeof entity?.setScale === 'function') {
+		entity.setScale(scale.x, scale.y, scale.z);
+		return;
+	}
+	renderScaleOf(entity)?.set?.(scale.x, scale.y, scale.z);
+}
 
 /**
  * Send a one-off diagnostic to the editor console without needing a
@@ -98,7 +133,7 @@ export class GameBridge {
 			this.channel.on('entity:focus', ({ uuid }) => {
 				focusEntity(uuid);
 			}),
-			this.channel.on('entity:transform', ({ uuid, position, rotation }) => {
+			this.channel.on('entity:transform', ({ uuid, position, rotation, scale }) => {
 				const entity = this.host?.resolveEntity(uuid) as any;
 				if (!entity) return;
 				if (position && typeof entity.setPosition === 'function') {
@@ -108,6 +143,9 @@ export class GameBridge {
 					entity.setRotationX?.(rotation.x);
 					entity.setRotationY?.(rotation.y);
 					entity.setRotationZ?.(rotation.z);
+				}
+				if (scale) {
+					applyEntityScale(entity, scale);
 				}
 			}),
 			this.channel.on('stage:variable:set', ({ key, value }) => {
