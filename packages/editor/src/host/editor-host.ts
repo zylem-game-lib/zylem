@@ -11,7 +11,6 @@
 
 import { getZylemBridge, type BridgeDebugTool } from '@zylem/bridge';
 import {
-	connectEditorBridge,
 	sendDebugEnabled,
 	sendPlayback,
 	sendTool,
@@ -73,11 +72,19 @@ export function dispatchToEditor(payload: EditorUpdatePayload): void {
 }
 
 /**
- * Connect the editor to the shared bridge and observe editor→game commands.
+ * Observe editor→game commands on the shared bridge.
  *
  * The game side applies commands itself; this helper exists so external
  * hosts can mirror editor actions (debug toggle, tool, pause) into their own
  * state via `onStateDispatch`.
+ *
+ * This deliberately does **not** open the editor's game→editor store
+ * subscriptions. Those are owned by `<zylem-editor>` for the duration it is
+ * mounted, and the game gates expensive work (thumbnail renders, entity
+ * summaries) on them being present. A long-lived host helper holding one open
+ * would keep that work running forever, even with no editor on screen. Hosts
+ * that render editor components without the custom element should call
+ * `connectEditorBridge()` directly and release it themselves.
  *
  * @example
  * ```ts
@@ -89,8 +96,6 @@ export function dispatchToEditor(payload: EditorUpdatePayload): void {
 export function attachEditorStateBridge(
 	options: EditorStateBridgeOptions = {},
 ): EditorStateBridge {
-	connectEditorBridge();
-
 	const { channel } = getZylemBridge();
 	const unsubscribes = [
 		channel.on('debug:set', ({ enabled }) => {

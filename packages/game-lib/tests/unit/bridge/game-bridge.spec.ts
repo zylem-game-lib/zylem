@@ -55,6 +55,51 @@ describe('GameBridge command intake', () => {
 		expect(debugState.selectedEntityId).toBeNull();
 	});
 
+	it('applies every component of an entity transform, including scale', () => {
+		const scale = {
+			x: 1,
+			y: 1,
+			z: 1,
+			set(x: number, y: number, z: number) {
+				this.x = x;
+				this.y = y;
+				this.z = z;
+			},
+		};
+		const entity = {
+			uuid: 'entity-1',
+			group: { scale },
+			setPosition: vi.fn(),
+			setRotationX: vi.fn(),
+			setRotationY: vi.fn(),
+			setRotationZ: vi.fn(),
+		};
+		bridge.connect({ resolveEntity: () => entity as any });
+
+		channel.send('entity:transform', {
+			uuid: 'entity-1',
+			position: { x: 1, y: 2, z: 3 },
+			rotation: { x: 0, y: 0.5, z: 0 },
+			scale: { x: 2, y: 3, z: 4 },
+		});
+
+		expect(entity.setPosition).toHaveBeenCalledWith(1, 2, 3);
+		expect(entity.setRotationY).toHaveBeenCalledWith(0.5);
+		expect(scale).toMatchObject({ x: 2, y: 3, z: 4 });
+	});
+
+	it('prefers a setScale mutator when the entity exposes one', () => {
+		const entity = { uuid: 'entity-1', setScale: vi.fn() };
+		bridge.connect({ resolveEntity: () => entity as any });
+
+		channel.send('entity:transform', {
+			uuid: 'entity-1',
+			scale: { x: 5, y: 6, z: 7 },
+		});
+
+		expect(entity.setScale).toHaveBeenCalledWith(5, 6, 7);
+	});
+
 	it('stops applying commands after disconnect', () => {
 		bridge.connect({ resolveEntity: () => null });
 		bridge.disconnect();
