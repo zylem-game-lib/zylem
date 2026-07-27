@@ -4,22 +4,28 @@ export * from './components/common/Icon';
 export { editorEvents } from './components/events';
 export type { EditorEvent, EditorEventType } from './components/events';
 export {
-    dispatchEditorUpdate,
-    EDITOR_UPDATE_EVENT,
-    EDITOR_STATE_DISPATCH,
-    EDITOR_STATE_RECEIVE,
-    type EditorUpdatePayload,
-} from './components/editor-events';
-export {
     debugStore,
     debugState,
     gameState,
     stageState,
 } from './components';
 export {
+    connectEditorBridge,
+    disconnectEditorBridge,
+    bridgeChannel,
+    sendDebugEnabled,
+    sendTool,
+    sendPlayback,
+    sendEntitySelect,
+    sendEntityFocus,
+    sendStageVariable,
+} from './bridge/editor-bridge';
+export {
     attachEditorStateBridge,
     dispatchToEditor,
+    dispatchEditorUpdate,
     mountZylemEditor,
+    type EditorUpdatePayload,
     type EditorStateBridge,
     type EditorStateBridgeOptions,
     type MountedZylemEditor,

@@ -1,14 +1,14 @@
 import MousePointer from 'lucide-solid/icons/mouse-pointer';
 import type { Component } from 'solid-js';
 import { setDebugTool, debugStore } from '..';
-import { dispatchEditorUpdate } from '../editor-events';
+import { sendTool } from '../../bridge/editor-bridge';
 import { ToolbarButton } from './ToolbarButton';
 
 export const SelectButton: Component = () => {
     const handleClick = () => {
         const newTool = debugStore.tool === 'select' ? 'none' : 'select';
         setDebugTool(newTool);
-        dispatchEditorUpdate({ toolbarState: { tool: newTool } });
+        sendTool(newTool);
     };
 
     return (

@@ -96,8 +96,11 @@ export default defineConfig({
 		// single physical copy so the node system (and its shared `three.core`
 		// realm) is never duplicated across the bundle. solid-js is deduped so
 		// @zylem/ui (compiled from its shipped TSX source) shares the app's
-		// Solid runtime instead of its own copy.
-		dedupe: ['three', 'solid-js'],
+		// Solid runtime instead of its own copy. @zylem/bridge is deduped so
+		// game-lib and editor share one bridge module (the registry is
+		// realm-safe regardless, but one copy keeps types/state trivially
+		// consistent).
+		dedupe: ['three', 'solid-js', '@zylem/bridge'],
 		alias: [
 			// Solid-only: route valtio's React-coupled root entry to vanilla.
 			{ find: /^valtio$/, replacement: 'valtio/vanilla' },

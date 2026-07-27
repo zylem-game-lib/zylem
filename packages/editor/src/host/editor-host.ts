@@ -2,56 +2,82 @@
  * Editor Host Helpers
  *
  * Reusable wiring for apps that embed the <zylem-editor> overlay next to a
- * running Zylem game. Consolidates the mount + state-bridge boilerplate that
- * was previously duplicated across consuming apps (examples, creator preview).
+ * running Zylem game. These helpers are thin wrappers over the shared
+ * `@zylem/bridge` channel: the game applies editor commands itself (via its
+ * bridge adapter), so hosts only need this module to mount the overlay,
+ * mirror editor commands into their own stores, or push state into the
+ * editor UI.
  */
 
-import { debugState, setDebugTool, setPaused } from '@zylem/game-lib/debug';
+import { getZylemBridge, type BridgeDebugTool } from '@zylem/bridge';
 import {
-    EDITOR_STATE_DISPATCH,
-    EDITOR_STATE_RECEIVE,
-    type EditorUpdatePayload,
-} from '../components/editor-events';
+	connectEditorBridge,
+	sendDebugEnabled,
+	sendPlayback,
+	sendTool,
+} from '../bridge/editor-bridge';
+import { debugState as editorDebugState } from '../components/entities/entities-state';
+import { setDebugStore } from '../components/editor-store';
 import {
-    registerZylemEditor,
-    type ZylemEditorElement,
+	registerZylemEditor,
+	type ZylemEditorElement,
 } from '../web-components/zylem-editor';
 import type { EditorLauncherMode } from '../App';
 
+/**
+ * Nested state payload used by host-facing helpers.
+ * Mirrors the historical `editor-state-dispatch` window-event shape so
+ * existing hosts keep working; internally everything rides the bridge.
+ */
+export interface EditorUpdatePayload {
+	gameState?: {
+		debugFlag?: boolean;
+		[key: string]: unknown;
+	};
+	toolbarState?: {
+		tool?: BridgeDebugTool;
+		paused?: boolean;
+	};
+	[key: string]: unknown;
+}
+
 export interface EditorStateBridgeOptions {
-    /**
-     * Called after each editor state dispatch has been applied to the
-     * game-lib debug state, so hosts can mirror the payload into their own
-     * stores (e.g. a SolidJS store).
-     */
-    onStateDispatch?: (payload: EditorUpdatePayload) => void;
+	/**
+	 * Called after each editor command has been sent to the game, so hosts
+	 * can mirror the payload into their own stores (e.g. a SolidJS store).
+	 */
+	onStateDispatch?: (payload: EditorUpdatePayload) => void;
 }
 
 export interface EditorStateBridge {
-    /** Push external app state back into the editor UI. */
-    dispatchToEditor(payload: EditorUpdatePayload): void;
-    /** Remove the window listener installed by the bridge. */
-    dispose(): void;
+	/** Push external app state back into the editor UI. */
+	dispatchToEditor(payload: EditorUpdatePayload): void;
+	/** Remove the bridge subscriptions installed by this helper. */
+	dispose(): void;
 }
 
 /**
- * Dispatch a state update payload to the editor (EDITOR_STATE_RECEIVE).
- * Safe to call in non-browser environments (no-op).
+ * Push a state update payload into the editor UI (stores + game command).
+ * Safe to call in non-browser environments (no-op side effects only).
  */
 export function dispatchToEditor(payload: EditorUpdatePayload): void {
-    if (typeof window === 'undefined') return;
-
-    window.dispatchEvent(
-        new CustomEvent(EDITOR_STATE_RECEIVE, {
-            detail: payload,
-            bubbles: true,
-        }),
-    );
+	if (payload.gameState?.debugFlag !== undefined) {
+		setDebugStore('debug', payload.gameState.debugFlag);
+	}
+	if (payload.toolbarState?.tool !== undefined) {
+		editorDebugState.tool = payload.toolbarState.tool;
+	}
+	if (payload.toolbarState?.paused !== undefined) {
+		editorDebugState.paused = payload.toolbarState.paused;
+	}
 }
 
 /**
- * Listen for editor state dispatches (EDITOR_STATE_DISPATCH) and sync them
- * into the game-lib debug state: debug flag, active tool, and pause state.
+ * Connect the editor to the shared bridge and observe editor→game commands.
+ *
+ * The game side applies commands itself; this helper exists so external
+ * hosts can mirror editor actions (debug toggle, tool, pause) into their own
+ * state via `onStateDispatch`.
  *
  * @example
  * ```ts
@@ -61,51 +87,65 @@ export function dispatchToEditor(payload: EditorUpdatePayload): void {
  * ```
  */
 export function attachEditorStateBridge(
-    options: EditorStateBridgeOptions = {},
+	options: EditorStateBridgeOptions = {},
 ): EditorStateBridge {
-    const listener = ((event: CustomEvent<EditorUpdatePayload>) => {
-        const payload = event.detail;
-        if (payload.gameState?.debugFlag !== undefined) {
-            debugState.enabled = payload.gameState.debugFlag;
-        }
-        if (payload.toolbarState?.tool !== undefined) {
-            setDebugTool(payload.toolbarState.tool);
-        }
-        if (payload.toolbarState?.paused !== undefined) {
-            setPaused(payload.toolbarState.paused);
-        }
-        options.onStateDispatch?.(payload);
-    }) as EventListener;
+	connectEditorBridge();
 
-    if (typeof window !== 'undefined') {
-        window.addEventListener(EDITOR_STATE_DISPATCH, listener);
-    }
+	const { channel } = getZylemBridge();
+	const unsubscribes = [
+		channel.on('debug:set', ({ enabled }) => {
+			options.onStateDispatch?.({ gameState: { debugFlag: enabled } });
+		}),
+		channel.on('tool:set', ({ tool }) => {
+			options.onStateDispatch?.({ toolbarState: { tool } });
+		}),
+		channel.on('playback:set', ({ paused }) => {
+			options.onStateDispatch?.({ toolbarState: { paused } });
+		}),
+	];
 
-    return {
-        dispatchToEditor,
-        dispose() {
-            if (typeof window !== 'undefined') {
-                window.removeEventListener(EDITOR_STATE_DISPATCH, listener);
-            }
-        },
-    };
+	return {
+		dispatchToEditor,
+		dispose() {
+			for (const unsubscribe of unsubscribes) unsubscribe();
+		},
+	};
+}
+
+/**
+ * Send an editor state payload as bridge commands to the running game.
+ *
+ * @deprecated Use the typed bridge commands (`sendDebugEnabled`, `sendTool`,
+ * `sendPlayback`) instead. Kept for hosts migrating off the old
+ * window-CustomEvent API.
+ */
+export function dispatchEditorUpdate(payload: EditorUpdatePayload): void {
+	if (payload.gameState?.debugFlag !== undefined) {
+		sendDebugEnabled(payload.gameState.debugFlag);
+	}
+	if (payload.toolbarState?.tool !== undefined) {
+		sendTool(payload.toolbarState.tool);
+	}
+	if (payload.toolbarState?.paused !== undefined) {
+		sendPlayback(payload.toolbarState.paused);
+	}
 }
 
 export interface MountZylemEditorOptions extends EditorStateBridgeOptions {
-    /**
-     * Controls the editor's floating launcher button.
-     * @default 'floating'
-     */
-    launcherMode?: EditorLauncherMode;
-    /**
-     * Element the <zylem-editor> overlay is appended to.
-     * @default document.body
-     */
-    target?: HTMLElement;
+	/**
+	 * Controls the editor's floating launcher button.
+	 * @default 'floating'
+	 */
+	launcherMode?: EditorLauncherMode;
+	/**
+	 * Element the <zylem-editor> overlay is appended to.
+	 * @default document.body
+	 */
+	target?: HTMLElement;
 }
 
 export interface MountedZylemEditor extends EditorStateBridge {
-    element: ZylemEditorElement;
+	element: ZylemEditorElement;
 }
 
 /**
@@ -119,22 +159,22 @@ export interface MountedZylemEditor extends EditorStateBridge {
  * ```
  */
 export function mountZylemEditor(
-    options: MountZylemEditorOptions = {},
+	options: MountZylemEditorOptions = {},
 ): MountedZylemEditor {
-    registerZylemEditor();
+	registerZylemEditor();
 
-    const element = document.createElement('zylem-editor') as ZylemEditorElement;
-    element.setAttribute('launcher-mode', options.launcherMode ?? 'floating');
-    (options.target ?? document.body).appendChild(element);
+	const element = document.createElement('zylem-editor') as ZylemEditorElement;
+	element.setAttribute('launcher-mode', options.launcherMode ?? 'floating');
+	(options.target ?? document.body).appendChild(element);
 
-    const bridge = attachEditorStateBridge(options);
+	const bridge = attachEditorStateBridge(options);
 
-    return {
-        element,
-        dispatchToEditor: bridge.dispatchToEditor,
-        dispose() {
-            bridge.dispose();
-            element.remove();
-        },
-    };
+	return {
+		element,
+		dispatchToEditor: bridge.dispatchToEditor,
+		dispose() {
+			bridge.dispose();
+			element.remove();
+		},
+	};
 }

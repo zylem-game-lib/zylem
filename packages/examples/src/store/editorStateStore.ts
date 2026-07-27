@@ -1,9 +1,10 @@
 /**
  * Editor State Store
  *
- * SolidJS store that mirrors state dispatched from @zylem/editor.
- * The window listener + game-lib sync lives in the shared
- * `attachEditorStateBridge` helper from @zylem/editor; this store adds a
+ * SolidJS store that mirrors editor commands sent over the shared
+ * `@zylem/bridge` channel. The bridge subscription lives in the
+ * `attachEditorStateBridge` helper from @zylem/editor (the running game
+ * applies commands itself via its own bridge adapter); this store adds a
  * reactive mirror on top and can dispatch updates back to the editor.
  */
 
@@ -80,8 +81,9 @@ export const resetEditorState = () => {
 
 export { dispatchToEditor };
 
-// The shared bridge syncs editor dispatches into game-lib's debug state;
-// mirror the payload into the Solid store so UI stays reactive.
+// Editor commands ride the @zylem/bridge channel and are applied to the
+// game by game-lib itself; mirror the payload into the Solid store so UI
+// stays reactive.
 if (typeof window !== 'undefined') {
     attachEditorStateBridge({
         onStateDispatch: (payload: EditorUpdatePayload) => {

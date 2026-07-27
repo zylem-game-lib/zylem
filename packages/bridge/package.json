@@ -1,0 +1,34 @@
+{
+  "name": "@zylem/bridge",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Typed communication bridge shared by @zylem/game-lib and @zylem/editor. Protocol types, RAF-coalescing channel, and realm-safe singleton registry.",
+  "license": "MIT",
+  "author": "Tim Cool",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "biome check .",
+    "typecheck": "tsgo --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@typescript/native-preview": "latest",
+    "tsup": "^8.5.1",
+    "typescript": "6.0.3",
+    "vitest": "^4.0.9"
+  }
+}

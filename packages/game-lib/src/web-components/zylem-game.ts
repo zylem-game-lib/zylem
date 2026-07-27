@@ -1,3 +1,4 @@
+import { announceBridgeReady } from '@zylem/bridge';
 import { Game } from '../lib/game/game';
 import {
   debugState,
@@ -79,6 +80,9 @@ export class ZylemGameElement extends HTMLElement {
     this.attachHostContainer(game);
     this.syncDisplayRuntime();
     game.start();
+    // Bubble a composed bridge-ready event from this element so shadow-DOM
+    // hosts (editor, devtools) can detect the live game without polling.
+    announceBridgeReady(this);
   }
 
   get game(): Game<any> | null {

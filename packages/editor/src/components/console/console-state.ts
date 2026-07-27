@@ -8,6 +8,13 @@ export const consoleState = proxy({
 });
 
 /**
+ * Maximum retained console lines. The console is a ring buffer because a
+ * chatty game can print continuously, and an unbounded array would grow the
+ * proxy (and the string rebuilt for display) without limit.
+ */
+export const MAX_CONSOLE_MESSAGES = 500;
+
+/**
  * Append a message to the debug console
  * @param message The message to append to the console
  */
@@ -15,6 +22,12 @@ export const printToConsole = (message: string) => {
 	const timestamp = new Date().toLocaleTimeString();
 	const formattedMessage = `[${timestamp}] ${message}`;
 	consoleState.messages.push(formattedMessage);
+	if (consoleState.messages.length > MAX_CONSOLE_MESSAGES) {
+		consoleState.messages.splice(
+			0,
+			consoleState.messages.length - MAX_CONSOLE_MESSAGES,
+		);
+	}
 };
 
 /**

@@ -1,14 +1,14 @@
 import Bug from 'lucide-solid/icons/bug';
 import type { Component } from 'solid-js';
 import { debugStore, setDebugStore } from '../editor-store';
-import { dispatchEditorUpdate } from '../editor-events';
+import { sendDebugEnabled } from '../../bridge/editor-bridge';
 import { ToolbarButton } from './ToolbarButton';
 
 export const DebugButton: Component = () => {
     const handleClick = () => {
         const newDebug = !debugStore.debug;
         setDebugStore('debug', newDebug);
-        dispatchEditorUpdate({ gameState: { debugFlag: newDebug } });
+        sendDebugEnabled(newDebug);
     };
 
     return (

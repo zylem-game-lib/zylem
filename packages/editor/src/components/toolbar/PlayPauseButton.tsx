@@ -2,14 +2,14 @@ import Pause from 'lucide-solid/icons/pause';
 import Play from 'lucide-solid/icons/play';
 import type { Component } from 'solid-js';
 import { setPaused, debugState, debugStore } from '..';
-import { dispatchEditorUpdate } from '../editor-events';
+import { sendPlayback } from '../../bridge/editor-bridge';
 import { ToolbarButton } from './ToolbarButton';
 
 export const PlayPauseButton: Component = () => {
     const handleClick = () => {
         const newPaused = !debugState.paused;
         setPaused(newPaused);
-        dispatchEditorUpdate({ toolbarState: { paused: newPaused } });
+        sendPlayback(newPaused);
     };
 
     return (

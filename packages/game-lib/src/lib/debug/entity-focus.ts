@@ -1,6 +1,6 @@
 import type { Object3D } from 'three';
 import type { GameEntity } from '../entities/entity';
-import { debugState, setSelectedEntity } from './debug-state';
+import { debugState, setSelectedEntityId } from './debug-state';
 
 /**
  * Context registered by the active stage so the editor can focus entities
@@ -58,7 +58,7 @@ export function focusEntity(uuid: string): boolean {
 	}
 	activeContext.ensureDebugReady?.();
 
-	setSelectedEntity(entity);
+	setSelectedEntityId(uuid);
 	activeContext.frameObject(target);
 	return true;
 }

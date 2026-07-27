@@ -22,7 +22,15 @@ import { GameCanvas } from './game-canvas';
 import { GameDebugDelegate } from './game-debug-delegate';
 import { GameLoadingDelegate, GameLoadingEvent } from './game-loading-delegate';
 import { gameEventBus, GameStateUpdatedPayload } from './game-event-bus';
-import { zylemEventBus, type StateDispatchPayload, type StageConfigPayload, type EntityConfigPayload } from '../events';
+import { zylemEventBus } from '../events';
+import { GameBridge } from '../bridge/game-bridge';
+import type { GameEntity } from '../entities/entity';
+import { getZylemBridge } from '@zylem/bridge';
+import type {
+	EntitySummaryPayload,
+	GameConfigPayload,
+	StageConfigPayload,
+} from '@zylem/bridge';
 import { GameRendererObserver } from './game-renderer-observer';
 import { ZylemStage } from '../core';
 import {
@@ -86,17 +94,10 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	private rendererObserver: GameRendererObserver = new GameRendererObserver();
 	private eventBusUnsubscribes: (() => void)[] = [];
 	private thumbnailUnsubscribes: (() => void)[] = [];
-	/**
-	 * Trailing-debounce timer for entity-driven state dispatches. Building a
-	 * `state:dispatch` payload is O(entities) (and downstream editor stores
-	 * re-proxy/reconcile every entity), so bursts of thumbnail/destroy events
-	 * must coalesce into a single dispatch instead of one per entity.
-	 */
-	private entityDispatchTimer: ReturnType<typeof setTimeout> | null = null;
-	private pendingEntityDispatchPath: string | null = null;
-
-	/** Debounce window (ms) for coalescing entity-driven state dispatches. */
-	private static readonly ENTITY_DISPATCH_DEBOUNCE_MS = 150;
+	/** Serialized last-published game config, for dirty-checking resize churn. */
+	private lastPublishedGameConfig: string | null = null;
+	/** Editor ↔ game bridge adapter (RAF-coalesced publishes, command intake). */
+	private gameBridge = new GameBridge();
 	private readonly gameUpdateParams = {} as UpdateContext<
 		ZylemGame<TGlobals>,
 		TGlobals
@@ -138,6 +139,17 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		});
 		this.loadDebugOptions(options);
 		this.setGlobals(options);
+		this.gameBridge.connect({
+			resolveEntity: (uuid) =>
+				(this.currentStage()?.wrappedStage?.entityDelegate.childrenMap.get(uuid)
+					?? null) as GameEntity<any> | null,
+			setStageVariable: (key, value) => {
+				const stageState = this.currentStage()?.wrappedStage?.state;
+				if (stageState) {
+					stageState.variables[key] = value;
+				}
+			},
+		});
 	}
 
 	setDisplayRuntime(runtime: ResolveGameConfigRuntime): void {
@@ -146,7 +158,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.resolvedConfig = nextConfig;
 		this.rendererObserver.setConfig(nextConfig);
 		this.gameCanvas?.setAspectRatio(nextConfig.aspectRatio);
-		this.emitStateDispatch('@game:display-config');
+		this.publishGameConfig();
 	}
 
 	loadGameCanvas(config: GameConfig) {
@@ -287,8 +299,9 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			stage.start(setupParams);
 		}
 
-		// Emit state dispatch after stage is loaded so editor receives initial config
-		this.emitStateDispatch('@stage:loaded');
+		// Publish config + full stage snapshot so the editor receives initial state
+		this.publishGameConfig();
+		this.publishStageSnapshot();
 	}
 
 	/**
@@ -457,6 +470,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 	dispose() {
 		this.isDisposed = true;
+		this.gameBridge.disconnect();
 		if (this.animationFrameId !== null) {
 			cancelAnimationFrame(this.animationFrameId);
 			this.animationFrameId = null;
@@ -482,6 +496,11 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			this.rendererManager.dispose();
 			this.rendererManager = null;
 		}
+		entityThumbnailCache.clear();
+
+		// The bridge lives on globalThis, so retained hydration state would
+		// otherwise outlive this game and leak into the next one.
+		getZylemBridge().channel.reset();
 
 		this.timer.dispose();
 
@@ -544,54 +563,70 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	}
 
 	/**
-	 * Build the entities payload for the current stage.
+	 * Build a bridge entity summary for one entity, or null for entities on
+	 * the managed render path (instanced packs/bundles), which can number in
+	 * the thousands and are not useful in the editor panel.
 	 */
-	private buildEntitiesPayload(): EntityConfigPayload[] | null {
+	private buildEntitySummary(child: { uuid: string; name?: string; constructor: unknown }): EntitySummaryPayload | null {
+		if (usesManagedRenderPath((child as { options?: unknown }).options as any)) {
+			return null;
+		}
+
+		// Get type string from the entity's constructor
+		const entityType = (child.constructor as any).type;
+		const typeStr = entityType ? String(entityType).replace('Symbol(', '').replace(')', '') : 'Unknown';
+
+		// Get transform data
+		const position = (child as any).position ?? { x: 0, y: 0, z: 0 };
+		const rotation = (child as any).rotation ?? { x: 0, y: 0, z: 0 };
+		const scale = (child as any).scale ?? { x: 1, y: 1, z: 1 };
+
+		const thumb = entityThumbnailCache.get(child.uuid);
+
+		return {
+			uuid: child.uuid,
+			name: child.name || 'Unnamed',
+			type: typeStr,
+			position: { x: position.x ?? 0, y: position.y ?? 0, z: position.z ?? 0 },
+			rotation: { x: rotation.x ?? 0, y: rotation.y ?? 0, z: rotation.z ?? 0 },
+			scale: { x: scale.x ?? 1, y: scale.y ?? 1, z: scale.z ?? 1 },
+			thumbnail: thumb?.dataUrl ?? null,
+			bounds: thumb?.bounds,
+		};
+	}
+
+	/**
+	 * Build the full entities payload for the current stage.
+	 */
+	private buildEntitiesPayload(): EntitySummaryPayload[] {
 		const stage = this.currentStage();
-		if (!stage?.wrappedStage) return null;
+		if (!stage?.wrappedStage) return [];
 
-		const entities: EntityConfigPayload[] = [];
+		const entities: EntitySummaryPayload[] = [];
 		stage.wrappedStage.entityDelegate.childrenMap.forEach((child) => {
-			// Pack/environment entities can number in the thousands and are not
-			// useful in the editor entity panel — omit them from state:dispatch.
-			if (usesManagedRenderPath((child as { options?: unknown }).options as any)) {
-				return;
-			}
-
-			// Get type string from the entity's constructor
-			const entityType = (child.constructor as any).type;
-			const typeStr = entityType ? String(entityType).replace('Symbol(', '').replace(')', '') : 'Unknown';
-
-			// Get transform data
-			const position = (child as any).position ?? { x: 0, y: 0, z: 0 };
-			const rotation = (child as any).rotation ?? { x: 0, y: 0, z: 0 };
-			const scale = (child as any).scale ?? { x: 1, y: 1, z: 1 };
-
-			const thumb = entityThumbnailCache.get(child.uuid);
-
-			entities.push({
-				uuid: child.uuid,
-				name: child.name || 'Unnamed',
-				type: typeStr,
-				position: { x: position.x ?? 0, y: position.y ?? 0, z: position.z ?? 0 },
-				rotation: { x: rotation.x ?? 0, y: rotation.y ?? 0, z: rotation.z ?? 0 },
-				scale: { x: scale.x ?? 1, y: scale.y ?? 1, z: scale.z ?? 1 },
-				thumbnail: thumb?.dataUrl ?? null,
-				bounds: thumb?.bounds,
-			});
+			const summary = this.buildEntitySummary(child as any);
+			if (summary) entities.push(summary);
 		});
-
 		return entities;
 	}
 
 	/**
-	 * Generate entity thumbnails as entities become available, then refresh editor state.
+	 * Generate entity thumbnails as entities become available, streaming
+	 * upserts/thumbnails/removals to the editor through the bridge
+	 * (RAF-coalesced, merged by uuid).
+	 *
+	 * All of this work exists only to feed the editor, and thumbnails in
+	 * particular cost an offscreen render plus a pixel readback on the shared
+	 * renderer. Each publisher therefore checks the bridge for a live listener
+	 * first, and a late-connecting editor is backfilled from
+	 * {@link wireEditorBackfill}.
 	 */
 	private wireEntityThumbnails(stage: Stage): void {
 		this.clearEntityThumbnailWiring();
 		if (!stage.wrappedStage) return;
 
 		const queueThumbnail = (child: { uuid: string; group?: any; mesh?: any; options?: any }) => {
+			if (!this.gameBridge.wantsThumbnails()) return;
 			// Managed-render entities (instanced packs / bundles) can number in
 			// the thousands and are visually identical; per-entity offscreen
 			// thumbnail renders + PNG encodes would swamp the main thread.
@@ -599,13 +634,23 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			const object = child.group ?? child.mesh ?? null;
 			if (!object) return;
 			void entityThumbnailCache.ensure(child.uuid, object).then((result) => {
-				if (result) {
-					this.queueEntityStateDispatch('@entity:thumbnail');
+				if (result && !this.isDisposed) {
+					this.gameBridge.queueThumbnails([{
+						uuid: child.uuid,
+						url: result.dataUrl,
+						bounds: result.bounds,
+					}]);
 				}
 			});
 		};
 
 		const unsubAdded = stage.wrappedStage.onEntityAdded((child) => {
+			if (this.gameBridge.wantsEntityUpdates()) {
+				const summary = this.buildEntitySummary(child as any);
+				if (summary) {
+					this.gameBridge.queueEntityUpsert([summary]);
+				}
+			}
 			queueThumbnail(child as any);
 		}, { replayExisting: true });
 		this.thumbnailUnsubscribes.push(unsubAdded);
@@ -624,13 +669,50 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		});
 
 		const onDestroyed = (payload: { entityId: string }) => {
+			// Always invalidate, even with no editor attached: the cache would
+			// otherwise retain a PNG for every entity the game ever spawned.
 			entityThumbnailCache.invalidate(payload.entityId);
-			this.queueEntityStateDispatch('@entity:destroyed');
+			if (this.gameBridge.wantsEntityUpdates()) {
+				this.gameBridge.queueEntityRemoved([payload.entityId]);
+			}
 		};
 		zylemEventBus.on('entity:destroyed', onDestroyed);
 		this.thumbnailUnsubscribes.push(() => {
 			zylemEventBus.off('entity:destroyed', onDestroyed);
 		});
+
+		this.wireEditorBackfill(stage);
+	}
+
+	/**
+	 * Republish the current stage when an editor subscribes after the game
+	 * started. Without this, entities added while nothing was listening would
+	 * never appear, since the per-entity publishers were skipped.
+	 */
+	private wireEditorBackfill(stage: Stage): void {
+		const unsubscribe = this.gameBridge.onEditorAttached(() => {
+			if (this.isDisposed || this.currentStage() !== stage) return;
+			// A newly attached editor has seen nothing, so bypass dirty-checking.
+			this.lastPublishedGameConfig = null;
+			this.publishGameConfig();
+			this.publishStageSnapshot();
+			for (const child of stage.wrappedStage?.entityDelegate.childrenMap.values() ?? []) {
+				const entity = child as { uuid: string; group?: any; mesh?: any; options?: any };
+				if (usesManagedRenderPath(entity.options)) continue;
+				const object = entity.group ?? entity.mesh ?? null;
+				if (!object) continue;
+				void entityThumbnailCache.ensure(entity.uuid, object).then((result) => {
+					if (result && !this.isDisposed) {
+						this.gameBridge.queueThumbnails([{
+							uuid: entity.uuid,
+							url: result.dataUrl,
+							bounds: result.bounds,
+						}]);
+					}
+				});
+			}
+		});
+		this.thumbnailUnsubscribes.push(unsubscribe);
 	}
 
 	private clearEntityThumbnailWiring(): void {
@@ -640,62 +722,56 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			} catch { /* noop */ }
 		});
 		this.thumbnailUnsubscribes = [];
-		if (this.entityDispatchTimer !== null) {
-			clearTimeout(this.entityDispatchTimer);
-			this.entityDispatchTimer = null;
-		}
-		this.pendingEntityDispatchPath = null;
 	}
 
-	/**
-	 * Coalesce entity-driven state dispatches (thumbnail resolutions, entity
-	 * destruction) into one trailing `emitStateDispatch` per burst.
-	 */
-	private queueEntityStateDispatch(path: string): void {
-		this.pendingEntityDispatchPath = path;
-		if (this.entityDispatchTimer !== null) return;
-		this.entityDispatchTimer = setTimeout(() => {
-			this.entityDispatchTimer = null;
-			const pendingPath = this.pendingEntityDispatchPath;
-			this.pendingEntityDispatchPath = null;
-			if (pendingPath && !this.isDisposed) {
-				this.emitStateDispatch(pendingPath);
-			}
-		}, ZylemGame.ENTITY_DISPATCH_DEBOUNCE_MS);
-	}
-
-	/**
-	 * Emit a state:dispatch event to the zylemEventBus.
-	 * Called after stage load and on global state changes.
-	 */
-	private emitStateDispatch(path: string, value?: unknown, previousValue?: unknown): void {
-		const statePayload: StateDispatchPayload = {
-			scope: 'game',
-			path,
-			value,
-			previousValue,
-			config: this.resolvedConfig ? {
-				id: this.resolvedConfig.id,
-				aspectRatio: this.resolvedConfig.aspectRatio,
-				fullscreen: this.resolvedConfig.fullscreen,
-				bodyBackground: this.resolvedConfig.bodyBackground,
-				internalResolution: this.resolvedConfig.internalResolution,
-				debug: this.resolvedConfig.debug,
-			} : null,
-			stageConfig: this.buildStageConfigPayload(),
-			entities: this.buildEntitiesPayload(),
+	private buildGameConfigPayload(): GameConfigPayload | null {
+		if (!this.resolvedConfig) return null;
+		return {
+			id: this.resolvedConfig.id,
+			aspectRatio: this.resolvedConfig.aspectRatio,
+			fullscreen: this.resolvedConfig.fullscreen,
+			bodyBackground: this.resolvedConfig.bodyBackground,
+			internalResolution: this.resolvedConfig.internalResolution,
+			debug: this.resolvedConfig.debug,
 		};
-		zylemEventBus.emit('state:dispatch', statePayload);
+	}
+
+	/** Publish the resolved display config over the bridge. */
+	/**
+	 * Publish the display config, skipping unchanged payloads. The
+	 * `ResizeObserver` on `<zylem-game>` funnels into `setDisplayRuntime`, which
+	 * fires on every layout tick even when nothing about the config moved.
+	 */
+	private publishGameConfig(): void {
+		const config = this.buildGameConfigPayload();
+		if (!config) return;
+
+		const serialized = JSON.stringify(config);
+		if (serialized === this.lastPublishedGameConfig) return;
+		this.lastPublishedGameConfig = serialized;
+		this.gameBridge.publishConfig(config);
+	}
+
+	/** Publish a full stage snapshot (config + entity list) over the bridge. */
+	private publishStageSnapshot(): void {
+		this.gameBridge.publishStageSnapshot({
+			stage: this.buildStageConfigPayload(),
+			entities: this.buildEntitiesPayload(),
+		});
 	}
 
 	/**
-	 * Subscribe to the game event bus for stage loading and state events.
-	 * Emits events to zylemEventBus for cross-package communication.
+	 * Subscribe to the game event bus for stage loading and state events,
+	 * mirroring global-variable updates to the editor over the bridge.
 	 */
 	private subscribeToEventBus(): void {
 		this.eventBusUnsubscribes.push(
 			gameEventBus.on('game:state:updated', (payload: GameStateUpdatedPayload) => {
-				this.emitStateDispatch(payload.path, payload.value, payload.previousValue);
+				this.gameBridge.publishVariable({
+					path: payload.path,
+					value: payload.value,
+					previousValue: payload.previousValue,
+				});
 			}),
 		);
 	}

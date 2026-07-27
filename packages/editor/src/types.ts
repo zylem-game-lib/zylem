@@ -16,9 +16,11 @@ export interface BaseEntityInterface {
 	position?: Vector3Like | undefined;
 	rotation?: Vector3Like | undefined;
 	scale?: Vector3Like | undefined;
-	/** PNG data URL of a framed entity preview. */
-	thumbnail?: string | null | undefined;
-	/** World-space AABB size for thumbnail rulers. */
+	/**
+	 * World-space AABB size for thumbnail rulers. Preview images themselves
+	 * live in the thumbnail side-channel store, keyed by uuid, so entity state
+	 * stays small enough to diff cheaply.
+	 */
 	bounds?: { width: number; height: number; depth: number } | undefined;
 }
 

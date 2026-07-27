@@ -9,6 +9,8 @@ import { EditorProvider } from '../components/EditorContext';
 // Resolves via the `./styles.css` export in `@zylem/ui/package.json`.
 import zylemCSS from '@zylem/ui/styles.css?raw';
 import { entityPreviewCSS } from '../components/entities/entity-preview.css';
+import { bridgePanelCSS } from '../components/bridge/bridge-panel.css';
+import { connectEditorBridge } from '../bridge/editor-bridge';
 
 /**
  * Configuration options for the ZylemEditorElement
@@ -79,6 +81,8 @@ export class ZylemEditorElement extends HTMLElement {
   private _config: ZylemEditorConfig = {};
   private _initialized = false;
   private controller: EditorController | null = null;
+  /** Releases this element's bridge subscription (reference-counted). */
+  private releaseBridge: (() => void) | null = null;
 
   constructor() {
     super();
@@ -142,11 +146,15 @@ export class ZylemEditorElement extends HTMLElement {
     if (this._initialized) return;
     this._initialized = true;
 
+    // Subscribing here rather than at module load means a game with no editor
+    // mounted publishes nothing, and the game can skip editor-only work.
+    this.releaseBridge = connectEditorBridge();
+
     // Add bundled styles unless explicitly disabled
     if (this._config.includeStyles !== false) {
       const styleElement = document.createElement('style');
 
-      styleElement.textContent = `${zylemCSS}\n${entityPreviewCSS}`;
+      styleElement.textContent = `${zylemCSS}\n${entityPreviewCSS}\n${bridgePanelCSS}`;
       this.shadowRoot!.appendChild(styleElement);
     }
 
@@ -184,24 +192,25 @@ export class ZylemEditorElement extends HTMLElement {
    * Call this after changing the `config` property if the element is already connected.
    */
   reinitialize() {
-    if (this.dispose) {
-      this.dispose();
-      this.dispose = null;
-    }
-    this.controller = null;
+    this.teardown();
     // Clear shadow root
     while (this.shadowRoot!.firstChild) {
       this.shadowRoot!.removeChild(this.shadowRoot!.firstChild);
     }
-    this._initialized = false;
     this.initialize();
   }
 
   disconnectedCallback() {
+    this.teardown();
+  }
+
+  private teardown() {
     if (this.dispose) {
       this.dispose();
       this.dispose = null;
     }
+    this.releaseBridge?.();
+    this.releaseBridge = null;
     this.controller = null;
     this._initialized = false;
   }
