@@ -1,15 +1,21 @@
 import {
-	DirectionalLight,
+	AmbientLight,
 	Object3D,
 	PerspectiveCamera,
 	RenderTarget,
 	Scene,
 	Color,
 	LinearFilter,
+	SpotLight,
+	Vector3,
 } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import { frameObject, type ObjectBounds } from './frame-object';
 import { entityPayloadWorker } from '../bridge/entity-payload-worker';
+import {
+	encodeReadbackPixels,
+	type PixelEncodeOptions,
+} from '../bridge/pixel-encode';
 
 export interface EntityThumbnailResult {
 	/**
@@ -216,10 +222,6 @@ export class EntityThumbnailCache {
 		const thumbScene = new Scene();
 		thumbScene.background = new Color(0x3a3a3a);
 
-		const light = new DirectionalLight(0xffffff, 2);
-		light.position.set(5, 10, 7);
-		thumbScene.add(light);
-
 		const clone = object.clone(true);
 		// Normalize transform so framing is relative to the mesh itself
 		clone.position.set(0, 0, 0);
@@ -229,6 +231,7 @@ export class EntityThumbnailCache {
 
 		const thumbCam = new PerspectiveCamera(50, 1, 0.1, 100);
 		const bounds = frameObject(clone, thumbCam);
+		addThumbnailLights(thumbScene, thumbCam, bounds);
 
 		const rt = new RenderTarget(this.size, this.size, {
 			minFilter: LinearFilter,
@@ -258,12 +261,24 @@ export class EntityThumbnailCache {
 		// Do not dispose geometries/materials — Object3D.clone shares them with the live entity.
 		thumbScene.remove(clone);
 
-		// Prefer the payload worker: pixel flip + PNG encode run off-thread and
-		// the result is a compact blob URL. Fall back to the synchronous canvas
-		// path (data URL) when workers/OffscreenCanvas are unavailable.
+		// Render targets are drawn in the working (linear) color space, so the
+		// readback has to be sRGB encoded here or the PNG reads far too dark.
+		const encodeOptions: PixelEncodeOptions = {
+			flipY: readbackIsBottomUp(renderer),
+			srgb: true,
+		};
+
+		// Prefer the payload worker: pixel transform + PNG encode run off-thread
+		// and the result is a compact blob URL. Fall back to the synchronous
+		// canvas path (data URL) when workers/OffscreenCanvas are unavailable.
 		const dataUrl =
-			(await entityPayloadWorker.encodeThumbnail(buffer, this.size, this.size))
-			?? pixelsToDataUrl(buffer, this.size, this.size);
+			(await entityPayloadWorker.encodeThumbnail(
+				buffer,
+				this.size,
+				this.size,
+				encodeOptions,
+			))
+			?? pixelsToDataUrl(buffer, this.size, this.size, encodeOptions);
 		if (!dataUrl) return null;
 
 		return {
@@ -288,14 +303,86 @@ function revokeIfBlobUrl(url: string): void {
 }
 
 /**
- * Synchronous fallback: flip the bottom-up readback rows and encode a PNG
- * data URL on the main thread. Exported for unit tests.
+ * Whether the renderer's pixel readback comes back bottom-up.
+ *
+ * `WebGPURenderer` keeps a WebGL2 fallback backend, and the two disagree:
+ * `gl.readPixels` returns rows bottom-up while WebGPU's `copyTextureToBuffer`
+ * returns them top-down. Only the WebGL2 path needs a vertical flip.
+ *
+ * @internal
+ */
+export function readbackIsBottomUp(
+	renderer: WebGPURenderer | null | undefined,
+): boolean {
+	const backend = (
+		renderer as unknown as { backend?: { isWebGLBackend?: boolean } } | null
+	)?.backend;
+	return backend?.isWebGLBackend === true;
+}
+
+/**
+ * Light the thumbnail scene with a key spotlight offset from the framing
+ * camera plus a low ambient fill, so shaded sides read as shape rather than
+ * black.
+ *
+ * The spotlight uses `decay = 0` and an angle derived from the object's
+ * bounds, keeping exposure and coverage identical for a half-unit cube and a
+ * fifty-unit terrain. Physical falloff would require scaling intensity with
+ * the square of the framing distance.
+ */
+function addThumbnailLights(
+	scene: Scene,
+	camera: PerspectiveCamera,
+	bounds: ObjectBounds,
+): void {
+	scene.add(new AmbientLight(0xffffff, 0.7));
+
+	camera.updateMatrixWorld(true);
+	const right = new Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+	const up = new Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+	const distance = camera.position.distanceTo(bounds.center) || 1;
+
+	const spot = new SpotLight(0xffffff, 5);
+	spot.position
+		.copy(camera.position)
+		.addScaledVector(right, distance * 0.35)
+		.addScaledVector(up, distance * 0.45);
+	spot.decay = 0;
+	spot.distance = 0;
+	spot.penumbra = 0.5;
+	// Widen enough to cover the whole AABB from the offset position.
+	spot.angle = clamp(
+		Math.atan(bounds.maxDim / distance) + 0.25,
+		0.4,
+		Math.PI / 3,
+	);
+	// The shared renderer has shadow maps enabled; thumbnails do not need the
+	// extra passes.
+	spot.castShadow = false;
+
+	// SpotLight aims at its target's world position, which only updates while
+	// the target is part of the scene graph.
+	const target = new Object3D();
+	target.position.copy(bounds.center);
+	scene.add(target);
+	spot.target = target;
+	scene.add(spot);
+}
+
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * Synchronous fallback: normalize the readback and encode a PNG data URL on
+ * the main thread. Exported for unit tests.
  * @internal
  */
 export function pixelsToDataUrl(
 	buffer: ArrayBufferView,
 	width: number,
 	height: number,
+	options: PixelEncodeOptions = {},
 ): string | null {
 	if (typeof document === 'undefined') return null;
 
@@ -310,12 +397,7 @@ export function pixelsToDataUrl(
 		: new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 
 	const imageData = ctx.createImageData(width, height);
-	// WebGPU/WebGL readback is bottom-up; flip vertically for canvas.
-	for (let y = 0; y < height; y += 1) {
-		const srcRow = (height - 1 - y) * width * 4;
-		const dstRow = y * width * 4;
-		imageData.data.set(src.subarray(srcRow, srcRow + width * 4), dstRow);
-	}
+	imageData.data.set(encodeReadbackPixels(src, width, height, options));
 	ctx.putImageData(imageData, 0, 0);
 	return canvas.toDataURL('image/png');
 }
