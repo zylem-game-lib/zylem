@@ -1,10 +1,10 @@
 /**
  * Off-main-thread encoder for heavy entity payload processing.
  *
- * Thumbnail readbacks arrive as raw bottom-up RGBA pixel buffers. Encoding
- * them (row flip + PNG encode) on the main thread blocks the running game,
- * so this module ships the work to a dedicated web worker: the pixel buffer
- * is **transferred** (zero-copy), the worker flips rows and encodes via
+ * Thumbnail readbacks arrive as raw RGBA pixel buffers. Encoding them (row
+ * order fixup, linear-to-sRGB transfer, PNG encode) on the main thread blocks
+ * the running game, so this module ships the work to a dedicated web worker:
+ * the pixel buffer is **transferred** (zero-copy), the worker encodes via
  * `OffscreenCanvas.convertToBlob`, and the caller receives a compact blob
  * URL instead of a base64 data URL.
  *
@@ -14,6 +14,8 @@
  * unavailable (tests, older browsers), callers should fall back to the
  * synchronous canvas path.
  */
+
+import { encodeReadbackPixels, type PixelEncodeOptions } from './pixel-encode';
 
 interface WorkerSuccess {
 	id: number;
@@ -27,22 +29,24 @@ interface WorkerFailure {
 
 type WorkerResponse = WorkerSuccess | WorkerFailure;
 
+/**
+ * The pixel transform is injected by stringifying the shared implementation so
+ * the worker and the synchronous fallback can never drift apart. The assignment
+ * form accepts either a function declaration or an arrow, whichever the bundler
+ * emits after minification.
+ */
 const WORKER_SOURCE = `
+const encodeReadbackPixels = ${encodeReadbackPixels.toString()};
+
 self.onmessage = async (event) => {
-	const { id, buffer, width, height } = event.data;
+	const { id, buffer, width, height, options } = event.data;
 	try {
 		const src = new Uint8ClampedArray(buffer);
-		const rowBytes = width * 4;
-		const flipped = new Uint8ClampedArray(src.length);
-		// WebGPU/WebGL readback is bottom-up; flip vertically for canvas.
-		for (let y = 0; y < height; y += 1) {
-			const srcRow = (height - 1 - y) * rowBytes;
-			flipped.set(src.subarray(srcRow, srcRow + rowBytes), y * rowBytes);
-		}
+		const pixels = encodeReadbackPixels(src, width, height, options);
 		const canvas = new OffscreenCanvas(width, height);
 		const ctx = canvas.getContext('2d');
 		if (!ctx) throw new Error('OffscreenCanvas 2d context unavailable');
-		ctx.putImageData(new ImageData(flipped, width, height), 0, 0);
+		ctx.putImageData(new ImageData(pixels, width, height), 0, 0);
 		const blob = await canvas.convertToBlob({ type: 'image/png' });
 		self.postMessage({ id, blob });
 	} catch (error) {
@@ -75,9 +79,10 @@ export class EntityPayloadWorker {
 	}
 
 	/**
-	 * Encode a bottom-up RGBA pixel buffer to a PNG blob URL off-thread.
-	 * The buffer is copied into a transferable and handed to the worker.
+	 * Encode a raw RGBA readback to a PNG blob URL off-thread. The buffer is
+	 * copied into a transferable and handed to the worker.
 	 *
+	 * @param options Row order and color space handling for the readback.
 	 * @returns A blob URL (caller owns revocation), or null when the worker
 	 *          path is unavailable or encoding fails.
 	 */
@@ -85,6 +90,7 @@ export class EntityPayloadWorker {
 		pixels: ArrayBufferView,
 		width: number,
 		height: number,
+		options: PixelEncodeOptions = {},
 	): Promise<string | null> {
 		if (!this.isSupported()) return null;
 		const worker = this.ensureWorker();
@@ -103,9 +109,9 @@ export class EntityPayloadWorker {
 		try {
 			const blob = await new Promise<Blob>((resolve, reject) => {
 				this.pending.set(id, { resolve, reject });
-				worker.postMessage({ id, buffer: copy.buffer, width, height }, [
-					copy.buffer,
-				]);
+			worker.postMessage({ id, buffer: copy.buffer, width, height, options }, [
+				copy.buffer,
+			]);
 			});
 			return URL.createObjectURL(blob);
 		} catch {
