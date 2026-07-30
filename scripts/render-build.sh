@@ -10,7 +10,7 @@ if command -v pnpm >/dev/null 2>&1; then
   echo "pnpm already available: $(pnpm --version)"
 else
   corepack enable
-  corepack prepare pnpm@10.33.0 --activate
+  corepack prepare --activate
 fi
 pnpm install --frozen-lockfile
 export NODE_ENV=production
