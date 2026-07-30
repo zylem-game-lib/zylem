@@ -1,6 +1,6 @@
 {
   "name": "@zylem/editor",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "type": "module",
   "main": "./dist/zylem-editor.js",
   "module": "./dist/zylem-editor.js",
