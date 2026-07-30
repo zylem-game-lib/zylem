@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Resolve changed files
         id: changed-files
@@ -106,12 +106,10 @@ jobs:
           echo "mode=partial" >> "$GITHUB_OUTPUT"
           echo "targets=$sorted_targets" >> "$GITHUB_OUTPUT"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         if: ${{ steps.screenshot-targets.outputs.mode != 'skip' }}
-        with:
-          version: 10.18.3
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         if: ${{ steps.screenshot-targets.outputs.mode != 'skip' }}
         with:
           node-version-file: '.nvmrc'
@@ -139,7 +137,7 @@ jobs:
 
       - name: Upload screenshots
         if: ${{ !cancelled() && steps.screenshot-targets.outputs.mode != 'skip' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: demo-screenshots
           path: packages/examples/screenshots/
