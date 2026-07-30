@@ -226,13 +226,22 @@ export class GameBridge {
 	 * Run a callback when an editor first subscribes to entity data, so the
 	 * game can backfill state produced while nothing was listening.
 	 *
+	 * An editor takes out both entity subscriptions as it mounts, and each is
+	 * a first-subscriber transition. Backfilling on both would republish the
+	 * config, the whole stage snapshot, and every thumbnail twice per mount,
+	 * so a signal is ignored while the other entity type still has a
+	 * listener — that is the same editor finishing its setup, not a new one.
+	 *
 	 * @returns An unsubscribe function.
 	 */
 	onEditorAttached(callback: () => void): () => void {
 		return this.channel.onSubscriberAdded((type) => {
-			if (type === 'entity:upsert' || type === 'entity:thumbnail') {
-				callback();
-			}
+			if (type !== 'entity:upsert' && type !== 'entity:thumbnail') return;
+			const other = type === 'entity:upsert'
+				? 'entity:thumbnail'
+				: 'entity:upsert';
+			if (this.channel.subscriberCount(other) > 0) return;
+			callback();
 		});
 	}
 
@@ -250,8 +259,16 @@ export class GameBridge {
 		this.channel.queue('game:status', status);
 	}
 
+	/**
+	 * Publish a global's new value.
+	 *
+	 * Sent rather than queued: a queued payload is merged into the pending one
+	 * for its type, and since each message names a single `path`, two globals
+	 * changing in the same frame would collapse into one and the first
+	 * variable's update would never reach the editor.
+	 */
 	publishVariable(payload: GameVariablePayload): void {
-		this.channel.queue('game:variable', payload);
+		this.channel.send('game:variable', payload);
 	}
 
 	/** Surface a diagnostic message in the editor console. */

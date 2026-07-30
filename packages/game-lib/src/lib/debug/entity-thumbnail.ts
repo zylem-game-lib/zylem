@@ -62,6 +62,12 @@ interface QueuedRender {
 /**
  * Generates and caches entity thumbnail previews for the editor entity list.
  * Renders a cloned Object3D into an offscreen RenderTarget on the shared WebGPU renderer.
+ *
+ * A rendered URL leaves this cache the moment it is read, and the editor holds
+ * it for as long as the entity is listed. Dropping an entry here therefore
+ * must not revoke its blob URL — the consumer owns that lifetime and releases
+ * it when the thumbnail is replaced, the entity is removed, or the stage
+ * changes.
  */
 export class EntityThumbnailCache {
 	private cache = new Map<string, EntityThumbnailCacheEntry>();
@@ -89,8 +95,6 @@ export class EntityThumbnailCache {
 	}
 
 	invalidate(uuid: string): void {
-		const entry = this.cache.get(uuid);
-		if (entry) revokeIfBlobUrl(entry.dataUrl);
 		this.cache.delete(uuid);
 		this.inFlight.delete(uuid);
 		// Drop any queued render for an entity that no longer exists.
@@ -102,7 +106,6 @@ export class EntityThumbnailCache {
 	}
 
 	clear(): void {
-		this.cache.forEach((entry) => revokeIfBlobUrl(entry.dataUrl));
 		this.cache.clear();
 		this.inFlight.clear();
 		for (const task of this.queue) task.resolve(null);
@@ -206,8 +209,6 @@ export class EntityThumbnailCache {
 		while (this.cache.size > this.maxEntries) {
 			const oldest = this.cache.keys().next();
 			if (oldest.done) return;
-			const entry = this.cache.get(oldest.value);
-			if (entry) revokeIfBlobUrl(entry.dataUrl);
 			this.cache.delete(oldest.value);
 		}
 	}
@@ -295,12 +296,6 @@ export class EntityThumbnailCache {
 
 /** Shared cache used by the running game to feed editor entity payloads. */
 export const entityThumbnailCache = new EntityThumbnailCache();
-
-function revokeIfBlobUrl(url: string): void {
-	if (url.startsWith('blob:') && typeof URL !== 'undefined') {
-		URL.revokeObjectURL(url);
-	}
-}
 
 /**
  * Whether the renderer's pixel readback comes back bottom-up.

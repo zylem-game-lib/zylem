@@ -159,6 +159,22 @@ describe('GameBridge game → editor sync', () => {
 		expect(selections).toEqual([]);
 	});
 
+	it('delivers every global changed in the same frame', async () => {
+		const updates: { path: string; value: unknown }[] = [];
+		channel.on('game:variable', ({ path, value }) => {
+			updates.push({ path, value });
+		});
+
+		bridge.publishVariable({ path: 'score', value: 10 });
+		bridge.publishVariable({ path: 'lives', value: 2 });
+		await flushBridge();
+
+		expect(updates).toEqual([
+			{ path: 'score', value: 10 },
+			{ path: 'lives', value: 2 },
+		]);
+	});
+
 	it('publishes debug and pause status changes made inside the game', async () => {
 		const statuses: { paused?: boolean; debug?: boolean }[] = [];
 		channel.on('game:status', (status) => statuses.push(status));
@@ -200,9 +216,31 @@ describe('GameBridge demand gating', () => {
 
 	it('signals when an editor attaches so the game can backfill', () => {
 		const onAttached = vi.fn();
-		bridge.onEditorAttached(onAttached);
+		const stopWatching = bridge.onEditorAttached(onAttached);
 
-		channel.on('entity:upsert', () => {});
+		const unsubscribe = channel.on('entity:upsert', () => {});
 		expect(onAttached).toHaveBeenCalledTimes(1);
+
+		unsubscribe();
+		stopWatching();
+	});
+
+	it('signals once per editor, not once per entity subscription', () => {
+		const onAttached = vi.fn();
+		const stopWatching = bridge.onEditorAttached(onAttached);
+
+		// An editor mount subscribes to both entity streams; backfilling twice
+		// would repeat the stage snapshot and every thumbnail render.
+		const unsubscribes = [
+			channel.on('entity:upsert', () => {}),
+			channel.on('entity:thumbnail', () => {}),
+		];
+		expect(onAttached).toHaveBeenCalledTimes(1);
+
+		for (const unsubscribe of unsubscribes) unsubscribe();
+		channel.on('entity:upsert', () => {})();
+		expect(onAttached).toHaveBeenCalledTimes(2);
+
+		stopWatching();
 	});
 });
