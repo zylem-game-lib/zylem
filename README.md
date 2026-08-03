@@ -4,7 +4,7 @@ A powerful and easy-to-use framework for creating simple 3D digital interactive 
 
 ## Demos 🎮
 
-You can check out the latest build with demos at [https://zylem.onrender.com](https://zylem.onrender.com).
+You can check out the latest demos at [https://zylem.onrender.com](https://zylem.onrender.com) (hosted from [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples)).
 
 ## 📦 Packages
 
@@ -12,14 +12,16 @@ This is a pnpm workspace monorepo containing:
 
 - **[@zylem/game-lib](./packages/game-lib)** - Core game engine library (published to npm)
 - **[@zylem/editor](./packages/editor)** - SolidJS-based debug UI and editor
-- **[@zylem/examples](./packages/examples)** - Example applications and playground
-- **[@zylem/spacetime-server](./packages/server)** - SpacetimeDB multiplayer server (scaffold)
+- **[@zylem/bridge](./packages/bridge)** - Typed communication bridge shared by game-lib and editor
+- **[@zylem/utilities](./packages/zylem-utilities)** - Supporting development utilities
 
 External packages published to npm from their own repositories:
 
 - [@zylem/ui](https://github.com/zylem-game-lib/ui) - Shared styles and Solid components
 - [@zylem/runtime](https://github.com/zylem-game-lib/runtime) - Rust/wasm simulation runtime (prebuilt `zylem_runtime.wasm` + TS loader)
 - [@zylem/behaviors](https://github.com/zylem-game-lib/behaviors) - Tree-shakable behavior descriptors and systems
+- [@zylem/shaders](https://github.com/zylem-game-lib/shaders) - WebGPU TSL shaders and postprocessing
+- [@zylem/examples](https://github.com/zylem-game-lib/zylem-examples) - Example applications, playground, and SpacetimeDB server
 
 ## 🚀 Quick Start
 
@@ -35,9 +37,6 @@ pnpm install
 # Start the editor dev server
 pnpm dev:editor
 
-# Start the examples playground
-pnpm dev:examples
-
 # Build the game library
 pnpm build:lib
 
@@ -50,6 +49,8 @@ pnpm typecheck
 # Lint all packages
 pnpm lint
 ```
+
+For demos and the multiplayer server, use the sibling [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples) repo. For shader demos, use [`shaders`](https://github.com/zylem-game-lib/shaders).
 
 ### Interactive runner
 
@@ -70,23 +71,10 @@ zw link dev
 The `build`, `bump`, and `publish` actions still load the repo `.env` first, so
 secrets like `NPM_TOKEN` are available to those commands.
 
-### Render builds
-
-Render deployments use the root build script:
-
-```bash
-pnpm build:render
-```
-
-The wasm runtime ships prebuilt inside the `@zylem/runtime` npm package, so
-no Rust toolchain is required — the script just installs dependencies and
-bundles the examples SPA. The SpacetimeDB API remains the separate Render
-web service.
-
 ### Production builds
 
 - **`pnpm run build:production`** — Sets `NODE_ENV=production` for all JS/TS packages, disables `.map` files by default (override with `SOURCEMAP=1`), and enables minify where configured. The wasm runtime comes prebuilt from the `@zylem/runtime` npm package.
-- **`pnpm run build:production:verify`** — Runs `scripts/ensure-spacetimedb-toolchain-ci.sh` (Rust wasm + SpacetimeDB CLI when missing), then `typecheck`, `lint`, and `build:production`. Use this in CI or for a full gate before release.
+- **`pnpm run build:production:verify`** — Runs `typecheck`, `lint`, and `build:production`. Use this in CI or for a full gate before release.
 - For **npm publish** of `@zylem/game-lib`, `pnpm run publish:lib` (or `pnpm run publish`) builds the library with `NODE_ENV=production` first.
 
 > **Publishing auth:** `NPM_TOKEN` is read from the root `.env` and injected as the registry auth token only during publish. It is intentionally **not** referenced from the committed `.npmrc`, so everyday `pnpm` commands (`build`, `install`, `dev`, `test`) stay warning-free.

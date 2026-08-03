@@ -120,7 +120,7 @@ Use the lightest test style that covers the behavior well:
 - pure unit tests for math/tick functions
 - FSM tests for state transition behavior
 - small system tests for descriptor wiring and entity/ref integration
-- demo coverage through `packages/examples` buildability
+- demo coverage through `zylem-examples` buildability
 
 Skipped behavior specs should be replaced or reworked, not left dormant.
 

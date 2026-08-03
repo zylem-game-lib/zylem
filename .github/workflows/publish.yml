@@ -47,13 +47,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Ensure Rust wasm + SpacetimeDB CLI
-        run: bash ./scripts/ensure-spacetimedb-toolchain-ci.sh
-
-      - name: Export toolchain PATH
-        run: |
-          echo "PATH=${HOME}/.spacetimedb:${HOME}/.spacetimedb/bin/current:${HOME}/.cargo/bin:${PATH}" >> "${GITHUB_ENV}"
-
       - name: Build for publish
         run: pnpm run build:production
 

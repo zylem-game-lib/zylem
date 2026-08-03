@@ -8,8 +8,8 @@ for applying / verifying them.
 ## Files
 
 - [`r2-cors.json`](./r2-cors.json) — CORS rules applied to the bucket.
-  - `AllowedOrigins` covers the local examples (`http://localhost:3331`) and
-    shader-showcase (`http://localhost:3332`) servers, the Render staging +
+  - `AllowedOrigins` covers the local zylem-examples (`http://localhost:3331`) and
+    shaders/shader-showcase (`http://localhost:3332`) servers, the Render staging +
     production hosts, and the apex `zylem.com` domain.
     Extend it whenever you add a new origin (e.g. a preview deploy).
   - `AllowedMethods` is `GET` + `HEAD` only — the bucket is read-only from

@@ -26,17 +26,17 @@
   "dependencies": {
     "@kobalte/core": "^0.13.11",
     "@solidjs/router": "^0.14.0",
-    "@zylem/bridge": "workspace:*",
+    "@zylem/bridge": "^0.1.1",
     "@zylem/ui": "^0.2.0",
     "lucide-solid": "^0.511.0",
     "solid-js": "^1.9.9",
     "valtio": "^2.1.7"
   },
   "peerDependencies": {
-    "@zylem/game-lib": "workspace:^"
+    "@zylem/game-lib": "^0.8.3"
   },
   "devDependencies": {
-    "@zylem/game-lib": "workspace:*",
+    "@zylem/game-lib": "^0.8.3",
     "typescript": "6.0.3",
     "vite": "7.0.4",
     "vite-plugin-solid": "^2.11.8",

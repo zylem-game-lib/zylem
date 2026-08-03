@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Production verify (toolchain + typecheck + lint + build:production)
+      - name: Production verify (typecheck + lint + build:production)
         run: bash ./scripts/ci-production-verify.sh
 
       - name: Unit tests (game-lib)
