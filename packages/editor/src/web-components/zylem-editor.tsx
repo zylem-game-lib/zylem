@@ -4,6 +4,8 @@ import App, {
   type EditorLauncherMode,
 } from '../App';
 import { EditorProvider } from '../components/EditorContext';
+import { DOCK_SIDES, type DockPanelId, type DockSide } from '../components/common/dock-layout';
+import type { EditorDockDefaults } from '../components/editor-store';
 
 // Import bundled CSS (single file with all tokens and component styles).
 // Resolves via the `./styles.css` export in `@zylem/ui/package.json`.
@@ -39,10 +41,45 @@ export interface ZylemEditorConfig {
    * @default 'floating'
    */
   launcherMode?: EditorLauncherMode;
+  /**
+   * Dock layout to seed the first time the editor runs in this browser, keyed
+   * by viewport edge. Use `'main'` for the editor panel itself; any other id is
+   * a section (for example `'console'`), which gets detached from the accordion
+   * so it can hold a dock slot.
+   *
+   * Ignored once the user has a saved layout, so it sets a starting point
+   * rather than forcing one.
+   */
+  defaultDocks?: EditorDockDefaults;
 }
 
 const normalizeLauncherMode = (value: unknown): EditorLauncherMode =>
   value === 'hidden' ? 'hidden' : 'floating';
+
+/** Tolerant parse so a malformed attribute degrades to "no defaults". */
+const normalizeDockDefaults = (value: unknown): EditorDockDefaults | undefined => {
+  let source = value;
+  if (typeof source === 'string') {
+    try {
+      source = JSON.parse(source);
+    } catch {
+      return undefined;
+    }
+  }
+  if (!source || typeof source !== 'object') return undefined;
+
+  const defaults: EditorDockDefaults = {};
+  for (const side of DOCK_SIDES) {
+    const panels = (source as Record<string, unknown>)[side];
+    if (!Array.isArray(panels)) continue;
+    const ids = panels.filter(
+      (id): id is DockPanelId => typeof id === 'string' && id.length > 0,
+    );
+    if (ids.length > 0) defaults[side] = ids;
+  }
+
+  return Object.keys(defaults).length > 0 ? defaults : undefined;
+};
 
 /**
  * ZylemEditorElement - A web component that wraps the Zylem Editor.
@@ -124,7 +161,7 @@ export class ZylemEditorElement extends HTMLElement {
    * Observed attributes for the web component
    */
   static get observedAttributes() {
-    return ['include-styles', 'launcher-mode'];
+    return ['include-styles', 'launcher-mode', 'default-docks'];
   }
 
   attributeChangedCallback(name: string, _oldValue: string, newValue: string) {
@@ -135,6 +172,17 @@ export class ZylemEditorElement extends HTMLElement {
 
     if (name === 'launcher-mode') {
       this.launcherMode = normalizeLauncherMode(newValue);
+      return;
+    }
+
+    if (name === 'default-docks') {
+      // Only consulted on first run, so a late change needs no reinitialize.
+      const defaults = normalizeDockDefaults(newValue);
+      if (defaults) {
+        this._config.defaultDocks = defaults;
+      } else {
+        delete this._config.defaultDocks;
+      }
     }
   }
 
@@ -167,6 +215,7 @@ export class ZylemEditorElement extends HTMLElement {
       <EditorProvider>
         <App
           launcherMode={this.launcherMode}
+          defaultDocks={normalizeDockDefaults(this._config.defaultDocks)}
           onControllerReady={(controller) => {
             this.controller = controller;
           }}
@@ -185,6 +234,14 @@ export class ZylemEditorElement extends HTMLElement {
 
   togglePanel() {
     this.controller?.togglePanel();
+  }
+
+  /**
+   * Dock a panel to a viewport edge, or pass `null` to float it again.
+   * Defaults to the main editor panel.
+   */
+  dockPanel(side: DockSide | null, panelId?: DockPanelId) {
+    this.controller?.dockPanel(side, panelId);
   }
 
   /**

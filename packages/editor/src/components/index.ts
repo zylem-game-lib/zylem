@@ -31,6 +31,7 @@ export {
 	debugStore,
 	setDebugStore,
 	setPanelPosition,
+	setPanelSize,
 	setToggleButtonPosition,
 	detachPanel,
 	reattachPanel,
@@ -43,8 +44,34 @@ export {
 	setDropTargetIndex,
 	clearDragState,
 	bringPanelToFront,
+	dockPanelToSide,
+	undockPanelFromSides,
+	setDockThickness,
+	getDockedSide,
+	applyDefaultDocks,
+	MAIN_PANEL_ID,
 	type DetachedPanelState,
+	type EditorDockDefaults,
 } from './editor-store';
+
+// Dock layout geometry
+export {
+	computeDockLayout,
+	findDockedSide,
+	innerEdgeFor,
+	isHorizontalSide,
+	previewDockRect,
+	dockSlotIndex,
+	clampThickness,
+	resolveThickness,
+	DOCK_SIDES,
+	type DockPanelId,
+	type DockRect,
+	type DockRegistry,
+	type DockSide,
+	type DockZoneState,
+	type Viewport,
+} from './common/dock-layout';
 export { EditorProvider, useEditor, type EditorContextValue } from './EditorContext';
 
 // Console

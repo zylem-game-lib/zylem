@@ -8,6 +8,21 @@ export {
     debugState,
     gameState,
     stageState,
+    MAIN_PANEL_ID,
+    DOCK_SIDES,
+    computeDockLayout,
+    findDockedSide,
+    dockPanelToSide,
+    undockPanelFromSides,
+    getDockedSide,
+} from './components';
+export type {
+    DockPanelId,
+    DockRect,
+    DockRegistry,
+    DockSide,
+    DockZoneState,
+    EditorDockDefaults,
 } from './components';
 export {
     connectEditorBridge,

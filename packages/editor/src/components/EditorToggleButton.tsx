@@ -173,6 +173,7 @@ export const EditorToggleButton: Component<EditorToggleButtonProps> = (
         'z-index': 1001,
         cursor: 'grab',
         'touch-action': 'none',
+        'pointer-events': 'auto',
       }}
     >
       <button

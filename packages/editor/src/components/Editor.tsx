@@ -11,9 +11,25 @@ import {
 
 import { Menu } from './editor-panel/Menu';
 import { EditorToggleButton } from './EditorToggleButton';
-import { FloatingPanel } from './common/FloatingPanel';
+import { FloatingPanel, type DockRequest } from './common/FloatingPanel';
 import { DetachedPanel } from './editor-panel/DetachedPanel';
-import { debugStore, setPanelPosition } from '.';
+import {
+  applyDefaultDocks,
+  computeDockLayout,
+  debugStore,
+  detachPanel,
+  dockPanelToSide,
+  findDockedSide,
+  isPanelDetached,
+  MAIN_PANEL_ID,
+  setPanelPosition,
+  setPanelSize,
+  undockPanelFromSides,
+  type DockPanelId,
+  type DockSide,
+  type EditorDockDefaults,
+} from '.';
+import { viewportSize } from './common/viewport';
 
 // Panel dimensions
 const PANEL_WIDTH = 460;
@@ -28,10 +44,18 @@ export interface EditorController {
   openPanel: () => void;
   closePanel: () => void;
   togglePanel: () => void;
+  /**
+   * Dock a panel to a viewport edge, or pass `null` to float it.
+   * Defaults to the main editor panel; any other id is a section, which is
+   * detached from the accordion first.
+   */
+  dockPanel: (side: DockSide | null, panelId?: DockPanelId) => void;
 }
 
 interface EditorProps {
   launcherMode?: EditorLauncherMode | undefined;
+  /** First-run dock layout; ignored once the user has their own. */
+  defaultDocks?: EditorDockDefaults | undefined;
   onControllerReady?:
     | ((controller: EditorController | null) => void)
     | undefined;
@@ -112,7 +136,12 @@ const getInitialPanelPosition = () => {
  */
 export const Editor: Component<EditorProps> = (props) => {
   const [isOpen, setIsOpen] = createSignal(false);
+  const [dockRequest, setDockRequest] = createSignal<DockRequest | null>(null);
   const launcherMode = () => props.launcherMode ?? 'floating';
+
+  // Seed before the panel renders, so its first layout already reflects the
+  // host's requested docks. No-ops once the user has a layout of their own.
+  applyDefaultDocks(props.defaultDocks);
 
   const toggleMenu = () => {
     setIsOpen((open) => !open);
@@ -123,6 +152,8 @@ export const Editor: Component<EditorProps> = (props) => {
   const handlePanelMove = (pos: { x: number; y: number }) => {
     setPanelPosition(pos);
   };
+
+  const mainDockedSide = () => findDockedSide(debugStore.docks, MAIN_PANEL_ID);
 
   // Get list of detached panel IDs
   const getDetachedPanelIds = () => Object.keys(debugStore.detachedPanels);
@@ -140,29 +171,57 @@ export const Editor: Component<EditorProps> = (props) => {
   };
 
   const panelLayout = createMemo(() => {
-    if (typeof window === 'undefined') {
-      return {
-        initialPosition: getInitialPanelPosition(),
-        initialSize: { width: PANEL_WIDTH, height: PANEL_HEIGHT },
-      };
+    // A docked panel's geometry belongs to the dock registry.
+    if (mainDockedSide()) {
+      const rect = computeDockLayout(debugStore.docks, viewportSize())[MAIN_PANEL_ID];
+      if (rect) {
+        return {
+          initialPosition: { x: rect.x, y: rect.y },
+          initialSize: { width: rect.width, height: rect.height },
+        };
+      }
     }
 
-    if (!shouldViewportFitPanel()) {
-      return {
-        initialPosition: getInitialPanelPosition(),
-        initialSize: { width: PANEL_WIDTH, height: PANEL_HEIGHT },
-      };
-    }
+    const fallback =
+      typeof window === 'undefined' || !shouldViewportFitPanel()
+        ? {
+            initialPosition: getInitialPanelPosition(),
+            initialSize: { width: PANEL_WIDTH, height: PANEL_HEIGHT },
+          }
+        : getViewportFittedPanelLayout(
+            launcherMode() === 'hidden' ? MOBILE_BOTTOM_BAR_ALLOWANCE : 0,
+          );
 
-    return getViewportFittedPanelLayout(
-      launcherMode() === 'hidden' ? MOBILE_BOTTOM_BAR_ALLOWANCE : 0,
-    );
+    // A size the user chose outranks the viewport-fitted default.
+    return {
+      initialPosition: fallback.initialPosition,
+      initialSize: debugStore.panelSize ?? fallback.initialSize,
+    };
   });
 
   const controller: EditorController = {
     openPanel: openMenu,
     closePanel: closeMenu,
     togglePanel: toggleMenu,
+    dockPanel: (side, panelId = MAIN_PANEL_ID) => {
+      if (panelId === MAIN_PANEL_ID) {
+        // The panel owns the undock/restore path, so route through it.
+        openMenu();
+        setDockRequest((previous) => ({ side, nonce: (previous?.nonce ?? 0) + 1 }));
+        return;
+      }
+
+      if (side === null) {
+        undockPanelFromSides(panelId);
+        return;
+      }
+
+      // Only a detached section can hold a dock slot.
+      if (!isPanelDetached(panelId)) {
+        detachPanel(panelId, { x: 100, y: 100 });
+      }
+      dockPanelToSide(panelId, side);
+    },
   };
 
   onMount(() => {
@@ -180,6 +239,9 @@ export const Editor: Component<EditorProps> = (props) => {
         height: '100vh',
         width: '100vw',
         position: 'absolute',
+        // The overlay must never swallow input meant for the game underneath;
+        // interactive children opt back in with pointer-events: auto.
+        'pointer-events': 'none',
       }}
     >
       <Show when={launcherMode() !== 'hidden'}>
@@ -190,10 +252,13 @@ export const Editor: Component<EditorProps> = (props) => {
           title="Zylem Editor"
           initialPosition={panelLayout().initialPosition}
           initialSize={panelLayout().initialSize}
+          floatingSize={debugStore.panelSize ?? { width: PANEL_WIDTH, height: PANEL_HEIGHT }}
           minSize={{ width: 300, height: 200 }}
           collapsible={true}
           onClose={closeMenu}
           onMove={handlePanelMove}
+          onResize={setPanelSize}
+          dockRequest={dockRequest}
         >
           {(isCollapsed) => <Menu isCollapsed={isCollapsed} />}
         </FloatingPanel>

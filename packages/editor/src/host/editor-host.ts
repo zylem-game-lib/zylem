@@ -22,6 +22,8 @@ import {
 	type ZylemEditorElement,
 } from '../web-components/zylem-editor';
 import type { EditorLauncherMode } from '../App';
+import type { EditorDockDefaults } from '../components/editor-store';
+import type { DockPanelId, DockSide } from '../components/common/dock-layout';
 
 /**
  * Nested state payload used by host-facing helpers.
@@ -143,6 +145,17 @@ export interface MountZylemEditorOptions extends EditorStateBridgeOptions {
 	 */
 	launcherMode?: EditorLauncherMode;
 	/**
+	 * Dock layout to seed on first run, keyed by viewport edge. `'main'` is the
+	 * editor panel; any other id is a section such as `'console'`. Ignored once
+	 * the user has a saved layout.
+	 *
+	 * @example
+	 * ```ts
+	 * mountZylemEditor({ defaultDocks: { left: ['main'], bottom: ['console'] } });
+	 * ```
+	 */
+	defaultDocks?: EditorDockDefaults;
+	/**
 	 * Element the <zylem-editor> overlay is appended to.
 	 * @default document.body
 	 */
@@ -151,6 +164,8 @@ export interface MountZylemEditorOptions extends EditorStateBridgeOptions {
 
 export interface MountedZylemEditor extends EditorStateBridge {
 	element: ZylemEditorElement;
+	/** Dock a panel to a viewport edge, or pass `null` to float it again. */
+	dockPanel(side: DockSide | null, panelId?: DockPanelId): void;
 }
 
 /**
@@ -170,6 +185,11 @@ export function mountZylemEditor(
 
 	const element = document.createElement('zylem-editor') as ZylemEditorElement;
 	element.setAttribute('launcher-mode', options.launcherMode ?? 'floating');
+	if (options.defaultDocks) {
+		// Set before append: the config setter only reinitializes an element
+		// that has already mounted.
+		element.config = { ...element.config, defaultDocks: options.defaultDocks };
+	}
 	(options.target ?? document.body).appendChild(element);
 
 	const bridge = attachEditorStateBridge(options);
@@ -177,6 +197,9 @@ export function mountZylemEditor(
 	return {
 		element,
 		dispatchToEditor: bridge.dispatchToEditor,
+		dockPanel(side, panelId) {
+			element.dockPanel(side, panelId);
+		},
 		dispose() {
 			bridge.dispose();
 			element.remove();

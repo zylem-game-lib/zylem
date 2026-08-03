@@ -1,26 +1,53 @@
-import { createSignal, onCleanup, onMount, Show, type JSX, type Component, type Accessor } from 'solid-js';
+import {
+    createEffect,
+    createSignal,
+    onCleanup,
+    onMount,
+    Show,
+    type JSX,
+    type Component,
+    type Accessor,
+} from 'solid-js';
 import { WindowControls } from '@zylem/ui/components';
-import { createPanelDocking, DockPreviewOverlay } from './panel-docking';
+import { DockMenu } from './DockMenu';
+import { createPanelDocking, DockPreviewOverlay, type ResizeMode } from './panel-docking';
+import { isHorizontalSide, type DockSide } from './dock-layout';
+import { MAIN_PANEL_ID } from '../editor-store';
 
 // Minimum drag threshold to distinguish from clicks
 const DRAG_THRESHOLD = 3;
 
 type ResizeDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw' | null;
 
+/** An imperative dock command; the nonce lets the same side be re-sent. */
+export interface DockRequest {
+    side: DockSide | null;
+    nonce: number;
+}
+
 export interface FloatingPanelProps {
     title?: string;
     initialPosition?: { x: number; y: number };
     initialSize?: { width: number; height: number };
+    /**
+     * Size the panel should restore to when it floats. `initialSize` can be a
+     * docked rect when the panel mounts docked, so it must not seed the
+     * floating-size memory.
+     */
+    floatingSize?: { width: number; height: number };
     minSize?: { width: number; height: number };
     collapsible?: boolean;
     onClose?: () => void;
     onMove?: (position: { x: number; y: number }) => void;
+    onResize?: (size: { width: number; height: number }) => void;
+    dockRequest?: Accessor<DockRequest | null>;
     children: JSX.Element | ((isCollapsed: Accessor<boolean>) => JSX.Element);
 }
 
 /**
  * FloatingPanel - A draggable and resizable container component.
  * Can be moved by dragging the title bar and resized from edges/corners.
+ * Dragging it past a viewport edge docks it; see `panel-docking`.
  */
 export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
     const minSize = props.minSize ?? { width: 300, height: 200 };
@@ -38,10 +65,12 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
 
     let isDragging = false;
     let isResizing = false;
+    let resizeMode: ResizeMode = 'free';
     let resizeDirection: ResizeDirection = null;
     let dragStartPos = { x: 0, y: 0 };
     let panelStartPos = { x: 0, y: 0 };
     let panelStartSize = { width: 0, height: 0 };
+    let startThickness = 0;
     let hasMoved = false;
     let panelRef: HTMLDivElement | undefined;
 
@@ -54,16 +83,18 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
         getLiveSize,
         getDockPreviewRect,
         detectDockSide,
-        undockFromDrag,
+        detectDockIndex,
+        beginDragGhost,
+        endDragGhost,
+        isMoving,
         clampSizeToViewport,
         beginResize,
-        clearDockedSide,
+        resizeDockThickness,
         applyDockPreview,
-        restoreUndockedPanel,
-        handleWindowResize,
-        cleanupWindowResize,
+        dockTo,
     } = createPanelDocking({
-        initialSize: initialPanelSize,
+        panelId: MAIN_PANEL_ID,
+        initialSize: props.floatingSize ?? initialPanelSize,
         minSize,
         position,
         setPosition,
@@ -71,6 +102,14 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
         setSize,
         panelRef: () => panelRef,
         onPositionCommit: (nextPosition) => props.onMove?.(nextPosition),
+        onSizeCommit: (nextSize) => props.onResize?.(nextSize),
+    });
+
+    // Host-driven dock commands (toolbar buttons, postMessage from a shell).
+    createEffect(() => {
+        const request = props.dockRequest?.();
+        if (!request) return;
+        dockTo(request.side);
     });
 
     // Clamp position to keep panel visible in viewport
@@ -102,7 +141,12 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
     const handleResizePointerDown = (direction: ResizeDirection) => (e: PointerEvent) => {
         isResizing = true;
         resizeDirection = direction;
-        const currentSize = beginResize();
+        const side = dockedSide();
+        const { size: currentSize, mode } = beginResize(direction);
+        resizeMode = mode;
+        // A thickness resize measures from the zone's current extent, not the
+        // panel box, since every panel in the zone shares it.
+        startThickness = side && isHorizontalSide(side) ? currentSize.width : currentSize.height;
         dragStartPos = { x: e.clientX, y: e.clientY };
         panelStartPos = { ...position() };
         panelStartSize = { ...currentSize };
@@ -121,14 +165,13 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
             if (Math.abs(deltaX) > DRAG_THRESHOLD || Math.abs(deltaY) > DRAG_THRESHOLD) {
                 if (!hasMoved) {
                     hasMoved = true;
-                    if (dockedSide() !== null) {
-                        const fitted = undockFromDrag(e.clientX, e.clientY);
-                        dragStartPos = { x: e.clientX, y: e.clientY };
-                        panelStartPos = { ...fitted.position };
-                        panelStartSize = { ...fitted.size };
-                        deltaX = 0;
-                        deltaY = 0;
-                    }
+                    // Every move happens through the small ghost, docked or not.
+                    const fitted = beginDragGhost(e.clientX, e.clientY);
+                    dragStartPos = { x: e.clientX, y: e.clientY };
+                    panelStartPos = { ...fitted.position };
+                    panelStartSize = { ...fitted.size };
+                    deltaX = 0;
+                    deltaY = 0;
                 }
             }
 
@@ -144,7 +187,7 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                     liveSize.height,
                 );
                 if (dockSide) {
-                    showDockPreview(dockSide);
+                    showDockPreview(dockSide, detectDockIndex(dockSide, e.clientX, e.clientY));
                 } else {
                     hideDockPreview();
                 }
@@ -160,6 +203,13 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
         } else if (isResizing && resizeDirection) {
             const deltaX = e.clientX - dragStartPos.x;
             const deltaY = e.clientY - dragStartPos.y;
+
+            // While docked, the only free dimension is the zone's thickness;
+            // position and cross-axis extent come from the dock layout.
+            if (resizeMode === 'thickness') {
+                resizeDockThickness(startThickness, deltaX, deltaY);
+                return;
+            }
 
             let newWidth = panelStartSize.width;
             let newHeight = panelStartSize.height;
@@ -199,29 +249,26 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
     };
 
     const handlePointerUp = () => {
-        const wasDocked = dockedSide() !== null;
-
         if (isDragging && hasMoved) {
             if (applyDockPreview()) {
                 // Docking state and callbacks are handled by the shared controller.
             } else {
-                if (wasDocked) {
-                    restoreUndockedPanel();
-                } else {
-                    // Notify parent of new position
-                    props.onMove?.(position());
-                }
-                clearDockedSide();
+                // Drop the ghost: restores the pre-drag size and commits
+                // position/size through the controller callbacks.
+                endDragGhost();
             }
         }
 
-        if (isResizing) {
-            clearDockedSide();
+        // A thickness resize keeps the panel docked; its extent already lives in
+        // the registry, so only a free resize reports a floating size.
+        if (isResizing && resizeMode === 'free') {
             rememberUndockedSize(size());
+            props.onResize?.(size());
         }
 
         isDragging = false;
         isResizing = false;
+        resizeMode = 'free';
         resizeDirection = null;
         hasMoved = false;
         hideDockPreview();
@@ -230,14 +277,11 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
     onMount(() => {
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
-        window.addEventListener('resize', handleWindowResize);
     });
 
     onCleanup(() => {
         window.removeEventListener('pointermove', handlePointerMove);
         window.removeEventListener('pointerup', handlePointerUp);
-        window.removeEventListener('resize', handleWindowResize);
-        cleanupWindowResize();
     });
 
     const resizeHandleStyle = (cursor: string): JSX.CSSProperties => ({
@@ -256,11 +300,27 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                 left: `${position().x}px`,
                 top: `${position().y}px`,
                 width: `${size().width}px`,
-                height: isCollapsed() || isAutoHeight() ? 'auto' : `${size().height}px`,
+                height:
+                    !isMoving() && (isCollapsed() || isAutoHeight())
+                        ? 'auto'
+                        : `${size().height}px`,
                 'z-index': 1002,
                 display: 'flex',
                 'flex-direction': 'column',
                 'border-radius': dockedSide() ? '0' : undefined,
+                // The editor overlay root is pointer-events: none; re-enable
+                // interaction for the panel itself.
+                'pointer-events': 'auto',
+                // While being moved the panel is just a transparent outline.
+                ...(isMoving()
+                    ? {
+                        background: 'transparent',
+                        'backdrop-filter': 'none',
+                        '-webkit-backdrop-filter': 'none',
+                        'box-shadow': 'none',
+                        border: '2px solid var(--zylem-color-primary, #61a6e8)',
+                    }
+                    : {}),
             }}
         >
             <DockPreviewOverlay rect={getDockPreviewRect()} zIndex={1004} />
@@ -276,16 +336,20 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                     'user-select': 'none',
                     'touch-action': 'none',
                     'border-radius': dockedSide() ? '0' : undefined,
+                    visibility: isMoving() ? 'hidden' : undefined,
                 }}
                 onPointerDown={handleTitleBarPointerDown}
             >
                 <span class="floating-panel-title">{props.title ?? 'Panel'}</span>
-                <WindowControls
-                    collapsed={isCollapsed()}
-                    onCollapse={props.collapsible ? toggleCollapse : undefined}
-                    onClose={props.onClose}
-                    closeTestId="floating-panel-close"
-                />
+                <div style={{ display: 'flex', 'align-items': 'center', gap: '7px' }}>
+                    <DockMenu dockedSide={dockedSide} onDock={(side) => dockTo(side)} />
+                    <WindowControls
+                        collapsed={isCollapsed()}
+                        onCollapse={props.collapsible ? toggleCollapse : undefined}
+                        onClose={props.onClose}
+                        closeTestId="floating-panel-close"
+                    />
+                </div>
             </div>
 
             {/* Content area */}
@@ -296,6 +360,7 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                     overflow: 'hidden',
                     display: 'flex',
                     'flex-direction': 'column',
+                    visibility: isMoving() ? 'hidden' : undefined,
                 }}
             >
                 {typeof props.children === 'function'

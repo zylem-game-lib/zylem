@@ -7,9 +7,22 @@
 import { createStore } from 'solid-js/store';
 import { subscribe } from 'valtio/vanilla';
 import { debugState, type DebugTools } from './entities/entities-state';
+import {
+	createEmptyDockRegistry,
+	findDockedSide,
+	insertIntoZone,
+	normalizeDockRegistry,
+	removeFromZones,
+	type DockPanelId,
+	type DockRegistry,
+	type DockSide,
+} from './common/dock-layout';
 
 // localStorage key for persisted state
 const STORAGE_KEY = 'zylem-editor-state';
+
+/** Registry id of the main editor panel; detached sections use their panel id. */
+export const MAIN_PANEL_ID = 'main';
 
 // Default panel order
 const DEFAULT_PANEL_ORDER = ['game-config', 'stage-config', 'entities', 'console', 'bridge'];
@@ -29,14 +42,20 @@ export interface DetachedPanelState {
 	size: { width: number; height: number };
 }
 
+/** First-run dock assignments a host can request; see `applyDefaultDocks`. */
+export type EditorDockDefaults = Partial<Record<DockSide, DockPanelId[]>>;
+
 // State that gets persisted to localStorage
 interface PersistedState {
 	panelPosition: { x: number; y: number } | null;
+	panelSize: { width: number; height: number } | null;
 	toggleButtonPosition: { x: number; y: number };
 	panelOrder: string[];
 	detachedPanels: Record<string, DetachedPanelState>;
 	openSections: string[];
 	panelZOrder: string[];
+	docks: DockRegistry;
+	dockDefaultsApplied: boolean;
 }
 
 // Load persisted state from localStorage
@@ -73,6 +92,8 @@ export const [debugStore, setDebugStore] = createStore({
 	hovered: null as string | null,
 	selected: [] as string[],
 	panelPosition: persisted.panelPosition ?? null,
+	/** Main panel's floating size; its docked size comes from the registry. */
+	panelSize: persisted.panelSize ?? null,
 	toggleButtonPosition: persisted.toggleButtonPosition ?? { x: 0, y: 0 },
 	// Detachable panel state
 	panelOrder: withNewPanels(persisted.panelOrder),
@@ -80,6 +101,9 @@ export const [debugStore, setDebugStore] = createStore({
 	openSections: persisted.openSections ?? ['console'],
 	// Z-index ordering (last item = on top)
 	panelZOrder: persisted.panelZOrder ?? [],
+	// Which panels are docked to which viewport edge, and how thick each edge is
+	docks: normalizeDockRegistry(persisted.docks),
+	dockDefaultsApplied: persisted.dockDefaultsApplied ?? false,
 	// Drag-to-reattach state (not persisted)
 	draggingPanelId: null as string | null,
 	dropTargetIndex: null as number | null,
@@ -89,17 +113,25 @@ export const [debugStore, setDebugStore] = createStore({
 const persistState = () => {
 	savePersistedState({
 		panelPosition: debugStore.panelPosition,
+		panelSize: debugStore.panelSize,
 		toggleButtonPosition: debugStore.toggleButtonPosition,
 		panelOrder: debugStore.panelOrder,
 		detachedPanels: debugStore.detachedPanels,
 		openSections: debugStore.openSections,
 		panelZOrder: debugStore.panelZOrder,
+		docks: debugStore.docks,
+		dockDefaultsApplied: debugStore.dockDefaultsApplied,
 	});
 };
 
 // Panel position actions
 export const setPanelPosition = (pos: { x: number; y: number }) => {
 	setDebugStore('panelPosition', pos);
+	persistState();
+};
+
+export const setPanelSize = (size: { width: number; height: number }) => {
+	setDebugStore('panelSize', size);
 	persistState();
 };
 
@@ -126,6 +158,8 @@ export const reattachPanel = (panelId: string, insertIndex?: number) => {
 	setDebugStore('detachedPanels', panelId, undefined!);
 	// Remove from z-order
 	setDebugStore('panelZOrder', debugStore.panelZOrder.filter((id) => id !== panelId));
+	// A panel living back in the accordion can't also hold a dock slot.
+	setDebugStore('docks', removeFromZones(debugStore.docks, panelId));
 
 	// Add back to panel order if not already present
 	const currentOrder = debugStore.panelOrder;
@@ -167,6 +201,69 @@ export const setOpenSections = (sections: string[]) => {
 
 export const isPanelDetached = (panelId: string): boolean => {
 	return panelId in debugStore.detachedPanels;
+};
+
+// Dock registry actions. Rects are derived from this by `computeDockLayout`,
+// so moving a panel between zones relayouts every other docked panel too.
+export const dockPanelToSide = (
+	panelId: DockPanelId,
+	side: DockSide,
+	index?: number,
+) => {
+	setDebugStore('docks', insertIntoZone(debugStore.docks, panelId, side, index));
+	persistState();
+};
+
+export const undockPanelFromSides = (panelId: DockPanelId) => {
+	if (!findDockedSide(debugStore.docks, panelId)) return;
+	setDebugStore('docks', removeFromZones(debugStore.docks, panelId));
+	persistState();
+};
+
+export const setDockThickness = (side: DockSide, thickness: number) => {
+	setDebugStore('docks', side, 'thickness', Math.max(1, Math.round(thickness)));
+	persistState();
+};
+
+export const getDockedSide = (panelId: DockPanelId): DockSide | null =>
+	findDockedSide(debugStore.docks, panelId);
+
+/**
+ * Seed a host's preferred dock layout the first time the editor runs.
+ *
+ * Sections named here are pulled out of the accordion first, since only a
+ * detached section can hold a dock slot. Guarded by `dockDefaultsApplied` so a
+ * returning user's own layout is never overwritten.
+ */
+export const applyDefaultDocks = (defaults: EditorDockDefaults | undefined) => {
+	if (!defaults || debugStore.dockDefaultsApplied) return;
+
+	let docks = createEmptyDockRegistry();
+	let seeded = false;
+
+	for (const side of ['left', 'right', 'top', 'bottom'] as const) {
+		for (const panelId of defaults[side] ?? []) {
+			if (panelId !== MAIN_PANEL_ID && !isPanelDetached(panelId)) {
+				setDebugStore('detachedPanels', panelId, {
+					position: { x: 100, y: 100 },
+					size: { width: 350, height: 300 },
+				});
+				setDebugStore('openSections', (sections) => sections.filter((s) => s !== panelId));
+				setDebugStore('panelZOrder', [
+					...debugStore.panelZOrder.filter((id) => id !== panelId),
+					panelId,
+				]);
+			}
+			docks = insertIntoZone(docks, panelId, side);
+			seeded = true;
+		}
+	}
+
+	if (seeded) {
+		setDebugStore('docks', docks);
+	}
+	setDebugStore('dockDefaultsApplied', true);
+	persistState();
 };
 
 // Drag-to-reattach state management (not persisted)

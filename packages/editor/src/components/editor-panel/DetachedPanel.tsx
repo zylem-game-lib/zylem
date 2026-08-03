@@ -22,7 +22,8 @@ import {
     bringPanelToFront,
 } from '../editor-store';
 import { getPanelTitle, renderPanelContent } from './panel-config';
-import { createPanelDocking, DockPreviewOverlay } from '../common/panel-docking';
+import { createPanelDocking, DockPreviewOverlay, type ResizeMode } from '../common/panel-docking';
+import { isHorizontalSide } from '../common/dock-layout';
 
 // Minimum drag threshold to distinguish from clicks
 const DRAG_THRESHOLD = 3;
@@ -52,10 +53,12 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
 
     let isDragging = false;
     let isResizing = false;
+    let resizeMode: ResizeMode = 'free';
     let resizeDirection: ResizeDirection = null;
     let dragStartPos = { x: 0, y: 0 };
     let panelStartPos = { x: 0, y: 0 };
     let panelStartSize = { width: 0, height: 0 };
+    let startThickness = 0;
     let hasMoved = false;
     let panelRef: HTMLDivElement | undefined;
 
@@ -68,15 +71,16 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
         getLiveSize,
         getDockPreviewRect,
         detectDockSide,
-        undockFromDrag,
+        detectDockIndex,
+        beginDragGhost,
+        endDragGhost,
+        isMoving,
         clampSizeToViewport,
         beginResize,
-        clearDockedSide,
+        resizeDockThickness,
         applyDockPreview,
-        restoreUndockedPanel,
-        handleWindowResize,
-        cleanupWindowResize,
     } = createPanelDocking({
+        panelId: props.panelId,
         initialSize: initialPanelSize,
         minSize: { width: MIN_WIDTH, height: MIN_HEIGHT },
         position,
@@ -111,7 +115,12 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
     const handleResizePointerDown = (direction: ResizeDirection) => (e: PointerEvent) => {
         isResizing = true;
         resizeDirection = direction;
-        const currentSize = beginResize();
+        const side = dockedSide();
+        const { size: currentSize, mode } = beginResize(direction);
+        resizeMode = mode;
+        // A thickness resize measures from the zone's current extent, not the
+        // panel box, since every panel in the zone shares it.
+        startThickness = side && isHorizontalSide(side) ? currentSize.width : currentSize.height;
         dragStartPos = { x: e.clientX, y: e.clientY };
         panelStartPos = { ...position() };
         panelStartSize = { ...currentSize };
@@ -132,14 +141,13 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
                 if (!hasMoved) {
                     hasMoved = true;
                     setDraggingPanel(props.panelId);
-                    if (dockedSide() !== null) {
-                        const fitted = undockFromDrag(e.clientX, e.clientY);
-                        dragStartPos = { x: e.clientX, y: e.clientY };
-                        panelStartPos = { ...fitted.position };
-                        panelStartSize = { ...fitted.size };
-                        deltaX = 0;
-                        deltaY = 0;
-                    }
+                    // Every move happens through the small ghost, docked or not.
+                    const fitted = beginDragGhost(e.clientX, e.clientY);
+                    dragStartPos = { x: e.clientX, y: e.clientY };
+                    panelStartPos = { ...fitted.position };
+                    panelStartSize = { ...fitted.size };
+                    deltaX = 0;
+                    deltaY = 0;
                 }
             }
 
@@ -155,7 +163,7 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
                 );
 
                 if (dockSide) {
-                    showDockPreview(dockSide);
+                    showDockPreview(dockSide, detectDockIndex(dockSide, e.clientX, e.clientY));
                     setDropTargetIndex(null);
                 } else {
                     hideDockPreview();
@@ -202,6 +210,13 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
             const deltaX = e.clientX - dragStartPos.x;
             const deltaY = e.clientY - dragStartPos.y;
 
+            // While docked, the only free dimension is the zone's thickness;
+            // position and cross-axis extent come from the dock layout.
+            if (resizeMode === 'thickness') {
+                resizeDockThickness(startThickness, deltaX, deltaY);
+                return;
+            }
+
             let newWidth = panelStartSize.width;
             let newHeight = panelStartSize.height;
             let newX = panelStartPos.x;
@@ -241,28 +256,25 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
     };
 
     const handlePointerUp = () => {
-        const wasDocked = dockedSide() !== null;
-
         if (isDragging && hasMoved) {
             if (applyDockPreview()) {
                 // Docking state and store updates are handled by the shared controller.
             } else {
                 const dropIndex = debugStore.dropTargetIndex;
                 if (dropIndex !== null) {
+                    // The panel unmounts when it reattaches to the accordion.
                     reattachPanel(props.panelId, dropIndex);
                 } else {
-                    if (wasDocked) {
-                        restoreUndockedPanel();
-                    } else {
-                        updateDetachedPanelPosition(props.panelId, position());
-                    }
+                    // Drop the ghost: restores the pre-drag size and commits
+                    // position/size through the controller callbacks.
+                    endDragGhost();
                 }
-                clearDockedSide();
             }
         }
 
-        if (isResizing) {
-            clearDockedSide();
+        // A thickness resize keeps the panel docked; its extent already lives in
+        // the registry, so only a free resize reports a floating size.
+        if (isResizing && resizeMode === 'free') {
             rememberUndockedSize(size());
             updateDetachedPanelSize(props.panelId, size());
             updateDetachedPanelPosition(props.panelId, position());
@@ -270,6 +282,7 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
 
         isDragging = false;
         isResizing = false;
+        resizeMode = 'free';
         resizeDirection = null;
         hasMoved = false;
         hideDockPreview();
@@ -283,14 +296,11 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
     onMount(() => {
         window.addEventListener('pointermove', handlePointerMove);
         window.addEventListener('pointerup', handlePointerUp);
-        window.addEventListener('resize', handleWindowResize);
     });
 
     onCleanup(() => {
         window.removeEventListener('pointermove', handlePointerMove);
         window.removeEventListener('pointerup', handlePointerUp);
-        window.removeEventListener('resize', handleWindowResize);
-        cleanupWindowResize();
     });
 
     const resizeHandleStyle = (cursor: string): JSX.CSSProperties => ({
@@ -312,6 +322,19 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
                 height: isAutoHeight() ? 'auto' : `${size().height}px`,
                 'z-index': zIndex(),
                 'border-radius': dockedSide() ? '0' : undefined,
+                // The editor overlay root is pointer-events: none; re-enable
+                // interaction for the panel itself.
+                'pointer-events': 'auto',
+                // While being moved the panel is just a transparent outline.
+                ...(isMoving()
+                    ? {
+                        background: 'transparent',
+                        'backdrop-filter': 'none',
+                        '-webkit-backdrop-filter': 'none',
+                        'box-shadow': 'none',
+                        border: '2px solid var(--zylem-color-primary, #61a6e8)',
+                    }
+                    : {}),
             }}
         >
             <DockPreviewOverlay rect={getDockPreviewRect()} zIndex={zIndex() + 1} />
@@ -323,6 +346,7 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
                 style={{
                     "touch-action": "none",
                     'border-radius': dockedSide() ? '0' : undefined,
+                    visibility: isMoving() ? 'hidden' : undefined,
                 }}
             >
                 <span class="floating-panel-title">{getPanelTitle(props.panelId)}</span>
@@ -332,6 +356,7 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
             {/* Content area */}
             <div
                 class="detached-panel-content floating-panel-content"
+                style={{ visibility: isMoving() ? 'hidden' : undefined }}
             >
                 {renderPanelContent(props.panelId)}
             </div>
