@@ -53,17 +53,22 @@ pnpm lint
 
 ### Interactive runner
 
-Use the `zylem` command for a guided TUI (built on `@clack/prompts`). It asks
-for an action and then lets you multi-select which workspace packages to apply
-it to:
+The per-repo `pnpm zylem` runner has been replaced by `zw`, the workspace
+manager in the sibling [`zylem-workspace`](../zylem-workspace) repo. It covers
+every zylem repo from one place, so cross-repo package linking, builds, and
+tests no longer depend on which repo you happen to be standing in:
 
 ```bash
-# Pick an action (run / build / test / publish) and target packages
-pnpm zylem
+# Dashboard across all repos
+zw
+
+# Or non-interactively
+zw build --repo zylem
+zw link dev
 ```
 
-The `build` and `publish` actions automatically load the root `.env` before
-running, so secrets like `NPM_TOKEN` are available to those commands.
+The `build`, `bump`, and `publish` actions still load the repo `.env` first, so
+secrets like `NPM_TOKEN` are available to those commands.
 
 ### Render builds
 

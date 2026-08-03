@@ -15,7 +15,6 @@
     "pnpm": ">=10.32.1"
   },
   "scripts": {
-    "zylem": "node --experimental-strip-types --disable-warning=ExperimentalWarning ./scripts/zylem-runner.ts",
     "dev": "sh ./scripts/dev.sh",
     "dev:editor": "pnpm --filter @zylem/editor dev",
     "dev:examples": "pnpm --filter @zylem/examples dev",
