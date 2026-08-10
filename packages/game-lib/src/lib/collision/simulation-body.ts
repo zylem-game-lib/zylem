@@ -75,8 +75,16 @@ export class SimulationBody implements PhysicsRenderPoseProvider {
 		this.interpolationValidAfterStep = clock.steps + 2;
 	}
 
-	/** Suppress interpolation until the render buffers catch up. */
-	private markPoseDiscontinuity(): void {
+	/**
+	 * Suppress interpolation until the render buffers catch up.
+	 *
+	 * Called automatically by the pose setters below. Wasm-side behaviors that
+	 * teleport a body during a step (e.g. `screen_wrap`) bypass those setters,
+	 * so their host systems must call this after the step and before render
+	 * poses are synced — otherwise the render buffers straddle the teleport and
+	 * the body is drawn sweeping between the two poses.
+	 */
+	markPoseDiscontinuity(): void {
 		this.interpolationValidAfterStep = this.clock.steps + 2;
 	}
 

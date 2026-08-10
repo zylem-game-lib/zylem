@@ -79,6 +79,15 @@ export interface ZylemStageConfig {
 	stageRef?: Stage;
 }
 
+/**
+ * `BehaviorSystem.postUpdate` is optional and newer than the pinned
+ * `@zylem/behaviors` typings, so the stage calls it through this shape to stay
+ * compatible with either release.
+ */
+type PostPhysicsBehaviorSystem = {
+	postUpdate?: (ecs: unknown, delta: number) => void;
+};
+
 export type StageOptionItem = Partial<ZylemStageConfig> | CameraWrapper | StageEntityInput;
 export type StageOptions = [] | [Partial<ZylemStageConfig>, ...StageOptionItem[]];
 
@@ -347,6 +356,14 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		// behaviors and entities have written their inputs/intents.
 		profileStageFrameSection('worldUpdate', () => {
 			world.update(params);
+		});
+
+		// Behavior systems that need this frame's post-step state (e.g. wasm-side
+		// teleports) run here, before render poses are read.
+		profileStageFrameSection('behaviorPostUpdate', () => {
+			for (const system of this.entityDelegate.behaviorSystems) {
+				(system as PostPhysicsBehaviorSystem).postUpdate?.(undefined, delta);
+			}
 		});
 
 		// Sync physics to rendering AFTER the simulation stepped

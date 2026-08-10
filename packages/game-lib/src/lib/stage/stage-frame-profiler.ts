@@ -7,6 +7,7 @@ export type StageFrameSection =
 	| 'behaviorSystems'
 	| 'entityLoop'
 	| 'worldUpdate'
+	| 'behaviorPostUpdate'
 	| 'syncRenderPoses'
 	| 'renderStrategy'
 	| 'camera'

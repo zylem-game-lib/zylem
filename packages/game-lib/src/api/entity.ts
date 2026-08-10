@@ -6,7 +6,7 @@
 export { createBox, ZylemBox, BOX_TYPE } from '../lib/entities/box';
 export { createSphere, ZylemSphere, SPHERE_TYPE } from '../lib/entities/sphere';
 export { createSprite, ZylemSprite, SPRITE_TYPE } from '../lib/entities/sprite';
-export type { SpriteImage, SpriteAnimation } from '../lib/entities/sprite';
+export type { SpriteImage, SpriteAnimation, SpriteSheet } from '../lib/entities/sprite';
 export { createPlane, ZylemPlane, PLANE_TYPE } from '../lib/entities/plane';
 export { createZone, ZylemZone, ZONE_TYPE } from '../lib/entities/zone';
 export type { OnHeldParams, OnEnterParams, OnExitParams } from '../lib/entities/zone';

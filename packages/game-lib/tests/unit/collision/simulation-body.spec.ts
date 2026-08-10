@@ -211,6 +211,51 @@ describe('SimulationBody render-pose discontinuity window', () => {
 		expect(simulation.linearVelocityWrites).toHaveLength(1);
 	});
 
+	it('markPoseDiscontinuity suppresses the sweep across a wasm-side wrap', () => {
+		const { simulation, clock, body } = makeBody(0);
+		clock.steps = 10;
+		// The wrapping step left the buffers straddling the play area: previous
+		// holds the right edge, current the left edge it wrapped to.
+		simulation.previousRenderPosition = [15, 0, 0];
+		simulation.renderPosition = [-15, 0, 0];
+		simulation.livePosition = [-15, 0, 0];
+
+		// Without the flag the body is drawn mid-screen.
+		expectPosition(body.getRenderPose(0.5).position, [0, 0, 0]);
+
+		body.markPoseDiscontinuity();
+
+		expectPosition(body.getRenderPose(0.5).position, [-15, 0, 0]);
+	});
+
+	it('markPoseDiscontinuity also covers the instanced render path', () => {
+		const { simulation, clock, body } = makeBody(0);
+		clock.steps = 10;
+		simulation.previousRenderPosition = [15, 0, 0];
+		simulation.renderPosition = [-15, 0, 0];
+		simulation.livePosition = [-15, 0, 0];
+
+		body.markPoseDiscontinuity();
+
+		const outPosition = { x: 0, y: 0, z: 0 };
+		const outRotation = { x: 0, y: 0, z: 0, w: 1 };
+		body.writeRenderPose(0.5, outPosition, outRotation);
+
+		expectPosition(outPosition, [-15, 0, 0]);
+	});
+
+	it('resumes interpolating two steps after a wasm-side wrap', () => {
+		const { simulation, clock, body } = makeBody(0);
+		clock.steps = 10;
+		body.markPoseDiscontinuity();
+
+		clock.steps = 12;
+		simulation.previousRenderPosition = [-15, 0, 0];
+		simulation.renderPosition = [-13, 0, 0];
+
+		expectPosition(body.getRenderPose(0.5).position, [-14, 0, 0]);
+	});
+
 	it('writeRenderPose interpolates buffers after the window expires', () => {
 		const { simulation, clock, body } = makeBody(5);
 		simulation.livePosition = [9, 9, 9];
