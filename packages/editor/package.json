@@ -1,6 +1,6 @@
 {
   "name": "@zylem/editor",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "type": "module",
   "main": "./dist/zylem-editor.js",
   "module": "./dist/zylem-editor.js",
@@ -27,7 +27,7 @@
     "@kobalte/core": "^0.13.11",
     "@solidjs/router": "^0.14.0",
     "@zylem/bridge": "workspace:*",
-    "@zylem/ui": "^0.2.1",
+    "@zylem/ui": "^0.2.2",
     "lucide-solid": "^0.511.0",
     "solid-js": "^1.9.9",
     "valtio": "^2.1.7"
