@@ -14,18 +14,33 @@ import {
 	announceBridgeReady,
 	getZylemBridge,
 	type BridgeChannel,
+	type BridgePose,
+	type BridgeQuat,
 	type BridgeVec3,
 	type EntitySummaryPayload,
 	type EntityThumbnailPayload,
+	type EntityTypeDescriptor,
 	type GameConfigPayload,
 	type GameLoadingPayload,
 	type GameNoticePayload,
 	type GameVariablePayload,
+	type SceneOperationPayload,
+	type SnapSettingsPayload,
 	type StageSnapshotPayload,
 } from '@zylem/bridge';
 
-import { debugState, setDebugTool, setPaused, setSelectedEntityId } from '../debug/debug-state';
+import {
+	debugState,
+	setAddType,
+	setDebugTool,
+	setGridVisible,
+	setPaused,
+	setSelectedEntityId,
+	setSnapSettings,
+} from '../debug/debug-state';
 import { focusEntity } from '../debug/entity-focus';
+import { eulerToQuaternion, quaternionToEuler } from '../core/transform-math';
+import { commitColliderScale } from '../entities/entity-scale';
 import type { GameEntity } from '../entities/entity';
 
 /** A THREE `Vector3`-shaped value, as carried by a render object. */
@@ -33,11 +48,7 @@ type ScaleVector = BridgeVec3 & {
 	set?: (x: number, y: number, z: number) => void;
 };
 
-/**
- * The THREE object carrying an entity's render transform. Scale is not part
- * of the `GameEntity` mutator surface (unlike position and rotation), so it
- * has to be read and written on the render object directly.
- */
+/** The THREE object carrying an entity's render transform. */
 function renderScaleOf(entity: any): ScaleVector | undefined {
 	const object = entity?.group ?? entity?.mesh;
 	return object?.scale;
@@ -45,7 +56,8 @@ function renderScaleOf(entity: any): ScaleVector | undefined {
 
 /** Read an entity's scale, defaulting to unit scale. */
 export function readEntityScale(entity: any): BridgeVec3 {
-	const scale: Partial<BridgeVec3> = entity?.scale ?? renderScaleOf(entity) ?? {};
+	const stored = typeof entity?.getScale === 'function' ? entity.getScale() : undefined;
+	const scale: Partial<BridgeVec3> = stored ?? entity?.scale ?? renderScaleOf(entity) ?? {};
 	return {
 		x: scale.x ?? 1,
 		y: scale.y ?? 1,
@@ -53,13 +65,125 @@ export function readEntityScale(entity: any): BridgeVec3 {
 	};
 }
 
-/** Write an entity's scale, preferring a `setScale` mutator when present. */
+/** Read an entity's orientation as a quaternion, when it has a live pose. */
+export function readEntityQuaternion(entity: any): BridgeQuat | undefined {
+	const pose = typeof entity?.getPose === 'function' ? entity.getPose() : null;
+	if (!pose?.rotation) return undefined;
+	const { x, y, z, w } = pose.rotation;
+	return { x, y, z, w };
+}
+
+/**
+ * An entity's full current transform, for scene-operation before/after records.
+ *
+ * Every component is filled in, defaulted where the entity has no live pose,
+ * so callers building a complete payload do not have to re-default them.
+ */
+export function readEntityPose(entity: any): Required<BridgePose> {
+	const pose = typeof entity?.getPose === 'function' ? entity.getPose() : null;
+	const position = pose?.position ?? { x: 0, y: 0, z: 0 };
+	const quaternion = pose?.rotation ?? { x: 0, y: 0, z: 0, w: 1 };
+	return {
+		position: { x: position.x, y: position.y, z: position.z },
+		rotation: quaternionToEuler(quaternion),
+		quaternion: {
+			x: quaternion.x,
+			y: quaternion.y,
+			z: quaternion.z,
+			w: quaternion.w,
+		},
+		scale: readEntityScale(entity),
+	};
+}
+
+/**
+ * Write an entity's scale to its render object.
+ *
+ * Deliberately render-only: colliders are baked in the wasm simulation and
+ * rebuilding them means respawning the body, so that is deferred to
+ * {@link commitEntityScale} when the gesture commits.
+ */
 export function applyEntityScale(entity: any, scale: BridgeVec3): void {
 	if (typeof entity?.setScale === 'function') {
 		entity.setScale(scale.x, scale.y, scale.z);
 		return;
 	}
 	renderScaleOf(entity)?.set?.(scale.x, scale.y, scale.z);
+}
+
+/** Rebuild an entity's colliders to match a scale change already applied. */
+export function commitEntityScale(entity: any): void {
+	if (!entity || typeof entity.getScale !== 'function') return;
+	commitColliderScale(entity);
+}
+
+/**
+ * Apply an absolute pose to an entity.
+ *
+ * Routed through `setPose`, which teleports the body, rather than the
+ * velocity-style `setPosition` mutators — those accumulate a *delta* into the
+ * transform store, so feeding them an absolute target would send the entity
+ * flying off by its own coordinates every write.
+ */
+export function applyEntityPose(entity: any, pose: BridgePose): boolean {
+	if (!entity) return false;
+
+	const rotation = pose.quaternion
+		?? (pose.rotation ? eulerToQuaternion(pose.rotation) : undefined);
+
+	let applied = false;
+	if ((pose.position || rotation) && typeof entity.setPose === 'function') {
+		applied = entity.setPose({ position: pose.position, rotation });
+	}
+
+	if (pose.scale) {
+		applyEntityScale(entity, pose.scale);
+		applied = true;
+	}
+
+	return applied;
+}
+
+/**
+ * The entity's registered type symbol as the plain string the editor list shows.
+ */
+export function entityTypeName(entity: unknown): string {
+	const type = (entity as { constructor?: { type?: unknown } } | null)
+		?.constructor?.type;
+	return type
+		? String(type).replace('Symbol(', '').replace(')', '')
+		: 'Unknown';
+}
+
+/**
+ * Echo one entity's live transform to the editor.
+ *
+ * `entity:upsert` is otherwise published only when an entity is added, so the
+ * editor's list and inspector would keep showing the pose the entity spawned
+ * with. Sending the pose the game actually settled on — rather than trusting
+ * the editor's own optimistic write — also corrects the editor when the two
+ * disagree.
+ *
+ * Thumbnail and bounds are left off: the editor merges an upsert field by
+ * field and skips absent ones, so a transform echo cannot clobber them.
+ */
+export function publishEntityTransform(entity: unknown): void {
+	const target = entity as { uuid?: string; name?: string } | null;
+	if (!target?.uuid) return;
+
+	const channel = getZylemBridge().channel;
+	if (!channel.hasSubscribers('entity:upsert')) return;
+
+	const pose = readEntityPose(entity);
+	channel.queue('entity:upsert', [{
+		uuid: target.uuid,
+		name: target.name || 'Unnamed',
+		type: entityTypeName(entity),
+		position: pose.position,
+		rotation: pose.rotation,
+		scale: pose.scale,
+		quaternion: pose.quaternion,
+	}]);
 }
 
 /**
@@ -82,6 +206,14 @@ export interface GameBridgeHost {
 	resolveEntity(uuid: string): GameEntity<any> | null;
 	/** Write a stage variable (editor `stage:variable:set`). */
 	setStageVariable?(key: string, value: unknown): void;
+	/** Spawn a catalog entity into the current stage (editor `entity:create`). */
+	createEntity?(
+		typeId: string,
+		props: Record<string, unknown> | undefined,
+		pose: BridgePose | undefined,
+	): void;
+	/** Undo or redo a committed scene operation (`scene:operation:apply`). */
+	applySceneOperation?(op: SceneOperationPayload, direction: 'undo' | 'redo'): void;
 }
 
 export class GameBridge {
@@ -100,6 +232,12 @@ export class GameBridge {
 		selectedUuid?: string | null;
 		hoveredUuid?: string | null;
 	} = {};
+
+	/**
+	 * True while an undo/redo is being applied, so the writes it performs are
+	 * not themselves recorded as new operations.
+	 */
+	private applyingSceneOperation = false;
 
 	constructor() {
 		this.channel = getZylemBridge().channel;
@@ -133,20 +271,50 @@ export class GameBridge {
 			this.channel.on('entity:focus', ({ uuid }) => {
 				focusEntity(uuid);
 			}),
-			this.channel.on('entity:transform', ({ uuid, position, rotation, scale }) => {
+			this.channel.on('entity:transform', ({ uuid, position, rotation, quaternion, scale }) => {
 				const entity = this.host?.resolveEntity(uuid) as any;
 				if (!entity) return;
-				if (position && typeof entity.setPosition === 'function') {
-					entity.setPosition(position.x, position.y, position.z);
+
+				const before = readEntityPose(entity);
+				applyEntityPose(entity, { position, rotation, quaternion, scale });
+				// A numeric-field write is already a committed change, so unlike a
+				// gizmo drag it rebuilds colliders immediately.
+				if (scale) commitEntityScale(entity);
+
+				publishEntityTransform(entity);
+
+				// Echoed as an operation so inspector edits are undoable on the
+				// same stack as gizmo drags. Suppressed while a `scene:operation:
+				// apply` is running, or undoing would push its own inverse and the
+				// stack would never make progress.
+				if (this.applyingSceneOperation) return;
+				const after = readEntityPose(entity);
+				this.channel.send('scene:operation', {
+					opId: `tx-${uuid}-${Date.now().toString(36)}`,
+					kind: 'transform',
+					label: `Set ${entity.name || 'entity'} transform`,
+					entries: [{ uuid, before, after }],
+				});
+			}),
+			this.channel.on('entity:create', ({ typeId, props, pose }) => {
+				this.host?.createEntity?.(typeId, props, pose);
+			}),
+			this.channel.on('scene:operation:apply', ({ op, direction }) => {
+				this.applyingSceneOperation = true;
+				try {
+					this.host?.applySceneOperation?.(op, direction);
+				} finally {
+					this.applyingSceneOperation = false;
 				}
-				if (rotation) {
-					entity.setRotationX?.(rotation.x);
-					entity.setRotationY?.(rotation.y);
-					entity.setRotationZ?.(rotation.z);
-				}
-				if (scale) {
-					applyEntityScale(entity, scale);
-				}
+			}),
+			this.channel.on('add:type:set', ({ typeId, props }) => {
+				setAddType(typeId, props ?? null);
+			}),
+			this.channel.on('snap:set', (snap) => {
+				setSnapSettings(snap);
+			}),
+			this.channel.on('grid:set', ({ visible }) => {
+				setGridVisible(visible);
 			}),
 			this.channel.on('stage:variable:set', ({ key, value }) => {
 				this.host?.setStageVariable?.(key, value);
@@ -195,6 +363,7 @@ export class GameBridge {
 			this.channel.queue('entity:selection', {
 				selectedUuid: debugState.selectedEntityId,
 				hoveredUuid: debugState.hoveredEntityId,
+				selectedUuids: [...debugState.selectedEntityIds],
 			});
 		}
 	}
@@ -297,4 +466,40 @@ export class GameBridge {
 		if (!thumbnails.length) return;
 		this.channel.queue('entity:thumbnail', thumbnails);
 	}
+
+	/** Publish the placeable entity types the editor's Add palette offers. */
+	publishCatalog(entities: EntityTypeDescriptor[]): void {
+		this.channel.send('catalog:snapshot', { entities });
+	}
+
+	/**
+	 * Publish a committed, invertible change for the editor's undo stack.
+	 *
+	 * Sent rather than queued: coalescing merges same-type payloads within a
+	 * frame, which would fuse two operations into one and lose an undo step.
+	 */
+	publishSceneOperation(op: SceneOperationPayload): void {
+		this.channel.send('scene:operation', op);
+	}
+
+	/** Whether an editor is tracking scene operations for undo. */
+	wantsSceneOperations(): boolean {
+		return this.channel.hasSubscribers('scene:operation');
+	}
 }
+
+/**
+ * Publish a scene operation without a `GameBridge` instance, so the stage's
+ * debug delegate can report committed gestures where they happen.
+ */
+export function publishSceneOperation(op: SceneOperationPayload): void {
+	getZylemBridge().channel.send('scene:operation', op);
+}
+
+/** Publish the entity catalog without a `GameBridge` instance. */
+export function publishEntityCatalog(entities: EntityTypeDescriptor[]): void {
+	getZylemBridge().channel.send('catalog:snapshot', { entities });
+}
+
+/** Snap settings the editor last pushed, for gizmo drag math. */
+export type { SnapSettingsPayload };

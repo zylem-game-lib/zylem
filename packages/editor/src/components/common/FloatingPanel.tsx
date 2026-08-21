@@ -8,8 +8,9 @@ import {
     type Component,
     type Accessor,
 } from 'solid-js';
-import { WindowControls } from '@zylem/ui/components';
+import { useLayer, WindowControls } from '@zylem/ui/components';
 import { DockMenu } from './DockMenu';
+import { PANEL_RANK } from './layer-ranks';
 import { createPanelDocking, DockPreviewOverlay, type ResizeMode } from './panel-docking';
 import { isHorizontalSide, type DockSide } from './dock-layout';
 import { MAIN_PANEL_ID } from '../editor-store';
@@ -50,6 +51,7 @@ export interface FloatingPanelProps {
  * Dragging it past a viewport edge docks it; see `panel-docking`.
  */
 export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
+    const layer = useLayer('panel', PANEL_RANK.mainPanel);
     const minSize = props.minSize ?? { width: 300, height: 200 };
     const initialPanelSize = props.initialSize ?? { width: 460, height: 600 };
 
@@ -304,7 +306,7 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                     !isMoving() && (isCollapsed() || isAutoHeight())
                         ? 'auto'
                         : `${size().height}px`,
-                'z-index': 1002,
+                'z-index': layer.zIndex(),
                 display: 'flex',
                 'flex-direction': 'column',
                 'border-radius': dockedSide() ? '0' : undefined,
@@ -323,7 +325,10 @@ export const FloatingPanel: Component<FloatingPanelProps> = (props) => {
                     : {}),
             }}
         >
-            <DockPreviewOverlay rect={getDockPreviewRect()} zIndex={1004} />
+            <DockPreviewOverlay
+                rect={getDockPreviewRect()}
+                rank={PANEL_RANK.mainDockPreview}
+            />
 
             {/* Title bar */}
             <div

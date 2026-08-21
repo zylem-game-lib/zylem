@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getZylemBridge } from '@zylem/bridge';
+import { getZylemBridge, type EntitySummaryPayload } from '@zylem/bridge';
 
 import { GameBridge } from '../../../src/lib/bridge/game-bridge';
 import {
@@ -69,10 +69,8 @@ describe('GameBridge command intake', () => {
 		const entity = {
 			uuid: 'entity-1',
 			group: { scale },
+			setPose: vi.fn().mockReturnValue(true),
 			setPosition: vi.fn(),
-			setRotationX: vi.fn(),
-			setRotationY: vi.fn(),
-			setRotationZ: vi.fn(),
 		};
 		bridge.connect({ resolveEntity: () => entity as any });
 
@@ -83,9 +81,54 @@ describe('GameBridge command intake', () => {
 			scale: { x: 2, y: 3, z: 4 },
 		});
 
-		expect(entity.setPosition).toHaveBeenCalledWith(1, 2, 3);
-		expect(entity.setRotationY).toHaveBeenCalledWith(0.5);
+		expect(entity.setPose).toHaveBeenCalledWith({
+			position: { x: 1, y: 2, z: 3 },
+			rotation: expect.objectContaining({
+				y: expect.closeTo(Math.sin(0.25), 6),
+				w: expect.closeTo(Math.cos(0.25), 6),
+			}),
+		});
 		expect(scale).toMatchObject({ x: 2, y: 3, z: 4 });
+	});
+
+	it('teleports rather than nudging, so an absolute target is not treated as a delta', () => {
+		// `setPosition` accumulates a delta into the transform store, so feeding
+		// it an absolute target would displace the entity by its own coordinates.
+		const entity = {
+			uuid: 'entity-1',
+			setPose: vi.fn().mockReturnValue(true),
+			setPosition: vi.fn(),
+			setRotationX: vi.fn(),
+			setRotationY: vi.fn(),
+			setRotationZ: vi.fn(),
+		};
+		bridge.connect({ resolveEntity: () => entity as any });
+
+		channel.send('entity:transform', {
+			uuid: 'entity-1',
+			position: { x: 10, y: 0, z: 0 },
+		});
+
+		expect(entity.setPose).toHaveBeenCalledTimes(1);
+		expect(entity.setPosition).not.toHaveBeenCalled();
+		expect(entity.setRotationY).not.toHaveBeenCalled();
+	});
+
+	it('prefers the authoritative quaternion over euler angles when both arrive', () => {
+		const entity = { uuid: 'entity-1', setPose: vi.fn().mockReturnValue(true) };
+		bridge.connect({ resolveEntity: () => entity as any });
+
+		const quaternion = { x: 0, y: 0.7071, z: 0, w: 0.7071 };
+		channel.send('entity:transform', {
+			uuid: 'entity-1',
+			rotation: { x: 1, y: 1, z: 1 },
+			quaternion,
+		});
+
+		expect(entity.setPose).toHaveBeenCalledWith({
+			position: undefined,
+			rotation: quaternion,
+		});
 	});
 
 	it('prefers a setScale mutator when the entity exposes one', () => {
@@ -106,6 +149,81 @@ describe('GameBridge command intake', () => {
 
 		channel.send('debug:set', { enabled: true });
 		expect(debugState.enabled).toBe(false);
+	});
+
+	it('echoes the settled transform back so the editor list is not left stale', async () => {
+		// `entity:upsert` is otherwise only published when an entity is added, so
+		// the list and inspector kept showing the pose an entity spawned with.
+		// The pose is read back off the entity rather than reflected from the
+		// command, so a game that clamps or rests the entity elsewhere corrects
+		// the editor instead of silently disagreeing with it.
+		const upserts: EntitySummaryPayload[][] = [];
+		// Released before the test ends: a lingering subscriber would look like
+		// an attached editor to the demand gates.
+		const unsubscribe = channel.on('entity:upsert', (payload) => upserts.push(payload));
+
+		const entity = {
+			uuid: 'entity-1',
+			name: 'Crate',
+			setPose: vi.fn().mockReturnValue(true),
+			getPose: () => ({
+				position: { x: 1, y: 0.5, z: 3 },
+				rotation: { x: 0, y: 0, z: 0, w: 1 },
+			}),
+		};
+		bridge.connect({ resolveEntity: () => entity as any });
+
+		channel.send('entity:transform', {
+			uuid: 'entity-1',
+			position: { x: 1, y: 9, z: 3 },
+		});
+		await flushBridge();
+
+		expect(upserts.flat()).toContainEqual(
+			expect.objectContaining({
+				uuid: 'entity-1',
+				name: 'Crate',
+				position: { x: 1, y: 0.5, z: 3 },
+			}),
+		);
+		unsubscribe();
+	});
+
+	it('leaves thumbnails and bounds out of a transform echo', async () => {
+		// The editor merges an upsert field by field and skips absent ones, so
+		// omitting these is what stops a move from wiping an entity's thumbnail.
+		const upserts: EntitySummaryPayload[][] = [];
+		const unsubscribe = channel.on('entity:upsert', (payload) => upserts.push(payload));
+
+		const entity = {
+			uuid: 'entity-1',
+			setPose: vi.fn().mockReturnValue(true),
+			getPose: () => null,
+		};
+		bridge.connect({ resolveEntity: () => entity as any });
+
+		channel.send('entity:transform', { uuid: 'entity-1', position: { x: 0, y: 1, z: 0 } });
+		await flushBridge();
+
+		const echoed = upserts.flat()[0]!;
+		expect(echoed).not.toHaveProperty('thumbnail');
+		expect(echoed).not.toHaveProperty('bounds');
+		unsubscribe();
+	});
+
+	it('skips the transform echo when no editor is listening', () => {
+		const entity = {
+			uuid: 'entity-1',
+			setPose: vi.fn().mockReturnValue(true),
+			getPose: () => null,
+		};
+		bridge.connect({ resolveEntity: () => entity as any });
+
+		channel.send('entity:transform', { uuid: 'entity-1', position: { x: 0, y: 1, z: 0 } });
+
+		// Building summaries is pure editor overhead, so it is demand-gated like
+		// every other entity publish.
+		expect(channel.getState('entity:upsert')).toBeUndefined();
 	});
 
 	it('publishes stage snapshots for late-subscriber hydration', () => {

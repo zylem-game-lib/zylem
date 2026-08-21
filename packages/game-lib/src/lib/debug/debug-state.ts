@@ -10,6 +10,31 @@ export type DebugTools =
 	| 'add'
 	| 'none';
 
+/** Tools that manipulate a selected entity's transform via the gizmo. */
+export const TRANSFORM_TOOLS = ['translate', 'rotate', 'scale'] as const;
+
+export type TransformTool = (typeof TRANSFORM_TOOLS)[number];
+
+export function isTransformTool(tool: DebugTools): tool is TransformTool {
+	return (TRANSFORM_TOOLS as readonly string[]).includes(tool);
+}
+
+/** Grid increments applied to gizmo drags, in world units and radians. */
+export interface SnapSettings {
+	enabled: boolean;
+	translate: number;
+	/** Radians. Defaults to 15 degrees. */
+	rotate: number;
+	scale: number;
+}
+
+export const DEFAULT_SNAP_SETTINGS: SnapSettings = {
+	enabled: true,
+	translate: 0.25,
+	rotate: Math.PI / 12,
+	scale: 0.1,
+};
+
 export interface DebugState {
 	enabled: boolean;
 	paused: boolean;
@@ -22,8 +47,21 @@ export interface DebugState {
 	 * Proxy wrappers to engine code that expects real instances.
 	 */
 	selectedEntityId: string | null;
+	/**
+	 * Full selection, in click order. `selectedEntityId` mirrors the first
+	 * entry. Only ever holds one uuid today, but the gizmo and scene operations
+	 * are already written against the list so multi-select needs no rework here.
+	 */
+	selectedEntityIds: string[];
 	/** UUID of the hovered entity. Same constraint as `selectedEntityId`. */
 	hoveredEntityId: string | null;
+	snap: SnapSettings;
+	/** Whether the construction-plane grid is drawn. */
+	gridVisible: boolean;
+	/** Catalog type the add tool will spawn, or null when disarmed. */
+	addTypeId: string | null;
+	/** Creation options merged over the armed type's defaults. */
+	addTypeProps: Record<string, unknown> | null;
 	flags: Set<string>;
 }
 
@@ -32,7 +70,12 @@ export const debugState = proxy<DebugState>({
 	paused: false,
 	tool: 'none',
 	selectedEntityId: null,
+	selectedEntityIds: [],
 	hoveredEntityId: null,
+	snap: { ...DEFAULT_SNAP_SETTINGS },
+	gridVisible: false,
+	addTypeId: null,
+	addTypeProps: null,
 	flags: new Set(),
 });
 
@@ -113,6 +156,18 @@ export function setDebugTool(tool: DebugTools): void {
 	debugState.tool = tool;
 }
 
+/**
+ * Whether the editor's pointer tools should be live.
+ *
+ * Debug mode owns the collider wireframes and the orbit camera; it does not own
+ * editing. An armed tool has to work without it, or the toolbar offers buttons
+ * that quietly do nothing — which is what Add, Select and Delete all did until
+ * the Debug button happened to be on.
+ */
+export function isEditorInteractionActive(): boolean {
+	return debugState.enabled || debugState.tool !== 'none';
+}
+
 export function getSelectedEntityId(): string | null {
 	return debugState.selectedEntityId;
 }
@@ -121,6 +176,50 @@ export function setSelectedEntityId(uuid: string | null): void {
 	const next = toEntityId(uuid, 'setSelectedEntityId');
 	if (debugState.selectedEntityId === next) return;
 	debugState.selectedEntityId = next;
+	debugState.selectedEntityIds = next ? [next] : [];
+}
+
+/** Every selected uuid, in click order. */
+export function getSelectedEntityIds(): string[] {
+	return [...debugState.selectedEntityIds];
+}
+
+/**
+ * Replace the selection. `selectedEntityId` follows the first entry so the
+ * single-select consumers (debug cursor, orbit focus target, bridge mirror)
+ * keep working unchanged.
+ */
+export function setSelectedEntityIds(uuids: string[]): void {
+	const next = uuids.map((uuid, index) => toEntityId(uuid, `setSelectedEntityIds[${index}]`))
+		.filter((uuid): uuid is string => uuid !== null);
+	const unchanged =
+		next.length === debugState.selectedEntityIds.length
+		&& next.every((uuid, index) => debugState.selectedEntityIds[index] === uuid);
+	if (unchanged) return;
+	debugState.selectedEntityIds = next;
+	debugState.selectedEntityId = next[0] ?? null;
+}
+
+/** Current snap increments. */
+export function getSnapSettings(): SnapSettings {
+	return { ...debugState.snap };
+}
+
+export function setSnapSettings(snap: Partial<SnapSettings>): void {
+	Object.assign(debugState.snap, snap);
+}
+
+export function setGridVisible(visible: boolean): void {
+	debugState.gridVisible = visible;
+}
+
+/** Arm the add tool with a catalog type, or pass `null` to disarm it. */
+export function setAddType(
+	typeId: string | null,
+	props?: Record<string, unknown> | null,
+): void {
+	debugState.addTypeId = typeId;
+	debugState.addTypeProps = typeId ? (props ?? null) : null;
 }
 
 export function getHoveredEntityId(): string | null {

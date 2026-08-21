@@ -91,6 +91,8 @@ export const [debugStore, setDebugStore] = createStore({
 	paused: false,
 	hovered: null as string | null,
 	selected: [] as string[],
+	/** Fallback target for the gizmo tools; see `DebugState.lastTouchedEntityId`. */
+	lastTouched: null as string | null,
 	panelPosition: persisted.panelPosition ?? null,
 	/** Main panel's floating size; its docked size comes from the registry. */
 	panelSize: persisted.panelSize ?? null,
@@ -286,5 +288,6 @@ subscribe(debugState, () => {
 	setDebugStore('paused', debugState.paused);
 	setDebugStore('hovered', debugState.hoveredEntityId);
 	setDebugStore('selected', debugState.selectedEntityId ? [debugState.selectedEntityId] : []);
+	setDebugStore('lastTouched', debugState.lastTouchedEntityId);
 });
 

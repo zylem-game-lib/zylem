@@ -17,6 +17,7 @@ export default defineConfig({
 		'graphics': 'src/api/graphics.ts',
 		'events': 'src/api/events.ts',
 		'debug': 'src/api/debug.ts',
+		'catalog': 'src/api/catalog.ts',
 		'bridge': 'src/api/bridge.ts',
 		'web-components': 'src/api/web-components.ts',
 		'runtime': 'src/api/runtime.ts',

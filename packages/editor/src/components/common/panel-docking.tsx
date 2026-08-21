@@ -9,6 +9,7 @@ import {
     type Setter,
 } from 'solid-js';
 import { Portal } from 'solid-js/web';
+import { useLayer } from '@zylem/ui/components';
 import {
     clampThickness,
     computeDockLayout,
@@ -453,29 +454,45 @@ export function createPanelDocking(options: CreatePanelDockingOptions) {
     };
 }
 
+/**
+ * Outline showing where a dragged panel would dock.
+ *
+ * Portaled so the panel's own bounds cannot clip it, and into the layer container
+ * rather than `document.body` so it stays in the tree the editor's tokens and
+ * styles were injected into.
+ */
 export const DockPreviewOverlay: Component<{
     rect: DockRect | null;
-    zIndex: number;
-}> = (props) => (
-    <Show when={props.rect}>
-        {(previewRect) => (
-            <Portal>
-                <div
-                    style={{
-                        position: 'fixed',
-                        left: `${previewRect().x}px`,
-                        top: `${previewRect().y}px`,
-                        width: `${previewRect().width}px`,
-                        height: `${previewRect().height}px`,
-                        'z-index': props.zIndex,
-                        'pointer-events': 'none',
-                        'box-sizing': 'border-box',
-                        border: '2px dashed var(--zylem-color-primary)',
-                        background: 'rgba(10, 20, 30, 0.2)',
-                        'border-radius': '0',
-                    }}
-                />
-            </Portal>
-        )}
-    </Show>
-);
+    /** Rank within the panel tier; keeps it just above the panel it belongs to. */
+    rank: Accessor<number> | number;
+}> = (props) => {
+    const layer = useLayer('panel', props.rank);
+
+    return (
+        <Show when={props.rect}>
+            {(previewRect) => (
+                <Show when={layer.mount()} keyed>
+                    {(mount) => (
+                        <Portal mount={mount}>
+                            <div
+                                style={{
+                                    position: 'fixed',
+                                    left: `${previewRect().x}px`,
+                                    top: `${previewRect().y}px`,
+                                    width: `${previewRect().width}px`,
+                                    height: `${previewRect().height}px`,
+                                    'z-index': layer.zIndex(),
+                                    'pointer-events': 'none',
+                                    'box-sizing': 'border-box',
+                                    border: '2px dashed var(--zylem-color-primary)',
+                                    background: 'rgba(10, 20, 30, 0.2)',
+                                    'border-radius': '0',
+                                }}
+                            />
+                        </Portal>
+                    )}
+                </Show>
+            )}
+        </Show>
+    );
+};

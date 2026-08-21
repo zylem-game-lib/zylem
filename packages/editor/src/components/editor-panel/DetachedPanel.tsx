@@ -10,7 +10,7 @@
  */
 
 import { createSignal, onCleanup, onMount, type Component, type JSX } from 'solid-js';
-import { WindowControls } from '@zylem/ui/components';
+import { useLayer, WindowControls } from '@zylem/ui/components';
 import {
     reattachPanel,
     updateDetachedPanelPosition,
@@ -24,6 +24,7 @@ import {
 import { getPanelTitle, renderPanelContent } from './panel-config';
 import { createPanelDocking, DockPreviewOverlay, type ResizeMode } from '../common/panel-docking';
 import { isHorizontalSide } from '../common/dock-layout';
+import { PANEL_RANK } from '../common/layer-ranks';
 
 // Minimum drag threshold to distinguish from clicks
 const DRAG_THRESHOLD = 3;
@@ -38,10 +39,11 @@ export interface DetachedPanelProps {
 
 export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
     const panelState = () => debugStore.detachedPanels[props.panelId];
-    const zIndex = () => {
-        const index = debugStore.panelZOrder.indexOf(props.panelId);
-        return 1003 + index;
-    };
+    // Position in `panelZOrder` becomes the rank, so clicking a panel raises it
+    // above its siblings without leaving the panel tier.
+    const rank = () =>
+        PANEL_RANK.detachedBase + debugStore.panelZOrder.indexOf(props.panelId);
+    const layer = useLayer('panel', rank);
     const initialPanelSize = panelState()?.size ?? { width: 350, height: 300 };
 
     const [position, setPosition] = createSignal(
@@ -320,7 +322,7 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
                 top: `${position().y}px`,
                 width: `${size().width}px`,
                 height: isAutoHeight() ? 'auto' : `${size().height}px`,
-                'z-index': zIndex(),
+                'z-index': layer.zIndex(),
                 'border-radius': dockedSide() ? '0' : undefined,
                 // The editor overlay root is pointer-events: none; re-enable
                 // interaction for the panel itself.
@@ -337,7 +339,10 @@ export const DetachedPanel: Component<DetachedPanelProps> = (props) => {
                     : {}),
             }}
         >
-            <DockPreviewOverlay rect={getDockPreviewRect()} zIndex={zIndex() + 1} />
+            <DockPreviewOverlay
+                rect={getDockPreviewRect()}
+                rank={() => rank() + 1}
+            />
 
             {/* Title bar */}
             <div

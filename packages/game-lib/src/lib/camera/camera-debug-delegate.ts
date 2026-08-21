@@ -59,6 +59,15 @@ export class CameraOrbitController {
 	/** Whether the initial debug orbit pose has been seeded. */
 	private _debugPoseSeeded = false;
 
+	/** Whether orbit input is accepted; false while a gizmo drag owns the pointer. */
+	private _interactionEnabled = true;
+
+	/**
+	 * Whether the orbit target tracks the debug selection. False while a
+	 * transform tool is active — see {@link setFollowSelectionEnabled}.
+	 */
+	private _followSelection = true;
+
 	constructor(camera: Camera, domElement: HTMLElement, cameraRig?: Object3D | null) {
 		this.camera = camera;
 		this.domElement = domElement;
@@ -85,7 +94,12 @@ export class CameraOrbitController {
 	 */
 	setDefaultOrbitTarget(target: Object3D | null): void {
 		this._defaultOrbitTarget = target;
-		if (target && !this.orbitTarget && this.debugStateSnapshot.enabled) {
+		if (
+			target
+			&& !this.orbitTarget
+			&& this.debugStateSnapshot.enabled
+			&& this._followSelection
+		) {
 			this.orbitTarget = target;
 		}
 	}
@@ -130,7 +144,7 @@ export class CameraOrbitController {
 	 * Should be called from the camera's update loop.
 	 */
 	update() {
-		if (this.orbitControls && this.orbitTarget) {
+		if (this._followSelection && this.orbitControls && this.orbitTarget) {
 			this.orbitTarget.getWorldPosition(this.orbitTargetWorldPos);
 			this.orbitControls.target.copy(this.orbitTargetWorldPos);
 		}
@@ -281,8 +295,58 @@ export class CameraOrbitController {
 		this.orbitControls.minDistance = 1;
 		this.orbitControls.maxDistance = 500;
 		this.orbitControls.maxPolarAngle = Math.PI / 2;
+		this.orbitControls.enabled = this._interactionEnabled;
 		// Default target to origin
 		this.orbitControls.target.set(0, 0, 0);
+	}
+
+	/**
+	 * Suspend or resume orbit input without tearing the controls down.
+	 *
+	 * `OrbitControls` binds its own pointer listeners to the same canvas the
+	 * debug tools use, so dragging a transform gizmo would otherwise also swing
+	 * the camera. Suppressing it by stopping event propagation would depend on
+	 * listener registration order, so the flag is explicit instead. Camera
+	 * position and orbit target are preserved, unlike disposing the controls.
+	 */
+	setInteractionEnabled(enabled: boolean): void {
+		this._interactionEnabled = enabled;
+		if (this.orbitControls) {
+			this.orbitControls.enabled = enabled;
+		}
+	}
+
+	/**
+	 * Stop or resume tracking the debug selection with the orbit target.
+	 *
+	 * `OrbitControls.update` ends with `lookAt(target)`, so a target pinned to a
+	 * moving entity makes the camera re-aim at it every frame. During a gizmo
+	 * drag that is a feedback loop: the view swivels to follow the entity, the
+	 * world-space ray under the unmoved cursor sweeps with it, and the next frame
+	 * reads a larger drag value — the entity accelerates off screen.
+	 *
+	 * Tracking off leaves the target wherever it currently sits, so orbiting and
+	 * zooming still work around that point. Re-enabling re-resolves it from the
+	 * live selection, which costs no camera movement: `OrbitControls` recomputes
+	 * its offset from the actual camera position each frame, so a new target only
+	 * changes what later input pivots around.
+	 */
+	setFollowSelectionEnabled(enabled: boolean): void {
+		if (this._followSelection === enabled) return;
+		this._followSelection = enabled;
+
+		if (!enabled) {
+			// Dropping the reference is what freezes the target; `update` leaves
+			// `orbitControls.target` untouched without one.
+			this.orbitTarget = null;
+			return;
+		}
+		this.updateOrbitTargetFromSelection(this.debugStateSnapshot.selected);
+	}
+
+	/** Whether the orbit target currently tracks the debug selection. */
+	get isFollowingSelection(): boolean {
+		return this._followSelection;
 	}
 
 	private disableOrbitControls() {
@@ -294,6 +358,10 @@ export class CameraOrbitController {
 	}
 
 	private updateOrbitTargetFromSelection(selected: string[]) {
+		// A selection change while tracking is suspended must not re-target, or
+		// picking a different entity mid-drag would snap the view to it.
+		if (!this._followSelection) return;
+
 		// Default to origin anchor when no entity is selected
 		if (!this.debugDelegate || selected.length === 0) {
 			this.orbitTarget = this._defaultOrbitTarget;

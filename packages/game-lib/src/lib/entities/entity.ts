@@ -48,6 +48,7 @@ import {
 	markSpawnPlacementReady,
 	revealSpawnPlacement,
 	syncRenderPositionFromBody,
+	syncRenderRotationFromBody,
 } from './spawn-placement';
 
 export interface CollisionContext<
@@ -202,6 +203,19 @@ export class GameEntity<O extends GameEntityOptions>
 	public colliderDesc: SimulationColliderDefinition | undefined;
 	public custom: Record<string, any> = {};
 
+	/**
+	 * Pristine collider definitions captured before the first scale change, so
+	 * scaling stays absolute rather than compounding. See
+	 * {@link ensureColliderBaseline}.
+	 */
+	public colliderBaseline: SimulationColliderDefinition[] | null = null;
+	/**
+	 * Set when {@link GameEntity.setScale} has scaled the render object but the
+	 * colliders have not been rebuilt yet. Cleared by
+	 * {@link commitColliderScale}.
+	 */
+	public colliderScaleDirty = false;
+
 	// Compound entity support: multiple colliders and meshes
 	/** All collider descriptions for this entity (including primary) */
 	public colliderDescs: SimulationColliderDefinition[] = [];
@@ -256,6 +270,9 @@ export class GameEntity<O extends GameEntityOptions>
 
 	// Transform store for physics intent accumulation (auto-created in create())
 	public transformStore: TransformState;
+
+	/** Absolute scale, authored by the editor. Unit scale until changed. */
+	private _scale: Vec3 = { x: 1, y: 1, z: 1 };
 
 	/** Hide render target until spawn placement is confirmed. */
 	public _spawnPlacementPending = false;
@@ -345,11 +362,30 @@ export class GameEntity<O extends GameEntityOptions>
 		this.setPositionY = wrapAxisMutator(this.setPositionY.bind(this));
 		this.setPositionZ = wrapAxisMutator(this.setPositionZ.bind(this));
 
+		/**
+		 * Rotation needs its own push to the render object, because the
+		 * per-frame {@link syncRenderPoses} only runs while the stage is
+		 * stepping. Without this, turning a paused entity from the editor
+		 * showed nothing until playback resumed.
+		 */
+		const afterRotationMutation = () => {
+			if (this._spawnInProgress) {
+				return;
+			}
+			syncRenderRotationFromBody(this);
+		};
+
 		const originalSetPose = this.setPose.bind(this);
 		this.setPose = (input) => {
 			const ok = originalSetPose(input);
-			if (ok && input.position != null) {
+			if (!ok) {
+				return ok;
+			}
+			if (input.position != null) {
 				afterPositionMutation();
+			}
+			if (input.rotation != null) {
+				afterRotationMutation();
 			}
 			return ok;
 		};
@@ -405,6 +441,14 @@ export class GameEntity<O extends GameEntityOptions>
 				const { x, y, z, w } = input.rotation;
 				ok = this.wasmStageRef.setRotation(this.runtimeHandle, x, y, z, w) && ok;
 			}
+			// The runtime is written directly here rather than through
+			// `SimulationBody`'s setters, so the discontinuity they would have
+			// marked has to be marked by hand. Without it the render buffers
+			// straddle the teleport and the entity is drawn sweeping into its
+			// new pose instead of arriving there.
+			if (ok) {
+				this.body?.markPoseDiscontinuity();
+			}
 			return ok;
 		}
 		const body = this.body;
@@ -417,6 +461,26 @@ export class GameEntity<O extends GameEntityOptions>
 			body.setRotation(input.rotation, true);
 		}
 		return true;
+	}
+
+	/** Current absolute scale. */
+	public getScale(): Vec3 {
+		return { ...this._scale };
+	}
+
+	/**
+	 * Set absolute scale on the render object.
+	 *
+	 * Colliders are *not* resized here — they are baked into the wasm
+	 * simulation and can only be replaced by respawning the body, which is far
+	 * too costly to do per drag frame. The entity is flagged instead, and
+	 * {@link commitColliderScale} rebuilds them once the gesture commits.
+	 */
+	public setScale(x: number, y: number, z: number): void {
+		this._scale = { x, y, z };
+		const target = this.group ?? this.mesh;
+		target?.scale.set(x, y, z);
+		this.colliderScaleDirty = true;
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────

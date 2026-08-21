@@ -7,6 +7,7 @@ import type { Component, JSX } from 'solid-js';
 import { GameSection } from '../game/GameSection';
 import { StageSection } from '../stages/StageSection';
 import { EntitiesSection } from '../entities/EntitiesSection';
+import { TransformSection } from '../transform/TransformSection';
 import { Console } from '../console/Console';
 import { BridgePanel } from '../bridge/BridgePanel';
 
@@ -24,6 +25,7 @@ export const PANEL_CONFIGS: PanelConfig[] = [
     { id: 'game-config', title: 'Game', component: GameSection },
     { id: 'stage-config', title: 'Stage', component: StageSection },
     { id: 'entities', title: 'Entities', component: EntitiesSection },
+    { id: 'transform', title: 'Transform', component: TransformSection },
     { id: 'console', title: 'Console', component: Console },
     { id: 'bridge', title: 'Bridge', component: BridgePanel },
 ];

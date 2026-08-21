@@ -400,6 +400,23 @@ export class ZylemCamera {
 		this.orbitController?.frameTarget(object);
 	}
 
+	/**
+	 * Suspend or resume orbit input. Used by the debug transform tools so a
+	 * gizmo drag does not also swing the camera.
+	 */
+	setOrbitInteractionEnabled(enabled: boolean): void {
+		this.orbitController?.setInteractionEnabled(enabled);
+	}
+
+	/**
+	 * Stop or resume tracking the debug selection with the orbit target. Used by
+	 * the transform tools, which cannot be dragged accurately while the camera
+	 * re-aims at the entity being moved.
+	 */
+	setOrbitFollowEnabled(enabled: boolean): void {
+		this.orbitController?.setFollowSelectionEnabled(enabled);
+	}
+
 	// ─── Movement helpers (backward compat) ─────────────────────────────────
 
 	/**

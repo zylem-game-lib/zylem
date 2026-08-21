@@ -12,7 +12,22 @@ export interface DebugState {
     paused: boolean;
     tool: DebugTools;
     selectedEntityId: string | null;
+    /**
+     * Full selection, mirroring the game. `selectedEntityId` is its first entry,
+     * kept so single-select consumers need no change.
+     */
+    selectedEntityIds: string[];
     hoveredEntityId: string | null;
+    /**
+     * Most recently selected or created entity, kept after it is deselected.
+     *
+     * What the gizmo tools fall back to: pressing Rotate with nothing selected
+     * should turn the thing you were last working on, rather than nothing. Never
+     * cleared on deselect — only overwritten — and validated against the current
+     * entity list at the point of use, since the entity it names can be deleted
+     * or undone away.
+     */
+    lastTouchedEntityId: string | null;
     flags: Set<string>;
 }
 
@@ -20,7 +35,9 @@ export const debugState = proxy<DebugState>({
     paused: false,
     tool: 'none',
     selectedEntityId: null,
+    selectedEntityIds: [],
     hoveredEntityId: null,
+    lastTouchedEntityId: null,
     flags: new Set(),
 });
 
@@ -67,6 +84,28 @@ export function getSelectedEntityId(): string | null {
 
 export function setSelectedEntityId(id: string | null): void {
     debugState.selectedEntityId = id;
+    debugState.selectedEntityIds = id ? [id] : [];
+    if (id) debugState.lastTouchedEntityId = id;
+}
+
+export function getSelectedEntityIds(): string[] {
+    return [...debugState.selectedEntityIds];
+}
+
+/**
+ * Record an entity as the one most recently worked on.
+ *
+ * Separate from selection because creating an entity counts too: placing a box
+ * and then pressing Rotate should turn that box, even though placement leaves it
+ * unselected. Ignores null so a deselect does not erase the memory.
+ */
+export function noteTouchedEntity(id: string | null): void {
+    if (!id) return;
+    debugState.lastTouchedEntityId = id;
+}
+
+export function getLastTouchedEntityId(): string | null {
+    return debugState.lastTouchedEntityId;
 }
 
 // Subscribe to external events

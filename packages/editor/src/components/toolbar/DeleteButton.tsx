@@ -2,7 +2,7 @@ import Trash2 from 'lucide-solid/icons/trash-2';
 import type { Component } from 'solid-js';
 import { setDebugTool, debugStore } from '..';
 import { sendTool } from '../../bridge/editor-bridge';
-import { ToolbarButton } from './ToolbarButton';
+import { ToolbarButton } from '@zylem/ui/components';
 
 export const DeleteButton: Component = () => {
     const handleClick = () => {
@@ -14,7 +14,7 @@ export const DeleteButton: Component = () => {
     return (
         <ToolbarButton
             label="Delete"
-            isSelected={debugStore.tool === 'delete'}
+            selected={debugStore.tool === 'delete'}
             onClick={handleClick}
         >
             <Trash2 class="zylem-icon" />

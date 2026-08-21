@@ -23,9 +23,20 @@ import { GameDebugDelegate } from './game-debug-delegate';
 import { GameLoadingDelegate, GameLoadingEvent } from './game-loading-delegate';
 import { gameEventBus, GameStateUpdatedPayload } from './game-event-bus';
 import { zylemEventBus } from '../events';
-import { GameBridge, readEntityScale } from '../bridge/game-bridge';
+import {
+	GameBridge,
+	entityTypeName,
+	readEntityQuaternion,
+	readEntityScale,
+} from '../bridge/game-bridge';
 import type { GameEntity } from '../entities/entity';
-import { getZylemBridge } from '@zylem/bridge';
+import {
+	buildCatalogDescriptors,
+	getEntityType,
+	onEntityRegistryChanged,
+} from '../entities/entity-registry';
+import { registerBuiltInEntityTypes } from '../entities/entity-catalog';
+import { getZylemBridge, type BridgePose } from '@zylem/bridge';
 import type {
 	EntitySummaryPayload,
 	GameConfigPayload,
@@ -98,6 +109,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	private lastPublishedGameConfig: string | null = null;
 	/** Editor ↔ game bridge adapter (RAF-coalesced publishes, command intake). */
 	private gameBridge = new GameBridge();
+	/** Stops republishing the entity catalog on registry changes. */
+	private catalogUnsubscribe: (() => void) | null = null;
 	private readonly gameUpdateParams = {} as UpdateContext<
 		ZylemGame<TGlobals>,
 		TGlobals
@@ -139,6 +152,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		});
 		this.loadDebugOptions(options);
 		this.setGlobals(options);
+		registerBuiltInEntityTypes();
 		this.gameBridge.connect({
 			resolveEntity: (uuid) =>
 				(this.currentStage()?.wrappedStage?.entityDelegate.childrenMap.get(uuid)
@@ -149,7 +163,49 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 					stageState.variables[key] = value;
 				}
 			},
+			createEntity: (typeId, props, pose) => {
+				this.createCatalogEntity(typeId, props, pose);
+			},
+			applySceneOperation: (op, direction) => {
+				this.currentStage()?.wrappedStage?.debugDelegate?.applySceneOperation(
+					op,
+					direction,
+				);
+			},
 		});
+		this.publishEntityCatalog();
+		this.catalogUnsubscribe = onEntityRegistryChanged(() =>
+			this.publishEntityCatalog(),
+		);
+	}
+
+	/** Publish the placeable entity types the editor's Add palette lists. */
+	private publishEntityCatalog(): void {
+		this.gameBridge.publishCatalog(buildCatalogDescriptors());
+	}
+
+	/** Spawn a catalog type programmatically (editor `entity:create`). */
+	private createCatalogEntity(
+		typeId: string,
+		props: Record<string, unknown> | undefined,
+		pose: BridgePose | undefined,
+	): void {
+		const stage = this.currentStage()?.wrappedStage;
+		const registration = getEntityType(typeId);
+		if (!stage || !registration) return;
+
+		const position = pose?.position ?? { x: 0, y: 0, z: 0 };
+		const node = registration.create({
+			position,
+			props: { ...(registration.defaultProps ?? {}), ...(props ?? {}) },
+		});
+		if (!node) return;
+
+		void Promise.resolve(node)
+			.then((resolved) => resolved && stage.entityDelegate.spawnEntity(resolved))
+			.catch((error) => {
+				console.error('entity:create failed', error);
+			});
 	}
 
 	setDisplayRuntime(runtime: ResolveGameConfigRuntime): void {
@@ -470,6 +526,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 	dispose() {
 		this.isDisposed = true;
+		this.catalogUnsubscribe?.();
+		this.catalogUnsubscribe = null;
 		this.gameBridge.disconnect();
 		if (this.animationFrameId !== null) {
 			cancelAnimationFrame(this.animationFrameId);
@@ -572,25 +630,25 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			return null;
 		}
 
-		// Get type string from the entity's constructor
-		const entityType = (child.constructor as any).type;
-		const typeStr = entityType ? String(entityType).replace('Symbol(', '').replace(')', '') : 'Unknown';
-
 		// Get transform data. Scale lives on the render object rather than the
 		// entity, so read it the same way `entity:transform` writes it.
 		const position = (child as any).position ?? { x: 0, y: 0, z: 0 };
 		const rotation = (child as any).rotation ?? { x: 0, y: 0, z: 0 };
 		const scale = readEntityScale(child);
+		// The gizmo and undo entries work in quaternions; Euler angles are only
+		// for the inspector fields, and round-tripping through them drifts.
+		const quaternion = readEntityQuaternion(child);
 
 		const thumb = entityThumbnailCache.get(child.uuid);
 
 		return {
 			uuid: child.uuid,
 			name: child.name || 'Unnamed',
-			type: typeStr,
+			type: entityTypeName(child),
 			position: { x: position.x ?? 0, y: position.y ?? 0, z: position.z ?? 0 },
 			rotation: { x: rotation.x ?? 0, y: rotation.y ?? 0, z: rotation.z ?? 0 },
 			scale,
+			quaternion,
 			thumbnail: thumb?.dataUrl ?? null,
 			bounds: thumb?.bounds,
 		};

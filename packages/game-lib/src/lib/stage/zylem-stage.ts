@@ -17,7 +17,7 @@ import { RenderStrategyManager } from '../graphics/render-strategy-manager';
 import { resetStageVariables, setStageBackgroundColor, setStageBackgroundImage, setStageVariables, clearVariables, initialStageState } from './stage-state';
 
 import { GameEntityInterface } from '../types/entity-types';
-import { debugState } from '../debug/debug-state';
+import { debugState, isEditorInteractionActive } from '../debug/debug-state';
 
 import { SetupContext, UpdateContext, DestroyContext } from '../core/base-node-life-cycle';
 import { LifeCycleBase } from '../core/lifecycle-base';
@@ -401,13 +401,15 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.debugUpdate();
 	}
 
-	/** Update debug overlays and helpers if enabled. */
+	/** Update debug overlays and the editor's pointer tools. */
 	public debugUpdate() {
-		if (debugState.enabled) {
-			beginStageFrameSection('debugUpdate');
-			this.debugDelegate?.update();
-			endStageFrameSection();
-		}
+		// An armed tool ticks here too, not just debug mode: the delegate decides
+		// which of its layers apply. Gating the whole delegate on `enabled` meant
+		// the Add tool drew no preview and swallowed clicks with debug switched off.
+		if (!isEditorInteractionActive()) return;
+		beginStageFrameSection('debugUpdate');
+		this.debugDelegate?.update();
+		endStageFrameSection();
 	}
 
 	/** Cleanup owned resources when the stage is destroyed. */

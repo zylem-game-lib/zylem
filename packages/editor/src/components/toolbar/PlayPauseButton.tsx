@@ -3,7 +3,7 @@ import Play from 'lucide-solid/icons/play';
 import type { Component } from 'solid-js';
 import { setPaused, debugState, debugStore } from '..';
 import { sendPlayback } from '../../bridge/editor-bridge';
-import { ToolbarButton } from './ToolbarButton';
+import { ToolbarButton } from '@zylem/ui/components';
 
 export const PlayPauseButton: Component = () => {
     const handleClick = () => {
@@ -15,7 +15,7 @@ export const PlayPauseButton: Component = () => {
     return (
         <ToolbarButton
             label={debugStore.paused ? 'Play' : 'Pause'}
-            isSelected={debugStore.paused}
+            selected={debugStore.paused}
             onClick={handleClick}
         >
             {debugStore.paused ? (

@@ -15,9 +15,15 @@
 import {
 	getZylemBridge,
 	type BridgeDebugTool,
+	type BridgePose,
+	type BridgeQuat,
+	type BridgeVec3,
 	type EntitySelectionPayload,
 	type EntitySummaryPayload,
 	type EntityThumbnailPayload,
+	type EntityTypeDescriptor,
+	type SceneOperationPayload,
+	type SnapSettingsPayload,
 	type StageSnapshotPayload,
 	type GameConfigPayload,
 	type GameNoticePayload,
@@ -26,7 +32,10 @@ import {
 
 import { gameState } from '../components/game/game-state';
 import { stageState } from '../components/stages/stage-state';
-import { debugState as editorDebugState } from '../components/entities/entities-state';
+import {
+	debugState as editorDebugState,
+	noteTouchedEntity,
+} from '../components/entities/entities-state';
 import { setDebugStore } from '../components/editor-store';
 import { printToConsole } from '../components/console/console-state';
 import {
@@ -34,6 +43,9 @@ import {
 	removeEntityThumbnails,
 	setEntityThumbnails,
 } from '../components/entities/thumbnail-store';
+import { setEntityCatalog } from '../components/toolbar/catalog-state';
+import { clearHistory, pushOperation } from '../components/history/history-store';
+import { notifySceneOperation } from '../host/scene-operation-hook';
 import type { BaseEntityInterface } from '../types';
 
 const { channel } = getZylemBridge();
@@ -186,6 +198,9 @@ function applyStageSnapshot(snapshot: StageSnapshotPayload): void {
 	});
 	clearEntityThumbnails();
 	adoptInlineThumbnails(snapshot.entities);
+	// A new stage means every uuid in the history stack is dangling, so replaying
+	// an entry would either no-op or hit an unrelated entity.
+	clearHistory();
 }
 
 /**
@@ -266,6 +281,28 @@ function applyGameStatus(status: { paused?: boolean; debug?: boolean }): void {
 function applyEntitySelection(selection: EntitySelectionPayload): void {
 	editorDebugState.selectedEntityId = selection.selectedUuid;
 	editorDebugState.hoveredEntityId = selection.hoveredUuid;
+	editorDebugState.selectedEntityIds =
+		selection.selectedUuids
+		?? (selection.selectedUuid ? [selection.selectedUuid] : []);
+	// Written field by field rather than through `setSelectedEntityId`, so the
+	// in-scene Select tool's picks have to be recorded here too.
+	noteTouchedEntity(selection.selectedUuid);
+}
+
+function applyCatalog(payload: { entities: EntityTypeDescriptor[] }): void {
+	setEntityCatalog(payload.entities);
+}
+
+/** Record a committed game-side edit, and let the host observe it. */
+function applySceneOperation(op: SceneOperationPayload): void {
+	// Placement leaves the new entity unselected, so this is the only signal that
+	// it is now the thing being worked on. Undo of the create is not unwound here:
+	// the entity simply stops existing, and the gizmo tools check for that.
+	if (op.kind === 'create') {
+		noteTouchedEntity(op.entries.at(-1)?.uuid ?? null);
+	}
+	pushOperation(op);
+	notifySceneOperation(op);
 }
 
 function applyGameNotice(notice: GameNoticePayload): void {
@@ -309,6 +346,8 @@ export function connectEditorBridge(): () => void {
 		channel.on('entity:thumbnail', applyThumbnails),
 		channel.on('entity:selection', applyEntitySelection),
 		channel.on('game:notice', applyGameNotice),
+		channel.on('catalog:snapshot', applyCatalog),
+		channel.on('scene:operation', applySceneOperation),
 	];
 
 	// Rebuild the uuid index from whatever survived a previous connection.
@@ -331,6 +370,8 @@ export function connectEditorBridge(): () => void {
 	if (status) applyGameStatus(status);
 	const selection = channel.getState('entity:selection');
 	if (selection) applyEntitySelection(selection);
+	const catalog = channel.getState('catalog:snapshot');
+	if (catalog) applyCatalog(catalog);
 
 	return release;
 }
@@ -373,6 +414,54 @@ export function sendEntityFocus(uuid: string): void {
 /** Write a stage variable in the running game. */
 export function sendStageVariable(key: string, value: unknown): void {
 	channel.send('stage:variable:set', { key, value });
+}
+
+/**
+ * Set an entity's transform absolutely.
+ *
+ * `quaternion` is authoritative when supplied; `rotation` is Euler radians for
+ * the numeric fields, and round-trips less cleanly.
+ */
+export function sendEntityTransform(
+	uuid: string,
+	transform: {
+		position?: BridgeVec3;
+		rotation?: BridgeVec3;
+		quaternion?: BridgeQuat;
+		scale?: BridgeVec3;
+	},
+): void {
+	channel.send('entity:transform', { uuid, ...transform });
+}
+
+/** Arm the game's add tool with a catalog type, or `null` to disarm it. */
+export function sendAddType(
+	typeId: string | null,
+	props?: Record<string, unknown>,
+): void {
+	channel.send('add:type:set', props ? { typeId, props } : { typeId });
+}
+
+/** Spawn a catalog entity without a placement click. */
+export function sendEntityCreate(
+	typeId: string,
+	options?: { props?: Record<string, unknown>; pose?: BridgePose },
+): void {
+	channel.send('entity:create', {
+		typeId,
+		...(options?.props ? { props: options.props } : {}),
+		...(options?.pose ? { pose: options.pose } : {}),
+	});
+}
+
+/** Push snap increments to the game's gizmo. */
+export function sendSnapSettings(snap: SnapSettingsPayload): void {
+	channel.send('snap:set', snap);
+}
+
+/** Show or hide the game's construction-plane grid. */
+export function sendGridVisible(visible: boolean): void {
+	channel.send('grid:set', { visible });
 }
 
 /** The shared bridge channel, for advanced subscriptions. */

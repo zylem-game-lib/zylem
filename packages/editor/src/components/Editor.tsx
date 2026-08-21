@@ -1,3 +1,4 @@
+import { LayerProvider } from '@zylem/ui/components';
 import { render } from 'solid-js/web';
 import {
   createMemo,
@@ -233,45 +234,51 @@ export const Editor: Component<EditorProps> = (props) => {
   });
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        height: '100vh',
-        width: '100vw',
-        position: 'absolute',
-        // The overlay must never swallow input meant for the game underneath;
-        // interactive children opt back in with pointer-events: auto.
-        'pointer-events': 'none',
-      }}
-    >
-      <Show when={launcherMode() !== 'hidden'}>
-        <EditorToggleButton onToggle={toggleMenu} />
-      </Show>
-      <Show when={isOpen()}>
-        <FloatingPanel
-          title="Zylem Editor"
-          initialPosition={panelLayout().initialPosition}
-          initialSize={panelLayout().initialSize}
-          floatingSize={debugStore.panelSize ?? { width: PANEL_WIDTH, height: PANEL_HEIGHT }}
-          minSize={{ width: 300, height: 200 }}
-          collapsible={true}
-          onClose={closeMenu}
-          onMove={handlePanelMove}
-          onResize={setPanelSize}
-          dockRequest={dockRequest}
-        >
-          {(isCollapsed) => <Menu isCollapsed={isCollapsed} />}
-        </FloatingPanel>
-      </Show>
+    // The provider resolves the editor's shadow root once and owns the container
+    // every overlay portals into. Without it each overlay resolves its own, and
+    // more importantly they would land in `document.body`, outside the tree the
+    // editor's styles are injected into.
+    <LayerProvider>
+      <div
+        style={{
+          display: 'flex',
+          height: '100vh',
+          width: '100vw',
+          position: 'absolute',
+          // The overlay must never swallow input meant for the game underneath;
+          // interactive children opt back in with pointer-events: auto.
+          'pointer-events': 'none',
+        }}
+      >
+        <Show when={launcherMode() !== 'hidden'}>
+          <EditorToggleButton onToggle={toggleMenu} />
+        </Show>
+        <Show when={isOpen()}>
+          <FloatingPanel
+            title="Zylem Editor"
+            initialPosition={panelLayout().initialPosition}
+            initialSize={panelLayout().initialSize}
+            floatingSize={debugStore.panelSize ?? { width: PANEL_WIDTH, height: PANEL_HEIGHT }}
+            minSize={{ width: 300, height: 200 }}
+            collapsible={true}
+            onClose={closeMenu}
+            onMove={handlePanelMove}
+            onResize={setPanelSize}
+            dockRequest={dockRequest}
+          >
+            {(isCollapsed) => <Menu isCollapsed={isCollapsed} />}
+          </FloatingPanel>
+        </Show>
 
-      {/* Render detached panels */}
-      <For each={getDetachedPanelIds()}>
-        {(panelId) => <DetachedPanel panelId={panelId} />}
-      </For>
+        {/* Render detached panels */}
+        <For each={getDetachedPanelIds()}>
+          {(panelId) => <DetachedPanel panelId={panelId} />}
+        </For>
 
-      {/* Right area reserved for future content */}
-      <div style={{ flex: 1 }} />
-    </div>
+        {/* Right area reserved for future content */}
+        <div style={{ flex: 1 }} />
+      </div>
+    </LayerProvider>
   );
 };
 

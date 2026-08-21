@@ -1,3 +1,4 @@
+import { Quaternion } from 'three';
 import type { Group, Mesh } from 'three';
 import type { BehaviorRuntime } from '@zylem/behaviors/core';
 import type { SimulationBody } from '../collision/simulation-body';
@@ -7,6 +8,8 @@ import { VEC3_ZERO, normalizeVec3 } from '../core/vector';
 
 /** Internal marker on merged options when the author passed `position`. */
 export const EXPLICIT_SPAWN_POSITION = Symbol('explicitSpawnPosition');
+
+const _rotationScratch = new Quaternion();
 
 /**
  * Minimal structural type for spawn-placement helpers.
@@ -19,6 +22,8 @@ export interface SpawnPlacementEntity {
 	mesh?: Mesh;
 	physicsAttached?: boolean;
 	body?: SimulationBody | null;
+	/** Entity steers its own facing; see {@link syncRenderRotationFromBody}. */
+	controlledRotation?: boolean;
 	wasmStageRef?: BehaviorRuntime | null;
 	runtimeHandle?: number;
 	_spawnPlacementPending?: boolean;
@@ -96,6 +101,53 @@ export function syncRenderPositionFromBody(entity: SpawnPlacementEntity): void {
 		const position = normalizeVec3(entity.options.position, VEC3_ZERO);
 		target.position.set(position.x, position.y, position.z);
 	}
+}
+
+/**
+ * Copy the physics / wasm rotation onto the Three.js group or mesh immediately.
+ *
+ * The live body pose is read rather than the render buffers, so this lands the
+ * final orientation with no interpolation — the point is to show a teleport, not
+ * to animate towards it.
+ *
+ * Entities with `controlledRotation` are skipped, matching {@link syncRenderPoses}:
+ * their facing is owned elsewhere and writing it here would fight that owner.
+ */
+export function syncRenderRotationFromBody(entity: SpawnPlacementEntity): void {
+	const target = entity.group ?? entity.mesh;
+	if (!target || entity.controlledRotation) {
+		return;
+	}
+
+	if (entity.physicsAttached && entity.body) {
+		try {
+			const rotation = entity.body.rotation();
+			_rotationScratch.set(rotation.x, rotation.y, rotation.z, rotation.w);
+			target.setRotationFromQuaternion(_rotationScratch);
+			return;
+		} catch {
+			// Fall through to the wasm pose.
+		}
+	}
+
+	if (entity.wasmStageRef && (entity.runtimeHandle ?? -1) >= 0) {
+		const pose = entity.wasmStageRef.getPose(entity.runtimeHandle!);
+		if (pose) {
+			_rotationScratch.set(
+				pose.rotation[0],
+				pose.rotation[1],
+				pose.rotation[2],
+				pose.rotation[3],
+			);
+			target.setRotationFromQuaternion(_rotationScratch);
+		}
+	}
+}
+
+/** Both halves of the pose at once. */
+export function syncRenderPoseFromBody(entity: SpawnPlacementEntity): void {
+	syncRenderPositionFromBody(entity);
+	syncRenderRotationFromBody(entity);
 }
 
 export function applyRenderVisibility(entity: SpawnPlacementEntity, visible: boolean): void {

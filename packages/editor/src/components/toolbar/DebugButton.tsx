@@ -2,7 +2,7 @@ import Bug from 'lucide-solid/icons/bug';
 import type { Component } from 'solid-js';
 import { debugStore, setDebugStore } from '../editor-store';
 import { sendDebugEnabled } from '../../bridge/editor-bridge';
-import { ToolbarButton } from './ToolbarButton';
+import { ToolbarButton } from '@zylem/ui/components';
 
 export const DebugButton: Component = () => {
     const handleClick = () => {
@@ -14,7 +14,7 @@ export const DebugButton: Component = () => {
     return (
         <ToolbarButton
             label="Debug"
-            isSelected={debugStore.debug}
+            selected={debugStore.debug}
             onClick={handleClick}
         >
             <Bug class="zylem-icon" />

@@ -28,6 +28,7 @@ import {
 	endSpawnPlacement,
 	finalizeSpawnPlacement,
 	markSpawnPlacementReady,
+	revealSpawnPlacement,
 	syncRenderPositionFromBody,
 } from '../entities/spawn-placement';
 import { BaseEntityInterface } from '../types/entity-types';
@@ -44,6 +45,22 @@ import { Vessel } from '../core/vessel';
 
 type NodeLike = { create: Function };
 export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
+
+/**
+ * How many detached entities stay recoverable.
+ *
+ * Sized above the editor's undo depth (100) so a uuid still referenced by the
+ * history stack is never quietly unrecoverable. Anything evicted past this is
+ * fully destroyed.
+ */
+const MAX_DETACHED_ENTITIES = 200;
+
+/** A detached entity plus the pose to restore it at. */
+interface DetachedEntity {
+	entity: any;
+	position: { x: number; y: number; z: number } | null;
+	rotation: { x: number; y: number; z: number; w: number } | null;
+}
 
 /**
  * Runtime context provided by ZylemStage after scene and world are initialized.
@@ -73,6 +90,12 @@ export class StageEntityDelegate {
 
 	/** UUID → BaseNode map populated when debug mode is active. */
 	readonly debugMap: Map<string, BaseNode> = new Map();
+
+	/**
+	 * Entities detached from the stage but kept alive so an editor undo can put
+	 * them back. See {@link StageEntityDelegate.detachEntity}.
+	 */
+	readonly detachedMap: Map<string, DetachedEntity> = new Map();
 
 	private pendingEntities: StageEntityInput[] = [];
 	private pendingPromises: Promise<BaseNode>[] = [];
@@ -268,10 +291,33 @@ export class StageEntityDelegate {
 	// ─── Removal ─────────────────────────────────────────────────────────────
 
 	/**
-	 * Remove an entity and its resources by its UUID.
+	 * Remove an entity from the stage by its UUID.
+	 *
+	 * Detaches rather than destroys, so an editor undo can put the same
+	 * instance back. See {@link StageEntityDelegate.detachEntity}.
+	 *
 	 * @returns true if removed, false if not found or stage not ready
 	 */
 	removeEntityByUuid(uuid: string): boolean {
+		return this.detachEntity(uuid);
+	}
+
+	/**
+	 * Take an entity out of the stage while keeping the instance alive.
+	 *
+	 * The editor cannot rebuild an entity — all it ever receives is a summary of
+	 * name, type, and transform, with no material, behaviors, or collider
+	 * config. So undoing a delete has to restore the original object, which
+	 * means holding onto it here. Keeping the same instance also keeps its uuid
+	 * stable, which every other entry in the undo stack depends on.
+	 *
+	 * Observers are still told the entity is gone: from the outside it has left
+	 * the stage, and leaving it in the editor's list or the thumbnail cache
+	 * would leak.
+	 *
+	 * @returns true when the entity was found and detached.
+	 */
+	detachEntity(uuid: string): boolean {
 		if (!this.scene || !this.world) return false;
 
 		// @ts-ignore - collisionMap is public Map<string, GameEntity<any>>
@@ -279,8 +325,12 @@ export class StageEntityDelegate {
 		const entityFromChildren = this.childrenMap.get(uuid);
 		const entity: any = mapEntity ?? entityFromChildren ?? this.debugMap.get(uuid);
 		if (!entity) return false;
-		this.unregisterBehaviorLinks(entity);
 
+		// Captured before the body is despawned; the body definition still
+		// points at wherever the entity originally spawned.
+		const pose = typeof entity.getPose === 'function' ? entity.getPose() : null;
+
+		this.unregisterBehaviorLinks(entity);
 		this.entityModelDelegate.unobserve(uuid);
 
 		if (isManagedRenderEntity(entity)) {
@@ -297,8 +347,86 @@ export class StageEntityDelegate {
 
 		this.childrenMap.delete(uuid);
 		this.debugMap.delete(uuid);
+
+		this.detachedMap.set(uuid, {
+			entity,
+			position: pose?.position ?? null,
+			rotation: pose?.rotation ?? null,
+		});
+		this.evictOldestDetached();
+
 		zylemEventBus.emit('entity:destroyed', { entityId: uuid });
 		return true;
+	}
+
+	/**
+	 * Put a detached entity back into the stage at the pose it left.
+	 *
+	 * Unlike {@link StageEntityDelegate.spawnEntity} this never calls
+	 * `create()`: the entity is already fully built, and rebuilding it would
+	 * discard its meshes and colliders along with any editor scale applied to
+	 * them.
+	 *
+	 * @returns true when the entity was found and restored.
+	 */
+	restoreEntity(uuid: string): boolean {
+		if (!this.scene || !this.world) return false;
+
+		const detached = this.detachedMap.get(uuid);
+		if (!detached) return false;
+		this.detachedMap.delete(uuid);
+
+		const { entity, position, rotation } = detached;
+
+		// The body is respawned from its definition, so point that at the pose
+		// the entity was detached at rather than its original spawn point.
+		if (entity.bodyDesc) {
+			if (position) {
+				entity.bodyDesc.position = [position.x, position.y, position.z];
+			}
+			if (rotation) {
+				entity.bodyDesc.rotation = [rotation.x, rotation.y, rotation.z, rotation.w];
+			}
+		}
+
+		this.registerBehaviorLinks(entity);
+		this.maybeAttachEntityPhysics(entity);
+		this.tryRegisterRenderStrategy(entity);
+		if (!isManagedRenderEntity(entity)) {
+			this.scene.addEntityGroup(entity);
+		}
+
+		// The render transform is driven from the body each frame, but seed it
+		// now so a paused stage shows the entity in the right place immediately.
+		syncRenderPositionFromBody(entity);
+		revealSpawnPlacement(entity);
+
+		this.addEntityToStage(entity);
+		this.entityModelDelegate.observe(entity);
+		return true;
+	}
+
+	/** Whether a uuid is currently recoverable via {@link restoreEntity}. */
+	isDetached(uuid: string): boolean {
+		return this.detachedMap.has(uuid);
+	}
+
+	/**
+	 * Destroy detached entities past the recoverable window. Insertion-ordered,
+	 * so the oldest detachments go first.
+	 */
+	private evictOldestDetached(): void {
+		while (this.detachedMap.size > MAX_DETACHED_ENTITIES) {
+			const oldest = this.detachedMap.keys().next();
+			if (oldest.done) return;
+			const detached = this.detachedMap.get(oldest.value);
+			this.detachedMap.delete(oldest.value);
+			if (!detached) continue;
+			try {
+				detached.entity.nodeDestroy?.({ me: detached.entity, globals: getGlobals() });
+			} catch { /* noop */ }
+			clearVariables(detached.entity);
+		}
 	}
 
 	// ─── Lookup ──────────────────────────────────────────────────────────────
@@ -513,6 +641,17 @@ export class StageEntityDelegate {
 			clearVariables(child);
 			destroyedUuids.push(child.uuid);
 		});
+		// Detached entities are only recoverable within a stage; tearing the
+		// stage down makes their uuids meaningless, so destroy them here rather
+		// than leaking their meshes and materials.
+		this.detachedMap.forEach(({ entity }) => {
+			try {
+				entity.nodeDestroy?.({ me: entity, globals: getGlobals() });
+			} catch { /* noop */ }
+			clearVariables(entity);
+		});
+		this.detachedMap.clear();
+
 		this.childrenMap.clear();
 		this.debugMap.clear();
 		this.entityAddedHandlers = [];

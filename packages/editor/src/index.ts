@@ -33,8 +33,59 @@ export {
     sendPlayback,
     sendEntitySelect,
     sendEntityFocus,
+    sendEntityTransform,
+    sendEntityCreate,
+    sendAddType,
+    sendSnapSettings,
+    sendGridVisible,
     sendStageVariable,
 } from './bridge/editor-bridge';
+
+// Undo/redo. Exported so a host that turns off `enableUndoShortcut` can route
+// cmd+z by focus and still drive the editor's stack.
+export {
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    undoLabel,
+    redoLabel,
+    clearHistory,
+    historyState,
+    MAX_HISTORY_DEPTH,
+    type HistoryState,
+} from './components/history/history-store';
+export {
+    catalogState,
+    setEntityCatalog,
+    setArmedType,
+    type CatalogState,
+} from './components/toolbar/catalog-state';
+export { disarmTools } from './components/toolbar/tool-shortcuts';
+export {
+    installTransformToolGuard,
+    releaseOrphanedTransformTool,
+    type TransformToolGuardOptions,
+} from './components/toolbar/transform-tool-guard';
+export {
+    transformState,
+    setSnapEnabled,
+    setSnapIncrements,
+    setGridVisible,
+    DEFAULT_ROTATE_SNAP,
+    type TransformState,
+} from './components/transform/transform-state';
+export {
+    onSceneOperation,
+    type SceneOperationListener,
+} from './host/scene-operation-hook';
+export {
+    buildStageExport,
+    stageExportToString,
+    copyStageExport,
+    type StageExport,
+    type StageExportEntity,
+} from './components/stages/stage-export';
 export {
     attachEditorStateBridge,
     dispatchToEditor,

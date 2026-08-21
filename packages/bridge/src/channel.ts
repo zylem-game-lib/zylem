@@ -17,6 +17,25 @@ export type BridgeHandler<K extends BridgeMessageType> = (
  */
 const MAX_RETAINED_ITEMS = 2_000;
 
+/**
+ * Types whose every message must survive.
+ *
+ * Coalescing merges two payloads of the same type queued within one frame,
+ * which is right for state mirrors (a newer entity transform supersedes an
+ * older one) but destructive for a log of discrete events: two scene
+ * operations committed in the same frame would shallow-merge into one and
+ * silently drop an undo entry. `queue` dispatches these immediately instead.
+ */
+const NON_COALESCING_TYPES = new Set<BridgeMessageType>(['scene:operation']);
+
+/**
+ * Types that are discrete events rather than state, so there is nothing
+ * meaningful to hydrate a late subscriber with. Retaining them would replay a
+ * stale event — an editor connecting mid-session would push an already-applied
+ * scene operation onto its undo stack.
+ */
+const NON_RETAINED_TYPES = new Set<BridgeMessageType>(['scene:operation']);
+
 type PendingMap = Partial<{ [K in BridgeMessageType]: BridgeMessages[K] }>;
 
 /** Entry stored per message type for `getState` hydration. */
@@ -130,6 +149,11 @@ export class BridgeChannel extends EventTarget {
 	queue<K extends BridgeMessageType>(type: K, payload: BridgeMessages[K]): void {
 		if (isBridgeDebugEnabled()) {
 			bridgeTracer.recordQueue(type, payload);
+		}
+
+		if (NON_COALESCING_TYPES.has(type)) {
+			this.send(type, payload);
+			return;
 		}
 
 		const existing = this.pending[type];
@@ -280,6 +304,8 @@ export class BridgeChannel extends EventTarget {
 		type: K,
 		payload: BridgeMessages[K],
 	): void {
+		if (NON_RETAINED_TYPES.has(type)) return;
+
 		const existing = this.state.get(type);
 		if (
 			existing !== undefined &&

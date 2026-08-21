@@ -3,6 +3,7 @@ import type { Component } from 'solid-js';
 import { Show } from 'solid-js';
 import { useEditor } from '../EditorContext';
 import { stageStateToString, stageState } from './stage-state';
+import { copyStageExport, stageExportToString } from './stage-export';
 import { printToConsole } from '..';
 import { PropertyRow } from '../common/PropertyRow';
 
@@ -41,6 +42,26 @@ export const StageSection: Component = () => {
                     }}
                 >
                     Print Stage State
+                </Button>
+                <Button
+                    size="sm"
+                    onClick={() => {
+                        void copyStageExport().then((json) => {
+                            if (json) {
+                                printToConsole(
+                                    `Copied stage export (${stage.entities.length} entities) to clipboard.`,
+                                );
+                                return;
+                            }
+                            // Without the clipboard the work is still recoverable
+                            // from the console, which is the point of exporting.
+                            printToConsole(
+                                `Clipboard unavailable; stage export follows.\n${stageExportToString()}`,
+                            );
+                        });
+                    }}
+                >
+                    Export Stage
                 </Button>
             </section>
         </div>

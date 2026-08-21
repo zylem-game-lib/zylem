@@ -12,7 +12,12 @@ import type { EditorDockDefaults } from '../components/editor-store';
 import zylemCSS from '@zylem/ui/styles.css?raw';
 import { entityPreviewCSS } from '../components/entities/entity-preview.css';
 import { bridgePanelCSS } from '../components/bridge/bridge-panel.css';
+import { addPaletteCSS } from '../components/toolbar/add-palette.css';
 import { connectEditorBridge } from '../bridge/editor-bridge';
+import { installHistoryShortcuts } from '../components/history/history-shortcuts';
+import { installToolShortcuts } from '../components/toolbar/tool-shortcuts';
+import { installTransformToolGuard } from '../components/toolbar/transform-tool-guard';
+import { connectTransformState } from '../components/transform/transform-state';
 
 /**
  * Configuration options for the ZylemEditorElement
@@ -51,6 +56,19 @@ export interface ZylemEditorConfig {
    * rather than forcing one.
    */
   defaultDocks?: EditorDockDefaults;
+  /**
+   * Whether the editor claims cmd/ctrl+z for its own undo stack.
+   *
+   * Disable it when embedding the editor in an app with its own history, and
+   * call the exported `undo()` / `redo()` from that app's handler instead.
+   * @default true
+   */
+  enableUndoShortcut?: boolean;
+  /**
+   * Whether Escape disarms the active tool.
+   * @default true
+   */
+  enableEscapeShortcut?: boolean;
 }
 
 const normalizeLauncherMode = (value: unknown): EditorLauncherMode =>
@@ -120,6 +138,8 @@ export class ZylemEditorElement extends HTMLElement {
   private controller: EditorController | null = null;
   /** Releases this element's bridge subscription (reference-counted). */
   private releaseBridge: (() => void) | null = null;
+  /** Keyboard shortcuts and the snap/grid mirror, torn down with the element. */
+  private teardownHooks: (() => void)[] = [];
 
   constructor() {
     super();
@@ -198,11 +218,22 @@ export class ZylemEditorElement extends HTMLElement {
     // mounted publishes nothing, and the game can skip editor-only work.
     this.releaseBridge = connectEditorBridge();
 
+    this.teardownHooks = [
+      // Pushes the editor's snap increments and grid visibility to the game, so
+      // the gizmo snaps to whatever the toolbar shows.
+      connectTransformState(),
+      installHistoryShortcuts({ enabled: this._config.enableUndoShortcut !== false }),
+      installToolShortcuts({ enabled: this._config.enableEscapeShortcut !== false }),
+      // The gizmo mode buttons hide with the selection, so an active tool has to
+      // be released with it or it becomes unreachable.
+      installTransformToolGuard(),
+    ];
+
     // Add bundled styles unless explicitly disabled
     if (this._config.includeStyles !== false) {
       const styleElement = document.createElement('style');
 
-      styleElement.textContent = `${zylemCSS}\n${entityPreviewCSS}\n${bridgePanelCSS}`;
+      styleElement.textContent = `${zylemCSS}\n${entityPreviewCSS}\n${bridgePanelCSS}\n${addPaletteCSS}`;
       this.shadowRoot!.appendChild(styleElement);
     }
 
@@ -266,6 +297,8 @@ export class ZylemEditorElement extends HTMLElement {
       this.dispose();
       this.dispose = null;
     }
+    for (const teardown of this.teardownHooks) teardown();
+    this.teardownHooks = [];
     this.releaseBridge?.();
     this.releaseBridge = null;
     this.controller = null;

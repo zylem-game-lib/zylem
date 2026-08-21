@@ -7,8 +7,10 @@
  */
 
 import { Accordion } from '@kobalte/core';
+import { useLayer } from '@zylem/ui/components';
 import { createSignal, onCleanup, onMount, Show, type Component, type JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
+import { PANEL_RANK } from '../common/layer-ranks';
 import {
     detachPanel,
     debugStore,
@@ -28,6 +30,7 @@ export interface DraggableAccordionItemProps {
 }
 
 export const DraggableAccordionItem: Component<DraggableAccordionItemProps> = (props) => {
+    const layer = useLayer('panel', PANEL_RANK.dragGhost);
     let itemRef: HTMLDivElement | undefined;
     let headerRef: HTMLDivElement | undefined;
     let menuPanelRef: HTMLElement | null = null;
@@ -217,9 +220,13 @@ export const DraggableAccordionItem: Component<DraggableAccordionItemProps> = (p
                 </Accordion.Content>
             </Accordion.Item>
 
-            {/* Ghost outline that follows cursor during drag - rendered via portal to escape clipping */}
-            <Show when={isDragging()}>
-                <Portal>
+            {/*
+              Ghost outline that follows the cursor during a drag. Portaled to
+              escape the panel's clipping, into the layer container so it stays in
+              the tree the editor's styles were injected into.
+            */}
+            <Show when={isDragging() && layer.mount()}>
+                <Portal mount={layer.mount()!}>
                     <div
                         class="accordion-drag-ghost"
                         style={{
@@ -228,7 +235,7 @@ export const DraggableAccordionItem: Component<DraggableAccordionItemProps> = (p
                             top: `${ghostPos().y}px`,
                             width: `${headerSize().width}px`,
                             height: `${headerSize().height}px`,
-                            'z-index': 9999,
+                            'z-index': layer.zIndex(),
                             'pointer-events': 'none',
                             display: 'flex',
                             'align-items': 'center',

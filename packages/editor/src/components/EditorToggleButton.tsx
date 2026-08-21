@@ -1,5 +1,7 @@
+import { useLayer } from '@zylem/ui/components';
 import { createSignal, onCleanup, onMount, type Component } from 'solid-js';
 import { setToggleButtonPosition } from '.';
+import { PANEL_RANK } from './common/layer-ranks';
 
 // Corner snap threshold in pixels
 const SNAP_THRESHOLD = 50;
@@ -21,6 +23,7 @@ interface EditorToggleButtonProps {
 export const EditorToggleButton: Component<EditorToggleButtonProps> = (
   props,
 ) => {
+  const layer = useLayer('panel', PANEL_RANK.toggleButton);
   // Initial position will be set on mount to bottom-right corner
   const [position, setPosition] = createSignal({ x: 0, y: 0 });
   let resizeRaf: number | undefined;
@@ -170,7 +173,7 @@ export const EditorToggleButton: Component<EditorToggleButtonProps> = (
         position: 'fixed',
         left: `${position().x}px`,
         top: `${position().y}px`,
-        'z-index': 1001,
+        'z-index': layer.zIndex(),
         cursor: 'grab',
         'touch-action': 'none',
         'pointer-events': 'auto',
