@@ -27,6 +27,7 @@ import {
 	type SceneOperationPayload,
 	type SnapSettingsPayload,
 	type StageSnapshotPayload,
+	type EntityApplySwatchPayload,
 } from '@zylem/bridge';
 
 import {
@@ -214,6 +215,8 @@ export interface GameBridgeHost {
 	): void;
 	/** Undo or redo a committed scene operation (`scene:operation:apply`). */
 	applySceneOperation?(op: SceneOperationPayload, direction: 'undo' | 'redo'): void;
+	/** Attach a catalog shader or behavior to a live entity (`entity:apply-swatch`). */
+	applySwatch?(payload: EntityApplySwatchPayload): void;
 }
 
 export class GameBridge {
@@ -318,6 +321,9 @@ export class GameBridge {
 			}),
 			this.channel.on('stage:variable:set', ({ key, value }) => {
 				this.host?.setStageVariable?.(key, value);
+			}),
+			this.channel.on('entity:apply-swatch', (payload) => {
+				this.host?.applySwatch?.(payload);
 			}),
 			// Mirror game-owned debug state back to the editor so in-scene
 			// selections and game-side debug toggles stay in sync.

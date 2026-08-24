@@ -21,6 +21,8 @@ export {
 	setSnapSettings,
 	setGridVisible,
 	setAddType,
+	setPickMode,
+	isPickMode,
 	isTransformTool,
 	DEFAULT_SNAP_SETTINGS,
 	TRANSFORM_TOOLS,

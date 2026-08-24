@@ -715,6 +715,15 @@ export class StageEntityDelegate {
 		this.behaviorLinksByUuid.set(entity.uuid, links);
 	}
 
+	/**
+	 * Re-index an entity's behavior refs after a late `entity.use(...)`.
+	 * Spawn-time registration only sees refs that existed at attach.
+	 */
+	syncBehaviorLinks(entity: any): void {
+		this.unregisterBehaviorLinks(entity);
+		this.registerBehaviorLinks(entity);
+	}
+
 	private unregisterBehaviorLinks(entity: any): void {
 		const links = this.behaviorLinksByUuid.get(entity?.uuid);
 		if (!links) return;

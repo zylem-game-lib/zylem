@@ -26,6 +26,7 @@ export {
 	type StageSnapshotPayload,
 	type EntitySummaryPayload,
 	type EntityThumbnailPayload,
+	type EntityApplySwatchPayload,
 	type BridgeDebugTool,
 	type BridgeVec3,
 } from '@zylem/bridge';

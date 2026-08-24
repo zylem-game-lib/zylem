@@ -117,7 +117,14 @@ export interface GameNoticePayload {
 	message: string;
 }
 
-/** Entity selection owned by the game, mirrored back to the editor. */
+/** Apply a catalog shader or behavior to a live entity without a rebuild. */
+export interface EntityApplySwatchPayload {
+	uuid: string;
+	kind: 'shader' | 'behavior';
+	/** Shader factory or behavior descriptor export name. */
+	source: string;
+	props: Record<string, unknown>;
+}
 export interface EntitySelectionPayload {
 	/** First entry of {@link selectedUuids}, kept for single-select consumers. */
 	selectedUuid: string | null;
@@ -246,6 +253,7 @@ export type EditorToGameMessages = {
 	'snap:set': SnapSettingsPayload;
 	'grid:set': { visible: boolean };
 	'stage:variable:set': { key: string; value: unknown };
+	'entity:apply-swatch': EntityApplySwatchPayload;
 };
 
 /** Combined message map carried by a single bridge channel. */

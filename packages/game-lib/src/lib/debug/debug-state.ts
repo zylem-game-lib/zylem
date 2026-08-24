@@ -62,6 +62,11 @@ export interface DebugState {
 	addTypeId: string | null;
 	/** Creation options merged over the armed type's defaults. */
 	addTypeProps: Record<string, unknown> | null;
+	/**
+	 * Host-driven hover picking (e.g. Creator swatch drag). Raycasts even when
+	 * the Select tool is not armed, and keeps the hover highlight painted.
+	 */
+	pickMode: boolean;
 	flags: Set<string>;
 }
 
@@ -76,6 +81,7 @@ export const debugState = proxy<DebugState>({
 	gridVisible: false,
 	addTypeId: null,
 	addTypeProps: null,
+	pickMode: false,
 	flags: new Set(),
 });
 
@@ -165,7 +171,19 @@ export function setDebugTool(tool: DebugTools): void {
  * the Debug button happened to be on.
  */
 export function isEditorInteractionActive(): boolean {
-	return debugState.enabled || debugState.tool !== 'none';
+	return debugState.enabled || debugState.tool !== 'none' || debugState.pickMode;
+}
+
+/** Hosts arm this while forwarding pointer coords for entity hover (no Select tool). */
+export function setPickMode(enabled: boolean): void {
+	debugState.pickMode = enabled;
+	if (!enabled && debugState.tool !== 'select' && debugState.tool !== 'delete') {
+		resetHoveredEntity();
+	}
+}
+
+export function isPickMode(): boolean {
+	return debugState.pickMode;
 }
 
 export function getSelectedEntityId(): string | null {

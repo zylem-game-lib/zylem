@@ -12,10 +12,12 @@ import {
 	debugState,
 	isEditorInteractionActive,
 	setDebugTool,
+	setPickMode,
 } from '../../../src/lib/debug/debug-state';
 
 afterEach(() => {
 	setDebugTool('none');
+	setPickMode(false);
 	debugState.enabled = false;
 });
 
@@ -49,4 +51,10 @@ describe('isEditorInteractionActive', () => {
 			expect(isEditorInteractionActive()).toBe(true);
 		},
 	);
+
+	it('is active for host pick mode with debug off and no tool armed', () => {
+		setPickMode(true);
+
+		expect(isEditorInteractionActive()).toBe(true);
+	});
 });

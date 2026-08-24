@@ -324,7 +324,9 @@ export class StageDebugDelegate {
 	 */
 	private parkToolVisuals(tool: DebugTools): void {
 		if (tool !== 'add') this.placementGhost?.hide();
-		if (tool !== 'select' && tool !== 'delete') this.debugCursor?.hide();
+		if (tool !== 'select' && tool !== 'delete' && !debugState.pickMode) {
+			this.debugCursor?.hide();
+		}
 	}
 
 	private disposeToolVisuals(): void {
@@ -371,7 +373,7 @@ export class StageDebugDelegate {
 		// Hover tools paint the cursor highlight. The add tool has its ghost
 		// instead, and a highlight box around whatever is under the cursor would
 		// only compete with it.
-		const isHoverTool = tool === 'select' || tool === 'delete';
+		const isHoverTool = tool === 'select' || tool === 'delete' || debugState.pickMode;
 
 		if (!isHoverTool) {
 			this.debugCursor?.hide();
@@ -405,10 +407,34 @@ export class StageDebugDelegate {
 				this.debugCursor?.setColor(DELETE_TOOL_COLOR);
 				break;
 			default:
-				this.debugCursor?.setColor(0xffffff);
+				this.debugCursor?.setColor(debugState.pickMode ? SELECT_TOOL_COLOR : 0xffffff);
 				break;
 		}
 		this.debugCursor?.updateFromObject(targetObject);
+	}
+
+	/**
+	 * Raycast at NDC coordinates (from a host that cannot send DOM pointer
+	 * events, e.g. an overlay sitting on a preview iframe). Updates hover so
+	 * the next `update()` paints the highlight.
+	 */
+	pickAtNdc(ndcX: number, ndcY: number): { uuid: string; name: string } | null {
+		this.mouseNdc.set(ndcX, ndcY);
+		const world = this.stage.world;
+		if (!world || !this.getDebugViewCamera()) {
+			resetHoveredEntity();
+			return null;
+		}
+		const ray = this.currentRay();
+		const hit = world.raycast(ray.origin, ray.direction, this.options.maxRayDistance);
+		const uuid = hit?.uuid ?? null;
+		if (!uuid) {
+			resetHoveredEntity();
+			return null;
+		}
+		setHoveredEntityId(uuid);
+		const entity = this.resolveEntity(uuid);
+		return { uuid, name: entity?.name ?? '' };
 	}
 
 	/** Collider wireframes, straight from the wasm simulation. */
