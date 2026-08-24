@@ -1,6 +1,6 @@
 {
   "name": "@zylem/bridge",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "description": "Typed communication bridge shared by @zylem/game-lib and @zylem/editor. Protocol types, RAF-coalescing channel, and realm-safe singleton registry.",
   "license": "MIT",
