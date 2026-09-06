@@ -11,12 +11,12 @@ You can check out the latest demos at [https://zylem.onrender.com](https://zylem
 This is a pnpm workspace monorepo containing:
 
 - **[@zylem/game-lib](./packages/game-lib)** - Core game engine library (published to npm)
-- **[@zylem/editor](./packages/editor)** - SolidJS-based debug UI and editor
-- **[@zylem/bridge](./packages/bridge)** - Typed communication bridge shared by game-lib and editor
+- **[@zylem/bridge](./packages/bridge)** - Typed communication bridge shared by game-lib and the editor (published to npm)
 - **[@zylem/utilities](./packages/zylem-utilities)** - Supporting development utilities
 
 External packages published to npm from their own repositories:
 
+- [@zylem/editor](https://github.com/zylem-game-lib/editor) - SolidJS-based debug UI and scene editor (consumes `@zylem/bridge` and peers on `@zylem/game-lib`)
 - [@zylem/ui](https://github.com/zylem-game-lib/ui) - Shared styles and Solid components
 - [@zylem/runtime](https://github.com/zylem-game-lib/runtime) - Rust/wasm simulation runtime (prebuilt `zylem_runtime.wasm` + TS loader)
 - [@zylem/behaviors](https://github.com/zylem-game-lib/behaviors) - Tree-shakable behavior descriptors and systems
@@ -34,8 +34,8 @@ pnpm install
 ### Development
 
 ```bash
-# Start the editor dev server
-pnpm dev:editor
+# Watch-build the game library
+pnpm dev:lib
 
 # Build the game library
 pnpm build:lib
@@ -50,7 +50,7 @@ pnpm typecheck
 pnpm lint
 ```
 
-For demos and the multiplayer server, use the sibling [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples) repo. For shader demos, use [`shaders`](https://github.com/zylem-game-lib/shaders).
+For the editor, use the sibling [`editor`](https://github.com/zylem-game-lib/editor) repo (`pnpm dev` there boots a harness game with the editor overlaid; `zw link dev` points it at this checkout's `game-lib` and `bridge`). For demos and the multiplayer server, use [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples). For shader demos, use [`shaders`](https://github.com/zylem-game-lib/shaders).
 
 ### Interactive runner
 
@@ -116,17 +116,18 @@ createGame(ball).start();
 ## 🏗️ Monorepo Structure
 
 - ⚡ **pnpm workspaces** - Fast dependency management with instant local linking
-- 🧠 **TypeScript project references** - Real-time type sharing across packages
 - 🔥 **Biome** - Modern linting and formatting
 - 📦 **tsup** - Fast library bundling
-- 🎨 **SolidJS + Valtio** - Reactive editor UI with shared state
 
 ### Why Monorepo?
 
-- ✅ Zero version drift between packages
-- ✅ Instant type updates across editor and library
+- ✅ Zero version drift between `game-lib` and the `bridge` protocol it speaks
+- ✅ Instant type updates across the library and its shared packages
 - ✅ Unified development environment
 - ✅ No constant publishing during development
+
+The editor, UI kit, behaviors, and runtime live in their own repos and are
+linked in for local development with `zw link dev`.
 
 ## 🛠️ Technology Stack
 
@@ -134,7 +135,6 @@ createGame(ball).start();
 - **Physics**: RapierRS [RapierRS](https://rapier.rs/)
 - **State Management**: Valtio [Valtio](https://valtio.dev/)
 - **ECS**: bitECS
-- **UI Framework**: SolidJS
 - **Build Tool**: Vite + tsup
 
 ## 📝 License

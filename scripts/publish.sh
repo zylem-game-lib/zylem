@@ -1,8 +1,10 @@
 #!/usr/bin/env sh
-# Build and publish the public library (@zylem/game-lib only; all other
-# workspace packages are private). Loads .env and injects NPM_TOKEN as the
-# registry auth token for this publish only (the root .npmrc intentionally
-# omits the token so normal pnpm commands stay warning-free).
+# Build and publish the public library (@zylem/game-lib only). @zylem/bridge is
+# also public but published separately (`zw publish @zylem/bridge`);
+# @zylem/utilities is private; @zylem/editor lives in its own repo. Loads .env
+# and injects NPM_TOKEN as the registry auth token for this publish only (the
+# root .npmrc intentionally omits the token so normal pnpm commands stay
+# warning-free).
 set -eu
 
 _root_dir="$(cd "$(dirname "$0")/.." && pwd)"
