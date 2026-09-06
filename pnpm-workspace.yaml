@@ -6,7 +6,9 @@ catalog:
 
 overrides:
   '@eslint/plugin-kit@<0.3.4': '>=0.3.4'
-  three@<0.125.0: '>=0.125.0'
-  three: 0.185.1
   '@types/three': 0.185.1
+  '@zylem/behaviors': link:../behaviors
+  '@zylem/ui': link:../zylem-ui
   baseline-browser-mapping: ^2.10.43
+  three: 0.185.1
+  three@<0.125.0: '>=0.125.0'

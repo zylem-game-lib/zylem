@@ -37,11 +37,12 @@
     "@biomejs/biome": "^2.3.7",
     "@clack/prompts": "^1.6.0",
     "@solidjs/testing-library": "^0.8.10",
+    "@typescript/native": "npm:typescript@7.0.2",
     "baseline-browser-mapping": "^2.10.43",
     "cross-env": "^10.1.0",
     "esbuild-plugin-solid": "^0.6.0",
     "tsup": "^8.5.1",
-    "typescript": "6.0.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "vite": "7.0.4",
     "vite-plugin-glsl": "^1.5.4",
     "vite-plugin-solid": "^2.11.8"
@@ -49,6 +50,8 @@
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
     "@dgreenheck/three-pinata": "^2.0.1",
+    "@zylem/behaviors": "link:../behaviors",
+    "@zylem/ui": "link:../zylem-ui",
     "esbuild": "^0.27.2",
     "mitt": "^3.0.1",
     "multithreading": "^0.3.45"
