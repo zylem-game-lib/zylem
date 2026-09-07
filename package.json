@@ -45,7 +45,7 @@
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
     "@dgreenheck/three-pinata": "^2.0.1",
-    "@zylem/behaviors": "link:../behaviors",
+    "@zylem/behaviors": "^0.8.8",
     "esbuild": "^0.27.2",
     "mitt": "^3.0.1",
     "multithreading": "^0.3.45"
