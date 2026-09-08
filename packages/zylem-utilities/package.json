@@ -1,6 +1,6 @@
 {
   "name": "@zylem/utilities",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "Zylem monorepo utilities (offline destructible-prebake CLI, browser destructible-prebake worker, …)",
@@ -27,11 +27,11 @@
     "@zylem/behaviors": "^0.5.9",
     "@zylem/game-lib": "workspace:*",
     "comlink": "^4.4.2",
-    "three": "^0.185.0"
+    "three": "^0.185.1"
   },
   "devDependencies": {
-    "@types/node": "^20.19.13",
-    "@types/three": "^0.185.0",
+    "@types/node": "^20.19.43",
+    "@types/three": "^0.185.4",
     "@typescript/native": "npm:typescript@7.0.2",
     "tsup": "^8.5.1",
     "typescript": "npm:@typescript/typescript6@6.0.2"

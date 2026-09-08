@@ -1,6 +1,6 @@
 {
   "name": "@zylem/bridge",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "type": "module",
   "description": "Typed communication bridge shared by @zylem/game-lib and @zylem/editor. Protocol types, RAF-coalescing channel, and realm-safe singleton registry.",
   "license": "MIT",
@@ -23,12 +23,13 @@
     "dev": "tsup --watch",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "zw:prerelease": "pnpm -w run deps:latest --check"
   },
   "devDependencies": {
     "@typescript/native": "npm:typescript@7.0.2",
     "tsup": "^8.5.1",
     "typescript": "npm:@typescript/typescript6@6.0.2",
-    "vitest": "^4.0.9"
+    "vitest": "^4.0.18"
   }
 }

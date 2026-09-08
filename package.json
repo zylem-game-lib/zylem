@@ -1,6 +1,6 @@
 {
   "name": "zylem-monorepo",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "type": "module",
   "description": "Zylem game library monorepo - TypeScript 2025 Edition",
@@ -27,27 +27,29 @@
     "lint:fix": "biome check --write .",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r exec rm -rf dist node_modules",
+    "deps:latest": "sh ./scripts/deps-latest.sh",
     "install:all": "pnpm install",
     "publish": "sh ./scripts/publish.sh",
     "publish:lib": "sh ./scripts/publish.sh"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.7",
+    "@biomejs/biome": "^2.3.15",
     "@clack/prompts": "^1.6.0",
     "@typescript/native": "npm:typescript@7.0.2",
-    "baseline-browser-mapping": "^2.10.43",
+    "baseline-browser-mapping": "^2.10.44",
     "cross-env": "^10.1.0",
+    "npm-check-updates": "^23.1.0",
     "tsup": "^8.5.1",
     "typescript": "npm:@typescript/typescript6@6.0.2",
-    "vite": "7.0.4",
-    "vite-plugin-glsl": "^1.5.4"
+    "vite": "7.0.8",
+    "vite-plugin-glsl": "^1.5.6"
   },
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@10.33.4",
   "dependencies": {
     "@dgreenheck/three-pinata": "^2.0.1",
     "@zylem/behaviors": "^0.8.8",
-    "esbuild": "^0.27.2",
+    "esbuild": "^0.27.7",
     "mitt": "^3.0.1",
-    "multithreading": "^0.3.45"
+    "multithreading": "^0.3.52"
   }
 }
