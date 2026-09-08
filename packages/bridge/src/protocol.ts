@@ -117,14 +117,91 @@ export interface GameNoticePayload {
 	message: string;
 }
 
-/** Apply a catalog shader or behavior to a live entity without a rebuild. */
-export interface EntityApplySwatchPayload {
-	uuid: string;
-	kind: 'shader' | 'behavior';
+// ─────────────────────────────────────────────────────────────────────────────
+// Swatches (live shader / behavior application)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SwatchKind = 'shader' | 'behavior';
+
+/**
+ * A configured shader or behavior, described by what it resolves to rather
+ * than by a closure. `source` is the export name (`createLava`,
+ * `ThrusterBehavior`) that the game side registered as a swatch source, so the
+ * live path and generated code agree on one identifier.
+ */
+export interface SwatchSpec {
+	kind: SwatchKind;
 	/** Shader factory or behavior descriptor export name. */
 	source: string;
+	/** Factory options (shader) or overrides over `defaultOptions` (behavior). */
 	props: Record<string, unknown>;
 }
+
+/**
+ * Apply swatches to live entities without a rebuild.
+ *
+ * Batch-shaped from the start: the game applies every swatch to every uuid
+ * (cartesian product, in order) under one operation, so a drag-and-drop sends
+ * arrays of one while a multi-select apply from the editor reuses the same
+ * message and yields a single undo step. Within a batch the last shader wins
+ * per entity and behaviors replace any already attached with the same key.
+ */
+export interface EntityApplySwatchPayload {
+	/** Operation id for the resulting `scene:operation`; minted by the game when absent. */
+	opId?: string;
+	uuids: string[];
+	swatches: SwatchSpec[];
+	/** Make the successfully targeted entities the current selection. */
+	select?: boolean;
+}
+
+export type SwatchApplyFailureReason =
+	| 'entity-not-found'
+	| 'unknown-source'
+	| 'no-material'
+	| 'invalid-props';
+
+/** Outcome of applying one swatch to one entity. */
+export interface SwatchApplyResult {
+	uuid: string;
+	kind: SwatchKind;
+	source: string;
+	ok: boolean;
+	/** A behavior with the same key was already attached and got replaced. */
+	replaced?: boolean;
+	reason?: SwatchApplyFailureReason;
+}
+
+/**
+ * Answer to `entity:apply-swatch`. One result per uuid × swatch pair, in the
+ * order they were attempted. Partial success is normal for batches: targets
+ * that can accept the swatch still receive it when others cannot.
+ */
+export interface EntitySwatchAppliedPayload {
+	opId: string;
+	results: SwatchApplyResult[];
+}
+
+/** Normalized device coordinates, `-1..1` on both axes with +y up. */
+export interface BridgeNdc {
+	x: number;
+	y: number;
+}
+
+/**
+ * Raycast request at a pointer position. The `requestId` lets a consumer
+ * streaming picks during a drag match each answer to its pointer event.
+ */
+export interface EntityPickPayload {
+	requestId: string;
+	ndc: BridgeNdc;
+}
+
+export interface EntityPickResultPayload {
+	requestId: string;
+	hit: EntitySummaryPayload | null;
+}
+
 export interface EntitySelectionPayload {
 	/** First entry of {@link selectedUuids}, kept for single-select consumers. */
 	selectedUuid: string | null;
@@ -143,14 +220,20 @@ export interface EntitySelectionPayload {
  * - `transform` — poses changed; invert by writing `before`.
  * - `create` — entities were spawned; invert by detaching them.
  * - `delete` — entities were detached; invert by restoring them.
+ * - `swatch` — shaders/behaviors were applied; invert by restoring the
+ *   game-side snapshot taken before the apply.
  */
-export type SceneOperationKind = 'transform' | 'create' | 'delete';
+export type SceneOperationKind = 'transform' | 'create' | 'delete' | 'swatch';
 
 /** One entity's participation in a scene operation. */
 export interface SceneOperationEntry {
 	uuid: string;
 	before?: BridgePose;
 	after?: BridgePose;
+	/** The swatch that was applied (`swatch` operations). */
+	swatch?: SwatchSpec;
+	/** Behavior with the same key that the apply displaced, if any. */
+	replaced?: { source: string; props: Record<string, unknown> };
 }
 
 /**
@@ -223,6 +306,8 @@ export type GameToEditorMessages = {
 	'entity:selection': EntitySelectionPayload;
 	'catalog:snapshot': { entities: EntityTypeDescriptor[] };
 	'scene:operation': SceneOperationPayload;
+	'entity:pick:result': EntityPickResultPayload;
+	'entity:swatch-applied': EntitySwatchAppliedPayload;
 };
 
 /** Commands published by the editor, consumed by the game. */
@@ -253,6 +338,13 @@ export type EditorToGameMessages = {
 	'snap:set': SnapSettingsPayload;
 	'grid:set': { visible: boolean };
 	'stage:variable:set': { key: string; value: unknown };
+	/**
+	 * Arm host-driven hover picking (e.g. while a swatch is being dragged over
+	 * the viewport). While armed, `entity:pick` also updates the hover highlight.
+	 */
+	'pick:mode:set': { enabled: boolean };
+	/** Raycast at a pointer position; answered by `entity:pick:result`. */
+	'entity:pick': EntityPickPayload;
 	'entity:apply-swatch': EntityApplySwatchPayload;
 };
 

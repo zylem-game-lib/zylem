@@ -24,10 +24,13 @@ import {
 	type GameLoadingPayload,
 	type GameNoticePayload,
 	type GameVariablePayload,
+	type SceneOperationEntry,
 	type SceneOperationPayload,
 	type SnapSettingsPayload,
 	type StageSnapshotPayload,
+	type BridgeNdc,
 	type EntityApplySwatchPayload,
+	type SwatchApplyResult,
 } from '@zylem/bridge';
 
 import {
@@ -36,7 +39,9 @@ import {
 	setDebugTool,
 	setGridVisible,
 	setPaused,
+	setPickMode,
 	setSelectedEntityId,
+	setSelectedEntityIds,
 	setSnapSettings,
 } from '../debug/debug-state';
 import { focusEntity } from '../debug/entity-focus';
@@ -215,8 +220,38 @@ export interface GameBridgeHost {
 	): void;
 	/** Undo or redo a committed scene operation (`scene:operation:apply`). */
 	applySceneOperation?(op: SceneOperationPayload, direction: 'undo' | 'redo'): void;
-	/** Attach a catalog shader or behavior to a live entity (`entity:apply-swatch`). */
-	applySwatch?(payload: EntityApplySwatchPayload): void;
+	/**
+	 * Raycast at normalized device coordinates and describe the entity hit
+	 * (`entity:pick`). Hover should follow the pick only while pick mode is on.
+	 */
+	pickEntity?(ndc: BridgeNdc): EntitySummaryPayload | null;
+	/**
+	 * Apply every swatch to every uuid (`entity:apply-swatch`). Must report one
+	 * result per uuid × swatch pair and return a `scene:operation` entry for
+	 * each success so the batch is undoable as a single step.
+	 */
+	applySwatches?(payload: EntityApplySwatchPayload & { opId: string }): SwatchApplyOutcome;
+}
+
+/** What a host reports back from a swatch batch. */
+export interface SwatchApplyOutcome {
+	results: SwatchApplyResult[];
+	entries: SceneOperationEntry[];
+}
+
+/** Human-readable label for a swatch operation, e.g. `Apply createLava to Box`. */
+export function swatchOperationLabel(
+	payload: EntityApplySwatchPayload,
+	entries: SceneOperationEntry[],
+	resolveName: (uuid: string) => string | undefined,
+): string {
+	const sources = [...new Set(payload.swatches.map((swatch) => swatch.source))];
+	const uuids = [...new Set(entries.map((entry) => entry.uuid))];
+	const target =
+		uuids.length === 1
+			? resolveName(uuids[0]!) || 'entity'
+			: `${uuids.length} entities`;
+	return `Apply ${sources.join(', ')} to ${target}`;
 }
 
 export class GameBridge {
@@ -322,8 +357,15 @@ export class GameBridge {
 			this.channel.on('stage:variable:set', ({ key, value }) => {
 				this.host?.setStageVariable?.(key, value);
 			}),
+			this.channel.on('pick:mode:set', ({ enabled }) => {
+				setPickMode(enabled);
+			}),
+			this.channel.on('entity:pick', ({ requestId, ndc }) => {
+				const hit = this.host?.pickEntity?.(ndc) ?? null;
+				this.channel.send('entity:pick:result', { requestId, hit });
+			}),
 			this.channel.on('entity:apply-swatch', (payload) => {
-				this.host?.applySwatch?.(payload);
+				this.handleApplySwatch(payload);
 			}),
 			// Mirror game-owned debug state back to the editor so in-scene
 			// selections and game-side debug toggles stay in sync.
@@ -339,6 +381,51 @@ export class GameBridge {
 		this.unsubscribes = [];
 		this.host = null;
 		this.editorKnown = {};
+	}
+
+	/**
+	 * Run a swatch batch and report back.
+	 *
+	 * Order matters for the consumer: selection changes first (so a following
+	 * `entity:selection` describes the new targets), then the undo record, then
+	 * the ack — a consumer that persists on `ok` sees the operation already on
+	 * the stack.
+	 */
+	private handleApplySwatch(payload: EntityApplySwatchPayload): void {
+		const opId = payload.opId ?? `swatch-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+		const outcome: SwatchApplyOutcome = this.host?.applySwatches
+			? this.host.applySwatches({ ...payload, opId })
+			: {
+					results: payload.uuids.flatMap((uuid) =>
+						payload.swatches.map((swatch) => ({
+							uuid,
+							kind: swatch.kind,
+							source: swatch.source,
+							ok: false,
+							reason: 'entity-not-found' as const,
+						})),
+					),
+					entries: [],
+				};
+
+		const appliedUuids = [...new Set(outcome.entries.map((entry) => entry.uuid))];
+
+		if (payload.select && appliedUuids.length > 0) {
+			setSelectedEntityIds(appliedUuids);
+		}
+
+		if (outcome.entries.length > 0 && !this.applyingSceneOperation) {
+			this.channel.send('scene:operation', {
+				opId,
+				kind: 'swatch',
+				label: swatchOperationLabel(payload, outcome.entries, (uuid) =>
+					this.host?.resolveEntity(uuid)?.name,
+				),
+				entries: outcome.entries,
+			});
+		}
+
+		this.channel.send('entity:swatch-applied', { opId, results: outcome.results });
 	}
 
 	/**

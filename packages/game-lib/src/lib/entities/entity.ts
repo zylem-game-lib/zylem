@@ -799,6 +799,60 @@ export class GameEntity<O extends GameEntityOptions>
 		return this.behaviorRefs;
 	}
 
+	/**
+	 * Find the attached ref for a behavior, matched by descriptor key so a
+	 * re-imported copy of the same descriptor still resolves.
+	 */
+	public getBehaviorRef<O extends Record<string, any>>(
+		descriptor: BehaviorDescriptor<O, any>,
+	): BehaviorRef<O> | null {
+		return (
+			(this.behaviorRefs.find((ref) => ref.descriptor.key === descriptor.key) as
+				| BehaviorRef<O>
+				| undefined) ?? null
+		);
+	}
+
+	public hasBehavior(descriptor: BehaviorDescriptor<any, any>): boolean {
+		return this.getBehaviorRef(descriptor) !== null;
+	}
+
+	/**
+	 * Detach a behavior from this entity.
+	 *
+	 * Removes the ref so future spawns skip it. If the entity is live in a
+	 * stage, the stage must also drop the system link (see
+	 * `StageEntityDelegate.detachBehaviorLink`); `StageDebugDelegate` does this
+	 * for editor-driven removals.
+	 *
+	 * @param target The descriptor (matched by key) or the exact ref to remove.
+	 * @returns The removed ref, or `null` when nothing matched.
+	 */
+	public removeBehavior(
+		target: BehaviorDescriptor<any, any> | BehaviorRef<any>,
+	): BehaviorRef<any> | null {
+		const index =
+			'descriptor' in target
+				? this.behaviorRefs.indexOf(target as BehaviorRef<any>)
+				: this.behaviorRefs.findIndex(
+						(ref) => ref.descriptor.key === (target as BehaviorDescriptor<any, any>).key,
+					);
+		if (index === -1) return null;
+		const [removed] = this.behaviorRefs.splice(index, 1);
+		return removed ?? null;
+	}
+
+	/**
+	 * Re-attach a previously removed ref as-is (options, FSM state and all).
+	 * Used by undo so a restored behavior is the same object, not a re-created
+	 * one.
+	 */
+	public restoreBehaviorRef(ref: BehaviorRef<any>): void {
+		if (!this.behaviorRefs.includes(ref)) {
+			this.behaviorRefs.push(ref);
+		}
+	}
+
 	public getCollisionCallbacks(): Array<(params: CollisionContext<this, O>) => void> {
 		return this.getCollisionRegistrations().map((registration) => registration.callback);
 	}
@@ -930,6 +984,82 @@ export class GameEntity<O extends GameEntityOptions>
 
 			registration.callback({ entity: this, other, globals });
 		}
+	}
+
+	// ─────────────────────────────────────────────────────────────────────────────
+	// Materials API
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	/**
+	 * Whether this entity renders a mesh that a material can be assigned to.
+	 * Lights, zones, and other mesh-less entities return `false`.
+	 */
+	public hasMaterial(): boolean {
+		return this.mesh !== undefined || this.compoundMeshes.length > 0;
+	}
+
+	/** The materials currently driving this entity's meshes. */
+	public getMaterials(): Material[] {
+		return this.materials ? [...this.materials] : [];
+	}
+
+	/**
+	 * Rebuild this entity's material from creation-style options and swap it in
+	 * on the live mesh, so a runtime change (an editor applying a shader swatch)
+	 * renders exactly like a restart with `material: options` would.
+	 *
+	 * @param options Same shape as `GameEntityOptions.material`.
+	 * @param settings `disposePrevious` (default `true`) frees the replaced
+	 *   materials; pass `false` when keeping them for undo.
+	 * @returns The replaced materials, or `null` when the entity has no mesh.
+	 */
+	public setMaterial(
+		options: Partial<MaterialOptions>,
+		settings: { disposePrevious?: boolean } = {},
+	): Material[] | null {
+		if (!this.hasMaterial()) return null;
+		const builder = new MaterialBuilder();
+		const entityType =
+			(this.constructor as { type?: symbol }).type ?? Symbol.for('zylem:entity');
+		builder.build(options, entityType);
+		return this.replaceMaterials(builder.materials, settings);
+	}
+
+	/**
+	 * Assign already-built materials to every mesh this entity renders. Meshes
+	 * that carried a material array keep the array shape, cycling through the
+	 * supplied list so multi-material geometry stays fully covered.
+	 *
+	 * @returns The replaced materials, or `null` when the entity has no mesh.
+	 */
+	public replaceMaterials(
+		materials: Material[],
+		settings: { disposePrevious?: boolean } = {},
+	): Material[] | null {
+		if (!this.hasMaterial() || materials.length === 0) return null;
+		const { disposePrevious = true } = settings;
+		const previous = this.materials ? [...this.materials] : [];
+
+		const assign = (mesh: Mesh) => {
+			if (Array.isArray(mesh.material)) {
+				mesh.material = mesh.material.map(
+					(_slot, index) => materials[index % materials.length]!,
+				);
+			} else {
+				mesh.material = materials[0]!;
+			}
+		};
+		if (this.mesh) assign(this.mesh);
+		for (const mesh of this.compoundMeshes) assign(mesh);
+
+		this.materials = [...materials];
+
+		if (disposePrevious) {
+			for (const material of previous) {
+				if (!materials.includes(material)) material.dispose();
+			}
+		}
+		return previous;
 	}
 
 	protected updateMaterials(params: any) {

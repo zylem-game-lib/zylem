@@ -26,6 +26,7 @@ import { zylemEventBus } from '../events';
 import {
 	GameBridge,
 	entityTypeName,
+	readEntityPose,
 	readEntityQuaternion,
 	readEntityScale,
 } from '../bridge/game-bridge';
@@ -36,8 +37,10 @@ import {
 	onEntityRegistryChanged,
 } from '../entities/entity-registry';
 import { registerBuiltInEntityTypes } from '../entities/entity-catalog';
+import { registerBuiltInBehaviorSwatchSources } from '../entities/swatch-catalog';
 import { getZylemBridge, type BridgePose } from '@zylem/bridge';
 import type {
+	BridgeNdc,
 	EntitySummaryPayload,
 	GameConfigPayload,
 	StageConfigPayload,
@@ -153,6 +156,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		this.loadDebugOptions(options);
 		this.setGlobals(options);
 		registerBuiltInEntityTypes();
+		registerBuiltInBehaviorSwatchSources();
 		this.gameBridge.connect({
 			resolveEntity: (uuid) =>
 				(this.currentStage()?.wrappedStage?.entityDelegate.childrenMap.get(uuid)
@@ -172,10 +176,54 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 					direction,
 				);
 			},
+			pickEntity: (ndc) => this.pickEntityAtNdc(ndc),
+			applySwatches: (payload) => {
+				const delegate = this.currentStage()?.wrappedStage?.debugDelegate;
+				if (delegate) return delegate.applySwatches(payload);
+				return {
+					results: payload.uuids.flatMap((uuid) =>
+						payload.swatches.map((swatch) => ({
+							uuid,
+							kind: swatch.kind,
+							source: swatch.source,
+							ok: false,
+							reason: 'entity-not-found' as const,
+						})),
+					),
+					entries: [],
+				};
+			},
 		});
 		this.publishEntityCatalog();
 		this.catalogUnsubscribe = onEntityRegistryChanged(() =>
 			this.publishEntityCatalog(),
+		);
+	}
+
+	/**
+	 * Raycast at normalized device coordinates (editor `entity:pick`) and
+	 * describe the hit the same way the entity list does, so a consumer can
+	 * show name, type, and pose for whatever is under the pointer.
+	 */
+	private pickEntityAtNdc(ndc: BridgeNdc): EntitySummaryPayload | null {
+		const stage = this.currentStage()?.wrappedStage;
+		const hit = stage?.debugDelegate?.pickAtNdc(ndc.x, ndc.y);
+		if (!stage || !hit) return null;
+		const entity = stage.entityDelegate.childrenMap.get(hit.uuid) as
+			| (GameEntity<any> & { constructor: unknown })
+			| undefined;
+		if (!entity) return null;
+		// Managed-render entities are excluded from the list, but a pick on one
+		// is still a real hit; fall back to a minimal summary.
+		return (
+			this.buildEntitySummary(entity) ?? {
+				uuid: hit.uuid,
+				name: hit.name || 'Unnamed',
+				type: entityTypeName(entity),
+				position: readEntityPose(entity).position,
+				rotation: readEntityPose(entity).rotation,
+				scale: readEntityScale(entity),
+			}
 		);
 	}
 

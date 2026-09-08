@@ -25,4 +25,21 @@ export {
 	BUILT_IN_ENTITY_TYPES,
 } from '../lib/entities/entity-catalog';
 
-export type { EntityTypeDescriptor } from '@zylem/bridge';
+export {
+	registerSwatchSource,
+	registerSwatchSources,
+	registerSwatchSourcesFromModule,
+	getSwatchSource,
+	listSwatchSources,
+	onSwatchRegistryChanged,
+	clearSwatchRegistry,
+	isBehaviorDescriptor,
+	type SwatchSource,
+	type ShaderSwatchSource,
+	type BehaviorSwatchSource,
+	type SwatchShaderFactory,
+} from '../lib/entities/swatch-registry';
+
+export { registerBuiltInBehaviorSwatchSources } from '../lib/entities/swatch-catalog';
+
+export type { EntityTypeDescriptor, SwatchKind, SwatchSpec } from '@zylem/bridge';

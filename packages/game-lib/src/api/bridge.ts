@@ -6,11 +6,16 @@
  * editor→game commands without importing editor internals.
  * @public
  */
-export { GameBridge, type GameBridgeHost } from '../lib/bridge/game-bridge';
+export {
+	GameBridge,
+	type GameBridgeHost,
+	type SwatchApplyOutcome,
+} from '../lib/bridge/game-bridge';
 
 export {
 	getZylemBridge,
 	announceBridgeReady,
+	applySwatchesToSelection,
 	BRIDGE_READY_EVENT,
 	type ZylemBridge,
 	type BridgeChannel,
@@ -27,6 +32,14 @@ export {
 	type EntitySummaryPayload,
 	type EntityThumbnailPayload,
 	type EntityApplySwatchPayload,
+	type EntitySwatchAppliedPayload,
+	type EntityPickPayload,
+	type EntityPickResultPayload,
+	type SwatchSpec,
+	type SwatchKind,
+	type SwatchApplyResult,
+	type SwatchApplyFailureReason,
+	type BridgeNdc,
 	type BridgeDebugTool,
 	type BridgeVec3,
 } from '@zylem/bridge';

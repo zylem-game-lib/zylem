@@ -15,7 +15,7 @@
 import { Box3, BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments, Raycaster, Vector2, Vector3 } from 'three';
 import { subscribe } from 'valtio/vanilla';
 import { nanoid } from 'nanoid';
-import type { SceneOperationPayload } from '@zylem/bridge';
+import type { EntityApplySwatchPayload, SceneOperationPayload } from '@zylem/bridge';
 import { ZylemStage } from './zylem-stage';
 import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
 import {
@@ -43,6 +43,7 @@ import {
 	StageTransformTool,
 	applySceneOperationPoses,
 } from './stage-transform-tool';
+import { StageSwatchApplier, type SwatchApplyOutcome } from './stage-swatch-applier';
 import type { GizmoRay } from '../debug/transform-gizmo';
 import type { GameEntity } from '../entities/entity';
 import type { BaseNode } from '../core/base-node';
@@ -85,6 +86,7 @@ export class StageDebugDelegate {
 	private lastDebugEnabled: boolean | null = null;
 	private warnedMissingAddFactory = false;
 	private transformTool: StageTransformTool;
+	private swatchApplier: StageSwatchApplier;
 	private grid = new ConstructionGrid();
 	private lastTool: string | null = null;
 	/** Element the current gizmo drag captured, so pointerup is never missed. */
@@ -101,6 +103,14 @@ export class StageDebugDelegate {
 			getScene: () => this.stage.scene?.scene ?? null,
 			getCamera: () => this.getDebugViewCamera()?.camera ?? null,
 			resolveEntity: (uuid) => this.resolveEntity(uuid),
+		});
+
+		this.swatchApplier = new StageSwatchApplier({
+			resolveEntity: (uuid) => this.resolveEntity(uuid),
+			attachBehaviorLink: (entity, ref) =>
+				this.stage.entityDelegate.attachBehaviorLink(entity, ref),
+			detachBehaviorLink: (entity, ref) =>
+				this.stage.entityDelegate.detachBehaviorLink(entity, ref),
 		});
 
 		// Self-managing: sync with current state then subscribe for changes.
@@ -415,26 +425,44 @@ export class StageDebugDelegate {
 
 	/**
 	 * Raycast at NDC coordinates (from a host that cannot send DOM pointer
-	 * events, e.g. an overlay sitting on a preview iframe). Updates hover so
-	 * the next `update()` paints the highlight.
+	 * events, e.g. an overlay sitting on a preview iframe, or the bridge's
+	 * `entity:pick`).
+	 *
+	 * Hover follows the pick only while pick mode is armed (a drag in flight),
+	 * so a one-shot pick from an inspector does not disturb the user's hover.
+	 * While armed, the next `update()` paints the highlight.
 	 */
-	pickAtNdc(ndcX: number, ndcY: number): { uuid: string; name: string } | null {
+	pickAtNdc(
+		ndcX: number,
+		ndcY: number,
+		options: { updateHover?: boolean } = {},
+	): { uuid: string; name: string } | null {
+		const updateHover = options.updateHover ?? debugState.pickMode;
 		this.mouseNdc.set(ndcX, ndcY);
 		const world = this.stage.world;
 		if (!world || !this.getDebugViewCamera()) {
-			resetHoveredEntity();
+			if (updateHover) resetHoveredEntity();
 			return null;
 		}
 		const ray = this.currentRay();
 		const hit = world.raycast(ray.origin, ray.direction, this.options.maxRayDistance);
 		const uuid = hit?.uuid ?? null;
 		if (!uuid) {
-			resetHoveredEntity();
+			if (updateHover) resetHoveredEntity();
 			return null;
 		}
-		setHoveredEntityId(uuid);
+		if (updateHover) setHoveredEntityId(uuid);
 		const entity = this.resolveEntity(uuid);
 		return { uuid, name: entity?.name ?? '' };
+	}
+
+	/**
+	 * Apply swatches to live entities (`entity:apply-swatch`). Every uuid ×
+	 * swatch pair is attempted and reported; successful pairs are recorded so
+	 * the operation can be undone exactly via {@link applySceneOperation}.
+	 */
+	applySwatches(payload: EntityApplySwatchPayload & { opId: string }): SwatchApplyOutcome {
+		return this.swatchApplier.applySwatches(payload);
 	}
 
 	/** Collider wireframes, straight from the wasm simulation. */
@@ -534,6 +562,7 @@ export class StageDebugDelegate {
 		this.debugStateUnsubscribe = null;
 		this.endPointerCapture();
 		this.transformTool.dispose();
+		this.swatchApplier.dispose();
 		this.grid.dispose();
 		this.deactivate();
 		// Not part of `deactivate()`: the cursor and ghost survive debug mode
@@ -576,6 +605,9 @@ export class StageDebugDelegate {
 						this.stage.entityDelegate.detachEntity(entry.uuid);
 					}
 				}
+				break;
+			case 'swatch':
+				this.swatchApplier.applySceneOperation(op, direction);
 				break;
 		}
 	}

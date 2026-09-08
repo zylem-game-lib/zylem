@@ -37,6 +37,7 @@ import { StageEntityModelDelegate } from './stage-entity-model-delegate';
 import { isBaseNode, isThenable } from '../core/utility/options-parser';
 import type {
 	BehaviorEntityLink,
+	BehaviorRef,
 	BehaviorRuntime,
 	BehaviorSystem,
 	BehaviorSystemFactory,
@@ -678,69 +679,115 @@ export class StageEntityDelegate {
 		if (!Array.isArray(refs) || refs.length === 0) return;
 
 		const links: BehaviorEntityLink[] = [];
-
 		for (const ref of refs) {
-			const key = ref.descriptor.key;
-			const link: BehaviorEntityLink = { entity, ref };
-			links.push(link);
+			links.push(this.linkBehaviorRef(entity, ref));
+		}
+		this.behaviorLinksByUuid.set(entity.uuid, links);
+	}
 
-			let indexed = this.behaviorEntityIndex.get(key);
-			if (!indexed) {
-				indexed = new Set();
-				this.behaviorEntityIndex.set(key, indexed);
-			}
-			indexed.add(link);
+	/**
+	 * Index one ref, lazily create its system, and attach. Shared by spawn-time
+	 * registration and late per-ref attaches.
+	 */
+	private linkBehaviorRef(entity: any, ref: BehaviorRef): BehaviorEntityLink {
+		const key = ref.descriptor.key;
+		const link: BehaviorEntityLink = { entity, ref };
 
-			let system = this.behaviorSystemByKey.get(key);
-			if (!system && !this.registeredSystemKeys.has(key)) {
-				const createdSystem = ref.descriptor.systemFactory({
-					world: this.world,
-					scene: this.scene,
-					wasmStage: this.wasmStage,
-					getBehaviorLinks: (behaviorKey: symbol) =>
-						this.behaviorEntityIndex.get(behaviorKey)
-						?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
-					createEntity: create as unknown as CreateEntityFn,
-					getGlobals,
-				});
-				system = createdSystem;
-				this.behaviorSystems.push(createdSystem);
-				this.behaviorSystemByKey.set(key, createdSystem);
-				this.registeredSystemKeys.add(key);
-			}
+		let indexed = this.behaviorEntityIndex.get(key);
+		if (!indexed) {
+			indexed = new Set();
+			this.behaviorEntityIndex.set(key, indexed);
+		}
+		indexed.add(link);
 
-			system?.attach?.(link);
+		let system = this.behaviorSystemByKey.get(key);
+		if (!system && !this.registeredSystemKeys.has(key)) {
+			const createdSystem = ref.descriptor.systemFactory({
+				world: this.world,
+				scene: this.scene,
+				wasmStage: this.wasmStage,
+				getBehaviorLinks: (behaviorKey: symbol) =>
+					this.behaviorEntityIndex.get(behaviorKey)
+					?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
+				createEntity: create as unknown as CreateEntityFn,
+				getGlobals,
+			});
+			system = createdSystem;
+			this.behaviorSystems.push(createdSystem);
+			this.behaviorSystemByKey.set(key, createdSystem);
+			this.registeredSystemKeys.add(key);
 		}
 
-		this.behaviorLinksByUuid.set(entity.uuid, links);
+		system?.attach?.(link);
+		return link;
+	}
+
+	private unlinkBehaviorLink(link: BehaviorEntityLink): void {
+		const key = link.ref?.descriptor?.key as symbol | undefined;
+		if (!key) return;
+		this.behaviorSystemByKey.get(key)?.detach?.(link);
+		const indexed = this.behaviorEntityIndex.get(key);
+		if (!indexed) return;
+		indexed.delete(link);
+		if (indexed.size === 0) {
+			this.behaviorEntityIndex.delete(key);
+		}
 	}
 
 	/**
 	 * Re-index an entity's behavior refs after a late `entity.use(...)`.
 	 * Spawn-time registration only sees refs that existed at attach.
+	 *
+	 * Detaches and re-attaches every behavior on the entity, which resets their
+	 * per-link state. Prefer {@link attachBehaviorLink} /
+	 * {@link detachBehaviorLink} when only one ref changed.
 	 */
 	syncBehaviorLinks(entity: any): void {
 		this.unregisterBehaviorLinks(entity);
 		this.registerBehaviorLinks(entity);
 	}
 
+	/**
+	 * Attach a single ref that was added to a live entity (`entity.use(...)`
+	 * after spawn) without disturbing the entity's other behaviors.
+	 *
+	 * @returns `false` when the stage is not loaded or the ref is already linked.
+	 */
+	attachBehaviorLink(entity: any, ref: BehaviorRef): boolean {
+		if (!this.world || !this.scene) return false;
+		if (!entity?.uuid) return false;
+		const links = this.behaviorLinksByUuid.get(entity.uuid) ?? [];
+		if (links.some((link) => link.ref === ref)) return false;
+		links.push(this.linkBehaviorRef(entity, ref));
+		this.behaviorLinksByUuid.set(entity.uuid, links);
+		return true;
+	}
+
+	/**
+	 * Detach a single ref's system link from a live entity, leaving its other
+	 * behaviors attached.
+	 *
+	 * @returns `false` when no link for that ref exists.
+	 */
+	detachBehaviorLink(entity: any, ref: BehaviorRef): boolean {
+		const links = this.behaviorLinksByUuid.get(entity?.uuid);
+		if (!links) return false;
+		const index = links.findIndex((link) => link.ref === ref);
+		if (index === -1) return false;
+		const [link] = links.splice(index, 1);
+		if (link) this.unlinkBehaviorLink(link);
+		if (links.length === 0) {
+			this.behaviorLinksByUuid.delete(entity.uuid);
+		}
+		return true;
+	}
+
 	private unregisterBehaviorLinks(entity: any): void {
 		const links = this.behaviorLinksByUuid.get(entity?.uuid);
 		if (!links) return;
-
 		for (const link of links) {
-			const key = link.ref?.descriptor?.key as symbol | undefined;
-			if (!key) continue;
-			const indexed = this.behaviorEntityIndex.get(key);
-			if (!indexed) continue;
-
-			this.behaviorSystemByKey.get(key)?.detach?.(link);
-			indexed.delete(link);
-			if (indexed.size === 0) {
-				this.behaviorEntityIndex.delete(key);
-			}
+			this.unlinkBehaviorLink(link);
 		}
-
 		this.behaviorLinksByUuid.delete(entity.uuid);
 	}
 }

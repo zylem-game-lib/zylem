@@ -25,8 +25,17 @@ const MAX_RETAINED_ITEMS = 2_000;
  * older one) but destructive for a log of discrete events: two scene
  * operations committed in the same frame would shallow-merge into one and
  * silently drop an undo entry. `queue` dispatches these immediately instead.
+ *
+ * Pick answers and swatch acks are request/response: each carries an id the
+ * requester is waiting on, so merging two would lose a reply. `entity:pick`
+ * itself is deliberately *not* listed — a drag streams picks faster than
+ * frames, and only the latest pointer position matters.
  */
-const NON_COALESCING_TYPES = new Set<BridgeMessageType>(['scene:operation']);
+const NON_COALESCING_TYPES = new Set<BridgeMessageType>([
+	'scene:operation',
+	'entity:pick:result',
+	'entity:swatch-applied',
+]);
 
 /**
  * Types that are discrete events rather than state, so there is nothing
@@ -34,7 +43,13 @@ const NON_COALESCING_TYPES = new Set<BridgeMessageType>(['scene:operation']);
  * stale event — an editor connecting mid-session would push an already-applied
  * scene operation onto its undo stack.
  */
-const NON_RETAINED_TYPES = new Set<BridgeMessageType>(['scene:operation']);
+const NON_RETAINED_TYPES = new Set<BridgeMessageType>([
+	'scene:operation',
+	'entity:pick',
+	'entity:pick:result',
+	'entity:apply-swatch',
+	'entity:swatch-applied',
+]);
 
 type PendingMap = Partial<{ [K in BridgeMessageType]: BridgeMessages[K] }>;
 

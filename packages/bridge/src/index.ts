@@ -1,5 +1,6 @@
 export * from './protocol';
 export { BridgeChannel, mergePayloads, type BridgeHandler } from './channel';
+export { applySwatchesToSelection } from './swatches';
 export {
 	getZylemBridge,
 	announceBridgeReady,

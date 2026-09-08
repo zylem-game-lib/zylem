@@ -36,3 +36,36 @@ const current = channel.getState('stage:snapshot');
 // Editor side: send commands
 channel.send('tool:set', { tool: 'translate' });
 ```
+
+## Swatches: pick and live apply
+
+Dragging a configured shader or behavior ("swatch") onto the viewport is a
+request/response exchange. The game owns raycasting and application; the
+consumer only forwards pointer positions and the swatch description.
+
+```ts
+// Drag start: keep the hover outline painted while no Select tool is armed.
+channel.send('pick:mode:set', { enabled: true });
+
+// Each pointer move: `queue` keeps only the latest position per frame.
+channel.queue('entity:pick', { requestId, ndc: { x, y } });
+channel.on('entity:pick:result', ({ requestId, hit }) => { /* hit is an EntitySummaryPayload | null */ });
+
+// Drop: apply to the last hit. The payload is batch-shaped so a multi-select
+// apply is the same message with more uuids; every uuid × swatch pair is
+// attempted and reported, and successful pairs form one undoable
+// `scene:operation` of kind `swatch`.
+channel.send('entity:apply-swatch', {
+	uuids: [hit.uuid],
+	swatches: [{ kind: 'shader', source: 'createLava', props: { speed: 2 } }],
+	select: true,
+});
+channel.on('entity:swatch-applied', ({ opId, results }) => { /* results[i].ok / reason */ });
+
+// Drag end
+channel.send('pick:mode:set', { enabled: false });
+```
+
+`source` is the export name the game registered via
+`registerSwatchSource` (`@zylem/game-lib/catalog`); unknown names come back as
+`reason: 'unknown-source'`.
