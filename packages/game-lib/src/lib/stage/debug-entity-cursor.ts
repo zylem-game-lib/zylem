@@ -73,15 +73,27 @@ export class DebugEntityCursor {
 	}
 
 	/**
-	 * Update the cursor to enclose the provided Object3D using a world-space AABB.
+	 * Update the cursor to enclose the provided Object3D using its raw
+	 * world-space AABB. Prefer {@link updateFromBounds} with a box from
+	 * `resolveSelectionBounds`, which pads flat entities; this stays for
+	 * callers that only have an object.
 	 */
 	updateFromObject(object: Object3D | null | undefined): void {
 		if (!object) {
 			this.hide();
 			return;
 		}
-
 		this.bbox.setFromObject(object);
+		this.updateFromBounds(this.bbox);
+	}
+
+	/** Update the cursor to draw the given world-space box. */
+	updateFromBounds(bounds: Box3 | null | undefined): void {
+		if (!bounds || bounds.isEmpty()) {
+			this.hide();
+			return;
+		}
+		if (bounds !== this.bbox) this.bbox.copy(bounds);
 		if (!isFinite(this.bbox.min.x) || !isFinite(this.bbox.max.x)) {
 			this.hide();
 			return;

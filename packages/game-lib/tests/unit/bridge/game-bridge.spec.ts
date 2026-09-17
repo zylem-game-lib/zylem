@@ -7,6 +7,7 @@ import {
 	setDebugTool,
 	setPaused,
 	setSelectedEntityId,
+	setSelectedEntityIds,
 } from '../../../src/lib/debug/debug-state';
 
 /** Wait for valtio's microtask notification plus the channel's RAF flush. */
@@ -53,6 +54,26 @@ describe('GameBridge command intake', () => {
 
 		channel.send('entity:select', { uuid: null });
 		expect(debugState.selectedEntityId).toBeNull();
+	});
+
+	it('merges a multi-entity select according to its mode', () => {
+		bridge.connect({ resolveEntity: () => null });
+
+		channel.send('entity:select', { uuid: 'a', uuids: ['a', 'b'] });
+		expect(debugState.selectedEntityIds).toEqual(['a', 'b']);
+		expect(debugState.selectedEntityId).toBe('a');
+
+		channel.send('entity:select', { uuid: 'c', uuids: ['c', 'a'], mode: 'add' });
+		expect(debugState.selectedEntityIds).toEqual(['a', 'b', 'c']);
+
+		channel.send('entity:select', { uuid: 'b', uuids: ['b'], mode: 'subtract' });
+		expect(debugState.selectedEntityIds).toEqual(['a', 'c']);
+
+		channel.send('entity:select', { uuid: 'a', uuids: ['a', 'd'], mode: 'toggle' });
+		expect(debugState.selectedEntityIds).toEqual(['c', 'd']);
+		expect(debugState.selectedEntityId).toBe('c');
+
+		setSelectedEntityIds([]);
 	});
 
 	it('applies every component of an entity transform, including scale', () => {
@@ -275,6 +296,25 @@ describe('GameBridge game → editor sync', () => {
 		await flushBridge();
 
 		expect(selections).toEqual([]);
+	});
+
+	it('publishes when the selection list grows without changing its first entry', async () => {
+		const lists: string[][] = [];
+		channel.on('entity:selection', ({ selectedUuids }) => {
+			lists.push(selectedUuids ?? []);
+		});
+		bridge.connect({ resolveEntity: () => null });
+
+		setSelectedEntityIds(['a']);
+		await flushBridge();
+		lists.length = 0;
+
+		// `selectedEntityId` is still `a`, so only a list-aware diff notices.
+		setSelectedEntityIds(['a', 'b']);
+		await flushBridge();
+
+		expect(lists).toContainEqual(['a', 'b']);
+		setSelectedEntityIds([]);
 	});
 
 	it('delivers every global changed in the same frame', async () => {

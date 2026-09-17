@@ -4,7 +4,7 @@ const isProd = process.env.NODE_ENV === 'production';
 /** Emit sourcemaps in production when SOURCEMAP=1 (default: off in production). */
 const sourcemap = process.env.SOURCEMAP === '1' || !isProd;
 
-export default defineConfig({
+export default defineConfig((options) => ({
 	entry: {
 		'core': 'src/api/core.ts',
 		'entity': 'src/api/entity.ts',
@@ -33,7 +33,9 @@ export default defineConfig({
 	tsconfig: './tsconfig.build.json', // Use custom tsconfig for build
 	splitting: true,
 	sourcemap,
-	clean: true,
+	// In watch mode tsup would empty `dist` on every rebuild, and a consumer's
+	// Vite sees a delete-then-add instead of a change (`zw dev` watch loop).
+	clean: !options.watch,
 	minify: true,
 	outDir: 'dist',
 	external: [
@@ -54,4 +56,4 @@ export default defineConfig({
 			js: '.js',
 		};
 	},
-});
+}));

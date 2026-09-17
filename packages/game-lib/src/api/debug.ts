@@ -62,6 +62,17 @@ export {
 } from '../lib/debug/entity-focus';
 
 export {
+	padSelectionBounds,
+	measureObjectSelectionBounds,
+	resolveSelectionBounds,
+	SELECTION_BOUNDS_MARGIN,
+	SELECTION_THIN_AXIS_FRACTION,
+	SELECTION_THIN_AXIS_MIN,
+	SELECTION_THIN_AXIS_MAX,
+	type SelectionBoundsProvider,
+} from '../lib/debug/selection-bounds';
+
+export {
 	entityThumbnailCache,
 	EntityThumbnailCache,
 	type EntityThumbnailResult,

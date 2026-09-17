@@ -30,11 +30,14 @@ import {
 	type StageSnapshotPayload,
 	type BridgeNdc,
 	type EntityApplySwatchPayload,
+	type EntitySelectMode,
 	type SwatchApplyResult,
 } from '@zylem/bridge';
 
 import {
+	addSelectedEntityIds,
 	debugState,
+	removeSelectedEntityIds,
 	setAddType,
 	setDebugTool,
 	setGridVisible,
@@ -43,6 +46,7 @@ import {
 	setSelectedEntityId,
 	setSelectedEntityIds,
 	setSnapSettings,
+	toggleSelectedEntityId,
 } from '../debug/debug-state';
 import { focusEntity } from '../debug/entity-focus';
 import { eulerToQuaternion, quaternionToEuler } from '../core/transform-math';
@@ -254,6 +258,30 @@ export function swatchOperationLabel(
 	return `Apply ${sources.join(', ')} to ${target}`;
 }
 
+function sameUuidList(a: readonly string[], b: readonly string[] | undefined): boolean {
+	if (!b) return false;
+	if (a.length !== b.length) return false;
+	return a.every((uuid, index) => uuid === b[index]);
+}
+
+/** Apply a multi-entity `entity:select` against the current selection. */
+function applySelectionCommand(uuids: string[], mode: EntitySelectMode): void {
+	switch (mode) {
+		case 'add':
+			addSelectedEntityIds(uuids);
+			break;
+		case 'subtract':
+			removeSelectedEntityIds(uuids);
+			break;
+		case 'toggle':
+			for (const uuid of uuids) toggleSelectedEntityId(uuid);
+			break;
+		default:
+			setSelectedEntityIds(uuids);
+			break;
+	}
+}
+
 export class GameBridge {
 	private channel: BridgeChannel;
 	private unsubscribes: (() => void)[] = [];
@@ -268,6 +296,7 @@ export class GameBridge {
 		paused?: boolean;
 		debug?: boolean;
 		selectedUuid?: string | null;
+		selectedUuids?: string[];
 		hoveredUuid?: string | null;
 	} = {};
 
@@ -302,9 +331,16 @@ export class GameBridge {
 				this.editorKnown.paused = paused;
 				setPaused(paused);
 			}),
-			this.channel.on('entity:select', ({ uuid }) => {
-				this.editorKnown.selectedUuid = uuid;
-				setSelectedEntityId(uuid);
+			this.channel.on('entity:select', ({ uuid, uuids, mode }) => {
+				if (uuids) {
+					applySelectionCommand(uuids, mode ?? 'replace');
+				} else {
+					setSelectedEntityId(uuid);
+				}
+				// Recorded after the write, since add/subtract/toggle derive the
+				// final list from what was already selected.
+				this.editorKnown.selectedUuid = debugState.selectedEntityId;
+				this.editorKnown.selectedUuids = [...debugState.selectedEntityIds];
 			}),
 			this.channel.on('entity:focus', ({ uuid }) => {
 				focusEntity(uuid);
@@ -447,11 +483,15 @@ export class GameBridge {
 			this.publishStatus(status);
 		}
 
+		// The list is compared too: a marquee that grows `[A]` into `[A, B]`
+		// leaves `selectedEntityId` alone, and would otherwise never publish.
 		const selectionChanged =
 			debugState.selectedEntityId !== this.editorKnown.selectedUuid
-			|| debugState.hoveredEntityId !== this.editorKnown.hoveredUuid;
+			|| debugState.hoveredEntityId !== this.editorKnown.hoveredUuid
+			|| !sameUuidList(debugState.selectedEntityIds, this.editorKnown.selectedUuids);
 		if (selectionChanged) {
 			this.editorKnown.selectedUuid = debugState.selectedEntityId;
+			this.editorKnown.selectedUuids = [...debugState.selectedEntityIds];
 			this.editorKnown.hoveredUuid = debugState.hoveredEntityId;
 			this.channel.queue('entity:selection', {
 				selectedUuid: debugState.selectedEntityId,

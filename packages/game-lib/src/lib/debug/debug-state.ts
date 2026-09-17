@@ -218,6 +218,37 @@ export function setSelectedEntityIds(uuids: string[]): void {
 	debugState.selectedEntityId = next[0] ?? null;
 }
 
+/** Append uuids not already selected, keeping existing order. */
+export function addSelectedEntityIds(uuids: string[]): void {
+	const current = debugState.selectedEntityIds;
+	const additions = uuids.filter((uuid, index) =>
+		!current.includes(uuid) && uuids.indexOf(uuid) === index);
+	if (additions.length === 0) return;
+	setSelectedEntityIds([...current, ...additions]);
+}
+
+/** Drop uuids from the selection; unknown ones are ignored. */
+export function removeSelectedEntityIds(uuids: string[]): void {
+	const removed = new Set(uuids);
+	setSelectedEntityIds(debugState.selectedEntityIds.filter((uuid) => !removed.has(uuid)));
+}
+
+/** Add a uuid if absent, remove it if present (shift-click). */
+export function toggleSelectedEntityId(uuid: string): void {
+	const next = toEntityId(uuid, 'toggleSelectedEntityId');
+	if (!next) return;
+	if (debugState.selectedEntityIds.includes(next)) {
+		removeSelectedEntityIds([next]);
+	} else {
+		addSelectedEntityIds([next]);
+	}
+}
+
+/** Whether a uuid is part of the current selection. */
+export function isEntitySelected(uuid: string): boolean {
+	return debugState.selectedEntityIds.includes(uuid);
+}
+
 /** Current snap increments. */
 export function getSnapSettings(): SnapSettings {
 	return { ...debugState.snap };

@@ -26,13 +26,16 @@ import {
 	isEditorInteractionActive,
 	isTransformTool,
 	registerDebugEntityResolver,
+	removeSelectedEntityIds,
 	resetHoveredEntity,
 	setHoveredEntityId,
 	setSelectedEntityId,
+	toggleSelectedEntityId,
 	type DebugTools,
 	type TransformTool,
 } from '../debug/debug-state';
 import { registerEntityFocusContext } from '../debug/entity-focus';
+import { resolveSelectionBounds } from '../debug/selection-bounds';
 import { publishGameNotice, publishSceneOperation } from '../bridge/game-bridge';
 import { ConstructionGrid } from '../debug/construction-grid';
 import { getEntityType } from '../entities/entity-registry';
@@ -44,6 +47,8 @@ import {
 	applySceneOperationPoses,
 } from './stage-transform-tool';
 import { StageSwatchApplier, type SwatchApplyOutcome } from './stage-swatch-applier';
+import { StageMarqueeSelect } from './stage-marquee-select';
+import { SelectionHighlight } from './selection-highlight';
 import type { GizmoRay } from '../debug/transform-gizmo';
 import type { GameEntity } from '../entities/entity';
 import type { BaseNode } from '../core/base-node';
@@ -87,6 +92,10 @@ export class StageDebugDelegate {
 	private warnedMissingAddFactory = false;
 	private transformTool: StageTransformTool;
 	private swatchApplier: StageSwatchApplier;
+	private marquee: StageMarqueeSelect;
+	private selectionHighlight: SelectionHighlight | null = null;
+	private selectionBoundsPool: Box3[] = [];
+	private hoverBounds = new Box3();
 	private grid = new ConstructionGrid();
 	private lastTool: string | null = null;
 	/** Element the current gizmo drag captured, so pointerup is never missed. */
@@ -111,6 +120,11 @@ export class StageDebugDelegate {
 				this.stage.entityDelegate.attachBehaviorLink(entity, ref),
 			detachBehaviorLink: (entity, ref) =>
 				this.stage.entityDelegate.detachBehaviorLink(entity, ref),
+		});
+
+		this.marquee = new StageMarqueeSelect({
+			getCamera: () => this.getDebugViewCamera()?.camera ?? null,
+			forEachEntity: (visit) => this.forEachSelectableEntity(visit),
 		});
 
 		// Self-managing: sync with current state then subscribe for changes.
@@ -171,6 +185,23 @@ export class StageDebugDelegate {
 		return fromCollision ?? null;
 	}
 
+	/**
+	 * Every entity a marquee may catch. `childrenMap` is the live stage;
+	 * `debugMap` is consulted too so anything only registered there (the same
+	 * set the single pick resolves through) is not skipped. Whether an entity
+	 * has a selectable volume is the marquee's call, via its selection bounds.
+	 */
+	private forEachSelectableEntity(visit: (uuid: string, entity: GameEntity<any>) => void): void {
+		const seen = new Set<string>();
+		const visitEntry = (node: BaseNode, uuid: string) => {
+			if (seen.has(uuid)) return;
+			seen.add(uuid);
+			visit(uuid, node as GameEntity<any>);
+		};
+		this.stage.entityDelegate.childrenMap.forEach(visitEntry);
+		this.stage.entityDelegate.debugMap.forEach(visitEntry);
+	}
+
 	/** Copy all stage children into debugMap so raycast/select tools work after enabling debug mid-session. */
 	private populateDebugMap(): void {
 		this.stage.entityDelegate.childrenMap.forEach((entity: BaseNode, uuid: string) => {
@@ -214,6 +245,13 @@ export class StageDebugDelegate {
 		const tool = debugState.tool;
 		if (tool === this.lastTool) return;
 		this.lastTool = tool;
+
+		// A marquee in flight belongs to the Select tool; switching away
+		// mid-drag must not commit it later against a different tool's state.
+		if (this.marquee.isArmed) {
+			this.marquee.cancel();
+			this.endPointerCapture();
+		}
 
 		if (tool !== 'none') {
 			this.ensureInteraction();
@@ -322,6 +360,32 @@ export class StageDebugDelegate {
 		if (!scene) return;
 		this.debugCursor ??= new DebugEntityCursor(scene);
 		this.placementGhost ??= new PlacementGhost(scene);
+		this.selectionHighlight ??= new SelectionHighlight(scene);
+	}
+
+	/**
+	 * Outline every selected entity. Re-fitted each frame so the boxes follow
+	 * entities that move, and so a uuid whose entity has gone (deleted, or
+	 * undone) simply drops out instead of leaving a stale box behind.
+	 */
+	private updateSelectionHighlight(): void {
+		const highlight = this.selectionHighlight;
+		if (!highlight) return;
+		const uuids = debugState.selectedEntityIds;
+		if (uuids.length === 0) {
+			highlight.hide();
+			return;
+		}
+		// Scratch boxes are pooled across frames; the highlight copies what it
+		// needs before the next call reuses them.
+		const boxes: Box3[] = [];
+		for (const uuid of uuids) {
+			const entity = this.resolveEntity(uuid);
+			const scratch = this.selectionBoundsPool[boxes.length] ??= new Box3();
+			const bounds = resolveSelectionBounds(entity, scratch);
+			if (bounds) boxes.push(bounds);
+		}
+		highlight.update(boxes);
 	}
 
 	/**
@@ -337,6 +401,9 @@ export class StageDebugDelegate {
 		if (tool !== 'select' && tool !== 'delete' && !debugState.pickMode) {
 			this.debugCursor?.hide();
 		}
+		// With nothing armed and debug off, `update()` stops running and the
+		// outlines would otherwise stay frozen over a game being played.
+		if (tool === 'none' && !debugState.enabled) this.selectionHighlight?.hide();
 	}
 
 	private disposeToolVisuals(): void {
@@ -344,6 +411,8 @@ export class StageDebugDelegate {
 		this.debugCursor = null;
 		this.placementGhost?.dispose();
 		this.placementGhost = null;
+		this.selectionHighlight?.dispose();
+		this.selectionHighlight = null;
 	}
 
 	update(): void {
@@ -368,6 +437,7 @@ export class StageDebugDelegate {
 
 		// Before the tool branches below, all of which return early.
 		this.updatePlacementGhost(tool, world);
+		this.updateSelectionHighlight();
 
 		// Gizmo tools own the pointer entirely; entity picking would fight them.
 		if (isTransformTool(tool)) {
@@ -403,9 +473,10 @@ export class StageDebugDelegate {
 			this.debugCursor?.hide();
 			return;
 		}
-		const hoveredEntity: any = this.resolveEntity(hoveredUuid);
-		const targetObject = hoveredEntity?.group ?? hoveredEntity?.mesh ?? null;
-		if (!targetObject) {
+		// The same padded view the selection outline uses, so hovering a flat
+		// plane shows a slab rather than a hairline.
+		const hoverBounds = resolveSelectionBounds(this.resolveEntity(hoveredUuid), this.hoverBounds);
+		if (!hoverBounds) {
 			this.debugCursor?.hide();
 			return;
 		}
@@ -420,7 +491,7 @@ export class StageDebugDelegate {
 				this.debugCursor?.setColor(debugState.pickMode ? SELECT_TOOL_COLOR : 0xffffff);
 				break;
 		}
-		this.debugCursor?.updateFromObject(targetObject);
+		this.debugCursor?.updateFromBounds(hoverBounds);
 	}
 
 	/**
@@ -561,6 +632,7 @@ export class StageDebugDelegate {
 		this.debugStateUnsubscribe?.();
 		this.debugStateUnsubscribe = null;
 		this.endPointerCapture();
+		this.marquee.dispose();
 		this.transformTool.dispose();
 		this.swatchApplier.dispose();
 		this.grid.dispose();
@@ -623,7 +695,10 @@ export class StageDebugDelegate {
 		};
 	}
 
-	private handleAction(ray: GizmoRay): void {
+	private handleAction(
+		ray: GizmoRay,
+		modifiers: { shiftKey: boolean; altKey: boolean } = { shiftKey: false, altKey: false },
+	): void {
 		const tool = getDebugTool();
 		if (tool !== 'select' && tool !== 'delete' && tool !== 'add') return;
 
@@ -634,8 +709,18 @@ export class StageDebugDelegate {
 		switch (tool) {
 			case 'select': {
 				const uuid = hit?.uuid ?? null;
-				if (uuid && this.resolveEntity(uuid)) {
-					setSelectedEntityId(uuid);
+				const resolved = uuid && this.resolveEntity(uuid) ? uuid : null;
+				if (modifiers.altKey) {
+					// Alt-click drops one entity from the selection; on empty
+					// space it leaves the selection alone.
+					if (resolved) removeSelectedEntityIds([resolved]);
+				} else if (modifiers.shiftKey) {
+					// Shift-click toggles membership, the click counterpart of a
+					// shift-drag. Empty space is a no-op so a slipped shift-click
+					// cannot throw away a selection being built.
+					if (resolved) toggleSelectedEntityId(resolved);
+				} else if (resolved) {
+					setSelectedEntityId(resolved);
 				} else {
 					// Clicking empty space clears, which is what makes the gizmo
 					// dismissable without another tool.
@@ -765,6 +850,10 @@ export class StageDebugDelegate {
 
 		const onPointerMove = (e: PointerEvent) => {
 			trackPointer(e);
+			if (this.marquee.isArmed) {
+				this.marquee.pointerMove(this.mouseNdc, e);
+				return;
+			}
 			if (!this.transformTool.isDragging) return;
 			// Read the modifier per event: a drag that starts snapped and is then
 			// freed (or vice versa) needs no keydown/keyup tracking, and a keyup
@@ -781,27 +870,55 @@ export class StageDebugDelegate {
 				this.beginPointerCapture(canvas, e.pointerId);
 				return;
 			}
-			this.handleAction(ray);
+
+			if (getDebugTool() === 'select') {
+				// The press is not resolved until release: a drag becomes a
+				// marquee, anything shorter is the ordinary single pick. Orbit is
+				// suspended for the whole press, since the first few pixels of a
+				// marquee would otherwise also swing the camera.
+				this.marquee.pointerDown(this.mouseNdc, e, canvas);
+				this.beginPointerCapture(canvas, e.pointerId);
+				return;
+			}
+
+			this.handleAction(ray, e);
 		};
 
-		const onPointerUp = () => {
+		const onPointerUp = (e: PointerEvent) => {
+			if (this.marquee.isArmed) {
+				const release = this.marquee.pointerUp(this.mouseNdc);
+				this.endPointerCapture();
+				if (release === 'click') this.handleAction(this.currentRay(), e);
+				return;
+			}
 			if (!this.transformTool.isDragging) return;
 			this.transformTool.pointerUp();
 			this.endPointerCapture();
 		};
 
+		// A cancelled pointer (browser gesture, window blur) never delivers
+		// pointerup, so without this a drag would never commit or release. A
+		// marquee is abandoned rather than committed: the rectangle it ended on
+		// is wherever the pointer happened to be lost.
+		const onPointerCancel = (e: PointerEvent) => {
+			if (this.marquee.isArmed) {
+				this.marquee.cancel();
+				this.endPointerCapture();
+				return;
+			}
+			onPointerUp(e);
+		};
+
 		canvas.addEventListener('pointermove', onPointerMove);
 		canvas.addEventListener('pointerdown', onPointerDown);
 		canvas.addEventListener('pointerup', onPointerUp);
-		// A cancelled pointer (browser gesture, window blur) never delivers
-		// pointerup, so without this the drag would never commit or release.
-		canvas.addEventListener('pointercancel', onPointerUp);
+		canvas.addEventListener('pointercancel', onPointerCancel);
 
 		this.domDisposeFns.push(
 			() => canvas.removeEventListener('pointermove', onPointerMove),
 			() => canvas.removeEventListener('pointerdown', onPointerDown),
 			() => canvas.removeEventListener('pointerup', onPointerUp),
-			() => canvas.removeEventListener('pointercancel', onPointerUp),
+			() => canvas.removeEventListener('pointercancel', onPointerCancel),
 		);
 		return true;
 	}

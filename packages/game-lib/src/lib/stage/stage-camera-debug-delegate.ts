@@ -42,7 +42,7 @@ export class StageCameraDebugDelegate implements CameraDebugDelegate {
 	private snapshot(): CameraDebugState {
 		return {
 			enabled: debugState.enabled,
-			selected: debugState.selectedEntityId ? [debugState.selectedEntityId] : [],
+			selected: [...debugState.selectedEntityIds],
 		};
 	}
 }

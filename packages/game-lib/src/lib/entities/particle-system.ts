@@ -1,4 +1,4 @@
-import { Group, Quaternion, Vector3 } from 'three';
+import { Box3, Group, Quaternion, Vector3 } from 'three';
 
 import type { BehaviorHandle, BehaviorRef } from '@zylem/behaviors/core';
 import {
@@ -9,6 +9,10 @@ import {
 } from '@zylem/behaviors/particle-emitter';
 import { deepMergeValues } from '../core/clone-utils';
 import { toThreeVector3 } from '../core/vector';
+import {
+	padSelectionBounds,
+	type SelectionBoundsProvider,
+} from '../debug/selection-bounds';
 import { commonDefaults } from './common';
 import {
 	finalizeEntityCloneSupport,
@@ -41,6 +45,20 @@ const particleSystemDefaults: ZylemParticleSystemOptions = {
 
 export const PARTICLE_SYSTEM_TYPE = Symbol('ParticleSystem');
 
+/**
+ * Edge length of the box drawn around an emitter when selected. Particles
+ * are spawned by a behavior and have no static extent, so the emitter's
+ * anchor is given a fixed, grabbable volume instead.
+ */
+const PARTICLE_SYSTEM_SELECTION_EXTENT = 1;
+
+const _selectionSize = new Vector3(
+	PARTICLE_SYSTEM_SELECTION_EXTENT,
+	PARTICLE_SYSTEM_SELECTION_EXTENT,
+	PARTICLE_SYSTEM_SELECTION_EXTENT,
+);
+const _selectionCenter = new Vector3();
+
 function toBehaviorOptions(
 	options: ZylemParticleSystemOptions,
 ): ParticleEmitterBehaviorOptions {
@@ -54,12 +72,21 @@ function toBehaviorOptions(
 	};
 }
 
-export class ZylemParticleSystem extends GameEntity<ZylemParticleSystemOptions> {
+export class ZylemParticleSystem extends GameEntity<ZylemParticleSystemOptions>
+	implements SelectionBoundsProvider {
 	static type = PARTICLE_SYSTEM_TYPE;
 
 	declare __zylemParticleSystemEntity: true;
 
 	private particleHandle: ParticleEmitterHandle | null = null;
+
+	/** The emitter's `group` is empty, so measuring it yields nothing; see {@link PARTICLE_SYSTEM_SELECTION_EXTENT}. */
+	getSelectionBounds(target: Box3): Box3 | null {
+		if (!this.group) return null;
+		this.group.getWorldPosition(_selectionCenter);
+		target.setFromCenterAndSize(_selectionCenter, _selectionSize);
+		return padSelectionBounds(target);
+	}
 
 	constructor(
 		options?: Partial<ZylemParticleSystemOptions>,

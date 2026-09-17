@@ -1,5 +1,9 @@
-import { Vector3 } from 'three';
+import { Box3, Vector3 } from 'three';
 import { BaseNode } from '../core/base-node';
+import {
+  padSelectionBounds,
+  type SelectionBoundsProvider,
+} from '../debug/selection-bounds';
 import {
   finalizeEntityCloneSupport,
   GameEntityOptions,
@@ -9,7 +13,7 @@ import { CollisionHandlerDelegate } from '../collision/world';
 import { state } from '../game/game-state';
 import { commonDefaults, mergeArgs } from './common';
 import { zoneCollision } from './parts/collision-factories';
-import { Vec3Input } from '../core/vector';
+import { Vec3Input, VEC3_ZERO, normalizeVec3, toThreeVector3 } from '../core/vector';
 import { deepMergeValues } from '../core/clone-utils';
 
 export type OnHeldParams = {
@@ -42,7 +46,7 @@ const zoneDefaults: ZylemZoneOptions = {
 export const ZONE_TYPE = Symbol('Zone');
 
 export class ZylemZone extends GameEntity<ZylemZoneOptions>
-  implements CollisionHandlerDelegate {
+  implements CollisionHandlerDelegate, SelectionBoundsProvider {
   static type = ZONE_TYPE;
 
   private _enteredZone: Map<string, number> = new Map();
@@ -52,6 +56,21 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions>
   constructor(options?: ZylemZoneOptions) {
     super();
     this.options = deepMergeValues(zoneDefaults, options);
+  }
+
+  /**
+   * A zone has no render object, so the editor cannot measure it. Its
+   * selection view is the sensor volume itself: `options.size` centred on
+   * the live pose (or the configured position before spawn).
+   */
+  getSelectionBounds(target: Box3): Box3 | null {
+    const size = toThreeVector3(this.options.size, new Vector3(1, 1, 1));
+    const position = this.getPose()?.position ?? normalizeVec3(this.options.position, VEC3_ZERO);
+    target.setFromCenterAndSize(
+      new Vector3(position.x, position.y, position.z),
+      size,
+    );
+    return padSelectionBounds(target);
   }
 
   public handlePostCollision({ delta }: { delta: number }): boolean {
