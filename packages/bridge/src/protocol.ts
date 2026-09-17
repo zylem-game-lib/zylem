@@ -206,8 +206,25 @@ export interface EntitySelectionPayload {
 	/** First entry of {@link selectedUuids}, kept for single-select consumers. */
 	selectedUuid: string | null;
 	hoveredUuid: string | null;
-	/** Full selection. Present even while only one entity can be selected. */
+	/**
+	 * Full selection, in selection order. Holds several uuids after a marquee
+	 * drag, a shift-click, or an `entity:select` with `uuids`.
+	 */
 	selectedUuids?: string[];
+}
+
+/**
+ * How an `entity:select` with several uuids combines with the current
+ * selection. Omitted (or `replace`) swaps the selection wholesale.
+ */
+export type EntitySelectMode = 'replace' | 'add' | 'subtract' | 'toggle';
+
+export interface EntitySelectPayload {
+	/** Single-entity form; `null` clears. Ignored when {@link uuids} is set. */
+	uuid: string | null;
+	/** Multi-entity form. */
+	uuids?: string[];
+	mode?: EntitySelectMode;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -315,7 +332,7 @@ export type EditorToGameMessages = {
 	'debug:set': { enabled: boolean };
 	'tool:set': { tool: BridgeDebugTool };
 	'playback:set': { paused: boolean };
-	'entity:select': { uuid: string | null };
+	'entity:select': EntitySelectPayload;
 	'entity:focus': { uuid: string };
 	'entity:transform': {
 		uuid: string;
