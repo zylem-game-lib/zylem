@@ -14,6 +14,8 @@ import {
 	GameConfigJsonSchema,
 	StageConfigJsonSchema,
 	GameInputConfigSchema,
+	SongDefinitionSchema,
+	CutsceneDefinitionSchema,
 } from '../dist/schema.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,6 +36,8 @@ const schemas: Array<{ file: string; schema: TSchema }> = [
 	{ file: 'game-config.schema.json', schema: GameConfigJsonSchema },
 	{ file: 'stage-config.schema.json', schema: StageConfigJsonSchema },
 	{ file: 'input-config.schema.json', schema: GameInputConfigSchema },
+	{ file: 'song.schema.json', schema: SongDefinitionSchema },
+	{ file: 'cutscene.schema.json', schema: CutsceneDefinitionSchema },
 ];
 
 await mkdir(outDir, { recursive: true });

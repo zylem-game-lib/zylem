@@ -73,6 +73,15 @@ interface ActiveStageTransition {
 }
 
 /**
+ * Longest step (seconds) one frame may advance a transition. The first frame
+ * of a freshly composed pipeline stalls on shader compilation — a second or
+ * more on some machines — and without a cap that one long frame would swallow
+ * the whole blend, so it read as a hard cut. Frames at 20 fps and above are
+ * unaffected.
+ */
+const MAX_TRANSITION_STEP = 1 / 20;
+
+/**
  * Check if WebGPU is supported in the current browser.
  *
  * Informational only — game-lib always constructs a {@link WebGPURenderer},
@@ -276,6 +285,19 @@ export class RendererManager {
 	}
 
 	/**
+	 * Blend from the current picture into the frames that follow without
+	 * changing stage: snapshot the outgoing frame, then rebuild the pipeline
+	 * so the blend is composed immediately. Used by cutscene scene changes
+	 * and any in-stage "cut" the game wants to soften. Move the camera right
+	 * after calling this so the snapshot shows the outgoing shot.
+	 */
+	beginInStageTransition(resolved: ResolvedStageTransition, scene: Scene, camera: Camera): void {
+		if (!this._initialized) return;
+		this.beginSnapshotTransition(resolved, scene, camera);
+		this.setupPostProcessing(scene, camera);
+	}
+
+	/**
 	 * Complete the active transition immediately: rebuild the normal
 	 * pipeline, release transition resources, and fire `onComplete`.
 	 * No-op when no transition is active.
@@ -322,7 +344,7 @@ export class RendererManager {
 	private advanceTransition(delta: number): void {
 		const transition = this._transition;
 		if (!transition || !transition.composed) return;
-		transition.elapsed += delta;
+		transition.elapsed += Math.min(delta, MAX_TRANSITION_STEP);
 		const raw = Math.min(transition.elapsed / transition.resolved.duration, 1);
 		transition.progressUniform.value = transition.resolved.easing(raw);
 		if (raw >= 1) {

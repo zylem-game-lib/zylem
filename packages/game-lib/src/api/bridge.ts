@@ -42,4 +42,9 @@ export {
 	type BridgeNdc,
 	type BridgeDebugTool,
 	type BridgeVec3,
+	type CutsceneLoadPayload,
+	type CutsceneStatusPayload,
+	type CutsceneViewPayload,
+	type CutscenePlaybackState,
+	type CameraPosePayload,
 } from '@zylem/bridge';

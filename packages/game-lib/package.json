@@ -33,6 +33,10 @@
       "types": "./dist/audio.d.ts",
       "import": "./dist/audio.js"
     },
+    "./cinematics": {
+      "types": "./dist/cinematics.d.ts",
+      "import": "./dist/cinematics.js"
+    },
     "./globals": {
       "types": "./dist/globals.d.ts",
       "import": "./dist/globals.js"
@@ -89,7 +93,9 @@
     "./schema/stage": "./dist/schema/stage.schema.json",
     "./schema/game-config": "./dist/schema/game-config.schema.json",
     "./schema/stage-config": "./dist/schema/stage-config.schema.json",
-    "./schema/input-config": "./dist/schema/input-config.schema.json"
+    "./schema/input-config": "./dist/schema/input-config.schema.json",
+    "./schema/song": "./dist/schema/song.schema.json",
+    "./schema/cutscene": "./dist/schema/cutscene.schema.json"
   },
   "keywords": [
     "game",
@@ -132,6 +138,7 @@
     "nanoid": "^5.1.16",
     "stats.js": "^0.17.0",
     "three": "^0.185.1",
+    "tone": "^15.1.22",
     "typescript-fsm": "^1.6.0",
     "valtio": "^2.1.8"
   },

@@ -79,10 +79,13 @@ export class ZylemGameElement extends HTMLElement {
     this._game = game;
     this.attachHostContainer(game);
     this.syncDisplayRuntime();
-    game.start();
     // Bubble a composed bridge-ready event from this element so shadow-DOM
-    // hosts (editor, devtools) can detect the live game without polling.
-    announceBridgeReady(this);
+    // hosts (editor, devtools) can detect the live game without polling. It
+    // waits for start() to settle: the game's bridge handlers connect while
+    // the game loads, and a command sent on an earlier announcement is lost.
+    void game.start().then(() => {
+      if (this._game === game) announceBridgeReady(this);
+    });
   }
 
   get game(): Game<any> | null {

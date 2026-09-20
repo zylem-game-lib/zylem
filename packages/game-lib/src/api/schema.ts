@@ -49,3 +49,6 @@ export type {
 	GameConfigJson,
 	GameDeviceConfigJson,
 } from '../lib/core/json-schemas';
+
+export { SongDefinitionSchema, type SongDefinition } from '../lib/audio/song-definition';
+export { CutsceneDefinitionSchema, type CutsceneDefinition } from '../lib/cinematics/cutscene-definition';

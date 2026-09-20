@@ -52,6 +52,7 @@ import {
 	type StageTransitionConfig,
 } from '../graphics/stage-transition';
 import { usesManagedRenderPath } from '../graphics/render-category';
+import { CutscenePreviewController } from '../cinematics/preview-controller';
 
 export type { GameLoadingEvent };
 
@@ -112,6 +113,13 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	private lastPublishedGameConfig: string | null = null;
 	/** Editor ↔ game bridge adapter (RAF-coalesced publishes, command intake). */
 	private gameBridge = new GameBridge();
+	/** Director mode's in-game cutscene preview, driven over the bridge. */
+	private cutscenePreview = new CutscenePreviewController(
+		() => this.currentStage()?.wrappedStage ?? null,
+		(status) => this.gameBridge.publishCutsceneStatus(status),
+		{},
+		(view) => this.gameBridge.publishCutsceneView(view),
+	);
 	/** Stops republishing the entity catalog on registry changes. */
 	private catalogUnsubscribe: (() => void) | null = null;
 	private readonly gameUpdateParams = {} as UpdateContext<
@@ -177,6 +185,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 				);
 			},
 			pickEntity: (ndc) => this.pickEntityAtNdc(ndc),
+			cutscene: this.cutscenePreview,
+			cameraPose: () => this.cutscenePreview.cameraPose(),
 			applySwatches: (payload) => {
 				const delegate = this.currentStage()?.wrappedStage?.debugDelegate;
 				if (delegate) return delegate.applySwatches(payload);
@@ -327,6 +337,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		transition?: StageTransitionConfig,
 	): Promise<void> {
 		const resolved = transition ? resolveStageTransition(transition) : null;
+		// A previewed cutscene belongs to the outgoing stage's camera.
+		this.cutscenePreview.releaseStage();
 		const outgoing = this.currentStage() ?? null;
 		const outgoingRuntime = outgoing?.wrappedStage ?? null;
 		const outgoingScene = outgoingRuntime?.scene?.scene ?? null;
@@ -406,6 +418,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		// Publish config + full stage snapshot so the editor receives initial state
 		this.publishGameConfig();
 		this.publishStageSnapshot();
+		// A cutscene the editor loaded while no stage was up can start now.
+		this.cutscenePreview.stageReady();
 	}
 
 	/**
@@ -567,6 +581,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		}
 		this.debugDelegate?.end();
 		this.outOfLoop();
+		this.cutscenePreview.frame();
 		if (!this.isDisposed) {
 			this.animationFrameId = requestAnimationFrame(this.frameCallback);
 		}
@@ -574,6 +589,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 
 	dispose() {
 		this.isDisposed = true;
+		this.cutscenePreview.unload();
 		this.catalogUnsubscribe?.();
 		this.catalogUnsubscribe = null;
 		this.gameBridge.disconnect();

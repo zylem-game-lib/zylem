@@ -32,6 +32,10 @@ import {
 	type EntityApplySwatchPayload,
 	type EntitySelectMode,
 	type SwatchApplyResult,
+	type CameraPosePayload,
+	type CutsceneLoadPayload,
+	type CutsceneStatusPayload,
+	type CutsceneViewPayload,
 } from '@zylem/bridge';
 
 import {
@@ -235,6 +239,17 @@ export interface GameBridgeHost {
 	 * each success so the batch is undoable as a single step.
 	 */
 	applySwatches?(payload: EntityApplySwatchPayload & { opId: string }): SwatchApplyOutcome;
+	/** Cutscene preview hooks (`cutscene:*`); publish progress via `publishCutsceneStatus`. */
+	cutscene?: {
+		load(payload: CutsceneLoadPayload): void;
+		play(from?: number): void;
+		pause(): void;
+		stop(): void;
+		seek(time: number): void;
+		unload(): void;
+	};
+	/** Describe the live camera (`camera:pose:get`), for capturing framing into a cutscene. */
+	cameraPose?(): Omit<CameraPosePayload, 'requestId'> | null;
 }
 
 /** What a host reports back from a swatch batch. */
@@ -403,6 +418,16 @@ export class GameBridge {
 			this.channel.on('entity:apply-swatch', (payload) => {
 				this.handleApplySwatch(payload);
 			}),
+			this.channel.on('cutscene:load', (payload) => this.host?.cutscene?.load(payload)),
+			this.channel.on('cutscene:play', ({ from }) => this.host?.cutscene?.play(from)),
+			this.channel.on('cutscene:pause', () => this.host?.cutscene?.pause()),
+			this.channel.on('cutscene:stop', () => this.host?.cutscene?.stop()),
+			this.channel.on('cutscene:seek', ({ time }) => this.host?.cutscene?.seek(time)),
+			this.channel.on('cutscene:unload', () => this.host?.cutscene?.unload()),
+			this.channel.on('camera:pose:get', ({ requestId }) => {
+				const pose = this.host?.cameraPose?.();
+				if (pose) this.channel.send('camera:pose', { requestId, ...pose });
+			}),
 			// Mirror game-owned debug state back to the editor so in-scene
 			// selections and game-side debug toggles stay in sync.
 			subscribe(debugState, () => this.publishDebugStateChanges()),
@@ -410,6 +435,16 @@ export class GameBridge {
 
 		this.publishDebugStateChanges();
 		announceBridgeReady(announceTarget);
+	}
+
+	/** Cutscene playback progress for Director mode's transport. */
+	publishCutsceneStatus(status: CutsceneStatusPayload): void {
+		this.channel.queue('cutscene:status', status);
+	}
+
+	/** The previewing camera's projection, for Director mode's viewport overlays. */
+	publishCutsceneView(view: CutsceneViewPayload): void {
+		this.channel.queue('cutscene:view', view);
 	}
 
 	disconnect(): void {
