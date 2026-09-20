@@ -306,6 +306,60 @@ export interface SnapSettingsPayload {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Cutscenes (Director mode ↔ `@zylem/game-lib/cinematics`)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type CutscenePlaybackState = 'idle' | 'playing' | 'paused' | 'finished';
+
+/**
+ * Load (or replace) the cutscene the game previews. The definition is the
+ * runtime `CutsceneDefinition` shape; it is carried untyped here so the
+ * bridge does not depend on game-lib's schemas.
+ */
+export interface CutsceneLoadPayload {
+	definition: Record<string, unknown>;
+	/** Start playing once loaded; otherwise the game waits for `cutscene:play`. */
+	autoplay?: boolean;
+	/** Seconds to seek to after loading. */
+	time?: number;
+}
+
+/** Playback status the game publishes while a cutscene is loaded. */
+export interface CutsceneStatusPayload {
+	/** `null` when nothing is loaded. */
+	cutsceneId: string | null;
+	state: CutscenePlaybackState;
+	/** Seconds. */
+	time: number;
+	sceneId: string | null;
+	shotId: string | null;
+}
+
+/**
+ * The live camera's projection while a cutscene is previewed, so an editor
+ * can draw world-space guides (dolly paths, handles) over the game and map
+ * pointer positions back into the world. Published whenever it changes.
+ */
+export interface CutsceneViewPayload {
+	/** Column-major world → clip matrix (`projection × view`), 16 numbers. */
+	viewProjection: number[];
+	/** Its inverse, clip → world, for unprojecting pointer positions. */
+	inverseViewProjection: number[];
+	/** The render surface's box in the game document's CSS pixels. */
+	viewport: { x: number; y: number; width: number; height: number };
+}
+
+/** A camera pose in world space, for capturing framing from the viewport. */
+export interface CameraPosePayload {
+	requestId: string;
+	position: BridgeVec3;
+	/** A point in front of the camera, so the pose round-trips as position + lookAt. */
+	lookAt: BridgeVec3;
+	/** Vertical field of view in degrees; absent for orthographic cameras. */
+	fov?: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Message maps
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -325,6 +379,9 @@ export type GameToEditorMessages = {
 	'scene:operation': SceneOperationPayload;
 	'entity:pick:result': EntityPickResultPayload;
 	'entity:swatch-applied': EntitySwatchAppliedPayload;
+	'cutscene:status': CutsceneStatusPayload;
+	'cutscene:view': CutsceneViewPayload;
+	'camera:pose': CameraPosePayload;
 };
 
 /** Commands published by the editor, consumed by the game. */
@@ -363,6 +420,16 @@ export type EditorToGameMessages = {
 	/** Raycast at a pointer position; answered by `entity:pick:result`. */
 	'entity:pick': EntityPickPayload;
 	'entity:apply-swatch': EntityApplySwatchPayload;
+	'cutscene:load': CutsceneLoadPayload;
+	'cutscene:play': { from?: number };
+	'cutscene:pause': Record<string, never>;
+	'cutscene:stop': Record<string, never>;
+	/** Scrub to a time without firing events. */
+	'cutscene:seek': { time: number };
+	/** Drop the loaded cutscene and hand the camera back to gameplay. */
+	'cutscene:unload': Record<string, never>;
+	/** Ask for the live camera's pose; answered by `camera:pose`. */
+	'camera:pose:get': { requestId: string };
 };
 
 /** Combined message map carried by a single bridge channel. */
