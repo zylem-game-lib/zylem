@@ -1,0 +1,8 @@
+{
+  "label": "Game and stages",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "The game loop, stages, config, events, and loading"
+  }
+}

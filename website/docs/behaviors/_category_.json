@@ -1,0 +1,8 @@
+{
+  "label": "Behaviors",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "entity.use, coordinators, runtime-2d, and the behavior catalog"
+  }
+}

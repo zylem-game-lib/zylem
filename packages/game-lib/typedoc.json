@@ -11,7 +11,10 @@
 		"src/api/events.ts",
 		"src/api/globals.ts",
 		"src/api/audio.ts",
+		"src/api/cinematics.ts",
 		"src/api/debug.ts",
+		"src/api/catalog.ts",
+		"src/api/bridge.ts",
 		"src/api/web-components.ts",
 		"src/api/runtime.ts",
 		"src/api/schema.ts"

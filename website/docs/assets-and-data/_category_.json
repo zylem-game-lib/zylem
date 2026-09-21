@@ -1,0 +1,8 @@
+{
+  "label": "Assets and data",
+  "position": 13,
+  "link": {
+    "type": "generated-index",
+    "description": "Loaders, JSON Schema, and blueprints"
+  }
+}

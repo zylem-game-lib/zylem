@@ -1,0 +1,39 @@
+{
+	"$schema": "https://typedoc.org/schema.json",
+	"entryPoints": [
+		"../packages/game-lib/src/api/core.ts",
+		"../packages/game-lib/src/api/entity.ts",
+		"../packages/game-lib/src/api/behavior.ts",
+		"../packages/game-lib/src/api/actions.ts",
+		"../packages/game-lib/src/api/input.ts",
+		"../packages/game-lib/src/api/input-ui.ts",
+		"../packages/game-lib/src/api/graphics.ts",
+		"../packages/game-lib/src/api/events.ts",
+		"../packages/game-lib/src/api/globals.ts",
+		"../packages/game-lib/src/api/audio.ts",
+		"../packages/game-lib/src/api/cinematics.ts",
+		"../packages/game-lib/src/api/debug.ts",
+		"../packages/game-lib/src/api/catalog.ts",
+		"../packages/game-lib/src/api/bridge.ts",
+		"../packages/game-lib/src/api/web-components.ts",
+		"../packages/game-lib/src/api/runtime.ts",
+		"../packages/game-lib/src/api/schema.ts"
+	],
+	"tsconfig": "../packages/game-lib/tsconfig.build.json",
+	"entryPointStrategy": "resolve",
+	"plugin": ["typedoc-plugin-markdown"],
+	"out": "docs/api",
+	"readme": "none",
+	"entryFileName": "index",
+	"excludeExternals": true,
+	"excludePrivate": true,
+	"excludeInternal": true,
+	"externalPattern": [
+		"**/node_modules/three/**",
+		"**/node_modules/howler/**",
+		"**/node_modules/tone/**",
+		"**/node_modules/@dgreenheck/**"
+	],
+	"exclude": ["**/*.spec.ts", "**/*.test.ts"],
+	"githubPages": false
+}

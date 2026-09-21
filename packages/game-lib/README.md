@@ -35,6 +35,8 @@ Games normally never touch the runtime directly; for debug tooling there is an e
 
 > Note: This project is still in alpha. There are unfinished features and some APIs that may change.
 
+**Docs:** [https://zylem-game-lib.github.io/zylem/](https://zylem-game-lib.github.io/zylem/)
+
 ## Installation
 
 ```bash
@@ -76,8 +78,12 @@ ball.onUpdate(({ me, inputs, delta }) => {
 });
 
 // start the game with the ball
-createGame(ball);
+createGame(ball).start();
 ```
+
+## Documentation
+
+Full guides, API reference, and architecture diagrams: [https://zylem-game-lib.github.io/zylem/](https://zylem-game-lib.github.io/zylem/).
 
 ## Development
 

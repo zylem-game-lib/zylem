@@ -1,0 +1,8 @@
+{
+  "label": "Cinematics",
+  "position": 12,
+  "link": {
+    "type": "generated-index",
+    "description": "Cutscene definition, playback, and editor preview"
+  }
+}

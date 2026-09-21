@@ -2,6 +2,8 @@
 
 A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.
 
+**Docs:** [https://zylem-game-lib.github.io/zylem/](https://zylem-game-lib.github.io/zylem/)
+
 ## Demos 🎮
 
 You can check out the latest demos at [https://zylem.onrender.com](https://zylem.onrender.com) (hosted from [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples)).
@@ -48,6 +50,10 @@ pnpm typecheck
 
 # Lint all packages
 pnpm lint
+
+# Docs site
+pnpm docs:dev
+pnpm docs:build
 ```
 
 For the editor, use the sibling [`editor`](https://github.com/zylem-game-lib/editor) repo (`pnpm dev` there boots a harness game with the editor overlaid; `zw link dev` points it at this checkout's `game-lib` and `bridge`). For demos and the multiplayer server, use [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples). For shader demos, use [`shaders`](https://github.com/zylem-game-lib/shaders).

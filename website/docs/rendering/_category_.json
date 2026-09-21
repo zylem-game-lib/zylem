@@ -1,0 +1,8 @@
+{
+  "label": "Rendering",
+  "position": 9,
+  "link": {
+    "type": "generated-index",
+    "description": "Renderers, shaders, post-processing, and resolution"
+  }
+}

@@ -20,6 +20,9 @@ node_modules
 coverage
 wip
 _docs
+website/build
+website/.docusaurus
+website/docs/api
 stats.html
 target
 

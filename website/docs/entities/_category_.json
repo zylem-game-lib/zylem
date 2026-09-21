@@ -1,0 +1,8 @@
+{
+  "label": "Entities",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Primitives, actors, lights, particles, and lookup"
+  }
+}

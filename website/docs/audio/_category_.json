@@ -1,0 +1,8 @@
+{
+  "label": "Audio",
+  "position": 11,
+  "link": {
+    "type": "generated-index",
+    "description": "Howler one-shots and Tone.js songs"
+  }
+}
