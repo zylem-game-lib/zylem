@@ -36,6 +36,7 @@ import {
 	type CutsceneLoadPayload,
 	type CutsceneStatusPayload,
 	type CutsceneViewPayload,
+	type LevelBuffer,
 } from '@zylem/bridge';
 
 import {
@@ -53,6 +54,7 @@ import {
 	toggleSelectedEntityId,
 } from '../debug/debug-state';
 import { focusEntity } from '../debug/entity-focus';
+import { streamLevel } from '../level/stream-level';
 import { eulerToQuaternion, quaternionToEuler } from '../core/transform-math';
 import { commitColliderScale } from '../entities/entity-scale';
 import type { GameEntity } from '../entities/entity';
@@ -388,6 +390,9 @@ export class GameBridge {
 			this.channel.on('entity:create', ({ typeId, props, pose }) => {
 				this.host?.createEntity?.(typeId, props, pose);
 			}),
+			this.channel.on('level:load', ({ buffer }) => {
+				void this.loadLevel(buffer);
+			}),
 			this.channel.on('scene:operation:apply', ({ op, direction }) => {
 				this.applyingSceneOperation = true;
 				try {
@@ -606,6 +611,19 @@ export class GameBridge {
 	 */
 	publishVariable(payload: GameVariablePayload): void {
 		this.channel.send('game:variable', payload);
+	}
+
+	/**
+	 * Stream a level buffer through the host's catalog spawn.
+	 *
+	 * Each entry is handed to `createEntity`, which no-ops for an unknown
+	 * type. The notice counts entries handed off, not bodies that appeared.
+	 */
+	private async loadLevel(buffer: LevelBuffer): Promise<void> {
+		const { spawned } = await streamLevel(buffer, (entry) => {
+			this.host?.createEntity?.(entry.typeId, undefined, entry.pose);
+		});
+		this.publishNotice('info', `Streamed ${spawned} level entries`);
 	}
 
 	/** Surface a diagnostic message in the editor console. */

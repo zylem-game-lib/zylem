@@ -39,6 +39,16 @@ export type {
 /** @public */
 export { createStage } from '../lib/stage/stage';
 /** @public */
+export { streamLevel } from '../lib/level/stream-level';
+/** @public */
+export { streamLevelOnStage } from '../lib/level/stream-level-stage';
+/** @public */
+export type { StreamLevelOptions, StreamLevelResult } from '../lib/level/stream-level';
+/** @public */
+export type { LevelStage } from '../lib/level/stream-level-stage';
+/** @public */
+export type { LevelBuffer } from '@zylem/bridge';
+/** @public */
 export { entitySpawner } from '../lib/stage/entity-spawner';
 /** @public */
 export { stageConfig } from '../lib/stage/stage-config';

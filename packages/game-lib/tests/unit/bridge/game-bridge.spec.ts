@@ -401,4 +401,32 @@ describe('GameBridge demand gating', () => {
 
 		stopWatching();
 	});
+
+	it('streams a level buffer through createEntity and reports the handoff', async () => {
+		const created: string[] = [];
+		const notices: string[] = [];
+		bridge.connect({
+			resolveEntity: () => null,
+			createEntity: (typeId) => {
+				created.push(typeId);
+			},
+		});
+		const stop = channel.on('game:notice', ({ message }) => notices.push(message));
+
+		channel.send('level:load', {
+			buffer: {
+				version: 1,
+				entries: [
+					{ id: 'a', typeId: 'box', pose: { position: { x: 1, y: 2, z: 3 } } },
+					{ id: 'b', typeId: 'sphere', pose: {} },
+				],
+			},
+		});
+
+		await flushBridge();
+		stop();
+
+		expect(created).toEqual(['box', 'sphere']);
+		expect(notices).toEqual(['Streamed 2 level entries']);
+	});
 });
