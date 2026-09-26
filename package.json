@@ -11,7 +11,7 @@
     "url": "https://github.com/zylem-game-lib/zylem.git"
   },
   "engines": {
-    "node": ">=22.12.0",
+    "node": ">=22.22.2",
     "pnpm": ">=10.32.1"
   },
   "scripts": {
