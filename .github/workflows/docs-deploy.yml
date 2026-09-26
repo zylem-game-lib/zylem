@@ -1,5 +1,8 @@
 # Deploy the Docusaurus site to GitHub Pages:
 # https://zylem-game-lib.github.io/zylem/
+#
+# API pages are generated from TypeScript source. This job does not build
+# @zylem/game-lib, @zylem/bridge, or their dependencies.
 name: Docs
 
 on:
@@ -29,11 +32,8 @@ jobs:
           node-version-file: '.nvmrc'
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build game-lib
-        run: pnpm build:lib
+      - name: Install docs dependencies
+        run: pnpm install --frozen-lockfile --filter @zylem/website...
 
       - name: Build docs
         run: pnpm docs:build
