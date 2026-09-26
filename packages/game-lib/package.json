@@ -130,7 +130,7 @@
     "@sinclair/typebox": "^0.34.52",
     "@types/howler": "^2.2.13",
     "@zylem/behaviors": "^0.8.8",
-    "@zylem/bridge": "workspace:^",
+    "@zylem/bridge": "^0.9.0",
     "comlink": "^4.4.2",
     "howler": "^2.2.4",
     "idb-keyval": "^6.2.6",
