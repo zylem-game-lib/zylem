@@ -349,6 +349,28 @@ export interface CutsceneViewPayload {
 	viewport: { x: number; y: number; width: number; height: number };
 }
 
+/**
+ * One placed entity in a level buffer.
+ *
+ * `id` is the live entity uuid while the level is being edited. `typeId` is a
+ * catalog id (`box`), not the constructor symbol the entity list shows (`Box`).
+ */
+export interface LevelEntry {
+	id: string;
+	typeId: string;
+	pose: BridgePose;
+}
+
+/**
+ * A level the editor records and the game can stream back into a stage.
+ *
+ * `version` is bumped when the shape changes, so an old buffer is recognisable.
+ */
+export interface LevelBuffer {
+	version: 1;
+	entries: LevelEntry[];
+}
+
 /** A camera pose in world space, for capturing framing from the viewport. */
 export interface CameraPosePayload {
 	requestId: string;
@@ -403,6 +425,8 @@ export type EditorToGameMessages = {
 		props?: Record<string, unknown>;
 		pose?: BridgePose;
 	};
+	/** Stream a recorded level into the running stage. */
+	'level:load': { buffer: LevelBuffer };
 	'scene:operation:apply': {
 		op: SceneOperationPayload;
 		direction: 'undo' | 'redo';
