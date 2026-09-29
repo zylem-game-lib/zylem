@@ -19,7 +19,7 @@
 		"../packages/game-lib/src/api/runtime.ts",
 		"../packages/game-lib/src/api/schema.ts"
 	],
-	"tsconfig": "../packages/game-lib/tsconfig.build.json",
+	"tsconfig": "../packages/game-lib/tsconfig.docs.json",
 	"entryPointStrategy": "resolve",
 	"plugin": ["typedoc-plugin-markdown"],
 	"out": "docs/api",
