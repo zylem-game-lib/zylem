@@ -371,6 +371,12 @@ export interface LevelBuffer {
 	entries: LevelEntry[];
 }
 
+/**
+ * Editor viewport latch. Top, side, and isometric lock debug-orbit rotation;
+ * custom is free orbit. Space in the editor sends `custom` until release.
+ */
+export type CameraViewPreset = 'top' | 'side' | 'isometric' | 'custom';
+
 /** A camera pose in world space, for capturing framing from the viewport. */
 export interface CameraPosePayload {
 	requestId: string;
@@ -454,6 +460,8 @@ export type EditorToGameMessages = {
 	'cutscene:unload': Record<string, never>;
 	/** Ask for the live camera's pose; answered by `camera:pose`. */
 	'camera:pose:get': { requestId: string };
+	/** Lock the debug orbit camera to a preset, or `custom` to unlock rotation. */
+	'camera:view:set': { preset: CameraViewPreset };
 };
 
 /** Combined message map carried by a single bridge channel. */
