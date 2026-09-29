@@ -1,12 +1,12 @@
 import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, Scene, RenderTarget, Texture, LinearFilter } from 'three';
-import { PerspectiveType, Perspectives } from './perspective';
+import { PerspectiveType, Perspectives, perspectiveProjection } from './perspective';
 import { StageEntity } from '../interfaces/entity';
 import { CameraOrbitController, CameraDebugDelegate } from './camera-debug-delegate';
 import { RendererManager, DEFAULT_VIEWPORT } from './renderer-manager';
 import type { ZylemRenderer, Viewport } from './renderer-manager';
 import { CameraPipeline } from './camera-pipeline';
 import { createPerspective } from './perspectives';
-import type { CameraContext, TransformLike, CameraPose } from './types';
+import type { CameraContext, CameraPerspective, CameraPose, CameraProjection, TransformLike } from './types';
 
 // Re-export for backwards compatibility
 export type { CameraDebugState, CameraDebugDelegate } from './camera-debug-delegate';
@@ -521,6 +521,17 @@ export class ZylemCamera {
 		this.camera.position.copy(pose.position);
 
 		if (pose.lookAt) {
+			// Looking straight along Y is parallel to the default up vector, so
+			// top-down views use -Z as screen-up. Other views restore +Y.
+			const dirX = pose.lookAt.x - pose.position.x;
+			const dirY = pose.lookAt.y - pose.position.y;
+			const dirZ = pose.lookAt.z - pose.position.z;
+			const len = Math.hypot(dirX, dirY, dirZ);
+			if (len > 1e-8 && Math.abs(dirY) / len > 0.999) {
+				this.camera.up.set(0, 0, -1);
+			} else {
+				this.camera.up.set(0, 1, 0);
+			}
 			this.camera.lookAt(pose.lookAt);
 		} else {
 			this.camera.quaternion.copy(pose.rotation);
@@ -549,33 +560,73 @@ export class ZylemCamera {
 	}
 
 	/**
+	 * Install a perspective and replace the Three.js camera when its projection
+	 * kind differs from the live one. Pose is copied across; orbit controls and
+	 * post-processing are rebound to the new instance.
+	 */
+	applyPerspective(type: PerspectiveType, perspective: CameraPerspective): void {
+		this._perspective = type;
+		this.pipeline.setPerspective(perspective);
+		this.ensureProjection(perspective.projection ?? perspectiveProjection(type));
+	}
+
+	private ensureProjection(kind: CameraProjection): void {
+		const current: CameraProjection = this.camera instanceof OrthographicCamera
+			? 'orthographic'
+			: 'perspective';
+		if (current === kind) return;
+
+		const aspect = this.screenResolution.x / Math.max(this.screenResolution.y, 1);
+		const next = kind === 'orthographic'
+			? this.createOrthographicCamera(aspect)
+			: this.createPerspectiveCamera(aspect);
+
+		next.position.copy(this.camera.position);
+		next.quaternion.copy(this.camera.quaternion);
+		next.up.copy(this.camera.up);
+		next.layers.mask = this.camera.layers.mask;
+		next.name = this.camera.name;
+		if ('near' in this.camera && 'near' in next) {
+			const source = this.camera as PerspectiveCamera;
+			const dest = next as PerspectiveCamera;
+			dest.near = source.near;
+			dest.far = source.far;
+			dest.zoom = source.zoom;
+			dest.updateProjectionMatrix();
+		}
+
+		const parent = this.camera.parent;
+		if (parent) {
+			parent.add(next);
+			parent.remove(this.camera);
+		}
+
+		this.camera = next;
+		this.orbitController?.rebindCamera(next);
+		this._rendererManager?.rebindPostProcessingCamera(next);
+	}
+
+	/**
 	 * Create a Three.js camera based on perspective type.
 	 */
 	private createCameraForPerspective(aspectRatio: number): Camera {
-		switch (this._perspective) {
-			case Perspectives.ThirdPerson:
-				return new PerspectiveCamera(75, aspectRatio, 0.1, 1000);
-			case Perspectives.FirstPerson:
-				return new PerspectiveCamera(75, aspectRatio, 0.1, 1000);
-			case Perspectives.Isometric:
-				return new OrthographicCamera(
-					this.frustumSize * aspectRatio / -2,
-					this.frustumSize * aspectRatio / 2,
-					this.frustumSize / 2,
-					this.frustumSize / -2,
-					1, 1000
-				);
-			case Perspectives.Flat2D:
-			case Perspectives.Fixed2D:
-				return new OrthographicCamera(
-					this.frustumSize * aspectRatio / -2,
-					this.frustumSize * aspectRatio / 2,
-					this.frustumSize / 2,
-					this.frustumSize / -2,
-					1, 1000
-				);
-			default:
-				return new PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+		if (perspectiveProjection(this._perspective) === 'orthographic') {
+			return this.createOrthographicCamera(aspectRatio);
 		}
+		return this.createPerspectiveCamera(aspectRatio);
+	}
+
+	private createPerspectiveCamera(aspectRatio: number): PerspectiveCamera {
+		return new PerspectiveCamera(75, aspectRatio, 0.1, 1000);
+	}
+
+	private createOrthographicCamera(aspectRatio: number): OrthographicCamera {
+		return new OrthographicCamera(
+			this.frustumSize * aspectRatio / -2,
+			this.frustumSize * aspectRatio / 2,
+			this.frustumSize / 2,
+			this.frustumSize / -2,
+			1, 1000
+		);
 	}
 }

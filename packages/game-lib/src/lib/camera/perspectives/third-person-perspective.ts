@@ -78,6 +78,7 @@ interface TrailSample {
  */
 export class ThirdPersonPerspective implements CameraPerspective {
 	readonly id = 'third-person';
+	readonly projection = 'perspective' as const;
 	/**
 	 * Slightly looser than the previous 0.15 to compose better with the
 	 * trailing-delay follow: the trail absorbs short, fast moves and the

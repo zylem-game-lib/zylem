@@ -243,6 +243,16 @@ export class RendererManager {
 		this.postProcessing = post;
 	}
 
+	/**
+	 * Point an already-built post-processing pass at a replacement camera.
+	 * No-ops when post-processing has not been set up; the next setup call
+	 * receives whatever camera the stage passes in.
+	 */
+	rebindPostProcessingCamera(camera: Camera): void {
+		if (!this.postProcessing || !this._postSceneRef) return;
+		this.setupPostProcessing(this._postSceneRef, camera);
+	}
+
 	// ─── Stage transitions ──────────────────────────────────────────────────
 
 	/** Whether a stage transition is currently in flight. */

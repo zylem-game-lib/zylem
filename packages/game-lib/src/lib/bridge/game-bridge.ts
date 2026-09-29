@@ -53,6 +53,7 @@ import {
 	setSnapSettings,
 	toggleSelectedEntityId,
 } from '../debug/debug-state';
+import { setCameraViewPreset, type CameraViewPreset } from '../camera/camera-view';
 import { focusEntity } from '../debug/entity-focus';
 import { streamLevel } from '../level/stream-level';
 import { eulerToQuaternion, quaternionToEuler } from '../core/transform-math';
@@ -299,6 +300,23 @@ function applySelectionCommand(uuids: string[], mode: EntitySelectMode): void {
 	}
 }
 
+/**
+ * Listen for `camera:view:set`.
+ *
+ * The message is part of the bridge protocol. The cast keeps game-lib compiling
+ * against a published `@zylem/bridge` that has not been rebuilt with it yet.
+ */
+function onCameraViewSet(
+	channel: BridgeChannel,
+	apply: (preset: CameraViewPreset) => void,
+): () => void {
+	const listen = channel.on.bind(channel) as (
+		type: 'camera:view:set',
+		handler: (payload: { preset: CameraViewPreset }) => void,
+	) => () => void;
+	return listen('camera:view:set', ({ preset }) => apply(preset));
+}
+
 export class GameBridge {
 	private channel: BridgeChannel;
 	private unsubscribes: (() => void)[] = [];
@@ -433,6 +451,7 @@ export class GameBridge {
 				const pose = this.host?.cameraPose?.();
 				if (pose) this.channel.send('camera:pose', { requestId, ...pose });
 			}),
+			onCameraViewSet(this.channel, setCameraViewPreset),
 			// Mirror game-owned debug state back to the editor so in-scene
 			// selections and game-side debug toggles stay in sync.
 			subscribe(debugState, () => this.publishDebugStateChanges()),

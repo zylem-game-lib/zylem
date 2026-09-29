@@ -48,12 +48,21 @@ export interface CameraContext {
 	targets: Record<string, TransformLike>;
 }
 
+/** Which Three.js camera a perspective commits onto. */
+export type CameraProjection = 'perspective' | 'orthographic';
+
 /**
  * A perspective produces the base camera pose each frame.
  * Exactly one perspective is active per camera at a time.
  */
 export interface CameraPerspective {
 	id: string;
+	/**
+	 * Projection the Three.js camera must use. When omitted, the runtime keeps
+	 * a perspective camera. Orthographic perspectives set this so a runtime
+	 * switch replaces the camera instance.
+	 */
+	projection?: CameraProjection;
 	/** Compute the raw desired pose for this frame given the current context. */
 	getBasePose(ctx: CameraContext): CameraPose;
 	/** Optional defaults for smoothing and other pipeline settings. */

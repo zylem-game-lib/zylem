@@ -170,7 +170,7 @@ export class CameraWrapper {
 	 * @param options  Perspective-specific options (distance, height, zoom, etc.).
 	 */
 	setPerspective(type: PerspectiveType, options?: PerspectiveOptions): void {
-		this.cameraRef.pipeline.setPerspective(createPerspective(type, options));
+		this.cameraRef.applyPerspective(type, createPerspective(type, options));
 	}
 
 	/**
@@ -217,7 +217,11 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 		y: window.innerHeight,
 	});
 	let frustumSize = 10;
-	if (options.perspective === 'fixed-2d') {
+	if (
+		options.perspective === 'fixed-2d'
+		|| options.perspective === 'isometric'
+		|| options.perspective === 'top-down'
+	) {
 		frustumSize = options.zoom || 10;
 	}
 	const zylemCamera = new ZylemCamera(
@@ -242,11 +246,22 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 	// so the pipeline produces the correct base pose from the first frame.
 	const perspType = options.perspective || 'third-person';
 	if (perspType === 'fixed-2d' || perspType === 'flat-2d') {
-		zylemCamera.pipeline.setPerspective(
+		zylemCamera.applyPerspective(
+			perspType,
 			createPerspective(perspType, { zoom: frustumSize })
 		);
+	} else if (perspType === 'isometric' || perspType === 'top-down') {
+		zylemCamera.applyPerspective(
+			perspType,
+			createPerspective(perspType, {
+				zoom: frustumSize,
+				initialPosition: position.clone(),
+				initialLookAt: target.clone(),
+			})
+		);
 	} else {
-		zylemCamera.pipeline.setPerspective(
+		zylemCamera.applyPerspective(
+			perspType,
 			createPerspective(perspType, {
 				initialPosition: position.clone(),
 				initialLookAt: target.clone(),

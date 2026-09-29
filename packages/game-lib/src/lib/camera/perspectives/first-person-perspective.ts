@@ -62,6 +62,7 @@ const DEFAULTS: Defaults = {
  */
 export class FirstPersonPerspective implements CameraPerspective {
 	readonly id = 'first-person';
+	readonly projection = 'perspective' as const;
 	readonly defaults = { damping: 1 };
 
 	private opts: Defaults;

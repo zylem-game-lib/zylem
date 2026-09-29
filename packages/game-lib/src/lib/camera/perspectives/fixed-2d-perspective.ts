@@ -25,6 +25,7 @@ const DEFAULTS: Required<Fixed2DOptions> = {
  */
 export class Fixed2DPerspective implements CameraPerspective {
 	readonly id = 'fixed-2d';
+	readonly projection = 'orthographic' as const;
 	readonly defaults = { damping: 1 };
 
 	private opts: Required<Fixed2DOptions>;

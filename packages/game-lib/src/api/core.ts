@@ -110,6 +110,7 @@ export type {
 	CameraBehavior,
 	CameraAction,
 	CameraPipelineState,
+	CameraProjection,
 } from '../lib/camera/types';
 /** @public */
 export { CameraPipeline } from '../lib/camera/camera-pipeline';
@@ -118,6 +119,9 @@ export {
 	ThirdPersonPerspective,
 	Fixed2DPerspective,
 	FirstPersonPerspective,
+	SecondPersonPerspective,
+	IsometricPerspective,
+	TopDownPerspective,
 	createPerspective,
 } from '../lib/camera/perspectives';
 /** @public */
@@ -125,12 +129,32 @@ export type {
 	ThirdPersonOptions,
 	Fixed2DOptions,
 	FirstPersonOptions,
+	SecondPersonOptions,
+	IsometricOptions,
+	TopDownOptions,
 	PerspectiveOptions,
 } from '../lib/camera/perspectives';
 /** @public */
 export { createFollowTarget } from '../lib/camera/behaviors/follow-target';
 /** @public */
 export type { FollowTargetOptions } from '../lib/camera/behaviors/follow-target';
+/** @public */
+export { createPlatformFollow } from '../lib/camera/behaviors/platform-follow';
+/** @public */
+export type {
+	PlatformAxisMode,
+	PlatformAxisModes,
+	PlatformFollowOptions,
+} from '../lib/camera/behaviors/platform-follow';
+/** @public */
+export { createStrategyPan } from '../lib/camera/behaviors/strategy-pan';
+/** @public */
+export type {
+	StrategyPanBehavior,
+	StrategyPanInput,
+	StrategyPanOptions,
+	StrategyPointer,
+} from '../lib/camera/behaviors/strategy-pan';
 /** @public */
 export { setCameraFeed } from '../lib/camera/camera-feed';
 /** @public */
