@@ -57,7 +57,7 @@ export interface StrategyPanBehavior extends CameraBehavior {
  * whose up vector is −Z.
  */
 export function createStrategyPan(options?: StrategyPanOptions): StrategyPanBehavior {
-	const sampleInput = options?.sampleInput ?? (() => ({}));
+	const sampleInput = options?.sampleInput ?? ((): StrategyPanInput => ({}));
 	const edgeMargin = MathUtils.clamp(options?.edgeMargin ?? 0.08, 0, 0.5);
 	const edgeSpeed = options?.edgeSpeed ?? 12;
 	const panSpeed = options?.panSpeed ?? 16;
