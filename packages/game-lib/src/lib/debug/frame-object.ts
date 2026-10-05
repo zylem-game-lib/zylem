@@ -2,6 +2,7 @@ import {
 	Box3,
 	type Camera,
 	type Object3D,
+	OrthographicCamera,
 	PerspectiveCamera,
 	Vector3,
 } from 'three';
@@ -89,6 +90,12 @@ export function frameObjectFromDirection(
 		distance = framingDistance(bounds.maxDim, camera, padding);
 		camera.near = Math.max(distance / 100, 0.01);
 		camera.far = Math.max(distance * 20, 100);
+		camera.updateProjectionMatrix();
+	} else if (camera instanceof OrthographicCamera) {
+		const viewHeight = Math.max(camera.top - camera.bottom, 1e-4);
+		camera.zoom = viewHeight / Math.max(bounds.maxDim * padding, 1e-4);
+		camera.near = 0.1;
+		camera.far = Math.max(bounds.maxDim * 50, 1000);
 		camera.updateProjectionMatrix();
 	}
 

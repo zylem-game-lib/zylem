@@ -1,18 +1,6 @@
 import { Object3D, Vector3, Quaternion, Camera, Scene } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { frameObjectFromDirection } from '../debug/frame-object';
-import { subscribeCameraView, type CameraViewPreset } from './camera-view';
-
-/** Polar angle for the isometric lock: atan(√2), about 54.7° off vertical. */
-const ISOMETRIC_POLAR = Math.atan(Math.SQRT2);
-
-const VIEW_LOCKS: Record<Exclude<CameraViewPreset, 'custom'>, { phi: number; theta: number }> = {
-	top: { phi: 0, theta: 0 },
-	side: { phi: Math.PI / 2, theta: Math.PI / 2 },
-	isometric: { phi: ISOMETRIC_POLAR, theta: Math.PI / 4 },
-};
-
-const _lockOffset = new Vector3();
 
 export interface CameraDebugState {
 	enabled: boolean;
@@ -80,18 +68,16 @@ export class CameraOrbitController {
 	 */
 	private _followSelection = true;
 
-	/** Editor view latch. `custom` leaves orbit rotation free. */
-	private _viewPreset: CameraViewPreset = 'custom';
+	/** When true, orbit rotation stays at the pose captured when controls arm. */
+	private _rotationLocked = false;
 
-	private _unsubscribeCameraView: (() => void) | null = null;
+	/** Look-at captured by {@link seedOrbitPose}, used as the orbit target. */
+	private _seededLookAt: Vector3 | null = null;
 
 	constructor(camera: Camera, domElement: HTMLElement, cameraRig?: Object3D | null) {
 		this.camera = camera;
 		this.domElement = domElement;
 		this.cameraRig = cameraRig ?? null;
-		this._unsubscribeCameraView = subscribeCameraView((preset) => {
-			this.setViewLock(preset);
-		});
 	}
 
 	/**
@@ -128,11 +114,13 @@ export class CameraOrbitController {
 	 * Seed the debug camera to an orbit pose around a look-at point.
 	 */
 	seedOrbitPose(position: Vector3, lookAt: Vector3): void {
+		this._seededLookAt = lookAt.clone();
 		this.camera.position.copy(position);
 		this.camera.lookAt(lookAt);
 		if (this.orbitControls) {
 			this.orbitControls.target.copy(lookAt);
 			this.orbitControls.update();
+			if (this._rotationLocked) this.applyRotationLock();
 		}
 		this._debugPoseSeeded = true;
 	}
@@ -219,24 +207,19 @@ export class CameraOrbitController {
 	 * Clean up resources.
 	 */
 	dispose() {
-		this._unsubscribeCameraView?.();
-		this._unsubscribeCameraView = null;
 		this.disableOrbitControls();
 		this.detachDebugDelegate();
 	}
 
 	/**
-	 * Lock orbit rotation to an editor preset. Pan and dolly stay enabled.
-	 * `custom` restores free rotation without moving the camera.
+	 * Freeze orbit rotation at the current pose. Pan and dolly stay enabled.
 	 * A lock requested before orbit controls exist is applied when they do.
+	 * Passing false restores free rotation without moving the camera.
 	 */
-	setViewLock(preset: CameraViewPreset): void {
-		this._viewPreset = preset;
-		this.applyViewLock();
-	}
-
-	get viewPreset(): CameraViewPreset {
-		return this._viewPreset;
+	setRotationLocked(locked: boolean): void {
+		this._rotationLocked = locked;
+		if (locked) this.applyRotationLock();
+		else this.releaseRotationLock();
 	}
 
 	/**
@@ -286,7 +269,7 @@ export class CameraOrbitController {
 					this.restoreDebugCameraState();
 				}
 				this.updateOrbitTargetFromSelection(state.selected);
-				this.applyViewLock();
+				if (this._rotationLocked) this.applyRotationLock();
 			} else if (!state.enabled && wasEnabled) {
 				this.saveDebugCameraState();
 				if (!this._userOrbitEnabled) {
@@ -305,7 +288,7 @@ export class CameraOrbitController {
 			this.enableOrbitControls();
 			this.restoreDebugCameraState();
 			this.updateOrbitTargetFromSelection(state.selected);
-			this.applyViewLock();
+			if (this._rotationLocked) this.applyRotationLock();
 		} else if (!state.enabled && wasEnabled) {
 			// Exiting debug mode: save debug camera state, then restore game camera state
 			this.saveDebugCameraState();
@@ -334,39 +317,18 @@ export class CameraOrbitController {
 		this.orbitControls.maxDistance = 500;
 		this.orbitControls.maxPolarAngle = Math.PI / 2;
 		this.orbitControls.enabled = this._interactionEnabled;
-		// Default target to origin
-		this.orbitControls.target.set(0, 0, 0);
-		this.applyViewLock();
+		this.orbitControls.target.copy(this._seededLookAt ?? new Vector3());
+		if (this._rotationLocked) this.applyRotationLock();
 	}
 
-	/**
-	 * Point the orbit camera at a locked polar/azimuth and freeze rotation.
-	 * Dolly and pan stay available. `custom` restores the free-orbit limits
-	 * this controller was created with (`maxPolarAngle` π/2, azimuth unbounded).
-	 */
-	private applyViewLock(): void {
+	/** Freeze polar and azimuth at the pose orbit controls currently hold. */
+	private applyRotationLock(): void {
 		const controls = this.orbitControls;
 		if (!controls) return;
 
-		if (this._viewPreset === 'custom') {
-			controls.minPolarAngle = 0;
-			controls.maxPolarAngle = Math.PI / 2;
-			controls.minAzimuthAngle = -Infinity;
-			controls.maxAzimuthAngle = Infinity;
-			controls.enableRotate = true;
-			controls.update();
-			return;
-		}
-
-		const { phi, theta } = VIEW_LOCKS[this._viewPreset];
-		_lockOffset.copy(this.camera.position).sub(controls.target);
-		const distance = Math.max(_lockOffset.length(), controls.minDistance);
-		const sinPhi = Math.sin(phi);
-		this.camera.position.set(
-			controls.target.x + distance * sinPhi * Math.sin(theta),
-			controls.target.y + distance * Math.cos(phi),
-			controls.target.z + distance * sinPhi * Math.cos(theta),
-		);
+		controls.update();
+		const phi = controls.getPolarAngle();
+		const theta = controls.getAzimuthalAngle();
 		controls.minPolarAngle = phi;
 		controls.maxPolarAngle = phi;
 		controls.minAzimuthAngle = theta;
@@ -375,12 +337,25 @@ export class CameraOrbitController {
 		controls.update();
 	}
 
+	/** Restore the free-orbit limits this controller was created with. */
+	private releaseRotationLock(): void {
+		const controls = this.orbitControls;
+		if (!controls) return;
+
+		controls.minPolarAngle = 0;
+		controls.maxPolarAngle = Math.PI / 2;
+		controls.minAzimuthAngle = -Infinity;
+		controls.maxAzimuthAngle = Infinity;
+		controls.enableRotate = true;
+		controls.update();
+	}
+
 	/** Swap the camera instance after a perspective projection change. */
 	rebindCamera(camera: Camera): void {
 		this.camera = camera;
 		if (this.orbitControls) {
 			this.orbitControls.object = camera;
-			this.applyViewLock();
+			if (this._rotationLocked) this.applyRotationLock();
 		}
 	}
 

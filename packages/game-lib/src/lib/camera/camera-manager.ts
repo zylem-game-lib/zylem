@@ -1,8 +1,75 @@
-import { Vector2, Scene, Object3D, Vector3 } from 'three';
+import { Vector2, Vector3, Scene, OrthographicCamera, PerspectiveCamera } from 'three';
 import { ZylemCamera } from './zylem-camera';
 import { RendererManager } from './renderer-manager';
-import { Perspectives } from './perspective';
-import { nanoid } from 'nanoid';
+import { Perspectives, type PerspectiveType } from './perspective';
+import {
+	EDITOR_CAMERAS,
+	GAME_CAMERA_ID,
+	editorCamerasAreAttached,
+	registerEditorCameraHost,
+	type EditorCameraHost,
+} from './editor-camera-session';
+
+/** Where an editor view sits relative to the game camera's look-at. */
+interface EditorViewSpec {
+	id: string;
+	perspective: PerspectiveType;
+	lockRotation: boolean;
+	position(lookAt: Vector3, distance: number, gamePosition: Vector3): Vector3;
+	up(gameUp: Vector3): Vector3;
+}
+
+const EDITOR_VIEWS: EditorViewSpec[] = [
+	{
+		id: EDITOR_CAMERAS.side,
+		perspective: Perspectives.Fixed2D,
+		lockRotation: true,
+		position: (lookAt, distance) => new Vector3(lookAt.x + distance, lookAt.y, lookAt.z),
+		up: () => new Vector3(0, 1, 0),
+	},
+	{
+		id: EDITOR_CAMERAS.top,
+		perspective: Perspectives.TopDown,
+		lockRotation: true,
+		position: (lookAt, distance) => new Vector3(lookAt.x, lookAt.y + distance, lookAt.z),
+		up: () => new Vector3(0, 0, -1),
+	},
+	{
+		id: EDITOR_CAMERAS.isometric,
+		perspective: Perspectives.Isometric,
+		lockRotation: true,
+		position: (lookAt, distance) => lookAt.clone().add(
+			new Vector3(1, 1, 1).normalize().multiplyScalar(distance),
+		),
+		up: () => new Vector3(0, 1, 0),
+	},
+	{
+		id: EDITOR_CAMERAS.free,
+		perspective: Perspectives.ThirdPerson,
+		lockRotation: false,
+		position: (lookAt, distance, gamePosition) => {
+			if (gamePosition.distanceTo(lookAt) > 0.5) return gamePosition.clone();
+			return lookAt.clone().add(new Vector3(0, distance * 0.5, distance));
+		},
+		up: (gameUp) => gameUp.clone(),
+	},
+];
+
+/** Look-at and distance implied by a camera's current forward vector. */
+function captureFraming(camera: { position: Vector3; getWorldDirection(target: Vector3): Vector3 }): {
+	lookAt: Vector3;
+	distance: number;
+} {
+	const direction = new Vector3();
+	camera.getWorldDirection(direction);
+	const toOrigin = new Vector3().sub(camera.position);
+	const along = toOrigin.dot(direction);
+	const distance = along > 1 ? along : 12;
+	return {
+		lookAt: camera.position.clone().add(direction.multiplyScalar(distance)),
+		distance,
+	};
+}
 
 /**
  * CameraManager orchestrates multiple cameras per stage.
@@ -10,25 +77,38 @@ import { nanoid } from 'nanoid';
  * Responsibilities:
  * - Named camera registry (add/remove/get by name or reference)
  * - Active camera list management (determines which cameras render)
- * - Always-available debug camera with orbit controls
+ * - Editor view cameras (side, top, isometric, free), created only while an editor is attached
  * - Per-frame update of all active cameras' perspective controllers
  * - Coordinating rendering via RendererManager for all active viewports
  */
-export class CameraManager {
+export class CameraManager implements EditorCameraHost {
 	/** Named camera registry */
 	private cameras: Map<string, ZylemCamera> = new Map();
 
 	/** Currently active cameras, ordered by render layer (first = bottom) */
 	private _activeCameras: ZylemCamera[] = [];
 
-	/** Auto-created debug camera with orbit controls */
-	private _debugCamera: ZylemCamera | null = null;
+	/** Editor view cameras, keyed by `editor:*` id. */
+	private _editorCameras: Map<string, ZylemCamera> = new Map();
 
-	/** Gameplay primary camera saved while the debug camera is active. */
-	private _preDebugPrimary: ZylemCamera | null = null;
+	/** Which editor views freeze rotation. */
+	private _lockedEditorIds = new Set<string>();
 
-	/** Scene anchor at world origin for debug orbit when nothing is selected. */
-	private _debugOrbitTargetAnchor: Object3D | null = null;
+	/** Game camera to restore when the editor releases the main view. */
+	private _rememberedGameCamera: ZylemCamera | null = null;
+
+	/**
+	 * True while an editor view is the main camera. Game calls to
+	 * {@link setActiveCamera} update {@link _rememberedGameCamera} and leave
+	 * the view on screen.
+	 */
+	private _editorViewLocked = false;
+
+	/** Game cameras whose orbit input was suspended for an editor view. */
+	private _suspendedOrbits = new Set<ZylemCamera>();
+
+	/** In-flight creation, so a second attach does not build a second set. */
+	private _editorCamerasPromise: Promise<void> | null = null;
 
 	/** Reference to the shared renderer manager */
 	private _rendererManager: RendererManager | null = null;
@@ -39,9 +119,7 @@ export class CameraManager {
 	/** Counter for auto-generated camera names */
 	private _autoNameCounter = 0;
 
-	constructor() {
-		// Debug camera is created lazily during setup when we have screen resolution
-	}
+	private _unregisterEditorHost: (() => void) | null = null;
 
 	/**
 	 * Get the list of currently active cameras.
@@ -57,18 +135,14 @@ export class CameraManager {
 		return this._activeCameras.length > 0 ? this._activeCameras[0] : null;
 	}
 
-	/**
-	 * Get the debug camera.
-	 */
-	get debugCamera(): ZylemCamera | null {
-		return this._debugCamera;
+	/** True while side, top, isometric, or free is the main view. */
+	isEditorViewActive(): boolean {
+		return this._editorViewLocked;
 	}
 
-	/**
-	 * Gameplay primary camera that was active before debug mode was enabled.
-	 */
-	get preDebugPrimary(): ZylemCamera | null {
-		return this._preDebugPrimary;
+	/** True after the four editor views have been created. */
+	hasEditorCameras(): boolean {
+		return this._editorCameras.size > 0;
 	}
 
 	/**
@@ -102,7 +176,6 @@ export class CameraManager {
 
 	/**
 	 * Remove a camera by name or reference.
-	 * Cannot remove the debug camera via this method.
 	 */
 	removeCamera(nameOrRef: string | ZylemCamera): boolean {
 		let name: string | undefined;
@@ -110,7 +183,6 @@ export class CameraManager {
 		if (typeof nameOrRef === 'string') {
 			name = nameOrRef;
 		} else {
-			// Find by reference
 			for (const [key, cam] of this.cameras.entries()) {
 				if (cam === nameOrRef) {
 					name = key;
@@ -124,19 +196,17 @@ export class CameraManager {
 		const camera = this.cameras.get(name);
 		if (!camera) return false;
 
-		// Prevent removing the debug camera
-		if (camera === this._debugCamera) {
-			console.warn('CameraManager: Cannot remove the debug camera');
-			return false;
-		}
-
 		this.cameras.delete(name);
 
-		// Remove from active cameras
 		const activeIndex = this._activeCameras.indexOf(camera);
 		if (activeIndex !== -1) {
 			this._activeCameras.splice(activeIndex, 1);
 		}
+
+		if (this._rememberedGameCamera === camera) {
+			this._rememberedGameCamera = null;
+		}
+		this._suspendedOrbits.delete(camera);
 
 		return true;
 	}
@@ -144,6 +214,9 @@ export class CameraManager {
 	/**
 	 * Set a camera as the primary active camera (replaces all active cameras
 	 * except additional viewport cameras).
+	 *
+	 * While an editor view owns the main view, a game camera is remembered
+	 * and the rendered camera does not change.
 	 *
 	 * @param nameOrRef Camera name or reference to activate
 	 */
@@ -154,13 +227,17 @@ export class CameraManager {
 			return false;
 		}
 
-		// Set as the sole active camera (keeping PiP cameras if any)
-		const pipCameras = this._activeCameras.filter(c => {
-			return c !== this._activeCameras[0] && c.viewport.width < 1;
-		});
+		if (this._editorViewLocked && !this.isEditorCamera(camera)) {
+			this._rememberedGameCamera = camera;
+			return true;
+		}
 
-		this._activeCameras = [camera, ...pipCameras];
-		return true;
+		if (!this.isEditorCamera(camera)) {
+			this._rememberedGameCamera = camera;
+			this.restoreOrbitFor(camera);
+		}
+
+		return this.commitActive(camera);
 	}
 
 	/**
@@ -200,64 +277,80 @@ export class CameraManager {
 
 	/**
 	 * Setup all cameras with the given scene and renderer manager.
-	 * Also creates the debug camera.
+	 * Editor view cameras are created here only when an editor is already attached.
 	 */
 	async setup(scene: Scene, rendererManager: RendererManager): Promise<void> {
 		this._sceneRef = scene;
 		this._rendererManager = rendererManager;
 
-		// Create the debug camera (registered in `cameras`, not activated)
-		this.createDebugCamera(rendererManager.screenResolution);
-
-		// Origin anchor for debug orbit when nothing is selected
-		this._debugOrbitTargetAnchor = new Object3D();
-		this._debugOrbitTargetAnchor.name = '__debug_orbit_target__';
-		scene.add(this._debugOrbitTargetAnchor);
-
-		// Setup all registered cameras (including __debug__)
 		for (const camera of this.cameras.values()) {
 			camera.setRendererManager(rendererManager);
 			await camera.setup(scene, rendererManager);
 		}
 
-		if (this._debugCamera && this._debugOrbitTargetAnchor) {
-			this._debugCamera.setDefaultOrbitTarget(this._debugOrbitTargetAnchor);
+		this._unregisterEditorHost = registerEditorCameraHost(this);
+		if (editorCamerasAreAttached()) {
+			await this.ensureEditorCameras();
 		}
 	}
 
 	/**
-	 * Switch the primary viewport to the debug orbit camera, remembering the
-	 * previous primary so gameplay cameras (e.g. first-person) can be restored.
+	 * Create side, top, isometric, and free cameras seeded from the current
+	 * game camera. Does not change which camera is rendering.
 	 */
-	activateDebugCamera(): boolean {
-		if (!this._debugCamera) return false;
-		const primary = this.primaryCamera;
-		if (primary === this._debugCamera) return true;
-		this._preDebugPrimary = primary;
-		const activated = this.setActiveCamera(this._debugCamera);
-		if (activated) {
-			this.seedDebugCameraPose(primary);
-		}
-		return activated;
+	ensureEditorCameras(): Promise<void> {
+		if (this._editorCameras.size > 0) return Promise.resolve();
+		if (this._editorCamerasPromise) return this._editorCamerasPromise;
+		this._editorCamerasPromise = this.createEditorCameras().finally(() => {
+			this._editorCamerasPromise = null;
+		});
+		return this._editorCamerasPromise;
 	}
 
 	/**
-	 * Restore the gameplay primary camera that was active before
-	 * {@link activateDebugCamera}.
+	 * Restore the game camera when an editor view is showing, then destroy
+	 * the four editor cameras.
 	 */
-	deactivateDebugCamera(): boolean {
-		if (!this._debugCamera) return false;
-		const restore = this._preDebugPrimary;
-		this._preDebugPrimary = null;
-		if (restore && restore !== this._debugCamera) {
-			return this.setActiveCamera(restore);
-		}
-		for (const cam of this.cameras.values()) {
-			if (cam !== this._debugCamera) {
-				return this.setActiveCamera(cam);
+	destroyEditorCameras(): void {
+		const showingEditor = this.primaryCamera !== null && this.isEditorCamera(this.primaryCamera);
+		this._editorViewLocked = false;
+		if (showingEditor) {
+			const restore = this.gameCameraToRestore();
+			if (restore) {
+				this.restoreOrbitFor(restore);
+				this.commitActive(restore);
 			}
 		}
-		return false;
+
+		for (const camera of this._editorCameras.values()) {
+			this.removeCamera(camera);
+			camera.destroy();
+		}
+		this._editorCameras.clear();
+		this._lockedEditorIds.clear();
+	}
+
+	/**
+	 * Switch the main view.
+	 *
+	 * `game` releases to the remembered game camera. Editor view ids show
+	 * that view. Any other id activates a game-registered camera and clears
+	 * the editor override.
+	 */
+	activateCameraById(id: string): boolean {
+		if (id === GAME_CAMERA_ID) {
+			const restore = this.gameCameraToRestore();
+			if (!restore) return false;
+			return this.showGameCamera(restore);
+		}
+
+		const editor = this._editorCameras.get(id);
+		if (editor) return this.showEditorCamera(id, editor);
+
+		const named = this.getCamera(id);
+		if (!named || this.isEditorCamera(named)) return false;
+		this._rememberedGameCamera = named;
+		return this.showGameCamera(named);
 	}
 
 	/**
@@ -329,57 +422,147 @@ export class CameraManager {
 	 * Dispose all cameras and cleanup.
 	 */
 	dispose(): void {
+		this._unregisterEditorHost?.();
+		this._unregisterEditorHost = null;
+		this._editorViewLocked = false;
+
 		for (const camera of this.cameras.values()) {
 			camera.destroy();
 		}
-		// __debug__ is registered in `cameras` when created; only destroy here
-		// if createDebugCamera never registered it.
-		if (this._debugCamera && !this.cameras.has('__debug__')) {
-			this._debugCamera.destroy();
-		}
 		this.cameras.clear();
 		this._activeCameras = [];
-		this._debugCamera = null;
-		this._preDebugPrimary = null;
-		if (this._debugOrbitTargetAnchor && this._sceneRef) {
-			this._sceneRef.remove(this._debugOrbitTargetAnchor);
-		}
-		this._debugOrbitTargetAnchor = null;
+		this._editorCameras.clear();
+		this._lockedEditorIds.clear();
+		this._rememberedGameCamera = null;
+		this._suspendedOrbits.clear();
 		this._rendererManager = null;
 		this._sceneRef = null;
 	}
 
-	/**
-	 * Create the always-available debug camera with orbit controls.
-	 * Registered for lookup/activation, but not added to the active list.
-	 */
-	private createDebugCamera(screenResolution: Vector2): void {
-		this._debugCamera = new ZylemCamera(Perspectives.ThirdPerson, screenResolution);
-		this._debugCamera.name = '__debug__';
-		this._debugCamera.isDebugViewCamera = true;
-		this._debugCamera.enableOrbitalControls();
-		this.cameras.set('__debug__', this._debugCamera);
-	}
+	private async createEditorCameras(): Promise<void> {
+		if (this._editorCameras.size > 0) return;
+		if (!this._sceneRef || !this._rendererManager) return;
 
-	/**
-	 * Seed the debug camera orbit pose on first activation, framing the origin
-	 * or offsetting from the saved gameplay primary.
-	 */
-	private seedDebugCameraPose(gameplayPrimary: ZylemCamera | null): void {
-		if (!this._debugCamera || this._debugCamera.isDebugOrbitPoseSeeded()) return;
-
-		const origin = new Vector3(0, 0, 0);
-		const defaultPosition = new Vector3(0, 6, 12);
-
-		if (gameplayPrimary && gameplayPrimary !== this._debugCamera) {
-			const camPos = gameplayPrimary.camera.position;
-			const offset = new Vector3().subVectors(camPos, origin);
-			if (offset.lengthSq() > 1) {
-				defaultPosition.copy(offset.normalize().multiplyScalar(12).add(new Vector3(0, 4, 0)));
-			}
+		const source = this.primaryCamera ?? this.ensureDefaultCamera();
+		if (!source.sceneRef) {
+			source.setRendererManager(this._rendererManager);
+			await source.setup(this._sceneRef, this._rendererManager);
 		}
 
-		this._debugCamera.seedDebugOrbitPose(defaultPosition, origin);
+		const framing = captureFraming(source.camera);
+		const resolution = this._rendererManager.screenResolution.clone();
+		const frustum = Math.max(framing.distance, 4);
+
+		if (!this.isEditorCamera(source)) {
+			this._rememberedGameCamera = source;
+		}
+
+		for (const spec of EDITOR_VIEWS) {
+			const camera = new ZylemCamera(spec.perspective, resolution, frustum);
+			camera._skipDebugOrbit = true;
+			const position = spec.position(framing.lookAt, framing.distance, source.camera.position);
+			const up = spec.up(source.camera.up);
+			camera.camera.up.copy(up);
+			camera.camera.position.copy(position);
+			camera.camera.lookAt(framing.lookAt);
+			if (camera.camera instanceof OrthographicCamera || camera.camera instanceof PerspectiveCamera) {
+				camera.camera.near = 0.1;
+				camera.camera.far = 2000;
+				camera.camera.updateProjectionMatrix();
+			}
+
+			this.addCamera(camera, spec.id);
+			this._editorCameras.set(spec.id, camera);
+			if (spec.lockRotation) this._lockedEditorIds.add(spec.id);
+
+			camera.setRendererManager(this._rendererManager);
+			await camera.setup(this._sceneRef, this._rendererManager);
+			camera.seedDebugOrbitPose(position, framing.lookAt);
+		}
+	}
+
+	private showEditorCamera(id: string, camera: ZylemCamera): boolean {
+		if (!this._editorViewLocked) {
+			const primary = this.primaryCamera;
+			if (primary && !this.isEditorCamera(primary)) {
+				this._rememberedGameCamera = primary;
+			}
+		}
+		this._editorViewLocked = true;
+		this.suspendOtherOrbits(camera);
+		this.syncEditorOrbit(id);
+		return this.commitActive(camera);
+	}
+
+	private showGameCamera(camera: ZylemCamera): boolean {
+		this._editorViewLocked = false;
+		this.syncEditorOrbit(null);
+		this.restoreOrbitFor(camera);
+		return this.commitActive(camera);
+	}
+
+	/** Enable orbit on the active editor view only. Inactive views keep their pose. */
+	private syncEditorOrbit(activeId: string | null): void {
+		for (const [id, camera] of this._editorCameras) {
+			if (id === activeId) {
+				camera.armEditorOrbit(this._lockedEditorIds.has(id));
+			} else {
+				camera.disarmEditorOrbit();
+			}
+		}
+	}
+
+	/** Stop game-camera orbit controls from sharing the canvas with an editor view. */
+	private suspendOtherOrbits(active: ZylemCamera): void {
+		for (const camera of this.cameras.values()) {
+			if (camera === active || this.isEditorCamera(camera)) continue;
+			if (!camera.isOrbitActive) continue;
+			camera.setOrbitInteractionEnabled(false);
+			this._suspendedOrbits.add(camera);
+		}
+	}
+
+	private restoreOrbitFor(camera: ZylemCamera): void {
+		if (!this._suspendedOrbits.has(camera)) return;
+		camera.setOrbitInteractionEnabled(true);
+		this._suspendedOrbits.delete(camera);
+	}
+
+	private gameCameraToRestore(): ZylemCamera | null {
+		if (this._rememberedGameCamera && this.cameraIsRegistered(this._rememberedGameCamera)) {
+			return this._rememberedGameCamera;
+		}
+		for (const camera of this.cameras.values()) {
+			if (!this.isEditorCamera(camera)) return camera;
+		}
+		return null;
+	}
+
+	private cameraIsRegistered(camera: ZylemCamera): boolean {
+		for (const candidate of this.cameras.values()) {
+			if (candidate === camera) return true;
+		}
+		return false;
+	}
+
+	private isEditorCamera(camera: ZylemCamera): boolean {
+		for (const candidate of this._editorCameras.values()) {
+			if (candidate === camera) return true;
+		}
+		return false;
+	}
+
+	/** Replace the primary camera and keep picture-in-picture viewports. */
+	private commitActive(camera: ZylemCamera): boolean {
+		const previous = this.primaryCamera;
+		const pipCameras = this._activeCameras.filter((candidate) => {
+			return candidate !== this._activeCameras[0] && candidate.viewport.width < 1;
+		});
+		this._activeCameras = [camera, ...pipCameras];
+		if (previous !== camera) {
+			this._rendererManager?.rebindPostProcessingCamera(camera.camera);
+		}
+		return true;
 	}
 
 	/**
@@ -389,10 +572,6 @@ export class CameraManager {
 		if (typeof nameOrRef === 'string') {
 			return this.cameras.get(nameOrRef) ?? null;
 		}
-		if (nameOrRef === this._debugCamera) {
-			return this._debugCamera;
-		}
-		// Check if the reference exists in our registry
 		for (const cam of this.cameras.values()) {
 			if (cam === nameOrRef) return cam;
 		}

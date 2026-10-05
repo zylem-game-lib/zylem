@@ -372,10 +372,23 @@ export interface LevelBuffer {
 }
 
 /**
- * Editor viewport latch. Top, side, and isometric lock debug-orbit rotation;
- * custom is free orbit. Space in the editor sends `custom` until release.
+ * Sentinel id for `camera:activate`. Releases the main view to the game
+ * camera the game last asked to show.
  */
-export type CameraViewPreset = 'top' | 'side' | 'isometric' | 'custom';
+export const GAME_CAMERA_ID = 'game';
+
+/**
+ * Editor view cameras. Created only while an editor is attached, one instance
+ * per view. `free` is the perspective orbit camera.
+ */
+export const EDITOR_CAMERAS = {
+	side: 'editor:side',
+	top: 'editor:top',
+	isometric: 'editor:isometric',
+	free: 'editor:free',
+} as const;
+
+export type EditorCameraName = (typeof EDITOR_CAMERAS)[keyof typeof EDITOR_CAMERAS];
 
 /** A camera pose in world space, for capturing framing from the viewport. */
 export interface CameraPosePayload {
@@ -460,8 +473,14 @@ export type EditorToGameMessages = {
 	'cutscene:unload': Record<string, never>;
 	/** Ask for the live camera's pose; answered by `camera:pose`. */
 	'camera:pose:get': { requestId: string };
-	/** Lock the debug orbit camera to a preset, or `custom` to unlock rotation. */
-	'camera:view:set': { preset: CameraViewPreset };
+	/**
+	 * Make `id` the main view.
+	 *
+	 * `game` releases to the remembered game camera. `editor:side`,
+	 * `editor:top`, `editor:isometric`, and `editor:free` are the editor
+	 * views. Any other id is a game-registered camera name.
+	 */
+	'camera:activate': { id: string };
 };
 
 /** Combined message map carried by a single bridge channel. */

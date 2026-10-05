@@ -6,8 +6,9 @@
  * hover/select/delete/spawn, the `DebugEntityCursor` highlight and the
  * `PlacementGhost` — is live whenever a tool is armed, so the toolbar's buttons
  * work on their own. The debug layer — the wasm simulation's collider
- * wireframes and the orbit camera — is the part `debugState.enabled` gates, and
- * is torn down when it goes off while the delegate stays alive to re-activate.
+ * wireframes — is the part `debugState.enabled` gates, and is torn down when
+ * it goes off while the delegate stays alive to re-activate. Debug mode does
+ * not switch cameras; picking and gizmos use whichever camera is rendering.
  *
  * Centralizes all of this so `ZylemStage` doesn't have to know about
  * raycasting, DOM input, or debug rendering.
@@ -16,8 +17,8 @@ import { Box3, BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments,
 import { subscribe } from 'valtio/vanilla';
 import { nanoid } from 'nanoid';
 import type { EntityApplySwatchPayload, SceneOperationPayload } from '@zylem/bridge';
+import { EDITOR_CAMERAS, editorCamerasAreAttached } from '../camera/editor-camera-session';
 import { ZylemStage } from './zylem-stage';
-import { StageCameraDebugDelegate } from './stage-camera-debug-delegate';
 import {
 	debugState,
 	getDebugTool,
@@ -84,7 +85,6 @@ export class StageDebugDelegate {
 	private debugCursor: DebugEntityCursor | null = null;
 	private placementGhost: PlacementGhost | null = null;
 	private debugLines: LineSegments | null = null;
-	private cameraDebugDelegate: StageCameraDebugDelegate | null = null;
 	private debugStateUnsubscribe: (() => void) | null = null;
 	private focusContextUnregister: (() => void) | null = null;
 	private entityResolverUnregister: (() => void) | null = null;
@@ -142,8 +142,18 @@ export class StageDebugDelegate {
 		this.focusContextUnregister = registerEntityFocusContext({
 			resolveEntity: (uuid) => this.resolveEntity(uuid),
 			frameObject: (object) => {
-				this.ensureCameraDebugDelegate();
-				this.getDebugViewCamera()?.frameObject(object);
+				const manager = this.stage.cameraManagerRef;
+				const frame = () => {
+					if (manager && !manager.isEditorViewActive() && manager.hasEditorCameras()) {
+						manager.activateCameraById(EDITOR_CAMERAS.free);
+					}
+					this.getDebugViewCamera()?.frameObject(object);
+				};
+				if (manager && editorCamerasAreAttached() && !manager.hasEditorCameras()) {
+					void manager.ensureEditorCameras().then(frame);
+					return;
+				}
+				frame();
 			},
 			ensureDebugReady: () => {
 				if (!debugState.enabled) {
@@ -166,10 +176,9 @@ export class StageDebugDelegate {
 		this.warnedMissingAddFactory = false;
 	}
 
-	/** Camera used for debug orbit / raycasts (active primary, usually `__debug__`). */
+	/** Camera used for raycasts and gizmos: whichever one is rendering. */
 	private getDebugViewCamera(): ZylemCamera | null {
 		return this.stage.cameraManagerRef?.primaryCamera
-			?? this.stage.cameraManagerRef?.debugCamera
 			?? this.stage.cameraRef
 			?? null;
 	}
@@ -207,16 +216,6 @@ export class StageDebugDelegate {
 		this.stage.entityDelegate.childrenMap.forEach((entity: BaseNode, uuid: string) => {
 			this.stage.entityDelegate.debugMap.set(uuid, entity);
 		});
-	}
-
-	private ensureCameraDebugDelegate(): void {
-		const debugCam = this.stage.cameraManagerRef?.debugCamera ?? null;
-		if (!debugCam) return;
-
-		if (!this.cameraDebugDelegate) {
-			this.cameraDebugDelegate = new StageCameraDebugDelegate(this.stage);
-		}
-		debugCam.setDebugDelegate(this.cameraDebugDelegate);
 	}
 
 	/**
@@ -280,40 +279,26 @@ export class StageDebugDelegate {
 		this.grid.setVisible(debugState.gridVisible);
 	}
 
-	/** Initialize DOM listeners and switch rendering to the debug orbit camera. */
+	/** Initialize DOM listeners. The rendering camera stays whatever the editor selected. */
 	private activate(): void {
 		if (!this.domListenersAttached) {
 			this.domListenersAttached = this.attachDomListeners();
 		}
 
 		this.populateDebugMap();
-		this.stage.cameraManagerRef?.activateDebugCamera();
-		const debugCam = this.stage.cameraManagerRef?.debugCamera ?? null;
-		this.rebindPostProcessing(debugCam);
-		this.ensureCameraDebugDelegate();
+		this.rebindPostProcessing(this.getDebugViewCamera());
 
 		if (document.pointerLockElement) {
 			document.exitPointerLock();
 		}
 	}
 
-	/** Tear down visuals and restore the gameplay primary camera. */
+	/** Tear down visuals without changing which camera is rendering. */
 	private deactivate(): void {
 		this.disposeDebugVisuals();
 		this.transformTool.cancelDrag();
 		this.grid.setVisible(false);
-
-		const debugCam = this.stage.cameraManagerRef?.debugCamera;
-		if (debugCam) {
-			debugCam.setDebugDelegate(null);
-		}
-		if (this.stage.cameraRef && this.stage.cameraRef !== debugCam) {
-			this.stage.cameraRef.setDebugDelegate(null);
-		}
-		this.cameraDebugDelegate = null;
-		this.stage.cameraManagerRef?.deactivateDebugCamera();
-		const restored = this.stage.cameraManagerRef?.primaryCamera ?? this.stage.cameraRef ?? null;
-		this.rebindPostProcessing(restored);
+		this.rebindPostProcessing(this.getDebugViewCamera());
 	}
 
 	private rebindPostProcessing(camera: ZylemCamera | null): void {

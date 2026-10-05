@@ -53,7 +53,7 @@ import {
 	setSnapSettings,
 	toggleSelectedEntityId,
 } from '../debug/debug-state';
-import { setCameraViewPreset, type CameraViewPreset } from '../camera/camera-view';
+import { activateAttachedCamera, setEditorCamerasAttached } from '../camera/editor-camera-session';
 import { focusEntity } from '../debug/entity-focus';
 import { streamLevel } from '../level/stream-level';
 import { eulerToQuaternion, quaternionToEuler } from '../core/transform-math';
@@ -301,20 +301,20 @@ function applySelectionCommand(uuids: string[], mode: EntitySelectMode): void {
 }
 
 /**
- * Listen for `camera:view:set`.
+ * Listen for `camera:activate`.
  *
  * The message is part of the bridge protocol. The cast keeps game-lib compiling
  * against a published `@zylem/bridge` that has not been rebuilt with it yet.
  */
-function onCameraViewSet(
+function onCameraActivate(
 	channel: BridgeChannel,
-	apply: (preset: CameraViewPreset) => void,
+	apply: (id: string) => void,
 ): () => void {
 	const listen = channel.on.bind(channel) as (
-		type: 'camera:view:set',
-		handler: (payload: { preset: CameraViewPreset }) => void,
+		type: 'camera:activate',
+		handler: (payload: { id: string }) => void,
 	) => () => void;
-	return listen('camera:view:set', ({ preset }) => apply(preset));
+	return listen('camera:activate', ({ id }) => apply(id));
 }
 
 export class GameBridge {
@@ -340,6 +340,9 @@ export class GameBridge {
 	 * not themselves recorded as new operations.
 	 */
 	private applyingSceneOperation = false;
+
+	/** Frame watch used when the channel cannot report subscriber removal. */
+	private editorCameraFrame = 0;
 
 	constructor() {
 		this.channel = getZylemBridge().channel;
@@ -451,13 +454,22 @@ export class GameBridge {
 				const pose = this.host?.cameraPose?.();
 				if (pose) this.channel.send('camera:pose', { requestId, ...pose });
 			}),
-			onCameraViewSet(this.channel, setCameraViewPreset),
+			onCameraActivate(this.channel, activateAttachedCamera),
+			this.onEditorAttached(() => {
+				this.attachEditorCameras();
+			}),
+			this.onEditorDetached(() => {
+				this.detachEditorCameras();
+			}),
 			// Mirror game-owned debug state back to the editor so in-scene
 			// selections and game-side debug toggles stay in sync.
 			subscribe(debugState, () => this.publishDebugStateChanges()),
 		);
 
 		this.publishDebugStateChanges();
+		if (this.editorIsAttached()) {
+			this.attachEditorCameras();
+		}
 		announceBridgeReady(announceTarget);
 	}
 
@@ -476,6 +488,7 @@ export class GameBridge {
 		this.unsubscribes = [];
 		this.host = null;
 		this.editorKnown = {};
+		this.detachEditorCameras();
 	}
 
 	/**
@@ -604,6 +617,78 @@ export class GameBridge {
 			if (this.channel.subscriberCount(other) > 0) return;
 			callback();
 		});
+	}
+
+	/**
+	 * Run a callback when the editor drops both entity subscriptions.
+	 *
+	 * Mirrors {@link onEditorAttached}: the first of the pair to unsubscribe
+	 * is the same editor finishing teardown, so the callback waits until the
+	 * other type is already at zero.
+	 *
+	 * @returns An unsubscribe function.
+	 */
+	onEditorDetached(callback: () => void): () => void {
+		const channel = this.channel as BridgeChannel & {
+			onSubscriberRemoved?: (
+				listener: (type: 'entity:upsert' | 'entity:thumbnail') => void,
+			) => () => void;
+		};
+		if (typeof channel.onSubscriberRemoved !== 'function') return () => {};
+		return channel.onSubscriberRemoved((type) => {
+			if (type !== 'entity:upsert' && type !== 'entity:thumbnail') return;
+			const other = type === 'entity:upsert'
+				? 'entity:thumbnail'
+				: 'entity:upsert';
+			if (this.channel.subscriberCount(other) > 0) return;
+			callback();
+		});
+	}
+
+	/** True when an editor is listening for entity data. */
+	private editorIsAttached(): boolean {
+		return (
+			this.channel.hasSubscribers('entity:upsert')
+			|| this.channel.hasSubscribers('entity:thumbnail')
+		);
+	}
+
+	/** Create the view cameras and, if needed, watch for the editor leaving. */
+	private attachEditorCameras(): void {
+		void setEditorCamerasAttached(true);
+		this.watchEditorDetached();
+	}
+
+	/** Destroy the view cameras and stop watching for editor removal. */
+	private detachEditorCameras(): void {
+		this.stopWatchingEditorDetached();
+		void setEditorCamerasAttached(false);
+	}
+
+	/**
+	 * Published bridge builds do not report the last subscriber leaving.
+	 * While the editor is attached, look again each frame and tear the view
+	 * cameras down once both entity subscriptions are gone.
+	 */
+	private watchEditorDetached(): void {
+		const channel = this.channel as { onSubscriberRemoved?: unknown };
+		if (typeof channel.onSubscriberRemoved === 'function') return;
+		if (this.editorCameraFrame) return;
+		const tick = () => {
+			if (!this.editorIsAttached()) {
+				this.editorCameraFrame = 0;
+				void setEditorCamerasAttached(false);
+				return;
+			}
+			this.editorCameraFrame = requestAnimationFrame(tick);
+		};
+		this.editorCameraFrame = requestAnimationFrame(tick);
+	}
+
+	private stopWatchingEditorDetached(): void {
+		if (!this.editorCameraFrame) return;
+		cancelAnimationFrame(this.editorCameraFrame);
+		this.editorCameraFrame = 0;
 	}
 
 	// ── Publish helpers (game → editor) ─────────────────────────────────────

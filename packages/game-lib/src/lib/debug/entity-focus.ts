@@ -30,8 +30,9 @@ export function registerEntityFocusContext(context: EntityFocusContext): () => v
 }
 
 /**
- * Select an entity by UUID and frame the debug camera to fit it.
- * Enables debug mode so orbit controls are active.
+ * Select an entity by UUID and frame the active editor camera to fit it.
+ * When the game camera is showing, the stage switches to the free editor
+ * camera first. Enables debug mode so the selection is visible.
  *
  * @returns true if the entity was found and framed
  */

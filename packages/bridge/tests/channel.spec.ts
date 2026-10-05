@@ -142,6 +142,21 @@ describe('BridgeChannel subscriber awareness', () => {
 		expect(onAdded).toHaveBeenCalledTimes(1);
 		expect(onAdded).toHaveBeenCalledWith('entity:thumbnail');
 	});
+
+	it('notifies when a type loses its last subscriber', () => {
+		const channel = new BridgeChannel();
+		const onRemoved = vi.fn();
+		channel.onSubscriberRemoved(onRemoved);
+
+		const first = channel.on('entity:upsert', () => {});
+		const second = channel.on('entity:upsert', () => {});
+		first();
+		expect(onRemoved).not.toHaveBeenCalled();
+
+		second();
+		expect(onRemoved).toHaveBeenCalledTimes(1);
+		expect(onRemoved).toHaveBeenCalledWith('entity:upsert');
+	});
 });
 
 describe('getZylemBridge', () => {

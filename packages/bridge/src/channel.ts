@@ -132,6 +132,7 @@ export class BridgeChannel extends EventTarget {
 	private subscriberCounts = new Map<BridgeMessageType, number>();
 	/** Notified when a type gains its first subscriber. */
 	private subscriberListeners = new Set<(type: BridgeMessageType) => void>();
+	private subscriberRemovedListeners = new Set<(type: BridgeMessageType) => void>();
 	private flushing = false;
 
 	/** Dispatch a message immediately. */
@@ -228,6 +229,13 @@ export class BridgeChannel extends EventTarget {
 			const count = this.subscriberCounts.get(type) ?? 0;
 			if (count <= 1) {
 				this.subscriberCounts.delete(type);
+				for (const notify of this.subscriberRemovedListeners) {
+					try {
+						notify(type);
+					} catch (error) {
+						console.error('[zylem/bridge] subscriber removal listener failed', error);
+					}
+				}
 			} else {
 				this.subscriberCounts.set(type, count - 1);
 			}
@@ -276,6 +284,19 @@ export class BridgeChannel extends EventTarget {
 		this.subscriberListeners.add(listener);
 		return () => {
 			this.subscriberListeners.delete(listener);
+		};
+	}
+
+	/**
+	 * Observe types losing their last subscriber, so a publisher can drop
+	 * work that only exists for an attached editor.
+	 *
+	 * @returns An unsubscribe function.
+	 */
+	onSubscriberRemoved(listener: (type: BridgeMessageType) => void): () => void {
+		this.subscriberRemovedListeners.add(listener);
+		return () => {
+			this.subscriberRemovedListeners.delete(listener);
 		};
 	}
 

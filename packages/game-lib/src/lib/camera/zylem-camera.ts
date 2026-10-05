@@ -249,6 +249,26 @@ export class ZylemCamera {
 	}
 
 	/**
+	 * Turn on orbit for an editor view camera.
+	 *
+	 * Locked views keep pan and zoom and freeze the seeded angle. The free
+	 * view can rotate. Controls stay allocated after this so a later visit
+	 * keeps the panned pose; use {@link setOrbitInteractionEnabled} to ignore
+	 * pointer input while another camera is showing.
+	 */
+	armEditorOrbit(lockRotation: boolean): void {
+		this._skipDebugOrbit = true;
+		this.orbitController?.setRotationLocked(lockRotation);
+		this.enableOrbitalControls();
+		this.setOrbitInteractionEnabled(true);
+	}
+
+	/** Ignore pointer input without disposing orbit controls or their pose. */
+	disarmEditorOrbit(): void {
+		this.setOrbitInteractionEnabled(false);
+	}
+
+	/**
 	 * Whether user orbital controls are enabled.
 	 */
 	get useOrbitalControls(): boolean {
