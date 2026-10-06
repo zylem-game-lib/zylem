@@ -92,8 +92,8 @@ importers:
         specifier: ^0.8.8
         version: 0.8.9(@types/react@19.3.0)(react@19.3.0)(three@0.185.1)
       '@zylem/bridge':
-        specifier: ^0.9.3
-        version: 0.9.3
+        specifier: ^0.9.4
+        version: 0.9.4
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -116,8 +116,8 @@ importers:
         specifier: 0.185.1
         version: 0.185.1
       tone:
-        specifier: ^15.1.22
-        version: 15.1.22
+        specifier: ^15.1.23
+        version: 15.1.23
       typescript-fsm:
         specifier: ^1.6.0
         version: 1.6.0
@@ -211,10 +211,10 @@ importers:
         specifier: ^3.10.2
         version: 3.10.2(@docusaurus/plugin-content-docs@3.10.2(@mdx-js/react@3.1.1(@types/react@19.3.0)(react@19.3.0))(@typescript/typescript6@6.0.2)(esbuild@0.27.7)(lightningcss@1.32.0)(postcss@8.5.15)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@mdx-js/react@3.1.1(@types/react@19.3.0)(react@19.3.0))(@mermaid-js/layout-elk@0.1.9(mermaid@12.0.0))(@typescript/typescript6@6.0.2)(esbuild@0.27.7)(lightningcss@1.32.0)(postcss@8.5.15)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@easyops-cn/docusaurus-search-local':
-        specifier: ^0.52.1
+        specifier: ^0.52.3
         version: 0.52.3(@docusaurus/theme-common@3.10.2(@docusaurus/plugin-content-docs@3.10.2(@mdx-js/react@3.1.1(@types/react@19.3.0)(react@19.3.0))(@typescript/typescript6@6.0.2)(esbuild@0.27.7)(lightningcss@1.32.0)(postcss@8.5.15)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(esbuild@0.27.7)(lightningcss@1.32.0)(postcss@8.5.15)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(@mdx-js/react@3.1.1(@types/react@19.3.0)(react@19.3.0))(@typescript/typescript6@6.0.2)(esbuild@0.27.7)(lightningcss@1.32.0)(postcss@8.5.15)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@mdx-js/react':
-        specifier: ^3.1.0
+        specifier: ^3.1.1
         version: 3.1.1(@types/react@19.3.0)(react@19.3.0)
       '@mermaid-js/layout-elk':
         specifier: ^0.1.9
@@ -226,10 +226,10 @@ importers:
         specifier: ^2.4.1
         version: 2.4.1(react@19.3.0)
       react:
-        specifier: ^19.1.1
+        specifier: ^19.1.9
         version: 19.3.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.1.9
         version: 19.3.0(react@19.3.0)
     devDependencies:
       '@docusaurus/module-type-aliases':
@@ -3320,8 +3320,8 @@ packages:
     peerDependencies:
       three: 0.185.1
 
-  '@zylem/bridge@0.9.3':
-    resolution: {integrity: sha512-DMN/8cRQySI/L0BqEot4XNgwwDPLDDi+Ed0pkwh6Q/KnrR2dvl6k5A5OQgI90j4QIsut23LM087I/xIRk/pDbg==}
+  '@zylem/bridge@0.9.4':
+    resolution: {integrity: sha512-Txkre/yEdH+s1L4t5yh+ctXuOAE/3PARcPkSE6JCTtuLFcq0BKUdD0+zFcian4Rynt1YQ/qCojqkuiUvexnAng==}
 
   '@zylem/runtime@0.8.8':
     resolution: {integrity: sha512-u2UNFe/zhvlc0jJZr/gLRDkdc/R7fayQqdqeRNV9mRiV8tFwEhaQX9+yw/Gn2F37dmrXYVtA/z0pDT6A0CKAAQ==}
@@ -7178,8 +7178,8 @@ packages:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
 
-  tone@15.1.22:
-    resolution: {integrity: sha512-TCScAGD4sLsama5DjvTUXlLDXSqPealhL64nsdV1hhr6frPWve0DeSo63AKnSJwgfg55fhvxj0iPPRwPN5o0ag==}
+  tone@15.1.23:
+    resolution: {integrity: sha512-/0BOh7TUTsDgMJfvQgXV93FolgV7yi9YFmBhk7kCkSs20ZsMNYcAU5xlwrMg/f8IAGQniWdWNounqHmaLDgaCA==}
 
   totalist@3.0.1:
     resolution: {integrity: sha512-sf4i37nQ2LBx4m3wB74y+ubopq6W/dIzXg0FDGjsYnZHVa1Da8FH853wlL2gtUhg+xJXjfk3kUZS3BRoQeoQBQ==}
@@ -11812,7 +11812,7 @@ snapshots:
       - '@types/react'
       - react
 
-  '@zylem/bridge@0.9.3': {}
+  '@zylem/bridge@0.9.4': {}
 
   '@zylem/runtime@0.8.8': {}
 
@@ -16275,7 +16275,7 @@ snapshots:
 
   toidentifier@1.0.1: {}
 
-  tone@15.1.22:
+  tone@15.1.23:
     dependencies:
       standardized-audio-context: 25.3.77
       tslib: 2.8.1
