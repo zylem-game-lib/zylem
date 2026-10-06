@@ -10,11 +10,22 @@ import {
 	type EditorCameraHost,
 } from './editor-camera-session';
 
+/**
+ * Depth slab for the isometric view. A negative near plane keeps geometry
+ * behind the camera, so the diagonal view is not cut by a clip plane through
+ * the scene.
+ */
+const ISOMETRIC_DEPTH = 10_000;
+
 /** Where an editor view sits relative to the game camera's look-at. */
 interface EditorViewSpec {
 	id: string;
 	perspective: PerspectiveType;
 	lockRotation: boolean;
+	/** Pan in the view plane. Side moves on YZ, top on XZ. */
+	screenSpacePan: boolean;
+	near?: number;
+	far?: number;
 	position(lookAt: Vector3, distance: number, gamePosition: Vector3): Vector3;
 	up(gameUp: Vector3): Vector3;
 }
@@ -24,6 +35,7 @@ const EDITOR_VIEWS: EditorViewSpec[] = [
 		id: EDITOR_CAMERAS.side,
 		perspective: Perspectives.Fixed2D,
 		lockRotation: true,
+		screenSpacePan: true,
 		position: (lookAt, distance) => new Vector3(lookAt.x + distance, lookAt.y, lookAt.z),
 		up: () => new Vector3(0, 1, 0),
 	},
@@ -31,6 +43,7 @@ const EDITOR_VIEWS: EditorViewSpec[] = [
 		id: EDITOR_CAMERAS.top,
 		perspective: Perspectives.TopDown,
 		lockRotation: true,
+		screenSpacePan: true,
 		position: (lookAt, distance) => new Vector3(lookAt.x, lookAt.y + distance, lookAt.z),
 		up: () => new Vector3(0, 0, -1),
 	},
@@ -38,6 +51,9 @@ const EDITOR_VIEWS: EditorViewSpec[] = [
 		id: EDITOR_CAMERAS.isometric,
 		perspective: Perspectives.Isometric,
 		lockRotation: true,
+		screenSpacePan: true,
+		near: -ISOMETRIC_DEPTH,
+		far: ISOMETRIC_DEPTH,
 		position: (lookAt, distance) => lookAt.clone().add(
 			new Vector3(1, 1, 1).normalize().multiplyScalar(distance),
 		),
@@ -47,6 +63,7 @@ const EDITOR_VIEWS: EditorViewSpec[] = [
 		id: EDITOR_CAMERAS.free,
 		perspective: Perspectives.ThirdPerson,
 		lockRotation: false,
+		screenSpacePan: false,
 		position: (lookAt, distance, gamePosition) => {
 			if (gamePosition.distanceTo(lookAt) > 0.5) return gamePosition.clone();
 			return lookAt.clone().add(new Vector3(0, distance * 0.5, distance));
@@ -93,6 +110,9 @@ export class CameraManager implements EditorCameraHost {
 
 	/** Which editor views freeze rotation. */
 	private _lockedEditorIds = new Set<string>();
+
+	/** Which editor views pan in screen space (the view plane). */
+	private _screenSpacePanIds = new Set<string>();
 
 	/** Game camera to restore when the editor releases the main view. */
 	private _rememberedGameCamera: ZylemCamera | null = null;
@@ -328,6 +348,7 @@ export class CameraManager implements EditorCameraHost {
 		}
 		this._editorCameras.clear();
 		this._lockedEditorIds.clear();
+		this._screenSpacePanIds.clear();
 	}
 
 	/**
@@ -433,6 +454,7 @@ export class CameraManager implements EditorCameraHost {
 		this._activeCameras = [];
 		this._editorCameras.clear();
 		this._lockedEditorIds.clear();
+		this._screenSpacePanIds.clear();
 		this._rememberedGameCamera = null;
 		this._suspendedOrbits.clear();
 		this._rendererManager = null;
@@ -466,14 +488,15 @@ export class CameraManager implements EditorCameraHost {
 			camera.camera.position.copy(position);
 			camera.camera.lookAt(framing.lookAt);
 			if (camera.camera instanceof OrthographicCamera || camera.camera instanceof PerspectiveCamera) {
-				camera.camera.near = 0.1;
-				camera.camera.far = 2000;
+				camera.camera.near = spec.near ?? 0.1;
+				camera.camera.far = spec.far ?? 2000;
 				camera.camera.updateProjectionMatrix();
 			}
 
 			this.addCamera(camera, spec.id);
 			this._editorCameras.set(spec.id, camera);
 			if (spec.lockRotation) this._lockedEditorIds.add(spec.id);
+			if (spec.screenSpacePan) this._screenSpacePanIds.add(spec.id);
 
 			camera.setRendererManager(this._rendererManager);
 			await camera.setup(this._sceneRef, this._rendererManager);
@@ -505,7 +528,7 @@ export class CameraManager implements EditorCameraHost {
 	private syncEditorOrbit(activeId: string | null): void {
 		for (const [id, camera] of this._editorCameras) {
 			if (id === activeId) {
-				camera.armEditorOrbit(this._lockedEditorIds.has(id));
+				camera.armEditorOrbit(this._lockedEditorIds.has(id), this._screenSpacePanIds.has(id));
 			} else {
 				camera.disarmEditorOrbit();
 			}

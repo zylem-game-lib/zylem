@@ -71,6 +71,13 @@ export class CameraOrbitController {
 	/** When true, orbit rotation stays at the pose captured when controls arm. */
 	private _rotationLocked = false;
 
+	/**
+	 * When true, pan follows the screen. Orthographic editor views need this:
+	 * panning orthogonal to `camera.up` slides them along the view axis, which
+	 * does not move the picture.
+	 */
+	private _screenSpacePanning = false;
+
 	/** Look-at captured by {@link seedOrbitPose}, used as the orbit target. */
 	private _seededLookAt: Vector3 | null = null;
 
@@ -223,6 +230,17 @@ export class CameraOrbitController {
 	}
 
 	/**
+	 * Pan in screen space, or in the plane orthogonal to the camera up vector.
+	 * A value set before orbit controls exist is applied when they are created.
+	 */
+	setScreenSpacePanning(enabled: boolean): void {
+		this._screenSpacePanning = enabled;
+		if (this.orbitControls) {
+			this.orbitControls.screenSpacePanning = enabled;
+		}
+	}
+
+	/**
 	 * Get the current debug state snapshot.
 	 */
 	get debugState(): CameraDebugState {
@@ -312,7 +330,7 @@ export class CameraOrbitController {
 		this.orbitControls = new OrbitControls(this.camera, this.domElement);
 		this.orbitControls.enableDamping = true;
 		this.orbitControls.dampingFactor = 0.05;
-		this.orbitControls.screenSpacePanning = false;
+		this.orbitControls.screenSpacePanning = this._screenSpacePanning;
 		this.orbitControls.minDistance = 1;
 		this.orbitControls.maxDistance = 500;
 		this.orbitControls.maxPolarAngle = Math.PI / 2;
