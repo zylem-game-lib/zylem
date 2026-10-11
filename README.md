@@ -20,8 +20,8 @@ External packages published to npm from their own repositories:
 
 - [@zylem/editor](https://github.com/zylem-game-lib/editor) - SolidJS-based debug UI and scene editor (consumes `@zylem/bridge` and peers on `@zylem/game-lib`)
 - [@zylem/ui](https://github.com/zylem-game-lib/ui) - Shared styles and Solid components
-- [@zylem/runtime](https://github.com/zylem-game-lib/runtime) - Rust/wasm simulation runtime (prebuilt `zylem_runtime.wasm` + TS loader)
-- [@zylem/behaviors](https://github.com/zylem-game-lib/behaviors) - Tree-shakable behavior descriptors and systems
+- [@zylem/runtime](https://github.com/zylem-game-lib/simulation/tree/main/packages/runtime) - Rust/wasm simulation runtime (prebuilt `zylem_runtime.wasm` + TS loader)
+- [@zylem/behaviors](https://github.com/zylem-game-lib/simulation/tree/main/packages/behaviors) - Tree-shakable behavior descriptors and systems
 - [@zylem/shaders](https://github.com/zylem-game-lib/shaders) - WebGPU TSL shaders and postprocessing
 - [@zylem/examples](https://github.com/zylem-game-lib/zylem-examples) - Example applications, playground, and SpacetimeDB server
 
