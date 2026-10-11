@@ -3,7 +3,8 @@
 // The WebGPU particle engine (`Particles` from @zylem/behaviors) builds gradient
 // and atlas lookup textures from a 2D canvas in its constructor. Headless DOM
 // environments (happy-dom) do not implement a 2D canvas context, so any test
-// that constructs a particle system would otherwise throw. This stub returns a
+// that constructs a particle system would otherwise throw. HUD entities (text,
+// rects) draw paths and text into a canvas the same way. This stub returns a
 // no-op context sufficient for headless (no-GPU) construction, while preserving
 // a real context if the environment happens to provide one.
 const proto = (globalThis as any).HTMLCanvasElement?.prototype;
@@ -27,6 +28,10 @@ if (proto && !(proto as any).__zylemCanvas2DStubbed) {
 				fillStyle: '#000000',
 				strokeStyle: '#000000',
 				globalAlpha: 1,
+				lineWidth: 1,
+				font: '10px sans-serif',
+				textAlign: 'start',
+				textBaseline: 'alphabetic',
 				createLinearGradient: () => ({ addColorStop: () => {} }),
 				createRadialGradient: () => ({ addColorStop: () => {} }),
 				fillRect: () => {},
@@ -34,6 +39,22 @@ if (proto && !(proto as any).__zylemCanvas2DStubbed) {
 				drawImage: () => {},
 				getImageData: () => ({ data: new Uint8ClampedArray(4) }),
 				putImageData: () => {},
+				save: () => {},
+				restore: () => {},
+				beginPath: () => {},
+				closePath: () => {},
+				moveTo: () => {},
+				lineTo: () => {},
+				quadraticCurveTo: () => {},
+				arc: () => {},
+				ellipse: () => {},
+				rect: () => {},
+				fill: () => {},
+				stroke: () => {},
+				clip: () => {},
+				measureText: (text: string) => ({ width: text.length * 8 }),
+				fillText: () => {},
+				strokeText: () => {},
 			} as unknown as CanvasRenderingContext2D;
 		}
 		return originalGetContext ? originalGetContext.call(this, contextType, ...rest) : null;

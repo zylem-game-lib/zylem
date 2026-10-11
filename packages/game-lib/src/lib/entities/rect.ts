@@ -21,8 +21,19 @@ import { createEntity } from './create';
 import { UpdateContext, SetupContext } from '../core/base-node-life-cycle';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { DebugDelegate } from './delegates/debug';
-import { Vec2Input, toThreeVector2 } from '../core/vector';
+import { Vec2Input, VEC2_ZERO, normalizeVec2, toThreeVector2 } from '../core/vector';
 import { deepMergeValues } from '../core/clone-utils';
+import {
+  anchorFractions,
+  anchoredPoint,
+  placeOnViewport,
+  viewportSize,
+  type ScreenAnchor,
+  type ScreenPoint,
+  type ViewportSize,
+} from './screen-anchor';
+
+export type RectShape = 'rect' | 'ellipse';
 
 type ZylemRectOptions = GameEntityOptions & {
   width?: number;
@@ -32,10 +43,24 @@ type ZylemRectOptions = GameEntityOptions & {
   strokeWidth?: number;
   radius?: number;
   padding?: number;
+  /** `ellipse` inscribes an ellipse in the width × height box and ignores `radius`. */
+  shape?: RectShape;
+  /** Image URL drawn over the fill, stretched to the box and clipped to the shape. */
+  image?: string | null;
   stickToViewport?: boolean;
+  /**
+   * Viewport point the rect is positioned from. When set, `screenPosition` is
+   * a pixel offset from it (+x right, +y down) and `anchor` defaults to the
+   * same point, so a `bottom-right` rect sits inside that corner.
+   */
+  screenAnchor?: ScreenAnchor;
   screenPosition?: Vec2Input;
   zDistance?: number;
-  anchor?: Vec2Input; // 0-100 per axis, default top-left (0,0)
+  /**
+   * Point of the rect placed on its screen position, 0-100 per axis. Defaults
+   * to the `screenAnchor` point when one is set, otherwise top-left (0,0).
+   */
+  anchor?: Vec2Input;
   bounds?: {
     screen?: { x: number; y: number; width: number; height: number };
     world?: {
@@ -57,10 +82,11 @@ const rectDefaults: ZylemRectOptions = {
   strokeWidth: 0,
   radius: 0,
   padding: 0,
+  shape: 'rect',
+  image: null,
   stickToViewport: true,
   screenPosition: new Vector2(24, 24),
   zDistance: 1,
-  anchor: new Vector2(0, 0),
 };
 
 export class RectBuilder extends EntityBuilder<ZylemRect, ZylemRectOptions> {
@@ -82,6 +108,8 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
   private _cameraRef: ZylemCamera | null = null;
   private _lastCanvasW: number = 0;
   private _lastCanvasH: number = 0;
+  private _image: CanvasImageSource | null = null;
+  private _imageSource: string | null = null;
 
   constructor(options?: ZylemRectOptions) {
     super();
@@ -89,10 +117,6 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
     this.options.screenPosition = toThreeVector2(
       this.options.screenPosition,
       rectDefaults.screenPosition,
-    );
-    this.options.anchor = toThreeVector2(
-      this.options.anchor,
-      rectDefaults.anchor,
     );
     this.group = new Group();
     this.createSprite();
@@ -112,11 +136,30 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
       transparent: true,
       depthTest: false,
       depthWrite: false,
-      alphaTest: 0.5,
+      alphaTest: 0.01,
     });
     this._sprite = new ThreeSprite(material);
     this.group?.add(this._sprite);
+    this.loadImage();
     this.redrawRect();
+  }
+
+  /** Starts loading `options.image` when it differs from what is drawn. */
+  private loadImage() {
+    const source = this.options.image || null;
+    if (source === this._imageSource) return;
+    this._imageSource = source;
+    this._image = null;
+    if (!source) return;
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      // `updateRect` may have switched images while this one was loading.
+      if (this._imageSource !== source) return;
+      this._image = image;
+      this.redrawRect();
+    };
+    image.src = source;
   }
 
   private redrawRect() {
@@ -145,7 +188,17 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
     const rectH = Math.floor(height);
 
     this._ctx.beginPath();
-    if (radius > 0) {
+    if (this.options.shape === 'ellipse') {
+      this._ctx.ellipse(
+        rectX + rectW / 2,
+        rectY + rectH / 2,
+        rectW / 2,
+        rectH / 2,
+        0,
+        0,
+        Math.PI * 2,
+      );
+    } else if (radius > 0) {
       this.roundedRectPath(this._ctx, rectX, rectY, rectW, rectH, radius);
     } else {
       this._ctx.rect(rectX, rectY, rectW, rectH);
@@ -154,6 +207,14 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
     if (this.options.fillColor) {
       this._ctx.fillStyle = this.toCssColor(this.options.fillColor);
       this._ctx.fill();
+    }
+
+    if (this._image) {
+      // The path survives save/restore, so the stroke below still follows it.
+      this._ctx.save();
+      this._ctx.clip();
+      this._ctx.drawImage(this._image, rectX, rectY, rectW, rectH);
+      this._ctx.restore();
     }
 
     if (this.options.strokeColor && strokeWidth > 0) {
@@ -225,26 +286,6 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
     return `#${c.getHexString()}`;
   }
 
-  /**
-   * Get the viewport resolution from the renderer DOM element,
-   * falling back to the camera's screenResolution if the renderer
-   * is not available (e.g. when using the new RendererManager path).
-   */
-  private getResolution(): { width: number; height: number } {
-    try {
-      const dom = this._cameraRef?.renderer?.domElement;
-      if (dom) {
-        return { width: dom.clientWidth || 1, height: dom.clientHeight || 1 };
-      }
-    } catch {
-      /* renderer not available */
-    }
-    return {
-      width: this._cameraRef?.screenResolution?.x ?? 1,
-      height: this._cameraRef?.screenResolution?.y ?? 1,
-    };
-  }
-
   private rectSetup(params: SetupContext<ZylemRectOptions>) {
     this._cameraRef = (params.camera as unknown) as ZylemCamera | null;
     if (this.options.stickToViewport && this._cameraRef) {
@@ -301,62 +342,57 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
     }
   }
 
-  private updateStickyTransform() {
-    if (!this._sprite || !this._cameraRef) return;
-    const camera = this._cameraRef.camera;
-    const { width, height } = this.getResolution();
-    const screenPosition = toThreeVector2(
+  /** Where the rect's anchor goes on screen, in pixels from the top-left. */
+  private screenPoint(viewport: ViewportSize): ScreenPoint {
+    const position = normalizeVec2(
       this.options.screenPosition,
       rectDefaults.screenPosition,
     );
-    const px = screenPosition.x;
-    const py = screenPosition.y;
-    const zDist = Math.max(0.001, this.options.zDistance ?? 1);
-
-    let worldHalfW = 1;
-    let worldHalfH = 1;
-    if ((camera as PerspectiveCamera).isPerspectiveCamera) {
-      const pc = camera as PerspectiveCamera;
-      const halfH = Math.tan((pc.fov * Math.PI) / 180 / 2) * zDist;
-      const halfW = halfH * pc.aspect;
-      worldHalfW = halfW;
-      worldHalfH = halfH;
-    } else if ((camera as OrthographicCamera).isOrthographicCamera) {
-      const oc = camera as OrthographicCamera;
-      worldHalfW = (oc.right - oc.left) / 2;
-      worldHalfH = (oc.top - oc.bottom) / 2;
+    // Bounds resolve to an absolute top-left box, so they ignore the anchor.
+    if (this.options.screenAnchor && !this.options.bounds) {
+      return anchoredPoint(this.options.screenAnchor, position, viewport);
     }
+    return position;
+  }
 
-    const ndcX = (px / width) * 2 - 1;
-    const ndcY = 1 - (py / height) * 2;
-    const localX = ndcX * worldHalfW;
-    const localY = ndcY * worldHalfH;
-
-    let scaleX = 1;
-    let scaleY = 1;
-    if (this._canvas) {
-      const planeH = worldHalfH * 2;
-      const unitsPerPixel = planeH / height;
-      const pixelH = this._canvas.height;
-      scaleY = Math.max(0.0001, pixelH * unitsPerPixel);
-      const aspect = this._canvas.width / this._canvas.height;
-      scaleX = scaleY * aspect;
-      this._sprite.scale.set(scaleX, scaleY, 1);
-      if (this._mesh) this._mesh.scale.set(scaleX, scaleY, 1);
+  /** Point of the rect placed on its screen position, as 0..1 fractions of its box. */
+  private pivot(): ScreenPoint {
+    if (this.options.anchor != null) {
+      const anchor = normalizeVec2(this.options.anchor, VEC2_ZERO);
+      return {
+        x: Math.min(100, Math.max(0, anchor.x)) / 100,
+        y: Math.min(100, Math.max(0, anchor.y)) / 100,
+      };
     }
+    return this.options.screenAnchor
+      ? anchorFractions(this.options.screenAnchor)
+      : { x: 0, y: 0 };
+  }
 
-    const anchor = toThreeVector2(this.options.anchor, rectDefaults.anchor);
-    const ax = Math.min(100, Math.max(0, anchor.x)) / 100; // 0..1
-    const ay = Math.min(100, Math.max(0, anchor.y)) / 100; // 0..1
-    const offsetX = (0.5 - ax) * scaleX;
-    const offsetY = (ay - 0.5) * scaleY;
-    this.group?.position.set(localX + offsetX, localY + offsetY, -zDist);
+  private updateStickyTransform() {
+    if (!this._sprite || !this._cameraRef || !this._canvas) return;
+    const viewport = viewportSize(this._cameraRef);
+    const placement = placeOnViewport({
+      camera: this._cameraRef.camera as PerspectiveCamera | OrthographicCamera,
+      viewport,
+      point: this.screenPoint(viewport),
+      pivot: this.pivot(),
+      size: { width: this._canvas.width, height: this._canvas.height },
+      zDistance: this.options.zDistance ?? 1,
+    });
+    this._sprite.scale.set(placement.scale.x, placement.scale.y, 1);
+    if (this._mesh) this._mesh.scale.set(placement.scale.x, placement.scale.y, 1);
+    this.group?.position.set(
+      placement.position.x,
+      placement.position.y,
+      placement.position.z,
+    );
   }
 
   private worldToScreen(point: Vector3) {
     if (!this._cameraRef) return { x: 0, y: 0 };
     const camera = this._cameraRef.camera;
-    const { width, height } = this.getResolution();
+    const { width, height } = viewportSize(this._cameraRef);
     const v = point.clone().project(camera);
     const x = ((v.x + 1) / 2) * width;
     const y = ((1 - v.y) / 2) * height;
@@ -393,10 +429,13 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
         | 'strokeColor'
         | 'strokeWidth'
         | 'radius'
+        | 'shape'
+        | 'image'
       >
     >,
   ) {
     this.options = { ...this.options, ...options } as ZylemRectOptions;
+    this.loadImage();
     this.redrawRect();
     if (this.options.stickToViewport && this._cameraRef) {
       this.updateStickyTransform();
@@ -412,6 +451,7 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
       type: String(ZylemRect.type),
       width: this.options.width ?? 0,
       height: this.options.height ?? 0,
+      shape: this.options.shape ?? 'rect',
       sticky: this.options.stickToViewport,
     };
   }

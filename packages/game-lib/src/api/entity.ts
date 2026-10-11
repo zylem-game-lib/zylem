@@ -13,7 +13,7 @@ export type { OnHeldParams, OnEnterParams, OnExitParams } from '../lib/entities/
 export { createActor, ZylemActor, ACTOR_TYPE } from '../lib/entities/actor';
 export type { CollisionShapeType } from '../lib/entities/actor';
 export { createText, ZylemText, TEXT_TYPE } from '../lib/entities/text';
-export { createRect, ZylemRect, RECT_TYPE } from '../lib/entities/rect';
+export { createRect, ZylemRect, RECT_TYPE, type RectShape } from '../lib/entities/rect';
 export { createDisk, ZylemDisk, DISK_TYPE } from '../lib/entities/disk';
 export { createCone, ZylemCone, CONE_TYPE } from '../lib/entities/cone';
 export { createPyramid, ZylemPyramid, PYRAMID_TYPE } from '../lib/entities/pyramid';
@@ -54,8 +54,8 @@ export {
 	createCooldownIcon,
 	type IconSize,
 	type IconSizePreset,
-	type ScreenAnchor,
 } from '../lib/entities/cooldown-icon';
+export type { ScreenAnchor } from '../lib/entities/screen-anchor';
 export { destroy } from '../lib/entities/destroy';
 
 // Component factories for composable entity API

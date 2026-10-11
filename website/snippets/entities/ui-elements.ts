@@ -20,6 +20,18 @@ const label = createText({
 	stickToViewport: true,
 });
 
+const portrait = createRect({
+	name: 'hud-portrait',
+	shape: 'ellipse',
+	width: 64,
+	height: 64,
+	image: '/assets/ui/hero.png',
+	strokeColor: '#ffffff',
+	strokeWidth: 2,
+	screenAnchor: 'top-right',
+	screenPosition: { x: -12, y: 12 },
+});
+
 const attackIcon = createCooldownIcon({
 	name: 'attack-icon',
 	cooldown: 'attack',
@@ -29,4 +41,4 @@ const attackIcon = createCooldownIcon({
 	iconSize: 'md',
 });
 
-createGame(panel, label, attackIcon).start();
+createGame(panel, label, portrait, attackIcon).start();

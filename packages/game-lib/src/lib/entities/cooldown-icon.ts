@@ -37,38 +37,12 @@ import {
   toThreeVector2,
 } from '../core/vector';
 import { deepMergeValues } from '../core/clone-utils';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Screen anchor system
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Reference point on the viewport for positioning UI elements.
- * The offset in `screenPosition` is applied relative to this anchor.
- */
-export type ScreenAnchor =
-  | 'top-left'
-  | 'top-center'
-  | 'top-right'
-  | 'center-left'
-  | 'center'
-  | 'center-right'
-  | 'bottom-left'
-  | 'bottom-center'
-  | 'bottom-right';
-
-/** Fractional viewport coordinates for each anchor point. */
-const ANCHOR_FRACTIONS: Record<ScreenAnchor, { fx: number; fy: number }> = {
-  'top-left': { fx: 0, fy: 0 },
-  'top-center': { fx: 0.5, fy: 0 },
-  'top-right': { fx: 1, fy: 0 },
-  'center-left': { fx: 0, fy: 0.5 },
-  center: { fx: 0.5, fy: 0.5 },
-  'center-right': { fx: 1, fy: 0.5 },
-  'bottom-left': { fx: 0, fy: 1 },
-  'bottom-center': { fx: 0.5, fy: 1 },
-  'bottom-right': { fx: 1, fy: 1 },
-};
+import {
+  anchoredPoint,
+  placeOnViewport,
+  viewportSize,
+  type ScreenAnchor,
+} from './screen-anchor';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon size unit system
@@ -301,21 +275,6 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
     return `#${c.getHexString()}`;
   }
 
-  private getResolution(): { width: number; height: number } {
-    try {
-      const dom = this._cameraRef?.renderer?.domElement;
-      if (dom) {
-        return { width: dom.clientWidth || 1, height: dom.clientHeight || 1 };
-      }
-    } catch {
-      /* renderer not available */
-    }
-    return {
-      width: this._cameraRef?.screenResolution?.x ?? 1,
-      height: this._cameraRef?.screenResolution?.y ?? 1,
-    };
-  }
-
   private iconSetup(params: SetupContext<ZylemCooldownIconOptions>): void {
     // Recreate sprite resources if they were disposed by a previous cleanup
     if (!this._sprite) {
@@ -348,27 +307,6 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
   }
 
   /**
-   * Resolve screen position to pixels.
-   * Computes the anchor point in pixels, then adds the view-unit offset.
-   */
-  private resolveScreenPosition(
-    width: number,
-    height: number,
-  ): { px: number; py: number } {
-    const anchor = this.options.screenAnchor ?? 'top-left';
-    const pos = normalizeVec2(this.options.screenPosition, VEC2_ZERO);
-    const ox = pos.x;
-    const oy = pos.y;
-
-    const { fx, fy } = ANCHOR_FRACTIONS[anchor];
-    const ax = fx * width;
-    const ay = fy * height;
-
-    const pxPerUnit = height / VIEW_UNITS_HEIGHT;
-    return { px: ax + ox * pxPerUnit, py: ay + oy * pxPerUnit };
-  }
-
-  /**
    * Resolve `iconSize` to screen pixels using the view-unit grid.
    * Viewport height = {@link VIEW_UNITS_HEIGHT} units; width scales with aspect ratio.
    */
@@ -389,52 +327,30 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
     return { widthPx: w * pxPerUnit, heightPx: h * pxPerUnit };
   }
 
-  /** Compute the world-space half-extents at a given distance from the camera. */
-  private computeWorldExtents(
-    camera: PerspectiveCamera | OrthographicCamera,
-    zDist: number,
-  ) {
-    let worldHalfW = 1;
-    let worldHalfH = 1;
-    if ((camera as PerspectiveCamera).isPerspectiveCamera) {
-      const pc = camera as PerspectiveCamera;
-      const halfH = Math.tan((pc.fov * Math.PI) / 180 / 2) * zDist;
-      const halfW = halfH * pc.aspect;
-      worldHalfW = halfW;
-      worldHalfH = halfH;
-    } else if ((camera as OrthographicCamera).isOrthographicCamera) {
-      const oc = camera as OrthographicCamera;
-      worldHalfW = (oc.right - oc.left) / 2;
-      worldHalfH = (oc.top - oc.bottom) / 2;
-    }
-    return { worldHalfW, worldHalfH };
-  }
-
   private updateStickyTransform(): void {
     if (!this._sprite || !this._cameraRef) return;
-    const camera = this._cameraRef.camera as
-      | PerspectiveCamera
-      | OrthographicCamera;
-    const { width, height } = this.getResolution();
-    const { px, py } = this.resolveScreenPosition(width, height);
-    const zDist = Math.max(0.001, this.options.zDistance ?? 1);
-    const { worldHalfW, worldHalfH } = this.computeWorldExtents(camera, zDist);
-
-    const ndcX = (px / width) * 2 - 1;
-    const ndcY = 1 - (py / height) * 2;
-    const localX = ndcX * worldHalfW;
-    const localY = ndcY * worldHalfH;
-
-    {
-      const planeH = worldHalfH * 2;
-      const unitsPerPixel = planeH / height;
-      const { widthPx, heightPx } = this.resolveIconSize(height);
-      const scaleX = Math.max(0.0001, widthPx * unitsPerPixel);
-      const scaleY = Math.max(0.0001, heightPx * unitsPerPixel);
-      this._sprite.scale.set(scaleX, scaleY, 1);
-    }
-
-    this.group?.position.set(localX, localY, -zDist);
+    const viewport = viewportSize(this._cameraRef);
+    const pxPerUnit = viewport.height / VIEW_UNITS_HEIGHT;
+    const offset = normalizeVec2(this.options.screenPosition, VEC2_ZERO);
+    const { widthPx, heightPx } = this.resolveIconSize(viewport.height);
+    const placement = placeOnViewport({
+      camera: this._cameraRef.camera as PerspectiveCamera | OrthographicCamera,
+      viewport,
+      point: anchoredPoint(
+        this.options.screenAnchor ?? 'top-left',
+        { x: offset.x * pxPerUnit, y: offset.y * pxPerUnit },
+        viewport,
+      ),
+      pivot: { x: 0.5, y: 0.5 },
+      size: { width: widthPx, height: heightPx },
+      zDistance: this.options.zDistance ?? 1,
+    });
+    this._sprite.scale.set(placement.scale.x, placement.scale.y, 1);
+    this.group?.position.set(
+      placement.position.x,
+      placement.position.y,
+      placement.position.z,
+    );
   }
 
   /**

@@ -20,6 +20,7 @@ const scoreLabel = createText({
 	name: 'score',
 	text: 'Score: 0',
 	stickToViewport: true,
+	screenAnchor: 'top-left',
 	screenPosition: { x: 16, y: 16 },
 });
 

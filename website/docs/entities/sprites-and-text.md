@@ -22,6 +22,7 @@ const scoreLabel = createText({
   name: 'score',
   text: 'Score: 0',
   stickToViewport: true,
+  screenAnchor: 'top-left',
   screenPosition: { x: 16, y: 16 },
 });
 
@@ -52,7 +53,8 @@ Use [SPRITE_TYPE](/docs/api/entity/variables/SPRITE_TYPE) with `getEntityByName`
 Text entities default to **viewport-attached** sprites (`stickToViewport: true`):
 
 - `text`, `fontFamily`, `fontSize`, `fontColor`, `backgroundColor`, `padding`
-- `screenPosition` — offset in pixels from the anchor corner
+- `screenAnchor` — one of nine viewport points (`top-left` through `bottom-right`, see [Screen anchors](/docs/entities/ui-elements#screen-anchors)). The text aligns to it, so `top-right` text ends at that corner.
+- `screenPosition` — with `screenAnchor`, a pixel offset from it (+y is down). Without one, the point the text centers on, in pixels or as 0–1 fractions of the viewport.
 - `zDistance` — depth ordering among HUD layers
 
 Call [updateText](/docs/api/entity/classes/ZylemText#updatetext) whenever the string changes; the entity redraws its canvas texture on the next update.

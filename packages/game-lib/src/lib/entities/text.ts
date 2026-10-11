@@ -19,6 +19,15 @@ import { ZylemCamera } from '../camera/zylem-camera';
 import { DebugDelegate } from './delegates/debug';
 import { Vec2Input, toThreeVector2 } from '../core/vector';
 import { deepMergeValues } from '../core/clone-utils';
+import {
+  anchorFractions,
+  anchoredPoint,
+  placeOnViewport,
+  viewportSize,
+  type ScreenAnchor,
+  type ScreenPoint,
+  type ViewportSize,
+} from './screen-anchor';
 
 type ZylemTextOptions = GameEntityOptions & {
   text?: string;
@@ -28,6 +37,14 @@ type ZylemTextOptions = GameEntityOptions & {
   backgroundColor?: Color | string | null;
   padding?: number;
   stickToViewport?: boolean;
+  /**
+   * Viewport point the text is positioned from. When set, `screenPosition` is
+   * a pixel offset from it (+x right, +y down) and the text aligns to the same
+   * point, so `top-right` text ends at that corner. Without it,
+   * `screenPosition` is the text's centre, in pixels or as 0..1 fractions of
+   * the viewport.
+   */
+  screenAnchor?: ScreenAnchor;
   screenPosition?: Vec2Input;
   zDistance?: number;
 };
@@ -211,51 +228,21 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
     }
   }
 
-  private getResolution() {
-    return {
-      width: this._cameraRef?.screenResolution.x ?? 1,
-      height: this._cameraRef?.screenResolution.y ?? 1,
-    };
-  }
-
-  private getScreenPixels(sp: Vector2, width: number, height: number) {
-    const isPercentX = sp.x >= 0 && sp.x <= 1;
-    const isPercentY = sp.y >= 0 && sp.y <= 1;
-    return {
-      px: isPercentX ? sp.x * width : sp.x,
-      py: isPercentY ? sp.y * height : sp.y,
-    };
-  }
-
-  private computeWorldExtents(
-    camera: PerspectiveCamera | OrthographicCamera,
-    zDist: number,
-  ) {
-    let worldHalfW = 1;
-    let worldHalfH = 1;
-    if ((camera as PerspectiveCamera).isPerspectiveCamera) {
-      const pc = camera as PerspectiveCamera;
-      const halfH = Math.tan((pc.fov * Math.PI) / 180 / 2) * zDist;
-      const halfW = halfH * pc.aspect;
-      worldHalfW = halfW;
-      worldHalfH = halfH;
-    } else if ((camera as OrthographicCamera).isOrthographicCamera) {
-      const oc = camera as OrthographicCamera;
-      worldHalfW = (oc.right - oc.left) / 2;
-      worldHalfH = (oc.top - oc.bottom) / 2;
+  /** Where the text's pivot goes on screen, in pixels from the top-left. */
+  private screenPoint(viewport: ViewportSize): ScreenPoint {
+    const position = toThreeVector2(
+      this.options.screenPosition,
+      textDefaults.screenPosition,
+    );
+    if (this.options.screenAnchor) {
+      return anchoredPoint(this.options.screenAnchor, position, viewport);
     }
-    return { worldHalfW, worldHalfH };
-  }
-
-  private updateSpriteScale(worldHalfH: number, viewportHeight: number) {
-    if (!this._canvas || !this._sprite) return;
-    const planeH = worldHalfH * 2;
-    const unitsPerPixel = planeH / viewportHeight;
-    const pixelH = this._canvas.height;
-    const scaleY = Math.max(0.0001, pixelH * unitsPerPixel);
-    const aspect = this._canvas.width / this._canvas.height;
-    const scaleX = scaleY * aspect;
-    this._sprite.scale.set(scaleX, scaleY, 1);
+    const isFractionX = position.x >= 0 && position.x <= 1;
+    const isFractionY = position.y >= 0 && position.y <= 1;
+    return {
+      x: isFractionX ? position.x * viewport.width : position.x,
+      y: isFractionY ? position.y * viewport.height : position.y,
+    };
   }
 
   private updateWorldSpriteScale() {
@@ -268,25 +255,24 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
   }
 
   private updateStickyTransform() {
-    if (!this._sprite || !this._cameraRef) return;
-    const camera = this._cameraRef.camera as
-      | PerspectiveCamera
-      | OrthographicCamera;
-    const { width, height } = this.getResolution();
-    const sp = toThreeVector2(
-      this.options.screenPosition,
-      textDefaults.screenPosition,
+    if (!this._sprite || !this._cameraRef || !this._canvas) return;
+    const viewport = viewportSize(this._cameraRef);
+    const placement = placeOnViewport({
+      camera: this._cameraRef.camera as PerspectiveCamera | OrthographicCamera,
+      viewport,
+      point: this.screenPoint(viewport),
+      pivot: this.options.screenAnchor
+        ? anchorFractions(this.options.screenAnchor)
+        : { x: 0.5, y: 0.5 },
+      size: { width: this._canvas.width, height: this._canvas.height },
+      zDistance: this.options.zDistance ?? 1,
+    });
+    this._sprite.scale.set(placement.scale.x, placement.scale.y, 1);
+    this.group?.position.set(
+      placement.position.x,
+      placement.position.y,
+      placement.position.z,
     );
-    const { px, py } = this.getScreenPixels(sp, width, height);
-    const zDist = Math.max(0.001, this.options.zDistance ?? 1);
-    const { worldHalfW, worldHalfH } = this.computeWorldExtents(camera, zDist);
-
-    const ndcX = (px / width) * 2 - 1;
-    const ndcY = 1 - (py / height) * 2;
-    const localX = ndcX * worldHalfW;
-    const localY = ndcY * worldHalfH;
-    this.group?.position.set(localX, localY, -zDist);
-    this.updateSpriteScale(worldHalfH, height);
   }
 
   updateText(_text: string) {
