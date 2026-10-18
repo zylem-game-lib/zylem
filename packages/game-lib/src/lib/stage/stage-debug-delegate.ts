@@ -16,7 +16,9 @@
 import { Box3, BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments, Raycaster, Vector2, Vector3 } from 'three';
 import { subscribe } from 'valtio/vanilla';
 import { nanoid } from 'nanoid';
-import type { EntityApplySwatchPayload, SceneOperationPayload } from '@zylem/bridge';
+import { getZylemBridge, type EntityApplySwatchPayload, type SceneOperationPayload } from '@zylem/bridge';
+import { StageBodyKind, type EntityHandle } from '@zylem/behaviors/core';
+import type { LevelDocument, LevelSyncPayload } from '../level/level-types';
 import { EDITOR_CAMERAS, editorCamerasAreAttached } from '../camera/editor-camera-session';
 import { ZylemStage } from './zylem-stage';
 import {
@@ -38,6 +40,8 @@ import {
 import { registerEntityFocusContext } from '../debug/entity-focus';
 import { resolveSelectionBounds } from '../debug/selection-bounds';
 import { publishGameNotice, publishSceneOperation } from '../bridge/game-bridge';
+import { LevelSession } from '../level/level-session';
+import { createZone } from '../entities/zone';
 import { ConstructionGrid } from '../debug/construction-grid';
 import { getEntityType } from '../entities/entity-registry';
 import { DebugEntityCursor } from './debug-entity-cursor';
@@ -97,6 +101,9 @@ export class StageDebugDelegate {
 	private selectionBoundsPool: Box3[] = [];
 	private hoverBounds = new Box3();
 	private grid = new ConstructionGrid();
+	private levelSession: LevelSession;
+	/** The press belongs to the level session, through pointerup. */
+	private levelPointer = false;
 	private lastTool: string | null = null;
 	/** Element the current gizmo drag captured, so pointerup is never missed. */
 	private capturedPointer: { element: HTMLElement; pointerId: number } | null = null;
@@ -126,6 +133,8 @@ export class StageDebugDelegate {
 			getCamera: () => this.getDebugViewCamera()?.camera ?? null,
 			forEachEntity: (visit) => this.forEachSelectableEntity(visit),
 		});
+
+		this.levelSession = new LevelSession(this.levelSessionHost());
 
 		// Self-managing: sync with current state then subscribe for changes.
 		// `debugState` also carries per-frame hover/selection writes, so only
@@ -174,6 +183,89 @@ export class StageDebugDelegate {
 	setAddEntityFactory(factory: AddEntityFactory | null): void {
 		this.options.addEntityFactory = factory;
 		this.warnedMissingAddFactory = false;
+	}
+
+	/** Show the level document as an edit preview. Brush faces, no collision. */
+	syncLevel(payload: LevelSyncPayload): void {
+		this.levelSession.sync(payload);
+		this.syncGrid();
+	}
+
+	/** Respawn the document for play: hull collision, hidden brush faces, live zones. */
+	playLevel(document: LevelDocument): void {
+		this.levelSession.play(document);
+		this.syncGrid();
+	}
+
+	/** Remove the preview and any play collision. Stage entities stay. */
+	closeLevel(): void {
+		this.levelSession.close();
+		this.syncGrid();
+	}
+
+	private levelSessionHost() {
+		return {
+			getScene: () => this.stage.scene?.scene ?? null,
+			cameraId: () => this.stage.cameraManagerRef?.activeEditorCameraId() ?? null,
+			physicsHit: (ray: { origin: Vector3; direction: Vector3 }) => {
+				const hit = this.stage.world?.raycast(
+					ray.origin,
+					ray.direction,
+					this.options.maxRayDistance,
+				);
+				if (!hit) return null;
+				return { distance: hit.distance, normal: hit.normal };
+			},
+			spawnZone: async (zone: { name: string; position: { x: number; y: number; z: number }; size: { x: number; y: number; z: number } }) => {
+				const node = createZone({
+					name: zone.name,
+					position: zone.position,
+					size: zone.size,
+					editorOwned: true,
+				});
+				await this.stage.spawnEntity(node);
+				return node.uuid ?? null;
+			},
+			detach: (uuid: string) => {
+				this.stage.entityDelegate.detachEntity(uuid);
+			},
+			spawnHulls: (hulls: Float32Array[]) => {
+				const simulation = this.stage.world?.simulation;
+				if (!simulation || hulls.length === 0) return null;
+				return simulation.spawn({
+					body: {
+						kind: StageBodyKind.Static,
+						position: [0, 0, 0],
+						rotation: [0, 0, 0, 1],
+						canSleep: true,
+						ccdEnabled: false,
+					},
+					colliders: hulls.map((vertices) => ({
+						shape: { type: 'convexHull' as const, vertices },
+						friction: 0.5,
+						restitution: 0,
+						sensor: false,
+					})),
+				});
+			},
+			despawnHulls: (handle: unknown) => {
+				if (!handle) return;
+				try {
+					this.stage.world?.simulation.despawn(handle as EntityHandle);
+				} catch {
+					// The body is already gone with the world.
+				}
+			},
+			publishGesture: (gesture: unknown) => {
+				sendLevelMessage('level:gesture', { gesture });
+			},
+			publishSelect: (id: string | null) => {
+				sendLevelMessage('level:select', { id });
+			},
+			publishNotice: (message: string) => {
+				publishGameNotice('info', message);
+			},
+		};
 	}
 
 	/** Camera used for raycasts and gizmos: whichever one is rendering. */
@@ -276,7 +368,9 @@ export class StageDebugDelegate {
 		if (!scene) return;
 		this.grid.addTo(scene);
 		this.grid.setIncrement(getSnapSettings().translate);
-		this.grid.setVisible(debugState.gridVisible);
+		// Build mode keeps the lattice up for the edit preview. Play and a
+		// closed level fall back to the debug toggle.
+		this.grid.setVisible(debugState.gridVisible || this.levelSession.isEditing);
 	}
 
 	/** Initialize DOM listeners. The rendering camera stays whatever the editor selected. */
@@ -412,6 +506,9 @@ export class StageDebugDelegate {
 		// otherwise never get its listeners.
 		this.ensureInteraction();
 		this.ensureToolVisuals();
+		this.levelSession.tick();
+		// A sync can arrive before the scene exists; the next frame catches it.
+		this.syncGrid();
 
 		if (debugState.enabled) {
 			this.initDebugVisuals();
@@ -617,6 +714,7 @@ export class StageDebugDelegate {
 		this.debugStateUnsubscribe?.();
 		this.debugStateUnsubscribe = null;
 		this.endPointerCapture();
+		this.levelSession.dispose();
 		this.marquee.dispose();
 		this.transformTool.dispose();
 		this.swatchApplier.dispose();
@@ -835,6 +933,10 @@ export class StageDebugDelegate {
 
 		const onPointerMove = (e: PointerEvent) => {
 			trackPointer(e);
+			if (this.levelPointer) {
+				this.levelSession.pointerMove(this.currentRay());
+				return;
+			}
 			if (this.marquee.isArmed) {
 				this.marquee.pointerMove(this.mouseNdc, e);
 				return;
@@ -850,6 +952,12 @@ export class StageDebugDelegate {
 			if (e.button !== 0) return;
 			trackPointer(e);
 			const ray = this.currentRay();
+
+			if (this.levelSession.pointerDown(ray)) {
+				this.levelPointer = true;
+				this.beginPointerCapture(canvas, e.pointerId);
+				return;
+			}
 
 			if (this.transformTool.pointerDown(ray)) {
 				this.beginPointerCapture(canvas, e.pointerId);
@@ -870,6 +978,12 @@ export class StageDebugDelegate {
 		};
 
 		const onPointerUp = (e: PointerEvent) => {
+			if (this.levelPointer) {
+				this.levelSession.pointerUp(this.currentRay());
+				this.levelPointer = false;
+				this.endPointerCapture();
+				return;
+			}
 			if (this.marquee.isArmed) {
 				const release = this.marquee.pointerUp(this.mouseNdc);
 				this.endPointerCapture();
@@ -886,6 +1000,12 @@ export class StageDebugDelegate {
 		// marquee is abandoned rather than committed: the rectangle it ended on
 		// is wherever the pointer happened to be lost.
 		const onPointerCancel = (e: PointerEvent) => {
+			if (this.levelPointer) {
+				this.levelPointer = false;
+				this.levelSession.pointerUp(this.currentRay());
+				this.endPointerCapture();
+				return;
+			}
 			if (this.marquee.isArmed) {
 				this.marquee.cancel();
 				this.endPointerCapture();
@@ -936,4 +1056,13 @@ export class StageDebugDelegate {
 		} catch { /* already released */ }
 		this.capturedPointer = null;
 	}
+}
+
+/** The installed bridge types lag the local protocol, so level messages are sent by name. */
+function sendLevelMessage(type: string, payload: unknown): void {
+	const send = getZylemBridge().channel.send.bind(getZylemBridge().channel) as (
+		message: string,
+		body: unknown,
+	) => void;
+	send(type, payload);
 }

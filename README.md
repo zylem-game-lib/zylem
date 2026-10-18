@@ -2,11 +2,13 @@
 
 A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.
 
+Rendering, input, stages, and game state live in `@zylem/game-lib`. Behavior systems and the simulation step live in `@zylem/behaviors`, which owns a WebAssembly runtime (`@zylem/runtime`) built with Shipyard and Rapier3D. Each frame, game-lib forwards behavior inputs into that simulation and syncs the returned poses onto Three.js objects.
+
 **Docs:** [https://zylem-game-lib.github.io/zylem/](https://zylem-game-lib.github.io/zylem/)
 
 ## Demos 🎮
 
-You can check out the latest demos at [https://zylem.onrender.com](https://zylem.onrender.com) (hosted from [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples)).
+You can check out the latest demos at [https://zylem-examples.onrender.com](https://zylem-examples.onrender.com) (hosted from [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples)).
 
 ## 📦 Packages
 
@@ -14,16 +16,16 @@ This is a pnpm workspace monorepo containing:
 
 - **[@zylem/game-lib](./packages/game-lib)** - Core game engine library (published to npm)
 - **[@zylem/bridge](./packages/bridge)** - Typed communication bridge shared by game-lib and the editor (published to npm)
-- **[@zylem/utilities](./packages/zylem-utilities)** - Supporting development utilities
+- **[@zylem/utilities](./packages/zylem-utilities)** - Private destructible-prebake CLI and browser worker
 
 External packages published to npm from their own repositories:
 
 - [@zylem/editor](https://github.com/zylem-game-lib/editor) - SolidJS-based debug UI and scene editor (consumes `@zylem/bridge` and peers on `@zylem/game-lib`)
 - [@zylem/ui](https://github.com/zylem-game-lib/ui) - Shared styles and Solid components
-- [@zylem/runtime](https://github.com/zylem-game-lib/simulation/tree/main/packages/runtime) - Rust/wasm simulation runtime (prebuilt `zylem_runtime.wasm` + TS loader)
-- [@zylem/behaviors](https://github.com/zylem-game-lib/simulation/tree/main/packages/behaviors) - Tree-shakable behavior descriptors and systems
 - [@zylem/shaders](https://github.com/zylem-game-lib/shaders) - WebGPU TSL shaders and postprocessing
 - [@zylem/examples](https://github.com/zylem-game-lib/zylem-examples) - Example applications, playground, and SpacetimeDB server
+
+The simulation repository is private. It publishes [`@zylem/behaviors`](https://www.npmjs.com/package/@zylem/behaviors) (tree-shakable behavior descriptors and systems) and [`@zylem/runtime`](https://www.npmjs.com/package/@zylem/runtime) to npm. The WebAssembly module it builds — Shipyard ECS and Rapier3D, as `zylem_runtime.wasm` plus a TypeScript loader — ships in the public `@zylem/runtime` package.
 
 ## 🚀 Quick Start
 
@@ -61,7 +63,7 @@ For the editor, use the sibling [`editor`](https://github.com/zylem-game-lib/edi
 ### Interactive runner
 
 The per-repo `pnpm zylem` runner has been replaced by `zw`, the workspace
-manager in the sibling [`zylem-workspace`](../zylem-workspace) repo. It covers
+manager in the sibling [`zylem-workspace`](https://github.com/zylem-game-lib/polyrepo-manager) repo. It covers
 every zylem repo from one place, so cross-repo package linking, builds, and
 tests no longer depend on which repo you happen to be standing in:
 
@@ -132,16 +134,18 @@ createGame(ball).start();
 - ✅ Unified development environment
 - ✅ No constant publishing during development
 
-The editor, UI kit, behaviors, and runtime live in their own repos and are
-linked in for local development with `zw link dev`.
+The editor and UI kit live in their own repos. Behaviors and the WASM runtime
+are built from the private simulation repository, and the WASM module is
+published in `@zylem/runtime`. Local development links them in with `zw link dev`.
 
 ## 🛠️ Technology Stack
 
-- **Rendering**: ThreeJS [ThreeJS](https://threejs.org/)
-- **Physics**: RapierRS [RapierRS](https://rapier.rs/)
-- **State Management**: Valtio [Valtio](https://valtio.dev/)
-- **ECS**: bitECS
-- **Build Tool**: Vite + tsup
+- **Rendering**: [Three.js](https://threejs.org/)
+- **Physics**: [Rapier](https://rapier.rs/) (Rapier3D inside `@zylem/runtime`, compiled to WebAssembly)
+- **ECS**: [Shipyard](https://github.com/leudz/shipyard) (inside `@zylem/runtime`)
+- **State**: [Valtio](https://valtio.dev/)
+- **Audio**: [Howler](https://howlerjs.com/) and [Tone.js](https://tonejs.github.io/)
+- **Build**: [tsup](https://tsup.egoist.dev/)
 
 ## 📝 License
 

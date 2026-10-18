@@ -160,6 +160,16 @@ export class CameraManager implements EditorCameraHost {
 		return this._editorViewLocked;
 	}
 
+	/** Id of the editor view that is currently the main camera, if one is. */
+	activeEditorCameraId(): string | null {
+		const primary = this.primaryCamera;
+		if (!primary || !this._editorViewLocked) return null;
+		for (const [id, camera] of this._editorCameras) {
+			if (camera === primary) return id;
+		}
+		return null;
+	}
+
 	/** True after the four editor views have been created. */
 	hasEditorCameras(): boolean {
 		return this._editorCameras.size > 0;

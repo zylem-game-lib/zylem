@@ -128,6 +128,11 @@ export type GameEntityOptions = {
 	hideUntilPositioned?: boolean;
 	/** Explicit render visibility. When false, entity stays hidden until {@link GameEntity.reveal}. */
 	visible?: boolean;
+	/**
+	 * Level-mode object. Stays out of the entity list so the live stage cannot
+	 * be written back over the level document.
+	 */
+	editorOwned?: boolean;
 	/** Render path: `environment` (bundle), `pack` (instanced), or `none` (default). */
 	category?: RenderCategory;
 	runtime?: RuntimeEntityOptions;

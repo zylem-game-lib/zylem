@@ -8,6 +8,9 @@ export type DebugTools =
 	| 'scale'
 	| 'delete'
 	| 'add'
+	| 'brush'
+	| 'clip'
+	| 'vertex'
 	| 'none';
 
 /** Tools that manipulate a selected entity's transform via the gizmo. */

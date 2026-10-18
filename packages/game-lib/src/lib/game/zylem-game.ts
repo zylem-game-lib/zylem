@@ -187,6 +187,15 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			pickEntity: (ndc) => this.pickEntityAtNdc(ndc),
 			cutscene: this.cutscenePreview,
 			cameraPose: () => this.cutscenePreview.cameraPose(),
+			levelSync: (payload) => {
+				this.currentStage()?.wrappedStage?.debugDelegate?.syncLevel(payload);
+			},
+			levelPlay: (document) => {
+				this.currentStage()?.wrappedStage?.debugDelegate?.playLevel(document);
+			},
+			levelClose: () => {
+				this.currentStage()?.wrappedStage?.debugDelegate?.closeLevel();
+			},
 			applySwatches: (payload) => {
 				const delegate = this.currentStage()?.wrappedStage?.debugDelegate;
 				if (delegate) return delegate.applySwatches(payload);
@@ -689,7 +698,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	 * the managed render path (instanced packs/bundles), which can number in
 	 * the thousands and are not useful in the editor panel.
 	 */
-	private buildEntitySummary(child: { uuid: string; name?: string; constructor: unknown }): EntitySummaryPayload | null {
+	private buildEntitySummary(child: { uuid: string; name?: string; constructor: unknown; options?: { editorOwned?: boolean } }): EntitySummaryPayload | null {
+		if (child.options?.editorOwned) return null;
 		if (usesManagedRenderPath((child as { options?: unknown }).options as any)) {
 			return null;
 		}
@@ -749,6 +759,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		if (!stage.wrappedStage) return;
 
 		const queueThumbnail = (child: { uuid: string; group?: any; mesh?: any; options?: any }) => {
+			if (child.options?.editorOwned) return;
 			if (!this.gameBridge.wantsThumbnails()) return;
 			// Managed-render entities (instanced packs / bundles) can number in
 			// the thousands and are visually identical; per-entity offscreen
@@ -821,6 +832,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			this.publishStageSnapshot();
 			for (const child of stage.wrappedStage?.entityDelegate.childrenMap.values() ?? []) {
 				const entity = child as { uuid: string; group?: any; mesh?: any; options?: any };
+				if (entity.options?.editorOwned) continue;
 				if (usesManagedRenderPath(entity.options)) continue;
 				const object = entity.group ?? entity.mesh ?? null;
 				if (!object) continue;

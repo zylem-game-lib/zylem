@@ -58,6 +58,7 @@ import { focusEntity } from '../debug/entity-focus';
 import { streamLevel } from '../level/stream-level';
 import { eulerToQuaternion, quaternionToEuler } from '../core/transform-math';
 import { commitColliderScale } from '../entities/entity-scale';
+import type { LevelDocument, LevelSyncPayload } from '../level/level-types';
 import type { GameEntity } from '../entities/entity';
 
 /** A THREE `Vector3`-shaped value, as carried by a render object. */
@@ -253,6 +254,12 @@ export interface GameBridgeHost {
 	};
 	/** Describe the live camera (`camera:pose:get`), for capturing framing into a cutscene. */
 	cameraPose?(): Omit<CameraPosePayload, 'requestId'> | null;
+	/** Draw the level document as an edit preview (`level:sync`). */
+	levelSync?(payload: LevelSyncPayload): void;
+	/** Spawn collision, doodads, and triggers for play (`level:play`). */
+	levelPlay?(document: LevelDocument): void;
+	/** Remove the level preview (`level:close`). */
+	levelClose?(): void;
 }
 
 /** What a host reports back from a swatch batch. */
@@ -306,6 +313,22 @@ function applySelectionCommand(uuids: string[], mode: EntitySelectMode): void {
  * The message is part of the bridge protocol. The cast keeps game-lib compiling
  * against a published `@zylem/bridge` that has not been rebuilt with it yet.
  */
+/**
+ * Listen for a level command the published bridge types do not list yet.
+ * The payload shape lives in the local protocol module.
+ */
+function onLevelCommand<T>(
+	channel: BridgeChannel,
+	type: string,
+	handler: (payload: T) => void,
+): () => void {
+	const listen = channel.on.bind(channel) as (
+		message: string,
+		handle: (payload: T) => void,
+	) => () => void;
+	return listen(type, handler);
+}
+
 function onCameraActivate(
 	channel: BridgeChannel,
 	apply: (id: string) => void,
@@ -413,6 +436,15 @@ export class GameBridge {
 			}),
 			this.channel.on('level:load', ({ buffer }) => {
 				void this.loadLevel(buffer);
+			}),
+			onLevelCommand<LevelSyncPayload>(this.channel, 'level:sync', (payload) => {
+				this.host?.levelSync?.(payload);
+			}),
+			onLevelCommand<{ document: LevelDocument }>(this.channel, 'level:play', ({ document }) => {
+				this.host?.levelPlay?.(document);
+			}),
+			onLevelCommand<Record<string, never>>(this.channel, 'level:close', () => {
+				this.host?.levelClose?.();
 			}),
 			this.channel.on('scene:operation:apply', ({ op, direction }) => {
 				this.applyingSceneOperation = true;
