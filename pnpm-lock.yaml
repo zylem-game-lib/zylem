@@ -89,11 +89,11 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13
       '@zylem/behaviors':
-        specifier: ^0.8.10
-        version: 0.8.10(@types/react@19.3.0)(react@19.3.0)(three@0.185.1)
+        specifier: ^0.8.11
+        version: 0.8.11(@types/react@19.3.0)(react@19.3.0)(three@0.185.1)
       '@zylem/bridge':
-        specifier: ^0.9.4
-        version: 0.9.4
+        specifier: ^0.9.6
+        version: 0.9.6
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -3314,8 +3314,8 @@ packages:
     peerDependencies:
       three: 0.185.1
 
-  '@zylem/behaviors@0.8.10':
-    resolution: {integrity: sha512-dAD7Lub/tEidb/4vlP6GEfbTaO9zDXviBXN9LG2d/+R2NXUhgI4yGzabV7DmVMb6tG0af/eIGaQWAsK3cSaxpA==}
+  '@zylem/behaviors@0.8.11':
+    resolution: {integrity: sha512-NWcqjNu6OXfw7iXwh2vzcxJpVtOWQy+cHTaR7j/fKx7hvigu9i6s0IyioYi1aYUOKepP9Vh35+ViSbAnO65T1A==}
     engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
     peerDependencies:
       three: 0.185.1
@@ -3326,15 +3326,15 @@ packages:
     peerDependencies:
       three: 0.185.1
 
-  '@zylem/bridge@0.9.4':
-    resolution: {integrity: sha512-Txkre/yEdH+s1L4t5yh+ctXuOAE/3PARcPkSE6JCTtuLFcq0BKUdD0+zFcian4Rynt1YQ/qCojqkuiUvexnAng==}
+  '@zylem/bridge@0.9.6':
+    resolution: {integrity: sha512-DAM3r0AzQeMtbBZsgKDLyvNZkKXqjnkZpt4GaVFUwCQrFPa8vNFjJ2MjJ39IyqdUi5hNlgA0moyVQWIE643R6w==}
+
+  '@zylem/runtime@0.8.12':
+    resolution: {integrity: sha512-bqt1i3qCqortpN8aJm3oWzzG/Cn9ldR/485DsXNhNJsRWlcNiJfCFG1n8dcwAA9RAs6xsZwoaUuGv7kHNsaudQ==}
+    engines: {node: '>=20.10.0'}
 
   '@zylem/runtime@0.8.8':
     resolution: {integrity: sha512-u2UNFe/zhvlc0jJZr/gLRDkdc/R7fayQqdqeRNV9mRiV8tFwEhaQX9+yw/Gn2F37dmrXYVtA/z0pDT6A0CKAAQ==}
-    engines: {node: '>=20.10.0'}
-
-  '@zylem/runtime@0.8.9':
-    resolution: {integrity: sha512-FZsRe2LY+nXeFVHSNrasUzCODdFnxvcxB78tvr6m9QHet8UbYO0ZkRoZe4N32pEgd245Xg9UP8HEtqR7ixo8cg==}
     engines: {node: '>=20.10.0'}
 
   accepts@1.3.8:
@@ -11810,10 +11810,10 @@ snapshots:
       - '@types/react'
       - react
 
-  '@zylem/behaviors@0.8.10(@types/react@19.3.0)(react@19.3.0)(three@0.185.1)':
+  '@zylem/behaviors@0.8.11(@types/react@19.3.0)(react@19.3.0)(three@0.185.1)':
     dependencies:
       '@dgreenheck/three-pinata': 2.0.1(three@0.185.1)
-      '@zylem/runtime': 0.8.9
+      '@zylem/runtime': 0.8.12
       comlink: 4.4.2
       three: 0.185.1
       typescript-fsm: 1.6.0
@@ -11834,11 +11834,11 @@ snapshots:
       - '@types/react'
       - react
 
-  '@zylem/bridge@0.9.4': {}
+  '@zylem/bridge@0.9.6': {}
+
+  '@zylem/runtime@0.8.12': {}
 
   '@zylem/runtime@0.8.8': {}
-
-  '@zylem/runtime@0.8.9': {}
 
   accepts@1.3.8:
     dependencies:
