@@ -81,6 +81,12 @@ export class CameraOrbitController {
 	/** Look-at captured by {@link seedOrbitPose}, used as the orbit target. */
 	private _seededLookAt: Vector3 | null = null;
 
+	/**
+	 * When true, orbit may swing below the horizon. The free camera needs this
+	 * so a gameplay camera that looks upward is not snapped back to level.
+	 */
+	private _fullPolarRange = false;
+
 	constructor(camera: Camera, domElement: HTMLElement, cameraRig?: Object3D | null) {
 		this.camera = camera;
 		this.domElement = domElement;
@@ -230,6 +236,16 @@ export class CameraOrbitController {
 	}
 
 	/**
+	 * Allow the camera to orbit through the lower hemisphere.
+	 * A value set before orbit controls exist is applied when they are created.
+	 */
+	setFullPolarRange(enabled: boolean): void {
+		this._fullPolarRange = enabled;
+		if (!this.orbitControls || this._rotationLocked) return;
+		this.orbitControls.maxPolarAngle = this.polarLimit();
+	}
+
+	/**
 	 * Pan in screen space, or in the plane orthogonal to the camera up vector.
 	 * A value set before orbit controls exist is applied when they are created.
 	 */
@@ -327,16 +343,23 @@ export class CameraOrbitController {
 		if (this.orbitControls) {
 			return;
 		}
+		// OrbitControls updates against a target of the origin while it is
+		// constructed, which would throw away a pose seeded just before this.
+		const position = this.camera.position.clone();
+		const quaternion = this.camera.quaternion.clone();
 		this.orbitControls = new OrbitControls(this.camera, this.domElement);
 		this.orbitControls.enableDamping = true;
 		this.orbitControls.dampingFactor = 0.05;
 		this.orbitControls.screenSpacePanning = this._screenSpacePanning;
 		this.orbitControls.minDistance = 1;
 		this.orbitControls.maxDistance = 500;
-		this.orbitControls.maxPolarAngle = Math.PI / 2;
+		this.orbitControls.maxPolarAngle = this.polarLimit();
 		this.orbitControls.enabled = this._interactionEnabled;
 		this.orbitControls.target.copy(this._seededLookAt ?? new Vector3());
+		this.camera.position.copy(position);
+		this.camera.quaternion.copy(quaternion);
 		if (this._rotationLocked) this.applyRotationLock();
+		else this.orbitControls.update();
 	}
 
 	/** Freeze polar and azimuth at the pose orbit controls currently hold. */
@@ -355,13 +378,18 @@ export class CameraOrbitController {
 		controls.update();
 	}
 
+	/** Upper hemisphere, or nearly a full sphere for the free camera. */
+	private polarLimit(): number {
+		return this._fullPolarRange ? Math.PI - 1e-3 : Math.PI / 2;
+	}
+
 	/** Restore the free-orbit limits this controller was created with. */
 	private releaseRotationLock(): void {
 		const controls = this.orbitControls;
 		if (!controls) return;
 
 		controls.minPolarAngle = 0;
-		controls.maxPolarAngle = Math.PI / 2;
+		controls.maxPolarAngle = this.polarLimit();
 		controls.minAzimuthAngle = -Infinity;
 		controls.maxAzimuthAngle = Infinity;
 		controls.enableRotate = true;

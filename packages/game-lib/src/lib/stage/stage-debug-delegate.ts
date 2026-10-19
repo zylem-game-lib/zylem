@@ -7,8 +7,9 @@
  * `PlacementGhost` — is live whenever a tool is armed, so the toolbar's buttons
  * work on their own. The debug layer — the wasm simulation's collider
  * wireframes — is the part `debugState.enabled` gates, and is torn down when
- * it goes off while the delegate stays alive to re-activate. Debug mode does
- * not switch cameras; picking and gizmos use whichever camera is rendering.
+ * it goes off while the delegate stays alive to re-activate. This delegate
+ * does not switch cameras; the bridge shows the free camera when debug is
+ * enabled. Picking and gizmos use whichever camera is rendering.
  *
  * Centralizes all of this so `ZylemStage` doesn't have to know about
  * raycasting, DOM input, or debug rendering.
@@ -174,6 +175,8 @@ export class StageDebugDelegate {
 				this.activate();
 			},
 		});
+
+		this.stage.cameraManagerRef?.setEditorEntityBounds(() => this.editorEntityBoxes());
 	}
 
 	/**
@@ -207,6 +210,14 @@ export class StageDebugDelegate {
 		return {
 			getScene: () => this.stage.scene?.scene ?? null,
 			cameraId: () => this.stage.cameraManagerRef?.activeEditorCameraId() ?? null,
+			viewDirection: () => {
+				const camera = this.getDebugViewCamera()?.camera;
+				if (!camera) return { x: 0, y: -1, z: 0 };
+				camera.updateMatrixWorld(true);
+				const direction = new Vector3();
+				camera.getWorldDirection(direction);
+				return { x: direction.x, y: direction.y, z: direction.z };
+			},
 			physicsHit: (ray: { origin: Vector3; direction: Vector3 }) => {
 				const hit = this.stage.world?.raycast(
 					ray.origin,
@@ -705,8 +716,19 @@ export class StageDebugDelegate {
 		ghost.showAt(placement.position);
 	}
 
+	/** Selection boxes for the first side, top, and isometric placement. Level brushes are not included. */
+	private editorEntityBoxes(): Box3[] {
+		const boxes: Box3[] = [];
+		this.stage.entityDelegate.childrenMap.forEach((entity) => {
+			const box = resolveSelectionBounds(entity, new Box3());
+			if (box) boxes.push(box.clone());
+		});
+		return boxes;
+	}
+
 	/** Full teardown — unsubscribes from debugState and cleans up all resources. */
 	dispose(): void {
+		this.stage.cameraManagerRef?.setEditorEntityBounds(null);
 		this.focusContextUnregister?.();
 		this.focusContextUnregister = null;
 		this.entityResolverUnregister?.();
@@ -934,9 +956,12 @@ export class StageDebugDelegate {
 		const onPointerMove = (e: PointerEvent) => {
 			trackPointer(e);
 			if (this.levelPointer) {
+				e.preventDefault();
+				e.stopImmediatePropagation();
 				this.levelSession.pointerMove(this.currentRay());
 				return;
 			}
+			this.levelSession.pointerHover(this.currentRay());
 			if (this.marquee.isArmed) {
 				this.marquee.pointerMove(this.mouseNdc, e);
 				return;
@@ -954,6 +979,11 @@ export class StageDebugDelegate {
 			const ray = this.currentRay();
 
 			if (this.levelSession.pointerDown(ray)) {
+				// Capture phase, and stopped here, so OrbitControls never starts
+				// a drag on the same press. Otherwise the camera swings instead
+				// of the brush.
+				e.preventDefault();
+				e.stopImmediatePropagation();
 				this.levelPointer = true;
 				this.beginPointerCapture(canvas, e.pointerId);
 				return;
@@ -979,6 +1009,8 @@ export class StageDebugDelegate {
 
 		const onPointerUp = (e: PointerEvent) => {
 			if (this.levelPointer) {
+				e.preventDefault();
+				e.stopImmediatePropagation();
 				this.levelSession.pointerUp(this.currentRay());
 				this.levelPointer = false;
 				this.endPointerCapture();
@@ -1014,16 +1046,16 @@ export class StageDebugDelegate {
 			onPointerUp(e);
 		};
 
-		canvas.addEventListener('pointermove', onPointerMove);
-		canvas.addEventListener('pointerdown', onPointerDown);
-		canvas.addEventListener('pointerup', onPointerUp);
-		canvas.addEventListener('pointercancel', onPointerCancel);
+		canvas.addEventListener('pointermove', onPointerMove, true);
+		canvas.addEventListener('pointerdown', onPointerDown, true);
+		canvas.addEventListener('pointerup', onPointerUp, true);
+		canvas.addEventListener('pointercancel', onPointerCancel, true);
 
 		this.domDisposeFns.push(
-			() => canvas.removeEventListener('pointermove', onPointerMove),
-			() => canvas.removeEventListener('pointerdown', onPointerDown),
-			() => canvas.removeEventListener('pointerup', onPointerUp),
-			() => canvas.removeEventListener('pointercancel', onPointerCancel),
+			() => canvas.removeEventListener('pointermove', onPointerMove, true),
+			() => canvas.removeEventListener('pointerdown', onPointerDown, true),
+			() => canvas.removeEventListener('pointerup', onPointerUp, true),
+			() => canvas.removeEventListener('pointercancel', onPointerCancel, true),
 		);
 		return true;
 	}

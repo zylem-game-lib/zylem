@@ -53,7 +53,7 @@ import {
 	setSnapSettings,
 	toggleSelectedEntityId,
 } from '../debug/debug-state';
-import { activateAttachedCamera, setEditorCamerasAttached } from '../camera/editor-camera-session';
+import { activateAttachedCamera, setEditorCamerasAttached, syncFreeCamerasToGame } from '../camera/editor-camera-session';
 import { focusEntity } from '../debug/entity-focus';
 import { streamLevel } from '../level/stream-level';
 import { eulerToQuaternion, quaternionToEuler } from '../core/transform-math';
@@ -384,6 +384,7 @@ export class GameBridge {
 			this.channel.on('debug:set', ({ enabled }) => {
 				this.editorKnown.debug = enabled;
 				debugState.enabled = enabled;
+				if (enabled) syncFreeCamerasToGame();
 			}),
 			this.channel.on('tool:set', ({ tool }) => {
 				setDebugTool(tool);

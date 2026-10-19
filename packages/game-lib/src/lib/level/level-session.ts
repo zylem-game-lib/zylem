@@ -36,7 +36,9 @@ import { levelCollisionHulls } from './level-collision';
 import {
 	boxFromDrag,
 	clipPlaneFromPoints,
+	drawPlaneAxis,
 	drawViewForCamera,
+	drawViewForDirection,
 	rayHitAxisPlane,
 	snapPoint,
 	type DrawRay,
@@ -52,6 +54,8 @@ export interface LevelZoneSpawn {
 export interface LevelSessionHost {
 	getScene(): { add(object: Object3D): void; remove(object: Object3D): void } | null;
 	cameraId(): string | null;
+	/** World direction the rendering camera looks, for cameras other than Top and Side. */
+	viewDirection(): BrushVec3;
 	/** Physics hit under the pointer, for doodad and entity placement. */
 	physicsHit(ray: GizmoRay): PlacementHit | null;
 	spawnZone(zone: LevelZoneSpawn): Promise<string | null>;
@@ -63,8 +67,6 @@ export interface LevelSessionHost {
 	publishSelect(id: string | null): void;
 	publishNotice(message: string): void;
 }
-
-const DRAW_VIEW_NOTICE = 'Draw, clip, and vertex edit need the Top or Side view.';
 
 /** Neutral stand-in. A solid stores no material, so nothing replaces this yet. */
 const DEFAULT_BRUSH_COLOR = 0xc8c2b4;
@@ -93,7 +95,7 @@ function setActiveDocument(document: LevelDocument | null): void {
 type Drag =
 	| { kind: 'brush'; view: DrawView; start: BrushVec3 }
 	| { kind: 'vertex'; brushId: string; vertexIndex: number; view: DrawView; plane: number }
-	| { kind: 'translate'; id: string; layer: LevelLayerId; view: DrawView | 'xz'; start: BrushVec3 };
+	| { kind: 'translate'; id: string; layer: LevelLayerId; view: DrawView; start: BrushVec3 };
 
 function toDrawRay(ray: GizmoRay): DrawRay {
 	return {
@@ -246,6 +248,8 @@ export class LevelSession {
 	private drag: Drag | null = null;
 	private clipAnchor: BrushVec3 | null = null;
 	private ghost: Object3D | null = null;
+	/** Axis guides under the cursor while a solid tool is armed and not dragging. */
+	private hoverGuides: Object3D | null = null;
 	private bodyHandle: unknown = null;
 	private zoneIds: string[] = [];
 
@@ -339,6 +343,36 @@ export class LevelSession {
 		this.showBrushGhost(boxFromDrag(this.drag.view, this.drag.start, end, this.gridStep()));
 	}
 
+	/**
+	 * Follow the cursor with axis guides while Draw, Clip, or Vertex is armed.
+	 * A brush drag replaces them with the live box. Clip keeps them on the
+	 * anchor, and Vertex keeps them on the selected brush.
+	 */
+	pointerHover(ray: GizmoRay): void {
+		if (!this.payload || this.drag) return;
+		const tool = getDebugTool();
+		if (tool !== 'brush' && tool !== 'clip' && tool !== 'vertex') {
+			this.clearHoverGuides();
+			return;
+		}
+		if (tool === 'clip' && this.clipAnchor) {
+			// The clip marker already carries guides at the anchor.
+			this.clearHoverGuides();
+			return;
+		}
+		if (tool === 'vertex' && this.selectedSolidCenter()) {
+			// A selected solid already draws its own guides.
+			this.clearHoverGuides();
+			return;
+		}
+		const point = this.viewPoint(this.currentDrawView(), ray);
+		if (!point) {
+			this.clearHoverGuides();
+			return;
+		}
+		this.showHoverGuides(point);
+	}
+
 	pointerUp(ray: GizmoRay): void {
 		const drag = this.drag;
 		this.drag = null;
@@ -372,8 +406,9 @@ export class LevelSession {
 			y: snapped.y - drag.start.y,
 			z: snapped.z - drag.start.z,
 		};
-		if (drag.view === 'top' || drag.view === 'xz') delta.y = 0;
+		if (drag.view === 'top') delta.y = 0;
 		if (drag.view === 'side') delta.x = 0;
+		if (drag.view === 'front') delta.z = 0;
 		if (delta.x === 0 && delta.y === 0 && delta.z === 0) return;
 		this.host.publishGesture({ kind: 'translate', id: drag.id, layer: drag.layer, delta });
 	}
@@ -480,16 +515,14 @@ export class LevelSession {
 	}
 
 	private beginSolidGesture(tool: 'brush' | 'clip' | 'vertex', ray: GizmoRay): void {
-		const view = drawViewForCamera(this.host.cameraId());
-		if (!view) {
-			this.host.publishNotice(DRAW_VIEW_NOTICE);
-			return;
-		}
+		const view = this.currentDrawView();
 		const point = this.viewPoint(view, ray);
 		if (!point) return;
 
 		if (tool === 'brush') {
+			this.clearHoverGuides();
 			this.drag = { kind: 'brush', view, start: point };
+			this.showBrushGhost(boxFromDrag(view, point, point, this.gridStep()));
 			return;
 		}
 		if (tool === 'clip') {
@@ -514,7 +547,7 @@ export class LevelSession {
 				brushId: picked.id,
 				vertexIndex: picked.vertexIndex,
 				view,
-				plane: view === 'top' ? (vertex?.y ?? 0) : (vertex?.x ?? 0),
+				plane: vertex?.[drawPlaneAxis(view)] ?? 0,
 			};
 			return;
 		}
@@ -533,7 +566,7 @@ export class LevelSession {
 		if (!payload || !id) return false;
 		const layer = layerOf(payload.document, id);
 		if (!layer) return false;
-		const view = drawViewForCamera(this.host.cameraId()) ?? 'xz';
+		const view = this.currentDrawView();
 		const start = this.translatePoint({ kind: 'translate', id, layer, view, start: { x: 0, y: 0, z: 0 } }, ray);
 		if (!start) return true;
 		this.drag = { kind: 'translate', id, layer, view, start: snapPoint(start, this.gridStep()) };
@@ -567,14 +600,18 @@ export class LevelSession {
 		this.host.publishGesture({ kind: 'trigger', pose, size: placement.size });
 	}
 
+	/** Top and Side cameras stay on their planes. Every other camera uses its facing. */
+	private currentDrawView(): DrawView {
+		return drawViewForCamera(this.host.cameraId()) ?? drawViewForDirection(this.host.viewDirection());
+	}
+
 	private viewPoint(view: DrawView, ray: GizmoRay, plane = 0): BrushVec3 | null {
-		return rayHitAxisPlane(toDrawRay(ray), view === 'top' ? 'y' : 'x', plane);
+		return rayHitAxisPlane(toDrawRay(ray), drawPlaneAxis(view), plane);
 	}
 
 	private translatePoint(drag: Extract<Drag, { kind: 'translate' }>, ray: GizmoRay): BrushVec3 | null {
 		const anchor = this.anchorOf(drag.id);
-		if (drag.view === 'side') return rayHitAxisPlane(toDrawRay(ray), 'x', anchor.x);
-		return rayHitAxisPlane(toDrawRay(ray), 'y', drag.view === 'top' ? anchor.y : anchor.y);
+		return rayHitAxisPlane(toDrawRay(ray), drawPlaneAxis(drag.view), anchor[drawPlaneAxis(drag.view)]);
 	}
 
 	private anchorOf(id: string): BrushVec3 {
@@ -662,8 +699,35 @@ export class LevelSession {
 			new MeshBasicMaterial({ color: 0xffee88, depthTest: false }),
 		);
 		marker.position.set(point.x, point.y, point.z);
-		this.ghost = marker;
-		this.root.add(marker);
+		const group = new Group();
+		group.add(marker);
+		group.add(axisGuides(point));
+		this.ghost = group;
+		this.root.add(group);
+	}
+
+	private showHoverGuides(point: BrushVec3): void {
+		this.clearHoverGuides();
+		if (!this.ensureRoot()) return;
+		const guides = axisGuides(point);
+		this.hoverGuides = guides;
+		this.root.add(guides);
+	}
+
+	private clearHoverGuides(): void {
+		if (!this.hoverGuides) return;
+		this.root.remove(this.hoverGuides);
+		disposeObject(this.hoverGuides);
+		this.hoverGuides = null;
+	}
+
+	private selectedSolidCenter(): BrushVec3 | null {
+		const id = this.selectedSolidId();
+		if (!id) return null;
+		const solid = this.payload?.document.solids.find((entry) => entry.id === id);
+		if (!solid) return null;
+		const compiled = compileBrush(solid.planes);
+		return compiled ? brushCenter(compiled) : null;
 	}
 
 	private clearGhost(): void {
@@ -696,6 +760,7 @@ export class LevelSession {
 			this.bodyHandle = null;
 		}
 		this.clearGhost();
+		this.clearHoverGuides();
 		for (const child of [...this.root.children]) {
 			this.root.remove(child);
 			disposeObject(child);

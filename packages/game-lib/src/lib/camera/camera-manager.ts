@@ -1,7 +1,14 @@
-import { Vector2, Vector3, Scene, OrthographicCamera, PerspectiveCamera } from 'three';
+import { Box3, Vector2, Vector3, Scene, OrthographicCamera, PerspectiveCamera } from 'three';
 import { ZylemCamera } from './zylem-camera';
 import { RendererManager } from './renderer-manager';
 import { Perspectives, type PerspectiveType } from './perspective';
+import {
+	boxesWithinFitLimit,
+	clipRangeForBoxes,
+	frustumHeightForFit,
+	perspectiveFovMatchingOrthographic,
+	pictureSize,
+} from './editor-view-frame';
 import {
 	EDITOR_CAMERAS,
 	GAME_CAMERA_ID,
@@ -24,6 +31,8 @@ interface EditorViewSpec {
 	lockRotation: boolean;
 	/** Pan in the view plane. Side moves on YZ, top on XZ. */
 	screenSpacePan: boolean;
+	/** Orbit through the lower hemisphere so a low gameplay camera is not snapped level. */
+	fullPolarRange?: boolean;
 	near?: number;
 	far?: number;
 	position(lookAt: Vector3, distance: number, gamePosition: Vector3): Vector3;
@@ -64,6 +73,7 @@ const EDITOR_VIEWS: EditorViewSpec[] = [
 		perspective: Perspectives.ThirdPerson,
 		lockRotation: false,
 		screenSpacePan: false,
+		fullPolarRange: true,
 		position: (lookAt, distance, gamePosition) => {
 			if (gamePosition.distanceTo(lookAt) > 0.5) return gamePosition.clone();
 			return lookAt.clone().add(new Vector3(0, distance * 0.5, distance));
@@ -113,6 +123,12 @@ export class CameraManager implements EditorCameraHost {
 
 	/** Which editor views pan in screen space (the view plane). */
 	private _screenSpacePanIds = new Set<string>();
+
+	/** Side, top, and isometric views that have already been placed on the gameplay camera. */
+	private _framedEditorViews = new Set<string>();
+
+	/** World boxes of stage entities, read when an orthographic view is first shown. */
+	private _entityBounds: (() => readonly Box3[]) | null = null;
 
 	/** Game camera to restore when the editor releases the main view. */
 	private _rememberedGameCamera: ZylemCamera | null = null;
@@ -173,6 +189,30 @@ export class CameraManager implements EditorCameraHost {
 	/** True after the four editor views have been created. */
 	hasEditorCameras(): boolean {
 		return this._editorCameras.size > 0;
+	}
+
+	/**
+	 * World boxes used the first time side, top, or isometric is shown.
+	 * Pass null to stop contributing boxes.
+	 */
+	setEditorEntityBounds(read: (() => readonly Box3[]) | null): void {
+		this._entityBounds = read;
+	}
+
+	/**
+	 * Copy the gameplay camera onto the free view, then show that view.
+	 * Waits for the editor cameras when they have not been created yet.
+	 */
+	syncFreeCameraToGame(): void {
+		const run = () => {
+			if (!this.copyFreeFromGame()) return;
+			this.activateCameraById(EDITOR_CAMERAS.free);
+		};
+		if (this.hasEditorCameras()) {
+			run();
+			return;
+		}
+		void this.ensureEditorCameras().then(run);
 	}
 
 	/**
@@ -359,6 +399,7 @@ export class CameraManager implements EditorCameraHost {
 		this._editorCameras.clear();
 		this._lockedEditorIds.clear();
 		this._screenSpacePanIds.clear();
+		this._framedEditorViews.clear();
 	}
 
 	/**
@@ -465,6 +506,8 @@ export class CameraManager implements EditorCameraHost {
 		this._editorCameras.clear();
 		this._lockedEditorIds.clear();
 		this._screenSpacePanIds.clear();
+		this._framedEditorViews.clear();
+		this._entityBounds = null;
 		this._rememberedGameCamera = null;
 		this._suspendedOrbits.clear();
 		this._rendererManager = null;
@@ -510,6 +553,7 @@ export class CameraManager implements EditorCameraHost {
 
 			camera.setRendererManager(this._rendererManager);
 			await camera.setup(this._sceneRef, this._rendererManager);
+			if (spec.fullPolarRange) camera.allowFullOrbit();
 			camera.seedDebugOrbitPose(position, framing.lookAt);
 		}
 	}
@@ -520,6 +564,9 @@ export class CameraManager implements EditorCameraHost {
 			if (primary && !this.isEditorCamera(primary)) {
 				this._rememberedGameCamera = primary;
 			}
+		}
+		if (this.isOrthographicEditorView(id) && !this._framedEditorViews.has(id)) {
+			if (this.frameOrthographicView(id, camera)) this._framedEditorViews.add(id);
 		}
 		this._editorViewLocked = true;
 		this.suspendOtherOrbits(camera);
@@ -538,11 +585,85 @@ export class CameraManager implements EditorCameraHost {
 	private syncEditorOrbit(activeId: string | null): void {
 		for (const [id, camera] of this._editorCameras) {
 			if (id === activeId) {
+				if (id === EDITOR_CAMERAS.free) camera.allowFullOrbit();
 				camera.armEditorOrbit(this._lockedEditorIds.has(id), this._screenSpacePanIds.has(id));
 			} else {
 				camera.disarmEditorOrbit();
 			}
 		}
+	}
+
+	private isOrthographicEditorView(id: string): boolean {
+		return id === EDITOR_CAMERAS.side || id === EDITOR_CAMERAS.top || id === EDITOR_CAMERAS.isometric;
+	}
+
+	/** Snapshot the gameplay camera onto the free orbit camera. Does not switch views. */
+	private copyFreeFromGame(): boolean {
+		const free = this._editorCameras.get(EDITOR_CAMERAS.free);
+		const game = this.gameCameraToRestore();
+		if (!free || !game) return false;
+
+		const source = game.camera;
+		source.updateMatrixWorld(true);
+		const framing = captureFraming(source);
+		free.camera.up.copy(source.up);
+		if (source instanceof PerspectiveCamera || source instanceof OrthographicCamera) {
+			this.copyGameplayProjection(source, free, framing.distance);
+		}
+		free.allowFullOrbit();
+		free.replaceOrbitPose(source.position, framing.lookAt);
+		return true;
+	}
+
+	private copyGameplayProjection(source: PerspectiveCamera | OrthographicCamera, free: ZylemCamera, distance: number): void {
+		const dest = free.camera;
+		if (!(dest instanceof PerspectiveCamera)) return;
+		if (source instanceof PerspectiveCamera) {
+			dest.fov = source.fov;
+			dest.zoom = source.zoom;
+			dest.near = source.near;
+			dest.far = source.far;
+		} else if (source instanceof OrthographicCamera) {
+			dest.fov = perspectiveFovMatchingOrthographic(source, distance);
+			dest.zoom = 1;
+		}
+		dest.updateProjectionMatrix();
+	}
+
+	/**
+	 * Place an orthographic view on the gameplay camera's look-at and fit the
+	 * stage around that point. Returns false when there is no gameplay camera.
+	 */
+	private frameOrthographicView(id: string, view: ZylemCamera): boolean {
+		const spec = EDITOR_VIEWS.find((candidate) => candidate.id === id);
+		const game = this.gameCameraToRestore();
+		if (!spec || !game) return false;
+
+		const source = game.camera;
+		source.updateMatrixWorld(true);
+		const framing = captureFraming(source);
+		const picture = pictureSize(source, framing.distance);
+		const boxes = boxesWithinFitLimit(this._entityBounds?.() ?? [], picture);
+		const distance = Math.max(framing.distance, 4);
+		const position = spec.position(framing.lookAt, distance, source.position);
+		view.camera.up.copy(spec.up(source.up));
+		view.camera.position.copy(position);
+		view.camera.lookAt(framing.lookAt);
+		view.camera.updateMatrixWorld(true);
+
+		const right = new Vector3().setFromMatrixColumn(view.camera.matrixWorld, 0);
+		const up = new Vector3().setFromMatrixColumn(view.camera.matrixWorld, 1);
+		const forward = new Vector3();
+		view.camera.getWorldDirection(forward);
+		const aspect = view.screenResolution.x / Math.max(view.screenResolution.y, 1);
+		const height = frustumHeightForFit(framing.lookAt, right, up, boxes, picture, aspect);
+		const clip = clipRangeForBoxes(view.camera.position, forward, boxes, {
+			near: spec.near ?? 0.1,
+			far: spec.far ?? 2000,
+		});
+		view.applyOrthographicFrame(height, clip.near, clip.far);
+		view.replaceOrbitPose(position, framing.lookAt);
+		return true;
 	}
 
 	/** Stop game-camera orbit controls from sharing the canvas with an editor view. */

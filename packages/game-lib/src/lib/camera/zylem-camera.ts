@@ -265,6 +265,11 @@ export class ZylemCamera {
 		this.setOrbitInteractionEnabled(true);
 	}
 
+	/** Let this camera orbit below the horizon. Set before controls are created. */
+	allowFullOrbit(): void {
+		this.orbitController?.setFullPolarRange(true);
+	}
+
 	/** Ignore pointer input without disposing orbit controls or their pose. */
 	disarmEditorOrbit(): void {
 		this.setOrbitInteractionEnabled(false);
@@ -399,6 +404,35 @@ export class ZylemCamera {
 			return;
 		}
 		this.orbitController?.seedOrbitPose(position, lookAt);
+	}
+
+	/** Write an orbit pose even when one was already seeded. */
+	replaceOrbitPose(position: Vector3, lookAt: Vector3): void {
+		if (this.orbitController) {
+			this.orbitController.seedOrbitPose(position, lookAt);
+			return;
+		}
+		this.camera.position.copy(position);
+		this.camera.lookAt(lookAt);
+	}
+
+	/**
+	 * Resize an orthographic editor view. `frustumSize` is the visible height;
+	 * width follows the screen aspect, matching {@link resize}.
+	 */
+	applyOrthographicFrame(frustumSize: number, near: number, far: number): void {
+		const camera = this.camera;
+		if (!(camera instanceof OrthographicCamera)) return;
+		this.frustumSize = frustumSize;
+		const aspect = this.screenResolution.x / Math.max(this.screenResolution.y, 1);
+		camera.zoom = 1;
+		camera.left = frustumSize * aspect / -2;
+		camera.right = frustumSize * aspect / 2;
+		camera.top = frustumSize / 2;
+		camera.bottom = frustumSize / -2;
+		camera.near = near;
+		camera.far = far;
+		camera.updateProjectionMatrix();
 	}
 
 	/** Whether the debug orbit camera has received its initial pose. */

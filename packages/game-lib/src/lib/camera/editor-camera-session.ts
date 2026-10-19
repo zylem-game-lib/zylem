@@ -24,6 +24,8 @@ export interface EditorCameraHost {
 	ensureEditorCameras(): Promise<void>;
 	destroyEditorCameras(): void;
 	activateCameraById(id: string): boolean;
+	/** Copy the gameplay camera onto the free view, then show it. */
+	syncFreeCameraToGame(): void;
 }
 
 let attached = false;
@@ -65,6 +67,11 @@ export function setEditorCamerasAttached(next: boolean): Promise<void> {
 	return Promise.all(
 		[...hosts].map((host) => host.ensureEditorCameras()),
 	).then(() => undefined);
+}
+
+/** Copy the gameplay camera onto each stage's free view, then show that view. */
+export function syncFreeCamerasToGame(): void {
+	for (const host of hosts) host.syncFreeCameraToGame();
 }
 
 /** Activate `id` on every live stage. `game` releases to the game camera. */

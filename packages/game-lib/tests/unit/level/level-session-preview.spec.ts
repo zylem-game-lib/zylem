@@ -11,6 +11,7 @@ function host(scene: Scene): LevelSessionHost {
 	return {
 		getScene: () => scene,
 		cameraId: () => null,
+		viewDirection: () => ({ x: 0, y: -1, z: 0 }),
 		physicsHit: () => null,
 		spawnZone: async () => null,
 		detach: () => {},
