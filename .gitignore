@@ -23,6 +23,7 @@ _docs
 website/build
 website/.docusaurus
 website/docs/api
+website/static/anatomy/frame-machine/
 stats.html
 target
 

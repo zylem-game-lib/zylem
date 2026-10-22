@@ -74,6 +74,7 @@ const config: Config = {
 				{ type: 'docSidebar', sidebarId: 'guide', position: 'left', label: 'Guide' },
 				{ type: 'docSidebar', sidebarId: 'api', position: 'left', label: 'API' },
 				{ type: 'docSidebar', sidebarId: 'architecture', position: 'left', label: 'Architecture' },
+				{ to: '/machine', position: 'left', label: 'The machine' },
 				{
 					href: 'https://zylem.onrender.com',
 					label: 'Demos',
