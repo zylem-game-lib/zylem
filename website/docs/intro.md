@@ -36,6 +36,7 @@ Each frame, game-lib forwards behavior inputs into the simulation, advances fixe
 2. [Your first game](/docs/getting-started/your-first-game) — move a sphere with arrow keys and keep it inside a 2D boundary.
 3. [Project setup](/docs/getting-started/project-setup) — Vite, `createGame().start()`, or `<zylem-game>`.
 4. [Core concepts](/docs/getting-started/core-concepts) and the [Glossary](/docs/getting-started/glossary) — shared vocabulary for the rest of the guide.
+5. [API cheatsheet](/docs/getting-started/api-cheatsheet) — public functions, one line each.
 
 Live demos are hosted at [zylem.onrender.com](https://zylem.onrender.com). The project is still in **alpha**; APIs may change.
 

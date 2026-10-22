@@ -98,6 +98,7 @@ const config: Config = {
 					title: 'Docs',
 					items: [
 						{ label: 'Get started', to: '/docs/getting-started/installation' },
+						{ label: 'API cheatsheet', to: '/docs/getting-started/api-cheatsheet' },
 						{ label: 'API reference', to: '/docs/api' },
 						{ label: 'Architecture', to: '/docs/architecture/overview' },
 					],

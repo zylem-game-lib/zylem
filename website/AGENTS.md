@@ -35,6 +35,8 @@ Layer story is fixed: **game-lib → behaviors → runtime**, as in [packages/ga
 4. Pitfalls
 5. Closing **API reference** list linking into `/docs/api/<module>/...`
 
+Exception: `getting-started/api-cheatsheet.md` is a table index of the game-author API. It does not use the tutorial shape above.
+
 Complete runnable examples live in `website/snippets/<section>/*.ts` and are type-checked. Paste them into markdown fences (the site uses `markdown.format: 'md'`). Short fragments may be inline fences. Wrap HTML-like tags such as `` `<zylem-game>` `` in backticks so they are not parsed as JSX.
 
 ## Sources of truth
