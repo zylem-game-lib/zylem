@@ -4,8 +4,11 @@
   "private": true,
   "scripts": {
     "gen:api": "typedoc && node ./scripts/escape-api-md.mjs",
-    "start": "pnpm gen:api && docusaurus start",
-    "build": "pnpm gen:api && docusaurus build",
+    "start": "pnpm anatomy:build && pnpm gen:api && docusaurus start",
+    "build": "pnpm anatomy:build && pnpm gen:api && docusaurus build",
+    "anatomy:build": "node ./scripts/anatomy/build.mjs",
+    "anatomy:test": "node --test ./scripts/anatomy/*.test.mjs",
+    "anatomy:typecheck": "tsc --noEmit -p ./scripts/anatomy/tsconfig.json",
     "serve": "docusaurus serve",
     "typecheck": "tsc --noEmit",
     "typecheck:snippets": "tsc --noEmit -p tsconfig.snippets.json",
