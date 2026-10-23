@@ -1,0 +1,21 @@
+.galleryNav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+	padding: 1.25rem max(1.25rem, calc((100% - 1120px) / 2));
+	border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+.galleryNav a {
+	border: 1px solid var(--ifm-color-emphasis-300);
+	border-radius: 7px;
+	padding: .65rem 1rem;
+	font-size: .9rem;
+	color: var(--ifm-font-color-base);
+	text-decoration: none;
+}
+.galleryNav a[aria-current='page'] {
+	background: var(--ifm-color-emphasis-200);
+	border-color: var(--ifm-color-emphasis-700);
+	font-weight: 600;
+}
+.galleryNav a:focus-visible { outline: 2px solid var(--ifm-color-primary); outline-offset: 3px; }

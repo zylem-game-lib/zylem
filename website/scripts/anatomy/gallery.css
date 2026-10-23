@@ -1,0 +1,12 @@
+.stations { grid-template-columns: repeat(var(--stop-count), minmax(0, 1fr)); }
+.result { margin: 16px 0 !important; font: 400 23px/1.4 Georgia, serif !important; color: var(--anatomy-strong) !important; }
+.renderer a { font-size: 12px; }
+.active-marker .iso-top { fill: var(--anatomy-lit); }
+.active-marker .iso-shade { fill: var(--anatomy-lit-shade); }
+body.iso[data-theme='dark'] { --anatomy-lit-top: #e0e5de; --anatomy-lit-shade: #93a594; }
+body.iso[data-theme='light'] { --anatomy-lit-top: #344538; --anatomy-lit-shade: #708071; }
+.iso-stage { touch-action: pan-x pan-y; }
+@media (max-width: 680px) {
+	.stations { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.machine-head { flex-direction: column; gap: 6px; }
+}
