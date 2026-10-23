@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { buildGallery } from './gallery-build.mjs';
 import { buildGeometry } from './geometry.mjs';
 import { STATIONS } from './model.ts';
 import { ISO_CSS } from './vendor/iso-kit.mjs';
@@ -39,3 +40,5 @@ const output = new URL('../../static/anatomy/frame-machine/index.html', import.m
 mkdirSync(new URL('.', output), { recursive: true });
 writeFileSync(output, html);
 console.log(`Built ${fileURLToPath(output)} (${geometry.parts.length} solids, ${Math.round(html.length / 1024)} KiB).`);
+
+buildGallery();

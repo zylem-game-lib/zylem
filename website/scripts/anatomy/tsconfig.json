@@ -10,5 +10,5 @@
 		"skipLibCheck": true,
 		"types": []
 	},
-	"include": ["model.ts", "spatial.ts", "live.ts"]
+	"include": ["model.ts", "spatial.ts", "live.ts", "catalog.ts", "gallery-spatial.ts", "gallery-live.ts"]
 }
