@@ -7,6 +7,7 @@
 		"src/api/actions.ts",
 		"src/api/input.ts",
 		"src/api/input-ui.ts",
+		"src/api/placement.ts",
 		"src/api/graphics.ts",
 		"src/api/events.ts",
 		"src/api/globals.ts",

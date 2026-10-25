@@ -51,6 +51,7 @@ import type { Vec3Components } from '../core/vector';
 import type { BehaviorSystem, BehaviorSystemFactory } from '@zylem/behaviors/core';
 import { applyTransformChanges, TransformableEntity } from '../actions/capabilities/apply-transform';
 import { StageEntityDelegate, StageEntityInput } from './stage-entity-delegate';
+import { StagePointerDelegate, type StagePointerHost } from './stage-pointer-delegate';
 export type { LoadingEvent };
 
 export interface ZylemStageConfig {
@@ -115,6 +116,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	renderStrategy: RenderStrategyManager | null = null;
 
 	debugDelegate: StageDebugDelegate | null = null;
+	/** Play-mode hover, drop, and click-to-place. Suspended while the editor tools are live. */
+	readonly pointerDelegate: StagePointerDelegate;
 
 	uuid: string;
 	wrapperRef: Stage | null = null;
@@ -150,6 +153,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.loadingDelegate = new StageLoadingDelegate();
 		this.entityModelDelegate = new StageEntityModelDelegate();
 		this.entityDelegate = new StageEntityDelegate(this.loadingDelegate, this.entityModelDelegate);
+		this.pointerDelegate = new StagePointerDelegate(stagePointerHost(this));
 
 		// Parse the options array using the stage-config module
 		const parsed = parseStageOptions(options);
@@ -394,6 +398,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			scene.update({ delta });
 		});
 
+		// After the camera moves, so a strategy pan doesn't leave the preview
+		// a frame behind. The delegate no-ops while the editor owns the pointer.
+		this.pointerDelegate.update(delta);
+
 		finishStageFrame();
 	}
 
@@ -414,6 +422,10 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 
 	/** Cleanup owned resources when the stage is destroyed. */
 	protected _destroy(params: DestroyContext<ZylemStage>): void {
+		// Drop the cursor preview and its listeners before entities go away, so
+		// a hover callback doesn't run against a stage that's already tearing down.
+		this.pointerDelegate.dispose();
+
 		// Delegate handles entity + behavior system cleanup
 		this.entityDelegate.destroyAll();
 
@@ -527,4 +539,28 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			this.scene.updateRenderer(width, height);
 		}
 	}
+}
+
+function stagePointerHost(stage: ZylemStage): StagePointerHost {
+	return {
+		getScene: () => stage.scene?.scene ?? null,
+		raycast: (origin, direction, maxDistance) => {
+			const hit = stage.world?.raycast(origin, direction, maxDistance);
+			if (!hit) return null;
+			return { distance: hit.distance, normal: hit.normal };
+		},
+		addSpawn: (entity) => {
+			if (stage.wrapperRef) {
+				stage.wrapperRef.add(entity as StageEntityInput);
+				return;
+			}
+			stage.enqueue(entity as StageEntityInput);
+		},
+		getCanvas: () => stage.rendererManager?.getDomElement() ?? null,
+		getCamera: () =>
+			(stage.cameraManagerRef?.primaryCamera ?? stage.cameraRef)?.camera ?? null,
+		onSessionEnded: () => {
+			stage.wrapperRef?.abandonPlacement();
+		},
+	};
 }

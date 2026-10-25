@@ -55,6 +55,8 @@ export type { LevelBuffer } from '@zylem/bridge';
 /** @public */
 export { entitySpawner } from '../lib/stage/entity-spawner';
 /** @public */
+export type { ArmPlacementOptions, PlacementSession } from '../lib/stage/placement-session';
+/** @public */
 export { stageConfig } from '../lib/stage/stage-config';
 /** @public */
 export type { StageConfigLike } from '../lib/stage/stage-config';

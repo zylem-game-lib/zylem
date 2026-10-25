@@ -22,6 +22,8 @@ import { EntityTypeMap } from '../types/entity-type-map';
 import { EventEmitterDelegate, zylemEventBus, type StageEvents } from '../events';
 import { GameInputConfig } from '../game/game-interfaces';
 import { mergeInputConfigs } from '../input/input-presets';
+import type { EntityRepresentative } from './entity-representative';
+import type { ArmPlacementOptions, PlacementSession } from './placement-session';
 import { usesManagedRenderPath } from '../graphics/render-category';
 import type { BaseEntityInterface } from '../types/entity-types';
 
@@ -46,6 +48,10 @@ export class Stage {
 
 	/** Per-stage input configuration overrides. Merged with game-level defaults on stage load. */
 	inputConfig: GameInputConfig | null = null;
+
+	/** Placement armed before the runtime stage exists, applied on load. */
+	private pendingPlacement: ArmPlacementOptions | null = null;
+	private placementGeneration = 0;
 
 	/**
 	 * Callback set by the game to trigger input reconfiguration
@@ -77,6 +83,9 @@ export class Stage {
 	}
 
 	async load(id: string, camera?: ZylemCamera | CameraWrapper | null, rendererManager?: RendererManager | null) {
+		// A second load drops the previous runtime. Its pointer listeners have
+		// to come off too, or the abandoned stage stays in the membership set.
+		this.wrappedStage?.pointerDelegate.dispose();
 		stageState.entities = [];
 		// Combine original options with pending entities, then clear pending
 		const loadOptions = [...this.options, ...this._pendingEntities] as StageOptions;
@@ -84,6 +93,9 @@ export class Stage {
 		
 		this.wrappedStage = new ZylemStage(loadOptions);
 		this.wrappedStage.wrapperRef = this;
+		if (this.pendingPlacement) {
+			this.wrappedStage.pointerDelegate.arm(this.pendingPlacement);
+		}
 
 		// Flush pending loading callbacks BEFORE load so we catch start/progress events
 		this.pendingLoadingCallbacks.forEach(cb => {
@@ -250,6 +262,63 @@ export class Stage {
 	): T extends keyof EntityTypeMap ? EntityTypeMap[T] | undefined : BaseNode | undefined {
 		const entity = this.wrappedStage?.getEntityByName(name);
 		return entity as any;
+	}
+
+	/**
+	 * Follow the cursor with a representative and place an entity on left click.
+	 *
+	 * Click-to-place, not a drag. A hover area's `onClick` can call this to
+	 * pick something up. While the stage has any droppable, the click only
+	 * commits over one that accepts `payload`. Otherwise it lands on the
+	 * physics hit, or the ground plane. Right click, Escape, and
+	 * {@link cancelPlacement} fade the preview out.
+	 *
+	 * @example
+	 * stage.armPlacement({
+	 *   payload: 'tower',
+	 *   repeat: true,
+	 *   representative: entityRepresentative(createBox, { opacity: 0.45 }),
+	 *   spawnOnClick: ({ valid, position }) => valid ? createBox({ position }) : false,
+	 * });
+	 */
+	armPlacement(options: ArmPlacementOptions): PlacementSession {
+		const generation = ++this.placementGeneration;
+		this.pendingPlacement = options;
+		this.wrappedStage?.pointerDelegate.arm(options);
+		return {
+			cancel: () => {
+				if (this.placementGeneration !== generation) return;
+				this.cancelPlacement();
+			},
+			setPayload: (payload: unknown) => {
+				if (this.placementGeneration !== generation || !this.pendingPlacement) return;
+				this.pendingPlacement.payload = payload;
+				this.wrappedStage?.pointerDelegate.setPayload(payload);
+			},
+			setRepresentative: (representative: EntityRepresentative) => {
+				if (this.placementGeneration !== generation || !this.pendingPlacement) return;
+				this.pendingPlacement.representative = representative;
+				this.wrappedStage?.pointerDelegate.setRepresentative(representative);
+			},
+		};
+	}
+
+	/** Fade out the armed representative and ignore further placement clicks. */
+	cancelPlacement(): this {
+		this.abandonPlacement();
+		this.wrappedStage?.pointerDelegate.cancel();
+		return this;
+	}
+
+	/**
+	 * Drop the session the next load would re-arm.
+	 * The pointer delegate calls this after a cancel or a one-shot commit.
+	 * It does not touch the live preview — {@link cancelPlacement} does both.
+	 * @internal
+	 */
+	abandonPlacement(): void {
+		this.placementGeneration++;
+		this.pendingPlacement = null;
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────
