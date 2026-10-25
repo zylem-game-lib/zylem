@@ -38,6 +38,8 @@ Stage {
     },
   ],
   "pendingLoadingCallbacks": [],
+  "pendingPlacement": null,
+  "placementGeneration": 0,
   "setupCallbacks": [],
   "updateCallbacks": [],
   "wrappedStage": null,

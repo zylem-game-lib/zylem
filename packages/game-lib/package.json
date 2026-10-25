@@ -1,6 +1,6 @@
 {
   "name": "@zylem/game-lib",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "type": "module",
   "description": "A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.",
   "license": "MIT",
@@ -29,6 +29,142 @@
       "types": "./dist/behavior.d.ts",
       "import": "./dist/behavior.js"
     },
+    "./behavior/genre-map": {
+      "types": "./dist/behavior/genre-map.d.ts",
+      "import": "./dist/behavior/genre-map.js"
+    },
+    "./behavior/mechanics": {
+      "types": "./dist/behavior/mechanics.d.ts",
+      "import": "./dist/behavior/mechanics.js"
+    },
+    "./behavior/action": {
+      "types": "./dist/behavior/action.d.ts",
+      "import": "./dist/behavior/action.js"
+    },
+    "./behavior/action/platform": {
+      "types": "./dist/behavior/action/platform.d.ts",
+      "import": "./dist/behavior/action/platform.js"
+    },
+    "./behavior/action/shooter": {
+      "types": "./dist/behavior/action/shooter.d.ts",
+      "import": "./dist/behavior/action/shooter.js"
+    },
+    "./behavior/action/shooter/first-person": {
+      "types": "./dist/behavior/action/shooter/first-person.d.ts",
+      "import": "./dist/behavior/action/shooter/first-person.js"
+    },
+    "./behavior/action/shooter/shoot-em-up": {
+      "types": "./dist/behavior/action/shooter/shoot-em-up.d.ts",
+      "import": "./dist/behavior/action/shooter/shoot-em-up.js"
+    },
+    "./behavior/action/fighting": {
+      "types": "./dist/behavior/action/fighting.d.ts",
+      "import": "./dist/behavior/action/fighting.js"
+    },
+    "./behavior/action/stealth": {
+      "types": "./dist/behavior/action/stealth.d.ts",
+      "import": "./dist/behavior/action/stealth.js"
+    },
+    "./behavior/action/survival": {
+      "types": "./dist/behavior/action/survival.d.ts",
+      "import": "./dist/behavior/action/survival.js"
+    },
+    "./behavior/action/rhythm": {
+      "types": "./dist/behavior/action/rhythm.d.ts",
+      "import": "./dist/behavior/action/rhythm.js"
+    },
+    "./behavior/action/pinball": {
+      "types": "./dist/behavior/action/pinball.d.ts",
+      "import": "./dist/behavior/action/pinball.js"
+    },
+    "./behavior/action-adventure": {
+      "types": "./dist/behavior/action-adventure.d.ts",
+      "import": "./dist/behavior/action-adventure.js"
+    },
+    "./behavior/puzzle": {
+      "types": "./dist/behavior/puzzle.d.ts",
+      "import": "./dist/behavior/puzzle.js"
+    },
+    "./behavior/puzzle/physics": {
+      "types": "./dist/behavior/puzzle/physics.d.ts",
+      "import": "./dist/behavior/puzzle/physics.js"
+    },
+    "./behavior/puzzle/tile-matching": {
+      "types": "./dist/behavior/puzzle/tile-matching.d.ts",
+      "import": "./dist/behavior/puzzle/tile-matching.js"
+    },
+    "./behavior/role-playing": {
+      "types": "./dist/behavior/role-playing.d.ts",
+      "import": "./dist/behavior/role-playing.js"
+    },
+    "./behavior/role-playing/action-rpg": {
+      "types": "./dist/behavior/role-playing/action-rpg.d.ts",
+      "import": "./dist/behavior/role-playing/action-rpg.js"
+    },
+    "./behavior/role-playing/turn-based": {
+      "types": "./dist/behavior/role-playing/turn-based.d.ts",
+      "import": "./dist/behavior/role-playing/turn-based.js"
+    },
+    "./behavior/role-playing/monster-taming": {
+      "types": "./dist/behavior/role-playing/monster-taming.d.ts",
+      "import": "./dist/behavior/role-playing/monster-taming.js"
+    },
+    "./behavior/role-playing/tactical-rpg": {
+      "types": "./dist/behavior/role-playing/tactical-rpg.d.ts",
+      "import": "./dist/behavior/role-playing/tactical-rpg.js"
+    },
+    "./behavior/simulation": {
+      "types": "./dist/behavior/simulation.d.ts",
+      "import": "./dist/behavior/simulation.js"
+    },
+    "./behavior/simulation/life": {
+      "types": "./dist/behavior/simulation/life.d.ts",
+      "import": "./dist/behavior/simulation/life.js"
+    },
+    "./behavior/simulation/vehicle": {
+      "types": "./dist/behavior/simulation/vehicle.d.ts",
+      "import": "./dist/behavior/simulation/vehicle.js"
+    },
+    "./behavior/simulation/vehicle/racing": {
+      "types": "./dist/behavior/simulation/vehicle/racing.d.ts",
+      "import": "./dist/behavior/simulation/vehicle/racing.js"
+    },
+    "./behavior/strategy": {
+      "types": "./dist/behavior/strategy.d.ts",
+      "import": "./dist/behavior/strategy.js"
+    },
+    "./behavior/strategy/real-time-tactics": {
+      "types": "./dist/behavior/strategy/real-time-tactics.d.ts",
+      "import": "./dist/behavior/strategy/real-time-tactics.js"
+    },
+    "./behavior/strategy/tower-defense": {
+      "types": "./dist/behavior/strategy/tower-defense.d.ts",
+      "import": "./dist/behavior/strategy/tower-defense.js"
+    },
+    "./behavior/strategy/turn-based-tactics": {
+      "types": "./dist/behavior/strategy/turn-based-tactics.d.ts",
+      "import": "./dist/behavior/strategy/turn-based-tactics.js"
+    },
+    "./behavior/sports": {
+      "types": "./dist/behavior/sports.d.ts",
+      "import": "./dist/behavior/sports.js"
+    },
+    "./behavior/sports/racing": {
+      "types": "./dist/behavior/sports/racing.d.ts",
+      "import": "./dist/behavior/sports/racing.js"
+    },
+    "./behavior/sports/skate": {
+      "types": "./dist/behavior/sports/skate.d.ts",
+      "import": "./dist/behavior/sports/skate.js"
+    },
+    "./behavior/sports/golf": {
+      "types": "./dist/behavior/sports/golf.d.ts",
+      "import": "./dist/behavior/sports/golf.js"
+    },
+    "./behavior/sports/racket": {
+      "types": "./dist/behavior/sports/racket.d.ts",
+      "import": "./dist/behavior/sports/racket.js"
+    },
     "./audio": {
       "types": "./dist/audio.d.ts",
       "import": "./dist/audio.js"
@@ -52,6 +188,10 @@
     "./input-ui": {
       "types": "./dist/input-ui.d.ts",
       "import": "./dist/input-ui.js"
+    },
+    "./placement": {
+      "types": "./dist/placement.d.ts",
+      "import": "./dist/placement.js"
     },
     "./graphics": {
       "types": "./dist/graphics.d.ts",
@@ -112,7 +252,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup && pnpm api:extract && pnpm api:typedoc && pnpm schema:emit",
+    "build": "node --experimental-strip-types ../../../simulation/packages/behaviors/scripts/sync-genre-entries.ts && NODE_OPTIONS=--max-old-space-size=8192 tsup && pnpm api:extract && pnpm api:typedoc && pnpm schema:emit",
     "dev": "tsup --watch",
     "api:extract": "mkdir -p dist/api temp && api-extractor run --local --verbose",
     "api:typedoc": "mkdir -p dist/api && typedoc --options typedoc.json",
@@ -129,8 +269,8 @@
     "@dgreenheck/three-pinata": "^2.0.1",
     "@sinclair/typebox": "^0.34.52",
     "@types/howler": "^2.2.13",
-    "@zylem/behaviors": "^0.8.11",
-    "@zylem/bridge": "^0.9.6",
+    "@zylem/behaviors": "^0.8.12",
+    "@zylem/bridge": "^0.9.7",
     "comlink": "^4.4.2",
     "howler": "^2.2.4",
     "idb-keyval": "^6.2.6",

@@ -50,6 +50,13 @@ import {
 	syncRenderPositionFromBody,
 	syncRenderRotationFromBody,
 } from './spawn-placement';
+import {
+	attachDroppableArea,
+	attachHoverArea,
+	copyPointerAttachment,
+	type DroppableAreaOptions,
+	type HoverAreaOptions,
+} from '../stage/pointer-target';
 
 export interface CollisionContext<
 	T,
@@ -692,6 +699,7 @@ export class GameEntity<O extends GameEntityOptions>
 		}
 
 		this.cloneChildrenInto(clone);
+		copyPointerAttachment(this, clone);
 
 		return clone;
 	}
@@ -757,6 +765,26 @@ export class GameEntity<O extends GameEntityOptions>
 
 		this.collisionDelegate.collision = existing;
 		this.collisionDelegate.nextId = nextId;
+		return this;
+	}
+
+	/**
+	 * This entity is a pointer hotspot. The stage reports enter, leave, move,
+	 * and click while the cursor ray is over its bounds. One pointer role per
+	 * entity; a later {@link droppableArea} replaces this one.
+	 */
+	public hoverArea(options?: HoverAreaOptions): this {
+		attachHoverArea(this, options);
+		return this;
+	}
+
+	/**
+	 * This entity accepts a placement drop. Includes the hover callbacks.
+	 * `accepts` defaults to every payload. `onDrop` runs after a commit and
+	 * does not spawn a second entity.
+	 */
+	public droppableArea(options?: DroppableAreaOptions): this {
+		attachDroppableArea(this, options);
 		return this;
 	}
 

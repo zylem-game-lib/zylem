@@ -24,6 +24,29 @@ export * from './web-components';
 export * from './runtime';
 export * from './schema';
 
+// Placement factories. Session types are already exported from `core`.
+export {
+	createHoverArea,
+	createDroppableArea,
+	entityRepresentative,
+	ZylemHoverArea,
+	ZylemDroppableArea,
+	HOVER_AREA_TYPE,
+	DROPPABLE_AREA_TYPE,
+} from './placement';
+export type {
+	EntityRepresentative,
+	EntityRepresentativeOptions,
+	RepresentativeFrame,
+	RepresentativeLook,
+	RepresentativeSource,
+	HoverAreaOptions,
+	DroppableAreaOptions,
+	PointerAreaContext,
+	PlacementPointContext,
+	PointerTargetEntity,
+} from './placement';
+
 // `graphics` overlaps `core` on stage-transition symbols — re-export the
 // graphics-only surface explicitly to avoid duplicate `export *` conflicts.
 export {

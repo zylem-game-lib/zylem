@@ -43,6 +43,7 @@ import type {
 	BehaviorSystemFactory,
 } from '@zylem/behaviors/core';
 import { Vessel } from '../core/vessel';
+import { emitPointerMembership } from './pointer-target';
 
 type NodeLike = { create: Function };
 export type StageEntityInput = NodeLike | Promise<any> | (() => NodeLike | Promise<any>);
@@ -287,6 +288,7 @@ export class StageEntityDelegate {
 				console.error('onEntityAdded handler failed', e);
 			}
 		}
+		emitPointerMembership(entity, true);
 	}
 
 	// ─── Removal ─────────────────────────────────────────────────────────────
@@ -348,6 +350,7 @@ export class StageEntityDelegate {
 
 		this.childrenMap.delete(uuid);
 		this.debugMap.delete(uuid);
+		emitPointerMembership(entity, false);
 
 		this.detachedMap.set(uuid, {
 			entity,
@@ -636,6 +639,7 @@ export class StageEntityDelegate {
 
 		const destroyedUuids: string[] = [];
 		this.childrenMap.forEach((child) => {
+			emitPointerMembership(child, false);
 			try {
 				child.nodeDestroy({ me: child, globals: getGlobals() });
 			} catch { /* noop */ }
