@@ -1,4 +1,4 @@
-import { Color, Vector2 } from 'three';
+import { AdditiveBlending, Color, Vector2 } from 'three';
 import { MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
 import { describe, expect, it, vi } from 'vitest';
 import { color } from 'three/tsl';
@@ -124,5 +124,45 @@ describe('MaterialBuilder vector inputs', () => {
 
     expect(builder.materials).toHaveLength(1);
     expect(builder.materials[0]).toBeInstanceOf(MeshStandardNodeMaterial);
+  });
+
+  it('replaces a flat color material with an additive fresnel glow', () => {
+    const merged = deepMergeValues(commonDefaults, {
+      material: {
+        color: new Color('#ffe08a'),
+        glow: { intensity: 3, size: 0.05 },
+      },
+    });
+
+    const builder = new MaterialBuilder();
+    builder.build(merged.material ?? {}, Symbol('material-flat-glow'));
+
+    const material = builder.materials[0] as MeshBasicNodeMaterial;
+    expect(builder.materials).toHaveLength(1);
+    expect(material).toBeInstanceOf(MeshBasicNodeMaterial);
+    expect(material.blending).toBe(AdditiveBlending);
+    expect(material.transparent).toBe(true);
+    expect(material.depthWrite).toBe(false);
+    expect(material.toneMapped).toBe(false);
+    expect(material.colorNode).toBeTruthy();
+    expect(material.positionNode).toBeTruthy();
+  });
+
+  it('adds emissive glow to a textured material without replacing it', () => {
+    vi.spyOn(assetManager, 'loadTexture').mockResolvedValue({} as any);
+
+    const builder = new MaterialBuilder();
+    builder.build(
+      {
+        path: 'metal.png',
+        glow: true,
+      },
+      Symbol('material-texture-glow'),
+    );
+
+    const material = builder.materials[0] as MeshStandardNodeMaterial;
+    expect(material).toBeInstanceOf(MeshStandardNodeMaterial);
+    expect(material.emissiveNode).toBeTruthy();
+    expect(material.blending).not.toBe(AdditiveBlending);
   });
 });

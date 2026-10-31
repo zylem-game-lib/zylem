@@ -277,7 +277,7 @@
     "msgpackr": "^1.11.14",
     "nanoid": "^5.1.16",
     "stats.js": "^0.17.0",
-    "three": "^0.185.1",
+    "three": "^0.187.0",
     "tone": "^15.1.23",
     "typescript-fsm": "^1.6.0",
     "valtio": "^2.1.8"
@@ -285,14 +285,14 @@
   "peerDependencies": {
     "howler": "^2.2.4",
     "nanoid": "^5.1.5",
-    "three": "^0.185.0",
+    "three": "^0.187.0",
     "valtio": "^2.1.7"
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.58.13",
     "@types/node": "^20.19.43",
     "@types/stats.js": "^0.17.4",
-    "@types/three": "^0.185.4",
+    "@types/three": "^0.187.0",
     "@typescript/native": "npm:typescript@7.0.2",
     "happy-dom": "^18.0.1",
     "jsdom": "^27.2.0",

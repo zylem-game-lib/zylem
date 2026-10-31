@@ -11,6 +11,12 @@ import { shortHash, sortedStringify } from '../core/utility/strings';
 import { standardShader } from './shaders/standard.shader';
 import { assetManager } from '../core/asset-manager';
 import { Vec2Input, VEC2_ONE, toThreeVector2 } from '../core/vector';
+import {
+  applyEntityGlow,
+  createEntityGlowMaterial,
+  resolveEntityGlow,
+  type EntityGlowOptions,
+} from './glow';
 
 /**
  * GLSL shader object (traditional WebGL approach).
@@ -88,6 +94,12 @@ export interface MaterialOptions {
    * This flag is ignored.
    */
   useTSL?: boolean;
+  /**
+   * Soft fresnel glow in the material shader. A flat color becomes an unlit
+   * additive halo. A texture or custom shader keeps its surface and gains
+   * emissive rim light. This does not add a bloom pass.
+   */
+  glow?: boolean | EntityGlowOptions;
 }
 
 type SharedGeometryMap = Map<symbol, number>;
@@ -153,12 +165,15 @@ export class MaterialBuilder {
 
   build(options: Partial<MaterialOptions>, entityType: symbol): void {
     const { path, normalMap, repeat, color, shader, opacity } = options;
+    const glow = resolveEntityGlow(options.glow, color);
 
     // game-lib is WebGPU-only: always build TSL node materials.
     const usesDefaultStandardShader = isDefaultStandardShader(shader);
     const shouldUseCustomShader = Boolean(shader) && !usesDefaultStandardShader;
     const shouldUseTextureMaterial =
       Boolean(path) && (!shader || usesDefaultStandardShader);
+    const useFlatGlow =
+      glow !== null && !shouldUseTextureMaterial && !shouldUseCustomShader && !path;
 
     if (shouldUseTextureMaterial) {
       this.setTexture(path ?? null, repeat, true, opacity, color);
@@ -181,12 +196,23 @@ export class MaterialBuilder {
       this.setTexture(path, repeat, true, opacity, color);
     }
 
-    if (color && !shouldUseTextureMaterial && !shouldUseCustomShader) {
+    if (color && !shouldUseTextureMaterial && !shouldUseCustomShader && !useFlatGlow) {
       this.withColor(color, true, opacity);
     }
 
     if (this.materials.length === 0) {
-      this.setColor(new Color('#ffffff'), true, opacity);
+      if (useFlatGlow && glow) {
+        this.materials.push(createEntityGlowMaterial(glow));
+      } else {
+        this.setColor(new Color('#ffffff'), true, opacity);
+      }
+    }
+
+    if (glow && !useFlatGlow && this.materials.length > 0) {
+      const material = this.materials[this.materials.length - 1];
+      if (material) {
+        applyEntityGlow(material, glow);
+      }
     }
 
     // Apply normal map if present (to the last added material)
