@@ -1,4 +1,6 @@
-import { MeshBasicMaterial } from 'three';
+import { DoubleSide } from 'three';
+import { texture as sampleTexture, uv } from 'three/tsl';
+import { MeshBasicNodeMaterial } from 'three/webgpu';
 import type { StageEntity } from '../interfaces/entity';
 import type { CameraWrapper } from './camera';
 
@@ -66,7 +68,16 @@ export function setCameraFeed(
 		return;
 	}
 
-	// Replace the mesh material with one that displays the camera feed
-	const material = new MeshBasicMaterial({ map: texture });
+	// WebGPURenderer samples materials through node materials. A classic
+	// MeshBasicMaterial is not drawn by that path, so the feed stays blank.
+	// WGSL does not flip render-target samples; WebGL's node builder does.
+	// Sampling with a flipped V is upright on WebGPU, and the WebGL builder
+	// flips that V back when the texture is a render target.
+	const material = new MeshBasicNodeMaterial({
+		map: texture,
+		toneMapped: false,
+		side: DoubleSide,
+	});
+	material.colorNode = sampleTexture(texture, uv().flipY());
 	entity.mesh.material = material;
 }

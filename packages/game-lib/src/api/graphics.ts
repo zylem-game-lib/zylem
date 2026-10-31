@@ -24,6 +24,8 @@ export type {
 } from '../lib/graphics/stage-transition';
 export { crossfadeTransitionShader } from '../lib/graphics/stage-transition';
 export { isTSLShader, isGLSLShader, createNodeMaterialFromTSL } from '../lib/graphics/material';
+export type { EntityGlowOptions } from '../lib/graphics/glow';
+export { applyEntityGlow, createEntityGlowMaterial } from '../lib/graphics/glow';
 
 // TSL utilities for shader authoring (WebGPU)
 export { uniform, uv, time, vec3, vec4, float, Fn } from '../lib/graphics/material';

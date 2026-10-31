@@ -335,7 +335,7 @@ function createExplicitBoxCollider(options: ZylemActorOptions): SimulationCollid
 			collisionPosition?.y ?? halfHeight,
 			collisionPosition?.z ?? 0,
 		],
-		sensor: false,
+		sensor: Boolean(options.collision?.sensor),
 	};
 }
 

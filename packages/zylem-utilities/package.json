@@ -27,11 +27,11 @@
     "@zylem/behaviors": "^0.8.12",
     "@zylem/game-lib": "workspace:*",
     "comlink": "^4.4.2",
-    "three": "^0.185.1"
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
-    "@types/three": "^0.185.4",
+    "@types/three": "^0.187.0",
     "@typescript/native": "npm:typescript@7.0.2",
     "tsup": "^8.5.1",
     "typescript": "npm:@typescript/typescript6@6.0.2"

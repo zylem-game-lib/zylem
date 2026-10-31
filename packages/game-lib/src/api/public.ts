@@ -55,6 +55,8 @@ export {
 	isTSLShader,
 	isGLSLShader,
 	createNodeMaterialFromTSL,
+	applyEntityGlow,
+	createEntityGlowMaterial,
 	uniform,
 	uv,
 	time,
@@ -91,4 +93,5 @@ export type {
 	ZylemTSLShader,
 	ZylemShader,
 	ZylemPostEffect,
+	EntityGlowOptions,
 } from './graphics';

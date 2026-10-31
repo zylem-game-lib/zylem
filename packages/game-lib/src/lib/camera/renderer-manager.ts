@@ -1,4 +1,4 @@
-import { Vector2, Scene, Camera, RenderTarget, HalfFloatType } from 'three';
+import { Vector2, Scene, Camera, RenderTarget, HalfFloatType, type Material, type Mesh, type Object3D, type Texture } from 'three';
 import { WebGPURenderer, RenderPipeline } from 'three/webgpu';
 import {
 	pass,
@@ -455,14 +455,22 @@ export class RendererManager {
 	 * The camera must have a non-null renderTarget.
 	 */
 	renderCameraToTarget(scene: Scene, camera: ZylemCamera): void {
-		if (!camera.renderTarget) return;
+		const target = camera.renderTarget;
+		if (!target) return;
+
+		// The screen that displays this texture is in the same scene. Sampling
+		// it while it is the color attachment fails on WebGPU, so hide those
+		// meshes for this pass.
+		const hidden = hideTextureConsumers(scene, target.texture);
 
 		const prevTarget = this.renderer.getRenderTarget();
+		this.renderer.setRenderTarget(target);
 		this.renderer.setScissorTest(false);
-		this.renderer.setRenderTarget(camera.renderTarget);
 		this.renderer.clear();
 		this.renderer.render(scene, camera.camera);
 		this.renderer.setRenderTarget(prevTarget);
+
+		for (const object of hidden) object.visible = true;
 	}
 
 	/**
@@ -541,6 +549,25 @@ export class RendererManager {
 		this._postEffects = [];
 		this._initialized = false;
 	}
+}
+
+/** Meshes whose material samples `texture`, hidden so a render-target pass can write it. */
+function hideTextureConsumers(scene: Object3D, texture: Texture): Object3D[] {
+	const hidden: Object3D[] = [];
+	scene.traverse((object) => {
+		const mesh = object as Mesh;
+		if (!mesh.isMesh || !mesh.visible) return;
+		const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+		if (!materials.some((material) => materialSamplesTexture(material, texture))) return;
+		mesh.visible = false;
+		hidden.push(mesh);
+	});
+	return hidden;
+}
+
+function materialSamplesTexture(material: Material | undefined, texture: Texture): boolean {
+	if (!material) return false;
+	return (material as Material & { map?: Texture | null }).map === texture;
 }
 
 /** Whether a viewport covers the entire canvas. */

@@ -20,6 +20,7 @@ import {
 	type DroppableAreaOptions,
 	type HoverAreaOptions,
 	type PointerAreaContext,
+	type PointerTargetEntity,
 	type PlacementPointContext,
 } from '../stage/pointer-target';
 
@@ -35,7 +36,7 @@ export const HOVER_AREA_TYPE = Symbol('HoverArea');
 export const DROPPABLE_AREA_TYPE = Symbol('DroppableArea');
 
 function bindHandlers(
-	entity: GameEntity<any>,
+	entity: PointerTargetEntity,
 	handlers: Partial<DroppableAreaOptions>,
 	promoteToDroppable: boolean,
 ): void {
