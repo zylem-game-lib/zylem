@@ -9,11 +9,13 @@ import { AnimationClip, Object3D } from 'three';
 import { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import { assetManager } from './asset-manager';
 import type { AssetLoadOptions } from './asset-types';
-import { getUrlFileExtension } from './loaders/url-utils';
 
 export interface AssetLoaderResult {
 	object?: Object3D;
+	/** First clip. Separate-file Mixamo loads keep using this. */
 	animation?: AnimationClip;
+	/** Every clip in the file. Shared model URLs bind by clip name. */
+	animations?: AnimationClip[];
 	gltf?: GLTF;
 }
 
@@ -25,35 +27,16 @@ export interface AssetLoaderResult {
  */
 export class EntityAssetLoader {
 	/**
-	 * Load a model file (FBX, GLTF, GLB, OBJ) using the asset manager
+	 * Load a model file through `AssetManager.loadModel`.
 	 */
 	async loadFile(file: string, options?: AssetLoadOptions): Promise<AssetLoaderResult> {
-		const ext = getUrlFileExtension(file);
-
-		switch (ext) {
-			case 'fbx': {
-				const result = await assetManager.loadFBX(file, options);
-				return {
-					object: result.object,
-					animation: result.animations?.[0]
-				};
-			}
-			case 'gltf':
-			case 'glb': {
-				const result = await assetManager.loadGLTF(file, options);
-				return {
-					object: result.object,
-					gltf: result.gltf
-				};
-			}
-			case 'obj': {
-				const result = await assetManager.loadOBJ(file, options);
-				return {
-					object: result.object
-				};
-			}
-			default:
-				throw new Error(`Unsupported file type: ${file}`);
-		}
+		const result = await assetManager.loadModel(file, options);
+		const animations = result.animations ?? [];
+		return {
+			object: result.object,
+			animation: animations[0],
+			animations,
+			gltf: result.gltf,
+		};
 	}
 }

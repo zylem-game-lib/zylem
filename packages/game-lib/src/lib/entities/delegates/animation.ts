@@ -22,6 +22,29 @@ type AnimationObject = {
 	path: string;
 };
 
+function selectAnimationClip(
+	result: AssetLoaderResult,
+	key: string,
+	occurrence: number,
+): AnimationClip | undefined {
+	const clips = result.animations?.length
+		? result.animations
+		: result.animation
+			? [result.animation]
+			: [];
+	if (clips.length === 0) {
+		return undefined;
+	}
+	const named = clips.find((clip) => clip.name === key);
+	if (named) {
+		return named;
+	}
+	if (clips.length === 1) {
+		return clips[0];
+	}
+	return clips[occurrence] ?? clips[0];
+}
+
 function getTrackTargetName(trackName: string): string {
 	const propertyIndex = trackName.lastIndexOf('.');
 	return propertyIndex >= 0 ? trackName.slice(0, propertyIndex) : trackName;
@@ -167,12 +190,18 @@ export class AnimationDelegate {
 		});
 		
 		const loadedRaw: { key: string; clip: AnimationClip; path: string }[] = [];
+		const occurrenceByPath = new Map<string, number>();
 		results.forEach((result, i) => {
-			if (result.animation) {
+			const path = animations[i].path;
+			const occurrence = occurrenceByPath.get(path) ?? 0;
+			occurrenceByPath.set(path, occurrence + 1);
+			const key = animations[i].key || i.toString();
+			const selected = selectAnimationClip(result, key, occurrence);
+			if (selected) {
 				loadedRaw.push({
-					key: animations[i].key || i.toString(),
-					clip: result.animation,
-					path: animations[i].path,
+					key,
+					clip: selected.clone(),
+					path,
 				});
 			}
 		});

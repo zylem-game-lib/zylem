@@ -1,6 +1,10 @@
 /**
- * FBX loader adapter for the Asset Manager
- * Uses native fetch (already async/non-blocking in browsers) + parse
+ * FBX loader adapter for the Asset Manager.
+ *
+ * `FBXLoader` rotates Z-up files (`UpAxis === 2` sets `rotation.x = -π/2`)
+ * and stores `UnitScaleFactor` on `userData.unitScaleFactor` without applying
+ * it. Mixamo clips in the examples are authored against that unscaled size,
+ * so unit scale stays off unless `applyUnitScale` is set.
  */
 
 import { Object3D } from 'three';
@@ -10,11 +14,27 @@ import { cloneModelObject } from './model-clone';
 import { getUrlFileExtension } from './url-utils';
 
 export interface FBXLoadOptions extends AssetLoadOptions {
-	/** 
-	 * Use async fetch + parse pattern instead of loader.load()
-	 * Note: fetch() is already non-blocking in browsers
+	/**
+	 * Use async fetch + parse pattern instead of loader.load().
+	 * The fetch is async. `FBXLoader.parse` still runs on the main thread.
 	 */
 	useAsyncFetch?: boolean;
+	/**
+	 * Scale the root by `userData.unitScaleFactor` when the file defines one.
+	 * Defaults to false.
+	 */
+	applyUnitScale?: boolean;
+}
+
+function applyFbxUnitScale(object: Object3D, options?: FBXLoadOptions): void {
+	if (!options?.applyUnitScale) {
+		return;
+	}
+	const factor = object.userData?.unitScaleFactor;
+	if (typeof factor !== 'number' || !Number.isFinite(factor) || factor === 1) {
+		return;
+	}
+	object.scale.multiplyScalar(factor);
 }
 
 export class FBXLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
@@ -49,6 +69,7 @@ export class FBXLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 
 			// Parse on main thread using FBXLoader.parse
 			const object = this.loader.parse(buffer, url);
+			applyFbxUnitScale(object, _options);
 
 			return {
 				object,
@@ -65,6 +86,7 @@ export class FBXLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 			this.loader.load(
 				url,
 				(object: Object3D) => {
+					applyFbxUnitScale(object, options);
 					resolve({
 						object,
 						animations: (object as any).animations || []

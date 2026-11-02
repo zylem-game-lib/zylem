@@ -22,6 +22,12 @@ import {
 	UpdateFunction,
 } from '../core/base-node-life-cycle';
 import { AssetLoaderResult, EntityAssetLoader } from '../core/entity-asset-loader';
+import {
+	disposeGaussianSplatResources,
+	geometryForBounds,
+	isExclusiveGaussianSplatModel,
+	isGaussianSplatNode,
+} from '../core/loaders/gaussian-model';
 import { EntityLoaderDelegate } from './delegates/loader';
 import {
 	Vec3Input,
@@ -366,7 +372,7 @@ function computeModelBounds(
 		}
 
 		const mesh = child as Mesh;
-		const geometry = mesh.geometry;
+		const geometry = geometryForBounds(mesh);
 		if (!geometry) {
 			return;
 		}
@@ -421,7 +427,7 @@ function computeModelTrimesh(
 	let foundMesh = false;
 
 	modelRoot.traverse((child) => {
-		if (!(child as any).isMesh) {
+		if (!(child as any).isMesh || isGaussianSplatNode(child)) {
 			return;
 		}
 
@@ -603,6 +609,7 @@ function disposeObjectResources(object: Object3D | null): void {
 		if (!(child as any).isMesh) {
 			return;
 		}
+		disposeGaussianSplatResources(child);
 
 		const mesh = child as SkinnedMesh;
 		mesh.geometry?.dispose();
@@ -987,7 +994,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 	 * is offset so Mixamo-style hip calibration does not float the mesh.
 	 */
 	private alignVisualModelToGround(): void {
-		if (!this._object || !this.group) {
+		if (!this._object || !this.group || isExclusiveGaussianSplatModel(this._object)) {
 			return;
 		}
 
@@ -1017,7 +1024,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		}
 
 		this._object.traverse((child) => {
-			if (!(child as any).isMesh) {
+			if (!(child as any).isMesh || isGaussianSplatNode(child)) {
 				return;
 			}
 

@@ -5,14 +5,22 @@
  */
 
 import { WebGLRenderer, Object3D, Texture } from 'three';
-import { GLTF, GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { WebGPURenderer } from 'three/webgpu';
 import { LoaderAdapter, AssetLoadOptions, ModelLoadResult } from '../asset-types';
 import { DEFAULT_TEXTURE_ANISOTROPY } from './texture-loader';
+import { fetchArrayBuffer } from './fetch-buffer';
+import { markGaussianSplats } from './gaussian-model';
 import { cloneModelObject } from './model-clone';
+import {
+	gltfUsesGaussianSplatting,
+	inspectGltfExtensions,
+	requiredSpzGaussianCompression,
+	unsupportedSpzExtensionError,
+} from './model-sniff';
 import { getUrlFileExtension } from './url-utils';
 
 /** Material texture maps that benefit from anisotropic filtering. */
@@ -25,7 +33,8 @@ const ANISOTROPIC_MAP_KEYS = [
 	'aoMap',
 ] as const;
 
-const DRACO_DECODER_PATH = 'https://www.gstatic.com/draco/v1/decoders/';
+/** Draco WASM, fetched on the first KHR_draco_mesh_compression mesh. Apps serve the r187 glTF decoder files here, next to `/three/basis/`. */
+export const DEFAULT_DRACO_DECODER_PATH = '/three/draco/';
 
 export interface GLTFRuntimeConfig {
 	meshopt?: boolean;
@@ -34,10 +43,9 @@ export interface GLTFRuntimeConfig {
 }
 
 export interface GLTFLoadOptions extends AssetLoadOptions {
-	/** 
-	 * Use async fetch + parseAsync pattern instead of loader.load()
-	 * Note: fetch() is already non-blocking in browsers, so this mainly
-	 * provides a cleaner async/await pattern rather than performance gains
+	/**
+	 * Retained for existing callers. Loads always download once and parse
+	 * that buffer. A parse error rejects; it does not download the file again.
 	 */
 	useAsyncFetch?: boolean;
 }
@@ -49,10 +57,11 @@ export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 	private meshoptEnabled = false;
 	private configuredRenderer: WebGLRenderer | WebGPURenderer | null = null;
 	private ktx2TranscoderPath: string | null = null;
+	private gaussianPluginReady: Promise<void> | null = null;
 
 	constructor() {
 		this.dracoLoader = new DRACOLoader();
-		this.dracoLoader.setDecoderPath(DRACO_DECODER_PATH);
+		this.dracoLoader.setDecoderPath(DEFAULT_DRACO_DECODER_PATH);
 
 		this.loader = new GLTFLoader();
 		this.loader.setDRACOLoader(this.dracoLoader);
@@ -107,60 +116,43 @@ export class GLTFLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
 	}
 
 	async load(url: string, options?: GLTFLoadOptions): Promise<ModelLoadResult> {
-		if (options?.useAsyncFetch) {
-			return this.loadWithAsyncFetch(url, options);
-		}
-		return this.loadMainThread(url, options);
+		const buffer = await fetchArrayBuffer(url, options);
+		await this.prepareGaussianPlugin(buffer);
+		const gltf = await this.loader.parseAsync(buffer, url);
+		this.applyTextureAnisotropy(gltf.scene);
+		markGaussianSplats(gltf.scene);
+		return {
+			object: gltf.scene,
+			animations: gltf.animations,
+			gltf,
+		};
 	}
 
 	/**
-	 * Load using native fetch + parseAsync
-	 * Both fetch and parsing are async, keeping the main thread responsive
+	 * Register the WebGPU splat plugin only after a file actually uses
+	 * `KHR_gaussian_splatting`. A required SPZ compression extension cannot
+	 * be decoded by r187 and fails the load.
 	 */
-	private async loadWithAsyncFetch(url: string, options?: GLTFLoadOptions): Promise<ModelLoadResult> {
-		try {
-			const response = await fetch(url);
-			if (!response.ok) {
-				throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
-			}
-			const buffer = await response.arrayBuffer();
-
-			// Parse on main thread using GLTFLoader.parseAsync
-			// The url is passed as the path for resolving relative resources
-			const gltf = await this.loader.parseAsync(buffer, url);
-			this.applyTextureAnisotropy(gltf.scene);
-
-			return {
-				object: gltf.scene,
-				animations: gltf.animations,
-				gltf
-			};
-		} catch (error) {
-			console.error(`Async fetch GLTF load failed for ${url}, falling back to loader.load():`, error);
-			return this.loadMainThread(url, options);
+	private prepareGaussianPlugin(buffer: ArrayBuffer): Promise<void> {
+		const extensions = inspectGltfExtensions(buffer);
+		if (requiredSpzGaussianCompression(extensions)) {
+			return Promise.reject(unsupportedSpzExtensionError());
 		}
+		if (!gltfUsesGaussianSplatting(extensions)) {
+			return Promise.resolve();
+		}
+		this.gaussianPluginReady ??= this.registerGaussianPlugin().catch((error) => {
+			this.gaussianPluginReady = null;
+			throw error;
+		});
+		return this.gaussianPluginReady;
 	}
 
-	private async loadMainThread(url: string, options?: GLTFLoadOptions): Promise<ModelLoadResult> {
-		return new Promise((resolve, reject) => {
-			this.loader.load(
-				url,
-				(gltf: GLTF) => {
-					this.applyTextureAnisotropy(gltf.scene);
-					resolve({
-						object: gltf.scene,
-						animations: gltf.animations,
-						gltf
-					});
-				},
-				(event) => {
-					if (options?.onProgress && event.lengthComputable) {
-						options.onProgress(event.loaded / event.total);
-					}
-				},
-				(error) => reject(error)
-			);
-		});
+	private async registerGaussianPlugin(): Promise<void> {
+		const { GLTFGaussianSplatLoaderExtension } = await import(
+			'three/addons/loaders/GLTFGaussianSplatLoaderExtension.js'
+		);
+		this.loader.register((parser) => new GLTFGaussianSplatLoaderExtension(parser));
 	}
 
 	/**
