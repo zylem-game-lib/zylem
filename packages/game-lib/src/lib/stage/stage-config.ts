@@ -30,6 +30,10 @@ export type StageAssetLoaderConfig = {
  * by three's `KTX2Loader` to decode `KHR_texture_basisu` textures. Stages apply
  * this automatically so demos don't need to specify it; `KTX2Loader` only
  * fetches the transcoder lazily when a KTX2 texture is actually encountered.
+ *
+ * Draco mesh compression uses `/three/draco/` (`DEFAULT_DRACO_DECODER_PATH`
+ * on the GLTF loader). Apps should serve the r187 glTF decoder files there
+ * the same way they serve `/three/basis/`.
  */
 export const DEFAULT_KTX2_TRANSCODER_PATH = '/three/basis/';
 

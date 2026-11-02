@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
 	getUrlFileExtension,
+	resolveAgainstFileUrl,
 	stripUrlSearchAndHash,
 } from '../../../src/lib/core/loaders/url-utils';
 
@@ -21,5 +22,12 @@ describe('URL asset helpers', () => {
 	it('returns null when no usable extension exists', () => {
 		expect(getUrlFileExtension('/src/assets/ship')).toBeNull();
 		expect(getUrlFileExtension('/src/assets/ship.')).toBeNull();
+	});
+
+	it('resolves a sibling material library against the model URL', () => {
+		expect(resolveAgainstFileUrl('crate.mtl', '/models/crate.obj')).toBe('/models/crate.mtl');
+		expect(resolveAgainstFileUrl('crate.mtl', 'https://cdn.example.com/models/crate.obj?v=2')).toBe(
+			'https://cdn.example.com/models/crate.mtl',
+		);
 	});
 });

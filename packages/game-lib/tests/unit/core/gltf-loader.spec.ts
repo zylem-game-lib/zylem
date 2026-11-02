@@ -1,10 +1,11 @@
 import { WebGLRenderer } from 'three';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 import { WebGPURenderer } from 'three/webgpu';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { GLTFLoaderAdapter } from '../../../src/lib/core/loaders/gltf-loader';
+import { DEFAULT_DRACO_DECODER_PATH, GLTFLoaderAdapter } from '../../../src/lib/core/loaders/gltf-loader';
 
 function createWebGLRendererStub(): WebGLRenderer {
 	return Object.create(WebGLRenderer.prototype) as WebGLRenderer;
@@ -135,4 +136,75 @@ describe('GLTFLoaderAdapter runtime configuration', () => {
 			}),
 		).rejects.toThrow(/requires a renderer/i);
 	});
+
+	it('points Draco at the local decoder path', () => {
+		const setDecoderPath = vi.spyOn(DRACOLoader.prototype, 'setDecoderPath');
+
+		new GLTFLoaderAdapter();
+
+		expect(setDecoderPath).toHaveBeenCalledWith(DEFAULT_DRACO_DECODER_PATH);
+		expect(DEFAULT_DRACO_DECODER_PATH).toBe('/three/draco/');
+	});
+
+	it('rejects a parse failure without downloading the file again', async () => {
+		const fetchMock = vi.fn(async () => new Response(new Uint8Array([1, 2, 3, 4])));
+		vi.stubGlobal('fetch', fetchMock);
+
+		const loader = new GLTFLoaderAdapter();
+
+		await expect(loader.load('broken.glb')).rejects.toBeTruthy();
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it('rejects a required SPZ gaussian extension before parsing', async () => {
+		vi.stubGlobal('fetch', async () => new Response(encodeGlb({
+			asset: { version: '2.0' },
+			extensionsRequired: ['KHR_spz_gaussian_splats_compression'],
+		})));
+
+		const loader = new GLTFLoaderAdapter();
+
+		await expect(loader.load('compressed.glb')).rejects.toThrow(/KHR_spz_gaussian_splats_compression/);
+	});
+
+	it('registers the gaussian splat plugin only when the glTF extension is present', async () => {
+		const register = vi.spyOn(GLTFLoader.prototype, 'register');
+		const loader = new GLTFLoaderAdapter();
+		const builtInRegistrations = register.mock.calls.length;
+
+		vi.stubGlobal('fetch', async () => new Response(encodeGlb({
+			asset: { version: '2.0' },
+			scene: 0,
+			scenes: [{ nodes: [] }],
+		})));
+		await loader.load('mesh.glb');
+		expect(register.mock.calls.length).toBe(builtInRegistrations);
+
+		vi.stubGlobal('fetch', async () => new Response(encodeGlb({
+			asset: { version: '2.0' },
+			extensionsUsed: ['KHR_gaussian_splatting'],
+			scene: 0,
+			scenes: [{ nodes: [] }],
+		})));
+		await loader.load('splats.glb');
+		expect(register.mock.calls.length).toBeGreaterThan(builtInRegistrations);
+	});
 });
+
+function encodeGlb(json: object): Uint8Array {
+	const jsonBytes = new TextEncoder().encode(JSON.stringify(json));
+	const padding = (4 - (jsonBytes.byteLength % 4)) % 4;
+	const chunkLength = jsonBytes.byteLength + padding;
+	const total = 12 + 8 + chunkLength;
+	const buffer = new ArrayBuffer(total);
+	const view = new DataView(buffer);
+	view.setUint32(0, 0x46546c67, true);
+	view.setUint32(4, 2, true);
+	view.setUint32(8, total, true);
+	view.setUint32(12, chunkLength, true);
+	view.setUint32(16, 0x4e4f534a, true);
+	const chunk = new Uint8Array(buffer, 20, chunkLength);
+	chunk.set(jsonBytes);
+	chunk.fill(0x20, jsonBytes.byteLength);
+	return new Uint8Array(buffer);
+}

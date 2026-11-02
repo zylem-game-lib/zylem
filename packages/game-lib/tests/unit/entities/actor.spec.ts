@@ -2,6 +2,8 @@ import {
 	AnimationClip,
 	Bone,
 	BoxGeometry,
+	BufferAttribute,
+	Color,
 	Group,
 	Mesh,
 	MeshStandardMaterial,
@@ -474,5 +476,46 @@ describe('ZylemActor', () => {
 			expect(track?.values[1]).toBe(42);
 			expect(track?.values[4]).toBe(42);
 		}
+	});
+
+	it('does not tint or triangle-collide a Gaussian splat, and frees its capture buffers', async () => {
+		const material = new MeshStandardMaterial({ color: 0x00ff00 });
+		const mesh = new Mesh(new BoxGeometry(0.2, 0.2, 0.2), material);
+		(mesh as Mesh & { isGaussianSplat?: boolean; splatGeometry?: BoxGeometry }).isGaussianSplat = true;
+		(mesh as Mesh & { splatGeometry?: BoxGeometry }).splatGeometry = new BoxGeometry(4, 2, 6);
+		const captureAttribute = new BufferAttribute(new Float32Array([1, 2, 3, 4]), 1);
+		const disposeSpy = vi.spyOn(captureAttribute, 'dispose');
+		(mesh as Mesh & { _buffers?: unknown })._buffers = { centerRead: { value: captureAttribute } };
+
+		vi.spyOn(EntityAssetLoader.prototype, 'loadFile').mockResolvedValue({ object: mesh });
+
+		const actor = createActor({
+			models: ['cloud.spz'],
+			collision: { static: true },
+			collisionShape: 'trimesh',
+			material: { color: new Color(1, 0, 0) },
+		});
+
+		await flushPromises();
+
+		expect(mesh.material).toBe(material);
+		expect(mesh.position.y).toBe(0);
+		actor.synchronizeRuntimeCollider();
+		expect(inspectColliderDesc(actor.colliderDesc!).shape).toBe('capsule');
+
+		const boundsActor = createActor({
+			models: ['cloud.spz'],
+			collisionShape: 'bounds',
+		});
+		await flushPromises();
+		boundsActor.synchronizeRuntimeCollider();
+		const bounds = inspectColliderDesc(boundsActor.colliderDesc!);
+		expect(bounds.shape).toBe('cuboid');
+		expect(bounds.dimensions[0]).toBeCloseTo(2, 5);
+		expect(bounds.dimensions[1]).toBeCloseTo(1, 5);
+		expect(bounds.dimensions[2]).toBeCloseTo(3, 5);
+
+		actor.actorDestroy();
+		expect(disposeSpy).toHaveBeenCalled();
 	});
 });

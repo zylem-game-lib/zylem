@@ -2,7 +2,7 @@
  * Asset type definitions for the Zylem Asset Manager
  */
 
-import { Texture, Material, Object3D } from 'three';
+import { AnimationClip, Texture, Material, Object3D } from 'three';
 import { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 
 /**
@@ -14,10 +14,22 @@ export enum AssetType {
 	GLTF = 'gltf',
 	FBX = 'fbx',
 	OBJ = 'obj',
+	STL = 'stl',
+	PLY = 'ply',
+	USD = 'usd',
+	GAUSSIAN_SPLAT = 'gaussian-splat',
+	SOG = 'sog',
 	AUDIO = 'audio',
 	FILE = 'file',
 	JSON = 'json'
 }
+
+/**
+ * Disambiguates extension-less URLs and files that share an extension.
+ * `mesh` and `splat` override the `.ply` header sniff.
+ * `sog` accepts a bundled `.sog` or an unbundled `meta.json`.
+ */
+export type ModelFileType = 'mesh' | 'splat' | 'sog';
 
 /**
  * Options for loading assets
@@ -29,6 +41,25 @@ export interface AssetLoadOptions {
 	clone?: boolean;
 	/** Progress callback for individual asset */
 	onProgress?: (progress: number) => void;
+	/** Override sniffing for `.ply`, extension-less URLs, and SOG JSON. */
+	fileType?: ModelFileType;
+	/** Explicit Wavefront material library. Sibling `mtllib` is used when omitted. */
+	mtlPath?: string;
+	/**
+	 * STL and mesh PLY have no axis metadata. `'y'` trusts the file.
+	 * `'z'` applies the same X-axis rotation FBX and USD use for Z-up files.
+	 */
+	upAxis?: 'y' | 'z';
+	/**
+	 * FBX only. Scale the root by `userData.unitScaleFactor`.
+	 * Off by default so existing Mixamo scenes keep their authored size.
+	 */
+	applyUnitScale?: boolean;
+	/**
+	 * Gaussian captures. `'authored'` keeps the file axes.
+	 * `'y-down'` rotates 180° about X for OpenCV-style captures.
+	 */
+	splatFrame?: 'authored' | 'y-down';
 }
 
 /**
@@ -48,7 +79,7 @@ export interface TextureLoadResult {
 
 export interface ModelLoadResult {
 	object: Object3D;
-	animations?: any[];
+	animations?: AnimationClip[];
 	gltf?: GLTF;
 }
 

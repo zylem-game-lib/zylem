@@ -282,6 +282,9 @@
     "typescript-fsm": "^1.6.0",
     "valtio": "^2.1.8"
   },
+  "optionalDependencies": {
+    "@playcanvas/splat-transform": "3.10.3"
+  },
   "peerDependencies": {
     "howler": "^2.2.4",
     "nanoid": "^5.1.5",

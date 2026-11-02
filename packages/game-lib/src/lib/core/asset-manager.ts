@@ -5,7 +5,7 @@
  * All asset loading should funnel through this manager.
  */
 
-import { Texture, Object3D, LoadingManager, Cache } from 'three';
+import { Texture, LoadingManager, Cache } from 'three';
 import mitt, { Emitter } from 'mitt';
 
 import {
@@ -16,23 +16,30 @@ import {
   ModelLoadResult,
 } from './asset-types';
 
-import {
-  TextureLoaderAdapter,
-  GLTFLoaderAdapter,
-  type GLTFRuntimeConfig,
-  FBXLoaderAdapter,
-  OBJLoaderAdapter,
-  AudioLoaderAdapter,
-  FileLoaderAdapter,
-  JsonLoaderAdapter,
-  TextureOptions,
-  GLTFLoadOptions,
-  FBXLoadOptions,
-  OBJLoadOptions,
-  FileLoadOptions,
-} from './loaders';
+import { TextureLoaderAdapter, type TextureOptions } from './loaders/texture-loader';
+import { GLTFLoaderAdapter, type GLTFLoadOptions, type GLTFRuntimeConfig } from './loaders/gltf-loader';
+import { AudioLoaderAdapter } from './loaders/audio-loader';
+import { FileLoaderAdapter, JsonLoaderAdapter, type FileLoadOptions } from './loaders/file-loader';
+import type { FBXLoadOptions } from './loaders/fbx-loader';
+import type { OBJLoadOptions } from './loaders/obj-loader';
+import type { FBXLoaderAdapter } from './loaders/fbx-loader';
+import type { OBJLoaderAdapter } from './loaders/obj-loader';
+import type { GeometryMeshAdapter } from './loaders/geometry-mesh-loader';
+import type { GaussianSplatAdapter } from './loaders/gaussian-splat-loader';
+import type { USDLoaderAdapter } from './loaders/usd-loader';
+import type { SogLoaderAdapter } from './loaders/sog-loader';
 import { VEC2_ONE, toThreeVector2 } from './vector';
-import { getUrlFileExtension } from './loaders/url-utils';
+import { fetchArrayBuffer } from './loaders/fetch-buffer';
+import { ALEMBIC_UNSUPPORTED_MESSAGE, classifyPly, type PlyKind } from './loaders/model-sniff';
+import { getUrlFileExtension, getUrlFileName } from './loaders/url-utils';
+
+function optionCacheSuffix(options?: AssetLoadOptions): string {
+  const parts: string[] = [];
+  if (options?.upAxis === 'z') parts.push('up-z');
+  if (options?.applyUnitScale) parts.push('unit-scale');
+  if (options?.splatFrame === 'y-down') parts.push('y-down');
+  return parts.length ? `:${parts.join('+')}` : '';
+}
 
 /**
  * Asset cache entry
@@ -66,14 +73,21 @@ export class AssetManager {
   private pendingGLTFRuntimePromise: Promise<void> | null = null;
   private pendingGLTFRuntimeResolve: (() => void) | null = null;
 
-  // Loaders
+  // Loaders. GLTF stays eager because stage startup configures it.
+  // The other model adapters are created on first use so their three.js
+  // parsers stay out of the first chunk.
   private textureLoader: TextureLoaderAdapter;
   private gltfLoader: GLTFLoaderAdapter;
-  private fbxLoader: FBXLoaderAdapter;
-  private objLoader: OBJLoaderAdapter;
+  private fbxLoaderPromise: Promise<FBXLoaderAdapter> | null = null;
+  private objLoaderPromise: Promise<OBJLoaderAdapter> | null = null;
+  private geometryLoaderPromise: Promise<GeometryMeshAdapter> | null = null;
+  private gaussianLoaderPromise: Promise<GaussianSplatAdapter> | null = null;
+  private usdLoaderPromise: Promise<USDLoaderAdapter> | null = null;
+  private sogLoaderPromise: Promise<SogLoaderAdapter> | null = null;
   private audioLoader: AudioLoaderAdapter;
   private fileLoader: FileLoaderAdapter;
   private jsonLoader: JsonLoaderAdapter;
+  private bufferLoads = new Map<string, Promise<ArrayBuffer>>();
 
   // Loading manager for progress tracking
   private loadingManager: LoadingManager;
@@ -95,8 +109,6 @@ export class AssetManager {
     // Initialize loaders
     this.textureLoader = new TextureLoaderAdapter();
     this.gltfLoader = new GLTFLoaderAdapter();
-    this.fbxLoader = new FBXLoaderAdapter();
-    this.objLoader = new OBJLoaderAdapter();
     this.audioLoader = new AudioLoaderAdapter();
     this.fileLoader = new FileLoaderAdapter();
     this.jsonLoader = new JsonLoaderAdapter();
@@ -227,32 +239,132 @@ export class AssetManager {
     url: string,
     options?: FBXLoadOptions,
   ): Promise<ModelLoadResult> {
+    const loader = await this.fbxLoader();
     return this.loadWithCache(
-      url,
+      `${url}${optionCacheSuffix(options)}`,
       AssetType.FBX,
       this.modelCache,
-      () => this.fbxLoader.load(url, options),
+      () => loader.load(url, options),
       options,
-      result => (options?.clone ? this.fbxLoader.clone(result) : result),
+      result => (options?.clone ? loader.clone(result) : result),
     );
   }
 
   /**
-   * Load an OBJ model with caching
+   * Load an OBJ model with caching.
+   * An explicit MTL path is part of the cache key. A sibling `mtllib`
+   * is resolved inside the adapter and is identified by the OBJ URL.
    */
   async loadOBJ(
     url: string,
     options?: OBJLoadOptions,
   ): Promise<ModelLoadResult> {
-    // Include mtlPath in cache key for OBJ files
+    const loader = await this.objLoader();
     const cacheKey = options?.mtlPath ? `${url}:${options.mtlPath}` : url;
     return this.loadWithCache(
       cacheKey,
       AssetType.OBJ,
       this.modelCache,
-      () => this.objLoader.load(url, options),
+      () => loader.load(url, options),
       options,
-      result => (options?.clone ? this.objLoader.clone(result) : result),
+      result => (options?.clone ? loader.clone(result) : result),
+    );
+  }
+
+  /**
+   * Load an STL triangle soup.
+   */
+  async loadSTL(
+    url: string,
+    options?: AssetLoadOptions,
+  ): Promise<ModelLoadResult> {
+    const loader = await this.geometryLoader();
+    return this.loadWithCache(
+      `${url}${optionCacheSuffix(options)}`,
+      AssetType.STL,
+      this.modelCache,
+      () => loader.load(url, options),
+      options,
+      result => (options?.clone ? loader.clone(result) : result),
+    );
+  }
+
+  /**
+   * Load a PLY file. Mesh and Gaussian payloads do not share a cache entry.
+   */
+  async loadPLY(
+    url: string,
+    options?: AssetLoadOptions,
+  ): Promise<ModelLoadResult> {
+    const hinted = options?.fileType === 'mesh' || options?.fileType === 'splat'
+      ? options.fileType
+      : null;
+    const suffix = optionCacheSuffix(options);
+    if (!hinted && !options?.forceReload) {
+      if (this.modelCache.has(`${url}:mesh${suffix}`)) {
+        return this.loadCachedPly(url, 'mesh', options);
+      }
+      if (this.modelCache.has(`${url}:splat${suffix}`)) {
+        return this.loadCachedPly(url, 'splat', options);
+      }
+    }
+
+    const buffer = await this.loadBuffer(url, options);
+    const kind = classifyPly(buffer, hinted);
+    return this.loadParsedPly(url, kind, buffer, options);
+  }
+
+  /**
+   * Load a USD, USDA, USDC, or USDZ file through `USDLoader`.
+   */
+  async loadUSD(
+    url: string,
+    options?: AssetLoadOptions,
+  ): Promise<ModelLoadResult> {
+    const loader = await this.usdLoader();
+    return this.loadWithCache(
+      url,
+      AssetType.USD,
+      this.modelCache,
+      () => loader.load(url, options),
+      options,
+      result => (options?.clone ? loader.clone(result) : result),
+    );
+  }
+
+  /**
+   * Load an SPZ, SPLAT, or KSPLAT Gaussian capture.
+   */
+  async loadGaussianSplat(
+    url: string,
+    options?: AssetLoadOptions,
+  ): Promise<ModelLoadResult> {
+    const loader = await this.gaussianLoader();
+    return this.loadWithCache(
+      `${url}${optionCacheSuffix(options)}`,
+      AssetType.GAUSSIAN_SPLAT,
+      this.modelCache,
+      () => loader.load(url, options),
+      options,
+      result => (options?.clone ? loader.clone(result) : result),
+    );
+  }
+
+  /**
+   * Load a bundled `.sog`, or an unbundled `meta.json` requested as a model.
+   */
+  async loadSOG(
+    url: string,
+    options?: AssetLoadOptions,
+  ): Promise<ModelLoadResult> {
+    const loader = await this.sogLoader();
+    return this.loadWithCache(
+      url,
+      AssetType.SOG,
+      this.modelCache,
+      () => loader.load(url, options),
+      options,
+      result => (options?.clone ? loader.clone(result) : result),
     );
   }
 
@@ -263,9 +375,18 @@ export class AssetManager {
     url: string,
     options?: AssetLoadOptions,
   ): Promise<ModelLoadResult> {
-    const ext = getUrlFileExtension(url);
+    const extension = getUrlFileExtension(url);
+    if (extension === 'abc') {
+      throw new Error(ALEMBIC_UNSUPPORTED_MESSAGE);
+    }
+    if (this.isSogRequest(url, options)) {
+      return this.loadSOG(url, options);
+    }
+    if (extension === 'ply' || (!extension && (options?.fileType === 'mesh' || options?.fileType === 'splat'))) {
+      return this.loadPLY(url, options);
+    }
 
-    switch (ext) {
+    switch (extension) {
       case 'gltf':
       case 'glb':
         return this.loadGLTF(url, options);
@@ -273,8 +394,19 @@ export class AssetManager {
         return this.loadFBX(url, options);
       case 'obj':
         return this.loadOBJ(url, options);
+      case 'stl':
+        return this.loadSTL(url, options);
+      case 'usd':
+      case 'usda':
+      case 'usdc':
+      case 'usdz':
+        return this.loadUSD(url, options);
+      case 'spz':
+      case 'splat':
+      case 'ksplat':
+        return this.loadGaussianSplat(url, options);
       default:
-        throw new Error(`Unsupported model format: ${ext}`);
+        throw new Error(`Unsupported model format: ${extension}`);
     }
   }
 
@@ -358,6 +490,21 @@ export class AssetManager {
           case AssetType.OBJ:
             result = await this.loadOBJ(item.url, item.options);
             break;
+          case AssetType.STL:
+            result = await this.loadSTL(item.url, item.options);
+            break;
+          case AssetType.PLY:
+            result = await this.loadPLY(item.url, item.options);
+            break;
+          case AssetType.USD:
+            result = await this.loadUSD(item.url, item.options);
+            break;
+          case AssetType.GAUSSIAN_SPLAT:
+            result = await this.loadGaussianSplat(item.url, item.options);
+            break;
+          case AssetType.SOG:
+            result = await this.loadSOG(item.url, item.options);
+            break;
           case AssetType.AUDIO:
             result = await this.loadAudio(item.url, item.options);
             break;
@@ -403,35 +550,42 @@ export class AssetManager {
    */
   isCached(url: string): boolean {
     return (
-      this.textureCache.has(url) ||
-      this.modelCache.has(url) ||
-      this.audioCache.has(url) ||
-      this.fileCache.has(url) ||
-      this.jsonCache.has(url)
+      this.cacheHasUrl(this.textureCache, url) ||
+      this.cacheHasUrl(this.modelCache, url) ||
+      this.cacheHasUrl(this.audioCache, url) ||
+      this.cacheHasUrl(this.fileCache, url) ||
+      this.cacheHasUrl(this.jsonCache, url)
     );
   }
 
   /**
-   * Clear all caches or a specific URL
+   * Clear all caches or a specific URL.
+   * Cached textures are disposed, and ImageBitmap sources are closed.
    */
   clearCache(url?: string): void {
     if (url) {
-      this.textureCache.delete(url);
-      this.modelCache.delete(url);
-      this.audioCache.delete(url);
-      this.fileCache.delete(url);
-      this.jsonCache.delete(url);
-    } else {
-      this.textureCache.clear();
-      this.modelCache.clear();
-      this.audioCache.clear();
-      this.fileCache.clear();
-      this.jsonCache.clear();
-      Cache.clear();
-      this.pendingGLTFRuntimePath = null;
-      this.pendingGLTFRuntimePromise = null;
-      this.pendingGLTFRuntimeResolve = null;
+      this.deleteCacheUrl(this.textureCache, url, (entry) => this.disposeCachedTexture(entry.result));
+      this.deleteCacheUrl(this.modelCache, url);
+      this.deleteCacheUrl(this.audioCache, url);
+      this.deleteCacheUrl(this.fileCache, url);
+      this.deleteCacheUrl(this.jsonCache, url);
+      this.bufferLoads.delete(url);
+      return;
     }
+
+    for (const entry of this.textureCache.values()) {
+      this.disposeCachedTexture(entry.result);
+    }
+    this.textureCache.clear();
+    this.modelCache.clear();
+    this.audioCache.clear();
+    this.fileCache.clear();
+    this.jsonCache.clear();
+    this.bufferLoads.clear();
+    Cache.clear();
+    this.pendingGLTFRuntimePath = null;
+    this.pendingGLTFRuntimePromise = null;
+    this.pendingGLTFRuntimeResolve = null;
   }
 
   /**
@@ -464,6 +618,159 @@ export class AssetManager {
   }
 
   // ==================== PRIVATE HELPERS ====================
+
+  private fbxLoader(): Promise<FBXLoaderAdapter> {
+    this.fbxLoaderPromise ??= import('./loaders/fbx-loader').then(
+      (module) => new module.FBXLoaderAdapter(),
+    );
+    return this.fbxLoaderPromise;
+  }
+
+  private objLoader(): Promise<OBJLoaderAdapter> {
+    this.objLoaderPromise ??= import('./loaders/obj-loader').then(
+      (module) => new module.OBJLoaderAdapter(),
+    );
+    return this.objLoaderPromise;
+  }
+
+  private geometryLoader(): Promise<GeometryMeshAdapter> {
+    this.geometryLoaderPromise ??= import('./loaders/geometry-mesh-loader').then(
+      (module) => new module.GeometryMeshAdapter(),
+    );
+    return this.geometryLoaderPromise;
+  }
+
+  private gaussianLoader(): Promise<GaussianSplatAdapter> {
+    this.gaussianLoaderPromise ??= import('./loaders/gaussian-splat-loader').then(
+      (module) => new module.GaussianSplatAdapter(),
+    );
+    return this.gaussianLoaderPromise;
+  }
+
+  private usdLoader(): Promise<USDLoaderAdapter> {
+    this.usdLoaderPromise ??= import('./loaders/usd-loader').then(
+      (module) => new module.USDLoaderAdapter(),
+    );
+    return this.usdLoaderPromise;
+  }
+
+  private sogLoader(): Promise<SogLoaderAdapter> {
+    this.sogLoaderPromise ??= import('./loaders/sog-loader').then(
+      (module) => new module.SogLoaderAdapter(),
+    );
+    return this.sogLoaderPromise;
+  }
+
+  private isSogRequest(url: string, options?: AssetLoadOptions): boolean {
+    if (getUrlFileName(url) === 'lod-meta.json') {
+      return options?.fileType === 'sog';
+    }
+    return options?.fileType === 'sog'
+      || getUrlFileExtension(url) === 'sog'
+      || getUrlFileName(url) === 'meta.json';
+  }
+
+  private loadBuffer(url: string, options?: AssetLoadOptions): Promise<ArrayBuffer> {
+    if (options?.forceReload) {
+      this.bufferLoads.delete(url);
+    }
+    const existing = this.bufferLoads.get(url);
+    if (existing) {
+      return existing;
+    }
+    const pending = fetchArrayBuffer(url, options).finally(() => {
+      this.bufferLoads.delete(url);
+    });
+    this.bufferLoads.set(url, pending);
+    return pending;
+  }
+
+  private loadCachedPly(
+    url: string,
+    kind: PlyKind,
+    options?: AssetLoadOptions,
+  ): Promise<ModelLoadResult> {
+    return this.loadParsedPly(url, kind, null, options);
+  }
+
+  private async loadParsedPly(
+    url: string,
+    kind: PlyKind,
+    buffer: ArrayBuffer | null,
+    options?: AssetLoadOptions,
+  ): Promise<ModelLoadResult> {
+    const cacheKey = `${url}:${kind}${optionCacheSuffix(options)}`;
+    if (kind === 'splat') {
+      const loader = await this.gaussianLoader();
+      return this.loadWithCache(
+        cacheKey,
+        AssetType.GAUSSIAN_SPLAT,
+        this.modelCache,
+        async () => {
+          const bytes = buffer ?? await this.loadBuffer(url, options);
+          return loader.parse('ply', bytes, options);
+        },
+        options,
+        (result) => (options?.clone ? loader.clone(result) : result),
+      );
+    }
+
+    const loader = await this.geometryLoader();
+    const geometryModule = await import('./loaders/geometry-mesh-loader');
+    return this.loadWithCache(
+      cacheKey,
+      AssetType.PLY,
+      this.modelCache,
+      async () => {
+        const bytes = buffer ?? await this.loadBuffer(url, options);
+        return geometryModule.parseMeshPlyBuffer(bytes, options);
+      },
+      options,
+      (result) => (options?.clone ? loader.clone(result) : result),
+    );
+  }
+
+  private cacheHasUrl(cache: Map<string, unknown>, url: string): boolean {
+    if (cache.has(url)) {
+      return true;
+    }
+    const prefix = `${url}:`;
+    for (const key of cache.keys()) {
+      if (key.startsWith(prefix)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private deleteCacheUrl<T>(
+    cache: Map<string, CacheEntry<T>>,
+    url: string,
+    dispose?: (entry: CacheEntry<T>) => void,
+  ): void {
+    for (const key of [...cache.keys()]) {
+      if (key === url || key.startsWith(`${url}:`)) {
+        const entry = cache.get(key);
+        if (entry && dispose) {
+          dispose(entry);
+        }
+        cache.delete(key);
+      }
+    }
+  }
+
+  private disposeCachedTexture(texture: Texture | undefined): void {
+    if (!texture) {
+      return;
+    }
+    const image = texture.image as { close?: () => void } | undefined;
+    image?.close?.();
+    const sourceData = (texture as Texture & { source?: { data?: { close?: () => void } } }).source?.data;
+    if (sourceData && sourceData !== image) {
+      sourceData.close?.();
+    }
+    texture.dispose();
+  }
 
   /**
    * Generic cache wrapper for loading assets
@@ -528,6 +835,11 @@ export class AssetManager {
       case AssetType.GLTF:
       case AssetType.FBX:
       case AssetType.OBJ:
+      case AssetType.STL:
+      case AssetType.PLY:
+      case AssetType.USD:
+      case AssetType.GAUSSIAN_SPLAT:
+      case AssetType.SOG:
         this.stats.modelsLoaded++;
         break;
       case AssetType.AUDIO:

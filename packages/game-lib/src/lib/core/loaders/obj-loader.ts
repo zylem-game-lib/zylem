@@ -1,81 +1,55 @@
 /**
- * OBJ loader adapter for the Asset Manager
- * Supports optional MTL (material) file loading
+ * OBJ loader adapter for the Asset Manager.
+ *
+ * Each load uses a new OBJLoader. A shared loader's `setMaterials` call
+ * would paint the next OBJ with the previous MTL. When `mtlPath` is omitted,
+ * the first `mtllib` line is resolved against the OBJ URL and loaded.
  */
 
-import { Object3D, Group } from 'three';
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { LoaderAdapter, AssetLoadOptions, ModelLoadResult } from '../asset-types';
+import { fetchText } from './fetch-buffer';
 import { cloneModelObject } from './model-clone';
-import { getUrlFileExtension } from './url-utils';
+import { getUrlDirectory, getUrlFileExtension, resolveAgainstFileUrl } from './url-utils';
 
 export interface OBJLoadOptions extends AssetLoadOptions {
-	/** Path to MTL material file */
+	/** Path to an MTL file. When omitted, the OBJ `mtllib` entry is used. */
 	mtlPath?: string;
 }
 
+export function readObjMaterialLibrary(text: string): string | null {
+	const match = /^mtllib\s+(.+)$/m.exec(text);
+	const name = match?.[1]?.trim();
+	return name || null;
+}
+
 export class OBJLoaderAdapter implements LoaderAdapter<ModelLoadResult> {
-	private loader: OBJLoader;
-	private mtlLoader: MTLLoader;
-
-	constructor() {
-		this.loader = new OBJLoader();
-		this.mtlLoader = new MTLLoader();
-	}
-
 	isSupported(url: string): boolean {
-		const ext = getUrlFileExtension(url);
-		return ext === 'obj';
+		return getUrlFileExtension(url) === 'obj';
 	}
 
 	async load(url: string, options?: OBJLoadOptions): Promise<ModelLoadResult> {
-		// Load MTL first if provided
-		if (options?.mtlPath) {
-			await this.loadMTL(options.mtlPath);
+		const text = await fetchText(url, options);
+		const loader = new OBJLoader();
+		const libraryName = options?.mtlPath ? null : readObjMaterialLibrary(text);
+		const mtlUrl = options?.mtlPath ?? (libraryName ? resolveAgainstFileUrl(libraryName, url) : null);
+		if (mtlUrl) {
+			const materials = new MTLLoader().parse(await fetchText(mtlUrl, options), getUrlDirectory(mtlUrl));
+			materials.preload();
+			loader.setMaterials(materials);
 		}
 
-		return new Promise((resolve, reject) => {
-			this.loader.load(
-				url,
-				(object: Group) => {
-					resolve({
-						object,
-						animations: []
-					});
-				},
-				(event) => {
-					if (options?.onProgress && event.lengthComputable) {
-						options.onProgress(event.loaded / event.total);
-					}
-				},
-				(error) => reject(error)
-			);
-		});
+		return {
+			object: loader.parse(text),
+			animations: [],
+		};
 	}
 
-	private async loadMTL(url: string): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.mtlLoader.load(
-				url,
-				(materials) => {
-					materials.preload();
-					this.loader.setMaterials(materials);
-					resolve();
-				},
-				undefined,
-				(error) => reject(error)
-			);
-		});
-	}
-
-	/**
-	 * Clone a loaded OBJ object for reuse
-	 */
 	clone(result: ModelLoadResult): ModelLoadResult {
 		return {
 			object: cloneModelObject(result.object),
-			animations: []
+			animations: [],
 		};
 	}
 }

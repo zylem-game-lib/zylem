@@ -88,6 +88,7 @@ export default defineConfig((options) => ({
 		'nanoid',
 		'lucide-solid',
 		'@kobalte/core',
+		'@playcanvas/splat-transform',
 	],
 	outExtension({ format }) {
 		return {
