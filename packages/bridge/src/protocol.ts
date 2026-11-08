@@ -456,12 +456,20 @@ export const GAME_CAMERA_ID = 'game';
 
 /**
  * Editor view cameras. Created only while an editor is attached, one instance
- * per view. `free` is the perspective orbit camera.
+ * per view. `side` is the right orthographic view and `isometric` is the
+ * iso right/top corner, kept under their original ids. `perspective` is a
+ * locked perspective camera. `free` is the perspective orbit camera.
  */
 export const EDITOR_CAMERAS = {
 	side: 'editor:side',
+	left: 'editor:left',
 	top: 'editor:top',
+	bottom: 'editor:bottom',
 	isometric: 'editor:isometric',
+	isoLeftTop: 'editor:iso-left-top',
+	isoRightBottom: 'editor:iso-right-bottom',
+	isoLeftBottom: 'editor:iso-left-bottom',
+	perspective: 'editor:perspective',
 	free: 'editor:free',
 } as const;
 

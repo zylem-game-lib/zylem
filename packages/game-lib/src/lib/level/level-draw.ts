@@ -18,10 +18,13 @@ export interface DrawRay {
 	direction: BrushVec3;
 }
 
-/** `editor:top` and `editor:side`, or null when the camera should follow its facing. */
+/**
+ * Top and bottom draw on XZ. Left and right (the original side camera) draw
+ * on YZ. Every other camera follows its facing.
+ */
 export function drawViewForCamera(cameraId: string | null): DrawView | null {
-	if (cameraId === EDITOR_CAMERAS.top) return 'top';
-	if (cameraId === EDITOR_CAMERAS.side) return 'side';
+	if (cameraId === EDITOR_CAMERAS.top || cameraId === EDITOR_CAMERAS.bottom) return 'top';
+	if (cameraId === EDITOR_CAMERAS.side || cameraId === EDITOR_CAMERAS.left) return 'side';
 	return null;
 }
 

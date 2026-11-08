@@ -350,6 +350,110 @@ describe('GameBridge game → editor sync', () => {
 	});
 });
 
+describe('GameBridge selected pose watch', () => {
+	const bridge = new GameBridge();
+	const { channel } = getZylemBridge();
+	// Released after each test: a lingering subscriber would look like an
+	// attached editor to the next one.
+	const stops: (() => void)[] = [];
+
+	afterEach(() => {
+		for (const stop of stops.splice(0)) stop();
+		bridge.disconnect();
+		channel.reset();
+		setSelectedEntityIds([]);
+	});
+
+	/** A selected entity whose live pose the test moves by hand. */
+	function selectCrate(position = { x: 0, y: 0.5, z: 0 }) {
+		const crate = {
+			uuid: 'crate',
+			name: 'Crate',
+			position,
+			getPose: () => ({
+				position: { ...crate.position },
+				rotation: { x: 0, y: 0, z: 0, w: 1 },
+			}),
+		};
+		bridge.connect({
+			resolveEntity: (uuid) => (uuid === 'crate' ? (crate as any) : null),
+		});
+		setSelectedEntityIds(['crate']);
+		return crate;
+	}
+
+	function listen(): EntitySummaryPayload[] {
+		const upserts: EntitySummaryPayload[] = [];
+		stops.push(channel.on('entity:upsert', (payload) => upserts.push(...payload)));
+		return upserts;
+	}
+
+	it('publishes a selected entity each time it moves, and not while it rests', async () => {
+		// Whatever moved it — a gizmo drag, an undo, physics — the editor's
+		// transform fields only ever learn the new pose from this.
+		const upserts = listen();
+		const crate = selectCrate();
+
+		bridge.publishSelectedPoses();
+		await flushBridge();
+		expect(upserts).toEqual([
+			expect.objectContaining({ uuid: 'crate', position: { x: 0, y: 0.5, z: 0 } }),
+		]);
+
+		upserts.length = 0;
+		bridge.publishSelectedPoses();
+		await flushBridge();
+		expect(upserts).toEqual([]);
+
+		crate.position = { x: 1.25, y: 0.5, z: 0 };
+		bridge.publishSelectedPoses();
+		await flushBridge();
+		expect(upserts).toEqual([
+			expect.objectContaining({ uuid: 'crate', position: { x: 1.25, y: 0.5, z: 0 } }),
+		]);
+	});
+
+	it('skips an entity that has no live pose yet', async () => {
+		// Until it spawns, the pose would only be defaults, and publishing those
+		// would show the entity at the origin.
+		const upserts = listen();
+		bridge.connect({
+			resolveEntity: () => ({ uuid: 'crate', name: 'Crate', getPose: () => null }) as any,
+		});
+		setSelectedEntityIds(['crate']);
+
+		bridge.publishSelectedPoses();
+		await flushBridge();
+
+		expect(upserts).toEqual([]);
+	});
+
+	it('publishes nothing while no editor is listening', async () => {
+		selectCrate();
+
+		bridge.publishSelectedPoses();
+		await flushBridge();
+
+		expect(channel.getState('entity:upsert')).toBeUndefined();
+	});
+
+	it('sends the current pose again to an editor that attaches later', async () => {
+		selectCrate();
+		const first = channel.on('entity:upsert', () => {});
+		bridge.publishSelectedPoses();
+		await flushBridge();
+		first();
+		bridge.publishSelectedPoses();
+
+		// The crate has not moved, but this editor has never been told where it is.
+		const upserts = listen();
+		bridge.publishSelectedPoses();
+		await flushBridge();
+
+		expect(upserts).toEqual([expect.objectContaining({ uuid: 'crate' })]);
+	});
+});
+
 describe('GameBridge demand gating', () => {
 	const bridge = new GameBridge();
 	const { channel } = getZylemBridge();

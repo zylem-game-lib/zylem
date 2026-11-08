@@ -7,8 +7,14 @@ export const GAME_CAMERA_ID = 'game';
 
 export const EDITOR_CAMERAS = {
 	side: 'editor:side',
+	left: 'editor:left',
 	top: 'editor:top',
+	bottom: 'editor:bottom',
 	isometric: 'editor:isometric',
+	isoLeftTop: 'editor:iso-left-top',
+	isoRightBottom: 'editor:iso-right-bottom',
+	isoLeftBottom: 'editor:iso-left-bottom',
+	perspective: 'editor:perspective',
 	free: 'editor:free',
 } as const;
 
@@ -17,7 +23,7 @@ export const EDITOR_CAMERAS = {
  *
  * `GameBridge.connect()` runs for every game, so it is not the signal. The
  * bridge marks the session attached when an editor subscribes, and every live
- * camera manager creates or destroys its four view cameras from that flag.
+ * camera manager creates or destroys its view cameras from that flag.
  */
 
 export interface EditorCameraHost {
