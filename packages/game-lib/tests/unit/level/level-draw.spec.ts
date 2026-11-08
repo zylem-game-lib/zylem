@@ -1,14 +1,31 @@
 import { describe, expect, it } from 'vitest';
 
-import { boxBrush } from '../../../src/lib/level/brush';
+import { DEFAULT_DRAW_SHAPE, boxBrush, brushBounds, primitiveBrushes } from '@zylem/bridge';
 import { levelCollisionHulls } from '../../../src/lib/level/level-collision';
 import {
 	boxFromDrag,
 	clipPlaneFromPoints,
 	drawViewForCamera,
 	drawViewForDirection,
+	primitiveFromBox,
 	rayHitAxisPlane,
 } from '../../../src/lib/level/level-draw';
+
+describe('primitiveFromBox', () => {
+	it('bakes back to the same box through the ground frame', () => {
+		const box = { min: { x: -1, y: 2, z: 3 }, max: { x: 4, y: 5, z: 6 } };
+		const gesture = primitiveFromBox(box, DEFAULT_DRAW_SHAPE);
+		const brushes = primitiveBrushes('box', gesture.frame, gesture.footprint, gesture.height);
+		expect(brushes).toHaveLength(1);
+		const bounds = brushBounds(brushes![0]!)!;
+		expect(bounds.min.x).toBeCloseTo(-1, 6);
+		expect(bounds.min.y).toBeCloseTo(2, 6);
+		expect(bounds.min.z).toBeCloseTo(3, 6);
+		expect(bounds.max.x).toBeCloseTo(4, 6);
+		expect(bounds.max.y).toBeCloseTo(5, 6);
+		expect(bounds.max.z).toBeCloseTo(6, 6);
+	});
+});
 
 describe('draw views', () => {
 	it('locks the top, bottom, left, and side cameras and leaves every other camera to its facing', () => {

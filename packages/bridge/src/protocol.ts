@@ -1,4 +1,6 @@
 import type { BrushPlane } from './level/brush';
+import type { BrushElementKind } from './level/brush-edit';
+import type { BrushFootprint, BrushFrame, BrushShape } from './level/brush-shapes';
 
 /**
  * Editor ↔ game bridge protocol.
@@ -48,7 +50,7 @@ export type BridgeDebugTool =
 	| 'add'
 	| 'brush'
 	| 'clip'
-	| 'vertex'
+	| 'shear'
 	| 'none';
 
 /** Display / runtime configuration of the running game. */
@@ -383,6 +385,16 @@ export type LevelLayerId = 'solid' | 'doodad' | 'entity';
 export interface BrushSolid {
 	id: string;
 	planes: BrushPlane[];
+	/**
+	 * Solids baked from one primitive (an arch's segments) share a group.
+	 * A click selects the whole group; a double-click selects one member.
+	 */
+	groupId?: string;
+}
+
+/** The sector grid: square XZ cells `size` units wide. A solid belongs to the cell holding its center. */
+export interface LevelSectorSettings {
+	size: number;
 }
 
 /** A visual placement. Spawned with no collider. */
@@ -393,11 +405,14 @@ export interface DoodadPlacement {
 	props: Record<string, unknown>;
 }
 
+/** What a spawn marker spawns. Stored in its `props.spawnKind`. */
+export type LevelSpawnKind = 'player' | 'enemy' | 'item';
+
 /**
  * A gameplay marker.
  *
  * `typeId` is `spawn` or `zone`. Spawn props carry `spawnKind`
- * (`player` | `enemy` | `item`) and `archetype`. Trigger props carry `size`.
+ * ({@link LevelSpawnKind}) and `archetype`. Trigger props carry `size`.
  */
 export interface EntityPlacement {
 	id: string;
@@ -417,7 +432,42 @@ export interface LevelDocument {
 	solids: BrushSolid[];
 	doodads: DoodadPlacement[];
 	entities: EntityPlacement[];
+	/** Absent means the default sector size. */
+	sectors?: LevelSectorSettings;
 }
+
+/** What a click on a solid picks: the whole solid, or one of its vertices, edges, or faces. */
+export type LevelElementMode = 'object' | 'vertex' | 'edge' | 'face';
+
+/**
+ * One part of a solid, named by plane indices: a face by its plane, an edge
+ * by the two planes either side, a vertex by every plane through it. Indices
+ * are ascending. The names survive undo because they never hold positions.
+ */
+export interface LevelElementRef {
+	brushId: string;
+	kind: BrushElementKind;
+	planes: number[];
+}
+
+/** The primitive the brush tool draws, with every option filled in. */
+export interface LevelDrawShape {
+	shape: BrushShape;
+	/** Quarter turns: the edge a wedge rises toward, or the axis an arch spans. */
+	turn: number;
+	/** Cylinder side count. */
+	sides: number;
+	/** Arch segment count. */
+	segments: number;
+	/** Arch ring thickness in world units. */
+	thickness: number;
+}
+
+/** A whole-object transform. Rotate and scale act about `pivot`. */
+export type LevelTransform =
+	| { kind: 'translate'; delta: BridgeVec3 }
+	| { kind: 'rotate'; axis: BridgeVec3; angle: number; pivot: BridgeVec3 }
+	| { kind: 'scale'; factor: BridgeVec3; pivot: BridgeVec3 };
 
 /** What the Add tool will write into the document on the next click. */
 export type LevelPlacementArm =
@@ -429,24 +479,65 @@ export type LevelPlacementArm =
 export interface LevelSyncPayload {
 	document: LevelDocument;
 	hiddenLayers: LevelLayerId[];
+	/** Sector keys (`x:z`) whose solids are left out of the preview. */
+	hiddenSectors?: string[];
+	/** Tint each solid by its sector and draw the sector grid. */
+	showSectorTint?: boolean;
+	/** Selected objects of any layer. In an element mode, the solids that own the selected elements. */
 	selectedIds: string[];
+	/** Absent means `object`. */
+	elementMode?: LevelElementMode;
+	/** Selected vertices, edges, or faces, matching `elementMode`. */
+	elements?: LevelElementRef[];
 	activeLayer: LevelLayerId;
 	placement: LevelPlacementArm | null;
+	/** The armed primitive while the brush tool is on. */
+	drawShape?: LevelDrawShape | null;
 }
 
 /**
  * A finished pointer gesture. The game reports it once, on release.
- * The editor applies it to the document and syncs the result back.
+ * The editor applies it to the document and syncs the result back; an edit
+ * that would leave a solid non-convex or empty is dropped and the preview
+ * snaps back.
  */
 export type LevelGesture =
-	| { kind: 'brush'; min: BridgeVec3; max: BridgeVec3 }
-	| { kind: 'clip'; brushId: string; plane: BrushPlane }
-	| { kind: 'vertex'; brushId: string; vertexIndex: number; position: BridgeVec3 }
-	| { kind: 'translate'; id: string; layer: LevelLayerId; delta: BridgeVec3 }
+	/** A primitive drawn on a plane; see `primitiveBrushes`. */
+	| {
+			kind: 'primitive';
+			frame: BrushFrame;
+			footprint: BrushFootprint;
+			height: number;
+			shape: LevelDrawShape;
+	  }
+	/** Split every listed solid by the plane. */
+	| { kind: 'clip'; brushIds: string[]; plane: BrushPlane }
+	/** Push or pull faces along their own normals. */
+	| { kind: 'face-move'; faces: LevelElementRef[]; distance: number }
+	/** Sweep each face into a new solid. */
+	| { kind: 'face-extrude'; faces: LevelElementRef[]; distance: number }
+	/** Move vertices, edges, or faces by one delta and rebuild each solid's hull. */
+	| { kind: 'element-move'; elements: LevelElementRef[]; delta: BridgeVec3 }
+	/** Slide faces within their own planes. */
+	| { kind: 'shear'; faces: LevelElementRef[]; delta: BridgeVec3 }
+	/** Translate, rotate, or scale whole objects of any layer. */
+	| { kind: 'transform'; ids: string[]; transform: LevelTransform }
 	| { kind: 'doodad'; typeId: string; pose: BridgePose; props?: Record<string, unknown> }
 	| { kind: 'spawn'; pose: BridgePose }
 	| { kind: 'trigger'; pose: BridgePose; size: BridgeVec3 }
 	| { kind: 'delete'; id: string };
+
+/** A click in the level preview. Not an undo step. */
+export interface LevelSelectPayload {
+	/** The clicked object, or `null` for empty space. In an element mode, the solid that owns the element. */
+	id: string | null;
+	/** The clicked vertex, edge, or face while an element mode is on. */
+	elements?: LevelElementRef[];
+	/** Shift-click: toggle the hit in or out of the selection instead of replacing it. */
+	additive?: boolean;
+	/** Double-click: select the one solid hit instead of its whole group. */
+	ungroup?: boolean;
+}
 
 /**
  * Sentinel id for `camera:activate`. Releases the main view to the game
@@ -510,8 +601,8 @@ export type GameToEditorMessages = {
 	'camera:pose': CameraPosePayload;
 	/** A finished level-editing gesture. The editor applies it to the document. */
 	'level:gesture': { gesture: LevelGesture };
-	/** A click on a preview object, or empty space when `id` is null. Not an undo step. */
-	'level:select': { id: string | null };
+	/** A click on a preview object or element, or on empty space. */
+	'level:select': LevelSelectPayload;
 };
 
 /** Commands published by the editor, consumed by the game. */
@@ -537,7 +628,7 @@ export type EditorToGameMessages = {
 	'level:load': { buffer: LevelBuffer };
 	/** Replace the edit-time preview. Does not build collision. */
 	'level:sync': LevelSyncPayload;
-	/** Respawn the document for play: static hulls, hidden brush faces, live zones. */
+	/** Respawn the document for play: one merged mesh and one static body per sector, live zones. */
 	'level:play': { document: LevelDocument };
 	/** Drop the preview and any play collision. The stage's own entities stay. */
 	'level:close': Record<string, never>;

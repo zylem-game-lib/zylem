@@ -45,7 +45,7 @@ export { streamLevelOnStage } from '../lib/level/stream-level-stage';
 /** @public The level document currently previewed or playing, if level mode is on. */
 export { getActiveLevelDocument } from '../lib/level/level-session';
 /** @public */
-export type { LevelDocument } from '../lib/level/level-types';
+export type { LevelDocument } from '@zylem/bridge';
 /** @public */
 export type { StreamLevelOptions, StreamLevelResult } from '../lib/level/stream-level';
 /** @public */

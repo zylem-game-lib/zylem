@@ -26,8 +26,18 @@ import {
 	SphereGeometry,
 	type Material,
 } from 'three';
-import { compileBrush, type BrushVec3, type CompiledBrush } from './brush';
-import type { LevelDocument, LevelGesture, LevelLayerId, LevelSyncPayload } from './level-types';
+import {
+	DEFAULT_DRAW_SHAPE,
+	brushTopology,
+	compileBrush,
+	type BrushVec3,
+	type CompiledBrush,
+	type LevelDocument,
+	type LevelGesture,
+	type LevelLayerId,
+	type LevelSelectPayload,
+	type LevelSyncPayload,
+} from '@zylem/bridge';
 import { getDebugTool, getSnapSettings } from '../debug/debug-state';
 import { getEntityType } from '../entities/entity-registry';
 import type { GizmoRay } from '../debug/transform-gizmo';
@@ -39,6 +49,7 @@ import {
 	drawPlaneAxis,
 	drawViewForCamera,
 	drawViewForDirection,
+	primitiveFromBox,
 	rayHitAxisPlane,
 	snapPoint,
 	type DrawRay,
@@ -64,7 +75,7 @@ export interface LevelSessionHost {
 	spawnHulls(hulls: Float32Array[]): unknown | null;
 	despawnHulls(handle: unknown): void;
 	publishGesture(gesture: LevelGesture): void;
-	publishSelect(id: string | null): void;
+	publishSelect(payload: LevelSelectPayload): void;
 	publishNotice(message: string): void;
 }
 
@@ -315,8 +326,12 @@ export class LevelSession {
 		if (!this.payload) return false;
 		const tool = getDebugTool();
 
+		if (tool === 'select' && this.vertexMode()) {
+			this.beginSolidGesture('vertex', ray);
+			return true;
+		}
 		if (tool === 'select') {
-			this.host.publishSelect(this.pickId(ray));
+			this.host.publishSelect({ id: this.pickId(ray) });
 			return true;
 		}
 		if (tool === 'delete') {
@@ -328,7 +343,7 @@ export class LevelSession {
 			this.placeArmed(ray);
 			return true;
 		}
-		if (tool === 'brush' || tool === 'clip' || tool === 'vertex') {
+		if (tool === 'brush' || tool === 'clip') {
 			this.beginSolidGesture(tool, ray);
 			return true;
 		}
@@ -351,7 +366,8 @@ export class LevelSession {
 	pointerHover(ray: GizmoRay): void {
 		if (!this.payload || this.drag) return;
 		const tool = getDebugTool();
-		if (tool !== 'brush' && tool !== 'clip' && tool !== 'vertex') {
+		const vertexMode = tool === 'select' && this.vertexMode();
+		if (tool !== 'brush' && tool !== 'clip' && !vertexMode) {
 			this.clearHoverGuides();
 			return;
 		}
@@ -360,7 +376,7 @@ export class LevelSession {
 			this.clearHoverGuides();
 			return;
 		}
-		if (tool === 'vertex' && this.selectedSolidCenter()) {
+		if (vertexMode && this.selectedSolidCenter()) {
 			// A selected solid already draws its own guides.
 			this.clearHoverGuides();
 			return;
@@ -382,19 +398,21 @@ export class LevelSession {
 		if (drag.kind === 'brush') {
 			const end = this.viewPoint(drag.view, ray) ?? drag.start;
 			const box = boxFromDrag(drag.view, drag.start, end, this.gridStep());
-			this.host.publishGesture({ kind: 'brush', min: box.min, max: box.max });
+			this.host.publishGesture(
+				primitiveFromBox(box, this.payload?.drawShape ?? DEFAULT_DRAW_SHAPE)
+			);
 			return;
 		}
 
 		if (drag.kind === 'vertex') {
 			const end = this.viewPoint(drag.view, ray, drag.plane);
 			if (!end) return;
-			this.host.publishGesture({
-				kind: 'vertex',
-				brushId: drag.brushId,
-				vertexIndex: drag.vertexIndex,
-				position: snapPoint(end, this.gridStep()),
-			});
+			const gesture = this.vertexMove(
+				drag.brushId,
+				drag.vertexIndex,
+				snapPoint(end, this.gridStep())
+			);
+			if (gesture) this.host.publishGesture(gesture);
 			return;
 		}
 
@@ -410,7 +428,35 @@ export class LevelSession {
 		if (drag.view === 'side') delta.x = 0;
 		if (drag.view === 'front') delta.z = 0;
 		if (delta.x === 0 && delta.y === 0 && delta.z === 0) return;
-		this.host.publishGesture({ kind: 'translate', id: drag.id, layer: drag.layer, delta });
+		this.host.publishGesture({
+			kind: 'transform',
+			ids: [drag.id],
+			transform: { kind: 'translate', delta },
+		});
+	}
+
+	private vertexMode(): boolean {
+		return this.payload?.elementMode === 'vertex';
+	}
+
+	/** One compiled vertex moved to `position`, as an element move named by its planes. */
+	private vertexMove(
+		brushId: string,
+		vertexIndex: number,
+		position: BrushVec3
+	): LevelGesture | null {
+		const solid = this.payload?.document.solids.find((entry) => entry.id === brushId);
+		const topology = solid ? brushTopology(solid.planes) : null;
+		const from = topology?.vertices[vertexIndex];
+		const planes = topology?.vertexPlanes[vertexIndex];
+		if (!from || !planes) return null;
+		const delta = { x: position.x - from.x, y: position.y - from.y, z: position.z - from.z };
+		if (delta.x === 0 && delta.y === 0 && delta.z === 0) return null;
+		return {
+			kind: 'element-move',
+			elements: [{ brushId, kind: 'vertex', planes: [...planes] }],
+			delta,
+		};
 	}
 
 	private rebuild(): void {
@@ -444,7 +490,7 @@ export class LevelSession {
 				mesh.userData.levelId = solid.id;
 				this.root.add(mesh);
 				if (isSelected) this.root.add(axisGuides(brushCenter(compiled)));
-				if (selected.has(solid.id) && getDebugTool() === 'vertex') {
+				if (selected.has(solid.id) && payload.elementMode === 'vertex') {
 					this.addVertexHandles(solid.id, compiled);
 				}
 			}
@@ -535,7 +581,7 @@ export class LevelSession {
 			this.clipAnchor = null;
 			this.clearGhost();
 			const brushId = this.selectedSolidId();
-			if (plane && brushId) this.host.publishGesture({ kind: 'clip', brushId, plane });
+			if (plane && brushId) this.host.publishGesture({ kind: 'clip', brushIds: [brushId], plane });
 			return;
 		}
 
@@ -551,7 +597,7 @@ export class LevelSession {
 			};
 			return;
 		}
-		this.host.publishSelect(picked?.id ?? null);
+		this.host.publishSelect({ id: picked?.id ?? null });
 	}
 
 	private vertexAt(brushId: string, index: number): BrushVec3 | null {

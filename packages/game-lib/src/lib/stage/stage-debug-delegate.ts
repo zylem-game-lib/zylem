@@ -17,9 +17,16 @@
 import { Box3, BufferAttribute, BufferGeometry, LineBasicMaterial, LineSegments, Raycaster, Vector2, Vector3 } from 'three';
 import { subscribe } from 'valtio/vanilla';
 import { nanoid } from 'nanoid';
-import { getZylemBridge, type EntityApplySwatchPayload, type SceneOperationPayload } from '@zylem/bridge';
+import {
+	getZylemBridge,
+	type EntityApplySwatchPayload,
+	type LevelDocument,
+	type LevelGesture,
+	type LevelSelectPayload,
+	type LevelSyncPayload,
+	type SceneOperationPayload,
+} from '@zylem/bridge';
 import { StageBodyKind, type EntityHandle } from '@zylem/behaviors/core';
-import type { LevelDocument, LevelSyncPayload } from '../level/level-types';
 import { EDITOR_CAMERAS, editorCamerasAreAttached } from '../camera/editor-camera-session';
 import { ZylemStage } from './zylem-stage';
 import {
@@ -267,11 +274,11 @@ export class StageDebugDelegate {
 					// The body is already gone with the world.
 				}
 			},
-			publishGesture: (gesture: unknown) => {
-				sendLevelMessage('level:gesture', { gesture });
+			publishGesture: (gesture: LevelGesture) => {
+				getZylemBridge().channel.send('level:gesture', { gesture });
 			},
-			publishSelect: (id: string | null) => {
-				sendLevelMessage('level:select', { id });
+			publishSelect: (payload: LevelSelectPayload) => {
+				getZylemBridge().channel.send('level:select', payload);
 			},
 			publishNotice: (message: string) => {
 				publishGameNotice('info', message);
@@ -1088,13 +1095,4 @@ export class StageDebugDelegate {
 		} catch { /* already released */ }
 		this.capturedPointer = null;
 	}
-}
-
-/** The installed bridge types lag the local protocol, so level messages are sent by name. */
-function sendLevelMessage(type: string, payload: unknown): void {
-	const send = getZylemBridge().channel.send.bind(getZylemBridge().channel) as (
-		message: string,
-		body: unknown,
-	) => void;
-	send(type, payload);
 }

@@ -5,8 +5,7 @@
  * body. Vertices stay in world space, matching the brush planes.
  */
 
-import { compileBrush } from './brush';
-import type { BrushSolid } from './level-types';
+import { compileBrush, type BrushSolid } from '@zylem/bridge';
 
 export function levelCollisionHulls(solids: readonly BrushSolid[]): Float32Array[] {
 	const hulls: Float32Array[] = [];

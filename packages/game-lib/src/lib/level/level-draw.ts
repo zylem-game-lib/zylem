@@ -8,8 +8,14 @@
  * uses whichever axis it faces most directly.
  */
 
+import {
+	frameForPlane,
+	type BrushPlane,
+	type BrushVec3,
+	type LevelDrawShape,
+	type LevelGesture,
+} from '@zylem/bridge';
 import { EDITOR_CAMERAS } from '../camera/editor-camera-session';
-import type { BrushPlane, BrushVec3 } from './brush';
 
 export type DrawView = 'top' | 'side' | 'front';
 
@@ -119,6 +125,23 @@ export function boxFromDrag(
 	return {
 		min: { x: x0, y: y0, z: z0 },
 		max: { x: x0 + grid, y: y1, z: z1 },
+	};
+}
+
+/**
+ * An axis-aligned box as a primitive on the ground frame through its floor.
+ * The ground frame's `u` is +X and its `v` is -Z.
+ */
+export function primitiveFromBox(
+	box: { min: BrushVec3; max: BrushVec3 },
+	shape: LevelDrawShape
+): Extract<LevelGesture, { kind: 'primitive' }> {
+	return {
+		kind: 'primitive',
+		frame: frameForPlane({ x: 0, y: 1, z: 0 }, box.min.y),
+		footprint: { u0: box.min.x, v0: -box.max.z, u1: box.max.x, v1: -box.min.z },
+		height: box.max.y - box.min.y,
+		shape: { ...shape },
 	};
 }
 
