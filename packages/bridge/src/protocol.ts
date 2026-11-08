@@ -525,7 +525,9 @@ export type LevelGesture =
 	| { kind: 'doodad'; typeId: string; pose: BridgePose; props?: Record<string, unknown> }
 	| { kind: 'spawn'; pose: BridgePose }
 	| { kind: 'trigger'; pose: BridgePose; size: BridgeVec3 }
-	| { kind: 'delete'; id: string };
+	| { kind: 'delete'; id: string }
+	/** Drop these elements' vertices and rebuild each solid. */
+	| { kind: 'element-delete'; elements: LevelElementRef[] };
 
 /** A click in the level preview. Not an undo step. */
 export interface LevelSelectPayload {

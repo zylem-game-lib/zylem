@@ -407,9 +407,8 @@ export class StageDebugDelegate {
 		this.grid.setIncrement(getSnapSettings().translate);
 		const draw = this.levelSession.drawPlane;
 		this.grid.setPlane(draw?.frame ?? null, draw?.focus);
-		// Build mode keeps the lattice up for the edit preview. Play and a
-		// closed level fall back to the debug toggle.
-		this.grid.setVisible(debugState.gridVisible || this.levelSession.isEditing);
+		// The Show grid toggle, including while a level is being edited.
+		this.grid.setVisible(debugState.gridVisible);
 	}
 
 	/** Initialize DOM listeners. The rendering camera stays whatever the editor selected. */

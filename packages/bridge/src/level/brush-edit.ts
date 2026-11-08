@@ -419,6 +419,30 @@ function gridLines(lo: number, hi: number, tile: number): number[] {
 }
 
 /**
+ * Drop the vertices of the named elements and rebuild the hull.
+ *
+ * A face drops every corner of that face, an edge its two ends, a vertex
+ * itself. `null` when an element is missing or the points left do not
+ * enclose a volume.
+ */
+export function deleteBrushElements(
+	planes: readonly BrushPlane[],
+	elements: readonly BrushElementKey[]
+): BrushPlane[] | null {
+	const topology = brushTopology(planes);
+	if (!topology || elements.length === 0) return null;
+	const drop = new Set<number>();
+	for (const element of elements) {
+		const indices = elementVertices(topology, element);
+		if (!indices || indices.length === 0) return null;
+		for (const index of indices) drop.add(index);
+	}
+	if (drop.size === 0 || drop.size >= topology.vertices.length) return null;
+	const points = topology.vertices.filter((_, index) => !drop.has(index));
+	return brushFromPoints(points);
+}
+
+/**
  * Cut a brush into pieces on the world XZ grid, `tile` units apart.
  *
  * Lines are absolute, so neighbouring brushes split on the same seams. A

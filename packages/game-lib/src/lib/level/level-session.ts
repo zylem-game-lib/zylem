@@ -31,6 +31,7 @@ import {
 	brushCenter,
 	brushTopology,
 	clipBrush,
+	deleteBrushElements,
 	frameForPlane,
 	primitiveBrushes,
 	sectorSizeOf,
@@ -81,6 +82,7 @@ import {
 } from './level-highlight';
 import {
 	LevelPicker,
+	copyElement,
 	isDoubleClick,
 	sameElement,
 	type ClickStamp,
@@ -443,12 +445,9 @@ export class LevelSession {
 			case 'rotate':
 			case 'scale':
 				return this.pressTransform(ray, input);
-			case 'delete': {
-				const id = this.picker.object(ray);
-				if (id) this.host.publishGesture({ kind: 'delete', id });
-				this.held = { kind: 'press' };
+			case 'delete':
+				this.pressDelete(ray);
 				return true;
-			}
 			case 'add':
 				this.placeArmed(ray);
 				this.held = { kind: 'press' };
@@ -519,7 +518,7 @@ export class LevelSession {
 			this.setHover(null);
 			return;
 		}
-		if (tool === 'select' || isTransformTool(tool)) {
+		if (tool === 'select' || tool === 'delete' || isTransformTool(tool)) {
 			this.hoverIn(ray, this.elementMode());
 			return;
 		}
@@ -614,6 +613,32 @@ export class LevelSession {
 		const elements = this.elementMode() === 'face' ? [face.ref] : undefined;
 		this.hold(ray, drag, selectPayload(face.ref.brushId, elements, additive, ungroup));
 		return true;
+	}
+
+	/**
+	 * Delete the object under the pointer, or the element the current mode
+	 * picks. Empty space leaves Delete armed. An element that would not leave
+	 * a solid is refused.
+	 */
+	private pressDelete(ray: GizmoRay): void {
+		this.held = { kind: 'press' };
+		const mode = this.elementMode();
+		if (mode === 'object') {
+			const id = this.picker.object(ray);
+			if (id) this.host.publishGesture({ kind: 'delete', id });
+			return;
+		}
+		const element = this.picker.element(ray, mode);
+		if (!element) return;
+		const solid = this.solids.get(element.ref.brushId);
+		const planes = solid
+			? deleteBrushElements(solid.planes, [{ kind: element.ref.kind, planes: element.ref.planes }])
+			: null;
+		if (!planes) {
+			this.host.publishNotice('That would not leave a solid.');
+			return;
+		}
+		this.host.publishGesture({ kind: 'element-delete', elements: [copyElement(element.ref)] });
 	}
 
 	private pressDraw(ray: GizmoRay): boolean {

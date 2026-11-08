@@ -36,6 +36,7 @@ export {
 	MAX_SUBDIVIDE_PIECES,
 	brushEdges,
 	brushTopology,
+	deleteBrushElements,
 	elementPositions,
 	extrudeFace,
 	findElementAt,
