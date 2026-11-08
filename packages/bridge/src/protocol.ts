@@ -481,7 +481,7 @@ export interface LevelSyncPayload {
 	hiddenLayers: LevelLayerId[];
 	/** Sector keys (`x:z`) whose solids are left out of the preview. */
 	hiddenSectors?: string[];
-	/** Tint each solid by its sector and draw the sector grid. */
+	/** Tint each solid by its sector. The sector grid shows either way. */
 	showSectorTint?: boolean;
 	/** Selected objects of any layer. In an element mode, the solids that own the selected elements. */
 	selectedIds: string[];
