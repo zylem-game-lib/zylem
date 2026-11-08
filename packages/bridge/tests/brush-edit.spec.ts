@@ -12,6 +12,7 @@ import {
 import {
 	brushEdges,
 	brushTopology,
+	deleteBrushElements,
 	elementPositions,
 	extrudeFace,
 	findElementAt,
@@ -288,5 +289,24 @@ describe('subdivideBrush', () => {
 		const floor = boxBrush({ x: 0, y: 0, z: 0 }, { x: 64, y: 1, z: 64 });
 		expect(subdivideBrush(floor, 1, { maxPieces: 100 })).toBeNull();
 		expect(subdivideBrush(floor, 0)).toBeNull();
+	});
+});
+
+describe('deleteBrushElements', () => {
+	it('cuts off a corner and leaves the other vertices', () => {
+		const next = deleteBrushElements(UNIT, [{ kind: 'vertex', planes: [0, 2, 4] }]);
+		const solid = compileBrush(next!);
+		expect(solid).not.toBeNull();
+		expect(solid!.vertices).toHaveLength(7);
+		expect(
+			solid!.vertices.some((vertex) => vertex.x > 0.99 && vertex.y > 0.99 && vertex.z > 0.99)
+		).toBe(false);
+	});
+
+	it('drops an edge and refuses a face that would leave no volume', () => {
+		const next = deleteBrushElements(UNIT, [{ kind: 'edge', planes: [0, 2] }]);
+		expect(compileBrush(next!)!.vertices).toHaveLength(6);
+		expect(deleteBrushElements(UNIT, [{ kind: 'face', planes: [2] }])).toBeNull();
+		expect(deleteBrushElements(UNIT, [])).toBeNull();
 	});
 });

@@ -753,3 +753,34 @@ describe('level gizmo', () => {
 		expect(selects).toEqual([{ id: 'box', elements: [TOP_FACE], additive: true }]);
 	});
 });
+
+describe('level delete', () => {
+	it('deletes the object under the pointer and leaves empty space armed', () => {
+		const { session, gestures, click } = rig();
+		session.sync(payload());
+		arm('delete');
+
+		expect(click({ x: 0.2, y: 1, z: 0.2 })).toBe(true);
+		expect(click({ x: 5, y: 0, z: 5 })).toBe(true);
+		expect(gestures).toEqual([{ kind: 'delete', id: 'box' }]);
+	});
+
+	it('deletes a vertex and refuses a face that would flatten the brush', () => {
+		const { session, gestures, notices, click } = rig();
+		session.sync(payload({ elementMode: 'vertex' }));
+		arm('delete');
+		expect(click({ x: 1, y: 1, z: 1 })).toBe(true);
+		expect(gestures).toEqual([
+			{
+				kind: 'element-delete',
+				elements: [{ brushId: 'box', kind: 'vertex', planes: [0, 2, 4] }],
+			},
+		]);
+
+		session.sync(payload({ elementMode: 'face' }));
+		arm('delete');
+		expect(click({ x: 0.2, y: 1, z: 0.2 })).toBe(true);
+		expect(gestures).toHaveLength(1);
+		expect(notices).toEqual(['That would not leave a solid.']);
+	});
+});
