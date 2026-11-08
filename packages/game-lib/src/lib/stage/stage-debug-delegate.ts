@@ -48,7 +48,7 @@ import {
 import { registerEntityFocusContext } from '../debug/entity-focus';
 import { resolveSelectionBounds } from '../debug/selection-bounds';
 import { publishGameNotice, publishSceneOperation } from '../bridge/game-bridge';
-import { LevelSession } from '../level/level-session';
+import { LevelSession, type LevelSessionHost } from '../level/level-session';
 import { createZone } from '../entities/zone';
 import { ConstructionGrid } from '../debug/construction-grid';
 import { getEntityType } from '../entities/entity-registry';
@@ -198,22 +198,25 @@ export class StageDebugDelegate {
 	/** Show the level document as an edit preview. Brush faces, no collision. */
 	syncLevel(payload: LevelSyncPayload): void {
 		this.levelSession.sync(payload);
+		this.syncTransformTool();
 		this.syncGrid();
 	}
 
 	/** Respawn the document for play: hull collision, hidden brush faces, live zones. */
 	playLevel(document: LevelDocument): void {
 		this.levelSession.play(document);
+		this.syncTransformTool();
 		this.syncGrid();
 	}
 
 	/** Remove the preview and any play collision. Stage entities stay. */
 	closeLevel(): void {
 		this.levelSession.close();
+		this.syncTransformTool();
 		this.syncGrid();
 	}
 
-	private levelSessionHost() {
+	private levelSessionHost(): LevelSessionHost {
 		return {
 			getScene: () => this.stage.scene?.scene ?? null,
 			cameraId: () => this.stage.cameraManagerRef?.activeEditorCameraId() ?? null,
@@ -224,6 +227,13 @@ export class StageDebugDelegate {
 				const direction = new Vector3();
 				camera.getWorldDirection(direction);
 				return { x: direction.x, y: direction.y, z: direction.z };
+			},
+			camera: () => this.getDebugViewCamera()?.camera ?? null,
+			viewport: () => {
+				const rect = this.stage.rendererManager?.getDomElement().getBoundingClientRect();
+				return rect && rect.width > 0 && rect.height > 0
+					? { width: rect.width, height: rect.height }
+					: null;
 			},
 			physicsHit: (ray: { origin: Vector3; direction: Vector3 }) => {
 				const hit = this.stage.world?.raycast(
@@ -361,6 +371,8 @@ export class StageDebugDelegate {
 			this.marquee.cancel();
 			this.endPointerCapture();
 		}
+		// A draw, clip, or drag belongs to the tool that started it.
+		this.levelSession.cancelGesture();
 
 		if (tool !== 'none') {
 			this.ensureInteraction();
@@ -378,7 +390,14 @@ export class StageDebugDelegate {
 		// between gestures too.
 		this.getDebugViewCamera()?.setOrbitFollowEnabled(!transforming);
 
-		this.transformTool.setMode(transforming ? (tool as TransformTool) : null);
+		this.syncTransformTool();
+	}
+
+	/** The entity gizmo stands down while a level is edited; the level session runs its own. */
+	private syncTransformTool(): void {
+		const tool = debugState.tool;
+		const entityGizmo = isTransformTool(tool) && !this.levelSession.isEditing;
+		this.transformTool.setMode(entityGizmo ? (tool as TransformTool) : null);
 	}
 
 	private syncGrid(): void {
@@ -386,6 +405,8 @@ export class StageDebugDelegate {
 		if (!scene) return;
 		this.grid.addTo(scene);
 		this.grid.setIncrement(getSnapSettings().translate);
+		const draw = this.levelSession.drawPlane;
+		this.grid.setPlane(draw?.frame ?? null, draw?.focus);
 		// Build mode keeps the lattice up for the edit preview. Play and a
 		// closed level fall back to the debug toggle.
 		this.grid.setVisible(debugState.gridVisible || this.levelSession.isEditing);
@@ -965,7 +986,7 @@ export class StageDebugDelegate {
 			if (this.levelPointer) {
 				e.preventDefault();
 				e.stopImmediatePropagation();
-				this.levelSession.pointerMove(this.currentRay());
+				this.levelSession.pointerMove(this.currentRay(), e);
 				return;
 			}
 			this.levelSession.pointerHover(this.currentRay());
@@ -985,7 +1006,7 @@ export class StageDebugDelegate {
 			trackPointer(e);
 			const ray = this.currentRay();
 
-			if (this.levelSession.pointerDown(ray)) {
+			if (this.levelSession.pointerDown(ray, e)) {
 				// Capture phase, and stopped here, so OrbitControls never starts
 				// a drag on the same press. Otherwise the camera swings instead
 				// of the brush.
@@ -1053,16 +1074,27 @@ export class StageDebugDelegate {
 			onPointerUp(e);
 		};
 
+		// Capture phase on the window, ahead of the editor's own Escape, which
+		// would also disarm the tool. Only while a level gesture is under way.
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key !== 'Escape' || !this.levelSession.hasGesture) return;
+			e.preventDefault();
+			e.stopImmediatePropagation();
+			this.levelSession.cancelGesture();
+		};
+
 		canvas.addEventListener('pointermove', onPointerMove, true);
 		canvas.addEventListener('pointerdown', onPointerDown, true);
 		canvas.addEventListener('pointerup', onPointerUp, true);
 		canvas.addEventListener('pointercancel', onPointerCancel, true);
+		window.addEventListener('keydown', onKeyDown, true);
 
 		this.domDisposeFns.push(
 			() => canvas.removeEventListener('pointermove', onPointerMove, true),
 			() => canvas.removeEventListener('pointerdown', onPointerDown, true),
 			() => canvas.removeEventListener('pointerup', onPointerUp, true),
 			() => canvas.removeEventListener('pointercancel', onPointerCancel, true),
+			() => window.removeEventListener('keydown', onKeyDown, true),
 		);
 		return true;
 	}

@@ -9,7 +9,12 @@
 import { BufferGeometry, Float32BufferAttribute } from 'three';
 import type { CompiledBrush } from '@zylem/bridge';
 
-function appendBrush(compiled: CompiledBrush, positions: number[], indices: number[]): void {
+function appendBrush(
+	compiled: CompiledBrush,
+	positions: number[],
+	indices: number[],
+	trianglePlanes?: number[],
+): void {
 	for (const face of compiled.faces) {
 		const base = positions.length / 3;
 		for (const index of face.indices) {
@@ -18,6 +23,7 @@ function appendBrush(compiled: CompiledBrush, positions: number[], indices: numb
 		}
 		for (let i = 1; i < face.indices.length - 1; i += 1) {
 			indices.push(base, base + i, base + i + 1);
+			trianglePlanes?.push(face.planeIndex);
 		}
 	}
 }
@@ -30,11 +36,15 @@ function toGeometry(positions: number[], indices: number[]): BufferGeometry {
 	return geometry;
 }
 
+/** One brush. `userData.trianglePlanes[i]` is the plane index of triangle `i`, for face picking. */
 export function brushGeometry(compiled: CompiledBrush): BufferGeometry {
 	const positions: number[] = [];
 	const indices: number[] = [];
-	appendBrush(compiled, positions, indices);
-	return toGeometry(positions, indices);
+	const trianglePlanes: number[] = [];
+	appendBrush(compiled, positions, indices, trianglePlanes);
+	const geometry = toGeometry(positions, indices);
+	geometry.userData.trianglePlanes = trianglePlanes;
+	return geometry;
 }
 
 /** Several brushes as one geometry: one draw call for a whole sector in play. */

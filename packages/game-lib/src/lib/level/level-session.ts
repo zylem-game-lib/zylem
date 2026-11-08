@@ -1,65 +1,94 @@
 /**
  * The stage's picture of the level document.
  *
- * The editor owns the file. This session draws it, reports finished gestures,
- * and on play swaps the brush faces for one merged mesh and one static body
- * of convex hulls per sector. Nothing it creates is a normal stage entity
- * except play-mode trigger zones, and those are marked editor-owned so they
- * are not published back.
+ * The editor owns the file. This session draws it, routes level pointer
+ * gestures to the tools, reports what they finish, and on play swaps the
+ * brush faces for one merged mesh and one static body of convex hulls per
+ * sector. Nothing it creates is a normal stage entity except play-mode
+ * trigger zones, and those are marked editor-owned so they are not published
+ * back.
  */
 
 import {
+	Box3,
+	Box3Helper,
 	BoxGeometry,
-	BufferGeometry,
 	Color,
 	DoubleSide,
 	EdgesGeometry,
-	Float32BufferAttribute,
 	Group,
-	Line,
 	LineBasicMaterial,
 	LineSegments,
 	Mesh,
-	MeshBasicMaterial,
 	MeshStandardMaterial,
 	Object3D,
 	OctahedronGeometry,
-	Raycaster,
-	SphereGeometry,
-	type Material,
+	Vector3,
+	type Camera,
 } from 'three';
 import {
 	DEFAULT_DRAW_SHAPE,
+	brushCenter,
 	brushTopology,
-	compileBrush,
+	clipBrush,
+	frameForPlane,
+	primitiveBrushes,
 	sectorSizeOf,
+	type BridgePose,
+	type BrushFrame,
+	type BrushPlane,
+	type BrushTopology,
 	type BrushVec3,
-	type CompiledBrush,
 	type LevelDocument,
+	type LevelDrawShape,
+	type LevelElementMode,
+	type LevelElementRef,
 	type LevelGesture,
-	type LevelLayerId,
 	type LevelSelectPayload,
 	type LevelSyncPayload,
 } from '@zylem/bridge';
-import { getDebugTool, getSnapSettings } from '../debug/debug-state';
+import { getDebugTool, getSnapSettings, isTransformTool } from '../debug/debug-state';
 import { getEntityType } from '../entities/entity-registry';
 import type { GizmoRay } from '../debug/transform-gizmo';
 import { computePlacementPose, type PlacementHit } from '../stage/placement-geometry';
+import { LevelClipTool } from './level-clip-tool';
 import {
-	boxFromDrag,
-	clipPlaneFromPoints,
-	drawPlaneAxis,
-	drawViewForCamera,
-	drawViewForDirection,
-	primitiveFromBox,
-	rayHitAxisPlane,
-	snapPoint,
+	AxisDrag,
+	facingAxisPlane,
+	fallbackDrawFrame,
+	framePlane,
+	rayHitPlane,
+	snapOntoPlane,
 	type DrawRay,
-	type DrawView,
+	type ViewBasis,
 } from './level-draw';
+import { LevelDrawTool } from './level-draw-tool';
+import { ElementMoveDrag, FaceDrag, ShearDrag, type ElementDrag } from './level-element-drag';
 import { brushGeometry } from './level-geometry';
+import { LevelGizmo, documentPose, gizmoTarget, selectionPivot } from './level-gizmo';
+import {
+	HOVER_COLOR,
+	OverlaySlot,
+	axisGuides,
+	clipMarks,
+	disposeObject,
+	drawGhost,
+	edgeHighlight,
+	elementMark,
+	elementSelection,
+	elementWire,
+	topologyEdges,
+} from './level-highlight';
+import {
+	LevelPicker,
+	isDoubleClick,
+	sameElement,
+	type ClickStamp,
+	type PickedElement,
+} from './level-pick';
 import { buildPlaySectors } from './level-play';
 import { buildSectorOverlay, solidSectorHidden, solidSectorTint } from './level-sectors';
+import { LevelToolPreview } from './level-tool-preview';
 
 export interface LevelZoneSpawn {
 	name: string;
@@ -70,8 +99,12 @@ export interface LevelZoneSpawn {
 export interface LevelSessionHost {
 	getScene(): { add(object: Object3D): void; remove(object: Object3D): void } | null;
 	cameraId(): string | null;
-	/** World direction the rendering camera looks, for cameras other than Top and Side. */
+	/** World direction the rendering camera looks. */
 	viewDirection(): BrushVec3;
+	/** The rendering camera, for the gizmo, on-screen picking, and screen-up measures. */
+	camera(): Camera | null;
+	/** The canvas in CSS pixels, for pixel thresholds. */
+	viewport(): { width: number; height: number } | null;
 	/** Physics hit under the pointer, for doodad and entity placement. */
 	physicsHit(ray: GizmoRay): PlacementHit | null;
 	spawnZone(zone: LevelZoneSpawn): Promise<string | null>;
@@ -84,18 +117,22 @@ export interface LevelSessionHost {
 	publishNotice(message: string): void;
 }
 
+/** What the session reads off a pointer event. A `PointerEvent` fits. */
+export interface LevelPointerInput {
+	shiftKey?: boolean;
+	altKey?: boolean;
+	/** Milliseconds, for telling a double-click. */
+	timeStamp?: number;
+}
+
 /** Neutral stand-in. A solid stores no material, so nothing replaces this yet. */
 const DEFAULT_BRUSH_COLOR = 0xc8c2b4;
 /** Lighter than the default so a selected solid still reads as chosen. */
 const SELECTED_BRUSH_COLOR = 0xe4ddd0;
-
-/** Half-length of each guide, long enough to cross an editor view. */
-const AXIS_GUIDE_SPAN = 250;
-const AXIS_GUIDES: Array<{ color: number; axis: 'x' | 'y' | 'z' }> = [
-	{ color: 0xff3333, axis: 'x' },
-	{ color: 0x33cc66, axis: 'y' },
-	{ color: 0x3388ff, axis: 'z' },
-];
+/** The two halves of a clip preview. */
+const CLIP_TINTS = ['#5aa9ff', '#ff9a5a'] as const;
+/** A held press moves this many pixels before it counts as a drag. */
+const DRAG_PIXELS = 4;
 
 let activeDocument: LevelDocument | null = null;
 
@@ -108,10 +145,27 @@ function setActiveDocument(document: LevelDocument | null): void {
 	activeDocument = document;
 }
 
-type Drag =
-	| { kind: 'brush'; view: DrawView; start: BrushVec3 }
-	| { kind: 'vertex'; brushId: string; vertexIndex: number; view: DrawView; plane: number }
-	| { kind: 'translate'; id: string; layer: LevelLayerId; view: DrawView; start: BrushVec3 };
+interface SolidView {
+	planes: BrushPlane[];
+	topology: BrushTopology;
+	mesh: Mesh;
+	/** Axis guides through a selected solid in object mode. */
+	guides: Object3D | null;
+}
+
+/** The press the pointer holds, from down to up. */
+type Held =
+	| { kind: 'draw' }
+	| {
+			kind: 'drag';
+			drag: ElementDrag | null;
+			/** Published when the press ends without changing anything. */
+			click: LevelSelectPayload;
+			from: { x: number; y: number } | null;
+			moved: boolean;
+	  }
+	| { kind: 'gizmo' }
+	| { kind: 'press' };
 
 function toDrawRay(ray: GizmoRay): DrawRay {
 	return {
@@ -129,24 +183,9 @@ function sizeOf(props: Record<string, unknown>, fallback: BrushVec3): BrushVec3 
 	};
 }
 
-function layerOf(document: LevelDocument, id: string): LevelLayerId | null {
-	if (document.solids.some((solid) => solid.id === id)) return 'solid';
-	if (document.doodads.some((doodad) => doodad.id === id)) return 'doodad';
-	if (document.entities.some((entity) => entity.id === id)) return 'entity';
-	return null;
-}
-
-function disposeMaterial(material: Material | Material[]): void {
-	if (Array.isArray(material)) material.forEach((entry) => entry.dispose());
-	else material.dispose();
-}
-
-function disposeObject(object: Object3D): void {
-	object.traverse((child) => {
-		const mesh = child as Mesh;
-		mesh.geometry?.dispose();
-		if (mesh.material) disposeMaterial(mesh.material);
-	});
+function unit(value: BrushVec3): BrushVec3 {
+	const magnitude = Math.hypot(value.x, value.y, value.z) || 1;
+	return { x: value.x / magnitude, y: value.y / magnitude, z: value.z / magnitude };
 }
 
 function cloneVisual(source: Object3D): Object3D {
@@ -183,78 +222,108 @@ function visualForType(typeId: string, props: Record<string, unknown>): Object3D
 	);
 }
 
-function applyPose(object: Object3D, pose: { position?: BrushVec3; rotation?: BrushVec3; quaternion?: { x: number; y: number; z: number; w: number }; scale?: BrushVec3 }): void {
+/** Every part of the pose, so a visual a preview moved goes back exactly. */
+function applyPose(object: Object3D, pose: BridgePose): void {
 	const position = pose.position ?? { x: 0, y: 0, z: 0 };
 	object.position.set(position.x, position.y, position.z);
 	if (pose.quaternion) {
 		object.quaternion.set(pose.quaternion.x, pose.quaternion.y, pose.quaternion.z, pose.quaternion.w);
 	} else if (pose.rotation) {
 		object.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z);
+	} else {
+		object.quaternion.identity();
 	}
-	if (pose.scale) object.scale.set(pose.scale.x, pose.scale.y, pose.scale.z);
+	const scale = pose.scale ?? { x: 1, y: 1, z: 1 };
+	object.scale.set(scale.x, scale.y, scale.z);
 }
 
-/** `tint` is the sector color; a selected solid takes it lighter. */
+/**
+ * `tint` is the sector color; a selected solid takes it lighter. Faces sit a
+ * hair back in depth so edge lines drawn on them win the depth test.
+ */
 function brushMaterial(selected: boolean, tint: string | null = null): MeshStandardMaterial {
 	const material = new MeshStandardMaterial({
 		color: tint ?? (selected ? SELECTED_BRUSH_COLOR : DEFAULT_BRUSH_COLOR),
 		side: DoubleSide,
+		polygonOffset: true,
+		polygonOffsetFactor: 1,
+		polygonOffsetUnits: 1,
 	});
 	if (tint && selected) material.color.lerp(new Color(0xffffff), 0.35);
 	return material;
 }
 
-/** World axes through a point. Depth is ignored so the lines stay visible while editing. */
-function axisGuides(center: BrushVec3): Group {
-	const group = new Group();
-	for (const guide of AXIS_GUIDES) {
-		const start = { x: center.x, y: center.y, z: center.z };
-		const end = { x: center.x, y: center.y, z: center.z };
-		start[guide.axis] -= AXIS_GUIDE_SPAN;
-		end[guide.axis] += AXIS_GUIDE_SPAN;
-		const geometry = new BufferGeometry();
-		geometry.setAttribute(
-			'position',
-			new Float32BufferAttribute([start.x, start.y, start.z, end.x, end.y, end.z], 3),
-		);
-		const line = new Line(
-			geometry,
-			new LineBasicMaterial({ color: guide.color, depthTest: false }),
-		);
-		line.frustumCulled = false;
-		line.renderOrder = 20;
-		group.add(line);
-	}
-	return group;
+function selectPayload(
+	id: string | null,
+	elements: LevelElementRef[] | undefined,
+	additive: boolean,
+	ungroup: boolean,
+): LevelSelectPayload {
+	return {
+		id,
+		...(elements ? { elements } : {}),
+		...(additive ? { additive: true } : {}),
+		...(ungroup ? { ungroup: true } : {}),
+	};
 }
 
-function brushCenter(compiled: CompiledBrush): BrushVec3 {
-	const sum = compiled.vertices.reduce(
-		(acc, vertex) => ({ x: acc.x + vertex.x, y: acc.y + vertex.y, z: acc.z + vertex.z }),
-		{ x: 0, y: 0, z: 0 },
-	);
-	const count = compiled.vertices.length;
-	return { x: sum.x / count, y: sum.y / count, z: sum.z / count };
+function elementKey(ref: LevelElementRef): string {
+	return `${ref.brushId}:${ref.kind}:${ref.planes.join(',')}`;
 }
 
 export class LevelSession {
 	private root = new Group();
-	private raycaster = new Raycaster();
+	/** Tool overlays and the gizmo. Kept across rebuilds; each slot owns what it shows. */
+	private tools = new Group();
+	private hoverSlot = new OverlaySlot(this.tools);
+	private ghostSlot = new OverlaySlot(this.tools);
+	private guideSlot = new OverlaySlot(this.tools);
 	private mounted = false;
 	private generation = 0;
 	private mode: 'edit' | 'play' = 'edit';
 	private payload: LevelSyncPayload | null = null;
-	private drag: Drag | null = null;
-	private clipAnchor: BrushVec3 | null = null;
-	private ghost: Object3D | null = null;
-	/** Axis guides under the cursor while a solid tool is armed and not dragging. */
-	private hoverGuides: Object3D | null = null;
+	/** Solids in the edit preview, by id. Filled in place, since the picker and preview read it. */
+	private solids = new Map<string, SolidView>();
+	/** Doodad and entity visuals in the edit preview, by id. */
+	private objects = new Map<string, Object3D>();
+	/** The selected elements, drawn over the solids. */
+	private selectionView: Object3D | null = null;
+	private picker: LevelPicker;
+	/** A drag's or clip's preview. Outlives the drag until the sync it causes. */
+	private preview: LevelToolPreview;
+	private drawTool = new LevelDrawTool();
+	private clipTool = new LevelClipTool();
+	/** Where the clip preview last followed the pointer. */
+	private clipCursor: BrushVec3 | null = null;
+	private gizmo = new LevelGizmo();
+	private gizmoPivot: BrushVec3 | null = null;
+	private held: Held | null = null;
+	private lastClick: ClickStamp | null = null;
+	private hoverRay: GizmoRay | null = null;
+	private hoverKey: string | null = null;
 	/** One static body per sector while playing. */
 	private bodyHandles: unknown[] = [];
 	private zoneIds: string[] = [];
 
 	constructor(private host: LevelSessionHost) {
 		this.root.name = 'level-preview';
+		this.tools.name = 'level-tools';
+		this.tools.add(this.gizmo.root);
+		this.picker = new LevelPicker(this.solids, this.objects, {
+			camera: () => host.camera(),
+			viewport: () => host.viewport(),
+		});
+		this.preview = new LevelToolPreview(this.tools, {
+			solids: this.solids,
+			objects: this.objects,
+			selection: () => this.selectionView,
+			material: (id, planes) => brushMaterial(this.isObjectSelected(id), this.sectorTint(planes)),
+			half: (index) => brushMaterial(false, CLIP_TINTS[index % 2]!),
+			restore: (id, object) => {
+				const pose = this.payload ? documentPose(this.payload.document, id) : null;
+				if (pose) applyPose(object, pose);
+			},
+		});
 	}
 
 	get isActive(): boolean {
@@ -266,20 +335,46 @@ export class LevelSession {
 		return this.payload !== null && this.mode === 'edit';
 	}
 
-	/** Attach the preview if a sync arrived before the scene existed. */
-	tick(): void {
-		if (!this.payload || this.mounted || !this.host.getScene()) return;
-		this.rebuild();
+	/** A draw, clip points, or a drag under way. Escape cancels it. */
+	get hasGesture(): boolean {
+		return (
+			this.drawTool.phase !== 'idle' ||
+			this.clipTool.active ||
+			this.gizmo.isDragging ||
+			(this.held !== null && this.held.kind !== 'press')
+		);
 	}
 
+	/** The plane a draw is on and where it started, for the construction grid. */
+	get drawPlane(): { frame: BrushFrame; focus: BrushVec3 } | null {
+		const frame = this.drawTool.activeFrame;
+		const focus = this.drawTool.anchor;
+		return frame && focus ? { frame, focus } : null;
+	}
+
+	/** Attach the preview if a sync arrived before the scene existed, and keep the gizmo screen-sized. */
+	tick(): void {
+		if (!this.payload) return;
+		if (!this.mounted) {
+			if (!this.host.getScene()) return;
+			this.rebuild();
+		}
+		this.syncGizmo();
+	}
+
+	/** Show the document. A draw in progress carries on with the new payload's shape. */
 	sync(payload: LevelSyncPayload): void {
+		const previousMode = this.elementMode();
 		this.mode = 'edit';
 		this.payload = payload;
 		setActiveDocument(payload.document);
+		const dragging = this.held?.kind === 'drag' || this.held?.kind === 'gizmo';
+		if (dragging && this.elementMode() !== previousMode) this.cancelHeld();
 		this.rebuild();
 	}
 
 	play(document: LevelDocument): void {
+		this.cancelGesture();
 		this.mode = 'play';
 		this.payload = {
 			document,
@@ -294,16 +389,29 @@ export class LevelSession {
 
 	close(): void {
 		this.generation += 1;
+		this.cancelGesture();
 		this.payload = null;
-		this.drag = null;
-		this.clipAnchor = null;
 		setActiveDocument(null);
 		this.teardownOwned();
+		this.clearTools();
 		this.unmount();
 	}
 
 	dispose(): void {
 		this.close();
+		this.gizmo.dispose();
+	}
+
+	/** Drop the gesture in progress without publishing anything. */
+	cancelGesture(): void {
+		this.cancelHeld();
+		this.drawTool.cancel();
+		this.clipTool.cancel();
+		this.clipCursor = null;
+		this.ghostSlot.clear();
+		this.guideSlot.clear();
+		this.setHover(null);
+		this.preview.show(null);
 	}
 
 	/**
@@ -311,141 +419,452 @@ export class LevelSession {
 	 *
 	 * @returns Whether the rest of the pointer pipeline should leave this press alone.
 	 */
-	pointerDown(ray: GizmoRay): boolean {
-		if (!this.payload) return false;
-		const tool = getDebugTool();
+	pointerDown(ray: GizmoRay, input: LevelPointerInput = {}): boolean {
+		if (!this.isEditing) return false;
+		this.cancelHeld();
+		if (this.preview.value && !this.clipTool.active) this.preview.show(null);
 
-		if (tool === 'select' && this.vertexMode()) {
-			this.beginSolidGesture('vertex', ray);
+		if (this.drawTool.phase === 'height') {
+			this.commitDraw();
+			this.held = { kind: 'press' };
 			return true;
 		}
-		if (tool === 'select') {
-			this.host.publishSelect({ id: this.pickId(ray) });
-			return true;
+
+		switch (getDebugTool()) {
+			case 'select':
+				return this.pressSelect(ray, input);
+			case 'shear':
+				return this.pressShear(ray, input);
+			case 'brush':
+				return this.pressDraw(ray);
+			case 'clip':
+				return this.pressClip(ray, input);
+			case 'translate':
+			case 'rotate':
+			case 'scale':
+				return this.pressTransform(ray, input);
+			case 'delete': {
+				const id = this.picker.object(ray);
+				if (id) this.host.publishGesture({ kind: 'delete', id });
+				this.held = { kind: 'press' };
+				return true;
+			}
+			case 'add':
+				this.placeArmed(ray);
+				this.held = { kind: 'press' };
+				return true;
+			default:
+				return false;
 		}
-		if (tool === 'delete') {
-			const id = this.pickId(ray);
-			if (id) this.host.publishGesture({ kind: 'delete', id });
-			return true;
-		}
-		if (tool === 'add') {
-			this.placeArmed(ray);
-			return true;
-		}
-		if (tool === 'brush' || tool === 'clip') {
-			this.beginSolidGesture(tool, ray);
-			return true;
-		}
-		if (tool === 'translate') return this.beginTranslate(ray);
-		return false;
 	}
 
-	pointerMove(ray: GizmoRay): void {
-		if (!this.drag || this.drag.kind !== 'brush') return;
-		const end = this.viewPoint(this.drag.view, ray);
-		if (!end) return;
-		this.showBrushGhost(boxFromDrag(this.drag.view, this.drag.start, end, this.gridStep()));
+	pointerMove(ray: GizmoRay, input: LevelPointerInput = {}): void {
+		const held = this.held;
+		if (!held || !this.isEditing) return;
+		if (held.kind === 'draw') {
+			this.drawTool.drag(toDrawRay(ray));
+			this.showDraw();
+			return;
+		}
+		if (held.kind === 'drag') {
+			if (!held.drag) return;
+			if (!held.moved && !this.leftPress(held.from, ray)) return;
+			held.moved = true;
+			held.drag.update(toDrawRay(ray), input);
+			const preview = held.drag.preview();
+			this.preview.show(preview ? { solids: preview.solids, added: preview.added } : null);
+			return;
+		}
+		if (held.kind === 'gizmo') {
+			const camera = this.host.camera();
+			if (!camera) return;
+			const preview = this.gizmo.move(ray, camera, input.altKey === true);
+			this.preview.show(preview ? { solids: preview.solids, poses: preview.poses } : null);
+		}
 	}
 
 	/**
-	 * Follow the cursor with axis guides while Draw, Clip, or Vertex is armed.
-	 * A brush drag replaces them with the live box. Clip keeps them on the
-	 * anchor, and Vertex keeps them on the selected brush.
+	 * Follow the pointer between presses: the height step, the clip preview,
+	 * the gizmo handles, and the hover highlight.
 	 */
 	pointerHover(ray: GizmoRay): void {
-		if (!this.payload || this.drag) return;
+		if (!this.isEditing) {
+			this.setHover(null);
+			return;
+		}
+		if (this.held) return;
+		this.hoverRay = { origin: ray.origin.clone(), direction: ray.direction.clone() };
+
+		if (this.drawTool.phase === 'height') {
+			this.drawTool.raise(toDrawRay(ray));
+			this.showDraw();
+			return;
+		}
+
 		const tool = getDebugTool();
-		const vertexMode = tool === 'select' && this.vertexMode();
-		if (tool !== 'brush' && tool !== 'clip' && !vertexMode) {
-			this.clearHoverGuides();
+		if (tool === 'brush' || tool === 'clip') {
+			this.setHover(null);
+			const point = this.surfacePoint(ray);
+			if (tool === 'clip' && this.clipTool.active) {
+				this.guideSlot.clear();
+				this.showClip(point);
+			} else {
+				this.guideSlot.set(point ? axisGuides(point) : null);
+			}
 			return;
 		}
-		if (tool === 'clip' && this.clipAnchor) {
-			// The clip marker already carries guides at the anchor.
-			this.clearHoverGuides();
+		this.guideSlot.clear();
+
+		if (isTransformTool(tool) && this.gizmo.hover(ray)) {
+			this.setHover(null);
 			return;
 		}
-		if (vertexMode && this.selectedSolidCenter()) {
-			// A selected solid already draws its own guides.
-			this.clearHoverGuides();
+		if (tool === 'select' || isTransformTool(tool)) {
+			this.hoverIn(ray, this.elementMode());
 			return;
 		}
-		const point = this.viewPoint(this.currentDrawView(), ray);
-		if (!point) {
-			this.clearHoverGuides();
+		if (tool === 'shear') {
+			this.hoverIn(ray, 'face');
 			return;
 		}
-		this.showHoverGuides(point);
+		this.setHover(null);
 	}
 
 	pointerUp(ray: GizmoRay): void {
-		const drag = this.drag;
-		this.drag = null;
-		this.clearGhost();
-		if (!drag) return;
+		const held = this.held;
+		this.held = null;
+		if (!held) return;
 
-		if (drag.kind === 'brush') {
-			const end = this.viewPoint(drag.view, ray) ?? drag.start;
-			const box = boxFromDrag(drag.view, drag.start, end, this.gridStep());
-			this.host.publishGesture(
-				primitiveFromBox(box, this.payload?.drawShape ?? DEFAULT_DRAW_SHAPE)
-			);
+		if (held.kind === 'draw') {
+			if (this.drawTool.phase !== 'footprint') return;
+			const drawRay = toDrawRay(ray);
+			this.drawTool.drag(drawRay);
+			this.drawTool.release(drawRay, this.viewBasis());
+			this.showDraw();
 			return;
 		}
 
-		if (drag.kind === 'vertex') {
-			const end = this.viewPoint(drag.view, ray, drag.plane);
-			if (!end) return;
-			const gesture = this.vertexMove(
-				drag.brushId,
-				drag.vertexIndex,
-				snapPoint(end, this.gridStep())
-			);
+		if (held.kind === 'drag') {
+			const gesture = held.moved ? held.drag?.finish() ?? null : null;
+			if (gesture) {
+				this.host.publishGesture(gesture);
+				return;
+			}
+			this.preview.show(null);
+			this.host.publishSelect(held.click);
+			return;
+		}
+
+		if (held.kind === 'gizmo') {
+			const gesture = this.gizmo.end();
 			if (gesture) this.host.publishGesture(gesture);
+			else this.preview.show(null);
+		}
+	}
+
+	private elementMode(): LevelElementMode {
+		return this.payload?.elementMode ?? 'object';
+	}
+
+	private pressSelect(ray: GizmoRay, input: LevelPointerInput): boolean {
+		const additive = input.shiftKey === true;
+		this.held = { kind: 'press' };
+		const mode = this.elementMode();
+		if (mode === 'object') {
+			const id = this.picker.object(ray);
+			const ungroup = id ? this.registerClick(ray, input) : false;
+			this.host.publishSelect(selectPayload(id, undefined, additive, ungroup));
+			return true;
+		}
+		const element = this.picker.element(ray, mode);
+		if (!element) {
+			this.host.publishSelect(selectPayload(null, undefined, additive, false));
+			return true;
+		}
+		this.pressElement(ray, element, mode, input);
+		return true;
+	}
+
+	/** Hold a press on an element: released in place it selects, dragged it edits. */
+	private pressElement(
+		ray: GizmoRay,
+		element: PickedElement,
+		mode: Exclude<LevelElementMode, 'object'>,
+		input: LevelPointerInput,
+	): void {
+		const ungroup = this.registerClick(ray, input);
+		const click = selectPayload(element.ref.brushId, [element.ref], input.shiftKey === true, ungroup);
+		const drag = mode === 'face'
+			? this.faceDrag(ray, element, input)
+			: this.elementDrag(element);
+		this.hold(ray, drag, click);
+	}
+
+	private pressShear(ray: GizmoRay, input: LevelPointerInput): boolean {
+		const additive = input.shiftKey === true;
+		const face = this.picker.face(ray);
+		if (!face) {
+			this.host.publishSelect(selectPayload(null, undefined, additive, false));
+			this.held = { kind: 'press' };
+			return true;
+		}
+		const ungroup = this.registerClick(ray, input);
+		const faces = this.dragSet(face.ref);
+		const drag = new ShearDrag(faces, this.startPlanes(faces), face.plane, face.point, this.snapStep());
+		const elements = this.elementMode() === 'face' ? [face.ref] : undefined;
+		this.hold(ray, drag, selectPayload(face.ref.brushId, elements, additive, ungroup));
+		return true;
+	}
+
+	private pressDraw(ray: GizmoRay): boolean {
+		const start = this.drawStart(ray);
+		if (!start) {
+			this.held = { kind: 'press' };
+			return true;
+		}
+		this.drawTool.begin(start.frame, start.point, this.snapStep());
+		this.held = { kind: 'draw' };
+		this.guideSlot.clear();
+		this.showDraw();
+		return true;
+	}
+
+	private pressClip(ray: GizmoRay, input: LevelPointerInput): boolean {
+		this.held = { kind: 'press' };
+		const brushIds = this.clipTargets();
+		if (brushIds.length === 0) {
+			this.host.publishNotice('Select the solids to clip first.');
+			return true;
+		}
+		const point = this.surfacePoint(ray);
+		if (!point) return true;
+		this.guideSlot.clear();
+		const plane = this.clipTool.click(point, this.host.viewDirection(), input.shiftKey === true);
+		if (!plane) {
+			this.showClip(point);
+			return true;
+		}
+		this.clipCursor = null;
+		this.ghostSlot.clear();
+		this.host.publishGesture({ kind: 'clip', brushIds, plane });
+		return true;
+	}
+
+	/**
+	 * Grab a gizmo handle. Off the handles, a press on something acts as the
+	 * Select tool's would, since the editor trades Select for Move after a
+	 * pick: an element can still be dragged, Alt-extruded, or added with
+	 * Shift. A press on nothing is left to the camera.
+	 */
+	private pressTransform(ray: GizmoRay, input: LevelPointerInput): boolean {
+		const camera = this.host.camera();
+		const payload = this.payload;
+		const target = camera && payload && this.gizmoPivot
+			? gizmoTarget(payload, this.solids, this.objects, this.gizmoPivot)
+			: null;
+		if (camera && target && this.gizmo.begin(ray, camera, target)) {
+			this.held = { kind: 'gizmo' };
+			this.setHover(null);
+			return true;
+		}
+		const mode = this.elementMode();
+		if (mode === 'object') {
+			const id = this.picker.object(ray);
+			if (!id) return false;
+			const ungroup = this.registerClick(ray, input);
+			this.host.publishSelect(selectPayload(id, undefined, input.shiftKey === true, ungroup));
+			this.held = { kind: 'press' };
+			return true;
+		}
+		const element = this.picker.element(ray, mode);
+		if (!element) return false;
+		this.pressElement(ray, element, mode, input);
+		return true;
+	}
+
+	private hold(ray: GizmoRay, drag: ElementDrag | null, click: LevelSelectPayload): void {
+		this.held = { kind: 'drag', drag, click, from: this.picker.screenOf(ray), moved: false };
+		this.setHover(null);
+	}
+
+	/** Stamp a click on something; `true` when it completes a double-click. */
+	private registerClick(ray: GizmoRay, input: LevelPointerInput): boolean {
+		const screen = this.picker.screenOf(ray);
+		const stamp = {
+			time: input.timeStamp ?? performance.now(),
+			x: screen?.x ?? 0,
+			y: screen?.y ?? 0,
+		};
+		const double = isDoubleClick(this.lastClick, stamp);
+		this.lastClick = double ? null : stamp;
+		return double;
+	}
+
+	private leftPress(from: { x: number; y: number } | null, ray: GizmoRay): boolean {
+		if (!from) return true;
+		const at = this.picker.screenOf(ray);
+		return !at || Math.hypot(at.x - from.x, at.y - from.y) >= DRAG_PIXELS;
+	}
+
+	/** The pressed element and, when it is selected, every selected element of its kind. */
+	private dragSet(ref: LevelElementRef): LevelElementRef[] {
+		const selected = this.payload?.elements ?? [];
+		if (!selected.some((entry) => sameElement(entry, ref))) return [ref];
+		return selected.filter((entry) => entry.kind === ref.kind && this.solids.has(entry.brushId));
+	}
+
+	private startPlanes(refs: readonly LevelElementRef[]): Map<string, BrushPlane[]> {
+		const planes = new Map<string, BrushPlane[]>();
+		for (const ref of refs) {
+			const solid = this.solids.get(ref.brushId);
+			if (solid) planes.set(ref.brushId, solid.planes);
+		}
+		return planes;
+	}
+
+	private faceDrag(ray: GizmoRay, face: PickedElement, input: LevelPointerInput): ElementDrag | null {
+		const plane = this.solids.get(face.ref.brushId)?.planes[face.ref.planes[0] ?? -1];
+		if (!plane) return null;
+		const measure = new AxisDrag(face.point, unit(plane.normal), toDrawRay(ray), this.viewBasis());
+		const faces = this.dragSet(face.ref);
+		return new FaceDrag(faces, this.startPlanes(faces), measure, this.snapStep(), input.altKey === true);
+	}
+
+	private elementDrag(element: PickedElement): ElementDrag {
+		const elements = this.dragSet(element.ref);
+		const plane = facingAxisPlane(this.host.cameraId(), this.host.viewDirection(), element.point);
+		const lone = elements.length === 1 && element.ref.kind === 'vertex' ? element.corners[0] ?? null : null;
+		return new ElementMoveDrag(elements, this.startPlanes(elements), plane, element.point, lone, this.snapStep());
+	}
+
+	/** The frame a draw starts on: the face under the pointer, else the view plane or the ground. */
+	private drawStart(ray: GizmoRay): { frame: BrushFrame; point: BrushVec3 } | null {
+		const face = this.picker.face(ray);
+		if (face) {
+			return { frame: frameForPlane(face.plane.normal, face.plane.distance), point: face.point };
+		}
+		const frame = fallbackDrawFrame(this.host.cameraId(), this.host.viewDirection());
+		const plane = framePlane(frame);
+		const point = rayHitPlane(toDrawRay(ray), plane.normal, plane.distance);
+		return point ? { frame, point } : null;
+	}
+
+	/** A point on the face under the pointer, else on the draw plane, snapped to the grid. */
+	private surfacePoint(ray: GizmoRay): BrushVec3 | null {
+		const step = this.snapStep();
+		const face = this.picker.face(ray);
+		if (face) return snapOntoPlane(face.point, face.plane, step);
+		const plane = framePlane(fallbackDrawFrame(this.host.cameraId(), this.host.viewDirection()));
+		const hit = rayHitPlane(toDrawRay(ray), plane.normal, plane.distance);
+		return hit ? snapOntoPlane(hit, plane, step) : null;
+	}
+
+	private drawShape(): LevelDrawShape {
+		return { ...(this.payload?.drawShape ?? DEFAULT_DRAW_SHAPE) };
+	}
+
+	/** Publish the primitive. Its ghost stays up until the sync that adds the solid. */
+	private commitDraw(): void {
+		const gesture = this.drawTool.commit(this.drawShape());
+		const shape = gesture?.shape;
+		if (gesture && shape && primitiveBrushes(shape.shape, gesture.frame, gesture.footprint, gesture.height, shape)) {
+			this.host.publishGesture(gesture);
 			return;
 		}
-
-		const end = this.translatePoint(drag, ray);
-		if (!end) return;
-		const snapped = snapPoint(end, this.gridStep());
-		const delta = {
-			x: snapped.x - drag.start.x,
-			y: snapped.y - drag.start.y,
-			z: snapped.z - drag.start.z,
-		};
-		if (drag.view === 'top') delta.y = 0;
-		if (drag.view === 'side') delta.x = 0;
-		if (drag.view === 'front') delta.z = 0;
-		if (delta.x === 0 && delta.y === 0 && delta.z === 0) return;
-		this.host.publishGesture({
-			kind: 'transform',
-			ids: [drag.id],
-			transform: { kind: 'translate', delta },
-		});
+		this.ghostSlot.clear();
 	}
 
-	private vertexMode(): boolean {
-		return this.payload?.elementMode === 'vertex';
+	private showDraw(): void {
+		const state = this.drawTool.state();
+		this.ghostSlot.set(state ? drawGhost(state, this.drawShape()) : null);
 	}
 
-	/** One compiled vertex moved to `position`, as an element move named by its planes. */
-	private vertexMove(
-		brushId: string,
-		vertexIndex: number,
-		position: BrushVec3
-	): LevelGesture | null {
-		const solid = this.payload?.document.solids.find((entry) => entry.id === brushId);
-		const topology = solid ? brushTopology(solid.planes) : null;
-		const from = topology?.vertices[vertexIndex];
-		const planes = topology?.vertexPlanes[vertexIndex];
-		if (!from || !planes) return null;
-		const delta = { x: position.x - from.x, y: position.y - from.y, z: position.z - from.z };
-		if (delta.x === 0 && delta.y === 0 && delta.z === 0) return null;
-		return {
-			kind: 'element-move',
-			elements: [{ brushId, kind: 'vertex', planes: [...planes] }],
-			delta,
-		};
+	/** Selected solids, plus the owners of selected elements. */
+	private clipTargets(): string[] {
+		const payload = this.payload;
+		if (!payload) return [];
+		const solids = new Set(payload.document.solids.map((solid) => solid.id));
+		const ids = new Set<string>();
+		for (const id of payload.selectedIds) if (solids.has(id)) ids.add(id);
+		for (const element of payload.elements ?? []) {
+			if (solids.has(element.brushId)) ids.add(element.brushId);
+		}
+		return [...ids];
+	}
+
+	/** Placed points, the path to the pointer, and the halves the cut would make. */
+	private showClip(cursor: BrushVec3 | null): void {
+		this.clipCursor = cursor;
+		const placed = this.clipTool.placed;
+		this.ghostSlot.set(clipMarks(cursor ? [...placed, cursor] : placed));
+		const plane = cursor && placed.length > 0 ? this.clipTool.preview(cursor, this.host.viewDirection()) : null;
+		const split = new Map<string, BrushPlane[][]>();
+		if (plane) {
+			for (const id of this.clipTargets()) {
+				const solid = this.solids.get(id);
+				const halves = solid ? clipBrush(solid.planes, plane) : [];
+				if (halves.length > 1) split.set(id, halves);
+			}
+		}
+		this.preview.show(split.size > 0 ? { split } : null);
+	}
+
+	/** Highlight what a click would pick in `mode`. */
+	private hoverIn(ray: GizmoRay, mode: LevelElementMode): void {
+		if (mode === 'object') {
+			const id = this.picker.object(ray);
+			this.setHover(id ? `object:${id}` : null, () => (id ? this.objectOutline(id) : null));
+			return;
+		}
+		const element = this.picker.element(ray, mode);
+		this.setHover(element ? elementKey(element.ref) : null, () =>
+			element ? elementMark(element.ref.kind, element.corners, HOVER_COLOR, 0.2) : null,
+		);
+	}
+
+	private setHover(key: string | null, build?: () => Object3D | null): void {
+		if (key === this.hoverKey) return;
+		this.hoverKey = key;
+		this.hoverSlot.set(key && build ? build() : null);
+	}
+
+	private objectOutline(id: string): Object3D | null {
+		const solid = this.solids.get(id);
+		if (solid) return edgeHighlight(topologyEdges(solid.topology), HOVER_COLOR);
+		const object = this.objects.get(id);
+		if (!object) return null;
+		const box = new Box3().setFromObject(object);
+		return box.isEmpty() ? null : new Box3Helper(box, HOVER_COLOR);
+	}
+
+	private isObjectSelected(id: string): boolean {
+		return this.elementMode() === 'object' && (this.payload?.selectedIds.includes(id) ?? false);
+	}
+
+	private sectorTint(planes: readonly BrushPlane[]): string | null {
+		return this.payload ? solidSectorTint(planes, this.payload) : null;
+	}
+
+	private syncGizmo(): void {
+		const tool = getDebugTool();
+		this.gizmo.place(this.isEditing && isTransformTool(tool) ? tool : null, this.gizmoPivot);
+		if (!this.gizmo.visible) return;
+		const camera = this.host.camera();
+		if (camera) this.gizmo.update(camera);
+	}
+
+	/** The camera's facing and its screen up, for measures read on screen. */
+	private viewBasis(): ViewBasis {
+		const direction = this.host.viewDirection();
+		const camera = this.host.camera();
+		if (camera) {
+			camera.updateMatrixWorld();
+			const up = new Vector3().setFromMatrixColumn(camera.matrixWorld, 1).normalize();
+			return { direction, up: { x: up.x, y: up.y, z: up.z } };
+		}
+		const flat = { x: -direction.x * direction.y, y: 1 - direction.y * direction.y, z: -direction.z * direction.y };
+		const up = Math.hypot(flat.x, flat.y, flat.z) > 1e-6 ? unit(flat) : { x: 0, y: 0, z: -1 };
+		return { direction, up };
 	}
 
 	private rebuild(): void {
@@ -454,12 +873,31 @@ export class LevelSession {
 		const payload = this.payload;
 		if (!payload || !this.ensureRoot()) return;
 		this.buildVisuals();
+		this.root.updateMatrixWorld(true);
+		this.gizmoPivot = this.isEditing ? selectionPivot(payload, this.solids, this.objects) : null;
+		this.refreshTools();
 		if (this.mode !== 'play') return;
 
 		this.spawnSectors(payload.document);
 		void this.spawnZones(payload.document, generation).catch((error: unknown) => {
 			console.error('Level triggers failed to spawn', error);
 		});
+	}
+
+	/** Redraw the tool overlays over a fresh document. A drag's preview survives; a finished one is done. */
+	private refreshTools(): void {
+		if (!this.isEditing) {
+			this.clearTools();
+			return;
+		}
+		if (!this.held && !this.gizmo.isDragging) this.preview.forget();
+		else this.preview.apply();
+		this.ghostSlot.clear();
+		this.setHover(null);
+		if (this.drawTool.phase !== 'idle') this.showDraw();
+		else if (this.clipTool.active) this.showClip(this.clipCursor);
+		else if (this.hoverRay && !this.held) this.pointerHover(this.hoverRay);
+		this.syncGizmo();
 	}
 
 	private spawnSectors(document: LevelDocument): void {
@@ -476,32 +914,40 @@ export class LevelSession {
 	private buildVisuals(): void {
 		const payload = this.payload;
 		if (!payload) return;
-		const hidden = new Set(this.mode === 'play' ? [] : payload.hiddenLayers);
-		const selected = new Set(payload.selectedIds);
-		const showFaces = this.mode === 'edit';
+		const editing = this.mode === 'edit';
+		const hidden = new Set(editing ? payload.hiddenLayers : []);
+		const elementMode = editing ? this.elementMode() : 'object';
 
-		if (showFaces && !hidden.has('solid')) {
+		if (editing && !hidden.has('solid')) {
 			for (const solid of payload.document.solids) {
 				if (solidSectorHidden(solid.planes, payload)) continue;
-				const compiled = compileBrush(solid.planes);
-				if (!compiled) continue;
-				const isSelected = selected.has(solid.id);
+				const topology = brushTopology(solid.planes);
+				if (!topology) continue;
+				const isSelected = this.isObjectSelected(solid.id);
 				const mesh = new Mesh(
-					brushGeometry(compiled),
+					brushGeometry(topology),
 					brushMaterial(isSelected, solidSectorTint(solid.planes, payload)),
 				);
 				mesh.userData.levelId = solid.id;
 				this.root.add(mesh);
-				if (isSelected) this.root.add(axisGuides(brushCenter(compiled)));
-				if (selected.has(solid.id) && payload.elementMode === 'vertex') {
-					this.addVertexHandles(solid.id, compiled);
-				}
+				const center = isSelected ? brushCenter(solid.planes) : null;
+				const guides = center ? axisGuides(center) : null;
+				if (guides) this.root.add(guides);
+				this.solids.set(solid.id, { planes: solid.planes, topology, mesh, guides });
 			}
 		}
 
-		if (showFaces) {
+		if (editing) {
 			const overlay = buildSectorOverlay(payload);
 			if (overlay) this.root.add(overlay);
+		}
+
+		if (editing && elementMode !== 'object') {
+			const topologies = [...this.solids.values()].map((view) => view.topology);
+			const wire = elementWire(topologies, elementMode === 'vertex');
+			if (wire) this.root.add(wire);
+			this.selectionView = elementSelection(payload.elements ?? [], (id) => this.solids.get(id)?.planes);
+			if (this.selectionView) this.root.add(this.selectionView);
 		}
 
 		if (!hidden.has('doodad')) {
@@ -510,6 +956,7 @@ export class LevelSession {
 				applyPose(visual, doodad.pose);
 				visual.userData.levelId = doodad.id;
 				this.root.add(visual);
+				this.objects.set(doodad.id, visual);
 			}
 		}
 
@@ -524,23 +971,9 @@ export class LevelSession {
 				applyPose(marker, entity.pose);
 				marker.userData.levelId = entity.id;
 				this.root.add(marker);
+				this.objects.set(entity.id, marker);
 			}
 		}
-	}
-
-	private addVertexHandles(brushId: string, compiled: CompiledBrush): void {
-		const radius = Math.max(this.gridStep() * 0.28, 0.08);
-		compiled.vertices.forEach((vertex, index) => {
-			const handle = new Mesh(
-				new SphereGeometry(radius, 8, 6),
-				new MeshBasicMaterial({ color: 0xffee88, depthTest: false }),
-			);
-			handle.position.set(vertex.x, vertex.y, vertex.z);
-			handle.userData.levelId = brushId;
-			handle.userData.vertexIndex = index;
-			handle.renderOrder = 10;
-			this.root.add(handle);
-		});
 	}
 
 	private triggerOutline(props: Record<string, unknown>): Object3D {
@@ -566,65 +999,6 @@ export class LevelSession {
 			}
 			if (uuid) this.zoneIds.push(uuid);
 		}
-	}
-
-	private beginSolidGesture(tool: 'brush' | 'clip' | 'vertex', ray: GizmoRay): void {
-		const view = this.currentDrawView();
-		const point = this.viewPoint(view, ray);
-		if (!point) return;
-
-		if (tool === 'brush') {
-			this.clearHoverGuides();
-			this.drag = { kind: 'brush', view, start: point };
-			this.showBrushGhost(boxFromDrag(view, point, point, this.gridStep()));
-			return;
-		}
-		if (tool === 'clip') {
-			if (!this.clipAnchor) {
-				this.clipAnchor = point;
-				this.showClipMarker(point);
-				return;
-			}
-			const plane = clipPlaneFromPoints(view, this.clipAnchor, point);
-			this.clipAnchor = null;
-			this.clearGhost();
-			const brushId = this.selectedSolidId();
-			if (plane && brushId) this.host.publishGesture({ kind: 'clip', brushIds: [brushId], plane });
-			return;
-		}
-
-		const picked = this.pick(ray);
-		if (picked && typeof picked.vertexIndex === 'number') {
-			const vertex = this.vertexAt(picked.id, picked.vertexIndex);
-			this.drag = {
-				kind: 'vertex',
-				brushId: picked.id,
-				vertexIndex: picked.vertexIndex,
-				view,
-				plane: vertex?.[drawPlaneAxis(view)] ?? 0,
-			};
-			return;
-		}
-		this.host.publishSelect({ id: picked?.id ?? null });
-	}
-
-	private vertexAt(brushId: string, index: number): BrushVec3 | null {
-		const solid = this.payload?.document.solids.find((entry) => entry.id === brushId);
-		if (!solid) return null;
-		return compileBrush(solid.planes)?.vertices[index] ?? null;
-	}
-
-	private beginTranslate(ray: GizmoRay): boolean {
-		const payload = this.payload;
-		const id = payload?.selectedIds[0];
-		if (!payload || !id) return false;
-		const layer = layerOf(payload.document, id);
-		if (!layer) return false;
-		const view = this.currentDrawView();
-		const start = this.translatePoint({ kind: 'translate', id, layer, view, start: { x: 0, y: 0, z: 0 } }, ray);
-		if (!start) return true;
-		this.drag = { kind: 'translate', id, layer, view, start: snapPoint(start, this.gridStep()) };
-		return true;
 	}
 
 	private placeArmed(ray: GizmoRay): void {
@@ -654,151 +1028,34 @@ export class LevelSession {
 		this.host.publishGesture({ kind: 'trigger', pose, size: placement.size });
 	}
 
-	/** Top and Side cameras stay on their planes. Every other camera uses its facing. */
-	private currentDrawView(): DrawView {
-		return drawViewForCamera(this.host.cameraId()) ?? drawViewForDirection(this.host.viewDirection());
-	}
-
-	private viewPoint(view: DrawView, ray: GizmoRay, plane = 0): BrushVec3 | null {
-		return rayHitAxisPlane(toDrawRay(ray), drawPlaneAxis(view), plane);
-	}
-
-	private translatePoint(drag: Extract<Drag, { kind: 'translate' }>, ray: GizmoRay): BrushVec3 | null {
-		const anchor = this.anchorOf(drag.id);
-		return rayHitAxisPlane(toDrawRay(ray), drawPlaneAxis(drag.view), anchor[drawPlaneAxis(drag.view)]);
-	}
-
-	private anchorOf(id: string): BrushVec3 {
-		const document = this.payload?.document;
-		const solid = document?.solids.find((entry) => entry.id === id);
-		if (solid) {
-			const compiled = compileBrush(solid.planes);
-			if (compiled && compiled.vertices.length > 0) {
-				const sum = compiled.vertices.reduce(
-					(acc, vertex) => ({ x: acc.x + vertex.x, y: acc.y + vertex.y, z: acc.z + vertex.z }),
-					{ x: 0, y: 0, z: 0 },
-				);
-				const count = compiled.vertices.length;
-				return { x: sum.x / count, y: sum.y / count, z: sum.z / count };
-			}
+	/** Drop the press in progress, and its preview. */
+	private cancelHeld(): void {
+		const held = this.held;
+		this.held = null;
+		if (this.gizmo.isDragging) this.gizmo.cancel();
+		if (held?.kind === 'drag' || held?.kind === 'gizmo') this.preview.show(null);
+		if (held?.kind === 'draw') {
+			this.drawTool.cancel();
+			this.ghostSlot.clear();
 		}
-		const doodad = document?.doodads.find((entry) => entry.id === id);
-		if (doodad?.pose.position) return doodad.pose.position;
-		const entity = document?.entities.find((entry) => entry.id === id);
-		return entity?.pose.position ?? { x: 0, y: 0, z: 0 };
 	}
 
-	private selectedSolidId(): string | null {
-		const payload = this.payload;
-		if (!payload) return null;
-		return payload.selectedIds.find((id) => payload.document.solids.some((solid) => solid.id === id)) ?? null;
-	}
-
-	private pickId(ray: GizmoRay): string | null {
-		return this.pick(ray)?.id ?? null;
-	}
-
-	private pick(ray: GizmoRay): { id: string; vertexIndex?: number } | null {
-		if (!this.mounted) return null;
-		this.raycaster.set(ray.origin, ray.direction);
-		const hits = this.raycaster.intersectObjects(this.root.children, true);
-		for (const hit of hits) {
-			let object: Object3D | null = hit.object;
-			while (object) {
-				const vertexIndex = object.userData.vertexIndex;
-				const id = object.userData.levelId;
-				if (typeof id === 'string') {
-					return typeof vertexIndex === 'number' ? { id, vertexIndex } : { id };
-				}
-				object = object.parent;
-			}
-		}
-		return null;
-	}
-
-	private showBrushGhost(box: { min: BrushVec3; max: BrushVec3 }): void {
-		this.clearGhost();
-		const size = {
-			x: box.max.x - box.min.x,
-			y: box.max.y - box.min.y,
-			z: box.max.z - box.min.z,
-		};
-		const center = {
-			x: (box.min.x + box.max.x) / 2,
-			y: (box.min.y + box.max.y) / 2,
-			z: (box.min.z + box.max.z) / 2,
-		};
-		const mesh = new Mesh(
-			new BoxGeometry(size.x, size.y, size.z),
-			new MeshStandardMaterial({
-				color: DEFAULT_BRUSH_COLOR,
-				transparent: true,
-				opacity: 0.35,
-				depthWrite: false,
-				side: DoubleSide,
-			}),
-		);
-		mesh.position.set(center.x, center.y, center.z);
-		const group = new Group();
-		group.add(mesh);
-		group.add(axisGuides(center));
-		this.ghost = group;
-		this.root.add(group);
-	}
-
-	private showClipMarker(point: BrushVec3): void {
-		this.clearGhost();
-		const marker = new Mesh(
-			new SphereGeometry(Math.max(this.gridStep() * 0.2, 0.06), 8, 6),
-			new MeshBasicMaterial({ color: 0xffee88, depthTest: false }),
-		);
-		marker.position.set(point.x, point.y, point.z);
-		const group = new Group();
-		group.add(marker);
-		group.add(axisGuides(point));
-		this.ghost = group;
-		this.root.add(group);
-	}
-
-	private showHoverGuides(point: BrushVec3): void {
-		this.clearHoverGuides();
-		if (!this.ensureRoot()) return;
-		const guides = axisGuides(point);
-		this.hoverGuides = guides;
-		this.root.add(guides);
-	}
-
-	private clearHoverGuides(): void {
-		if (!this.hoverGuides) return;
-		this.root.remove(this.hoverGuides);
-		disposeObject(this.hoverGuides);
-		this.hoverGuides = null;
-	}
-
-	private selectedSolidCenter(): BrushVec3 | null {
-		const id = this.selectedSolidId();
-		if (!id) return null;
-		const solid = this.payload?.document.solids.find((entry) => entry.id === id);
-		if (!solid) return null;
-		const compiled = compileBrush(solid.planes);
-		return compiled ? brushCenter(compiled) : null;
-	}
-
-	private clearGhost(): void {
-		if (!this.ghost) return;
-		this.root.remove(this.ghost);
-		disposeObject(this.ghost);
-		this.ghost = null;
-	}
-
+	/** Placement keeps a grid even with snapping off. */
 	private gridStep(): number {
 		const step = getSnapSettings().translate;
 		return step > 0 ? step : 1;
 	}
 
+	/** The tools' grid step, or 0 while snapping is off. */
+	private snapStep(): number {
+		const snap = getSnapSettings();
+		return snap.enabled && snap.translate > 0 ? snap.translate : 0;
+	}
+
 	private ensureRoot(): boolean {
 		const scene = this.host.getScene();
 		if (!scene) return false;
+		if (this.tools.parent !== this.root) this.root.add(this.tools);
 		if (!this.mounted) {
 			scene.add(this.root);
 			this.mounted = true;
@@ -806,14 +1063,24 @@ export class LevelSession {
 		return true;
 	}
 
+	private clearTools(): void {
+		this.setHover(null);
+		this.ghostSlot.clear();
+		this.guideSlot.clear();
+		this.preview.forget();
+		this.gizmo.place(null, null);
+	}
+
 	private teardownOwned(): void {
 		for (const uuid of this.zoneIds) this.host.detach(uuid);
 		this.zoneIds = [];
 		for (const handle of this.bodyHandles) this.host.despawnHulls(handle);
 		this.bodyHandles = [];
-		this.clearGhost();
-		this.clearHoverGuides();
+		this.solids.clear();
+		this.objects.clear();
+		this.selectionView = null;
 		for (const child of [...this.root.children]) {
+			if (child === this.tools) continue;
 			this.root.remove(child);
 			disposeObject(child);
 		}
