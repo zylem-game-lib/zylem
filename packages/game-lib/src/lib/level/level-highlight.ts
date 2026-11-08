@@ -12,7 +12,6 @@ import {
 	Group,
 	Line,
 	LineBasicMaterial,
-	LineLoop,
 	LineSegments,
 	Mesh,
 	MeshBasicMaterial,
@@ -115,10 +114,11 @@ function lineMaterial(color: number, overlay: boolean): LineBasicMaterial {
 	return new LineBasicMaterial({ color, depthTest: !overlay, transparent: overlay });
 }
 
-function ringLoop(corners: readonly BrushVec3[], color: number): LineLoop {
-	const loop = new LineLoop(positionGeometry(flat(corners)), lineMaterial(color, true));
-	loop.renderOrder = OVERLAY_ORDER + 1;
-	return loop;
+/** A closed outline, as a `Line` back to its start: the WebGPU renderer cannot draw a `LineLoop`. */
+function ringLoop(corners: readonly BrushVec3[], color: number): Line {
+	const ring = new Line(positionGeometry(flat([...corners, corners[0]!])), lineMaterial(color, true));
+	ring.renderOrder = OVERLAY_ORDER + 1;
+	return ring;
 }
 
 /** A face ring, tinted, with its outline. `null` for fewer than three corners. */
