@@ -77,6 +77,34 @@ describe('boxBrush', () => {
 		expect(volume(boxBrush(UNIT_MIN, UNIT_MAX))).toBeCloseTo(1, 4);
 	});
 
+	it('winds every face of a sloped solid counter-clockwise about its outward normal', () => {
+		const ramp: BrushPlane[] = [
+			{ normal: { x: 0, y: -1, z: 0 }, distance: 0 },
+			{ normal: { x: 1, y: 0, z: 0 }, distance: 4 },
+			{ normal: { x: -0.6, y: 0.8, z: 0 }, distance: 0 },
+			{ normal: { x: 0, y: 0, z: 1 }, distance: 0 },
+			{ normal: { x: 0, y: 0, z: -1 }, distance: 2 },
+		];
+		const brush = compiled(ramp);
+		for (const face of brush.faces) {
+			const normal = ramp[face.planeIndex]!.normal;
+			const ring = face.indices.map((index) => brush.vertices[index]!);
+			for (let i = 0; i < ring.length; i += 1) {
+				const a = ring[i]!;
+				const b = ring[(i + 1) % ring.length]!;
+				const c = ring[(i + 2) % ring.length]!;
+				const ab = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
+				const bc = { x: c.x - b.x, y: c.y - b.y, z: c.z - b.z };
+				const turn =
+					normal.x * (ab.y * bc.z - ab.z * bc.y) +
+					normal.y * (ab.z * bc.x - ab.x * bc.z) +
+					normal.z * (ab.x * bc.y - ab.y * bc.x);
+				expect(turn).toBeGreaterThan(0);
+			}
+		}
+		expect(volume(ramp)).toBeCloseTo(12, 4);
+	});
+
 	it('swaps inverted corners and rejects a flat box', () => {
 		closeToVec(bounds(boxBrush(UNIT_MAX, UNIT_MIN)).min, UNIT_MIN);
 		closeToVec(bounds(boxBrush(UNIT_MAX, UNIT_MIN)).max, UNIT_MAX);

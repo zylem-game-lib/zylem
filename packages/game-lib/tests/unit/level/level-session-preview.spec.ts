@@ -1,8 +1,7 @@
 import { Line, Mesh, MeshStandardMaterial, Scene } from 'three';
 import { describe, expect, it } from 'vitest';
-import { boxBrush } from '../../../src/lib/level/brush';
+import { boxBrush, type LevelDocument, type LevelSyncPayload } from '@zylem/bridge';
 import { LevelSession, type LevelSessionHost } from '../../../src/lib/level/level-session';
-import type { LevelDocument, LevelSyncPayload } from '../../../src/lib/level/level-types';
 
 const DEFAULT_BRUSH_COLOR = 0xc8c2b4;
 const SELECTED_BRUSH_COLOR = 0xe4ddd0;

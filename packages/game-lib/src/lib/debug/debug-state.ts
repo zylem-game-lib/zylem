@@ -10,7 +10,7 @@ export type DebugTools =
 	| 'add'
 	| 'brush'
 	| 'clip'
-	| 'vertex'
+	| 'shear'
 	| 'none';
 
 /** Tools that manipulate a selected entity's transform via the gizmo. */

@@ -8,6 +8,20 @@
  * game both compile brushes through this module.
  */
 
+import {
+	EPS,
+	add,
+	centroid,
+	copyVec,
+	cross,
+	dot,
+	length,
+	normalize,
+	samePoint,
+	scale,
+	sub,
+} from './vec';
+
 export interface BrushVec3 {
 	x: number;
 	y: number;
@@ -32,48 +46,9 @@ export interface CompiledBrush {
 	faces: CompiledFace[];
 }
 
-const EPS = 1e-5;
-
-function dot(a: BrushVec3, b: BrushVec3): number {
-	return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-
-function cross(a: BrushVec3, b: BrushVec3): BrushVec3 {
-	return {
-		x: a.y * b.z - a.z * b.y,
-		y: a.z * b.x - a.x * b.z,
-		z: a.x * b.y - a.y * b.x,
-	};
-}
-
-function sub(a: BrushVec3, b: BrushVec3): BrushVec3 {
-	return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
-}
-
-function add(a: BrushVec3, b: BrushVec3): BrushVec3 {
-	return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
-}
-
-function scale(a: BrushVec3, factor: number): BrushVec3 {
-	return { x: a.x * factor, y: a.y * factor, z: a.z * factor };
-}
-
-function length(a: BrushVec3): number {
-	return Math.hypot(a.x, a.y, a.z);
-}
-
-function normalize(a: BrushVec3): BrushVec3 | null {
-	const magnitude = length(a);
-	if (magnitude < EPS) return null;
-	return scale(a, 1 / magnitude);
-}
-
-function samePoint(a: BrushVec3, b: BrushVec3): boolean {
-	return Math.abs(a.x - b.x) <= EPS && Math.abs(a.y - b.y) <= EPS && Math.abs(a.z - b.z) <= EPS;
-}
-
-function copyVec(value: BrushVec3): BrushVec3 {
-	return { x: value.x, y: value.y, z: value.z };
+export interface BrushBounds {
+	min: BrushVec3;
+	max: BrushVec3;
 }
 
 /** Six planes of an axis-aligned box. Zero volume still returns planes; compile rejects it. */
@@ -122,7 +97,8 @@ function inside(point: BrushVec3, planes: readonly BrushPlane[]): boolean {
 }
 
 function orderIndices(vertices: readonly BrushVec3[], indices: readonly number[], normal: BrushVec3): number[] {
-	const origin = vertices[indices[0]!]!;
+	// Angles from a corner tie at zero and can bow-tie the ring; from the centroid they are distinct.
+	const origin = centroid(indices.map((index) => vertices[index]!));
 	let tangent = cross(normal, { x: 1, y: 0, z: 0 });
 	if (length(tangent) < 1e-8) tangent = cross(normal, { x: 0, y: 1, z: 0 });
 	const tangentUnit = normalize(tangent);
@@ -172,6 +148,30 @@ export function compileBrush(planes: readonly BrushPlane[]): CompiledBrush | nul
 	}
 	if (faces.length < 4) return null;
 	return { vertices, faces };
+}
+
+/** Axis-aligned bounds of the compiled solid, or `null` when it does not compile. */
+export function brushBounds(planes: readonly BrushPlane[]): BrushBounds | null {
+	const compiled = compileBrush(planes);
+	if (!compiled) return null;
+	const min = { x: Infinity, y: Infinity, z: Infinity };
+	const max = { x: -Infinity, y: -Infinity, z: -Infinity };
+	for (const vertex of compiled.vertices) {
+		min.x = Math.min(min.x, vertex.x);
+		min.y = Math.min(min.y, vertex.y);
+		min.z = Math.min(min.z, vertex.z);
+		max.x = Math.max(max.x, vertex.x);
+		max.y = Math.max(max.y, vertex.y);
+		max.z = Math.max(max.z, vertex.z);
+	}
+	return { min, max };
+}
+
+/** Center of the bounds: the gizmo pivot and the point that picks a brush's sector. */
+export function brushCenter(planes: readonly BrushPlane[]): BrushVec3 | null {
+	const bounds = brushBounds(planes);
+	if (!bounds) return null;
+	return scale(add(bounds.min, bounds.max), 0.5);
 }
 
 /** Shift every plane so the solid moves by `delta`. */
@@ -293,13 +293,8 @@ function initialTetra(points: readonly BrushVec3[]): [number, number, number, nu
 	return [0, i1, i2, i3];
 }
 
-function centroid(points: readonly BrushVec3[]): BrushVec3 {
-	const sum = points.reduce((acc, point) => add(acc, point), { x: 0, y: 0, z: 0 });
-	return scale(sum, 1 / points.length);
-}
-
 /** Planes of the convex hull, or `null` when the points do not span a volume. */
-function convexHullPlanes(points: readonly BrushVec3[]): BrushPlane[] | null {
+export function brushFromPoints(points: readonly BrushVec3[]): BrushPlane[] | null {
 	const unique = dedupePoints(points);
 	if (unique.length < 4) return null;
 	const tetra = initialTetra(unique);
@@ -383,7 +378,7 @@ export function setBrushVertex(
 	const next = compiled.vertices.map((vertex, index) =>
 		index === vertexIndex ? copyVec(position) : copyVec(vertex),
 	);
-	const hull = convexHullPlanes(next);
+	const hull = brushFromPoints(next);
 	if (!hull) return null;
 	const check = compileBrush(hull);
 	if (!check) return null;
