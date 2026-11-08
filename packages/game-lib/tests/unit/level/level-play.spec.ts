@@ -42,6 +42,8 @@ describe('level play', () => {
 			getScene: () => scene,
 			cameraId: () => null,
 			viewDirection: () => ({ x: 0, y: -1, z: 0 }),
+			camera: () => null,
+			viewport: () => null,
 			physicsHit: () => null,
 			spawnZone: async () => null,
 			detach: () => {},
@@ -55,7 +57,7 @@ describe('level play', () => {
 			publishGesture: () => {},
 			publishSelect: () => {},
 			publishNotice: () => {},
-		} as LevelSessionHost;
+		};
 	}
 
 	const DOCUMENT: LevelDocument = {
