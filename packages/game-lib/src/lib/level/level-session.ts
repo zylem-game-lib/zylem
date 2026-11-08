@@ -2,14 +2,16 @@
  * The stage's picture of the level document.
  *
  * The editor owns the file. This session draws it, reports finished gestures,
- * and on play swaps the brush faces for one static body of convex hulls.
- * Nothing it creates is a normal stage entity except play-mode trigger zones,
- * and those are marked editor-owned so they are not published back.
+ * and on play swaps the brush faces for one merged mesh and one static body
+ * of convex hulls per sector. Nothing it creates is a normal stage entity
+ * except play-mode trigger zones, and those are marked editor-owned so they
+ * are not published back.
  */
 
 import {
 	BoxGeometry,
 	BufferGeometry,
+	Color,
 	DoubleSide,
 	EdgesGeometry,
 	Float32BufferAttribute,
@@ -30,6 +32,7 @@ import {
 	DEFAULT_DRAW_SHAPE,
 	brushTopology,
 	compileBrush,
+	sectorSizeOf,
 	type BrushVec3,
 	type CompiledBrush,
 	type LevelDocument,
@@ -42,7 +45,6 @@ import { getDebugTool, getSnapSettings } from '../debug/debug-state';
 import { getEntityType } from '../entities/entity-registry';
 import type { GizmoRay } from '../debug/transform-gizmo';
 import { computePlacementPose, type PlacementHit } from '../stage/placement-geometry';
-import { levelCollisionHulls } from './level-collision';
 import {
 	boxFromDrag,
 	clipPlaneFromPoints,
@@ -55,6 +57,9 @@ import {
 	type DrawRay,
 	type DrawView,
 } from './level-draw';
+import { brushGeometry } from './level-geometry';
+import { buildPlaySectors } from './level-play';
+import { buildSectorOverlay, solidSectorHidden, solidSectorTint } from './level-sectors';
 
 export interface LevelZoneSpawn {
 	name: string;
@@ -189,11 +194,14 @@ function applyPose(object: Object3D, pose: { position?: BrushVec3; rotation?: Br
 	if (pose.scale) object.scale.set(pose.scale.x, pose.scale.y, pose.scale.z);
 }
 
-function brushMaterial(selected: boolean): MeshStandardMaterial {
-	return new MeshStandardMaterial({
-		color: selected ? SELECTED_BRUSH_COLOR : DEFAULT_BRUSH_COLOR,
+/** `tint` is the sector color; a selected solid takes it lighter. */
+function brushMaterial(selected: boolean, tint: string | null = null): MeshStandardMaterial {
+	const material = new MeshStandardMaterial({
+		color: tint ?? (selected ? SELECTED_BRUSH_COLOR : DEFAULT_BRUSH_COLOR),
 		side: DoubleSide,
 	});
+	if (tint && selected) material.color.lerp(new Color(0xffffff), 0.35);
+	return material;
 }
 
 /** World axes through a point. Depth is ignored so the lines stay visible while editing. */
@@ -229,26 +237,6 @@ function brushCenter(compiled: CompiledBrush): BrushVec3 {
 	return { x: sum.x / count, y: sum.y / count, z: sum.z / count };
 }
 
-function brushGeometry(compiled: CompiledBrush): BufferGeometry {
-	const positions: number[] = [];
-	const indices: number[] = [];
-	for (const face of compiled.faces) {
-		const base = positions.length / 3;
-		for (const index of face.indices) {
-			const vertex = compiled.vertices[index]!;
-			positions.push(vertex.x, vertex.y, vertex.z);
-		}
-		for (let i = 1; i < face.indices.length - 1; i += 1) {
-			indices.push(base, base + i, base + i + 1);
-		}
-	}
-	const geometry = new BufferGeometry();
-	geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
-	geometry.setIndex(indices);
-	geometry.computeVertexNormals();
-	return geometry;
-}
-
 export class LevelSession {
 	private root = new Group();
 	private raycaster = new Raycaster();
@@ -261,7 +249,8 @@ export class LevelSession {
 	private ghost: Object3D | null = null;
 	/** Axis guides under the cursor while a solid tool is armed and not dragging. */
 	private hoverGuides: Object3D | null = null;
-	private bodyHandle: unknown = null;
+	/** One static body per sector while playing. */
+	private bodyHandles: unknown[] = [];
 	private zoneIds: string[] = [];
 
 	constructor(private host: LevelSessionHost) {
@@ -467,11 +456,21 @@ export class LevelSession {
 		this.buildVisuals();
 		if (this.mode !== 'play') return;
 
-		const hulls = levelCollisionHulls(payload.document.solids);
-		this.bodyHandle = hulls.length > 0 ? this.host.spawnHulls(hulls) : null;
+		this.spawnSectors(payload.document);
 		void this.spawnZones(payload.document, generation).catch((error: unknown) => {
 			console.error('Level triggers failed to spawn', error);
 		});
+	}
+
+	private spawnSectors(document: LevelDocument): void {
+		for (const sector of buildPlaySectors(document.solids, sectorSizeOf(document))) {
+			const mesh = new Mesh(sector.geometry, brushMaterial(false));
+			mesh.name = `level-sector:${sector.key}`;
+			this.root.add(mesh);
+			if (sector.hulls.length === 0) continue;
+			const body = this.host.spawnHulls(sector.hulls);
+			if (body !== null) this.bodyHandles.push(body);
+		}
 	}
 
 	private buildVisuals(): void {
@@ -483,10 +482,14 @@ export class LevelSession {
 
 		if (showFaces && !hidden.has('solid')) {
 			for (const solid of payload.document.solids) {
+				if (solidSectorHidden(solid.planes, payload)) continue;
 				const compiled = compileBrush(solid.planes);
 				if (!compiled) continue;
 				const isSelected = selected.has(solid.id);
-				const mesh = new Mesh(brushGeometry(compiled), brushMaterial(isSelected));
+				const mesh = new Mesh(
+					brushGeometry(compiled),
+					brushMaterial(isSelected, solidSectorTint(solid.planes, payload)),
+				);
 				mesh.userData.levelId = solid.id;
 				this.root.add(mesh);
 				if (isSelected) this.root.add(axisGuides(brushCenter(compiled)));
@@ -494,6 +497,11 @@ export class LevelSession {
 					this.addVertexHandles(solid.id, compiled);
 				}
 			}
+		}
+
+		if (showFaces) {
+			const overlay = buildSectorOverlay(payload);
+			if (overlay) this.root.add(overlay);
 		}
 
 		if (!hidden.has('doodad')) {
@@ -801,10 +809,8 @@ export class LevelSession {
 	private teardownOwned(): void {
 		for (const uuid of this.zoneIds) this.host.detach(uuid);
 		this.zoneIds = [];
-		if (this.bodyHandle !== null) {
-			this.host.despawnHulls(this.bodyHandle);
-			this.bodyHandle = null;
-		}
+		for (const handle of this.bodyHandles) this.host.despawnHulls(handle);
+		this.bodyHandles = [];
 		this.clearGhost();
 		this.clearHoverGuides();
 		for (const child of [...this.root.children]) {
