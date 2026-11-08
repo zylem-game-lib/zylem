@@ -29,8 +29,10 @@ interface EditorViewSpec {
 	id: string;
 	perspective: PerspectiveType;
 	lockRotation: boolean;
-	/** Pan in the view plane. Side moves on YZ, top on XZ. */
+	/** Pan in the view plane. A side view moves on YZ, top and bottom on XZ. */
 	screenSpacePan: boolean;
+	/** Framed to the scene the first time it is shown. Free and perspective are not. */
+	orthographic: boolean;
 	/** Orbit through the lower hemisphere so a low gameplay camera is not snapped level. */
 	fullPolarRange?: boolean;
 	near?: number;
@@ -39,40 +41,58 @@ interface EditorViewSpec {
 	up(gameUp: Vector3): Vector3;
 }
 
+/** Locked orthographic view `distance` out along `offset`, which need not be a unit vector. */
+function orthographicView(
+	id: string,
+	perspective: PerspectiveType,
+	offset: Vector3,
+	up: Vector3,
+	isoDepth = false,
+): EditorViewSpec {
+	const direction = offset.clone().normalize();
+	return {
+		id,
+		perspective,
+		lockRotation: true,
+		screenSpacePan: true,
+		orthographic: true,
+		...(isoDepth ? { near: -ISOMETRIC_DEPTH, far: ISOMETRIC_DEPTH } : {}),
+		position: (lookAt, distance) => lookAt.clone().addScaledVector(direction, distance),
+		up: () => up.clone(),
+	};
+}
+
+const WORLD_UP = new Vector3(0, 1, 0);
+const TOP_UP = new Vector3(0, 0, -1);
+const BOTTOM_UP = new Vector3(0, 0, 1);
+
 const EDITOR_VIEWS: EditorViewSpec[] = [
+	orthographicView(EDITOR_CAMERAS.left, Perspectives.Fixed2D, new Vector3(-1, 0, 0), WORLD_UP),
+	orthographicView(EDITOR_CAMERAS.side, Perspectives.Fixed2D, new Vector3(1, 0, 0), WORLD_UP),
+	orthographicView(EDITOR_CAMERAS.top, Perspectives.TopDown, new Vector3(0, 1, 0), TOP_UP),
+	orthographicView(EDITOR_CAMERAS.bottom, Perspectives.TopDown, new Vector3(0, -1, 0), BOTTOM_UP),
+	orthographicView(EDITOR_CAMERAS.isoLeftTop, Perspectives.Isometric, new Vector3(-1, 1, 1), WORLD_UP, true),
+	orthographicView(EDITOR_CAMERAS.isometric, Perspectives.Isometric, new Vector3(1, 1, 1), WORLD_UP, true),
+	orthographicView(EDITOR_CAMERAS.isoLeftBottom, Perspectives.Isometric, new Vector3(-1, -1, 1), WORLD_UP, true),
+	orthographicView(EDITOR_CAMERAS.isoRightBottom, Perspectives.Isometric, new Vector3(1, -1, 1), WORLD_UP, true),
 	{
-		id: EDITOR_CAMERAS.side,
-		perspective: Perspectives.Fixed2D,
+		id: EDITOR_CAMERAS.perspective,
+		perspective: Perspectives.ThirdPerson,
 		lockRotation: true,
 		screenSpacePan: true,
-		position: (lookAt, distance) => new Vector3(lookAt.x + distance, lookAt.y, lookAt.z),
-		up: () => new Vector3(0, 1, 0),
-	},
-	{
-		id: EDITOR_CAMERAS.top,
-		perspective: Perspectives.TopDown,
-		lockRotation: true,
-		screenSpacePan: true,
-		position: (lookAt, distance) => new Vector3(lookAt.x, lookAt.y + distance, lookAt.z),
-		up: () => new Vector3(0, 0, -1),
-	},
-	{
-		id: EDITOR_CAMERAS.isometric,
-		perspective: Perspectives.Isometric,
-		lockRotation: true,
-		screenSpacePan: true,
-		near: -ISOMETRIC_DEPTH,
-		far: ISOMETRIC_DEPTH,
-		position: (lookAt, distance) => lookAt.clone().add(
-			new Vector3(1, 1, 1).normalize().multiplyScalar(distance),
-		),
-		up: () => new Vector3(0, 1, 0),
+		orthographic: false,
+		position: (lookAt, distance, gamePosition) => {
+			if (gamePosition.distanceTo(lookAt) > 0.5) return gamePosition.clone();
+			return lookAt.clone().add(new Vector3(0, distance * 0.5, distance));
+		},
+		up: (gameUp) => gameUp.clone(),
 	},
 	{
 		id: EDITOR_CAMERAS.free,
 		perspective: Perspectives.ThirdPerson,
 		lockRotation: false,
 		screenSpacePan: false,
+		orthographic: false,
 		fullPolarRange: true,
 		position: (lookAt, distance, gamePosition) => {
 			if (gamePosition.distanceTo(lookAt) > 0.5) return gamePosition.clone();
@@ -104,7 +124,7 @@ function captureFraming(camera: { position: Vector3; getWorldDirection(target: V
  * Responsibilities:
  * - Named camera registry (add/remove/get by name or reference)
  * - Active camera list management (determines which cameras render)
- * - Editor view cameras (side, top, isometric, free), created only while an editor is attached
+ * - Editor view cameras, created only while an editor is attached
  * - Per-frame update of all active cameras' perspective controllers
  * - Coordinating rendering via RendererManager for all active viewports
  */
@@ -171,7 +191,7 @@ export class CameraManager implements EditorCameraHost {
 		return this._activeCameras.length > 0 ? this._activeCameras[0] : null;
 	}
 
-	/** True while side, top, isometric, or free is the main view. */
+	/** True while an editor view is the main camera. */
 	isEditorViewActive(): boolean {
 		return this._editorViewLocked;
 	}
@@ -186,7 +206,7 @@ export class CameraManager implements EditorCameraHost {
 		return null;
 	}
 
-	/** True after the four editor views have been created. */
+	/** True after the editor views have been created. */
 	hasEditorCameras(): boolean {
 		return this._editorCameras.size > 0;
 	}
@@ -365,12 +385,14 @@ export class CameraManager implements EditorCameraHost {
 	}
 
 	/**
-	 * Create side, top, isometric, and free cameras seeded from the current
-	 * game camera. Does not change which camera is rendering.
+	 * Create the editor view cameras seeded from the current game camera.
+	 * Does not change which camera is rendering.
 	 */
 	ensureEditorCameras(): Promise<void> {
-		if (this._editorCameras.size > 0) return Promise.resolve();
+		// Creation adds a camera before its first await, so a second caller can
+		// see a partial set. Wait for the run already going.
 		if (this._editorCamerasPromise) return this._editorCamerasPromise;
+		if (this._editorCameras.size > 0) return Promise.resolve();
 		this._editorCamerasPromise = this.createEditorCameras().finally(() => {
 			this._editorCamerasPromise = null;
 		});
@@ -379,7 +401,7 @@ export class CameraManager implements EditorCameraHost {
 
 	/**
 	 * Restore the game camera when an editor view is showing, then destroy
-	 * the four editor cameras.
+	 * the editor cameras.
 	 */
 	destroyEditorCameras(): void {
 		const showingEditor = this.primaryCamera !== null && this.isEditorCamera(this.primaryCamera);
@@ -594,7 +616,7 @@ export class CameraManager implements EditorCameraHost {
 	}
 
 	private isOrthographicEditorView(id: string): boolean {
-		return id === EDITOR_CAMERAS.side || id === EDITOR_CAMERAS.top || id === EDITOR_CAMERAS.isometric;
+		return EDITOR_VIEWS.some((spec) => spec.id === id && spec.orthographic);
 	}
 
 	/** Snapshot the gameplay camera onto the free orbit camera. Does not switch views. */

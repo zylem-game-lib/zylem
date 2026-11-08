@@ -83,13 +83,16 @@ export function readEntityScale(entity: any): BridgeVec3 {
 	};
 }
 
-/** Read an entity's orientation as a quaternion, when it has a live pose. */
-export function readEntityQuaternion(entity: any): BridgeQuat | undefined {
-	const pose = typeof entity?.getPose === 'function' ? entity.getPose() : null;
-	if (!pose?.rotation) return undefined;
-	const { x, y, z, w } = pose.rotation;
-	return { x, y, z, w };
+/** A pose as `GameEntity.getPose()` reports it. */
+interface LivePose {
+	position: BridgeVec3;
+	rotation: BridgeQuat;
 }
+
+const ORIGIN_POSE: LivePose = {
+	position: { x: 0, y: 0, z: 0 },
+	rotation: { x: 0, y: 0, z: 0, w: 1 },
+};
 
 /**
  * An entity's full current transform, for scene-operation before/after records.
@@ -98,9 +101,20 @@ export function readEntityQuaternion(entity: any): BridgeQuat | undefined {
  * so callers building a complete payload do not have to re-default them.
  */
 export function readEntityPose(entity: any): Required<BridgePose> {
-	const pose = typeof entity?.getPose === 'function' ? entity.getPose() : null;
-	const position = pose?.position ?? { x: 0, y: 0, z: 0 };
-	const quaternion = pose?.rotation ?? { x: 0, y: 0, z: 0, w: 1 };
+	return readLiveEntityPose(entity) ?? toBridgePose(entity, ORIGIN_POSE);
+}
+
+/**
+ * {@link readEntityPose}, or `null` for an entity not spawned yet, which has no
+ * live pose to read.
+ */
+export function readLiveEntityPose(entity: any): Required<BridgePose> | null {
+	const pose: LivePose | null = typeof entity?.getPose === 'function' ? entity.getPose() : null;
+	return pose ? toBridgePose(entity, pose) : null;
+}
+
+function toBridgePose(entity: any, pose: LivePose): Required<BridgePose> {
+	const { position, rotation: quaternion } = pose;
 	return {
 		position: { x: position.x, y: position.y, z: position.z },
 		rotation: quaternionToEuler(quaternion),
@@ -184,15 +198,20 @@ export function entityTypeName(entity: unknown): string {
  *
  * Thumbnail and bounds are left off: the editor merges an upsert field by
  * field and skips absent ones, so a transform echo cannot clobber them.
+ *
+ * @param knownPose The entity's pose, when the caller has already read it.
  */
-export function publishEntityTransform(entity: unknown): void {
+export function publishEntityTransform(
+	entity: unknown,
+	knownPose?: Required<BridgePose>,
+): void {
 	const target = entity as { uuid?: string; name?: string } | null;
 	if (!target?.uuid) return;
 
 	const channel = getZylemBridge().channel;
 	if (!channel.hasSubscribers('entity:upsert')) return;
 
-	const pose = readEntityPose(entity);
+	const pose = knownPose ?? readEntityPose(entity);
 	channel.queue('entity:upsert', [{
 		uuid: target.uuid,
 		name: target.name || 'Unnamed',
@@ -283,6 +302,33 @@ export function swatchOperationLabel(
 	return `Apply ${sources.join(', ')} to ${target}`;
 }
 
+/** Smaller changes than this are float noise from the simulation, not motion. */
+const POSE_EPSILON = 1e-5;
+
+function nearlyEqual(a: BridgeVec3, b: BridgeVec3): boolean {
+	return (
+		Math.abs(a.x - b.x) <= POSE_EPSILON
+		&& Math.abs(a.y - b.y) <= POSE_EPSILON
+		&& Math.abs(a.z - b.z) <= POSE_EPSILON
+	);
+}
+
+/**
+ * Whether two poses match to within float noise.
+ *
+ * Quaternions are compared component by component rather than by dot product:
+ * a dot-product tolerance this small still lets about half a degree through,
+ * which the inspector's rotation fields would show as visible steps.
+ */
+function samePose(a: Required<BridgePose>, b: Required<BridgePose>): boolean {
+	return (
+		nearlyEqual(a.position, b.position)
+		&& nearlyEqual(a.scale, b.scale)
+		&& nearlyEqual(a.quaternion, b.quaternion)
+		&& Math.abs(a.quaternion.w - b.quaternion.w) <= POSE_EPSILON
+	);
+}
+
 function sameUuidList(a: readonly string[], b: readonly string[] | undefined): boolean {
 	if (!b) return false;
 	if (a.length !== b.length) return false;
@@ -366,6 +412,9 @@ export class GameBridge {
 
 	/** Frame watch used when the channel cannot report subscriber removal. */
 	private editorCameraFrame = 0;
+
+	/** Last pose published for each selected entity, so one at rest sends nothing. */
+	private publishedPoses = new Map<string, Required<BridgePose>>();
 
 	constructor() {
 		this.channel = getZylemBridge().channel;
@@ -521,7 +570,43 @@ export class GameBridge {
 		this.unsubscribes = [];
 		this.host = null;
 		this.editorKnown = {};
+		this.publishedPoses.clear();
 		this.detachEditorCameras();
+	}
+
+	/**
+	 * Echo the live pose of each selected entity that moved since its pose was
+	 * last published. The game loop calls this every frame.
+	 *
+	 * One watcher covers every mover — gizmo drags, undo/redo, physics, scripts —
+	 * so the editor's transform fields follow the selection without each of them
+	 * publishing for itself. Only the selection is watched: it is all the
+	 * inspector shows, and watching the whole stage would cost a pose read per
+	 * entity per frame.
+	 */
+	publishSelectedPoses(): void {
+		// Forgotten while no editor listens, so one that attaches later is sent
+		// the current poses instead of nothing.
+		if (!this.host || !this.channel.hasSubscribers('entity:upsert')) {
+			this.publishedPoses.clear();
+			return;
+		}
+
+		const selected = debugState.selectedEntityIds;
+		for (const uuid of this.publishedPoses.keys()) {
+			if (!selected.includes(uuid)) this.publishedPoses.delete(uuid);
+		}
+
+		for (const uuid of selected) {
+			const entity = this.host.resolveEntity(uuid);
+			// Null until the entity spawns, when there would only be defaults to report.
+			const pose = readLiveEntityPose(entity);
+			if (!pose) continue;
+			const published = this.publishedPoses.get(uuid);
+			if (published && samePose(published, pose)) continue;
+			this.publishedPoses.set(uuid, pose);
+			publishEntityTransform(entity, pose);
+		}
 	}
 
 	/**

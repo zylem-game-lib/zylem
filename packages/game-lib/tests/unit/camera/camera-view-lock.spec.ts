@@ -106,15 +106,25 @@ describe('editor view cameras', () => {
 		expect(manager.getCamera(EDITOR_CAMERAS.side)).toBeNull();
 	});
 
-	it('creates four view cameras on attach and leaves the game camera active', async () => {
+	it('creates the view cameras on attach and leaves the game camera active', async () => {
 		const { manager, game } = await stage();
 
 		await setEditorCamerasAttached(true);
 
 		expect(manager.primaryCamera).toBe(game);
-		expect(manager.getCamera(EDITOR_CAMERAS.side)?.camera).toBeInstanceOf(OrthographicCamera);
-		expect(manager.getCamera(EDITOR_CAMERAS.top)?.camera).toBeInstanceOf(OrthographicCamera);
-		expect(manager.getCamera(EDITOR_CAMERAS.isometric)?.camera).toBeInstanceOf(OrthographicCamera);
+		for (const id of [
+			EDITOR_CAMERAS.side,
+			EDITOR_CAMERAS.left,
+			EDITOR_CAMERAS.top,
+			EDITOR_CAMERAS.bottom,
+			EDITOR_CAMERAS.isometric,
+			EDITOR_CAMERAS.isoLeftTop,
+			EDITOR_CAMERAS.isoRightBottom,
+			EDITOR_CAMERAS.isoLeftBottom,
+		]) {
+			expect(manager.getCamera(id)?.camera, id).toBeInstanceOf(OrthographicCamera);
+		}
+		expect(manager.getCamera(EDITOR_CAMERAS.perspective)?.camera).toBeInstanceOf(PerspectiveCamera);
 		expect(manager.getCamera(EDITOR_CAMERAS.free)?.camera).toBeInstanceOf(PerspectiveCamera);
 		expect(manager.isEditorViewActive()).toBe(false);
 	});
@@ -151,6 +161,48 @@ describe('editor view cameras', () => {
 		expect(Math.abs(topArmed.x)).toBeLessThan(1);
 		expect(Math.abs(topArmed.z)).toBeLessThan(1);
 		expect(manager.primaryCamera!.camera.up.z).toBeLessThan(0);
+	});
+
+	it('frames left, bottom, and an iso corner, and seeds perspective from the game camera', async () => {
+		const { manager, game } = await stage();
+		await setEditorCamerasAttached(true);
+
+		const perspective = manager.getCamera(EDITOR_CAMERAS.perspective)!.camera.position;
+		expect(perspective.distanceTo(game.camera.position)).toBeLessThan(0.001);
+
+		manager.activateCameraById(EDITOR_CAMERAS.left);
+		const left = manager.primaryCamera!.camera.position;
+		expect(left.x).toBeLessThan(-1);
+		expect(Math.abs(left.y)).toBeLessThan(1);
+		expect(Math.abs(left.z)).toBeLessThan(1);
+
+		manager.activateCameraById(EDITOR_CAMERAS.bottom);
+		const bottom = manager.primaryCamera!.camera;
+		expect(bottom.position.y).toBeLessThan(-1);
+		expect(Math.abs(bottom.position.x)).toBeLessThan(1);
+		expect(Math.abs(bottom.position.z)).toBeLessThan(1);
+		expect(bottom.up.z).toBeGreaterThan(0);
+
+		manager.activateCameraById(EDITOR_CAMERAS.isoLeftTop);
+		const iso = manager.primaryCamera!.camera.position;
+		expect(iso.x).toBeLessThan(-1);
+		expect(iso.y).toBeGreaterThan(1);
+		expect(iso.z).toBeGreaterThan(1);
+		expect(Math.abs(iso.x)).toBeCloseTo(iso.y, 0);
+		expect(iso.z).toBeCloseTo(iso.y, 0);
+	});
+
+	it('keeps the bottom iso corners below the horizon', async () => {
+		const { manager } = await stage();
+		await setEditorCamerasAttached(true);
+
+		for (const id of [EDITOR_CAMERAS.isoLeftBottom, EDITOR_CAMERAS.isoRightBottom]) {
+			manager.activateCameraById(id);
+			const position = manager.primaryCamera!.camera.position;
+			expect(position.y, id).toBeLessThan(-1);
+			expect(Math.abs(position.x), id).toBeCloseTo(Math.abs(position.y), 0);
+			expect(Math.abs(position.z), id).toBeCloseTo(Math.abs(position.y), 0);
+		}
 	});
 
 	it('switches to an editor view and remembers a game camera change', async () => {

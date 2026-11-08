@@ -11,10 +11,14 @@ import {
 } from '../../../src/lib/level/level-draw';
 
 describe('draw views', () => {
-	it('locks the top and side cameras and leaves every other camera to its facing', () => {
+	it('locks the top, bottom, left, and side cameras and leaves every other camera to its facing', () => {
 		expect(drawViewForCamera('editor:top')).toBe('top');
+		expect(drawViewForCamera('editor:bottom')).toBe('top');
 		expect(drawViewForCamera('editor:side')).toBe('side');
+		expect(drawViewForCamera('editor:left')).toBe('side');
 		expect(drawViewForCamera('editor:free')).toBeNull();
+		expect(drawViewForCamera('editor:perspective')).toBeNull();
+		expect(drawViewForCamera('editor:iso-left-top')).toBeNull();
 		expect(drawViewForCamera('game')).toBeNull();
 		expect(drawViewForCamera(null)).toBeNull();
 	});

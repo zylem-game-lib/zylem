@@ -367,6 +367,10 @@ export class CameraOrbitController {
 		const controls = this.orbitControls;
 		if (!controls) return;
 
+		// The horizon is the usual limit. Measuring through it would lift a
+		// view seeded below, such as a bottom iso corner, up into a side view
+		// and then freeze that.
+		controls.maxPolarAngle = Math.max(controls.maxPolarAngle, Math.PI);
 		controls.update();
 		const phi = controls.getPolarAngle();
 		const theta = controls.getAzimuthalAngle();

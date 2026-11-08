@@ -27,9 +27,10 @@ import {
 	GameBridge,
 	entityTypeName,
 	readEntityPose,
-	readEntityQuaternion,
 	readEntityScale,
+	readLiveEntityPose,
 } from '../bridge/game-bridge';
+import { normalizeVec3, VEC3_ZERO, type Vec3Input } from '../core/vector';
 import type { GameEntity } from '../entities/entity';
 import {
 	buildCatalogDescriptors,
@@ -590,6 +591,9 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		}
 		this.debugDelegate?.end();
 		this.outOfLoop();
+		// Outside the pause check: the transform tool pauses the simulation, and
+		// its drags still have to reach the editor's fields.
+		this.gameBridge.publishSelectedPoses();
 		this.cutscenePreview.frame();
 		if (!this.isDisposed) {
 			this.animationFrameId = requestAnimationFrame(this.frameCallback);
@@ -698,20 +702,28 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 	 * the managed render path (instanced packs/bundles), which can number in
 	 * the thousands and are not useful in the editor panel.
 	 */
-	private buildEntitySummary(child: { uuid: string; name?: string; constructor: unknown; options?: { editorOwned?: boolean } }): EntitySummaryPayload | null {
+	private buildEntitySummary(child: {
+		uuid: string;
+		name?: string;
+		constructor: unknown;
+		options?: { editorOwned?: boolean; position?: Vec3Input };
+	}): EntitySummaryPayload | null {
 		if (child.options?.editorOwned) return null;
 		if (usesManagedRenderPath((child as { options?: unknown }).options as any)) {
 			return null;
 		}
 
-		// Get transform data. Scale lives on the render object rather than the
-		// entity, so read it the same way `entity:transform` writes it.
-		const position = (child as any).position ?? { x: 0, y: 0, z: 0 };
-		const rotation = (child as any).rotation ?? { x: 0, y: 0, z: 0 };
-		const scale = readEntityScale(child);
+		// The pose lives in the simulation, not on the entity. One that has not
+		// spawned yet has no live pose, so it reports where it will spawn.
+		const pose = readLiveEntityPose(child);
+		const position = pose?.position ?? normalizeVec3(child.options?.position, VEC3_ZERO);
+		const rotation = pose?.rotation ?? { x: 0, y: 0, z: 0 };
+		// Scale lives on the render object rather than the entity, so read it the
+		// same way `entity:transform` writes it.
+		const scale = pose?.scale ?? readEntityScale(child);
 		// The gizmo and undo entries work in quaternions; Euler angles are only
 		// for the inspector fields, and round-tripping through them drifts.
-		const quaternion = readEntityQuaternion(child);
+		const quaternion = pose?.quaternion;
 
 		const thumb = entityThumbnailCache.get(child.uuid);
 
@@ -719,8 +731,8 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			uuid: child.uuid,
 			name: child.name || 'Unnamed',
 			type: entityTypeName(child),
-			position: { x: position.x ?? 0, y: position.y ?? 0, z: position.z ?? 0 },
-			rotation: { x: rotation.x ?? 0, y: rotation.y ?? 0, z: rotation.z ?? 0 },
+			position,
+			rotation,
 			scale,
 			quaternion,
 			thumbnail: thumb?.dataUrl ?? null,
