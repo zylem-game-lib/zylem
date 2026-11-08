@@ -1,7 +1,8 @@
-import { Line, Mesh, MeshStandardMaterial, Scene } from 'three';
+import { Line, Mesh, MeshStandardMaterial, Scene, type Object3D } from 'three';
 import { describe, expect, it } from 'vitest';
 import { boxBrush, type LevelDocument, type LevelSyncPayload } from '@zylem/bridge';
 import { LevelSession, type LevelSessionHost } from '../../../src/lib/level/level-session';
+import { SECTOR_OVERLAY_NAME } from '../../../src/lib/level/level-sectors';
 
 const DEFAULT_BRUSH_COLOR = 0xc8c2b4;
 const SELECTED_BRUSH_COLOR = 0xe4ddd0;
@@ -52,11 +53,15 @@ function preview(scene: Scene) {
 	return root;
 }
 
+/** Lines other than the sector grid, which is always drawn while editing. */
 function linesIn(scene: Scene): Line[] {
 	const found: Line[] = [];
-	preview(scene).traverse((child) => {
-		if (child instanceof Line) found.push(child);
-	});
+	const visit = (object: Object3D) => {
+		if (object.name === SECTOR_OVERLAY_NAME) return;
+		if (object instanceof Line) found.push(object);
+		object.children.forEach(visit);
+	};
+	visit(preview(scene));
 	return found;
 }
 
