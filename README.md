@@ -53,7 +53,7 @@ pnpm typecheck
 # Lint all packages
 pnpm lint
 
-# Docs site
+# Docs site at http://localhost:3080
 pnpm docs:dev
 pnpm docs:build
 ```

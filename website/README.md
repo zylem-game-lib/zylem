@@ -3,7 +3,7 @@
 Docusaurus 3 docs for `@zylem/game-lib`.
 
 ```bash
-pnpm docs:dev
+pnpm docs:dev    # http://localhost:3080
 pnpm docs:build
 ```
 
