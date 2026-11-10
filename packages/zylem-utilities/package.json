@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@dgreenheck/three-pinata": "^2.0.1",
-    "@zylem/behaviors": "^0.8.12",
+    "@zylem/behaviors": "^0.8.13",
     "@zylem/game-lib": "workspace:*",
     "comlink": "^4.4.2",
     "three": "^0.187.0"
