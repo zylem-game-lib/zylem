@@ -19,8 +19,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(three@0.187.0)
       '@zylem/behaviors':
-        specifier: ^0.8.12
-        version: 0.8.12(@types/react@19.3.0)(react@19.3.0)(three@0.187.0)
+        specifier: ^0.8.13
+        version: 0.8.13(@types/react@19.3.0)(react@19.3.0)(three@0.187.0)
       esbuild:
         specifier: ^0.27.7
         version: 0.27.7
@@ -89,11 +89,11 @@ importers:
         specifier: ^2.2.13
         version: 2.2.13
       '@zylem/behaviors':
-        specifier: ^0.8.12
-        version: 0.8.12(@types/react@19.3.0)(react@19.3.0)(three@0.187.0)
+        specifier: ^0.8.13
+        version: 0.8.13(@types/react@19.3.0)(react@19.3.0)(three@0.187.0)
       '@zylem/bridge':
-        specifier: ^0.9.7
-        version: 0.9.7
+        specifier: ^0.9.9
+        version: 0.9.9
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -175,8 +175,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(three@0.187.0)
       '@zylem/behaviors':
-        specifier: ^0.8.12
-        version: 0.8.12(@types/react@19.3.0)(react@19.3.0)(three@0.187.0)
+        specifier: ^0.8.13
+        version: 0.8.13(@types/react@19.3.0)(react@19.3.0)(three@0.187.0)
       '@zylem/game-lib':
         specifier: workspace:*
         version: link:../game-lib
@@ -994,6 +994,10 @@ packages:
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': ^7.0.0-0
+
+  '@babel/runtime@7.29.13':
+    resolution: {integrity: sha512-v+oN26xP4YIlQsbQ/CbTH1WG5m/l/DjKKZNy/Kp3f/AFvbgt7Em/D0FeMM3O2hX0YzeN2M16W8lOpyhIkfCBcQ==}
+    engines: {node: '>=6.9.0'}
 
   '@babel/runtime@7.29.7':
     resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
@@ -2974,6 +2978,9 @@ packages:
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
 
+  '@types/estree@1.0.10':
+    resolution: {integrity: sha512-lTyOMnOcmRBzdCv6/4zUZCrEhV0xrqQiUZBZtVcbmLHBXKLnN8q89v/wKRF/Q0HbwVsqbIG3o5HDoFl9sduM+g==}
+
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
@@ -3325,17 +3332,17 @@ packages:
   '@xtuc/long@4.2.2':
     resolution: {integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==}
 
-  '@zylem/behaviors@0.8.12':
-    resolution: {integrity: sha512-zSuyIkdJgn/5x0p/qsbbP/GxnDKE3EkpmEos5qPi/sclei+RoS9wSY7unIq4i+N8n7JJugkDnDzCgQLBZOjDDw==}
+  '@zylem/behaviors@0.8.13':
+    resolution: {integrity: sha512-NZqsf+ijgfLt74669yK/XrGDliyy96Sb2RRYA5D98HJL6G+9m79lzylLOCpeKNHm4AMMWqs5/FUag6VN7iHI3Q==}
     engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
     peerDependencies:
       three: 0.187.0
 
-  '@zylem/bridge@0.9.7':
-    resolution: {integrity: sha512-HQjb4xJiEqvbYmdXLaTczibxmpq68xrZgybhy3BPF5wHNhDiZEwDBdf5qcA7pUCPmswxXqg1S4vsE1vr0nT73g==}
+  '@zylem/bridge@0.9.9':
+    resolution: {integrity: sha512-ox66i3uXnxu34kpPQbbHxmV2QJhrOlyfagyLlU9SZTlVSo5sia70XkJF7WwCAm3B54N9KzLZlAHV3qYY3uXftw==}
 
-  '@zylem/runtime@0.8.14':
-    resolution: {integrity: sha512-7bjpp4ohh6gthca0y7hVpib17UkME2+d23pvRxnWLgC+UV98BaFMJvgq2TAvWJGGo94Zb86h4Gn1/W1DR6jJIg==}
+  '@zylem/runtime@0.8.15':
+    resolution: {integrity: sha512-sJHfMkdpejRoU/zSvqRYNBkbtIJirqTX3lcu4Qkp27xYnsbNN8Bi0Wm99peCG8OtcSNSDuJfgFuq8pBDU4ZgDQ==}
     engines: {node: '>=20.10.0'}
 
   accepts@1.3.8:
@@ -8736,6 +8743,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@babel/runtime@7.29.13': {}
+
   '@babel/runtime@7.29.7': {}
 
   '@babel/template@7.27.2':
@@ -11036,7 +11045,7 @@ snapshots:
 
   '@rollup/pluginutils@5.3.0(rollup@4.50.0)':
     dependencies:
-      '@types/estree': 1.0.9
+      '@types/estree': 1.0.10
       estree-walker: 2.0.2
       picomatch: 4.0.7
     optionalDependencies:
@@ -11183,7 +11192,7 @@ snapshots:
 
   '@slorber/react-helmet-async@1.3.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.29.13
       invariant: 2.2.4
       prop-types: 15.8.1
       react: 19.3.0
@@ -11474,6 +11483,9 @@ snapshots:
   '@types/estree-jsx@1.0.5':
     dependencies:
       '@types/estree': 1.0.9
+
+  '@types/estree@1.0.10':
+    optional: true
 
   '@types/estree@1.0.8': {}
 
@@ -11822,10 +11834,10 @@ snapshots:
 
   '@xtuc/long@4.2.2': {}
 
-  '@zylem/behaviors@0.8.12(@types/react@19.3.0)(react@19.3.0)(three@0.187.0)':
+  '@zylem/behaviors@0.8.13(@types/react@19.3.0)(react@19.3.0)(three@0.187.0)':
     dependencies:
       '@dgreenheck/three-pinata': 2.0.1(three@0.187.0)
-      '@zylem/runtime': 0.8.14
+      '@zylem/runtime': 0.8.15
       comlink: 4.4.2
       three: 0.187.0
       typescript-fsm: 1.6.0
@@ -11834,9 +11846,9 @@ snapshots:
       - '@types/react'
       - react
 
-  '@zylem/bridge@0.9.7': {}
+  '@zylem/bridge@0.9.9': {}
 
-  '@zylem/runtime@0.8.14': {}
+  '@zylem/runtime@0.8.15': {}
 
   accepts@1.3.8:
     dependencies:
