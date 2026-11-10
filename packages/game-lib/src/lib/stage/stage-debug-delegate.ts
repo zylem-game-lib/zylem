@@ -900,9 +900,12 @@ export class StageDebugDelegate {
 		if (!placement) return;
 		const { position: snapped, normal } = placement;
 
-		const registration = debugState.addTypeId
-			? getEntityType(debugState.addTypeId)
-			: null;
+		const typeId = debugState.addTypeId;
+		const createdProps = {
+			...(typeId ? getEntityType(typeId)?.defaultProps ?? {} : {}),
+			...(debugState.addTypeProps ?? {}),
+		};
+		const registration = typeId ? getEntityType(typeId) : null;
 
 		if (!registration && !this.options.addEntityFactory) {
 			this.warnMissingAddSource();
@@ -931,7 +934,13 @@ export class StageDebugDelegate {
 					opId: nanoid(10),
 					kind: 'create',
 					label: `Add ${registration?.label ?? 'entity'}`,
-					entries: [{ uuid: resolvedNode.uuid }],
+					entries: [
+						{
+							uuid: resolvedNode.uuid,
+							...(typeId ? { typeId } : {}),
+							...(Object.keys(createdProps).length > 0 ? { props: createdProps } : {}),
+						},
+					],
 				});
 			})
 			.catch((error) => {

@@ -26,6 +26,7 @@ import { zylemEventBus } from '../events';
 import {
 	GameBridge,
 	entityTypeName,
+	publishSceneOperation,
 	readEntityPose,
 	readEntityScale,
 	readLiveEntityPose,
@@ -40,6 +41,7 @@ import {
 import { registerBuiltInEntityTypes } from '../entities/entity-catalog';
 import { registerBuiltInBehaviorSwatchSources } from '../entities/swatch-catalog';
 import { getZylemBridge, type BridgePose } from '@zylem/bridge';
+import { nanoid } from 'nanoid';
 import type {
 	BridgeNdc,
 	EntitySummaryPayload,
@@ -270,7 +272,22 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		if (!node) return;
 
 		void Promise.resolve(node)
-			.then((resolved) => resolved && stage.entityDelegate.spawnEntity(resolved))
+			.then(async (resolved) => {
+				if (!resolved) return;
+				await stage.entityDelegate.spawnEntity(resolved);
+				publishSceneOperation({
+					opId: nanoid(10),
+					kind: 'create',
+					label: `Add ${registration.label}`,
+					entries: [
+						{
+							uuid: resolved.uuid,
+							typeId,
+							...(props && Object.keys(props).length > 0 ? { props } : {}),
+						},
+					],
+				});
+			})
 			.catch((error) => {
 				console.error('entity:create failed', error);
 			});
