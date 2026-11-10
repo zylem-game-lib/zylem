@@ -254,6 +254,10 @@ export interface SceneOperationEntry {
 	uuid: string;
 	before?: BridgePose;
 	after?: BridgePose;
+	/** Catalog id of an entity a `create` operation spawned, e.g. `box`. */
+	typeId?: string;
+	/** Creation props for a `create` operation, without the pose. */
+	props?: Record<string, unknown>;
 	/** The swatch that was applied (`swatch` operations). */
 	swatch?: SwatchSpec;
 	/** Behavior with the same key that the apply displaced, if any. */
