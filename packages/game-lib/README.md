@@ -88,3 +88,7 @@ Full guides, API reference, and architecture diagrams: [https://zylem-game-lib.g
 ## Development
 
 This package is part of the Zylem monorepo. See the main repository README for development setup.
+
+## Navigation
+
+Bake level solids into Recast navigation meshes, author obstacle volumes and traversal links in the editor, and query routes through `stage.navigation`. See [Navigation meshes](./NAVIGATION.md) for the editor workflow, persistence, runtime API, worker packaging, and coordinated release requirements.

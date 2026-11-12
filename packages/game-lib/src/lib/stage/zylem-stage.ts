@@ -9,6 +9,9 @@
  * updates, render), and tears everything down on destroy. The author-facing
  * `Stage` wraps and recreates one of these on each load.
  */
+
+import { NavigationSession } from '../navigation/navigation-session';
+import { getZylemBridge } from '@zylem/bridge';
 import { Color, Vector3 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
@@ -107,6 +110,7 @@ const STAGE_TYPE = 'Stage';
  */
 export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	public type = STAGE_TYPE;
+	readonly navigation: NavigationSession;
 
 	state: StageState = { ...initialStageState };
 	gravity: Vector3 | Vec3Components;
@@ -147,6 +151,15 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.world = null;
 		this.scene = null;
 		this.uuid = nanoid();
+		const stage = this;
+		this.navigation = new NavigationSession({
+			get stageId() { return stage.uuid; },
+			scene: () => this.scene?.scene ?? null,
+			status: status => getZylemBridge().channel.send('navigation:status', status),
+			baked: (requestId, asset) => getZylemBridge().channel.send('navigation:baked', { stageId: this.uuid, requestId, asset }),
+			path: (result, requestId) => getZylemBridge().channel.send('navigation:path', { stageId: this.uuid, requestId, result }),
+			edit: edit => getZylemBridge().channel.send('navigation:edit', { stageId: this.uuid, edit }),
+		});
 
 		// Initialize delegates
 		this.cameraDelegate = new StageCameraDelegate(this);
@@ -425,6 +438,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		// Drop the cursor preview and its listeners before entities go away, so
 		// a hover callback doesn't run against a stage that's already tearing down.
 		this.pointerDelegate.dispose();
+		this.navigation.dispose();
 
 		// Delegate handles entity + behavior system cleanup
 		this.entityDelegate.destroyAll();

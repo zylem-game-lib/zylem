@@ -33,6 +33,11 @@ type EntityInput = AnyNode | (() => AnyNode) | (() => Promise<any>);
 
 export class Stage {
 	wrappedStage: ZylemStage | null;
+
+	/** Navigation for the loaded stage. Null before load or after teardown. */
+	get navigation() {
+		return this.wrappedStage?.navigation ?? null;
+	}
 	options: StageOptionItem[] = [];
 	// Entities added after construction, consumed on each load
 	private _pendingEntities: BaseNode[] = [];

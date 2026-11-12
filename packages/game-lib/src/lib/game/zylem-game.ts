@@ -169,6 +169,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		registerBuiltInEntityTypes();
 		registerBuiltInBehaviorSwatchSources();
 		this.gameBridge.connect({
+			navigation: () => this.currentStage()?.wrappedStage?.navigation ?? null,
 			resolveEntity: (uuid) =>
 				(this.currentStage()?.wrappedStage?.entityDelegate.childrenMap.get(uuid)
 					?? null) as GameEntity<any> | null,

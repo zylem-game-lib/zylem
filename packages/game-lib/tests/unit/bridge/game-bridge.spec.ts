@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getZylemBridge, type EntitySummaryPayload } from '@zylem/bridge';
 
+import { NavigationSession } from '../../../src/lib/navigation/navigation-session';
 import { GameBridge } from '../../../src/lib/bridge/game-bridge';
 import {
 	debugState,
@@ -39,6 +40,28 @@ describe('GameBridge command intake', () => {
 
 		channel.send('playback:set', { paused: true });
 		expect(debugState.paused).toBe(true);
+	});
+
+	it('routes navigation commands to the active stage and disarms on ordinary tools', () => {
+		const nav = new NavigationSession({ stageId: 'stage', scene: () => null });
+		const bake = vi.spyOn(nav, 'bake').mockResolvedValue(null);
+		const tool = vi.spyOn(nav, 'setTool');
+		const preview = vi.spyOn(nav, 'setPreview');
+		const query = vi.spyOn(nav, 'query');
+		bridge.connect({ resolveEntity: () => null, navigation: () => nav });
+		channel.send('navigation:bake', { requestId: 'request' });
+		expect(bake).toHaveBeenCalledWith('request');
+		channel.send('navigation:tool', { tool: 'link', bidirectional: false });
+		expect(tool).toHaveBeenLastCalledWith({ tool: 'link', bidirectional: false });
+		channel.send('navigation:preview', { visible: false });
+		expect(preview).toHaveBeenLastCalledWith(false);
+		const start = { x: 0, y: 0, z: 0 },
+			end = { x: 1, y: 0, z: 0 };
+		channel.send('navigation:query', { requestId: 'path', start, end });
+		expect(query).toHaveBeenCalledWith(start, end, 'path');
+		channel.send('tool:set', { tool: 'select' });
+		expect(tool).toHaveBeenLastCalledWith({ tool: 'none' });
+		nav.dispose();
 	});
 
 	it('stores the selected entity by uuid, never the live entity', () => {
@@ -205,7 +228,7 @@ describe('GameBridge command intake', () => {
 				uuid: 'entity-1',
 				name: 'Crate',
 				position: { x: 1, y: 0.5, z: 3 },
-			}),
+			})
 		);
 		unsubscribe();
 	});
@@ -344,9 +367,7 @@ describe('GameBridge game → editor sync', () => {
 		debugState.enabled = true;
 		await flushBridge();
 
-		expect(statuses).toContainEqual(
-			expect.objectContaining({ paused: true, debug: true }),
-		);
+		expect(statuses).toContainEqual(expect.objectContaining({ paused: true, debug: true }));
 	});
 });
 

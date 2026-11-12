@@ -18,6 +18,7 @@ export * from './events';
 export * from './globals';
 export * from './audio';
 export * from './cinematics';
+export { NavigationMesh, NavigationSession, bakeNavigationData } from './navigation';
 export * from './debug';
 export * from './bridge';
 export * from './web-components';

@@ -235,7 +235,12 @@
     "./schema/stage-config": "./dist/schema/stage-config.schema.json",
     "./schema/input-config": "./dist/schema/input-config.schema.json",
     "./schema/song": "./dist/schema/song.schema.json",
-    "./schema/cutscene": "./dist/schema/cutscene.schema.json"
+    "./schema/cutscene": "./dist/schema/cutscene.schema.json",
+    "./navigation": {
+      "types": "./dist/navigation.d.ts",
+      "import": "./dist/navigation.js"
+    },
+    "./navigation-worker.js": "./dist/navigation-worker.js"
   },
   "keywords": [
     "game",
@@ -263,10 +268,12 @@
     "test": "vitest --reporter=verbose",
     "coverage": "vitest run --coverage",
     "zw:postunlink": "pnpm -w run deps:latest",
-    "zw:prerelease": "pnpm -w run deps:latest --check"
+    "zw:prerelease": "pnpm -w run deps:latest --check",
+    "test:navigation:bundle": "node tests/navigation-bundle.mjs"
   },
   "dependencies": {
     "@dgreenheck/three-pinata": "^2.0.1",
+    "@recast-navigation/three": "0.44.0",
     "@sinclair/typebox": "^0.34.52",
     "@types/howler": "^2.2.13",
     "@zylem/behaviors": "^0.8.13",
@@ -276,6 +283,7 @@
     "idb-keyval": "^6.2.6",
     "msgpackr": "^1.11.14",
     "nanoid": "^5.1.16",
+    "recast-navigation": "0.44.0",
     "stats.js": "^0.17.0",
     "three": "^0.187.0",
     "tone": "^15.1.23",

@@ -84,3 +84,5 @@ export {
 	type BridgeTraceListener,
 	type BridgeTypeStats,
 } from './instrumentation';
+
+export * from './navigation';

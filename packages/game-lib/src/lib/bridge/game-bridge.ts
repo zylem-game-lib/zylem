@@ -9,6 +9,8 @@
  * frame.
  */
 
+import type { NavigationSession } from '../navigation/navigation-session';
+
 import { subscribe } from 'valtio/vanilla';
 import {
 	announceBridgeReady,
@@ -240,6 +242,7 @@ export function publishGameNotice(
  * live stage state without the bridge importing game internals.
  */
 export interface GameBridgeHost {
+	navigation?(): NavigationSession | null;
 	/** Resolve a live entity by UUID from the current stage. */
 	resolveEntity(uuid: string): GameEntity<any> | null;
 	/** Write a stage variable (editor `stage:variable:set`). */
@@ -421,6 +424,7 @@ export class GameBridge {
 				if (enabled) syncFreeCamerasToGame();
 			}),
 			this.channel.on('tool:set', ({ tool }) => {
+				this.host?.navigation?.()?.setTool({ tool: 'none' });
 				setDebugTool(tool);
 			}),
 			this.channel.on('playback:set', ({ paused }) => {
@@ -472,6 +476,14 @@ export class GameBridge {
 			this.channel.on('level:load', ({ buffer }) => {
 				void this.loadLevel(buffer);
 			}),
+			this.channel.on('navigation:bake', ({ requestId }) => {
+				const navigation = this.host?.navigation?.();
+				if (navigation) void navigation.bake(requestId);
+				else this.channel.send('navigation:status', { stageId: '', state: 'error', sourceHash: '', requestId, message: 'No stage is loaded.' });
+			}),
+			this.channel.on('navigation:preview', ({ visible }) => this.host?.navigation?.()?.setPreview(visible)),
+			this.channel.on('navigation:tool', payload => this.host?.navigation?.()?.setTool(payload)),
+			this.channel.on('navigation:query', ({ requestId, start, end }) => this.host?.navigation?.()?.query(start, end, requestId)),
 			this.channel.on('level:sync', (payload) => {
 				this.host?.levelSync?.(payload);
 			}),

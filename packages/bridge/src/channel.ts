@@ -35,6 +35,10 @@ const NON_COALESCING_TYPES = new Set<BridgeMessageType>([
 	'scene:operation',
 	'entity:pick:result',
 	'entity:swatch-applied',
+	'navigation:baked',
+	'navigation:edit',
+	'navigation:query',
+	'navigation:path',
 ]);
 
 /**
@@ -49,6 +53,10 @@ const NON_RETAINED_TYPES = new Set<BridgeMessageType>([
 	'entity:pick:result',
 	'entity:apply-swatch',
 	'entity:swatch-applied',
+	'navigation:baked',
+	'navigation:edit',
+	'navigation:query',
+	'navigation:path',
 ]);
 
 type PendingMap = Partial<{ [K in BridgeMessageType]: BridgeMessages[K] }>;

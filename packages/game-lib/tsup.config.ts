@@ -1,3 +1,4 @@
+import { build } from 'esbuild';
 import { defineConfig } from 'tsup';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -7,6 +8,7 @@ const sourcemap = process.env.SOURCEMAP === '1' || !isProd;
 export default defineConfig((options) => ({
 	entry: {
 		'core': 'src/api/core.ts',
+		'navigation': 'src/api/navigation.ts',
 		'entity': 'src/api/entity.ts',
 		'behavior': 'src/api/behavior.ts',
 		'behavior/genre-map': 'src/api/behavior/genre-map.ts',
@@ -74,6 +76,18 @@ export default defineConfig((options) => ({
 	clean: !options.watch,
 	minify: true,
 	outDir: 'dist',
+	onSuccess: async () => {
+		// A standalone browser worker: no bare module imports and no host setup required.
+		await build({
+			entryPoints: ['src/lib/navigation/navigation-worker.js'],
+			outfile: 'dist/navigation-worker.js',
+			bundle: true,
+			format: 'esm',
+			platform: 'browser',
+			target: 'es2022',
+			minify: isProd,
+		});
+	},
 	external: [
 		'three',
 		'@zylem/behaviors',

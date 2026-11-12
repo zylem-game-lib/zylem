@@ -1,3 +1,11 @@
+import type {
+	LevelNavigation,
+	NavigationAsset,
+	NavigationEdit,
+	NavigationPath,
+	NavigationStatus,
+	NavigationToolPayload,
+} from './navigation';
 import type { BrushPlane } from './level/brush';
 import type { BrushElementKind } from './level/brush-edit';
 import type { BrushFootprint, BrushFrame, BrushShape } from './level/brush-shapes';
@@ -432,6 +440,8 @@ export interface EntityPlacement {
  * `version` is 2 so a v1 catalog buffer is recognisable and left alone.
  */
 export interface LevelDocument {
+	/** Optional, backward-compatible navigation authoring and baked data. */
+	navigation?: LevelNavigation;
 	version: 2;
 	solids: BrushSolid[];
 	doodads: DoodadPlacement[];
@@ -588,6 +598,11 @@ export interface CameraPosePayload {
 
 /** Messages published by the game side, consumed by the editor. */
 export type GameToEditorMessages = {
+	'navigation:status': NavigationStatus;
+	'navigation:baked': { stageId: string; requestId: string; asset: NavigationAsset };
+	'navigation:path': { stageId: string; requestId?: string; result: NavigationPath };
+	'navigation:edit': { stageId: string; edit: NavigationEdit };
+
 	'game:config': GameConfigPayload;
 	'game:loading': GameLoadingPayload;
 	'game:status': { paused?: boolean; debug?: boolean };
@@ -613,6 +628,11 @@ export type GameToEditorMessages = {
 
 /** Commands published by the editor, consumed by the game. */
 export type EditorToGameMessages = {
+	'navigation:bake': { requestId: string };
+	'navigation:preview': { visible: boolean };
+	'navigation:tool': NavigationToolPayload;
+	'navigation:query': { requestId: string; start: BridgeVec3; end: BridgeVec3 };
+
 	'debug:set': { enabled: boolean };
 	'tool:set': { tool: BridgeDebugTool };
 	'playback:set': { paused: boolean };

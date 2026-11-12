@@ -198,6 +198,7 @@ export class StageDebugDelegate {
 	/** Show the level document as an edit preview. Brush faces, no collision. */
 	syncLevel(payload: LevelSyncPayload): void {
 		this.levelSession.sync(payload);
+		this.stage.navigation.sync(payload.document);
 		this.syncTransformTool();
 		this.syncGrid();
 	}
@@ -205,6 +206,8 @@ export class StageDebugDelegate {
 	/** Respawn the document for play: hull collision, hidden brush faces, live zones. */
 	playLevel(document: LevelDocument): void {
 		this.levelSession.play(document);
+		this.stage.navigation.setTool({ tool: 'none' });
+		this.stage.navigation.sync(document);
 		this.syncTransformTool();
 		this.syncGrid();
 	}
@@ -212,6 +215,7 @@ export class StageDebugDelegate {
 	/** Remove the preview and any play collision. Stage entities stay. */
 	closeLevel(): void {
 		this.levelSession.close();
+		this.stage.navigation.clear();
 		this.syncTransformTool();
 		this.syncGrid();
 	}
@@ -1013,6 +1017,12 @@ export class StageDebugDelegate {
 			if (e.button !== 0) return;
 			trackPointer(e);
 			const ray = this.currentRay();
+
+			if (this.stage.navigation.pointerDown(ray)) {
+				e.preventDefault();
+				e.stopImmediatePropagation();
+				return;
+			}
 
 			if (this.levelSession.pointerDown(ray, e)) {
 				// Capture phase, and stopped here, so OrbitControls never starts
