@@ -124,6 +124,13 @@ export type GameEntityOptions = {
 	color?: Color;
 	size?: Vec3Input;
 	position?: Vec3Input;
+	/** Spawn orientation as Euler angles in radians, applied in XYZ order. */
+	rotation?: Vec3Input;
+	/**
+	 * Spawn scale. Colliders are scaled with the render object. An actor
+	 * sizes its model from this instead.
+	 */
+	scale?: Vec3Input;
 	/**
 	 * Spawn visibility behavior:
 	 * - `undefined` (default): hidden while `spawnEntity` runs, revealed once

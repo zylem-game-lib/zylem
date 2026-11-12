@@ -31,6 +31,11 @@ import {
 	revealSpawnPlacement,
 	syncRenderPositionFromBody,
 } from '../entities/spawn-placement';
+import {
+	applyLateSpawnTransform,
+	applySpawnTransformOptions,
+	type SpawnTransformEntity,
+} from '../entities/spawn-transform';
 import { BaseEntityInterface } from '../types/entity-types';
 import { StageLoadingDelegate } from './stage-loading-delegate';
 import { StageEntityModelDelegate } from './stage-entity-model-delegate';
@@ -188,6 +193,7 @@ export class StageEntityDelegate {
 		beginSpawnPlacement(entity);
 		this.registerBehaviorLinks(entity);
 		this.ensureEnvironmentStatic(entity);
+		this.applySpawnTransform(entity);
 		this.maybeAttachEntityPhysics(entity);
 
 		for (const childNode of child.getChildren()) {
@@ -217,12 +223,23 @@ export class StageEntityDelegate {
 			return;
 		}
 		this.ensureEnvironmentStatic(entity);
+		// A model that arrived late may have only now built the group, or the
+		// body, that the `rotation` option belongs on.
+		applyLateSpawnTransform(entity as unknown as SpawnTransformEntity);
 		this.maybeAttachEntityPhysics(entity);
 		this.tryRegisterRenderStrategy(entity);
 		if (!isManagedRenderEntity(entity)) {
 			this.scene.addEntityGroup(entity);
 		}
 		finalizeSpawnPlacement(entity);
+	}
+
+	/** Apply the `rotation` and `scale` options before the body is spawned. */
+	private applySpawnTransform(entity: GameEntity<any>): void {
+		applySpawnTransformOptions(entity as unknown as SpawnTransformEntity, {
+			// An actor sizes its own model and collision bounds from `scale`.
+			skipScale: entity instanceof ZylemActor,
+		});
 	}
 
 	// ─── Render strategy registration ────────────────────────────────────────

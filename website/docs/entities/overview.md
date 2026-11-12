@@ -64,6 +64,8 @@ Most factories accept [GameEntityOptions](/docs/api/entity/type-aliases/GameEnti
 
 - **name** — used with `getEntityByName` on the [createStage](/docs/api/core/functions/createStage) handle and for editor selection.
 - **position**, **size**, **color** — transform and appearance defaults (exact fields vary by factory).
+- **rotation** — spawn orientation as Euler angles in radians, `{ x, y, z }`, applied in XYZ order.
+- **scale** — spawn scale, `{ x, y, z }`. Colliders are scaled with the render object. `createActor` sizes its model from this option instead.
 - **collision** — Rapier body flags (`static`, `sensor`, locks, CCD, and related fields).
 - **material** — shader and texture overrides from the graphics layer.
 - **hideUntilPositioned** — spawn visibility when a spawner sets pose after creation.

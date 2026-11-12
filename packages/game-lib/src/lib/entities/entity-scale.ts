@@ -136,16 +136,14 @@ export function ensureColliderBaseline(entity: ScalableEntity): SimulationCollid
 }
 
 /**
- * Rebuild the entity's colliders at its current scale and respawn its body.
+ * Recompute the entity's collider definitions at its current scale.
  *
- * The body is recreated, so its definition is first repointed at the entity's
- * live pose — otherwise it would reappear wherever it originally spawned. The
- * entity object, its uuid, and its scene graph node are untouched; only the
- * wasm handles are reassigned, exactly as an ordinary spawn does.
+ * Touches no world, so a body already spawned keeps its old colliders until it
+ * is respawned. {@link commitColliderScale} does both.
  *
- * @returns `true` when colliders were rebuilt.
+ * @returns `true` when the definitions were rewritten.
  */
-export function commitColliderScale(entity: ScalableEntity): boolean {
+export function rescaleColliderDefinitions(entity: ScalableEntity): boolean {
 	if (!entity.colliderScaleDirty) return false;
 	entity.colliderScaleDirty = false;
 
@@ -156,6 +154,21 @@ export function commitColliderScale(entity: ScalableEntity): boolean {
 	const scaled = baseline.map((definition) => scaleColliderDefinition(definition, scale));
 	entity.colliderDescs = scaled;
 	entity.colliderDesc = scaled[0];
+	return true;
+}
+
+/**
+ * Rebuild the entity's colliders at its current scale and respawn its body.
+ *
+ * The body is recreated, so its definition is first repointed at the entity's
+ * live pose — otherwise it would reappear wherever it originally spawned. The
+ * entity object, its uuid, and its scene graph node are untouched; only the
+ * wasm handles are reassigned, exactly as an ordinary spawn does.
+ *
+ * @returns `true` when colliders were rebuilt.
+ */
+export function commitColliderScale(entity: ScalableEntity): boolean {
+	if (!rescaleColliderDefinitions(entity)) return false;
 
 	const world = entity.physicsWorldRef as ColliderRespawnWorld | null;
 	if (!world) {
