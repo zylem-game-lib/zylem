@@ -355,6 +355,29 @@ describe('editor view cameras', () => {
 		expect(side.camera.position.x).toBeCloseTo(seeded.x, 5);
 	});
 
+	it('copies the game camera onto free the first time it is shown, then keeps that pose', async () => {
+		const { manager, game } = await stage();
+		await setEditorCamerasAttached(true);
+		game.camera.position.set(3, 5, 9);
+		game.camera.lookAt(3, 1, 0);
+
+		expect(manager.activateCameraById(EDITOR_CAMERAS.free)).toBe(true);
+		const free = manager.getCamera(EDITOR_CAMERAS.free)!;
+		expect(free.camera.position.distanceTo(game.camera.position)).toBeLessThan(0.05);
+		const freeDirection = new Vector3();
+		const gameDirection = new Vector3();
+		free.camera.getWorldDirection(freeDirection);
+		game.camera.getWorldDirection(gameDirection);
+		expect(freeDirection.dot(gameDirection)).toBeGreaterThan(0.99);
+
+		const parked = free.camera.position.clone();
+		manager.activateCameraById(GAME_CAMERA_ID);
+		game.camera.position.set(30, 0, 0);
+		game.camera.lookAt(30, 0, -10);
+		manager.activateCameraById(EDITOR_CAMERAS.free);
+		expect(free.camera.position.distanceTo(parked)).toBeLessThan(0.05);
+	});
+
 	it('copies the gameplay camera onto the free camera when debug sync runs', async () => {
 		const { manager, game } = await stage();
 		await setEditorCamerasAttached(true);

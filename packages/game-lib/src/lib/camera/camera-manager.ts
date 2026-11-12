@@ -147,6 +147,9 @@ export class CameraManager implements EditorCameraHost {
 	/** Side, top, and isometric views that have already been placed on the gameplay camera. */
 	private _framedEditorViews = new Set<string>();
 
+	/** True after the free camera has copied the gameplay pose once. */
+	private _freePoseCaptured = false;
+
 	/** World boxes of stage entities, read when an orthographic view is first shown. */
 	private _entityBounds: (() => readonly Box3[]) | null = null;
 
@@ -422,6 +425,7 @@ export class CameraManager implements EditorCameraHost {
 		this._lockedEditorIds.clear();
 		this._screenSpacePanIds.clear();
 		this._framedEditorViews.clear();
+		this._freePoseCaptured = false;
 	}
 
 	/**
@@ -529,6 +533,7 @@ export class CameraManager implements EditorCameraHost {
 		this._lockedEditorIds.clear();
 		this._screenSpacePanIds.clear();
 		this._framedEditorViews.clear();
+		this._freePoseCaptured = false;
 		this._entityBounds = null;
 		this._rememberedGameCamera = null;
 		this._suspendedOrbits.clear();
@@ -589,6 +594,9 @@ export class CameraManager implements EditorCameraHost {
 		}
 		if (this.isOrthographicEditorView(id) && !this._framedEditorViews.has(id)) {
 			if (this.frameOrthographicView(id, camera)) this._framedEditorViews.add(id);
+		}
+		if (id === EDITOR_CAMERAS.free && !this._freePoseCaptured) {
+			if (this.copyFreeFromGame()) this._freePoseCaptured = true;
 		}
 		this._editorViewLocked = true;
 		this.suspendOtherOrbits(camera);
