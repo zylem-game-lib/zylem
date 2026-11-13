@@ -55,13 +55,13 @@ The source hash covers bake inputs and generator version. Changed geometry never
 
 ## Browser packaging and bounds
 
-`dist/navigation-worker.js` ships with game-lib and embeds the Recast WASM payload. Keep it alongside the ESM chunks; let the app bundler process `new Worker(new URL(..., import.meta.url))`. Vite consumers should exclude `@zylem/game-lib` from `optimizeDeps` to preserve relative worker URLs, and include its nested CommonJS dependencies (`@zylem/game-lib > howler`, `@zylem/game-lib > typescript-fsm`). The editor config includes this setup. CSP must permit the worker and WebAssembly compilation.
+`dist/navigation-worker.js` ships with game-lib and embeds the Recast WASM payload. Keep it alongside the ESM chunks; let the app bundler process `new Worker(new URL(..., import.meta.url))`. Vite consumers should exclude `@zylem/game-lib` from `optimizeDeps` to preserve relative worker URLs, and include its nested CommonJS dependencies (`@zylem/game-lib > howler`, `@zylem/game-lib > typescript-fsm`). Include `@zylem/game-lib > recast-navigation` and `@zylem/game-lib > @recast-navigation/three` as well: game-lib imports Recast on the first bake or asset load, and a dependency Vite finds that late makes the dev server re-optimize and reload the page, which discards an unsaved level. The editor config includes this setup. CSP must permit the worker and WebAssembly compilation.
 
 This version bakes one agent profile per document. Obstacles are static bake inputs, padded for agent radius/height. Up to 128 volumes are supported. Detour limits each volume's conservative bounds to eight tile layers; oversized volumes fail with an instruction to split them. The baker rejects empty/invalid geometry, caps the XZ raster grid at 16 million cells, and times out browser workers after two minutes. Imported base64 data is capped at 64 MiB. These bounds make failures explicit; this is not incremental streaming or runtime dynamic-obstacle support.
 
 ## Development and release order
 
-Use the `feature/recast-navigation` branches of both repos with `zw link dev`, then build bridge and game-lib before the editor. Registry 0.9.9 does not contain the new bridge exports. Publish the updated bridge first, then game-lib against it, then update the editor's bridge/runtime dependency ranges and lockfile before releasing the editor. Registry version bumps/publication are separate from these feature branches.
+Use the `feature/recast-navigation` branches of both repos with `zw link dev`, then build bridge and game-lib before the editor. Navigation ships in bridge 0.9.10, game-lib 0.9.11 and editor 0.9.11; earlier registry versions do not contain the bridge exports. Publish the bridge first, then game-lib against it, then update the editor's bridge and game-lib ranges and lockfile before releasing the editor.
 
 Validation commands, after linking:
 

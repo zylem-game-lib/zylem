@@ -12,12 +12,14 @@ import {
 	debugState,
 	isEditorInteractionActive,
 	setDebugTool,
+	setNavigationToolArmed,
 	setPickMode,
 } from '../../../src/lib/debug/debug-state';
 
 afterEach(() => {
 	setDebugTool('none');
 	setPickMode(false);
+	setNavigationToolArmed(false);
 	debugState.enabled = false;
 });
 
@@ -56,5 +58,17 @@ describe('isEditorInteractionActive', () => {
 		setPickMode(true);
 
 		expect(isEditorInteractionActive()).toBe(true);
+	});
+
+	it('is active for an armed navigation tool with debug off', () => {
+		// Map Navigation disarms the debug tool when it arms its own, so on a
+		// fresh page nothing else attaches the canvas listeners its clicks need.
+		setNavigationToolArmed(true);
+
+		expect(isEditorInteractionActive()).toBe(true);
+
+		setNavigationToolArmed(false);
+
+		expect(isEditorInteractionActive()).toBe(false);
 	});
 });

@@ -7,8 +7,9 @@ import {
 	type LevelNavigation,
 	navigationSourceHash,
 } from '@zylem/bridge';
-import { Scene } from 'three';
+import { type BufferGeometry, type Line, type LineBasicMaterial, type Mesh, Scene } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isEditorInteractionActive } from '../../../src/lib/debug/debug-state';
 import { NavigationSession } from '../../../src/lib/navigation/navigation-session';
 
 const sessions: NavigationSession[] = [];
@@ -141,6 +142,37 @@ describe('Recast navigation', () => {
 		if (!asset) throw new Error('Bake failed');
 		await expect(nav.load({ ...asset, sourceHash: 'obsolete' })).rejects.toThrow('stale');
 		expect(nav.findPath(start, end).status).toBe('unreachable');
+	});
+	it('draws a tested path after the navmesh overlay so the overlay cannot cover it', async () => {
+		// The overlay is a transparent mesh, which three draws after every opaque
+		// object. An opaque route line that skips the depth test is painted first
+		// and then buried under it.
+		const { nav, scene } = session(level());
+		await nav.bake();
+		nav.query(start, end);
+		const route = scene.getObjectByName('navigation-route');
+		const line = route?.children[0] as Line<BufferGeometry, LineBasicMaterial> | undefined;
+		if (!line) throw new Error('No route line was drawn');
+		let overlayOrder = 0;
+		scene.getObjectByName('navigation-overlay')?.traverse((child) => {
+			if ((child as Mesh).isMesh) overlayOrder = Math.max(overlayOrder, child.renderOrder);
+		});
+		expect(line.material.transparent).toBe(true);
+		expect(line.material.depthTest).toBe(false);
+		expect(line.renderOrder).toBeGreaterThan(overlayOrder);
+	});
+	it('claims the editor pointer while a tool is armed, and releases it when disarmed or cleared', () => {
+		// With Debug off and no other tool armed, this is the only thing that
+		// attaches the canvas listeners the two-click tools read.
+		const { nav } = session(level());
+		expect(isEditorInteractionActive()).toBe(false);
+		nav.setTool({ tool: 'path' });
+		expect(isEditorInteractionActive()).toBe(true);
+		nav.setTool({ tool: 'none' });
+		expect(isEditorInteractionActive()).toBe(false);
+		nav.setTool({ tool: 'obstacle', obstacleHeight: 2 });
+		nav.clear();
+		expect(isEditorInteractionActive()).toBe(false);
 	});
 	it('cancels an in-flight worker and never publishes its stale result', async () => {
 		const workers: { terminate: ReturnType<typeof vi.fn>; onmessage?: (e: unknown) => void }[] = [];

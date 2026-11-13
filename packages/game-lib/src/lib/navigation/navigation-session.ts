@@ -22,6 +22,7 @@ import {
 	Raycaster,
 	Vector3,
 } from 'three';
+import { setNavigationToolArmed } from '../debug/debug-state';
 import type { NavigationBakeInput } from './bake';
 import { disposeSourceMeshes, navigationSourceMeshes } from './geometry';
 import type { NavigationMesh } from './nav-mesh';
@@ -34,6 +35,12 @@ export interface NavigationSessionHost {
 	path?(result: NavigationPath, requestId?: string): void;
 	edit?(edit: NavigationEdit): void;
 }
+
+/** Route colours picked to read against the orange navmesh overlay. */
+const ROUTE_COMPLETE = 0x00e5ff;
+const ROUTE_PARTIAL = 0xff1744;
+/** Above the overlay helper, which three leaves at the default order of 0. */
+const ROUTE_RENDER_ORDER = 1;
 
 function clearGroup(group: Object3D): void {
 	group.traverse((child) => {
@@ -75,6 +82,7 @@ export class NavigationSession {
 	private state: NavigationStatus['state'] = 'empty';
 	constructor(private host: NavigationSessionHost) {
 		this.overlay.name = 'navigation-overlay';
+		this.route.name = 'navigation-route';
 		this.overlay.add(this.annotations, this.route);
 	}
 	get status(): NavigationStatus {
@@ -125,6 +133,9 @@ export class NavigationSession {
 	setTool(tool: NavigationToolPayload): void {
 		this.tool = tool;
 		this.firstPoint = null;
+		// The canvas listeners attach only while the editor owns the pointer, and
+		// arming one of these tools disarms the debug tool that would claim it.
+		setNavigationToolArmed(tool.tool !== 'none');
 		if (tool.tool !== 'none') this.setPreview(true);
 	}
 	/** Import a saved asset without running the generator. */
@@ -252,16 +263,23 @@ export class NavigationSession {
 		clearGroup(this.route);
 		this.overlay.add(this.route);
 		if (result.points.length)
-			this.route.add(this.line(result.points, result.status === 'complete' ? 0xffd54f : 0xff7043));
+			this.route.add(
+				this.line(result.points, result.status === 'complete' ? ROUTE_COMPLETE : ROUTE_PARTIAL)
+			);
 		this.setPreview(true);
 		this.host.path?.(result, requestId);
 		return result;
 	}
 	private line(points: BridgeVec3[], color: number): Line {
-		return new Line(
+		const line = new Line(
 			new BufferGeometry().setFromPoints(points.map((p) => new Vector3(p.x, p.y + 0.06, p.z))),
-			new LineBasicMaterial({ color, depthTest: false })
+			// Transparent, and ordered after the overlay: the navmesh helper is a
+			// transparent mesh, drawn after every opaque object, so an opaque line
+			// that skips the depth test was painted first and then covered by it.
+			new LineBasicMaterial({ color, depthTest: false, transparent: true })
 		);
+		line.renderOrder = ROUTE_RENDER_ORDER;
+		return line;
 	}
 	private drawAnnotations(): void {
 		clearGroup(this.annotations);
@@ -299,7 +317,7 @@ export class NavigationSession {
 				this.firstPoint = point;
 				clearGroup(this.route);
 				this.overlay.add(this.route);
-				this.route.add(this.line([point, { ...point, y: point.y + 0.5 }], 0xffd54f));
+				this.route.add(this.line([point, { ...point, y: point.y + 0.5 }], ROUTE_COMPLETE));
 				return true;
 			}
 			const start = this.firstPoint;

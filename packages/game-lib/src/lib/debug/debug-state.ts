@@ -70,6 +70,12 @@ export interface DebugState {
 	 * the Select tool is not armed, and keeps the hover highlight painted.
 	 */
 	pickMode: boolean;
+	/**
+	 * A Map Navigation tool (path test, obstacle, traversal link) is armed.
+	 * Those tools live on the stage's navigation session, outside `tool`, and
+	 * still need the canvas listeners and the game's own pointer input parked.
+	 */
+	navigationTool: boolean;
 	flags: Set<string>;
 }
 
@@ -85,6 +91,7 @@ export const debugState = proxy<DebugState>({
 	addTypeId: null,
 	addTypeProps: null,
 	pickMode: false,
+	navigationTool: false,
 	flags: new Set(),
 });
 
@@ -174,7 +181,17 @@ export function setDebugTool(tool: DebugTools): void {
  * the Debug button happened to be on.
  */
 export function isEditorInteractionActive(): boolean {
-	return debugState.enabled || debugState.tool !== 'none' || debugState.pickMode;
+	return (
+		debugState.enabled ||
+		debugState.tool !== 'none' ||
+		debugState.pickMode ||
+		debugState.navigationTool
+	);
+}
+
+/** The navigation session reports here whenever one of its tools arms or disarms. */
+export function setNavigationToolArmed(armed: boolean): void {
+	if (debugState.navigationTool !== armed) debugState.navigationTool = armed;
 }
 
 /** Hosts arm this while forwarding pointer coords for entity hover (no Select tool). */
