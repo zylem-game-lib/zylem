@@ -1,3 +1,5 @@
+import { createAmbientOcclusion } from '../graphics/ambient-occlusion/ambient-occlusion';
+import { resolveAmbientOcclusion, type AmbientOcclusionOptions } from '../graphics/ambient-occlusion/config';
 import { Vector2, Scene, Camera, RenderTarget, HalfFloatType, type Material, type Mesh, type Object3D, type Texture } from 'three';
 import { WebGPURenderer, RenderPipeline } from 'three/webgpu';
 import {
@@ -128,6 +130,9 @@ export class RendererManager {
 	private _lastAnimationTimestamp: number | null = null;
 	/** Registered postprocessing effects, applied in order over the scene pass. */
 	private _postEffects: ZylemPostEffect[] = [];
+	private _ambientOcclusion: AmbientOcclusionOptions = false;
+	private _aoPass: ReturnType<typeof createAmbientOcclusion> = null;
+	private _ownedScenePass: { dispose(): void } | null = null;
 	/** Scene/camera the current pipeline was built for (for rebuilds). */
 	private _postSceneRef: Scene | null = null;
 	private _postCameraRef: Camera | null = null;
@@ -195,12 +200,25 @@ export class RendererManager {
 	 * WebGL pipeline hid via implicit supersampling. This is the WebGPU
 	 * replacement for the old `EffectComposer` + `RenderPass`.
 	 */
-	setupPostProcessing(scene: Scene, camera: Camera): void {
+	setupPostProcessing(scene: Scene, camera: Camera, ambientOcclusion?: AmbientOcclusionOptions): void {
+		if (ambientOcclusion !== undefined) {
+			resolveAmbientOcclusion(ambientOcclusion);
+			this._ambientOcclusion = ambientOcclusion ? { ...ambientOcclusion } : false;
+		}
 		this.disposePostProcessing();
 		this._postSceneRef = scene;
 		this._postCameraRef = camera;
 		const post = new RenderPipeline(this.renderer);
 		const scenePass = pass(scene, camera);
+		this._ownedScenePass = scenePass;
+		try {
+			this._aoPass = createAmbientOcclusion(scene, camera, this._ambientOcclusion, this.renderScale);
+		} catch (error) {
+			post.dispose();
+			this.disposePostProcessing();
+			throw error;
+		}
+		if (this._aoPass) scenePass.contextNode = this._aoPass.contextNode;
 		// Opt-in supersampling: render the pass larger and let it downsample.
 		// `setResolutionScale` lives on the underlying PassNode; the
 		// ShaderNodeObject proxy forwards the call at runtime but doesn't
@@ -383,14 +401,25 @@ export class RendererManager {
 		this.renderScale = Math.max(1, Number.isFinite(scale) ? scale : 1);
 	}
 
-	/**
-	 * Dispose the current post-processing pipeline, if any.
-	 */
+	/** Change AO on the currently rendered stage, rebuilding only its graphics graph. */
+	setAmbientOcclusion(options: AmbientOcclusionOptions): void {
+		resolveAmbientOcclusion(options);
+		this._ambientOcclusion = options ? { ...options } : false;
+		if (this.postProcessing && this._postSceneRef && this._postCameraRef) {
+			this.setupPostProcessing(this._postSceneRef, this._postCameraRef);
+		}
+	}
+
+	/** Dispose the pipeline and the scene/AO resources it references. */
 	private disposePostProcessing(): void {
 		try {
 			(this.postProcessing as any)?.dispose?.();
 		} catch { /* noop */ }
 		this.postProcessing = null;
+		this._aoPass?.dispose();
+		this._aoPass = null;
+		this._ownedScenePass?.dispose();
+		this._ownedScenePass = null;
 	}
 
 	/**
@@ -547,6 +576,7 @@ export class RendererManager {
 		this._postSceneRef = null;
 		this._postCameraRef = null;
 		this._postEffects = [];
+		this._ambientOcclusion = false;
 		this._initialized = false;
 	}
 }

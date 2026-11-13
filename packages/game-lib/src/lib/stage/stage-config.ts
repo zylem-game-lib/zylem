@@ -8,6 +8,7 @@
  * normalized `ParsedStageOptions` that `ZylemStage` can consume directly.
  */
 import { Color, Vector3 } from 'three';
+import { resolveAmbientOcclusion, type AmbientOcclusionOptions } from '../graphics/ambient-occlusion/config';
 import { BaseNode } from '../core/base-node';
 import { CameraWrapper } from '../camera/camera';
 import { isBaseNode, isCameraWrapper, isConfigObject, isEntityInput } from '../core/utility/options-parser';
@@ -75,6 +76,8 @@ export type StageConfigLike = Partial<{
 	 * single fullscreen-camera rendering.
 	 */
 	postProcessingEffects: ZylemPostEffect[];
+	/** Per-stage AO method and quality. Off by default; single fullscreen camera only. */
+	ambientOcclusion: AmbientOcclusionOptions;
 }>;
 
 /**
@@ -96,6 +99,7 @@ export class StageConfig {
 		public defaultLighting: boolean = true,
 		/** Postprocessing effects applied over the scene pass, in order. */
 		public postProcessingEffects: ZylemPostEffect[] = [],
+		public ambientOcclusion: AmbientOcclusionOptions = false,
 	) { }
 }
 
@@ -158,6 +162,8 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		}
 	}
 
+	resolveAmbientOcclusion(config.ambientOcclusion);
+
 	// Merge user config with defaults
 	const resolvedConfig = new StageConfig(
 		config.inputs ?? defaults.inputs,
@@ -170,6 +176,7 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		(config as any).assetLoaders ?? defaults.assetLoaders,
 		(config as any).defaultLighting ?? defaults.defaultLighting,
 		(config as any).postProcessingEffects ?? defaults.postProcessingEffects,
+		config.ambientOcclusion ? { ...config.ambientOcclusion } : false,
 	);
 
 	// Backward compat: first camera is the legacy `camera` field

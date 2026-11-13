@@ -60,3 +60,14 @@ export {
 
 // Background shader factory
 export { createBackgroundShader } from '../lib/graphics/background-shader';
+
+// Stage-level screen-space ambient occlusion
+export { resolveAmbientOcclusion } from '../lib/graphics/ambient-occlusion/config';
+export type {
+	AmbientOcclusionMethod,
+	AmbientOcclusionQuality,
+	AmbientOcclusionSettings,
+	AmbientOcclusionOptions,
+	ResolvedAmbientOcclusion,
+} from '../lib/graphics/ambient-occlusion/config';
+export { createAmbientOcclusion } from '../lib/graphics/ambient-occlusion/ambient-occlusion';

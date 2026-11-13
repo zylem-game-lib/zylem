@@ -81,6 +81,10 @@ ball.onUpdate(({ me, inputs, delta }) => {
 createGame(ball).start();
 ```
 
+## Ambient occlusion
+
+Stages can select SSAO, GTAO, or the CORTAO TSL port through `ambientOcclusion`. It is off by default. See [configuration, examples, and port limitations](docs/ambient-occlusion.md).
+
 ## Documentation
 
 Full guides, API reference, and architecture diagrams: [https://zylem-game-lib.github.io/zylem/](https://zylem-game-lib.github.io/zylem/).
