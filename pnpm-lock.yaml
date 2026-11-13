@@ -170,6 +170,9 @@ importers:
       vitest:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@20.19.43)(happy-dom@18.0.1)(jiti@2.6.1)(jsdom@27.2.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.0)
+      webgpu:
+        specifier: 0.6.2
+        version: 0.6.2
     optionalDependencies:
       '@playcanvas/splat-transform':
         specifier: 3.10.3
@@ -11863,8 +11866,7 @@ snapshots:
       '@webassemblyjs/ast': 1.14.1
       '@xtuc/long': 4.2.2
 
-  '@webgpu/types@0.1.74':
-    optional: true
+  '@webgpu/types@0.1.74': {}
 
   '@xtuc/ieee754@1.2.0': {}
 
@@ -16745,7 +16747,6 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   webidl-conversions@8.0.0: {}
 

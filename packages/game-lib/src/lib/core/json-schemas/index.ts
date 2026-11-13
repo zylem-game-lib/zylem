@@ -44,6 +44,7 @@ export {
 	StageGLTFAssetLoaderConfigSchema,
 	StageAssetLoaderConfigSchema,
 	StageConfigJsonSchema,
+	AmbientOcclusionSchema,
 	type StageConfigJson,
 } from './stage-config';
 

@@ -88,6 +88,8 @@ export {
 	vec2,
 	mod,
 	createBackgroundShader,
+	createAmbientOcclusion,
+	resolveAmbientOcclusion,
 } from './graphics';
 export type {
 	ZylemShaderObject,
@@ -95,4 +97,9 @@ export type {
 	ZylemShader,
 	ZylemPostEffect,
 	EntityGlowOptions,
+	AmbientOcclusionMethod,
+	AmbientOcclusionQuality,
+	AmbientOcclusionSettings,
+	AmbientOcclusionOptions,
+	ResolvedAmbientOcclusion,
 } from './graphics';

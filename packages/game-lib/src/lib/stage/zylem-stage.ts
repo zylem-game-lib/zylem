@@ -10,6 +10,7 @@
  * `Stage` wraps and recreates one of these on each load.
  */
 
+import type { AmbientOcclusionOptions } from '../graphics/ambient-occlusion/config';
 import { NavigationSession } from '../navigation/navigation-session';
 import { getZylemBridge } from '@zylem/bridge';
 import { Color, Vector3 } from 'three';
@@ -80,6 +81,8 @@ export interface ZylemStageConfig {
 	 * single fullscreen-camera rendering.
 	 */
 	postProcessingEffects?: ZylemPostEffect[];
+	/** Screen-space ambient occlusion, disabled by default. */
+	ambientOcclusion?: AmbientOcclusionOptions;
 	stageRef?: Stage;
 }
 
@@ -192,6 +195,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			assetLoaders: parsed.config.assetLoaders,
 			defaultLighting: parsed.config.defaultLighting,
 			postProcessingEffects: parsed.config.postProcessingEffects,
+			ambientOcclusion: parsed.config.ambientOcclusion,
 			entities: [],
 		};
 
@@ -260,7 +264,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			const primaryCam = this.cameraManagerRef.primaryCamera;
 			if (primaryCam) {
 				this.rendererManager.setPostProcessingEffects(this.state.postProcessingEffects ?? []);
-				this.rendererManager.setupPostProcessing(this.scene.scene, primaryCam.camera);
+				this.rendererManager.setupPostProcessing(this.scene.scene, primaryCam.camera, this.state.ambientOcclusion ?? false);
 			}
 			// Pipeline/follow-camera runs inside `_update` (after transformSystem).
 			// The renderer loop calls `CameraManager.render` (orbit pre-tick +

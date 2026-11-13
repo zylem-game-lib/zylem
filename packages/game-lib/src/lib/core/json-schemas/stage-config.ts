@@ -29,6 +29,19 @@ export const StageAssetLoaderConfigSchema = Type.Object(
 	{ title: 'StageAssetLoaderConfig', additionalProperties: false },
 );
 
+/** Serializable stage AO selection. Algorithm-specific implementation stays in graphics. */
+export const AmbientOcclusionSchema = Type.Union([
+	Type.Literal(false),
+	Type.Object({
+		method: Type.Union([Type.Literal('ssao'), Type.Literal('gtao'), Type.Literal('cortao')]),
+		quality: Type.Optional(Type.Union([Type.Literal('low'), Type.Literal('medium'), Type.Literal('high')])),
+		radius: Type.Optional(Type.Number({ exclusiveMinimum: 0 })),
+		intensity: Type.Optional(Type.Number({ minimum: 0 })),
+		resolutionScale: Type.Optional(Type.Number({ exclusiveMinimum: 0, maximum: 1 })),
+		denoise: Type.Optional(Type.Boolean()),
+	}, { additionalProperties: false }),
+], { title: 'AmbientOcclusion' });
+
 /**
  * JSON-serializable subset of {@link StageConfigLike}.
  * Excludes live objects (shaders, runtime adapters, post-effects, wasm builders).
@@ -43,6 +56,7 @@ export const StageConfigJsonSchema = Type.Object(
 		physicsRate: Type.Optional(Type.Number({ exclusiveMinimum: 0 })),
 		assetLoaders: Type.Optional(StageAssetLoaderConfigSchema),
 		defaultLighting: Type.Optional(Type.Boolean()),
+		ambientOcclusion: Type.Optional(AmbientOcclusionSchema),
 	},
 	{
 		$id: 'StageConfigJson',
