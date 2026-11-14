@@ -12,7 +12,11 @@ import {
 	type Material,
 	type Texture,
 } from 'three';
-import { MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
+import {
+	MeshBasicNodeMaterial,
+	MeshPhysicalNodeMaterial,
+	MeshStandardNodeMaterial,
+} from 'three/webgpu';
 import {
 	abs,
 	clamp,
@@ -97,12 +101,17 @@ export function createPlanetVisual(options: PlanetOptions = {}) {
 	};
 	const maps = createPlanetTextures(
 		config.seed,
-		options.surface?.oceanColor ?? '#075daf',
-		options.surface?.landColor ?? '#454e89',
+		options.surface?.oceanColor ?? '#0864c1',
+		options.surface?.landColor ?? '#155bb1',
 		config.oceanCoverage
 	);
 	ownedTextures.push(...Object.values(maps));
-	const surfaceMaterial = new MeshStandardNodeMaterial({ roughness: 0.7, metalness: 0 });
+	// A restrained dielectric glint keeps the ocean blue in the sunlit region.
+	const surfaceMaterial = new MeshPhysicalNodeMaterial({
+		roughness: 0.7,
+		metalness: 0,
+		specularIntensity: 0.25,
+	});
 	surfaceMaterial.colorNode = texture(maps.surface).rgb.mul(ringShadow());
 	surfaceMaterial.roughnessNode = texture(maps.roughness).g;
 	materials.push(surfaceMaterial);

@@ -6,7 +6,7 @@ sidebar_position: 4.6
 
 Use a stage's `background` setting for solid colors, horizon gradients, space, or atmospheric skies. `createPlanet()` adds an ocean world with clouds, a light-blue atmospheric rim, rings, and optional moons. Both APIs live in graphics; the stage owns background resources and the planet entity owns its meshes and textures.
 
-![Blue ocean planet with violet-blue continents, light-blue atmosphere, rings, and two moons](/img/rendering/space-planet.png)
+![Blue ocean planet with subtle darker-blue continents, light-blue atmosphere, red rings, and two moons](/img/rendering/space-planet.png)
 
 ## Minimal example
 
@@ -16,9 +16,9 @@ import { createPlanet } from '@zylem/game-lib/graphics';
 
 const planet = createPlanet({
 	radius: 20,
-	surface: { oceanColor: '#075daf', landColor: '#454e89', oceanCoverage: 0.8 },
-	atmosphere: { color: '#8edbff' },
-	rings: { innerRadius: 25, outerRadius: 36, tilt: 26 },
+	surface: { oceanColor: '#0864c1', landColor: '#155bb1', oceanCoverage: 0.8 },
+	atmosphere: { color: '#5aafff' },
+	rings: { innerRadius: 25, outerRadius: 36, tilt: -26, color: '#ef493b' },
 	moons: 'crossed',
 });
 
@@ -41,7 +41,7 @@ const stage = createStage({
 createGame({ id: 'ocean-planet' }, stage).start();
 ```
 
-The defaults already provide the blue ocean, blue-purple land, light-blue rim, and tilted rings. `createPlanet({ moons: 'crossed' })` is sufficient when those defaults suit the scene.
+The defaults already provide the blue ocean, subtly darker blue-purple land, light-blue rim, and red rings tilted upward to the right in the example camera. `createPlanet({ moons: 'crossed' })` is sufficient when those defaults suit the scene.
 
 ## Background modes
 
@@ -71,7 +71,7 @@ The sky uses MIT-licensed [`@pmndrs/sky`](https://github.com/pmndrs/sky), loaded
 | `surface.oceanCoverage` | `0.8` | Artistic sea-level control in `[0, 1]`, not an exact area percentage |
 | `surface.clouds` | `true` | Separate, slowly drifting cloud layer |
 | `atmosphere` | Light blue, thickness `0.035`, intensity `1` | Stylized rim; thickness is a fraction of planet radius; `false` disables it |
-| `rings` | Inner radius `1.25R`, outer radius `1.8R`, tilt `26°`, opacity `0.72` | Banded translucent annulus; `false` disables it |
+| `rings` | Inner radius `1.25R`, outer radius `1.8R`, tilt `-26°`, opacity `0.72` | Banded translucent annulus; `false` disables it |
 | `moons` | `[]` | `'crossed'` or an explicit list of moon options |
 
 The surface has separate ocean/land roughness and seeded spherical noise. The ring has filtered radial bands, gaps, a planet shadow, and casts an analytic shadow on the surface, clouds, and moons. Materials respond to scene lights. `sunDirection` controls the analytic shadows and atmospheric rim; it defaults to the same direction as the space background's sun. When changing that sun, provide the same direction to the planet or call `planet.setSunDirection([x, y, z])`.
