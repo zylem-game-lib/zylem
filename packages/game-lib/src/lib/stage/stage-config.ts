@@ -8,6 +8,7 @@
  * normalized `ParsedStageOptions` that `ZylemStage` can consume directly.
  */
 import { Color, Vector3 } from 'three';
+import { validateBackground, type StageBackground } from '../graphics/space/background-config';
 import { resolveAmbientOcclusion, type AmbientOcclusionOptions } from '../graphics/ambient-occlusion/config';
 import { BaseNode } from '../core/base-node';
 import { CameraWrapper } from '../camera/camera';
@@ -56,6 +57,8 @@ export function resolveGLTFLoaderConfig(
  */
 export type StageConfigLike = Partial<{
 	inputs: Record<string, string[]>;
+	/** Takes precedence over legacy background color/image/shader fields. */
+	background: StageBackground;
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
 	backgroundShader: ZylemShader;
@@ -100,6 +103,7 @@ export class StageConfig {
 		/** Postprocessing effects applied over the scene pass, in order. */
 		public postProcessingEffects: ZylemPostEffect[] = [],
 		public ambientOcclusion: AmbientOcclusionOptions = false,
+		public background?: StageBackground,
 	) { }
 }
 
@@ -163,6 +167,7 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 	}
 
 	resolveAmbientOcclusion(config.ambientOcclusion);
+	validateBackground(config.background);
 
 	// Merge user config with defaults
 	const resolvedConfig = new StageConfig(
@@ -177,6 +182,7 @@ export function parseStageOptions(options: any[] = []): ParsedStageOptions {
 		(config as any).defaultLighting ?? defaults.defaultLighting,
 		(config as any).postProcessingEffects ?? defaults.postProcessingEffects,
 		config.ambientOcclusion ? { ...config.ambientOcclusion } : false,
+		config.background ? structuredClone(config.background) : undefined,
 	);
 
 	// Backward compat: first camera is the legacy `camera` field

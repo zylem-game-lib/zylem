@@ -89,6 +89,7 @@ export default defineConfig((options) => ({
 		});
 	},
 	external: [
+		'@pmndrs/sky',
 		'three',
 		'@zylem/behaviors',
 		'@zylem/behaviors/*',

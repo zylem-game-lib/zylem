@@ -10,6 +10,10 @@ import {
 	Light,
 	SRGBColorSpace,
 } from 'three';
+import type { Camera } from 'three';
+import type { WebGPURenderer } from 'three/webgpu';
+import type { StageBackground } from './space/background-config';
+import { createStageBackground } from './space/background';
 import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
 import { syncPendingPlacementVisibility } from '../entities/spawn-placement';
@@ -25,6 +29,7 @@ import { assetManager } from '../core/asset-manager';
 import { ZylemShader, isTSLShader } from './material';
 
 interface SceneState {
+	background?: StageBackground;
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
 	backgroundShader?: ZylemShader | null;
@@ -39,6 +44,11 @@ interface SceneState {
 
 export class ZylemScene implements Entity<ZylemScene> {
 	public type = 'Scene';
+	private backgroundConfig?: StageBackground;
+	private backgroundController: Awaited<ReturnType<typeof createStageBackground>> | null = null;
+	private backgroundSetup: Promise<void> | null = null;
+	private backgroundGeneration = 0;
+	private destroyed = false;
 
 	_setup?: SetupFunction<ZylemScene>;
 	scene!: Scene;
@@ -54,17 +64,18 @@ export class ZylemScene implements Entity<ZylemScene> {
 
 	constructor(id: string, camera: ZylemCamera, state: SceneState) {
 		const scene = new Scene();
+		this.backgroundConfig = state.background;
 		const isColor = state.backgroundColor instanceof Color;
 		const backgroundColor = (isColor) ? state.backgroundColor : new Color(state.backgroundColor);
 		scene.background = backgroundColor as Color;
 
-		if (state.backgroundShader) {
+		if (!state.background && state.backgroundShader) {
 			this.setupBackgroundShader(scene, state.backgroundShader);
-		} else if (state.backgroundImage) {
+		} else if (!state.background && state.backgroundImage) {
 			// Load background image asynchronously via asset manager. Tag it sRGB
 			// so it is decoded correctly (otherwise it renders too bright).
 			assetManager.loadTexture(state.backgroundImage, { colorSpace: SRGBColorSpace }).then(texture => {
-				scene.background = texture;
+				if (!this.destroyed) scene.background = texture;
 			});
 		}
 
@@ -104,6 +115,35 @@ export class ZylemScene implements Entity<ZylemScene> {
 		scene.backgroundNode = shader.colorNode;
 	}
 
+	async setupBackground(renderer: WebGPURenderer, camera: Camera): Promise<void> {
+		if (!this.backgroundConfig || this.destroyed) return;
+		// Concurrent callers share the same initialization so an older controller
+		// cannot restore its captured background over a newer controller's state.
+		if (this.backgroundSetup) return this.backgroundSetup;
+		this.backgroundSetup = this.initializeBackground(renderer, camera);
+		try {
+			await this.backgroundSetup;
+		} finally {
+			this.backgroundSetup = null;
+		}
+	}
+
+	private async initializeBackground(renderer: WebGPURenderer, camera: Camera): Promise<void> {
+		const generation = ++this.backgroundGeneration;
+		this.backgroundController?.dispose();
+		this.backgroundController = null;
+		const controller = await createStageBackground(this.scene, renderer, camera, this.backgroundConfig!);
+		if (this.destroyed || generation !== this.backgroundGeneration) {
+			controller.dispose();
+			return;
+		}
+		this.backgroundController = controller;
+	}
+
+	updateBackground(camera: Camera, delta: number): void {
+		this.backgroundController?.update(camera, delta);
+	}
+
 	setup() {
 		if (this._setup) {
 			this._setup({ me: this, camera: this.zylemCamera, globals: getGlobals() });
@@ -111,6 +151,10 @@ export class ZylemScene implements Entity<ZylemScene> {
 	}
 
 	destroy() {
+		this.destroyed = true;
+		++this.backgroundGeneration;
+		this.backgroundController?.dispose();
+		this.backgroundController = null;
 		// Destroy via camera manager if available, otherwise legacy single camera
 		if (this.cameraManager) {
 			this.cameraManager.dispose();
