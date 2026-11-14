@@ -82,6 +82,9 @@ importers:
       '@dgreenheck/three-pinata':
         specifier: ^2.0.1
         version: 2.0.1(three@0.187.0)
+      '@pmndrs/sky':
+        specifier: 0.6.0
+        version: 0.6.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.187.0)
       '@recast-navigation/three':
         specifier: 0.44.0
         version: 0.44.0(@types/three@0.187.0)(three@0.187.0)
@@ -2539,6 +2542,21 @@ packages:
     hasBin: true
     peerDependencies:
       playcanvas: ^2.0.0
+
+  '@pmndrs/sky@0.6.0':
+    resolution: {integrity: sha512-6zT0ghyShxThMwI+6EQB58/Y5Q22/p0PB55H3Fs92YtuS/p6swQcWz1lKDBSEOdAtgUttxt8cwOkiFGsqL5AKA==}
+    peerDependencies:
+      '@react-three/fiber': '>=10.0.0-0'
+      react: '>=18'
+      react-dom: '>=18'
+      three: 0.187.0
+    peerDependenciesMeta:
+      '@react-three/fiber':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   '@pnpm/config.env-replace@1.1.0':
     resolution: {integrity: sha512-htyl8TWnKL7K/ESFa1oW2UB5lVDxuF5DpM7tBi6Hu2LNL3mWkIzNLG6N4zoCUP1lCKNxWy/3iu8mS8MvToGd6w==}
@@ -11049,6 +11067,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
     optional: true
+
+  '@pmndrs/sky@0.6.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(three@0.187.0)':
+    dependencies:
+      three: 0.187.0
+    optionalDependencies:
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
 
   '@pnpm/config.env-replace@1.1.0': {}
 

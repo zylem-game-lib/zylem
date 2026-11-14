@@ -10,6 +10,7 @@
  * `Stage` wraps and recreates one of these on each load.
  */
 
+import type { StageBackground } from '../graphics/space/background-config';
 import type { AmbientOcclusionOptions } from '../graphics/ambient-occlusion/config';
 import { NavigationSession } from '../navigation/navigation-session';
 import { getZylemBridge } from '@zylem/bridge';
@@ -59,6 +60,7 @@ import { StagePointerDelegate, type StagePointerHost } from './stage-pointer-del
 export type { LoadingEvent };
 
 export interface ZylemStageConfig {
+	background?: StageBackground;
 	inputs: Record<string, string[]>;
 	backgroundColor: Color | string;
 	backgroundImage: string | null;
@@ -187,6 +189,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			...this.state,
 			inputs: parsed.config.inputs,
 			backgroundColor: parsed.config.backgroundColor,
+			background: parsed.config.background,
 			backgroundImage: parsed.config.backgroundImage,
 			backgroundShader: parsed.config.backgroundShader,
 			gravity: parsed.config.gravity,
@@ -262,6 +265,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		if (this.cameraManagerRef && this.rendererManager) {
 			await this.scene.setupCameraManager(this.scene.scene, this.cameraManagerRef, this.rendererManager);
 			const primaryCam = this.cameraManagerRef.primaryCamera;
+			await this.scene.setupBackground(this.rendererManager.renderer, (primaryCam ?? zylemCamera).camera);
 			if (primaryCam) {
 				this.rendererManager.setPostProcessingEffects(this.state.postProcessingEffects ?? []);
 				this.rendererManager.setupPostProcessing(this.scene.scene, primaryCam.camera, this.state.ambientOcclusion ?? false);
@@ -274,6 +278,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			});
 		} else {
 			await this.scene.setupCamera(this.scene.scene, zylemCamera);
+			await this.scene.setupBackground(this.resolveRenderer(zylemCamera), zylemCamera.camera);
 		}
 
 		const renderer = this.resolveRenderer(zylemCamera);
@@ -412,6 +417,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		});
 
 		profileStageFrameSection('scene', () => {
+			scene.updateBackground(this.cameraManagerRef?.primaryCamera?.camera ?? this.cameraRef!.camera, delta);
 			scene.update({ delta });
 		});
 

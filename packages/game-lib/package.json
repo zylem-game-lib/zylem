@@ -1,6 +1,6 @@
 {
   "name": "@zylem/game-lib",
-	"version": "0.9.11",
+  "version": "0.9.12",
   "type": "module",
   "description": "A powerful and easy-to-use framework for creating simple 3D digital interactive applications using TypeScript.",
   "license": "MIT",
@@ -271,11 +271,13 @@
     "coverage": "vitest run --coverage",
     "zw:postunlink": "pnpm -w run deps:latest",
     "zw:prerelease": "pnpm -w run deps:latest --check",
+    "test:graphics:space": "node tests/space-gpu.mjs",
     "test:graphics:ao": "node tests/ambient-occlusion-gpu.mjs",
     "test:navigation:bundle": "node tests/navigation-bundle.mjs"
   },
   "dependencies": {
     "@dgreenheck/three-pinata": "^2.0.1",
+    "@pmndrs/sky": "0.6.0",
     "@recast-navigation/three": "0.44.0",
     "@sinclair/typebox": "^0.34.52",
     "@types/howler": "^2.2.13",

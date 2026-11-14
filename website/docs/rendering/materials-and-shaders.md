@@ -43,4 +43,4 @@ Textures load through material `path` / `normalMap` with optional `repeat`. Shar
 
 - [ZylemShader](/docs/api/graphics/type-aliases/ZylemShader), [ZylemTSLShader](/docs/api/graphics/type-aliases/ZylemTSLShader)
 - [createNodeMaterialFromTSL](/docs/api/graphics/functions/createNodeMaterialFromTSL), [standardShader](/docs/api/graphics/variables/standardShader)
-- TSL re-exports: [uniform](/docs/api/graphics/variables/uniform), [Fn](/docs/api/graphics/variables/Fn), [vec3](/docs/api/graphics/variables/vec3), [vec4](/docs/api/graphics/variables/vec4)
+- TSL re-exports: [uniform](/docs/api/graphics/functions/uniform), [Fn](/docs/api/graphics/functions/Fn), [vec3](/docs/api/graphics/variables/vec3), [vec4](/docs/api/graphics/variables/vec4)

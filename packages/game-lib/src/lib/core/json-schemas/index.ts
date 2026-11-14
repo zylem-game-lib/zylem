@@ -40,6 +40,7 @@ export {
 
 export {
 	ColorJsonSchema,
+	StageBackgroundSchema,
 	Vec3ComponentsSchema,
 	StageGLTFAssetLoaderConfigSchema,
 	StageAssetLoaderConfigSchema,
