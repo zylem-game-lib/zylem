@@ -255,8 +255,7 @@
   "sideEffects": false,
   "files": [
     "dist",
-    "THIRD_PARTY_NOTICES.md",
-    "docs/ambient-occlusion.md"
+    "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
     "build": "node --experimental-strip-types ../../../simulation/packages/behaviors/scripts/sync-genre-entries.ts && NODE_OPTIONS=--max-old-space-size=8192 tsup && pnpm api:extract && pnpm api:typedoc && pnpm schema:emit",

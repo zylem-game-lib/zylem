@@ -83,7 +83,7 @@ createGame(ball).start();
 
 ## Ambient occlusion
 
-Stages can select SSAO, GTAO, or the CORTAO TSL port through `ambientOcclusion`. It is off by default. See [configuration, examples, and port limitations](docs/ambient-occlusion.md).
+Stages can select SSAO, GTAO, or the CORTAO TSL port through `ambientOcclusion`. It is off by default. See [configuration, examples, and port limitations](https://zylem-game-lib.github.io/zylem/docs/rendering/ambient-occlusion).
 
 ## Documentation
 
@@ -95,4 +95,4 @@ This package is part of the Zylem monorepo. See the main repository README for d
 
 ## Navigation
 
-Bake level solids into Recast navigation meshes, author obstacle volumes and traversal links in the editor, and query routes through `stage.navigation`. See [Navigation meshes](./NAVIGATION.md) for the editor workflow, persistence, runtime API, worker packaging, and coordinated release requirements.
+Bake level solids into Recast navigation meshes, author obstacle volumes and traversal links in the editor, and query routes through `stage.navigation`. See [Navigation meshes](https://zylem-game-lib.github.io/zylem/docs/game-and-stages/navigation-meshes) for the editor workflow, persistence, runtime API, worker packaging, and coordinated release requirements.
