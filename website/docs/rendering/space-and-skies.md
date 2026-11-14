@@ -4,7 +4,7 @@ description: Stage backgrounds, atmospheric day/night skies, and reusable ringed
 sidebar_position: 4.6
 ---
 
-Use a stage's `background` setting for solid colors, horizon gradients, space, or atmospheric skies. `createPlanet()` adds an ocean world with clouds, a light-blue atmospheric rim, rings, and optional moons. Both APIs live in graphics; the stage owns background resources and the planet entity owns its meshes and textures.
+Use a stage's `background` setting for solid colors, horizon gradients, space, or atmospheric skies. `createCelestialBody()` creates an independent entity with a rocky or ocean surface, optional atmosphere and rings, and configurable gravity. Graphics own meshes and textures; `OrbitBehavior` and `GravitySourceBehavior` delegate orbital motion and gravity to the simulation WASM runtime.
 
 ![Blue ocean planet with subtle darker-blue continents, light-blue atmosphere, red rings, and two moons](/img/rendering/space-planet.png)
 
@@ -12,14 +12,26 @@ Use a stage's `background` setting for solid colors, horizon gradients, space, o
 
 ```ts
 import { createCamera, createGame, createStage, Perspectives } from '@zylem/game-lib/core';
-import { createPlanet } from '@zylem/game-lib/graphics';
+import { createOrbitPath, OrbitBehavior } from '@zylem/game-lib/behavior';
+import { createCelestialBody } from '@zylem/game-lib/graphics';
 
-const planet = createPlanet({
+const planet = createCelestialBody({
 	radius: 20,
-	surface: { oceanColor: '#0864c1', landColor: '#155bb1', oceanCoverage: 0.8 },
+	surface: { type: 'ocean', oceanColor: '#0864c1', landColor: '#155bb1', oceanCoverage: 0.8 },
 	atmosphere: { color: '#5aafff' },
 	rings: { innerRadius: 25, outerRadius: 36, tilt: -26, color: '#ef493b' },
-	moons: 'crossed',
+	gravity: { surfaceAcceleration: 2.5 },
+});
+
+const innerMoon = createCelestialBody({ radius: 1.4, seed: 84 });
+innerMoon.use(OrbitBehavior, {
+	around: planet,
+	path: createOrbitPath({ semiMajorAxis: 39.6, inclination: -26, phase: 35 }),
+});
+const outerMoon = createCelestialBody({ radius: 1, seed: 85 });
+outerMoon.use(OrbitBehavior, {
+	around: planet,
+	path: createOrbitPath({ semiMajorAxis: 48, eccentricity: 0.04, inclination: 26, phase: 210 }),
 });
 
 const camera = createCamera({
@@ -28,20 +40,22 @@ const camera = createCamera({
 	target: { x: 0, y: 0, z: 0 },
 });
 
-const stage = createStage({
-	defaultLighting: false,
-	background: {
-		type: 'space',
-		color: '#02040c',
-		stars: { count: 4500, brightness: 1.5 },
-		sun: {},
+const stage = createStage(
+	{
+		defaultLighting: false,
+		background: {
+			type: 'space',
+			color: '#02040c',
+			stars: { count: 4500, brightness: 1.5 },
+			sun: {},
+		},
 	},
-}, camera, planet);
+	camera,
+	planet, innerMoon, outerMoon
+);
 
 createGame({ id: 'ocean-planet' }, stage).start();
 ```
-
-The defaults already provide the blue ocean, subtly darker blue-purple land, light-blue rim, and red rings tilted upward to the right in the example camera. `createPlanet({ moons: 'crossed' })` is sufficient when those defaults suit the scene.
 
 ## Background modes
 
@@ -62,39 +76,43 @@ For a ground-level scene, choose `type: 'sky'`. `timeOfDay` is hours in `[0, 24]
 
 The sky uses MIT-licensed [`@pmndrs/sky`](https://github.com/pmndrs/sky), loaded when sky or stars are requested. Its full MIT notice ships with Zylem. Atmospheric skies use its scattering and environment lighting; space uses its star catalog with a vacuum sprite adaptation. Zylem disables aerial perspective in this integration. The day/night cycle uses the primary camera and is intended for a single full-screen view.
 
-## Planet settings
+## Body and orbit settings
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `radius`, `seed` | `20`, `83` | World radius and repeatable geography |
-| `rotationPeriod` | `140` | Seconds per surface revolution; `0` freezes surface and clouds |
-| `surface.oceanCoverage` | `0.8` | Artistic sea-level control in `[0, 1]`, not an exact area percentage |
-| `surface.clouds` | `true` | Separate, slowly drifting cloud layer |
-| `atmosphere` | Light blue, thickness `0.035`, intensity `1` | Stylized rim; thickness is a fraction of planet radius; `false` disables it |
-| `rings` | Inner radius `1.25R`, outer radius `1.8R`, tilt `-26°`, opacity `0.72` | Banded translucent annulus; `false` disables it |
-| `moons` | `[]` | `'crossed'` or an explicit list of moon options |
+| `radius`, `seed` | `1`, `83` | Body size and repeatable surface texture |
+| `surface.type` | `rock` | Cratered rock or an `ocean` surface with separate ocean and land colors |
+| `surface.color`, `roughness`, `bumpScale` | White tint, `0.9`, `0.025R` | Rock appearance; ocean roughness comes from its procedural map |
+| `rotationPeriod` | `140` | Seconds per surface revolution; `0` holds the surface still |
+| `atmosphere`, `rings` | Disabled | Add explicit options to enable either layer |
+| `gravity` | Disabled | Emit gravity using `surfaceAcceleration` or `gravitationalParameter` (mu = G × mass) |
+| `motion` | `fixed` | Use `dynamic` for a body that responds to forces and collisions |
 
-The surface has separate ocean/land roughness and seeded spherical noise. The ring has filtered radial bands, gaps, a planet shadow, and casts an analytic shadow on the surface, clouds, and moons. Materials respond to scene lights. `sunDirection` controls the analytic shadows and atmospheric rim; it defaults to the same direction as the space background's sun. When changing that sun, provide the same direction to the planet or call `planet.setSunDirection([x, y, z])`.
+Bodies have spherical colliders. Surface spin is visual and independent of the body's position. Ocean surfaces support `oceanColor`, `landColor`, `oceanCoverage` and `clouds`. Atmospheres accept `color`, `thickness` and `intensity`; rings accept `innerRadius`, `outerRadius`, `tilt`, `color` and `opacity`. The ring casts an analytic shadow on its own body's surface and clouds, and receives the body's shadow. `sunDirection` must match the stage sun; update it with `body.setSunDirection([x, y, z])`.
 
-`moons: 'crossed'` creates two cratered natural moons in oppositely tilted circular orbits. The inner orbit is coplanar with, and just outside, the ring. The second has a larger radius, so the paths cross in projection without the moons colliding. Their periods are 48 and 71 seconds. The X appearance depends on viewing angle; the example camera makes the opposing tilts readable.
+Each orbit names its primary with `around` and supplies a path. `semiMajorAxis` controls size; `eccentricity` controls elongation (`0` is circular, supported range is `[0, 0.99)`). `inclination`, `ascendingNode`, `argumentOfPeriapsis` and `phase` are degrees. The untilted path lies in XZ; inclination tilts about Z, matching the ring, then ascending node rotates about Y. Paths are oriented in stage axes relative to the primary's position, independent of its visual spin. `phase` is mean anomaly at time zero.
 
-For custom moons, supply `{ radius, seed, orbit: { radius, period, inclination, ascendingNode, phase } }` entries. Distances are world units, periods are seconds, and angles are degrees. The untilted orbit is in the planet's local XZ plane; inclination tilts about Z, then ascending node rotates about Y. Custom orbits must clear the planet and ring; arrange their mutual spacing yourself.
+With the default `mode: 'defined'`, WASM samples a stable Keplerian path and owns the body's kinematic position. Omitting `period` derives speed from the primary's gravity. An explicit `period` overrides that speed for authored animation and does not require a gravity source. Gravity has no effect on the prescribed path. A primary and its orbiting entities must belong to the same stage; cyclic parent relationships are rejected.
 
-Use `planet.setTimeScale(0)` to pause all animation, `setTimeScale(1)` to resume, and `setTime(seconds)` to scrub. The planet recreates its resources and starts at time zero when the stage reloads. Orbits are visual animation with no allocated physics bodies.
+For a physics trajectory, create a body with `motion: 'dynamic'`, attach `OrbitBehavior` with `mode: 'dynamic'`, and omit `period`. The primary's gravity seeds the initial orbital position and velocity once; afterward all gravity sources, forces and collisions can change the trajectory. Inverse-square gravity becomes linear inside a source's radius to avoid a center singularity. Optional `range` limits influence; `softening` sets a minimum distance. This uses the existing fixed-step physics integrator, so dynamic orbits accumulate numerical error and need an appropriate timestep. The stage's uniform gravity remains additive; space stages should use zero uniform gravity.
+
+Prescribed orbit handles expose `setTimeScale(0)` to pause and `setTime(seconds)` to seek on the next fixed step. Surface/cloud animation has separate controls on the body. Dynamic orbits reject these controls because their paths depend on simulation history. Stage reload rebuilds resources and resets orbital time.
+
+The example uses two explicit paths with opposing inclinations. The inner path clears the ring's outer radius; the outer ellipse's closest approach also clears the inner moon's orbit. Clearance is an authoring responsibility, especially for eccentric or intersecting paths.
 
 ## Pitfalls
 
 - Use a perspective camera for space and sky scenes. Tune the far plane to include the planet and moons; stars stay just inside it.
 - `background` is setup configuration. To change it, recreate the stage with the new config; mutating the original object does not update a running sky.
 - The planet atmosphere is a lightweight stylized shell, not a physical atmosphere simulation or ground-to-orbit transition. Rings use transparent rendering and analytic shadows; moon eclipses on the planet and multi-sun shadows are not modeled.
-- Generate planets during loading. Textures are created once on the CPU; per-frame work only updates transforms. Rendering quality and setup time should be profiled on target hardware.
+- Create bodies during loading. Textures are generated once on the CPU; orbital transforms and gravity are computed by WASM. Rendering quality and setup time should be profiled on target hardware.
 - Three.js WebGPU is the tested renderer. The WebGL fallback is not covered by the GPU tests.
 
 After building the package, `pnpm --filter @zylem/game-lib test:graphics:space` checks real WebGPU rendering, star camera translation, planet animation, sky day/night, resize, and teardown. A WebGPU adapter is required; for software Vulkan use `SPACE_GPU_BACKEND=vulkan VK_ICD_FILENAMES=/path/to/vk_swiftshader_icd.json`.
 
 ## API reference
 
-- [createPlanet](/docs/api/graphics/functions/createPlanet), [ZylemPlanet](/docs/api/graphics/classes/ZylemPlanet), [PlanetOptions](/docs/api/graphics/interfaces/PlanetOptions)
+- [createCelestialBody](/docs/api/graphics/functions/createCelestialBody), [ZylemCelestialBody](/docs/api/graphics/classes/ZylemCelestialBody), [CelestialBodyOptions](/docs/api/graphics/interfaces/CelestialBodyOptions)
 - [StageBackground](/docs/api/graphics/type-aliases/StageBackground), [StarOptions](/docs/api/graphics/interfaces/StarOptions)
 - [createStageBackground](/docs/api/graphics/functions/createStageBackground) for independently owned Three.js scenes; dispose the returned controller when replacing it
 - [createStage](/docs/api/core/functions/createStage), [StageConfigJsonSchema](/docs/api/schema/variables/StageConfigJsonSchema)

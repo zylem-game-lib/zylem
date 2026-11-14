@@ -45,3 +45,6 @@ export type {
 	RuntimeTriggerRegion2DHandle,
 	RuntimeTriggerRegion2DOptions,
 } from '@zylem/behaviors/runtime-2d';
+
+export { GravitySourceBehavior, OrbitBehavior, createOrbitPath } from '@zylem/behaviors/celestial';
+export type { GravitySourceOptions, OrbitOptions, OrbitPathOptions, OrbitPath, OrbitHandle, OrbitPrimary } from '@zylem/behaviors/celestial';
