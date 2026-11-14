@@ -17,6 +17,7 @@ This is a pnpm workspace monorepo containing:
 - **[@zylem/game-lib](./packages/game-lib)** - Core game engine library (published to npm)
 - **[@zylem/bridge](./packages/bridge)** - Typed communication bridge shared by game-lib and the editor (published to npm)
 - **[@zylem/utilities](./packages/zylem-utilities)** - Private destructible-prebake CLI and browser worker
+- **[@zylem/game-lib-showcase](./showcase)** - Private feature showcase: one exhibit per engine feature, running on this checkout's `game-lib`
 
 External packages published to npm from their own repositories:
 
@@ -56,9 +57,14 @@ pnpm lint
 # Docs site at http://localhost:3080
 pnpm docs:dev
 pnpm docs:build
+
+# Feature showcase at http://localhost:4242 (reads game-lib's dist, so run
+# build:lib first, or keep dev:lib running beside it)
+pnpm showcase:dev
+pnpm showcase:build
 ```
 
-For the editor, use the sibling [`editor`](https://github.com/zylem-game-lib/editor) repo (`pnpm dev` there boots a harness game with the editor overlaid; `zw link dev` points it at this checkout's `game-lib` and `bridge`). For demos and the multiplayer server, use [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples). For shader demos, use [`shaders`](https://github.com/zylem-game-lib/shaders).
+For the editor, use the sibling [`editor`](https://github.com/zylem-game-lib/editor) repo (`pnpm dev` there boots a harness game with the editor overlaid; `zw link dev` points it at this checkout's `game-lib` and `bridge`). For single-feature exhibits (stages, entities, cameras, actions, particles, instancing), use the [`showcase`](./showcase) app in this repo. For playable demos and the multiplayer server, use [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples). For shader demos, use [`shaders`](https://github.com/zylem-game-lib/shaders).
 
 ### Interactive runner
 

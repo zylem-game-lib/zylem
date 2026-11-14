@@ -1,0 +1,110 @@
+@import '@zylem/ui/styles.css';
+
+/*
+ * Game-lib showcase, HyperGlass theme. Chrome (sidebar, panel, key caps)
+ * comes from @zylem/ui; this file only keeps app-specific layout.
+ */
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+:root {
+	color-scheme: dark;
+	--text-dim: var(--zylem-color-text-secondary);
+	--accent: var(--zylem-color-primary);
+}
+
+html,
+body {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	background: var(--zylem-color-background);
+	color: var(--zylem-color-text);
+	font-family: var(--zylem-font-family);
+}
+
+#root {
+	width: 100%;
+	height: 100%;
+}
+
+.app-shell {
+	display: flex;
+	width: 100%;
+	height: 100%;
+}
+
+/* Sidebar (library `.sidebar` provides the glass treatment) */
+.showcase-sidebar {
+	width: 260px;
+	flex-shrink: 0;
+	padding: 20px 6px 10px;
+	gap: 18px;
+	overflow-y: auto;
+}
+
+.sidebar-title {
+	color: var(--zylem-color-text);
+	text-decoration: none;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	padding: 0 10px;
+}
+
+.sidebar-title-main {
+	color: var(--accent);
+}
+
+/* Viewer */
+.viewer {
+	flex: 1;
+	min-width: 0;
+	background: #000;
+}
+
+.game-canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.viewer-status {
+	height: 100%;
+}
+
+.viewer-status code {
+	color: var(--accent);
+	font-size: 0.95em;
+}
+
+/* Exhibit notes at the foot of the sidebar (library Panel provides the glass chrome) */
+.info-panel {
+	margin: auto 4px 0;
+	flex-shrink: 0;
+}
+
+.info-description {
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--text-dim);
+}
+
+.info-controls {
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 10px;
+	font-size: 12.5px;
+}
+
+.info-control {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
