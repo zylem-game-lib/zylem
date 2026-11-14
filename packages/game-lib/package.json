@@ -268,6 +268,7 @@
     "lint": "biome check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest --reporter=verbose",
+    "test:unit": "vitest run --project unit",
     "coverage": "vitest run --coverage",
     "zw:postunlink": "pnpm -w run deps:latest",
     "zw:prerelease": "pnpm -w run deps:latest --check",

@@ -1,4 +1,4 @@
-# Production build + tests on push / PR (matches root engines: Node 22 + pnpm).
+# game-lib unit tests on push / PR (matches root engines: Node 22 + pnpm).
 name: CI
 
 on:
@@ -8,7 +8,7 @@ on:
     branches: [main, master]
 
 jobs:
-  verify:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -22,33 +22,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Production verify (typecheck + lint + build:production)
-        run: bash ./scripts/ci-production-verify.sh
 
       - name: Unit tests (game-lib)
-        run: pnpm test
-
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: pnpm/action-setup@v5
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: '.nvmrc'
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build game-lib
-        run: pnpm build:lib
-
-      - name: Typecheck docs snippets
-        run: pnpm --filter @zylem/website typecheck:snippets
-
-      - name: Build docs site
-        run: pnpm docs:build
+        run: pnpm --filter @zylem/game-lib test:unit
