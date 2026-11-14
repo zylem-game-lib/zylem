@@ -71,3 +71,9 @@ export type {
 	ResolvedAmbientOcclusion,
 } from '../lib/graphics/ambient-occlusion/config';
 export { createAmbientOcclusion } from '../lib/graphics/ambient-occlusion/ambient-occlusion';
+
+// Stage environments and visual planet systems
+export { createPlanet, ZylemPlanet } from '../lib/graphics/space/planet';
+export { createStageBackground } from '../lib/graphics/space/background';
+export type { PlanetOptions, PlanetMoonOptions, MoonOrbitOptions } from '../lib/graphics/space/planet-config';
+export type { StageBackground, StarOptions, SpaceSunOptions } from '../lib/graphics/space/background-config';
