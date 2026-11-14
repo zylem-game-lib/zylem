@@ -30,7 +30,7 @@ export type StageBackground =
 			cycleDuration?: number;
 	  };
 
-export const SPACE_SUN_DIRECTION: [number, number, number] = [-1, 0.6, -0.8];
+export const SPACE_SUN_DIRECTION: [number, number, number] = [1, 0.6, -0.8];
 export function finiteRange(
 	value: number | undefined,
 	fallback: number,

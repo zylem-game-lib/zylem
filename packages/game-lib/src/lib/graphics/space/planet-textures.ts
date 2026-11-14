@@ -79,8 +79,9 @@ export function createPlanetTextures(
 		earth = new Color(land),
 		c = new Color(),
 		dry = new Color();
-	const shallow = new Color('#299bd0'),
-		highland = new Color('#8273b2');
+	// Keep detail in the chosen palette instead of introducing cyan/purple bands.
+	const shallow = sea.clone().multiplyScalar(1.12),
+		highland = earth.clone().multiplyScalar(0.94);
 	for (let v = 0; v < height; v++)
 		for (let u = 0; u < width; u++) {
 			const theta = (2 * Math.PI * (u + 0.5)) / width,
@@ -95,7 +96,7 @@ export function createPlanetTextures(
 			const landMask = smooth(level - 0.006, level + 0.006, terrain);
 			c.copy(sea)
 				.multiplyScalar(0.65 + terrain * 0.6)
-				.lerp(shallow, smooth(level - 0.04, level, terrain) * 0.65);
+				.lerp(shallow, smooth(level - 0.04, level, terrain) * 0.25);
 			dry.copy(earth).lerp(highland, smooth(level, level + 0.2, terrain));
 			c.lerp(dry, landMask).convertLinearToSRGB();
 			const i = (v * width + u) * 4;
@@ -103,12 +104,12 @@ export function createPlanetTextures(
 			surface[i + 1] = Math.round(c.g * 255);
 			surface[i + 2] = Math.round(c.b * 255);
 			surface[i + 3] = 255;
-			const r = Math.round((0.24 + landMask * 0.65) * 255);
+			const r = Math.round((0.38 + landMask * 0.24) * 255);
 			roughness.set([r, r, r, 255], i);
 			const w = noise(x * 5, y * 5 + 17, z * 5, seed + 19) * 1.3;
 			const cloud = fbm(x * 5 + w, y * 6 + w, z * 5, seed + 97, 5);
-			const alpha = Math.round(smooth(0.56, 0.7, cloud) * 190);
-			clouds.set([214, 235, 255, alpha], i);
+			const alpha = Math.round(smooth(0.56, 0.7, cloud) * 72);
+			clouds.set([104, 170, 242, alpha], i);
 		}
 	return {
 		surface: dataTexture(surface, width, height),

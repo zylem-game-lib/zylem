@@ -68,7 +68,7 @@ export function resolvePlanet(options: PlanetOptions = {}) {
 		options.atmosphere === false
 			? (false as const)
 			: {
-					color: options.atmosphere?.color ?? '#8edbff',
+					color: options.atmosphere?.color ?? '#5aafff',
 					thickness: finiteRange(
 						options.atmosphere?.thickness,
 						0.035,
@@ -94,8 +94,8 @@ export function resolvePlanet(options: PlanetOptions = {}) {
 						'Ring outer radius',
 						radius
 					),
-					tilt: finiteRange(options.rings?.tilt, 26, 'Ring tilt', -180, 180),
-					color: options.rings?.color ?? '#9cadd2',
+					tilt: finiteRange(options.rings?.tilt, -26, 'Ring tilt', -180, 180),
+					color: options.rings?.color ?? '#ef493b',
 					opacity: finiteRange(options.rings?.opacity, 0.72, 'Ring opacity', 0, 1),
 				};
 	if (rings && rings.outerRadius <= rings.innerRadius)
@@ -110,7 +110,7 @@ export function resolvePlanet(options: PlanetOptions = {}) {
 						orbit: {
 							radius: outer + radius * 0.18,
 							period: 48,
-							inclination: rings ? rings.tilt : 26,
+							inclination: rings ? rings.tilt : -26,
 							phase: 35,
 						},
 					},
@@ -120,7 +120,7 @@ export function resolvePlanet(options: PlanetOptions = {}) {
 						orbit: {
 							radius: outer + radius * 0.6,
 							period: 71,
-							inclination: rings ? -rings.tilt : -26,
+							inclination: rings ? -rings.tilt : 26,
 							phase: 210,
 						},
 					},

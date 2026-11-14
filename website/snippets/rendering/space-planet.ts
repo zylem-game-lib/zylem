@@ -3,9 +3,9 @@ import { createPlanet } from '@zylem/game-lib/graphics';
 
 const planet = createPlanet({
 	radius: 20,
-	surface: { oceanColor: '#075daf', landColor: '#454e89', oceanCoverage: 0.8 },
-	atmosphere: { color: '#8edbff' },
-	rings: { innerRadius: 25, outerRadius: 36, tilt: 26 },
+	surface: { oceanColor: '#0864c1', landColor: '#155bb1', oceanCoverage: 0.8 },
+	atmosphere: { color: '#5aafff' },
+	rings: { innerRadius: 25, outerRadius: 36, tilt: -26, color: '#ef493b' },
 	moons: 'crossed',
 });
 
