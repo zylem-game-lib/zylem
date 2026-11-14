@@ -72,8 +72,8 @@ export type {
 } from '../lib/graphics/ambient-occlusion/config';
 export { createAmbientOcclusion } from '../lib/graphics/ambient-occlusion/ambient-occlusion';
 
-// Stage environments and visual planet systems
-export { createPlanet, ZylemPlanet } from '../lib/graphics/space/planet';
+// Stage environments and celestial bodies
+export { createCelestialBody, ZylemCelestialBody } from '../lib/graphics/space/celestial-body';
 export { createStageBackground } from '../lib/graphics/space/background';
-export type { PlanetOptions, PlanetMoonOptions, MoonOrbitOptions } from '../lib/graphics/space/planet-config';
+export type { CelestialBodyOptions } from '../lib/graphics/space/celestial-body-config';
 export type { StageBackground, StarOptions, SpaceSunOptions } from '../lib/graphics/space/background-config';

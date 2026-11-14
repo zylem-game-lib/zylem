@@ -38,15 +38,14 @@ import {
 	vec4,
 	cameraPosition,
 } from 'three/tsl';
-import { resolvePlanet, type PlanetOptions } from './planet-config';
+import { resolveCelestialBody, type CelestialBodyOptions } from './celestial-body-config';
 import { createMoonTexture, createPlanetTextures } from './planet-textures';
-import { sampleMoonOrbit } from './orbit';
 
 /** Renderer-independent visual construction, shared by the Zylem entity and GPU tests. */
-export function createPlanetVisual(options: PlanetOptions = {}) {
-	const config = resolvePlanet(options);
+export function createCelestialBodyVisual(options: CelestialBodyOptions = {}) {
+	const config = resolveCelestialBody(options);
 	const group = new Group();
-	group.name = options.name ?? 'Zylem.Planet';
+	group.name = options.name ?? 'Zylem.CelestialBody';
 	const ownedTextures: Texture[] = [],
 		materials: Material[] = [];
 	const inverse = uniform(new Matrix4());
@@ -99,27 +98,38 @@ export function createPlanetVisual(options: PlanetOptions = {}) {
 			.and(abs(denominator).greaterThan(1e-4))
 			.select(float(1).sub(ringDensity(hitRadius).mul(0.85)), float(1));
 	};
-	const maps = createPlanetTextures(
-		config.seed,
-		options.surface?.oceanColor ?? '#0864c1',
-		options.surface?.landColor ?? '#155bb1',
-		config.oceanCoverage
-	);
-	ownedTextures.push(...Object.values(maps));
-	// A restrained dielectric glint keeps the ocean blue in the sunlit region.
+	const ocean = options.surface?.type === 'ocean';
+	const maps = ocean
+		? createPlanetTextures(
+				config.seed,
+				options.surface?.oceanColor ?? '#0864c1',
+				options.surface?.landColor ?? '#155bb1',
+				config.oceanCoverage
+			)
+		: null;
+	const rock = ocean ? null : createMoonTexture(config.seed);
+	if (maps) ownedTextures.push(...Object.values(maps));
+	if (rock) ownedTextures.push(rock);
 	const surfaceMaterial = new MeshPhysicalNodeMaterial({
-		roughness: 0.7,
+		roughness: config.roughness,
 		metalness: 0,
-		specularIntensity: 0.25,
+		specularIntensity: ocean ? 0.25 : 0.1,
+		bumpMap: rock,
+		bumpScale: config.bumpScale,
 	});
-	surfaceMaterial.colorNode = texture(maps.surface).rgb.mul(ringShadow());
-	surfaceMaterial.roughnessNode = texture(maps.roughness).g;
+	surfaceMaterial.colorNode = texture(maps?.surface ?? rock!)
+		.rgb.mul(uniform(new Color(options.surface?.color ?? '#ffffff')))
+		.mul(ringShadow());
+	if (maps) surfaceMaterial.roughnessNode = texture(maps.roughness).g;
 	materials.push(surfaceMaterial);
-	const surface = new Mesh(new SphereGeometry(radius, 128, 64), surfaceMaterial);
-	surface.name = 'Planet.Surface';
+	const surface = new Mesh(
+		new SphereGeometry(radius, ocean ? 128 : 48, ocean ? 64 : 24),
+		surfaceMaterial
+	);
+	surface.name = 'Body.Surface';
 	group.add(surface);
 	let clouds: Mesh | undefined;
-	if (options.surface?.clouds !== false) {
+	if (maps && options.surface?.clouds !== false) {
 		const material = new MeshStandardNodeMaterial({
 			map: maps.clouds,
 			transparent: true,
@@ -129,7 +139,7 @@ export function createPlanetVisual(options: PlanetOptions = {}) {
 		material.colorNode = texture(maps.clouds).rgb.mul(ringShadow());
 		material.opacityNode = texture(maps.clouds).a;
 		clouds = new Mesh(new SphereGeometry(radius * 1.009, 96, 48), material);
-		clouds.name = 'Planet.Clouds';
+		clouds.name = 'Body.Clouds';
 		clouds.renderOrder = 1;
 		materials.push(material);
 		group.add(clouds);
@@ -158,7 +168,7 @@ export function createPlanetVisual(options: PlanetOptions = {}) {
 			new SphereGeometry(radius * (1 + config.atmosphere.thickness), 96, 48),
 			material
 		);
-		atmosphere.name = 'Planet.Atmosphere';
+		atmosphere.name = 'Body.Atmosphere';
 		atmosphere.renderOrder = 3;
 		materials.push(material);
 		group.add(atmosphere);
@@ -181,7 +191,7 @@ export function createPlanetVisual(options: PlanetOptions = {}) {
 			new RingGeometry(ringConfig.innerRadius, ringConfig.outerRadius, 256, 4),
 			material
 		);
-		ring.name = 'Planet.Rings';
+		ring.name = 'Body.Rings';
 		ring.rotation.x = -Math.PI / 2;
 		ring.renderOrder = 2;
 		const plane = new Group();
@@ -190,21 +200,6 @@ export function createPlanetVisual(options: PlanetOptions = {}) {
 		group.add(plane);
 		materials.push(material);
 	}
-	const moons = config.moons.map((moon, i) => {
-		const map = createMoonTexture(moon.seed ?? config.seed + i + 1);
-		ownedTextures.push(map);
-		const material = new MeshStandardNodeMaterial({
-			roughness: 1,
-			bumpMap: map,
-			bumpScale: (moon.radius ?? 1) * 0.025,
-		});
-		material.colorNode = texture(map).rgb.mul(planetShadow()).mul(ringShadow());
-		const mesh = new Mesh(new SphereGeometry(moon.radius, 48, 24), material);
-		mesh.name = `Planet.Moon.${i + 1}`;
-		materials.push(material);
-		group.add(mesh);
-		return { mesh, orbit: moon.orbit };
-	});
 	const syncFrame = () => {
 		inverse.value.copy(group.matrixWorld).invert();
 		localSun.value.copy(sun.value).transformDirection(inverse.value);
@@ -222,16 +217,11 @@ export function createPlanetVisual(options: PlanetOptions = {}) {
 			clouds.rotation.y = config.rotationPeriod
 				? (elapsed * 2 * Math.PI) / (config.rotationPeriod * 0.87)
 				: 0;
-		for (const moon of moons) {
-			sampleMoonOrbit(moon.orbit, elapsed, moon.mesh.position);
-			moon.mesh.rotation.y = (-elapsed * 2 * Math.PI) / moon.orbit.period;
-		}
 	};
 	update(0);
 	return {
 		group,
 		surface,
-		moons,
 		config,
 		update,
 		setSunDirection(direction: Vector3) {

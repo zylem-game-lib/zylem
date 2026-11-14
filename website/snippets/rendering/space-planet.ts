@@ -1,12 +1,24 @@
 import { createCamera, createGame, createStage, Perspectives } from '@zylem/game-lib/core';
-import { createPlanet } from '@zylem/game-lib/graphics';
+import { createOrbitPath, OrbitBehavior } from '@zylem/game-lib/behavior';
+import { createCelestialBody } from '@zylem/game-lib/graphics';
 
-const planet = createPlanet({
+const planet = createCelestialBody({
 	radius: 20,
-	surface: { oceanColor: '#0864c1', landColor: '#155bb1', oceanCoverage: 0.8 },
+	surface: { type: 'ocean', oceanColor: '#0864c1', landColor: '#155bb1', oceanCoverage: 0.8 },
 	atmosphere: { color: '#5aafff' },
 	rings: { innerRadius: 25, outerRadius: 36, tilt: -26, color: '#ef493b' },
-	moons: 'crossed',
+	gravity: { surfaceAcceleration: 2.5 },
+});
+
+const innerMoon = createCelestialBody({ radius: 1.4, seed: 84 });
+innerMoon.use(OrbitBehavior, {
+	around: planet,
+	path: createOrbitPath({ semiMajorAxis: 39.6, inclination: -26, phase: 35 }),
+});
+const outerMoon = createCelestialBody({ radius: 1, seed: 85 });
+outerMoon.use(OrbitBehavior, {
+	around: planet,
+	path: createOrbitPath({ semiMajorAxis: 48, eccentricity: 0.04, inclination: 26, phase: 210 }),
 });
 
 const camera = createCamera({
@@ -26,7 +38,9 @@ const stage = createStage(
 		},
 	},
 	camera,
-	planet
+	planet,
+	innerMoon,
+	outerMoon
 );
 
 createGame({ id: 'ocean-planet' }, stage).start();

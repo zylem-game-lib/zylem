@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { parseStageOptions } from '../../../src/lib/stage/stage-config';
 import { StageConfigJsonSchema } from '../../../src/lib/core/json-schemas/stage-config';
 import { createStageBackground } from '../../../src/lib/graphics/space/background';
-import { resolvePlanet } from '../../../src/lib/graphics/space/planet-config';
-import { sampleMoonOrbit } from '../../../src/lib/graphics/space/orbit';
-import { createPlanet } from '../../../src/lib/graphics/space/planet';
+import { resolveCelestialBody } from '../../../src/lib/graphics/space/celestial-body-config';
+import { GravitySourceBehavior } from '@zylem/behaviors/celestial';
+import { createCelestialBody } from '../../../src/lib/graphics/space/celestial-body';
 import { ZylemScene } from '../../../src/lib/graphics/zylem-scene';
 import { ZylemCamera } from '../../../src/lib/camera/zylem-camera';
 import { Perspectives } from '../../../src/lib/camera/perspective';
@@ -108,74 +108,61 @@ describe('space backgrounds', () => {
 	});
 });
 
-describe('planet and crossed moon orbits', () => {
-	it('clones planet configuration without sharing mutable options', () => {
-		const planet = createPlanet({ moons: 'crossed', name: 'Original', seed: 4294967295 });
-		const clone = planet.clone({ name: 'Copy', position: { x: 10, y: 0, z: 0 } });
-		expect(clone.planetOptions.moons).toBe('crossed');
-		expect(clone.options.name).toBe('Copy');
+describe('independent celestial bodies', () => {
+	it('clones visual options and gravity without duplicating the source', () => {
+		const body = createCelestialBody({
+			radius: 20,
+			gravity: { surfaceAcceleration: 2.5 },
+			surface: { type: 'ocean' },
+		});
+		const clone = body.clone({ name: 'Copy', radius: 10, position: { x: 10, y: 0, z: 0 } });
+		expect(clone.bodyOptions.radius).toBe(10);
 		expect(clone.options.position?.x).toBe(10);
+		expect(clone.getBehaviorRefs()).toHaveLength(1);
+		expect(clone.getBehaviorRef(GravitySourceBehavior)?.options.radius).toBe(10);
 		clone.setSunDirection([0, 1, 0]);
-		expect(planet.planetOptions.sunDirection).toBeUndefined();
-	});
-	it('keeps one orbit in the ring plane, the other oppositely tilted, with radial clearance', () => {
-		const config = resolvePlanet({ moons: 'crossed' });
-		if (!config.rings) throw Error('Missing rings');
-		const [a, b] = config.moons;
-		expect(a.orbit.inclination).toBe(config.rings.tilt);
-		expect(b.orbit.inclination).toBe(-config.rings.tilt);
-		expect(a.orbit.radius - a.radius!).toBeGreaterThan(config.rings.outerRadius);
-		expect(b.orbit.radius - a.orbit.radius).toBeGreaterThan(a.radius! + b.radius!);
-		const normal = new Vector3(0, 1, 0).applyAxisAngle(
-			new Vector3(0, 0, 1),
-			(config.rings.tilt * Math.PI) / 180
-		);
-		for (let t = 0; t <= 100; t += 0.25) {
-			const pa = sampleMoonOrbit(a.orbit, t),
-				pb = sampleMoonOrbit(b.orbit, t);
-			expect(pa.length()).toBeCloseTo(a.orbit.radius, 8);
-			expect(pa.dot(normal)).toBeCloseTo(0, 8);
-			expect(pa.distanceTo(pb)).toBeGreaterThan(a.radius! + b.radius!);
-		}
-		expect(
-			sampleMoonOrbit(a.orbit, a.orbit.period).distanceTo(sampleMoonOrbit(a.orbit, 0))
-		).toBeLessThan(1e-10);
+		expect(body.bodyOptions.sunDirection).toBeUndefined();
 	});
 	it.each([
 		{ radius: 0 },
-		{ rings: { innerRadius: 19 } },
-		{ rings: { outerRadius: 22 } },
+		{ radius: 20, rings: { innerRadius: 19 } },
+		{ radius: 20, rings: { outerRadius: 22 } },
 		{ atmosphere: { thickness: -1 } },
 		{ surface: { oceanCoverage: 1.1 } },
-		{ moons: [{ orbit: { radius: 50, period: 0 } }] },
-		{ moons: [{ radius: 2, orbit: { radius: 36, period: 40 } }] },
-	])('rejects invalid planet geometry/orbits %j', (options) => {
-		expect(() => createPlanet(options)).toThrow();
+		{ gravity: { surfaceAcceleration: -1 } },
+	])('rejects invalid geometry or gravity %j', (options) => {
+		expect(() => createCelestialBody(options)).toThrow();
 	});
-	it('animates without physics, pauses, disposes textures, and recreates on stage reload', () => {
-		const planet = createPlanet({ moons: 'crossed', name: 'Ocean world' });
-		planet.create();
-		expect(planet.colliderDesc).toBeUndefined();
-		const oldGroup = planet.group!;
-		const firstMoon = oldGroup.getObjectByName('Planet.Moon.1')!;
-		const initial = firstMoon.position.clone();
-		planet.setTime(12);
-		expect(firstMoon.position.distanceTo(initial)).toBeGreaterThan(10);
-		planet.setTimeScale(0);
-		const paused = firstMoon.position.clone();
-		planet._update({ delta: 4 } as any);
-		expect(firstMoon.position.equals(paused)).toBe(true);
-		const clouds = oldGroup.getObjectByName('Planet.Clouds') as any;
-		const disposeMap = vi.spyOn(clouds.material.map, 'dispose');
-		planet.nodeCleanup({ me: planet, globals: {} });
-		expect(disposeMap).toHaveBeenCalledOnce();
-		expect(planet.group).toBeUndefined();
-		planet.create();
-		planet._setup({ me: planet, globals: {} });
-		expect(planet.group).not.toBe(oldGroup);
-		expect(
-			planet.group!.getObjectByName('Planet.Moon.1')!.position.distanceTo(initial)
-		).toBeLessThan(1e-8);
-		planet.nodeCleanup({ me: planet, globals: {} });
+	it('defaults to a standalone rocky body with no implicit companions', () => {
+		const body = createCelestialBody().create();
+		expect(resolveCelestialBody().rings).toBe(false);
+		expect(resolveCelestialBody().atmosphere).toBe(false);
+		expect(body.colliderDesc?.shape).toEqual({ type: 'sphere', radius: 1 });
+		expect(body.group!.children).toHaveLength(1);
+		body.nodeCleanup({ me: body, globals: {} });
+	});
+	it('pauses surface animation, disposes textures and recreates on stage reload', () => {
+		const body = createCelestialBody({
+			radius: 20,
+			surface: { type: 'ocean' },
+			atmosphere: {},
+			rings: {},
+		}).create();
+		const old = body.group!;
+		const clouds = old.getObjectByName('Body.Clouds') as any;
+		body.setTime(12);
+		const angle = body.mesh!.rotation.y;
+		expect(angle).toBeGreaterThan(0);
+		body.setTimeScale(0);
+		body._update({ delta: 4 } as any);
+		expect(body.mesh!.rotation.y).toBe(angle);
+		const dispose = vi.spyOn(clouds.material.map, 'dispose');
+		body.nodeCleanup({ me: body, globals: {} });
+		expect(dispose).toHaveBeenCalledOnce();
+		body.create();
+		body._setup({ me: body, globals: {} });
+		expect(body.group).not.toBe(old);
+		expect(body.mesh!.rotation.y).toBe(0);
+		body.nodeCleanup({ me: body, globals: {} });
 	});
 });

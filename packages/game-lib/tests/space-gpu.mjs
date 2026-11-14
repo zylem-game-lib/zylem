@@ -2,8 +2,10 @@
 import assert from 'node:assert/strict';
 import { create, globals } from 'webgpu';
 import * as THREE from 'three/webgpu';
+import { createSimulation, StageBodyKind } from '@zylem/behaviors/core';
+import { readFile } from 'node:fs/promises';
 import { pass, vec4 } from 'three/tsl';
-import { createPlanet, createStageBackground } from '../dist/graphics.js';
+import { createCelestialBody, createStageBackground } from '../dist/graphics.js';
 
 Object.assign(globalThis, globals);
 globalThis.self = { requestAnimationFrame: () => 1, cancelAnimationFrame: () => {} };
@@ -50,6 +52,17 @@ const main = pass(scene, camera);
 const pipeline = new THREE.RenderPipeline(renderer, main.getTextureNode());
 let background;
 let planet;
+const moons = [];
+const simulation = await createSimulation({
+	source: await readFile(new URL(import.meta.resolve('@zylem/runtime/wasm'))),
+	gravity: [0, 0, 0],
+});
+const handles = [];
+function syncMoons() {
+	moons.forEach((moon, i) =>
+		moon.group.position.fromArray(simulation.getPose(handles[i]).position)
+	);
+}
 
 async function draw() {
 	renderer.setRenderTarget(target);
@@ -109,7 +122,28 @@ try {
 	camera.position.x -= 1000;
 	camera.updateMatrixWorld();
 
-	planet = createPlanet({ moons: 'crossed' }).create();
+	planet = createCelestialBody({
+		radius: 20,
+		surface: { type: 'ocean' },
+		atmosphere: {},
+		rings: {},
+		gravity: { surfaceAcceleration: 2.5 },
+	}).create();
+	const primary = simulation.spawn({ body: { kind: StageBodyKind.Static } });
+	simulation.attachGravitySource(primary, { radius: 20, surfaceAcceleration: 2.5 });
+	for (const [radius, a, tilt, phase, seed] of [
+		[1.4, 39.6, -26, 35, 84],
+		[1, 48, 26, 210, 85],
+	]) {
+		const moon = createCelestialBody({ radius, seed }).create();
+		const handle = simulation.spawn({ body: { kind: StageBodyKind.Static } });
+		simulation.attachOrbit(handle, primary, { semiMajorAxis: a, inclination: tilt, phase });
+		moons.push(moon);
+		handles.push(handle);
+		scene.add(moon.group);
+	}
+	simulation.adapter.step(0);
+	syncMoons();
 	scene.add(planet.group);
 	const first = await draw();
 	assert.ok(difference(stars, first) > 2000, 'Planet failed to render');
@@ -117,13 +151,7 @@ try {
 	for (let i = 0; i < first.length; i += 4)
 		if (first[i + 2] > 60 && first[i + 2] > first[i] * 1.4 && first[i + 1] > 30) blue++;
 	assert.ok(blue > 1000, 'Oceans lost their blue color');
-	for (const name of [
-		'Planet.Rings',
-		'Planet.Atmosphere',
-		'Planet.Clouds',
-		'Planet.Moon.1',
-		'Planet.Moon.2',
-	]) {
+	for (const name of ['Body.Rings', 'Body.Atmosphere', 'Body.Clouds']) {
 		const object = planet.group.getObjectByName(name);
 		assert.ok(object, `${name} missing`);
 		object.visible = false;
@@ -131,7 +159,16 @@ try {
 		object.visible = true;
 		assert.ok(difference(first, hidden) > 3, `${name} contributes no visible pixels`);
 	}
+	for (const moon of moons) {
+		moon.group.visible = false;
+		const hidden = await draw();
+		moon.group.visible = true;
+		assert.ok(difference(first, hidden) > 3, 'Independent moon contributes no pixels');
+	}
 	planet.setTime(12);
+	for (const handle of handles) simulation.setOrbitTime(handle, 12);
+	simulation.adapter.step(0);
+	syncMoons();
 	const animated = await draw();
 	assert.ok(difference(first, animated) > 500, 'Planet animation did not change the frame');
 	renderer.setSize(240, 180, false);
@@ -141,6 +178,7 @@ try {
 	assert.ok(energy(await draw()) > 10000, 'Resize/camera move produced an empty frame');
 	planet.nodeCleanup({ me: planet, globals: {} });
 	planet = undefined;
+	for (const moon of moons.splice(0)) moon.nodeCleanup({ me: moon, globals: {} });
 	background.dispose();
 	background = undefined;
 	assert.equal(scene.children.length, 0, 'Background or planet objects leaked');
@@ -176,6 +214,8 @@ try {
 		'Space GPU: solid/gradient/stars, camera translation, planet layers and two moons, animation, resize, sky day/night and teardown passed.'
 	);
 } finally {
+	for (const moon of moons) moon.nodeCleanup({ me: moon, globals: {} });
+	simulation.dispose();
 	planet?.nodeCleanup({ me: planet, globals: {} });
 	background?.dispose();
 	pipeline.dispose();
