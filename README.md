@@ -64,7 +64,7 @@ pnpm showcase:dev
 pnpm showcase:build
 ```
 
-For the editor, use the sibling [`editor`](https://github.com/zylem-game-lib/editor) repo (`pnpm dev` there boots a harness game with the editor overlaid; `zw link dev` points it at this checkout's `game-lib` and `bridge`). For single-feature exhibits (stages, entities, cameras, actions, particles, instancing), use the [`showcase`](./showcase) app in this repo. For playable demos and the multiplayer server, use [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples). For shader demos, use [`shaders`](https://github.com/zylem-game-lib/shaders).
+For the editor, use the sibling [`editor`](https://github.com/zylem-game-lib/editor) repo (`pnpm dev` there boots a harness game with the editor overlaid; `zw link dev` points it at this checkout's `game-lib` and `bridge`). For single-feature exhibits (stages, entities, cameras, actions, particles, ambient occlusion, instancing), use the [`showcase`](./showcase) app in this repo. For playable demos and the multiplayer server, use [`zylem-examples`](https://github.com/zylem-game-lib/zylem-examples). For shader demos, use [`shaders`](https://github.com/zylem-game-lib/shaders).
 
 ### Interactive runner
 

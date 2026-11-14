@@ -18,6 +18,7 @@ export const SECTION_ORDER = [
 	'Camera',
 	'Actions',
 	'Effects',
+	'Rendering',
 	'Performance',
 ] as const;
 
@@ -31,6 +32,7 @@ const DEMOS_BY_SECTION: Record<SectionName, readonly string[]> = {
 	Camera: ['camera-test'],
 	Actions: ['actions-test'],
 	Effects: ['particle-effects'],
+	Rendering: ['ambient-occlusion'],
 	Performance: ['massive-instancing'],
 };
 
