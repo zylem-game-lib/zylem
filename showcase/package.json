@@ -1,0 +1,33 @@
+{
+  "name": "@zylem/game-lib-showcase",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Feature showcase for @zylem/game-lib: one exhibit per engine feature, running on this checkout's build.",
+  "scripts": {
+    "dev": "vite",
+    "build": "cross-env NODE_ENV=production vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@solidjs/router": "^0.14.10",
+    "@zylem/game-lib": "workspace:*",
+    "@zylem/shaders": "^0.8.10",
+    "@zylem/ui": "^0.9.11",
+    "howler": "^2.2.4",
+    "nanoid": "^5.1.16",
+    "solid-js": "^1.9.14",
+    "three": "^0.187.0",
+    "valtio": "^2.1.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/three": "^0.187.0",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "cross-env": "^10.1.0",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vite": "7.0.8",
+    "vite-plugin-solid": "^2.11.14"
+  }
+}
