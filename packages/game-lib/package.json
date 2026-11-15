@@ -258,7 +258,7 @@
     "THIRD_PARTY_NOTICES.md"
   ],
   "scripts": {
-    "build": "node --experimental-strip-types ../../../simulation/packages/behaviors/scripts/sync-genre-entries.ts && NODE_OPTIONS=--max-old-space-size=8192 tsup && pnpm api:extract && pnpm api:typedoc && pnpm schema:emit",
+    "build": "node --experimental-strip-types scripts/sync-genre-entries.ts && NODE_OPTIONS=--max-old-space-size=8192 tsup && pnpm api:extract && pnpm api:typedoc && pnpm schema:emit",
     "dev": "tsup --watch",
     "api:extract": "mkdir -p dist/api temp && api-extractor run --local --verbose",
     "api:typedoc": "mkdir -p dist/api && typedoc --options typedoc.json",
