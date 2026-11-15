@@ -1,0 +1,15 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "game-lib-showcase",
+	"compatibility_date": "2026-11-14",
+	"assets": {
+		"directory": "./showcase/dist",
+		"not_found_handling": "single-page-application",
+	},
+	"observability": {
+		"enabled": true,
+		"traces": {
+			"enabled": true,
+		},
+	},
+}

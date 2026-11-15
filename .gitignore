@@ -11,6 +11,7 @@ src/**/*.js
 
 dist
 temp
+.wrangler/
 
 tsconfig.tsbuildinfo
 

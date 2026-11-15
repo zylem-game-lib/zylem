@@ -30,7 +30,7 @@
     "docs:dev": "pnpm --filter @zylem/website start",
     "docs:build": "pnpm --filter @zylem/website build",
     "showcase:dev": "pnpm --filter @zylem/game-lib-showcase dev",
-    "showcase:build": "pnpm --filter @zylem/game-lib-showcase build",
+    "showcase:build": "cross-env NODE_ENV=production pnpm --filter @zylem/game-lib build && pnpm --filter @zylem/game-lib-showcase build",
     "deps:latest": "sh ./scripts/deps-latest.sh",
     "install:all": "pnpm install",
     "publish": "sh ./scripts/publish.sh",
@@ -46,7 +46,8 @@
     "tsup": "^8.5.1",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vite": "7.0.8",
-    "vite-plugin-glsl": "^1.5.6"
+    "vite-plugin-glsl": "^1.5.6",
+    "wrangler": "4.162.0"
   },
   "packageManager": "pnpm@10.33.4",
   "dependencies": {

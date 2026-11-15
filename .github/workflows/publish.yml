@@ -1,4 +1,5 @@
 # Publish @zylem/game-lib to GitHub Packages on release (requires aligned CI build).
+# After that publish succeeds, deploy the game-lib showcase Worker.
 name: publish zylem library
 
 on:
@@ -54,3 +55,31 @@ jobs:
         run: pnpm --filter @zylem/game-lib publish --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-showcase:
+    needs: publish-gpr
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build showcase
+        run: pnpm showcase:build
+
+      - name: Deploy showcase
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
