@@ -26,6 +26,7 @@ import type { EntityRepresentative } from './entity-representative';
 import type { ArmPlacementOptions, PlacementSession } from './placement-session';
 import { usesManagedRenderPath } from '../graphics/render-category';
 import type { BaseEntityInterface } from '../types/entity-types';
+import type { LevelDocument } from '@zylem/bridge';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
@@ -53,6 +54,9 @@ export class Stage {
 
 	/** Per-stage input configuration overrides. Merged with game-level defaults on stage load. */
 	inputConfig: GameInputConfig | null = null;
+
+	/** The level every load plays, until {@link closeLevel}. */
+	private levelDocument: LevelDocument | null = null;
 
 	/** Placement armed before the runtime stage exists, applied on load. */
 	private pendingPlacement: ArmPlacementOptions | null = null;
@@ -98,6 +102,10 @@ export class Stage {
 		
 		this.wrappedStage = new ZylemStage(loadOptions);
 		this.wrappedStage.wrapperRef = this;
+		// Held by the runtime stage until its setup, which runs after this load.
+		if (this.levelDocument) {
+			this.wrappedStage.playLevel(this.levelDocument);
+		}
 		if (this.pendingPlacement) {
 			this.wrappedStage.pointerDelegate.arm(this.pendingPlacement);
 		}
@@ -267,6 +275,34 @@ export class Stage {
 	): T extends keyof EntityTypeMap ? EntityTypeMap[T] | undefined : BaseNode | undefined {
 		const entity = this.wrappedStage?.getEntityByName(name);
 		return entity as any;
+	}
+
+	/**
+	 * Play a level document on this stage.
+	 *
+	 * Its solids become one merged mesh and one static body of convex hulls per
+	 * sector, its trigger zones spawn, and {@link navigation} is synced to the
+	 * document, ready to bake or to load a saved bake. The document is kept and
+	 * played again on every load, so it survives a stage reset. Called before
+	 * the stage loads, the level is in place by the time `onSetup` runs.
+	 *
+	 * @example
+	 * stage.playLevel(level);
+	 * stage.onSetup(() => {
+	 *   void stage.navigation?.bake();
+	 * });
+	 */
+	playLevel(document: LevelDocument): this {
+		this.levelDocument = document;
+		this.wrappedStage?.playLevel(document);
+		return this;
+	}
+
+	/** Remove the played level, its collision, and its navigation data. Stage entities stay. */
+	closeLevel(): this {
+		this.levelDocument = null;
+		this.wrappedStage?.closeLevel();
+		return this;
 	}
 
 	/**

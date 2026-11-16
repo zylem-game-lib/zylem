@@ -13,7 +13,7 @@
 import type { StageBackground } from '../graphics/space/background-config';
 import type { AmbientOcclusionOptions } from '../graphics/ambient-occlusion/config';
 import { NavigationSession } from '../navigation/navigation-session';
-import { getZylemBridge } from '@zylem/bridge';
+import { getZylemBridge, type LevelDocument } from '@zylem/bridge';
 import { Color, Vector3 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
@@ -125,6 +125,8 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 	renderStrategy: RenderStrategyManager | null = null;
 
 	debugDelegate: StageDebugDelegate | null = null;
+	/** A level passed to {@link playLevel} before `_setup` created the delegate that plays it. */
+	private pendingLevel: LevelDocument | null = null;
 	/** Play-mode hover, drop, and click-to-place. Suspended while the editor tools are live. */
 	readonly pointerDelegate: StagePointerDelegate;
 
@@ -333,6 +335,33 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		// and activates/deactivates visuals and camera debug automatically.
 		this.debugDelegate = new StageDebugDelegate(this);
 		this.hasSetup = true;
+		// Before the `setup` callbacks, so they find the level's collision and a
+		// synced navigation session.
+		const level = this.pendingLevel;
+		this.pendingLevel = null;
+		if (level) this.debugDelegate.playLevel(level);
+	}
+
+	/**
+	 * Play a level document on this stage: one merged mesh and one static body
+	 * of convex hulls per sector, its trigger zones, and `navigation` synced to
+	 * the document. Playing another document replaces the current one.
+	 *
+	 * A call before the stage is set up is held and applied during setup, ahead
+	 * of the `onSetup` callbacks.
+	 */
+	playLevel(document: LevelDocument): void {
+		if (!this.debugDelegate) {
+			this.pendingLevel = document;
+			return;
+		}
+		this.debugDelegate.playLevel(document);
+	}
+
+	/** Remove the played level, its collision, and its navigation data. Stage entities stay. */
+	closeLevel(): void {
+		this.pendingLevel = null;
+		this.debugDelegate?.closeLevel();
 	}
 
 	protected _update(params: UpdateContext<ZylemStage>): void {
