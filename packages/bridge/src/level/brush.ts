@@ -21,6 +21,7 @@ import {
 	scale,
 	sub,
 } from './vec';
+import { carrySurfaces, surfaceOf } from './brush-surface';
 
 export interface BrushVec3 {
 	x: number;
@@ -28,10 +29,27 @@ export interface BrushVec3 {
 	z: number;
 }
 
+/**
+ * The texture painted on a face and how it tiles. UVs come from the world
+ * position, so two faces in one plane tile as one; see `brush-surface.ts`.
+ */
+export interface BrushSurface {
+	/** `builtin:<key>` or the id of a texture stored in the level document. */
+	textureId: string;
+	/** World units one tile covers along each texture axis. */
+	scale: { u: number; v: number };
+	/** Shift, in tiles. */
+	offset: { u: number; v: number };
+	/** Radians, counter-clockwise when looking at the face. */
+	rotation: number;
+}
+
 export interface BrushPlane {
 	normal: BrushVec3;
 	/** The solid is `normal · point <= distance`. */
 	distance: number;
+	/** Absent on a face with no texture. */
+	surface?: BrushSurface;
 }
 
 export interface CompiledFace {
@@ -179,6 +197,7 @@ export function translateBrush(planes: readonly BrushPlane[], delta: BrushVec3):
 	return planes.map((plane) => ({
 		normal: copyVec(plane.normal),
 		distance: plane.distance + dot(plane.normal, delta),
+		...surfaceOf(plane),
 	}));
 }
 
@@ -188,14 +207,19 @@ function planesWithFaces(planes: readonly BrushPlane[]): BrushPlane[] | null {
 	const used = new Set(compiled.faces.map((face) => face.planeIndex));
 	const kept = planes.filter((_, index) => used.has(index));
 	if (kept.length < 4 || !compileBrush(kept)) return null;
-	return kept.map((plane) => ({ normal: copyVec(plane.normal), distance: plane.distance }));
+	return kept.map((plane) => ({
+		normal: copyVec(plane.normal),
+		distance: plane.distance,
+		...surfaceOf(plane),
+	}));
 }
 
 /**
  * Split a brush with a half-space.
  *
  * Each side that still compiles is returned, redundant planes dropped. A clip
- * that misses leaves the original solid as the only entry.
+ * that misses leaves the original solid as the only entry. Both sides keep
+ * the surfaces of the faces they keep; the cut itself is bare.
  */
 export function clipBrush(planes: readonly BrushPlane[], clip: BrushPlane): BrushPlane[][] {
 	const keep = planesWithFaces([...planes, clip]);
@@ -386,5 +410,5 @@ export function setBrushVertex(
 	for (const vertex of dedupePoints(next)) {
 		if (!check.vertices.some((other) => samePoint(vertex, other))) return null;
 	}
-	return hull;
+	return carrySurfaces(planes, hull);
 }

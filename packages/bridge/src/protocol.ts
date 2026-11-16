@@ -6,7 +6,7 @@ import type {
 	NavigationStatus,
 	NavigationToolPayload,
 } from './navigation';
-import type { BrushPlane } from './level/brush';
+import type { BrushPlane, BrushSurface } from './level/brush';
 import type { BrushElementKind } from './level/brush-edit';
 import type { BrushFootprint, BrushFrame, BrushShape } from './level/brush-shapes';
 
@@ -59,6 +59,7 @@ export type BridgeDebugTool =
 	| 'brush'
 	| 'clip'
 	| 'shear'
+	| 'paint'
 	| 'none';
 
 /** Display / runtime configuration of the running game. */
@@ -406,6 +407,21 @@ export interface BrushSolid {
 	groupId?: string;
 }
 
+/**
+ * An image the level's faces can be painted with. The built-in textures are
+ * not stored; see `BUILTIN_TEXTURES`.
+ */
+export interface LevelTexture {
+	/** What a painted face's surface names. */
+	id: string;
+	name: string;
+	/** The image itself, so the level file carries every texture it uses. */
+	dataUrl: string;
+	/** Pixels. */
+	width: number;
+	height: number;
+}
+
 /** The sector grid: square XZ cells `size` units wide. A solid belongs to the cell holding its center. */
 export interface LevelSectorSettings {
 	size: number;
@@ -450,6 +466,8 @@ export interface LevelDocument {
 	entities: EntityPlacement[];
 	/** Absent means the default sector size. */
 	sectors?: LevelSectorSettings;
+	/** Images painted on the solids' faces. Absent means none. */
+	textures?: LevelTexture[];
 }
 
 /** What a click on a solid picks: the whole solid, or one of its vertices, edges, or faces. */
@@ -509,6 +527,8 @@ export interface LevelSyncPayload {
 	placement: LevelPlacementArm | null;
 	/** The armed primitive while the brush tool is on. */
 	drawShape?: LevelDrawShape | null;
+	/** What the paint tool puts on a face. `null` or absent takes the texture off. */
+	paintSurface?: BrushSurface | null;
 	/**
 	 * Whether the level tools take the pointer. Absent means on. Off shows the
 	 * preview and lets Select pick it; every other tool leaves the press to
@@ -549,7 +569,9 @@ export type LevelGesture =
 	| { kind: 'trigger'; pose: BridgePose; size: BridgeVec3 }
 	| { kind: 'delete'; id: string }
 	/** Drop these elements' vertices and rebuild each solid. */
-	| { kind: 'element-delete'; elements: LevelElementRef[] };
+	| { kind: 'element-delete'; elements: LevelElementRef[] }
+	/** Paint these faces with one surface, or take their textures off with `null`. */
+	| { kind: 'paint'; faces: LevelElementRef[]; surface: BrushSurface | null };
 
 /** A click in the level preview. Not an undo step. */
 export interface LevelSelectPayload {

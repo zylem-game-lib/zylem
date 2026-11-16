@@ -10,10 +10,31 @@ export {
 	translateBrush,
 	type BrushBounds,
 	type BrushPlane,
+	type BrushSurface,
 	type BrushVec3,
 	type CompiledBrush,
 	type CompiledFace,
 } from './level/brush';
+export {
+	carrySurfaces,
+	copySurface,
+	createSurface,
+	sameSurface,
+	surfaceAxes,
+	surfaceProjector,
+	surfaceUv,
+	type SurfaceAxes,
+	type SurfaceUv,
+} from './level/brush-surface';
+export {
+	BUILTIN_TEXTURES,
+	BUILTIN_TEXTURE_PREFIX,
+	BUILTIN_TEXTURE_SIZE,
+	builtinTextureKey,
+	builtinTexturePixels,
+	type BuiltinTexture,
+	type BuiltinTextureKey,
+} from './level/builtin-textures';
 export {
 	DEFAULT_ARCH_SEGMENTS,
 	DEFAULT_ARCH_THICKNESS,

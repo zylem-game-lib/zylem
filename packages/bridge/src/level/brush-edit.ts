@@ -18,6 +18,7 @@ import {
 	type BrushVec3,
 	type CompiledBrush,
 } from './brush';
+import { carrySurfaces, surfaceOf } from './brush-surface';
 import {
 	EPS,
 	add,
@@ -73,7 +74,11 @@ export const MAX_SUBDIVIDE_PIECES = 256;
 const ascending = (a: number, b: number) => a - b;
 
 function copyPlanes(planes: readonly BrushPlane[]): BrushPlane[] {
-	return planes.map((plane) => ({ normal: copyVec(plane.normal), distance: plane.distance }));
+	return planes.map((plane) => ({
+		normal: copyVec(plane.normal),
+		distance: plane.distance,
+		...surfaceOf(plane),
+	}));
 }
 
 function copyKey(key: BrushElementKey): BrushElementKey {
@@ -229,6 +234,7 @@ export function moveFaces(
 	const next = planes.map((plane, index) => ({
 		normal: copyVec(plane.normal),
 		distance: moving.has(index) ? plane.distance + distance * length(plane.normal) : plane.distance,
+		...surfaceOf(plane),
 	}));
 	const compiled = compileBrush(next);
 	if (!compiled) return null;
@@ -249,7 +255,8 @@ export function moveFace(
 
 /**
  * A new brush swept from one face along its normal. A negative distance
- * sweeps into the source brush. Plane 0 faces the same way as the source face.
+ * sweeps into the source brush. Plane 0 faces the same way as the source face
+ * and takes its surface; the other faces are bare.
  */
 export function extrudeFace(
 	planes: readonly BrushPlane[],
@@ -268,7 +275,11 @@ export function extrudeFace(
 	const middle = centroid(ring);
 
 	const next: BrushPlane[] = [
-		{ normal: cleanVec(normal), distance: cleanNumber(offset + Math.max(0, distance)) },
+		{
+			normal: cleanVec(normal),
+			distance: cleanNumber(offset + Math.max(0, distance)),
+			...surfaceOf(source),
+		},
 		{
 			normal: cleanVec(scale(normal, -1)),
 			distance: cleanNumber(-(offset + Math.min(0, distance))),
@@ -287,7 +298,8 @@ export function extrudeFace(
 }
 
 /**
- * Move elements, each by its own delta, and rebuild the hull.
+ * Move elements, each by its own delta, and rebuild the hull. Surfaces follow
+ * the faces; see `carrySurfaces`.
  *
  * A corner shared by two moves takes the first one's delta. `null` when a key
  * is missing or a moved corner would end up inside or on the surface of the
@@ -332,7 +344,7 @@ export function moveElementsBy(
 		const found = findInTopology(rebuilt, move.key.kind, positions);
 		if (found) keys.push(found);
 	});
-	return { planes: hull, keys };
+	return { planes: carrySurfaces(planes, hull), keys };
 }
 
 /** Move elements together by one delta. */
@@ -379,7 +391,7 @@ export function rotateBrush(
 		const normal = cleanVec(rotateVec(plane.normal, unit, angle));
 		const onPlane = scale(plane.normal, plane.distance / dot(plane.normal, plane.normal));
 		const moved = add(pivot, rotateVec(sub(onPlane, pivot), unit, angle));
-		return { normal, distance: cleanNumber(dot(normal, moved)) };
+		return { normal, distance: cleanNumber(dot(normal, moved)), ...surfaceOf(plane) };
 	});
 	return compileBrush(next) ? next : null;
 }
@@ -406,6 +418,7 @@ export function scaleBrush(
 		return {
 			normal: cleanVec(scale(raw, 1 / magnitude)),
 			distance: cleanNumber(offset / magnitude),
+			...surfaceOf(plane),
 		};
 	});
 	return compileBrush(next) ? next : null;
@@ -423,7 +436,7 @@ function gridLines(lo: number, hi: number, tile: number): number[] {
  *
  * A face drops every corner of that face, an edge its two ends, a vertex
  * itself. `null` when an element is missing or the points left do not
- * enclose a volume.
+ * enclose a volume. Surfaces follow the faces that are left.
  */
 export function deleteBrushElements(
 	planes: readonly BrushPlane[],
@@ -439,7 +452,8 @@ export function deleteBrushElements(
 	}
 	if (drop.size === 0 || drop.size >= topology.vertices.length) return null;
 	const points = topology.vertices.filter((_, index) => !drop.has(index));
-	return brushFromPoints(points);
+	const hull = brushFromPoints(points);
+	return hull ? carrySurfaces(planes, hull) : null;
 }
 
 /**

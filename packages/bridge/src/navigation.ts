@@ -89,7 +89,10 @@ export function navigationSourceHash(document: LevelDocument): string {
 		settings: Object.keys(DEFAULT_NAVIGATION_SETTINGS).map(
 			(k) => nav.settings[k as keyof NavigationSettings]
 		),
-		solids: document.solids.filter((s) => !excluded.has(s.id)).map((s) => s.planes),
+		// A painted face bakes the same as a bare one, so its surface is left out.
+		solids: document.solids
+			.filter((s) => !excluded.has(s.id))
+			.map((s) => s.planes.map(({ surface: _surface, ...shape }) => shape)),
 		obstacles: nav.obstacles.map((o) => [o.min.x, o.min.y, o.min.z, o.max.x, o.max.y, o.max.z]),
 		links: nav.links.map((l) => [
 			l.start.x,
