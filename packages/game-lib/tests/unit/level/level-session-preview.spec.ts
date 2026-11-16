@@ -103,6 +103,20 @@ describe('level edit preview', () => {
 		session.dispose();
 	});
 
+	it('draws the sector grid for the level tools only', () => {
+		const scene = new Scene();
+		const session = new LevelSession(host(scene));
+		session.sync(payload([]));
+		expect(preview(scene).getObjectByName(SECTOR_OVERLAY_NAME)).toBeDefined();
+
+		session.sync({ ...payload([]), tools: false });
+		expect(preview(scene).getObjectByName(SECTOR_OVERLAY_NAME)).toBeUndefined();
+		// The level itself is still there to look at and to pick.
+		expect(preview(scene).children.filter((child) => child instanceof Mesh)).toHaveLength(1);
+
+		session.dispose();
+	});
+
 	it('drops the forced edit preview when the level plays or closes', () => {
 		const scene = new Scene();
 		const session = new LevelSession(host(scene));

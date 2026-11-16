@@ -1,6 +1,11 @@
 import { Mesh, Scene } from 'three';
 import { describe, expect, it } from 'vitest';
-import { boxBrush, type BrushSolid, type LevelDocument } from '@zylem/bridge';
+import {
+	boxBrush,
+	type BrushSolid,
+	type LevelDocument,
+	type LevelSyncPayload,
+} from '@zylem/bridge';
 import { buildPlaySectors } from '../../../src/lib/level/level-play';
 import { LevelSession, type LevelSessionHost } from '../../../src/lib/level/level-session';
 
@@ -98,6 +103,69 @@ describe('level play', () => {
 
 		expect(despawned).toEqual([{ body: 1 }, { body: 2 }]);
 		expect(spawned.map((hulls) => hulls.length)).toEqual([2, 1, 3]);
+		session.dispose();
+	});
+});
+
+describe('level preview bodies', () => {
+	function countingHost(scene: Scene, spawned: Float32Array[][], despawned: unknown[]): LevelSessionHost {
+		return {
+			getScene: () => scene,
+			cameraId: () => null,
+			viewDirection: () => ({ x: 0, y: -1, z: 0 }),
+			camera: () => null,
+			viewport: () => null,
+			physicsHit: () => null,
+			spawnZone: async () => null,
+			detach: () => {},
+			spawnHulls: (hulls) => {
+				spawned.push(hulls);
+				return { body: spawned.length };
+			},
+			despawnHulls: (handle) => {
+				despawned.push(handle);
+			},
+			publishGesture: () => {},
+			publishSelect: () => {},
+			publishNotice: () => {},
+		};
+	}
+
+	const SYNC: LevelSyncPayload = {
+		document: { version: 2, solids: SOLIDS, doodads: [], entities: [], sectors: { size: 32 } },
+		hiddenLayers: [],
+		selectedIds: [],
+		activeLayer: 'solid',
+		placement: null,
+	};
+
+	it('has no bodies while the level tools are on', () => {
+		const scene = new Scene();
+		const spawned: Float32Array[][] = [];
+		const session = new LevelSession(countingHost(scene, spawned, []));
+		session.sync(SYNC);
+
+		expect(spawned).toEqual([]);
+		session.dispose();
+	});
+
+	it('keeps the bodies under the brush preview while the tools are off', () => {
+		const scene = new Scene();
+		const spawned: Float32Array[][] = [];
+		const despawned: unknown[] = [];
+		const session = new LevelSession(countingHost(scene, spawned, despawned));
+		session.sync({ ...SYNC, tools: false });
+
+		expect(spawned.map((hulls) => hulls.length)).toEqual([2, 1]);
+		// The preview is the per-solid brushes, not the merged play meshes.
+		const root = scene.getObjectByName('level-preview');
+		const sectorMeshes = (root?.children ?? []).filter((child) => child.name.startsWith('level-sector:'));
+		expect(sectorMeshes).toEqual([]);
+
+		// Turning the tools on drops the bodies again.
+		session.sync(SYNC);
+		expect(despawned).toEqual([{ body: 1 }, { body: 2 }]);
+		expect(spawned).toHaveLength(2);
 		session.dispose();
 	});
 });

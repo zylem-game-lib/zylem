@@ -23,9 +23,11 @@ import {
   anchorFractions,
   anchoredPoint,
   placeOnViewport,
+  viewportRect,
   viewportSize,
   type ScreenAnchor,
   type ScreenPoint,
+  type ViewportRect,
   type ViewportSize,
 } from './screen-anchor';
 
@@ -254,6 +256,27 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
     this._sprite.scale.set(scaleX, scaleY, 1);
   }
 
+  /** Point of the text placed on its screen position, as 0..1 fractions of its box. */
+  private pivot(): ScreenPoint {
+    return this.options.screenAnchor
+      ? anchorFractions(this.options.screenAnchor)
+      : { x: 0.5, y: 0.5 };
+  }
+
+  /** Where the text is drawn on the viewport, or `null` while it is not pinned to it. */
+  getScreenRect(): ViewportRect | null {
+    if (!this.options.stickToViewport || !this._cameraRef || !this._canvas) {
+      return null;
+    }
+    const viewport = viewportSize(this._cameraRef);
+    return viewportRect(
+      this.screenPoint(viewport),
+      this.pivot(),
+      { width: this._canvas.width, height: this._canvas.height },
+      viewport,
+    );
+  }
+
   private updateStickyTransform() {
     if (!this._sprite || !this._cameraRef || !this._canvas) return;
     const viewport = viewportSize(this._cameraRef);
@@ -261,9 +284,7 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
       camera: this._cameraRef.camera as PerspectiveCamera | OrthographicCamera,
       viewport,
       point: this.screenPoint(viewport),
-      pivot: this.options.screenAnchor
-        ? anchorFractions(this.options.screenAnchor)
-        : { x: 0.5, y: 0.5 },
+      pivot: this.pivot(),
       size: { width: this._canvas.width, height: this._canvas.height },
       zDistance: this.options.zDistance ?? 1,
     });

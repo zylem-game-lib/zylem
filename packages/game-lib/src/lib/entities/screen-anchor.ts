@@ -110,6 +110,58 @@ export function viewPlaneHalfExtents(
   return { halfWidth: 1, halfHeight: 1 };
 }
 
+/** A box on the viewport, as 0..1 fractions of its size from the top-left. */
+export interface ViewportRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * The box {@link placeOnViewport} draws for the same `point`, `pivot`, and
+ * `size`, as fractions of the viewport. Fractions hold whether the canvas is
+ * shown at its render resolution or scaled.
+ */
+export function viewportRect(
+  point: ScreenPoint,
+  pivot: ScreenPoint,
+  size: ViewportSize,
+  viewport: ViewportSize,
+): ViewportRect {
+  return {
+    left: (point.x - pivot.x * size.width) / viewport.width,
+    top: (point.y - pivot.y * size.height) / viewport.height,
+    width: size.width / viewport.width,
+    height: size.height / viewport.height,
+  };
+}
+
+/**
+ * Implemented by entities that can be pinned to the viewport. The editor's
+ * Select tool tests the pointer against this box, since a HUD element has no
+ * collider for the physics raycast to find.
+ */
+export interface ScreenRectProvider {
+  /** Where the entity is drawn on screen, or `null` while it is not pinned to the viewport. */
+  getScreenRect(): ViewportRect | null;
+}
+
+export function hasScreenRect(obj: unknown): obj is ScreenRectProvider {
+  return (
+    Boolean(obj) &&
+    typeof (obj as ScreenRectProvider).getScreenRect === 'function'
+  );
+}
+
+/** Whether an entity is a HUD element: one built to be pinned to the viewport, with that turned on. */
+export function isHudEntity(entity: unknown): entity is ScreenRectProvider {
+  if (!hasScreenRect(entity)) return false;
+  const options = (entity as { options?: { stickToViewport?: boolean } })
+    .options;
+  return options?.stickToViewport === true;
+}
+
 export interface ViewportPlacementInput {
   camera: PerspectiveCamera | OrthographicCamera;
   viewport: ViewportSize;

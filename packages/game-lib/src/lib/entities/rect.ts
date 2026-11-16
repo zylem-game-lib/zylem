@@ -27,9 +27,11 @@ import {
   anchorFractions,
   anchoredPoint,
   placeOnViewport,
+  viewportRect,
   viewportSize,
   type ScreenAnchor,
   type ScreenPoint,
+  type ViewportRect,
   type ViewportSize,
 } from './screen-anchor';
 
@@ -367,6 +369,20 @@ export class ZylemRect extends GameEntity<ZylemRectOptions> {
     return this.options.screenAnchor
       ? anchorFractions(this.options.screenAnchor)
       : { x: 0, y: 0 };
+  }
+
+  /** Where the rect is drawn on the viewport, or `null` while it is not pinned to it. */
+  getScreenRect(): ViewportRect | null {
+    if (!this.options.stickToViewport || !this._cameraRef || !this._canvas) {
+      return null;
+    }
+    const viewport = viewportSize(this._cameraRef);
+    return viewportRect(
+      this.screenPoint(viewport),
+      this.pivot(),
+      { width: this._canvas.width, height: this._canvas.height },
+      viewport,
+    );
   }
 
   private updateStickyTransform() {

@@ -62,6 +62,10 @@ import {
 import { StageSwatchApplier, type SwatchApplyOutcome } from './stage-swatch-applier';
 import { StageMarqueeSelect } from './stage-marquee-select';
 import { SelectionHighlight } from './selection-highlight';
+import { HudOutline, type HudMark } from './hud-outline';
+import { hudRectOf, pickHud } from './hud-pick';
+import { chooseSelectTarget, type SelectTarget } from './select-target';
+import { isHudEntity } from '../entities/screen-anchor';
 import type { GizmoRay } from '../debug/transform-gizmo';
 import type { GameEntity } from '../entities/entity';
 import type { BaseNode } from '../core/base-node';
@@ -76,6 +80,9 @@ export interface StageDebugDelegateOptions {
 
 const SELECT_TOOL_COLOR = 0x22ff22;
 const DELETE_TOOL_COLOR = 0xff3333;
+/** The hover and selection colors again, for the HUD outlines drawn in the DOM. */
+const HUD_HOVER_COLOR = '#22ff22';
+const HUD_SELECTED_COLOR = '#ffd23f';
 
 const _placementBounds = new Box3();
 const _boundsSize = new Vector3();
@@ -106,6 +113,7 @@ export class StageDebugDelegate {
 	private swatchApplier: StageSwatchApplier;
 	private marquee: StageMarqueeSelect;
 	private selectionHighlight: SelectionHighlight | null = null;
+	private hudOutline = new HudOutline();
 	private selectionBoundsPool: Box3[] = [];
 	private hoverBounds = new Box3();
 	private grid = new ConstructionGrid();
@@ -323,13 +331,18 @@ export class StageDebugDelegate {
 	 * `debugMap` is consulted too so anything only registered there (the same
 	 * set the single pick resolves through) is not skipped. Whether an entity
 	 * has a selectable volume is the marquee's call, via its selection bounds.
+	 * HUD elements are left out: the marquee casts a frustum through the
+	 * world, and they sit on the lens. So are the level's trigger zones, which
+	 * the editor spawned and never lists.
 	 */
 	private forEachSelectableEntity(visit: (uuid: string, entity: GameEntity<any>) => void): void {
 		const seen = new Set<string>();
 		const visitEntry = (node: BaseNode, uuid: string) => {
 			if (seen.has(uuid)) return;
 			seen.add(uuid);
-			visit(uuid, node as GameEntity<any>);
+			const entity = node as GameEntity<any>;
+			if (isHudEntity(entity) || entity.options?.editorOwned) return;
+			visit(uuid, entity);
 		};
 		this.stage.entityDelegate.childrenMap.forEach(visitEntry);
 		this.stage.entityDelegate.debugMap.forEach(visitEntry);
@@ -397,10 +410,10 @@ export class StageDebugDelegate {
 		this.syncTransformTool();
 	}
 
-	/** The entity gizmo stands down while a level is edited; the level session runs its own. */
+	/** The entity gizmo stands down while the level holds the selection; the level session runs its own. */
 	private syncTransformTool(): void {
 		const tool = debugState.tool;
-		const entityGizmo = isTransformTool(tool) && !this.levelSession.isEditing;
+		const entityGizmo = isTransformTool(tool) && !this.levelSession.holdsGizmo;
 		this.transformTool.setMode(entityGizmo ? (tool as TransformTool) : null);
 	}
 
@@ -502,11 +515,88 @@ export class StageDebugDelegate {
 		const boxes: Box3[] = [];
 		for (const uuid of uuids) {
 			const entity = this.resolveEntity(uuid);
+			// Outlined on screen instead; see `updateHudOutline`.
+			if (isHudEntity(entity)) continue;
 			const scratch = this.selectionBoundsPool[boxes.length] ??= new Box3();
 			const bounds = resolveSelectionBounds(entity, scratch);
 			if (bounds) boxes.push(bounds);
 		}
 		highlight.update(boxes);
+	}
+
+	/**
+	 * Outline the selected HUD elements and the hovered one, on screen.
+	 *
+	 * Only those pinned to the rendering camera have a box to outline. Under
+	 * an editor camera the HUD is not on the lens, so nothing is drawn.
+	 */
+	private updateHudOutline(): void {
+		const canvas = this.stage.rendererManager?.getDomElement();
+		const camera = this.getDebugViewCamera()?.camera;
+		if (!canvas || !camera) {
+			this.hudOutline.hide();
+			return;
+		}
+		const marks: HudMark[] = [];
+		for (const uuid of debugState.selectedEntityIds) {
+			const rect = hudRectOf(this.resolveEntity(uuid), camera);
+			if (rect) marks.push({ rect, color: HUD_SELECTED_COLOR });
+		}
+		// Only Select hovers HUD elements; another tool leaves the last hover behind.
+		const hovered = getDebugTool() === 'select' ? debugState.hoveredEntityId : null;
+		if (hovered && !debugState.selectedEntityIds.includes(hovered)) {
+			const rect = hudRectOf(this.resolveEntity(hovered), camera);
+			if (rect) marks.push({ rect, color: HUD_HOVER_COLOR });
+		}
+		this.hudOutline.show(canvas, marks);
+	}
+
+	/** The HUD element on top under the pointer, while the HUD's camera is the one rendering. */
+	private hudAtPointer(): string | null {
+		const camera = this.getDebugViewCamera()?.camera;
+		if (!camera) return null;
+		return pickHud(this.stage.entityDelegate.childrenMap, camera, this.mouseNdc);
+	}
+
+	/**
+	 * A raycast hit as something Select may pick. The level's own trigger
+	 * zones are entities the editor spawned and never lists; a click on one
+	 * belongs to the level, which picks the marker it stands for.
+	 */
+	private selectableUuid(uuid: string | null | undefined): string | null {
+		if (!uuid) return null;
+		const entity = this.resolveEntity(uuid);
+		return entity && !entity.options?.editorOwned ? uuid : null;
+	}
+
+	/** The entity the physics raycast finds first along `ray`. */
+	private entityHit(ray: GizmoRay): { uuid: string; distance: number } | null {
+		const hit = this.stage.world?.raycast(ray.origin, ray.direction, this.options.maxRayDistance);
+		const uuid = this.selectableUuid(hit?.uuid);
+		return hit && uuid ? { uuid, distance: hit.distance } : null;
+	}
+
+	/**
+	 * What a Select click at the pointer would pick, the same in every mode:
+	 * the HUD element on top, else whichever of the level and an entity is
+	 * nearer along the ray.
+	 */
+	private selectTarget(ray: GizmoRay): SelectTarget | null {
+		return chooseSelectTarget({
+			hud: this.hudAtPointer(),
+			entity: this.entityHit(ray),
+			level: this.levelSession.selectDistance(ray),
+		});
+	}
+
+	/**
+	 * How far along `ray` the level session may hover for Select: up to
+	 * whatever a click would pick ahead of the level.
+	 */
+	private levelHoverLimit(ray: GizmoRay): number {
+		if (getDebugTool() !== 'select') return Infinity;
+		if (this.hudAtPointer()) return 0;
+		return this.entityHit(ray)?.distance ?? Infinity;
 	}
 
 	/**
@@ -524,7 +614,10 @@ export class StageDebugDelegate {
 		}
 		// With nothing armed and debug off, `update()` stops running and the
 		// outlines would otherwise stay frozen over a game being played.
-		if (tool === 'none' && !debugState.enabled) this.selectionHighlight?.hide();
+		if (tool === 'none' && !debugState.enabled) {
+			this.selectionHighlight?.hide();
+			this.hudOutline.hide();
+		}
 	}
 
 	private disposeToolVisuals(): void {
@@ -570,10 +663,19 @@ export class StageDebugDelegate {
 			if (!this.transformTool.isDragging) {
 				this.transformTool.hover(this.currentRay());
 			}
+			this.updateHudOutline();
 			return;
 		}
 		this.transformTool.update();
+		this.updateHover(tool, world);
+		this.updateHudOutline();
+	}
 
+	/** Find what is under the pointer for the hover tools and paint the cursor highlight on it. */
+	private updateHover(
+		tool: ReturnType<typeof getDebugTool>,
+		world: NonNullable<ZylemStage['world']>,
+	): void {
 		// Hover tools paint the cursor highlight. The add tool has its ghost
 		// instead, and a highlight box around whatever is under the cursor would
 		// only compete with it.
@@ -585,15 +687,26 @@ export class StageDebugDelegate {
 		}
 
 		const ray = this.currentRay();
-		const hit = world.raycast(ray.origin, ray.direction, this.options.maxRayDistance);
-		if (hit) {
-			setHoveredEntityId(hit.uuid ?? null);
+		// Select hovers what its click would pick. Delete and host picking stay
+		// on the physics raycast.
+		let onHud = false;
+		if (tool === 'select' && !debugState.pickMode) {
+			const target = this.selectTarget(ray);
+			onHud = target?.kind === 'hud';
+			if (target && target.kind !== 'level') setHoveredEntityId(target.uuid);
+			else resetHoveredEntity();
 		} else {
-			resetHoveredEntity();
+			const hit = world.raycast(ray.origin, ray.direction, this.options.maxRayDistance);
+			if (hit) {
+				setHoveredEntityId(hit.uuid ?? null);
+			} else {
+				resetHoveredEntity();
+			}
 		}
 
 		const hoveredUuid = getHoveredEntityId();
-		if (!hoveredUuid) {
+		// A HUD element is outlined on screen; see `updateHudOutline`.
+		if (!hoveredUuid || onHud) {
 			this.debugCursor?.hide();
 			return;
 		}
@@ -768,6 +881,7 @@ export class StageDebugDelegate {
 		this.debugStateUnsubscribe = null;
 		this.endPointerCapture();
 		this.levelSession.dispose();
+		this.hudOutline.dispose();
 		this.marquee.dispose();
 		this.transformTool.dispose();
 		this.swatchApplier.dispose();
@@ -844,24 +958,7 @@ export class StageDebugDelegate {
 
 		switch (tool) {
 			case 'select': {
-				const uuid = hit?.uuid ?? null;
-				const resolved = uuid && this.resolveEntity(uuid) ? uuid : null;
-				if (modifiers.altKey) {
-					// Alt-click drops one entity from the selection; on empty
-					// space it leaves the selection alone.
-					if (resolved) removeSelectedEntityIds([resolved]);
-				} else if (modifiers.shiftKey) {
-					// Shift-click toggles membership, the click counterpart of a
-					// shift-drag. Empty space is a no-op so a slipped shift-click
-					// cannot throw away a selection being built.
-					if (resolved) toggleSelectedEntityId(resolved);
-				} else if (resolved) {
-					setSelectedEntityId(resolved);
-				} else {
-					// Clicking empty space clears, which is what makes the gizmo
-					// dismissable without another tool.
-					setSelectedEntityId(null);
-				}
+				this.selectByClick(this.selectableUuid(hit?.uuid), modifiers);
 				break;
 			}
 			case 'delete': {
@@ -880,6 +977,35 @@ export class StageDebugDelegate {
 			case 'add':
 				this.placeEntity(ray, hit);
 				break;
+		}
+	}
+
+	/**
+	 * Apply a Select click on an entity, or on nothing, to the selection.
+	 *
+	 * @param resolved The entity clicked, or `null` for empty space.
+	 */
+	private selectByClick(
+		resolved: string | null,
+		modifiers: { shiftKey: boolean; altKey: boolean },
+	): void {
+		if (modifiers.altKey) {
+			// Alt-click drops one entity from the selection; on empty
+			// space it leaves the selection alone.
+			if (resolved) removeSelectedEntityIds([resolved]);
+		} else if (modifiers.shiftKey) {
+			// Shift-click toggles membership, the click counterpart of a
+			// shift-drag. Empty space is a no-op so a slipped shift-click
+			// cannot throw away a selection being built.
+			if (resolved) toggleSelectedEntityId(resolved);
+		} else if (resolved) {
+			setSelectedEntityId(resolved);
+		} else {
+			// Clicking empty space clears, which is what makes the gizmo
+			// dismissable without another tool. The level selection goes with
+			// it: the click was offered to the level first and missed.
+			setSelectedEntityId(null);
+			this.levelSession.selectNothing();
 		}
 	}
 
@@ -1001,7 +1127,8 @@ export class StageDebugDelegate {
 				this.levelSession.pointerMove(this.currentRay(), e);
 				return;
 			}
-			this.levelSession.pointerHover(this.currentRay());
+			const hoverRay = this.currentRay();
+			this.levelSession.pointerHover(hoverRay, this.levelHoverLimit(hoverRay));
 			if (this.marquee.isArmed) {
 				this.marquee.pointerMove(this.mouseNdc, e);
 				return;
@@ -1024,6 +1151,34 @@ export class StageDebugDelegate {
 				return;
 			}
 
+			// The entity gizmo is only up while the level holds no selection, so
+			// a press on one of its handles is never the level's.
+			if (this.transformTool.pointerDown(ray)) {
+				this.beginPointerCapture(canvas, e.pointerId);
+				return;
+			}
+
+			if (getDebugTool() === 'select') {
+				const target = this.selectTarget(ray);
+				if (target?.kind === 'hud') {
+					// Picked on the press. Stopped here so the camera does not
+					// orbit off a press that landed on the HUD.
+					e.preventDefault();
+					e.stopImmediatePropagation();
+					this.selectByClick(target.uuid, e);
+					return;
+				}
+				if (target?.kind !== 'level') {
+					// The press is not resolved until release: a drag becomes a
+					// marquee, anything shorter is the ordinary single pick. Orbit is
+					// suspended for the whole press, since the first few pixels of a
+					// marquee would otherwise also swing the camera.
+					this.marquee.pointerDown(this.mouseNdc, e, canvas);
+					this.beginPointerCapture(canvas, e.pointerId);
+					return;
+				}
+			}
+
 			if (this.levelSession.pointerDown(ray, e)) {
 				// Capture phase, and stopped here, so OrbitControls never starts
 				// a drag on the same press. Otherwise the camera swings instead
@@ -1031,21 +1186,6 @@ export class StageDebugDelegate {
 				e.preventDefault();
 				e.stopImmediatePropagation();
 				this.levelPointer = true;
-				this.beginPointerCapture(canvas, e.pointerId);
-				return;
-			}
-
-			if (this.transformTool.pointerDown(ray)) {
-				this.beginPointerCapture(canvas, e.pointerId);
-				return;
-			}
-
-			if (getDebugTool() === 'select') {
-				// The press is not resolved until release: a drag becomes a
-				// marquee, anything shorter is the ordinary single pick. Orbit is
-				// suspended for the whole press, since the first few pixels of a
-				// marquee would otherwise also swing the camera.
-				this.marquee.pointerDown(this.mouseNdc, e, canvas);
 				this.beginPointerCapture(canvas, e.pointerId);
 				return;
 			}

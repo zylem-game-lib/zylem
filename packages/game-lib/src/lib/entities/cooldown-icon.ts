@@ -40,8 +40,12 @@ import { deepMergeValues } from '../core/clone-utils';
 import {
   anchoredPoint,
   placeOnViewport,
+  viewportRect,
   viewportSize,
   type ScreenAnchor,
+  type ScreenPoint,
+  type ViewportRect,
+  type ViewportSize,
 } from './screen-anchor';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,6 +67,9 @@ const ICON_SIZE_PRESETS = {
   lg: 48,
   xl: 64,
 } as const;
+
+/** The icon is placed by its centre. */
+const ICON_PIVOT = { x: 0.5, y: 0.5 } as const;
 
 /** Named size preset. */
 export type IconSizePreset = keyof typeof ICON_SIZE_PRESETS;
@@ -327,22 +334,42 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
     return { widthPx: w * pxPerUnit, heightPx: h * pxPerUnit };
   }
 
-  private updateStickyTransform(): void {
-    if (!this._sprite || !this._cameraRef) return;
-    const viewport = viewportSize(this._cameraRef);
+  /** The icon's centre on screen and its size, in pixels. */
+  private screenBox(viewport: ViewportSize): {
+    point: ScreenPoint;
+    size: ViewportSize;
+  } {
     const pxPerUnit = viewport.height / VIEW_UNITS_HEIGHT;
     const offset = normalizeVec2(this.options.screenPosition, VEC2_ZERO);
     const { widthPx, heightPx } = this.resolveIconSize(viewport.height);
-    const placement = placeOnViewport({
-      camera: this._cameraRef.camera as PerspectiveCamera | OrthographicCamera,
-      viewport,
+    return {
       point: anchoredPoint(
         this.options.screenAnchor ?? 'top-left',
         { x: offset.x * pxPerUnit, y: offset.y * pxPerUnit },
         viewport,
       ),
-      pivot: { x: 0.5, y: 0.5 },
       size: { width: widthPx, height: heightPx },
+    };
+  }
+
+  /** Where the icon is drawn on the viewport, or `null` while it is not pinned to it. */
+  getScreenRect(): ViewportRect | null {
+    if (!this.options.stickToViewport || !this._cameraRef) return null;
+    const viewport = viewportSize(this._cameraRef);
+    const { point, size } = this.screenBox(viewport);
+    return viewportRect(point, ICON_PIVOT, size, viewport);
+  }
+
+  private updateStickyTransform(): void {
+    if (!this._sprite || !this._cameraRef) return;
+    const viewport = viewportSize(this._cameraRef);
+    const { point, size } = this.screenBox(viewport);
+    const placement = placeOnViewport({
+      camera: this._cameraRef.camera as PerspectiveCamera | OrthographicCamera,
+      viewport,
+      point,
+      pivot: ICON_PIVOT,
+      size,
       zDistance: this.options.zDistance ?? 1,
     });
     this._sprite.scale.set(placement.scale.x, placement.scale.y, 1);

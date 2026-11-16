@@ -4,9 +4,11 @@
  * The editor owns the file. This session draws it, routes level pointer
  * gestures to the tools, reports what they finish, and on play swaps the
  * brush faces for one merged mesh and one static body of convex hulls per
- * sector. Nothing it creates is a normal stage entity except play-mode
- * trigger zones, and those are marked editor-owned so they are not published
- * back.
+ * sector. A preview synced with its tools off keeps those bodies and the
+ * trigger zones under the brush faces, so a game running outside the level
+ * modes still stands on the level. Nothing it creates is a normal stage
+ * entity except the trigger zones, and those are marked editor-owned so they
+ * are not published back.
  */
 
 import {
@@ -302,6 +304,8 @@ export class LevelSession {
 	private held: Held | null = null;
 	private lastClick: ClickStamp | null = null;
 	private hoverRay: GizmoRay | null = null;
+	/** How far along {@link hoverRay} Select may hover; see {@link pointerHover}. */
+	private hoverLimit = Infinity;
 	private hoverKey: string | null = null;
 	/** One static body per sector while playing. */
 	private bodyHandles: unknown[] = [];
@@ -335,6 +339,53 @@ export class LevelSession {
 	/** Edit preview, not play. The construction grid stays up for this stretch. */
 	get isEditing(): boolean {
 		return this.payload !== null && this.mode === 'edit';
+	}
+
+	/**
+	 * Whether the level tools take the pointer. Off, the preview is shown and
+	 * Select can pick it, and every other tool leaves the press to the stage.
+	 */
+	get toolsEnabled(): boolean {
+		return this.payload?.tools !== false;
+	}
+
+	/** Objects or elements of the edit preview are selected. */
+	get hasSelection(): boolean {
+		const payload = this.payload;
+		if (!payload || !this.isEditing) return false;
+		return payload.selectedIds.length > 0 || (payload.elements?.length ?? 0) > 0;
+	}
+
+	/** The transform tools act on the level selection, so the entity gizmo stands down. */
+	get holdsGizmo(): boolean {
+		return this.toolsEnabled && this.hasSelection;
+	}
+
+	/**
+	 * How far along `ray` a Select press would land on the level, or `null`
+	 * where it would miss. The stage compares this with its own hits, so the
+	 * nearest thing under the pointer is the one picked.
+	 */
+	selectDistance(ray: GizmoRay): number | null {
+		if (!this.isEditing) return null;
+		const mode = this.elementMode();
+		if (mode !== 'object') {
+			const element = this.picker.element(ray, mode);
+			if (element) {
+				return Math.hypot(
+					element.point.x - ray.origin.x,
+					element.point.y - ray.origin.y,
+					element.point.z - ray.origin.z,
+				);
+			}
+		}
+		return this.picker.objectHit(ray)?.distance ?? null;
+	}
+
+	/** Drop the level selection, as a Select click on empty space does. */
+	selectNothing(): void {
+		if (!this.hasSelection) return;
+		this.host.publishSelect(selectPayload(null, undefined, false, false));
 	}
 
 	/** A draw, clip points, or a drag under way. Escape cancels it. */
@@ -372,6 +423,8 @@ export class LevelSession {
 		setActiveDocument(payload.document);
 		const dragging = this.held?.kind === 'drag' || this.held?.kind === 'gizmo';
 		if (dragging && this.elementMode() !== previousMode) this.cancelHeld();
+		// A draw or a clip belongs to the tools that were just turned off.
+		if (!this.toolsEnabled) this.cancelGesture();
 		this.rebuild();
 	}
 
@@ -423,6 +476,7 @@ export class LevelSession {
 	 */
 	pointerDown(ray: GizmoRay, input: LevelPointerInput = {}): boolean {
 		if (!this.isEditing) return false;
+		if (!this.toolsEnabled && getDebugTool() !== 'select') return false;
 		this.cancelHeld();
 		if (this.preview.value && !this.clipTool.active) this.preview.show(null);
 
@@ -449,6 +503,8 @@ export class LevelSession {
 				this.pressDelete(ray);
 				return true;
 			case 'add':
+				// Nothing of the level is armed, so the click is the stage's to place.
+				if (!this.payload?.placement) return false;
 				this.placeArmed(ray);
 				this.held = { kind: 'press' };
 				return true;
@@ -485,14 +541,25 @@ export class LevelSession {
 	/**
 	 * Follow the pointer between presses: the height step, the clip preview,
 	 * the gizmo handles, and the hover highlight.
+	 *
+	 * @param selectLimit How far along the ray Select may hover. The stage
+	 * passes the distance to whatever a Select click would pick ahead of the
+	 * level, so the highlight never promises a pick the click will not make.
 	 */
-	pointerHover(ray: GizmoRay): void {
+	pointerHover(ray: GizmoRay, selectLimit = Infinity): void {
 		if (!this.isEditing) {
 			this.setHover(null);
 			return;
 		}
 		if (this.held) return;
 		this.hoverRay = { origin: ray.origin.clone(), direction: ray.direction.clone() };
+		this.hoverLimit = selectLimit;
+
+		if (!this.toolsEnabled && getDebugTool() !== 'select') {
+			this.guideSlot.clear();
+			this.setHover(null);
+			return;
+		}
 
 		if (this.drawTool.phase === 'height') {
 			this.drawTool.raise(toDrawRay(ray));
@@ -517,6 +584,13 @@ export class LevelSession {
 		if (isTransformTool(tool) && this.gizmo.hover(ray)) {
 			this.setHover(null);
 			return;
+		}
+		if (tool === 'select' && selectLimit < Infinity) {
+			const distance = this.selectDistance(ray);
+			if (distance === null || distance > selectLimit) {
+				this.setHover(null);
+				return;
+			}
 		}
 		if (tool === 'select' || tool === 'delete' || isTransformTool(tool)) {
 			this.hoverIn(ray, this.elementMode());
@@ -872,7 +946,8 @@ export class LevelSession {
 
 	private syncGizmo(): void {
 		const tool = getDebugTool();
-		this.gizmo.place(this.isEditing && isTransformTool(tool) ? tool : null, this.gizmoPivot);
+		const shown = this.isEditing && this.toolsEnabled && isTransformTool(tool);
+		this.gizmo.place(shown ? tool : null, this.gizmoPivot);
 		if (!this.gizmo.visible) return;
 		const camera = this.host.camera();
 		if (camera) this.gizmo.update(camera);
@@ -901,9 +976,12 @@ export class LevelSession {
 		this.root.updateMatrixWorld(true);
 		this.gizmoPivot = this.isEditing ? selectionPivot(payload, this.solids, this.objects) : null;
 		this.refreshTools();
-		if (this.mode !== 'play') return;
+		// With the tools off the level is scenery to a running game, so it
+		// keeps the collision and triggers it plays with. Only the tools'
+		// own preview goes without them.
+		if (this.mode !== 'play' && this.toolsEnabled) return;
 
-		this.spawnSectors(payload.document);
+		this.spawnSectors(payload.document, this.mode === 'play');
 		void this.spawnZones(payload.document, generation).catch((error: unknown) => {
 			console.error('Level triggers failed to spawn', error);
 		});
@@ -921,15 +999,25 @@ export class LevelSession {
 		this.setHover(null);
 		if (this.drawTool.phase !== 'idle') this.showDraw();
 		else if (this.clipTool.active) this.showClip(this.clipCursor);
-		else if (this.hoverRay && !this.held) this.pointerHover(this.hoverRay);
+		else if (this.hoverRay && !this.held) this.pointerHover(this.hoverRay, this.hoverLimit);
 		this.syncGizmo();
 	}
 
-	private spawnSectors(document: LevelDocument): void {
+	/**
+	 * One static body per sector.
+	 *
+	 * @param meshes Draw each sector as one merged mesh. Off under the edit
+	 * preview, which already draws every solid.
+	 */
+	private spawnSectors(document: LevelDocument, meshes: boolean): void {
 		for (const sector of buildPlaySectors(document.solids, sectorSizeOf(document))) {
-			const mesh = new Mesh(sector.geometry, brushMaterial(false));
-			mesh.name = `level-sector:${sector.key}`;
-			this.root.add(mesh);
+			if (meshes) {
+				const mesh = new Mesh(sector.geometry, brushMaterial(false));
+				mesh.name = `level-sector:${sector.key}`;
+				this.root.add(mesh);
+			} else {
+				sector.geometry.dispose();
+			}
 			if (sector.hulls.length === 0) continue;
 			const body = this.host.spawnHulls(sector.hulls);
 			if (body !== null) this.bodyHandles.push(body);
@@ -962,7 +1050,8 @@ export class LevelSession {
 			}
 		}
 
-		if (editing) {
+		// The sector grid is a guide for the level tools, not part of the level.
+		if (editing && this.toolsEnabled) {
 			const overlay = buildSectorOverlay(payload);
 			if (overlay) this.root.add(overlay);
 		}

@@ -33,6 +33,7 @@ import {
 } from '../bridge/game-bridge';
 import { normalizeVec3, VEC3_ZERO, type Vec3Input } from '../core/vector';
 import type { GameEntity } from '../entities/entity';
+import { isHudEntity } from '../entities/screen-anchor';
 import {
 	buildCatalogDescriptors,
 	getEntityType,
@@ -755,6 +756,7 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 			quaternion,
 			thumbnail: thumb?.dataUrl ?? null,
 			bounds: thumb?.bounds,
+			hud: isHudEntity(child) || undefined,
 		};
 	}
 

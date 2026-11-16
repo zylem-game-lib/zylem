@@ -280,6 +280,110 @@ describe('level select clicks', () => {
 	});
 });
 
+describe('level preview with the tools off', () => {
+	const off = (overrides: Partial<LevelSyncPayload> = {}) => payload({ tools: false, ...overrides });
+
+	it('lets Select pick the level', () => {
+		const { session, selects, click } = rig();
+		session.sync(off());
+		arm('select');
+
+		expect(click({ x: 0.2, y: 1, z: 0.3 }, { timeStamp: 0 })).toBe(true);
+		expect(selects).toEqual([{ id: 'box' }]);
+	});
+
+	it.each<DebugTools>(['translate', 'rotate', 'scale', 'delete', 'brush', 'clip', 'shear', 'add'])(
+		'leaves a %s press on the level to the stage',
+		(tool) => {
+			const { session, selects, gestures, click } = rig();
+			session.sync(off({ selectedIds: ['box'], placement: { kind: 'doodad', model: 'crate' } as never }));
+			session.tick();
+			arm(tool);
+
+			expect(click({ x: 0.2, y: 1, z: 0.3 })).toBe(false);
+			expect(selects).toEqual([]);
+			expect(gestures).toEqual([]);
+		},
+	);
+
+	it('hovers for Select only', () => {
+		const { scene, session, rayAt } = rig();
+		session.sync(off());
+		const idle = toolsGroup(scene).children.length;
+
+		arm('delete');
+		session.pointerHover(rayAt({ x: 0.2, y: 1, z: 0.3 }));
+		expect(toolsGroup(scene).children.length).toBe(idle);
+
+		arm('select');
+		session.pointerHover(rayAt({ x: 0.2, y: 1, z: 0.3 }));
+		expect(toolsGroup(scene).children.length).toBe(idle + 1);
+	});
+
+	it('shows no gizmo and does not hold the transform tools', () => {
+		const { session } = rig();
+		arm('translate');
+		session.sync(off({ selectedIds: ['box'] }));
+		session.tick();
+		expect(session.holdsGizmo).toBe(false);
+
+		session.sync(payload({ selectedIds: ['box'] }));
+		expect(session.holdsGizmo).toBe(true);
+		session.sync(payload());
+		expect(session.holdsGizmo).toBe(false);
+	});
+});
+
+describe('level select arbitration', () => {
+	it('reports how far along the ray Select would land', () => {
+		const { session, rayAt } = rig();
+		session.sync(payload());
+
+		// The Top camera is 100 up and the box top is at 1.
+		expect(session.selectDistance(rayAt({ x: 0.2, y: 1, z: 0.3 }))).toBeCloseTo(99, 6);
+		expect(session.selectDistance(rayAt({ x: 5, y: 0, z: 5 }))).toBeNull();
+	});
+
+	it('reports nothing while the level plays', () => {
+		const { session, rayAt } = rig();
+		session.play(levelDocument());
+		expect(session.selectDistance(rayAt({ x: 0.2, y: 1, z: 0.3 }))).toBeNull();
+	});
+
+	it('does not hover the level behind something nearer', () => {
+		const { scene, session, rayAt } = rig();
+		session.sync(payload());
+		arm('select');
+		const idle = toolsGroup(scene).children.length;
+		const ray = rayAt({ x: 0.2, y: 1, z: 0.3 });
+
+		session.pointerHover(ray, 50);
+		expect(toolsGroup(scene).children.length).toBe(idle);
+		session.pointerHover(ray, 150);
+		expect(toolsGroup(scene).children.length).toBe(idle + 1);
+	});
+
+	it('clears the level selection on request, and only when there is one', () => {
+		const { session, selects } = rig();
+		session.sync(payload());
+		session.selectNothing();
+		expect(selects).toEqual([]);
+
+		session.sync(payload({ selectedIds: ['box'] }));
+		session.selectNothing();
+		expect(selects).toEqual([{ id: null }]);
+	});
+
+	it('leaves an Add press to the stage when nothing of the level is armed', () => {
+		const { session, gestures, click } = rig();
+		session.sync(payload());
+		arm('add');
+
+		expect(click({ x: 0.2, y: 1, z: 0.3 })).toBe(false);
+		expect(gestures).toEqual([]);
+	});
+});
+
 describe('level drawing', () => {
 	it('draws a box: footprint on the ground, a height, then a click', () => {
 		const { session, gestures, drag, click, rayAt } = rig();
