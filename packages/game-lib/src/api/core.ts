@@ -46,6 +46,10 @@ export { streamLevelOnStage } from '../lib/level/stream-level-stage';
 export { getActiveLevelDocument } from '../lib/level/level-session';
 /** @public */
 export type { LevelDocument } from '@zylem/bridge';
+/** @public Brush helpers for authoring a level document's solids in code. */
+export { boxBrush, frameForPlane, wedgeBrush } from '@zylem/bridge';
+/** @public */
+export type { BrushPlane, BrushSolid } from '@zylem/bridge';
 /** @public */
 export type { StreamLevelOptions, StreamLevelResult } from '../lib/level/stream-level';
 /** @public */
