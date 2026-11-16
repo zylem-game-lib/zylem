@@ -103,6 +103,8 @@ export interface EntitySummaryPayload {
 	thumbnail?: string | null;
 	/** World-space AABB size used for thumbnail rulers. */
 	bounds?: { width: number; height: number; depth: number };
+	/** Pinned to the viewport (text, rect, cooldown icon) rather than placed in the world. */
+	hud?: boolean;
 }
 
 /** Full stage snapshot: config plus the complete entity list. */
@@ -507,6 +509,12 @@ export interface LevelSyncPayload {
 	placement: LevelPlacementArm | null;
 	/** The armed primitive while the brush tool is on. */
 	drawShape?: LevelDrawShape | null;
+	/**
+	 * Whether the level tools take the pointer. Absent means on. Off shows the
+	 * preview and lets Select pick it; every other tool leaves the press to
+	 * the stage.
+	 */
+	tools?: boolean;
 }
 
 /**
