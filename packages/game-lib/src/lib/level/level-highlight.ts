@@ -37,6 +37,7 @@ import {
 } from '@zylem/bridge';
 import type { DrawState } from './level-draw-tool';
 import { brushGeometry } from './level-geometry';
+import { SHARED_MATERIAL } from './level-textures';
 
 export const HOVER_COLOR = 0x66ccff;
 export const SELECTION_COLOR = 0xffb020;
@@ -63,12 +64,11 @@ function devicePixels(size: number): number {
 	return size * ratio;
 }
 
+/** Dispose a mesh's materials. The level's shared ones belong to their cache and are left. */
 export function disposeMaterial(material: Material | Material[]): void {
-	if (!Array.isArray(material)) {
-		material.dispose();
-		return;
+	for (const entry of Array.isArray(material) ? material : [material]) {
+		if (!entry.userData[SHARED_MATERIAL]) entry.dispose();
 	}
-	for (const entry of material) entry.dispose();
 }
 
 export function disposeObject(object: Object3D): void {

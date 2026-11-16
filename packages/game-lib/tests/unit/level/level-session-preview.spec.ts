@@ -1,6 +1,12 @@
 import { Line, Mesh, MeshStandardMaterial, Scene, type Object3D } from 'three';
 import { describe, expect, it } from 'vitest';
-import { boxBrush, type LevelDocument, type LevelSyncPayload } from '@zylem/bridge';
+import {
+	boxBrush,
+	createSurface,
+	type LevelDocument,
+	type LevelSyncPayload,
+} from '@zylem/bridge';
+import { geometryTextures } from '../../../src/lib/level/level-geometry';
 import { LevelSession, type LevelSessionHost } from '../../../src/lib/level/level-session';
 import { SECTOR_OVERLAY_NAME } from '../../../src/lib/level/level-sectors';
 
@@ -99,6 +105,30 @@ describe('level edit preview', () => {
 			.map((line) => ((line as Line).material as MeshStandardMaterial).color.getHex())
 			.sort((a, b) => a - b);
 		expect(colors).toEqual([0x3388ff, 0x33cc66, 0xff3333]);
+
+		session.dispose();
+	});
+
+	it('draws a painted face with its texture, in the preview and in play', () => {
+		const scene = new Scene();
+		const session = new LevelSession(host(scene));
+		const level = document();
+		// Planes: +X, -X, +Y, -Y, +Z, -Z.
+		level.solids[0]!.planes[2]!.surface = createSurface('builtin:brick');
+		const brushMeshes = () =>
+			preview(scene).children.filter((child): child is Mesh => child instanceof Mesh);
+
+		session.sync({ ...payload([]), document: level });
+		for (const draw of [() => {}, () => session.play(level)]) {
+			draw();
+			const [mesh] = brushMeshes();
+			expect(geometryTextures(mesh!.geometry)).toEqual([null, 'builtin:brick']);
+			const [bare, brick] = mesh!.material as MeshStandardMaterial[];
+			expect(bare!.map).toBeNull();
+			expect(bare!.color.getHex()).toBe(DEFAULT_BRUSH_COLOR);
+			expect(brick!.map).not.toBeNull();
+			expect(brick!.color.getHex()).toBe(0xffffff);
+		}
 
 		session.dispose();
 	});

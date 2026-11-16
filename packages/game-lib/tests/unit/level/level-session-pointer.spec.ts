@@ -1,4 +1,5 @@
 import {
+	Mesh,
 	OrthographicCamera,
 	PerspectiveCamera,
 	Raycaster,
@@ -11,8 +12,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	boxBrush,
 	brushBounds,
+	createSurface,
 	frameForPlane,
 	primitiveBrushes,
+	type BrushSurface,
 	type BrushVec3,
 	type LevelDocument,
 	type LevelDrawShape,
@@ -27,6 +30,7 @@ import {
 	type DebugTools,
 } from '../../../src/lib/debug/debug-state';
 import type { GizmoRay } from '../../../src/lib/debug/transform-gizmo';
+import { geometryTextures } from '../../../src/lib/level/level-geometry';
 import { LevelSession, type LevelSessionHost } from '../../../src/lib/level/level-session';
 
 const VIEWPORT = { width: 800, height: 600 };
@@ -292,7 +296,17 @@ describe('level preview with the tools off', () => {
 		expect(selects).toEqual([{ id: 'box' }]);
 	});
 
-	it.each<DebugTools>(['translate', 'rotate', 'scale', 'delete', 'brush', 'clip', 'shear', 'add'])(
+	it.each<DebugTools>([
+		'translate',
+		'rotate',
+		'scale',
+		'delete',
+		'brush',
+		'clip',
+		'shear',
+		'paint',
+		'add',
+	])(
 		'leaves a %s press on the level to the stage',
 		(tool) => {
 			const { session, selects, gestures, click } = rig();
@@ -886,5 +900,121 @@ describe('level delete', () => {
 		expect(click({ x: 0.2, y: 1, z: 0.2 })).toBe(true);
 		expect(gestures).toHaveLength(1);
 		expect(notices).toEqual(['That would not leave a solid.']);
+	});
+});
+
+describe('level paint', () => {
+	const BRICK: BrushSurface = { ...createSurface('builtin:brick'), scale: { u: 2, v: 2 } };
+	const EAST_FACE = { brushId: 'box', kind: 'face' as const, planes: [0] };
+
+	/** Two boxes side by side, seen from above. */
+	function twoBoxes(): LevelDocument {
+		return {
+			version: 2,
+			solids: [
+				{ id: 'box', planes: boxBrush({ x: -1, y: 0, z: -1 }, { x: 1, y: 1, z: 1 }) },
+				{ id: 'far', planes: boxBrush({ x: 2, y: 0, z: -1 }, { x: 4, y: 1, z: 1 }) },
+			],
+			doodads: [],
+			entities: [],
+		};
+	}
+
+	it('paints the face under the pointer with the armed surface', () => {
+		const { session, gestures, selects, click } = rig();
+		session.sync(payload({ paintSurface: BRICK }));
+		arm('paint');
+
+		expect(click({ x: 0.2, y: 1, z: 0.2 })).toBe(true);
+		expect(gestures).toEqual([{ kind: 'paint', faces: [TOP_FACE], surface: BRICK }]);
+		expect(selects).toEqual([]);
+	});
+
+	it('takes the texture off when no surface is armed', () => {
+		const { session, gestures, click } = rig();
+		session.sync(payload({ paintSurface: null }));
+		arm('paint');
+
+		click({ x: 0.2, y: 1, z: 0.2 });
+		expect(gestures).toEqual([{ kind: 'paint', faces: [TOP_FACE], surface: null }]);
+	});
+
+	it('paints every face a stroke crosses as one gesture', () => {
+		const { session, gestures, drag } = rig();
+		session.sync(payload({ document: twoBoxes(), paintSurface: BRICK }));
+		arm('paint');
+
+		drag([
+			{ x: 0, y: 1, z: 0 },
+			{ x: 0.5, y: 1, z: 0 },
+			{ x: 1.5, y: 0, z: 0 },
+			{ x: 3, y: 1, z: 0 },
+		]);
+		expect(gestures).toEqual([
+			{
+				kind: 'paint',
+				faces: [TOP_FACE, { brushId: 'far', kind: 'face', planes: [2] }],
+				surface: BRICK,
+			},
+		]);
+	});
+
+	it('paints the whole solid with Shift', () => {
+		const camera = perspectiveCamera(new Vector3(6, 3, 2), new Vector3(0, 0.5, 0));
+		const { session, gestures, click } = rig({ camera, cameraId: 'editor:free' });
+		session.sync(payload({ paintSurface: BRICK }));
+		arm('paint');
+
+		click({ x: 1, y: 0.5, z: 0.2 }, { shiftKey: true });
+		expect(gestures).toHaveLength(1);
+		const [gesture] = gestures;
+		if (gesture?.kind !== 'paint') throw new Error('expected a paint gesture');
+		expect(gesture.faces.map((face) => face.planes[0]).sort()).toEqual([0, 1, 2, 3, 4, 5]);
+		expect(gesture.faces).toContainEqual(EAST_FACE);
+	});
+
+	it('leaves a press on empty space to the camera', () => {
+		const { session, gestures, click } = rig();
+		session.sync(payload({ paintSurface: BRICK }));
+		arm('paint');
+
+		expect(click({ x: 5, y: 0, z: 5 })).toBe(false);
+		expect(gestures).toEqual([]);
+		expect(session.hasGesture).toBe(false);
+	});
+
+	it('shows the stroke on the solid before it is released, and drops it on cancel', () => {
+		const { scene, session, gestures, rayAt } = rig();
+		session.sync(payload({ paintSurface: BRICK }));
+		arm('paint');
+		const textured = () => {
+			const found: string[] = [];
+			toolsGroup(scene).traverse((child) => {
+				if (!(child instanceof Mesh)) return;
+				for (const texture of geometryTextures(child.geometry)) if (texture) found.push(texture);
+			});
+			return found;
+		};
+
+		session.pointerDown(rayAt({ x: 0.2, y: 1, z: 0.2 }));
+		expect(session.hasGesture).toBe(true);
+		expect(textured()).toEqual(['builtin:brick']);
+
+		session.cancelGesture();
+		expect(textured()).toEqual([]);
+		session.pointerUp(rayAt({ x: 0.2, y: 1, z: 0.2 }));
+		expect(gestures).toEqual([]);
+	});
+
+	it('highlights the face a click would paint', () => {
+		const { scene, session, rayAt } = rig();
+		session.sync(payload({ paintSurface: BRICK }));
+		arm('paint');
+		const idle = toolsGroup(scene).children.length;
+
+		session.pointerHover(rayAt({ x: 0.4, y: 1, z: -0.2 }));
+		expect(toolsGroup(scene).children.length).toBe(idle + 1);
+		session.pointerHover(rayAt({ x: 5, y: 0, z: 5 }));
+		expect(toolsGroup(scene).children.length).toBe(idle);
 	});
 });

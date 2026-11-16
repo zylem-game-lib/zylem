@@ -11,6 +11,7 @@ export type DebugTools =
 	| 'brush'
 	| 'clip'
 	| 'shear'
+	| 'paint'
 	| 'none';
 
 /** Tools that manipulate a selected entity's transform via the gizmo. */

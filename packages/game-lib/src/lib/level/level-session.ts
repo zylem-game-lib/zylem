@@ -15,8 +15,6 @@ import {
 	Box3,
 	Box3Helper,
 	BoxGeometry,
-	Color,
-	DoubleSide,
 	EdgesGeometry,
 	Group,
 	LineBasicMaterial,
@@ -40,6 +38,7 @@ import {
 	type BridgePose,
 	type BrushFrame,
 	type BrushPlane,
+	type BrushSurface,
 	type BrushTopology,
 	type BrushVec3,
 	type LevelDocument,
@@ -67,7 +66,7 @@ import {
 } from './level-draw';
 import { LevelDrawTool } from './level-draw-tool';
 import { ElementMoveDrag, FaceDrag, ShearDrag, type ElementDrag } from './level-element-drag';
-import { brushGeometry } from './level-geometry';
+import { brushGeometry, geometryTextures } from './level-geometry';
 import { LevelGizmo, documentPose, gizmoTarget, selectionPivot } from './level-gizmo';
 import {
 	HOVER_COLOR,
@@ -92,6 +91,7 @@ import {
 } from './level-pick';
 import { buildPlaySectors } from './level-play';
 import { buildSectorOverlay, solidSectorHidden, solidSectorTint } from './level-sectors';
+import { LevelTextures } from './level-textures';
 import { LevelToolPreview } from './level-tool-preview';
 
 export interface LevelZoneSpawn {
@@ -129,10 +129,6 @@ export interface LevelPointerInput {
 	timeStamp?: number;
 }
 
-/** Neutral stand-in. A solid stores no material, so nothing replaces this yet. */
-const DEFAULT_BRUSH_COLOR = 0xc8c2b4;
-/** Lighter than the default so a selected solid still reads as chosen. */
-const SELECTED_BRUSH_COLOR = 0xe4ddd0;
 /** The two halves of a clip preview. */
 const CLIP_TINTS = ['#5aa9ff', '#ff9a5a'] as const;
 /** A held press moves this many pixels before it counts as a drag. */
@@ -169,6 +165,13 @@ type Held =
 			moved: boolean;
 	  }
 	| { kind: 'gizmo' }
+	| {
+			kind: 'paint';
+			/** The faces the stroke has crossed, by element key. */
+			faces: Map<string, LevelElementRef>;
+			/** Shift was down on the press: every face of a solid the stroke touches. */
+			whole: boolean;
+	  }
 	| { kind: 'press' };
 
 function toDrawRay(ray: GizmoRay): DrawRay {
@@ -241,22 +244,6 @@ function applyPose(object: Object3D, pose: BridgePose): void {
 	object.scale.set(scale.x, scale.y, scale.z);
 }
 
-/**
- * `tint` is the sector color; a selected solid takes it lighter. Faces sit a
- * hair back in depth so edge lines drawn on them win the depth test.
- */
-function brushMaterial(selected: boolean, tint: string | null = null): MeshStandardMaterial {
-	const material = new MeshStandardMaterial({
-		color: tint ?? (selected ? SELECTED_BRUSH_COLOR : DEFAULT_BRUSH_COLOR),
-		side: DoubleSide,
-		polygonOffset: true,
-		polygonOffsetFactor: 1,
-		polygonOffsetUnits: 1,
-	});
-	if (tint && selected) material.color.lerp(new Color(0xffffff), 0.35);
-	return material;
-}
-
 function selectPayload(
 	id: string | null,
 	elements: LevelElementRef[] | undefined,
@@ -293,7 +280,9 @@ export class LevelSession {
 	/** The selected elements, drawn over the solids. */
 	private selectionView: Object3D | null = null;
 	private picker: LevelPicker;
-	/** A drag's or clip's preview. Outlives the drag until the sync it causes. */
+	/** The solids' textures and materials, kept across rebuilds. */
+	private textures = new LevelTextures();
+	/** A drag's, clip's, or paint stroke's preview. Outlives the gesture until the sync it causes. */
 	private preview: LevelToolPreview;
 	private drawTool = new LevelDrawTool();
 	private clipTool = new LevelClipTool();
@@ -323,8 +312,12 @@ export class LevelSession {
 			solids: this.solids,
 			objects: this.objects,
 			selection: () => this.selectionView,
-			material: (id, planes) => brushMaterial(this.isObjectSelected(id), this.sectorTint(planes)),
-			half: (index) => brushMaterial(false, CLIP_TINTS[index % 2]!),
+			materials: (id, planes, textures) =>
+				this.textures.materialsFor(textures, {
+					selected: this.isObjectSelected(id),
+					tint: this.sectorTint(planes),
+				}),
+			half: (index) => this.textures.material(null, { tint: CLIP_TINTS[index % 2]! }),
 			restore: (id, object) => {
 				const pose = this.payload ? documentPose(this.payload.document, id) : null;
 				if (pose) applyPose(object, pose);
@@ -388,7 +381,7 @@ export class LevelSession {
 		this.host.publishSelect(selectPayload(null, undefined, false, false));
 	}
 
-	/** A draw, clip points, or a drag under way. Escape cancels it. */
+	/** A draw, clip points, a drag, or a paint stroke under way. Escape cancels it. */
 	get hasGesture(): boolean {
 		return (
 			this.drawTool.phase !== 'idle' ||
@@ -421,6 +414,7 @@ export class LevelSession {
 		this.mode = 'edit';
 		this.payload = payload;
 		setActiveDocument(payload.document);
+		this.textures.setLibrary(payload.document.textures);
 		const dragging = this.held?.kind === 'drag' || this.held?.kind === 'gizmo';
 		if (dragging && this.elementMode() !== previousMode) this.cancelHeld();
 		// A draw or a clip belongs to the tools that were just turned off.
@@ -439,6 +433,7 @@ export class LevelSession {
 			placement: null,
 		};
 		setActiveDocument(document);
+		this.textures.setLibrary(document.textures);
 		this.rebuild();
 	}
 
@@ -449,6 +444,7 @@ export class LevelSession {
 		setActiveDocument(null);
 		this.teardownOwned();
 		this.clearTools();
+		this.textures.dispose();
 		this.unmount();
 	}
 
@@ -502,6 +498,8 @@ export class LevelSession {
 			case 'delete':
 				this.pressDelete(ray);
 				return true;
+			case 'paint':
+				return this.pressPaint(ray, input);
 			case 'add':
 				// Nothing of the level is armed, so the click is the stage's to place.
 				if (!this.payload?.placement) return false;
@@ -535,7 +533,9 @@ export class LevelSession {
 			if (!camera) return;
 			const preview = this.gizmo.move(ray, camera, input.altKey === true);
 			this.preview.show(preview ? { solids: preview.solids, poses: preview.poses } : null);
+			return;
 		}
+		if (held.kind === 'paint') this.paintUnder(ray, held);
 	}
 
 	/**
@@ -596,7 +596,7 @@ export class LevelSession {
 			this.hoverIn(ray, this.elementMode());
 			return;
 		}
-		if (tool === 'shear') {
+		if (tool === 'shear' || tool === 'paint') {
 			this.hoverIn(ray, 'face');
 			return;
 		}
@@ -632,6 +632,15 @@ export class LevelSession {
 			const gesture = this.gizmo.end();
 			if (gesture) this.host.publishGesture(gesture);
 			else this.preview.show(null);
+			return;
+		}
+
+		if (held.kind === 'paint' && held.faces.size > 0) {
+			this.host.publishGesture({
+				kind: 'paint',
+				faces: [...held.faces.values()],
+				surface: this.paintSurface(),
+			});
 		}
 	}
 
@@ -713,6 +722,62 @@ export class LevelSession {
 			return;
 		}
 		this.host.publishGesture({ kind: 'element-delete', elements: [copyElement(element.ref)] });
+	}
+
+	/**
+	 * Start a paint stroke on the face under the pointer. Shift paints every
+	 * face of the solid. A press on nothing is left to the camera, so the view
+	 * can be turned with the brush armed.
+	 */
+	private pressPaint(ray: GizmoRay, input: LevelPointerInput): boolean {
+		if (!this.picker.face(ray)) return false;
+		const stroke: Extract<Held, { kind: 'paint' }> = {
+			kind: 'paint',
+			faces: new Map(),
+			whole: input.shiftKey === true,
+		};
+		this.held = stroke;
+		this.setHover(null);
+		this.paintUnder(ray, stroke);
+		return true;
+	}
+
+	/** Add the face under the pointer to the stroke, and show the stroke so far. */
+	private paintUnder(ray: GizmoRay, stroke: Extract<Held, { kind: 'paint' }>): void {
+		const face = this.picker.face(ray);
+		if (!face) return;
+		const solid = this.solids.get(face.ref.brushId);
+		const refs: LevelElementRef[] = stroke.whole && solid
+			? solid.topology.faces.map((entry) => ({
+				brushId: face.ref.brushId,
+				kind: 'face',
+				planes: [entry.planeIndex],
+			}))
+			: [face.ref];
+		const before = stroke.faces.size;
+		for (const ref of refs) stroke.faces.set(elementKey(ref), ref);
+		if (stroke.faces.size !== before) this.showPaint(stroke.faces.values());
+	}
+
+	/** What the armed brush puts on a face; `null` takes the texture off. */
+	private paintSurface(): BrushSurface | null {
+		return this.payload?.paintSurface ?? null;
+	}
+
+	/** Draw the stroke's solids as the paint would leave them. */
+	private showPaint(faces: Iterable<LevelElementRef>): void {
+		const surface = this.paintSurface();
+		const solids = new Map<string, BrushPlane[]>();
+		for (const ref of faces) {
+			const index = ref.planes[0] ?? -1;
+			const planes = solids.get(ref.brushId) ?? this.solids.get(ref.brushId)?.planes.map((plane) => ({ ...plane }));
+			const plane = planes?.[index];
+			if (!planes || !plane) continue;
+			if (surface) plane.surface = surface;
+			else delete plane.surface;
+			solids.set(ref.brushId, planes);
+		}
+		this.preview.show(solids.size > 0 ? { solids } : null);
 	}
 
 	private pressDraw(ray: GizmoRay): boolean {
@@ -1012,7 +1077,10 @@ export class LevelSession {
 	private spawnSectors(document: LevelDocument, meshes: boolean): void {
 		for (const sector of buildPlaySectors(document.solids, sectorSizeOf(document))) {
 			if (meshes) {
-				const mesh = new Mesh(sector.geometry, brushMaterial(false));
+				const mesh = new Mesh(
+					sector.geometry,
+					this.textures.materialsFor(geometryTextures(sector.geometry)),
+				);
 				mesh.name = `level-sector:${sector.key}`;
 				this.root.add(mesh);
 			} else {
@@ -1037,9 +1105,13 @@ export class LevelSession {
 				const topology = brushTopology(solid.planes);
 				if (!topology) continue;
 				const isSelected = this.isObjectSelected(solid.id);
+				const geometry = brushGeometry(topology, solid.planes);
 				const mesh = new Mesh(
-					brushGeometry(topology),
-					brushMaterial(isSelected, solidSectorTint(solid.planes, payload)),
+					geometry,
+					this.textures.materialsFor(geometryTextures(geometry), {
+						selected: isSelected,
+						tint: solidSectorTint(solid.planes, payload),
+					}),
 				);
 				mesh.userData.levelId = solid.id;
 				this.root.add(mesh);
@@ -1147,7 +1219,9 @@ export class LevelSession {
 		const held = this.held;
 		this.held = null;
 		if (this.gizmo.isDragging) this.gizmo.cancel();
-		if (held?.kind === 'drag' || held?.kind === 'gizmo') this.preview.show(null);
+		if (held?.kind === 'drag' || held?.kind === 'gizmo' || held?.kind === 'paint') {
+			this.preview.show(null);
+		}
 		if (held?.kind === 'draw') {
 			this.drawTool.cancel();
 			this.ghostSlot.clear();

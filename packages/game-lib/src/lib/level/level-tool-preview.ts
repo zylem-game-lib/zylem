@@ -6,7 +6,7 @@
 
 import { Group, Mesh, type Material, type Object3D } from 'three';
 import { compileBrush, type BrushPlane } from '@zylem/bridge';
-import { brushGeometry } from './level-geometry';
+import { brushGeometry, geometryTextures } from './level-geometry';
 import type { PreviewPose } from './level-gizmo';
 import { OverlaySlot, ghostBrushes } from './level-highlight';
 
@@ -27,8 +27,17 @@ export interface PreviewScene {
 	objects: ReadonlyMap<string, Object3D>;
 	/** The element selection, hidden while parts move. */
 	selection(): Object3D | null;
-	/** How the solid `id` is drawn. */
-	material(id: string, planes: readonly BrushPlane[]): Material;
+	/**
+	 * How the solid `id` is drawn: one material, or one per texture.
+	 *
+	 * @param planes The solid as the document has it, which decides its sector tint.
+	 * @param textures The texture of each material slot; see `geometryTextures`.
+	 */
+	materials(
+		id: string,
+		planes: readonly BrushPlane[],
+		textures: ReadonlyArray<string | null>
+	): Material | Material[];
 	/** How one half of a clip is drawn. */
 	half(index: number): Material;
 	/** Put an object back on its document pose. */
@@ -86,7 +95,9 @@ export class LevelToolPreview {
 		for (const [id, planes] of preview.solids) {
 			const compiled = compileBrush(planes);
 			const original = this.scene.solids.get(id)?.planes ?? planes;
-			if (compiled) group.add(new Mesh(brushGeometry(compiled), this.scene.material(id, original)));
+			if (!compiled) continue;
+			const geometry = brushGeometry(compiled, planes);
+			group.add(new Mesh(geometry, this.scene.materials(id, original, geometryTextures(geometry))));
 		}
 		for (const halves of preview.split.values()) {
 			halves.forEach((planes, index) => {
