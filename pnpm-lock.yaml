@@ -101,8 +101,8 @@ importers:
         specifier: ^0.8.14
         version: 0.8.14(@types/react@19.3.0)(react@19.3.0)(three@0.187.0)
       '@zylem/bridge':
-        specifier: ^0.9.11
-        version: 0.9.11
+        specifier: ^0.9.12
+        version: 0.9.12
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -3933,8 +3933,8 @@ packages:
     peerDependencies:
       three: 0.187.0
 
-  '@zylem/bridge@0.9.11':
-    resolution: {integrity: sha512-YrifJlZVpHy9tX9xtLNwCj2gvNfe1ZuoYm204xFltwm9P8p6O17n1LaW7qF17MOO1QctwCjqCHGf9YC2eZETaw==}
+  '@zylem/bridge@0.9.12':
+    resolution: {integrity: sha512-l0mIUYYddpr/EPc4QIPpm1spEaVhhRQlowZ0QJLNg0RwH1oJ7KbrIkdDqiUXCkvQMXdsUQ6Pxzw2CuoyJxaJFg==}
 
   '@zylem/runtime@0.8.15':
     resolution: {integrity: sha512-sJHfMkdpejRoU/zSvqRYNBkbtIJirqTX3lcu4Qkp27xYnsbNN8Bi0Wm99peCG8OtcSNSDuJfgFuq8pBDU4ZgDQ==}
@@ -12999,7 +12999,7 @@ snapshots:
       - '@types/react'
       - react
 
-  '@zylem/bridge@0.9.11': {}
+  '@zylem/bridge@0.9.12': {}
 
   '@zylem/runtime@0.8.15': {}
 
