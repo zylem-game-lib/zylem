@@ -42,6 +42,34 @@ if (navigation) {
 
 Import `createLevelNavigation` from `@zylem/game-lib/navigation` or `@zylem/bridge`. The navigation subpath also exports `NavigationMesh`, `NavigationSession`, and `bakeNavigationData` for custom Three.js hosts. Standalone `NavigationMesh` instances must be disposed by their owner. `sync` automatically loads a matching saved asset asynchronously; use `await load(asset)` when code needs a ready mesh before querying.
 
+## Playing a level from code
+
+A game that authors its level in code, with no editor attached, hands the document to `stage.playLevel`. The stage builds one merged mesh and one static body of convex hulls per sector, spawns the document's trigger zones, and syncs `stage.navigation` to it, so there is no separate `sync` call. `boxBrush`, `wedgeBrush`, and `frameForPlane` from `@zylem/game-lib/core` build the plane lists.
+
+```ts
+import { boxBrush, createStage, type LevelDocument } from '@zylem/game-lib/core';
+import { createLevelNavigation } from '@zylem/game-lib/navigation';
+
+const level: LevelDocument = {
+	version: 2,
+	solids: [
+		{ id: 'floor', planes: boxBrush({ x: -10, y: -1, z: -10 }, { x: 10, y: 0, z: 10 }) },
+		{ id: 'crate', planes: boxBrush({ x: 2, y: 0, z: 2 }, { x: 4, y: 2, z: 4 }) },
+	],
+	doodads: [],
+	entities: [],
+	navigation: createLevelNavigation(),
+};
+
+const stage = createStage({ gravity: { x: 0, y: -9.82, z: 0 } });
+stage.playLevel(level);
+stage.onSetup(() => {
+	void stage.navigation?.bake();
+});
+```
+
+The level is in place before `onSetup` runs. The stage keeps the document and plays it again on every load, so it survives `game.reset()`; `stage.closeLevel()` removes it. `bake()` resolves to `null` when the bake fails or is superseded, and the session's status carries the message.
+
 ## Path queries
 
 Queries return `complete`, `partial`, or `unreachable`. Endpoints snap within a search box (defaults: 1 unit horizontally, 2 vertically). `NavigationMesh.findPath` accepts custom half-extents.
@@ -96,4 +124,5 @@ The bundle test executes the shipped worker using browser globals, imports the e
 ## API reference
 
 - [LevelDocument](/docs/api/core/interfaces/LevelDocument) → `navigation`
+- [createStage](/docs/api/core/functions/createStage) → `playLevel`, `closeLevel`, `navigation`
 - `@zylem/game-lib/navigation` (`NavigationSession`, `NavigationMesh`, `bakeNavigationData`, `createLevelNavigation`) is not in the generated API reference yet.
