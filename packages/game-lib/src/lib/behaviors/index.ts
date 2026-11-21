@@ -66,6 +66,7 @@ export {
 	ScreenWrapFSM,
 	ScreenWrapState,
 	Shooter2DBehavior,
+	SlotBehaviorSystem,
 	ThrusterBehavior,
 	ThrusterEvent,
 	ThrusterFSM,
@@ -126,6 +127,7 @@ export {
 
 export type {
 	BehaviorDescriptor,
+	BehaviorEntityLink,
 	BehaviorHandle,
 	BehaviorRef,
 	BehaviorSystem,

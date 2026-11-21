@@ -281,7 +281,7 @@
     "@recast-navigation/three": "0.44.0",
     "@sinclair/typebox": "^0.34.52",
     "@types/howler": "^2.2.13",
-    "@zylem/behaviors": "^0.8.14",
+    "@zylem/behaviors": "^0.9.0",
 		"@zylem/bridge": "^0.9.12",
     "comlink": "^4.4.2",
     "howler": "^2.2.4",

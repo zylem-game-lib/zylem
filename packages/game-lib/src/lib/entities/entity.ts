@@ -44,6 +44,12 @@ import { commonDefaults } from './common';
 import type { Action } from '../actions/action';
 import { deepCloneValue, deepMergeValues } from '../core/clone-utils';
 import {
+	BehaviorSlotTable,
+	withSlotAliases,
+	type BehaviorHost,
+	type BehaviorSlot,
+} from './behavior-slots';
+import {
 	confirmSpawnPlacement,
 	markSpawnPlacementReady,
 	revealSpawnPlacement,
@@ -163,6 +169,11 @@ export type GameEntityOptions = {
 	};
 };
 
+/** Shared results for an entity with no behaviors, so asking allocates nothing. */
+const NO_BEHAVIOR_REFS = Object.freeze([]) as unknown as BehaviorRef[];
+const NO_BEHAVIOR_SLOTS: readonly BehaviorSlot[] = Object.freeze([]);
+const NO_SLOT_ALIASES: Map<BehaviorSlot, BehaviorSlot> = new Map();
+
 export abstract class GameEntityLifeCycle {
 	abstract _setup(params: SetupContext<this>): void;
 	abstract _update(params: UpdateContext<this>): void;
@@ -281,8 +292,8 @@ export class GameEntity<O extends GameEntityOptions>
 	// Event delegate for dispatch/listen API
 	protected eventDelegate = new EventEmitterDelegate<EntityEvents>();
 
-	// Behavior references (new ECS pattern)
-	private behaviorRefs: BehaviorRef[] = [];
+	/** Behaviors declared with {@link use}. Created by the first one. */
+	private behaviorSlots: BehaviorSlotTable | null = null;
 	private cloneFactory: EntityCloneFactory<O, this> | null = null;
 	private trackAddedComponents: boolean = false;
 	private trackedComponents: TrackedEntityComponent[] = [];
@@ -681,7 +692,7 @@ export class GameEntity<O extends GameEntityOptions>
 			deepMergeValues(this.options, overrides),
 		) as this;
 
-		const behaviorAliases = this.copyBehaviorRefsTo(clone);
+		const behaviorAliases = this.copyBehaviorSlotsTo(clone);
 		const wrapCallback = <T extends Function>(callback: T): T =>
 			wrapBehaviorCallback(callback, behaviorAliases);
 
@@ -796,11 +807,17 @@ export class GameEntity<O extends GameEntityOptions>
 	}
 
 	/**
-	 * Use a behavior on this entity via typed descriptor.
-	 * Behaviors will be auto-registered as systems when the entity is spawned.
+	 * Declare a behavior on this entity and switch it on.
+	 *
+	 * An entity holds one of each behavior. The first call creates it; a later
+	 * call for the same descriptor merges `options` into the existing ones,
+	 * enables the behavior, and returns the same handle. On a spawned entity
+	 * the behavior starts at once.
+	 *
 	 * @param descriptor The behavior descriptor (import from behaviors module)
 	 * @param options Optional overrides for the behavior's default options
-	 * @returns BehaviorHandle with behavior-specific methods for lazy FSM access
+	 * @returns The behavior's handle: its own methods plus `enable()`,
+	 * `disable()` and `setOptions()`.
 	 */
 	public use<
 		O extends Record<string, any>,
@@ -809,88 +826,79 @@ export class GameEntity<O extends GameEntityOptions>
 		descriptor: BehaviorDescriptor<O, H>,
 		options?: Partial<O>,
 	): BehaviorHandle<O, H> {
-		const behaviorRef: BehaviorRef<O> = {
-			descriptor: descriptor as BehaviorDescriptor<O, any>,
-			options: { ...descriptor.defaultOptions, ...options } as O,
-		};
-		this.behaviorRefs.push(behaviorRef as BehaviorRef<any>);
-
-		// Create base handle
-		const baseHandle = {
-			getFSM: () => behaviorRef.fsm ?? null,
-			getOptions: () => behaviorRef.options,
-			ref: behaviorRef,
-		};
-
-		// Merge behavior-specific methods if createHandle is provided
-		const customMethods = descriptor.createHandle?.(behaviorRef) ?? ({} as H);
-
-		return {
-			...baseHandle,
-			...customMethods,
-		} as BehaviorHandle<O, H>;
+		this.behaviorSlots ??= new BehaviorSlotTable(this);
+		return this.behaviorSlots.use(descriptor, options);
 	}
 
 	/**
-	 * Get all behavior references attached to this entity.
-	 * Used by the stage to auto-register required systems.
+	 * Remove a behavior from this entity for good. Its handle stops working
+	 * and a later {@link use} starts from the default options.
+	 *
+	 * To switch a behavior off and on again, call `disable()` and `enable()`
+	 * on its handle instead: they keep the behavior's memory for reuse.
+	 *
+	 * @returns False when the entity does not have the behavior.
+	 * @throws On a spawned entity when the behavior is enabled and cannot be
+	 * removed at runtime.
+	 */
+	public unuse(descriptor: BehaviorDescriptor<any, any>): boolean {
+		return this.behaviorSlots?.unuse(descriptor) ?? false;
+	}
+
+	/**
+	 * Refs of the behaviors that are enabled on this entity, in the order they
+	 * were declared. A disabled behavior is left out.
 	 */
 	public getBehaviorRefs(): BehaviorRef[] {
-		return this.behaviorRefs;
+		return this.behaviorSlots?.getEnabledRefs() ?? NO_BEHAVIOR_REFS;
 	}
 
 	/**
-	 * Find the attached ref for a behavior, matched by descriptor key so a
-	 * re-imported copy of the same descriptor still resolves.
+	 * The ref for a behavior that is enabled on this entity, matched by
+	 * descriptor key so a re-imported copy of the same descriptor still
+	 * resolves. Null when the behavior is absent or disabled.
 	 */
 	public getBehaviorRef<O extends Record<string, any>>(
 		descriptor: BehaviorDescriptor<O, any>,
 	): BehaviorRef<O> | null {
-		return (
-			(this.behaviorRefs.find((ref) => ref.descriptor.key === descriptor.key) as
-				| BehaviorRef<O>
-				| undefined) ?? null
-		);
+		return this.behaviorSlots?.enabledRef(descriptor) ?? null;
 	}
 
+	/** Whether the behavior is enabled on this entity. */
 	public hasBehavior(descriptor: BehaviorDescriptor<any, any>): boolean {
 		return this.getBehaviorRef(descriptor) !== null;
 	}
 
 	/**
-	 * Detach a behavior from this entity.
-	 *
-	 * Removes the ref so future spawns skip it. If the entity is live in a
-	 * stage, the stage must also drop the system link (see
-	 * `StageEntityDelegate.detachBehaviorLink`); `StageDebugDelegate` does this
-	 * for editor-driven removals.
-	 *
-	 * @param target The descriptor (matched by key) or the exact ref to remove.
-	 * @returns The removed ref, or `null` when nothing matched.
+	 * The handle `use()` returned for a behavior, whether it is enabled or
+	 * not. Null when the entity does not have the behavior.
 	 */
-	public removeBehavior(
-		target: BehaviorDescriptor<any, any> | BehaviorRef<any>,
-	): BehaviorRef<any> | null {
-		const index =
-			'descriptor' in target
-				? this.behaviorRefs.indexOf(target as BehaviorRef<any>)
-				: this.behaviorRefs.findIndex(
-						(ref) => ref.descriptor.key === (target as BehaviorDescriptor<any, any>).key,
-					);
-		if (index === -1) return null;
-		const [removed] = this.behaviorRefs.splice(index, 1);
-		return removed ?? null;
+	public getBehaviorHandle<
+		O extends Record<string, any>,
+		H extends Record<string, any> = Record<string, never>,
+	>(descriptor: BehaviorDescriptor<O, H>): BehaviorHandle<O, H> | null {
+		return this.behaviorSlots?.handleFor(descriptor) ?? null;
+	}
+
+	/** Every behavior declared on this entity, enabled or not. For the stage. */
+	public getBehaviorSlots(): readonly BehaviorSlot[] {
+		return this.behaviorSlots?.getSlots() ?? NO_BEHAVIOR_SLOTS;
 	}
 
 	/**
-	 * Re-attach a previously removed ref as-is (options, FSM state and all).
-	 * Used by undo so a restored behavior is the same object, not a re-created
-	 * one.
+	 * The stage running this entity's behaviors. The stage sets it when the
+	 * entity spawns and clears it when the entity leaves.
 	 */
-	public restoreBehaviorRef(ref: BehaviorRef<any>): void {
-		if (!this.behaviorRefs.includes(ref)) {
-			this.behaviorRefs.push(ref);
+	public get behaviorHost(): BehaviorHost | null {
+		return this.behaviorSlots?.host ?? null;
+	}
+
+	public set behaviorHost(host: BehaviorHost | null) {
+		if (!this.behaviorSlots) {
+			if (!host) return;
+			this.behaviorSlots = new BehaviorSlotTable(this);
 		}
+		this.behaviorSlots.host = host;
 	}
 
 	public getCollisionCallbacks(): Array<(params: CollisionContext<this, O>) => void> {
@@ -905,18 +913,11 @@ export class GameEntity<O extends GameEntityOptions>
 		}));
 	}
 
-	private copyBehaviorRefsTo(target: GameEntity<any>): Map<BehaviorRef, BehaviorRef> {
-		const aliases = new Map<BehaviorRef, BehaviorRef>();
-
-		for (const ref of this.behaviorRefs) {
-			target.use(ref.descriptor, deepCloneValue(ref.options));
-			const targetRef = target.getBehaviorRefs().at(-1);
-			if (targetRef) {
-				aliases.set(ref, targetRef);
-			}
-		}
-
-		return aliases;
+	/** Give `target` this entity's behaviors: copied options, same enabled state. */
+	private copyBehaviorSlotsTo(target: GameEntity<any>): Map<BehaviorSlot, BehaviorSlot> {
+		if (!this.behaviorSlots) return NO_SLOT_ALIASES;
+		target.behaviorSlots ??= new BehaviorSlotTable(target);
+		return this.behaviorSlots.copyTo(target.behaviorSlots, deepCloneValue);
 	}
 
 	/**
@@ -1227,21 +1228,28 @@ function cloneMeshComponent(mesh: Mesh): Mesh {
 	return clonedMesh;
 }
 
+/**
+ * Make a source entity's callback act on its clone's behaviors.
+ *
+ * The callback closed over the source's handles. While it runs, each source
+ * ref borrows the clone's options and FSM, and the handles' `enable`,
+ * `disable`, `setOptions` and `enabled` resolve to the clone's slots.
+ */
 function wrapBehaviorCallback<T extends Function>(
 	callback: T,
-	aliases: Map<BehaviorRef, BehaviorRef>,
+	aliases: Map<BehaviorSlot, BehaviorSlot>,
 ): T {
 	if (aliases.size === 0) {
 		return callback;
 	}
 
 	return ((...args: any[]) => {
-		const previousValues = Array.from(aliases.entries()).map(([sourceRef, targetRef]) => ({
-			sourceRef,
-			options: sourceRef.options,
-			fsm: sourceRef.fsm,
-			hasFSM: Object.prototype.hasOwnProperty.call(sourceRef, 'fsm'),
-			targetRef,
+		const previousValues = Array.from(aliases.entries()).map(([source, target]) => ({
+			sourceRef: source.ref,
+			options: source.ref.options,
+			fsm: source.ref.fsm,
+			hasFSM: Object.prototype.hasOwnProperty.call(source.ref, 'fsm'),
+			targetRef: target.ref,
 		}));
 
 		for (const entry of previousValues) {
@@ -1254,7 +1262,7 @@ function wrapBehaviorCallback<T extends Function>(
 		}
 
 		try {
-			return callback(...args);
+			return withSlotAliases(aliases, () => callback(...args));
 		} finally {
 			for (let i = previousValues.length - 1; i >= 0; i--) {
 				const entry = previousValues[i];

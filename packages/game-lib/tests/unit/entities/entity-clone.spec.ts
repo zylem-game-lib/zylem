@@ -245,4 +245,62 @@ describe('GameEntity.clone', () => {
 
 		expect(collisionSpy).toHaveBeenCalledTimes(2);
 	});
+
+	it('gives the clone each behavior with copied options and the same enabled state', () => {
+		const Other = defineBehavior({
+			name: 'clone-other-test',
+			defaultOptions: { value: 1 },
+			systemFactory: () => ({ update: () => {} }),
+		});
+		const source = createSphere({ name: 'source-ball' });
+		const speed = source.use(CloneAwareBehavior, { nested: { speed: 7 } });
+		const other = source.use(Other, { value: 5 });
+		other.disable();
+
+		const clone = source.clone();
+
+		const cloneSpeed = clone.getBehaviorHandle(CloneAwareBehavior)!;
+		const cloneOther = clone.getBehaviorHandle(Other)!;
+		expect(cloneSpeed).not.toBe(speed);
+		expect(cloneSpeed.enabled).toBe(true);
+		expect(cloneSpeed.getOptions()).toEqual({ nested: { speed: 7 } });
+		expect(cloneSpeed.getOptions().nested).not.toBe(speed.getOptions().nested);
+		expect(cloneOther.enabled).toBe(false);
+		expect(cloneOther.getOptions()).toEqual({ value: 5 });
+		expect(clone.getBehaviorRefs()).toEqual([cloneSpeed.ref]);
+		// The source is untouched.
+		expect(other.enabled).toBe(false);
+		expect(source.getBehaviorSlots()).toHaveLength(2);
+	});
+
+	it('a cloned callback that toggles a behavior acts on the clone, also through a clone of a clone', () => {
+		const source = createSphere({ name: 'source-ball' });
+		const behavior = source.use(CloneAwareBehavior);
+		const seen: boolean[] = [];
+		source.onUpdate(() => {
+			seen.push(behavior.enabled);
+			behavior.disable();
+			behavior.setOptions({ nested: { speed: 3 } });
+		});
+
+		const clone = source.clone();
+		const second = clone.clone();
+		const cloneHandle = clone.getBehaviorHandle(CloneAwareBehavior)!;
+		const secondHandle = second.getBehaviorHandle(CloneAwareBehavior)!;
+
+		second.nodeUpdate({ me: second, delta: 1 / 60, globals: {} } as any);
+
+		expect(seen).toEqual([true]);
+		expect(secondHandle.enabled).toBe(false);
+		expect(secondHandle.getOptions().nested.speed).toBe(3);
+		expect(cloneHandle.enabled).toBe(true);
+		expect(cloneHandle.getOptions().nested.speed).toBe(1);
+		expect(behavior.enabled).toBe(true);
+		expect(behavior.getOptions().nested.speed).toBe(1);
+
+		clone.nodeUpdate({ me: clone, delta: 1 / 60, globals: {} } as any);
+
+		expect(cloneHandle.enabled).toBe(false);
+		expect(behavior.enabled).toBe(true);
+	});
 });

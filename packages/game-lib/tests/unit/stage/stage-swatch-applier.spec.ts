@@ -1,11 +1,12 @@
 import { MeshStandardMaterial } from 'three';
 import { color } from 'three/tsl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineBehavior, type BehaviorRef } from '@zylem/behaviors/core';
+import { defineBehavior, type BehaviorEntityLink } from '@zylem/behaviors/core';
 import type { SceneOperationPayload } from '@zylem/bridge';
 
 import { createBox } from '../../../src/lib/entities/box';
 import { createZone } from '../../../src/lib/entities/zone';
+import type { BehaviorHost } from '../../../src/lib/entities/behavior-slots';
 import type { GameEntity } from '../../../src/lib/entities/entity';
 import {
 	clearSwatchRegistry,
@@ -14,12 +15,11 @@ import {
 import {
 	MAX_SWATCH_SNAPSHOTS,
 	StageSwatchApplier,
-	type SwatchApplierStage,
 } from '../../../src/lib/stage/stage-swatch-applier';
 
 const Thruster = defineBehavior({
 	name: 'applier-thruster',
-	defaultOptions: { thrust: 1 },
+	defaultOptions: { thrust: 1, damping: 0 },
 	systemFactory: () => ({ update() {} }),
 });
 const Wrap = defineBehavior({
@@ -28,32 +28,36 @@ const Wrap = defineBehavior({
 	systemFactory: () => ({ update() {} }),
 });
 
-/** Stage fake: uuid lookup plus a record of every link attach/detach. */
+/** Stage fake: uuid lookup. */
 function fakeStage(entities: GameEntity<any>[]) {
 	const byUuid = new Map(entities.map((entity) => [entity.uuid, entity]));
-	const linked = new Map<GameEntity<any>, Set<BehaviorRef>>();
-	const stage: SwatchApplierStage & {
-		linkedRefs(entity: GameEntity<any>): BehaviorRef[];
-		attach: ReturnType<typeof vi.fn>;
-		detach: ReturnType<typeof vi.fn>;
-	} = {
-		resolveEntity: (uuid) => byUuid.get(uuid) ?? null,
-		attach: vi.fn(),
-		detach: vi.fn(),
-		attachBehaviorLink(entity, ref) {
-			stage.attach(entity, ref);
-			const set = linked.get(entity) ?? new Set();
-			set.add(ref);
-			linked.set(entity, set);
-			return true;
-		},
-		detachBehaviorLink(entity, ref) {
-			stage.detach(entity, ref);
-			return linked.get(entity)?.delete(ref) ?? false;
-		},
-		linkedRefs: (entity) => [...(linked.get(entity) ?? [])],
-	};
-	return stage;
+	return { resolveEntity: (uuid: string) => byUuid.get(uuid) ?? null };
+}
+
+/**
+ * Stand in for the stage an entity is spawned in: records the links that are
+ * running. With `removable: false` it refuses to stop one, like a behavior
+ * whose system has no detach.
+ */
+function spawnInto(entity: GameEntity<any>, { removable = true } = {}) {
+	const running = new Set<BehaviorEntityLink>();
+	const host = {
+		running,
+		linkBehavior: vi.fn((link: BehaviorEntityLink) => {
+			running.add(link);
+		}),
+		unlinkBehavior: vi.fn((link: BehaviorEntityLink) => {
+			if (!removable) throw new Error('not removable at runtime');
+			running.delete(link);
+		}),
+		suspendBehaviors: vi.fn(),
+		resumeBehaviors: vi.fn(),
+	} satisfies BehaviorHost & { running: Set<BehaviorEntityLink> };
+	entity.behaviorHost = host;
+	for (const slot of entity.getBehaviorSlots()) {
+		if (slot.ref.enabled !== false) running.add(slot.link);
+	}
+	return host;
 }
 
 const lava = { kind: 'shader' as const, source: 'createLava', props: { speed: 2 } };
@@ -92,33 +96,53 @@ describe('StageSwatchApplier', () => {
 		expect(applier.hasSnapshot('op-1')).toBe(true);
 	});
 
-	it('attaches a behavior and links it to the stage', () => {
+	it('adds a behavior, which starts at once on a spawned entity', () => {
 		const box = createBox({ name: 'box' });
-		const stage = fakeStage([box]);
-		const applier = new StageSwatchApplier(stage);
+		const host = spawnInto(box);
+		const applier = new StageSwatchApplier(fakeStage([box]));
 
 		const outcome = applier.applySwatches({ opId: 'op-1', uuids: [box.uuid], swatches: [thruster] });
 
 		expect(outcome.results[0]).toMatchObject({ ok: true, replaced: false });
-		expect(box.getBehaviorRef(Thruster)?.options).toEqual({ thrust: 9 });
-		expect(stage.linkedRefs(box)).toEqual([box.getBehaviorRef(Thruster)]);
+		expect(box.getBehaviorRef(Thruster)?.options).toEqual({ thrust: 9, damping: 0 });
+		expect([...host.running]).toEqual([box.getBehaviorSlots()[0]!.link]);
 	});
 
-	it('replaces a behavior with the same key instead of stacking a duplicate', () => {
+	it('reconfigures a behavior the entity already has instead of adding a second', () => {
 		const box = createBox({ name: 'box' });
-		const existing = box.use(Thruster, { thrust: 3 }).ref;
-		const stage = fakeStage([box]);
-		stage.attachBehaviorLink(box, existing);
-		const applier = new StageSwatchApplier(stage);
+		const existing = box.use(Thruster, { thrust: 3, damping: 2 });
+		const host = spawnInto(box);
+		const applier = new StageSwatchApplier(fakeStage([box]));
 
 		const outcome = applier.applySwatches({ opId: 'op-1', uuids: [box.uuid], swatches: [thruster] });
 
 		expect(outcome.results[0]).toMatchObject({ ok: true, replaced: true });
-		expect(outcome.entries[0]?.replaced).toEqual({ source: 'Thruster', props: { thrust: 3 } });
-		expect(box.getBehaviorRefs().filter((ref) => ref.descriptor.key === Thruster.key)).toHaveLength(1);
-		expect(box.getBehaviorRef(Thruster)?.options).toEqual({ thrust: 9 });
-		expect(stage.detach).toHaveBeenCalledWith(box, existing);
-		expect(stage.linkedRefs(box)).toEqual([box.getBehaviorRef(Thruster)]);
+		expect(outcome.entries[0]?.replaced).toEqual({
+			source: 'Thruster',
+			props: { thrust: 3, damping: 2 },
+		});
+		expect(box.getBehaviorHandle(Thruster)).toBe(existing);
+		expect(box.getBehaviorRefs()).toEqual([existing.ref]);
+		// A swatch is a whole configuration: `damping` went back to its default.
+		expect(existing.getOptions()).toEqual({ thrust: 9, damping: 0 });
+		// Restarted once, on the same link.
+		expect(host.unlinkBehavior).toHaveBeenCalledTimes(1);
+		expect(host.linkBehavior).toHaveBeenCalledTimes(1);
+		expect([...host.running]).toEqual([box.getBehaviorSlots()[0]!.link]);
+	});
+
+	it('switches on a behavior that was off, without reporting it as replaced', () => {
+		const box = createBox({ name: 'box' });
+		const existing = box.use(Thruster, { thrust: 3 });
+		existing.disable();
+		const applier = new StageSwatchApplier(fakeStage([box]));
+
+		const outcome = applier.applySwatches({ opId: 'op-1', uuids: [box.uuid], swatches: [thruster] });
+
+		expect(outcome.results[0]).toMatchObject({ ok: true, replaced: false });
+		expect(outcome.entries[0]?.replaced).toBeUndefined();
+		expect(existing.enabled).toBe(true);
+		expect(existing.getOptions()).toEqual({ thrust: 9, damping: 0 });
 	});
 
 	describe('failure reporting', () => {
@@ -182,6 +206,28 @@ describe('StageSwatchApplier', () => {
 				'invalid-props',
 			]);
 		});
+
+		it('fails and changes nothing when a running behavior cannot be removed at runtime', () => {
+			const box = createBox({});
+			const existing = box.use(Thruster, { thrust: 3, damping: 2 });
+			const host = spawnInto(box, { removable: false });
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const applier = new StageSwatchApplier(fakeStage([box]));
+
+			const { results, entries } = applier.applySwatches({
+				opId: 'op',
+				uuids: [box.uuid],
+				swatches: [thruster],
+			});
+
+			expect(results[0]).toMatchObject({ ok: false, reason: 'invalid-props' });
+			expect(entries).toEqual([]);
+			expect(existing.enabled).toBe(true);
+			expect(existing.getOptions()).toEqual({ thrust: 3, damping: 2 });
+			expect(host.running.size).toBe(1);
+			expect(applier.hasSnapshot('op')).toBe(false);
+			expect(warn).toHaveBeenCalledTimes(1);
+		});
 	});
 
 	describe('batches', () => {
@@ -240,7 +286,7 @@ describe('StageSwatchApplier', () => {
 			expect(results[3]?.replaced).toBe(false);
 			expect(createWater).toHaveBeenCalledTimes(1);
 			expect(box.getBehaviorRefs().filter((ref) => ref.descriptor.key === Thruster.key)).toHaveLength(1);
-			expect(box.getBehaviorRef(Thruster)?.options).toEqual({ thrust: 1 });
+			expect(box.getBehaviorRef(Thruster)?.options).toEqual({ thrust: 1, damping: 0 });
 		});
 	});
 
@@ -283,36 +329,102 @@ describe('StageSwatchApplier', () => {
 			expect(box.mesh!.material).toBe(original);
 		});
 
-		it('puts a displaced behavior ref back on undo, same object, and re-removes it on redo', () => {
+		it('puts a reconfigured behavior\'s options back on undo and the swatch\'s on redo, on the same handle', () => {
 			const box = createBox({});
-			const existing = box.use(Thruster, { thrust: 3 }).ref;
-			const stage = fakeStage([box]);
-			stage.attachBehaviorLink(box, existing);
-			const applier = new StageSwatchApplier(stage);
+			const existing = box.use(Thruster, { thrust: 3, damping: 2 });
+			const host = spawnInto(box);
+			const applier = new StageSwatchApplier(fakeStage([box]));
 
 			const { entries } = applier.applySwatches({ opId: 'op', uuids: [box.uuid], swatches: [thruster] });
-			const applied = box.getBehaviorRef(Thruster)!;
 
 			applier.applySceneOperation(operation('op', entries), 'undo');
-			expect(box.getBehaviorRef(Thruster)).toBe(existing);
-			expect(box.getBehaviorRefs()).toHaveLength(1);
-			expect(stage.linkedRefs(box)).toEqual([existing]);
+			expect(box.getBehaviorHandle(Thruster)).toBe(existing);
+			expect(existing.getOptions()).toEqual({ thrust: 3, damping: 2 });
+			expect(existing.enabled).toBe(true);
+			expect(host.running.size).toBe(1);
 
 			applier.applySceneOperation(operation('op', entries), 'redo');
-			expect(box.getBehaviorRef(Thruster)).toBe(applied);
-			expect(stage.linkedRefs(box)).toEqual([applied]);
+			expect(box.getBehaviorHandle(Thruster)).toBe(existing);
+			expect(existing.getOptions()).toEqual({ thrust: 9, damping: 0 });
+			expect(box.getBehaviorRefs()).toHaveLength(1);
+			expect(host.running.size).toBe(1);
 		});
 
-		it('removes a freshly added behavior on undo', () => {
+		it('switches a freshly added behavior off on undo and back on, on the same handle, on redo', () => {
 			const box = createBox({});
-			const stage = fakeStage([box]);
-			const applier = new StageSwatchApplier(stage);
+			const host = spawnInto(box);
+			const applier = new StageSwatchApplier(fakeStage([box]));
 
 			const { entries } = applier.applySwatches({ opId: 'op', uuids: [box.uuid], swatches: [thruster] });
+			const added = box.getBehaviorHandle(Thruster)!;
 			applier.applySceneOperation(operation('op', entries), 'undo');
 
 			expect(box.hasBehavior(Thruster)).toBe(false);
-			expect(stage.linkedRefs(box)).toEqual([]);
+			expect(host.running.size).toBe(0);
+
+			applier.applySceneOperation(operation('op', entries), 'redo');
+
+			expect(box.getBehaviorHandle(Thruster)).toBe(added);
+			expect(added.enabled).toBe(true);
+			expect(added.getOptions()).toEqual({ thrust: 9, damping: 0 });
+			expect(host.running.size).toBe(1);
+		});
+
+		it('leaves a behavior that was off switched off again on undo, with its old options', () => {
+			const box = createBox({});
+			const existing = box.use(Thruster, { thrust: 3 });
+			existing.disable();
+			const applier = new StageSwatchApplier(fakeStage([box]));
+
+			const { entries } = applier.applySwatches({ opId: 'op', uuids: [box.uuid], swatches: [thruster] });
+			applier.applySceneOperation(operation('op', entries), 'undo');
+
+			expect(existing.enabled).toBe(false);
+			expect(existing.getOptions()).toEqual({ thrust: 3, damping: 0 });
+		});
+
+		it('undoes a batch that applied the same behavior twice back to what it displaced', () => {
+			const box = createBox({});
+			const existing = box.use(Thruster, { thrust: 3 });
+			const applier = new StageSwatchApplier(fakeStage([box]));
+
+			const { entries } = applier.applySwatches({
+				opId: 'op',
+				uuids: [box.uuid],
+				swatches: [thruster, { ...thruster, props: { thrust: 5 } }],
+			});
+			applier.applySceneOperation(operation('op', entries), 'undo');
+			expect(existing.getOptions()).toEqual({ thrust: 3, damping: 0 });
+
+			applier.applySceneOperation(operation('op', entries), 'redo');
+			expect(existing.getOptions()).toEqual({ thrust: 5, damping: 0 });
+		});
+
+		it('does not let later edits to the live options leak into the snapshot', () => {
+			const box = createBox({});
+			const existing = box.use(Thruster, { thrust: 3 });
+			const applier = new StageSwatchApplier(fakeStage([box]));
+
+			const { entries } = applier.applySwatches({ opId: 'op', uuids: [box.uuid], swatches: [thruster] });
+			existing.setOptions({ thrust: 100 });
+			applier.applySceneOperation(operation('op', entries), 'undo');
+			existing.setOptions({ thrust: 200 });
+			applier.applySceneOperation(operation('op', entries), 'redo');
+
+			expect(existing.getOptions()).toEqual({ thrust: 9, damping: 0 });
+		});
+
+		it('warns and leaves a behavior that cannot be removed at runtime when asked to undo it', () => {
+			const box = createBox({});
+			const applier = new StageSwatchApplier(fakeStage([box]));
+			const { entries } = applier.applySwatches({ opId: 'op', uuids: [box.uuid], swatches: [thruster] });
+			spawnInto(box, { removable: false });
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+			expect(() => applier.applySceneOperation(operation('op', entries), 'undo')).not.toThrow();
+
+			expect(warn).toHaveBeenCalledTimes(1);
+			expect(box.hasBehavior(Thruster)).toBe(true);
 		});
 
 		it('restores every entity of a multi-entity operation', () => {
@@ -342,11 +454,11 @@ describe('StageSwatchApplier', () => {
 				'redo',
 			);
 
-			expect(box.getBehaviorRef(Thruster)?.options).toEqual({ thrust: 9 });
+			expect(box.getBehaviorRef(Thruster)?.options).toEqual({ thrust: 9, damping: 0 });
 			expect(applier.hasSnapshot('never-seen')).toBe(true);
 		});
 
-		it('falls back to removing by key and restoring the recorded previous options on a snapshot-less undo', () => {
+		it('falls back to the recorded previous options on a snapshot-less undo', () => {
 			const box = createBox({});
 			box.use(Thruster, { thrust: 9 });
 			const applier = new StageSwatchApplier(fakeStage([box]));
@@ -358,7 +470,20 @@ describe('StageSwatchApplier', () => {
 				'undo',
 			);
 
-			expect(box.getBehaviorRef(Thruster)?.options).toEqual({ thrust: 3 });
+			expect(box.getBehaviorRef(Thruster)?.options).toEqual({ thrust: 3, damping: 0 });
+		});
+
+		it('falls back to switching the behavior off on a snapshot-less undo with nothing recorded', () => {
+			const box = createBox({});
+			box.use(Thruster, { thrust: 9 });
+			const applier = new StageSwatchApplier(fakeStage([box]));
+
+			applier.applySceneOperation(
+				operation('never-seen', [{ uuid: box.uuid, swatch: thruster }]),
+				'undo',
+			);
+
+			expect(box.hasBehavior(Thruster)).toBe(false);
 		});
 
 		it('evicts the oldest snapshots past the cap and frees their off-mesh materials', () => {

@@ -108,13 +108,16 @@ describe('ScreenVisibilityBehavior', () => {
 	});
 
 	it('can require full visibility instead of partial intersection', () => {
-		const entity = createEntity(new Vector3(4, 4, 1), new Vector3(4.5, 0, 0));
-		const partialHandle = entity.use(ScreenVisibilityBehavior) as ScreenVisibilityHandle;
-		const fullHandle = entity.use(ScreenVisibilityBehavior, {
+		const size = new Vector3(4, 4, 1);
+		const position = new Vector3(4.5, 0, 0);
+		const partialEntity = createEntity(size, position);
+		const fullEntity = createEntity(size, position);
+		const partialHandle = partialEntity.use(ScreenVisibilityBehavior) as ScreenVisibilityHandle;
+		const fullHandle = fullEntity.use(ScreenVisibilityBehavior, {
 			requireFullyVisible: true,
 		}) as ScreenVisibilityHandle;
 		const camera = createCamera('main');
-		const partialSystem = ScreenVisibilityBehavior.systemFactory({
+		const system = ScreenVisibilityBehavior.systemFactory({
 			world: {},
 			scene: {
 				zylemCamera: camera,
@@ -123,13 +126,13 @@ describe('ScreenVisibilityBehavior', () => {
 			getBehaviorLinks: (key: symbol) =>
 				key === ScreenVisibilityBehavior.key
 					? [
-						{ entity, ref: entity.getBehaviorRefs()[0] },
-						{ entity, ref: entity.getBehaviorRefs()[1] },
+						{ entity: partialEntity, ref: partialEntity.getBehaviorRefs()[0] },
+						{ entity: fullEntity, ref: fullEntity.getBehaviorRefs()[0] },
 					]
 					: [],
 		});
 
-		partialSystem.update(undefined, 1 / 60);
+		system.update(undefined, 1 / 60);
 
 		expect(partialHandle.isVisible()).toBe(true);
 		expect(fullHandle.isVisible()).toBe(false);

@@ -139,10 +139,6 @@ export class StageDebugDelegate {
 
 		this.swatchApplier = new StageSwatchApplier({
 			resolveEntity: (uuid) => this.resolveEntity(uuid),
-			attachBehaviorLink: (entity, ref) =>
-				this.stage.entityDelegate.attachBehaviorLink(entity, ref),
-			detachBehaviorLink: (entity, ref) =>
-				this.stage.entityDelegate.detachBehaviorLink(entity, ref),
 		});
 
 		this.marquee = new StageMarqueeSelect({

@@ -48,6 +48,11 @@ import type {
 	BehaviorSystemFactory,
 } from '@zylem/behaviors/core';
 import { Vessel } from '../core/vessel';
+import {
+	behaviorName,
+	type BehaviorHost,
+	type BehaviorSlotOwner,
+} from '../entities/behavior-slots';
 import { emitPointerMembership } from './pointer-target';
 
 type NodeLike = { create: Function };
@@ -86,7 +91,7 @@ export interface EntityDelegateContext {
  * Owns all entity-related state and exposes it to ZylemStage for orchestration
  * and to external consumers (debug delegate, transform system) via public getters.
  */
-export class StageEntityDelegate {
+export class StageEntityDelegate implements BehaviorHost {
 	private static readonly EMPTY_BEHAVIOR_LINKS: readonly BehaviorEntityLink[] = [];
 
 	/** Entities queued before load completes. */
@@ -114,8 +119,11 @@ export class StageEntityDelegate {
 	readonly behaviorSystems: BehaviorSystem[] = [];
 	readonly behaviorSystemByKey: Map<symbol, BehaviorSystem> = new Map();
 	readonly registeredSystemKeys: Set<symbol> = new Set();
+	/**
+	 * Running links by behavior key, for systems that read them through
+	 * `getBehaviorLinks`. A system that tracks its own links is not indexed.
+	 */
 	readonly behaviorEntityIndex: Map<symbol, Set<BehaviorEntityLink>> = new Map();
-	private readonly behaviorLinksByUuid: Map<string, BehaviorEntityLink[]> = new Map();
 
 	// Runtime context — set via attach() during stage load
 	private scene: ZylemScene | null = null;
@@ -196,6 +204,7 @@ export class StageEntityDelegate {
 		this.ensureEnvironmentStatic(entity);
 		this.applySpawnTransform(entity);
 		this.maybeAttachEntityPhysics(entity);
+		this.bindBehaviorsToRuntimeSlot(entity);
 
 		for (const childNode of child.getChildren()) {
 			if (childNode instanceof BaseNode) {
@@ -252,6 +261,7 @@ export class StageEntityDelegate {
 		// body, that the `rotation` option belongs on.
 		applyLateSpawnTransform(entity as unknown as SpawnTransformEntity);
 		this.maybeAttachEntityPhysics(entity);
+		this.bindBehaviorsToRuntimeSlot(entity);
 		this.tryRegisterRenderStrategy(entity);
 		if (!isManagedRenderEntity(entity)) {
 			this.scene.addEntityGroup(entity);
@@ -437,6 +447,7 @@ export class StageEntityDelegate {
 
 		this.registerBehaviorLinks(entity);
 		this.maybeAttachEntityPhysics(entity);
+		this.bindBehaviorsToRuntimeSlot(entity);
 		this.tryRegisterRenderStrategy(entity);
 		if (!isManagedRenderEntity(entity)) {
 			this.scene.addEntityGroup(entity);
@@ -677,10 +688,10 @@ export class StageEntityDelegate {
 		this.behaviorSystemByKey.clear();
 		this.registeredSystemKeys.clear();
 		this.behaviorEntityIndex.clear();
-		this.behaviorLinksByUuid.clear();
 
 		const destroyedUuids: string[] = [];
 		this.childrenMap.forEach((child) => {
+			this.releaseBehaviorHost(child);
 			emitPointerMembership(child, false);
 			try {
 				child.nodeDestroy({ me: child, globals: getGlobals() });
@@ -692,6 +703,7 @@ export class StageEntityDelegate {
 		// stage down makes their uuids meaningless, so destroy them here rather
 		// than leaking their meshes and materials.
 		this.detachedMap.forEach(({ entity }) => {
+			this.releaseBehaviorHost(entity);
 			try {
 				entity.nodeDestroy?.({ me: entity, globals: getGlobals() });
 			} catch { /* noop */ }
@@ -717,60 +729,88 @@ export class StageEntityDelegate {
 		this.wasmStage = null;
 	}
 
-	private registerBehaviorLinks(entity: any): void {
-		if (!this.world || !this.scene) return;
-		if (typeof entity?.getBehaviorRefs !== 'function') return;
-
-		const refs = entity.getBehaviorRefs();
-		if (!Array.isArray(refs) || refs.length === 0) return;
-
-		const links: BehaviorEntityLink[] = [];
-		for (const ref of refs) {
-			links.push(this.linkBehaviorRef(entity, ref));
-		}
-		this.behaviorLinksByUuid.set(entity.uuid, links);
-	}
+	// ─── Behavior host ───────────────────────────────────────────────────────
 
 	/**
-	 * Index one ref, lazily create its system, and attach. Shared by spawn-time
-	 * registration and late per-ref attaches.
+	 * Start an enabled behavior: create its system on first use, then attach
+	 * the link. Called at spawn and each time a behavior is enabled on a
+	 * spawned entity, so it creates no objects once the system exists.
 	 */
-	private linkBehaviorRef(entity: any, ref: BehaviorRef): BehaviorEntityLink {
+	linkBehavior(link: BehaviorEntityLink): void {
+		if (!this.world || !this.scene) return;
+		const ref = link.ref as BehaviorRef;
 		const key = ref.descriptor.key;
-		const link: BehaviorEntityLink = { entity, ref };
-
-		let indexed = this.behaviorEntityIndex.get(key);
-		if (!indexed) {
-			indexed = new Set();
-			this.behaviorEntityIndex.set(key, indexed);
-		}
-		indexed.add(link);
 
 		let system = this.behaviorSystemByKey.get(key);
 		if (!system && !this.registeredSystemKeys.has(key)) {
-			const createdSystem = ref.descriptor.systemFactory({
-				world: this.world,
-				scene: this.scene,
-				wasmStage: this.wasmStage,
-				getBehaviorLinks: (behaviorKey: symbol) =>
-					this.behaviorEntityIndex.get(behaviorKey)
-					?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
-				createEntity: create as unknown as CreateEntityFn,
-				getGlobals,
-			});
-			system = createdSystem;
-			this.behaviorSystems.push(createdSystem);
-			this.behaviorSystemByKey.set(key, createdSystem);
-			this.registeredSystemKeys.add(key);
+			system = this.createBehaviorSystem(ref);
 		}
 
+		if (!system?.tracksLinks) {
+			let indexed = this.behaviorEntityIndex.get(key);
+			if (!indexed) {
+				indexed = new Set();
+				this.behaviorEntityIndex.set(key, indexed);
+			}
+			indexed.add(link);
+		}
 		system?.attach?.(link);
-		return link;
 	}
 
-	private unlinkBehaviorLink(link: BehaviorEntityLink): void {
-		const key = link.ref?.descriptor?.key as symbol | undefined;
-		if (!key) return;
+	/**
+	 * Stop a running behavior on a spawned entity.
+	 * @throws When the behavior's system has no `detach`. Nothing changes.
+	 */
+	unlinkBehavior(link: BehaviorEntityLink): void {
+		const descriptor = (link.ref as BehaviorRef).descriptor;
+		const system = this.behaviorSystemByKey.get(descriptor.key);
+		if (system && typeof system.detach !== 'function') {
+			throw new Error(
+				`Behavior "${behaviorName(descriptor)}" is not removable at runtime: its system has no detach.`,
+			);
+		}
+		this.releaseBehaviorLink(link);
+	}
+
+	/** Stop every running behavior on the entity. Never throws for a system without `detach`. */
+	suspendBehaviors(entity: BehaviorSlotOwner): void {
+		const slots = entity.getBehaviorSlots();
+		for (let i = 0; i < slots.length; i++) {
+			const slot = slots[i]!;
+			if (slot.ref.enabled !== false) this.releaseBehaviorLink(slot.link);
+		}
+	}
+
+	/** Start every enabled behavior on the entity. */
+	resumeBehaviors(entity: BehaviorSlotOwner): void {
+		const slots = entity.getBehaviorSlots();
+		for (let i = 0; i < slots.length; i++) {
+			const slot = slots[i]!;
+			if (slot.ref.enabled !== false) this.linkBehavior(slot.link);
+		}
+	}
+
+	private createBehaviorSystem(ref: BehaviorRef): BehaviorSystem {
+		const key = ref.descriptor.key;
+		const system: BehaviorSystem = ref.descriptor.systemFactory({
+			world: this.world,
+			scene: this.scene,
+			wasmStage: this.wasmStage,
+			getBehaviorLinks: (behaviorKey: symbol) =>
+				this.behaviorEntityIndex.get(behaviorKey)
+				?? StageEntityDelegate.EMPTY_BEHAVIOR_LINKS,
+			createEntity: create as unknown as CreateEntityFn,
+			getGlobals,
+		});
+		this.behaviorSystems.push(system);
+		this.behaviorSystemByKey.set(key, system);
+		this.registeredSystemKeys.add(key);
+		return system;
+	}
+
+	/** Detach a link from its system and drop it from the index. */
+	private releaseBehaviorLink(link: BehaviorEntityLink): void {
+		const key = (link.ref as BehaviorRef).descriptor.key;
 		this.behaviorSystemByKey.get(key)?.detach?.(link);
 		const indexed = this.behaviorEntityIndex.get(key);
 		if (!indexed) return;
@@ -780,60 +820,53 @@ export class StageEntityDelegate {
 		}
 	}
 
-	/**
-	 * Re-index an entity's behavior refs after a late `entity.use(...)`.
-	 * Spawn-time registration only sees refs that existed at attach.
-	 *
-	 * Detaches and re-attaches every behavior on the entity, which resets their
-	 * per-link state. Prefer {@link attachBehaviorLink} /
-	 * {@link detachBehaviorLink} when only one ref changed.
-	 */
-	syncBehaviorLinks(entity: any): void {
-		this.unregisterBehaviorLinks(entity);
-		this.registerBehaviorLinks(entity);
+	/** Become the entity's behavior host and start its enabled behaviors. */
+	private registerBehaviorLinks(entity: any): void {
+		if (!this.world || !this.scene) return;
+		if (typeof entity?.getBehaviorSlots !== 'function') return;
+
+		const owner = entity as BehaviorSlotOwner;
+		const previous = owner.behaviorHost;
+		if (previous === this) return;
+		// A shared instance arriving from another stage: that stage's systems
+		// must let go of the links before this stage's take them.
+		previous?.suspendBehaviors(owner);
+		owner.behaviorHost = this;
+		this.resumeBehaviors(owner);
 	}
 
-	/**
-	 * Attach a single ref that was added to a live entity (`entity.use(...)`
-	 * after spawn) without disturbing the entity's other behaviors.
-	 *
-	 * @returns `false` when the stage is not loaded or the ref is already linked.
-	 */
-	attachBehaviorLink(entity: any, ref: BehaviorRef): boolean {
-		if (!this.world || !this.scene) return false;
-		if (!entity?.uuid) return false;
-		const links = this.behaviorLinksByUuid.get(entity.uuid) ?? [];
-		if (links.some((link) => link.ref === ref)) return false;
-		links.push(this.linkBehaviorRef(entity, ref));
-		this.behaviorLinksByUuid.set(entity.uuid, links);
-		return true;
-	}
-
-	/**
-	 * Detach a single ref's system link from a live entity, leaving its other
-	 * behaviors attached.
-	 *
-	 * @returns `false` when no link for that ref exists.
-	 */
-	detachBehaviorLink(entity: any, ref: BehaviorRef): boolean {
-		const links = this.behaviorLinksByUuid.get(entity?.uuid);
-		if (!links) return false;
-		const index = links.findIndex((link) => link.ref === ref);
-		if (index === -1) return false;
-		const [link] = links.splice(index, 1);
-		if (link) this.unlinkBehaviorLink(link);
-		if (links.length === 0) {
-			this.behaviorLinksByUuid.delete(entity.uuid);
-		}
-		return true;
-	}
-
+	/** Stop the entity's behaviors and stop being its host. */
 	private unregisterBehaviorLinks(entity: any): void {
-		const links = this.behaviorLinksByUuid.get(entity?.uuid);
-		if (!links) return;
-		for (const link of links) {
-			this.unlinkBehaviorLink(link);
+		if (typeof entity?.getBehaviorSlots !== 'function') return;
+		const owner = entity as BehaviorSlotOwner;
+		if (owner.behaviorHost !== this) return;
+		this.suspendBehaviors(owner);
+		owner.behaviorHost = null;
+	}
+
+	/** Stop being the entity's host at teardown, when the systems are already gone. */
+	private releaseBehaviorHost(entity: any): void {
+		if (entity?.behaviorHost === this) {
+			entity.behaviorHost = null;
 		}
-		this.behaviorLinksByUuid.delete(entity.uuid);
+	}
+
+	/**
+	 * Attach the entity's running behaviors to the runtime slot its body just
+	 * received, so they act on the next simulation step. Only systems that
+	 * track their own links take part: they accept a repeat `attach`.
+	 */
+	private bindBehaviorsToRuntimeSlot(entity: any): void {
+		if (typeof entity?.getBehaviorSlots !== 'function') return;
+		const owner = entity as BehaviorSlotOwner;
+		if (owner.behaviorHost !== this) return;
+
+		const slots = owner.getBehaviorSlots();
+		for (let i = 0; i < slots.length; i++) {
+			const slot = slots[i]!;
+			if (slot.ref.enabled === false) continue;
+			const system = this.behaviorSystemByKey.get(slot.ref.descriptor.key);
+			if (system?.tracksLinks) system.attach?.(slot.link);
+		}
 	}
 }

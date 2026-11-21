@@ -17,6 +17,7 @@
 
 import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import type { Vec3 } from '../core/vector';
+import type { BehaviorHost, BehaviorSlot, BehaviorSlotOwner } from './behavior-slots';
 
 /**
  * The subset of `ZylemWorld` a collider rebuild needs. Structural so this
@@ -39,6 +40,9 @@ export interface ScalableEntity {
 	getPose(): { position: Vec3; rotation: { x: number; y: number; z: number; w: number } } | null;
 	/** Pristine definitions captured before the first scale change. */
 	colliderBaseline: SimulationColliderDefinition[] | null;
+	/** The stage running the entity's behaviors, on entities that carry any. */
+	behaviorHost?: BehaviorHost | null;
+	getBehaviorSlots?(): readonly BehaviorSlot[];
 }
 
 function scaleTriple(
@@ -176,6 +180,13 @@ export function commitColliderScale(entity: ScalableEntity): boolean {
 		return true;
 	}
 
+	// The new body starts without the old one's runtime behaviors, so stop
+	// them here and start them again on the new body.
+	const behaviors = entity.getBehaviorSlots && entity.behaviorHost
+		? (entity as BehaviorSlotOwner)
+		: null;
+	behaviors?.behaviorHost?.suspendBehaviors(behaviors);
+
 	const pose = entity.getPose();
 	world.destroyEntity(entity);
 	if (pose && entity.bodyDesc) {
@@ -188,5 +199,6 @@ export function commitColliderScale(entity: ScalableEntity): boolean {
 		];
 	}
 	world.addEntity(entity);
+	behaviors?.behaviorHost?.resumeBehaviors(behaviors);
 	return true;
 }

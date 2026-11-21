@@ -42,7 +42,7 @@ export class ZylemCelestialBody extends GameEntity<CelestialBodyOptions> {
 	}
 	override clone(overrides?: Partial<CelestialBodyOptions>): this {
 		const clone = super.clone(overrides);
-		const ref = clone.getBehaviorRef(GravitySourceBehavior);
+		const ref = clone.getBehaviorHandle(GravitySourceBehavior)?.ref;
 		if (ref && clone.bodyOptions.gravity)
 			ref.options = {
 				...clone.bodyOptions.gravity,
@@ -101,9 +101,8 @@ export class ZylemCelestialBody extends GameEntity<CelestialBodyOptions> {
 export function createCelestialBody(options: CelestialBodyOptions = {}): ZylemCelestialBody {
 	const body = new ZylemCelestialBody(options);
 	return finalizeEntityCloneSupport(body, (overrides) => {
-		const clone = createCelestialBody({ ...body.bodyOptions, ...overrides });
-		// The base clone operation copies behavior refs after constructing the entity.
-		clone.removeBehavior(GravitySourceBehavior);
-		return clone;
+		// The base clone operation then copies the source's behaviors over the
+		// ones the constructor declared.
+		return createCelestialBody({ ...body.bodyOptions, ...overrides });
 	});
 }

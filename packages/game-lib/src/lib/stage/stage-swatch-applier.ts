@@ -8,14 +8,18 @@
  * selection has no material) while the rest still land.
  *
  * Undo follows the stage's "editor holds the history, game holds the
- * instances" rule. The original material and any displaced behavior refs are
- * kept here per operation, so undo puts back the exact objects rather than a
- * reconstruction — the pre-swatch material (texture, tint, standard shader) is
- * usually not describable as a swatch at all.
+ * instances" rule. The original material is kept here per operation, so undo
+ * puts back the exact object rather than a reconstruction — the pre-swatch
+ * material (texture, tint, standard shader) is usually not describable as a
+ * swatch at all.
+ *
+ * Behaviors need no kept objects. An entity holds one slot per behavior for
+ * its whole life, so an operation records each behavior's options and whether
+ * it was enabled, and undo and redo write those back through the handle.
  */
 
 import type { Material } from 'three';
-import type { BehaviorRef } from '@zylem/behaviors/core';
+import type { BehaviorDescriptor, BehaviorHandle } from '@zylem/behaviors/core';
 import type {
 	EntityApplySwatchPayload,
 	SceneOperationEntry,
@@ -23,13 +27,14 @@ import type {
 	SwatchApplyResult,
 	SwatchSpec,
 } from '@zylem/bridge';
+import { deepCloneValue } from '../core/clone-utils';
 import type { GameEntity } from '../entities/entity';
 import { getSwatchSource } from '../entities/swatch-registry';
 import { isGLSLShader, isTSLShader, type ZylemShader } from '../graphics/material';
 
 /**
  * Upper bound on remembered operations. Each holds at most one material set
- * and a few refs per entity, so this is generous for an editing session while
+ * and a few option copies per entity, so this is generous for an editing session while
  * still bounding a game that spams applies.
  */
 export const MAX_SWATCH_SNAPSHOTS = 200;
@@ -43,10 +48,22 @@ interface EntitySwatchSnapshot {
 	 * redo can put the same instances back.
 	 */
 	redoMaterials?: Material[];
-	/** Refs displaced by this op, by behavior key (first removal per key wins). */
-	previousRefs: Map<symbol, BehaviorRef>;
-	/** Refs this op installed, by behavior key (last per key wins). */
-	appliedRefs: Map<symbol, BehaviorRef>;
+	/** Behaviors this op changed, by behavior key. */
+	behaviors: Map<symbol, BehaviorSwatchSnapshot>;
+}
+
+type BehaviorOptions = Record<string, unknown>;
+
+/** One behavior's state on either side of an operation. */
+interface BehaviorSwatchSnapshot {
+	descriptor: BehaviorDescriptor<any, any>;
+	/**
+	 * The behavior before the op (the first swatch per key wins). Null when
+	 * the entity did not have it.
+	 */
+	previous: { options: BehaviorOptions; enabled: boolean } | null;
+	/** The options the op left it with (the last swatch per key wins). */
+	applied: BehaviorOptions;
 }
 
 type OperationSnapshot = Map<string, EntitySwatchSnapshot>;
@@ -54,8 +71,6 @@ type OperationSnapshot = Map<string, EntitySwatchSnapshot>;
 /** Stage hooks the applier needs; kept narrow so tests can pass fakes. */
 export interface SwatchApplierStage {
 	resolveEntity(uuid: string): GameEntity<any> | null;
-	attachBehaviorLink(entity: GameEntity<any>, ref: BehaviorRef): boolean;
-	detachBehaviorLink(entity: GameEntity<any>, ref: BehaviorRef): boolean;
 }
 
 export interface SwatchApplyOutcome {
@@ -66,6 +81,45 @@ export interface SwatchApplyOutcome {
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Leave a behavior with exactly `options`, switched on or off.
+ *
+ * The behavior is stopped while its options change, so a running one restarts
+ * once with the final set.
+ *
+ * @throws On a spawned entity when the behavior is running and cannot be
+ * removed at runtime. Nothing has changed when it throws.
+ */
+function writeBehaviorState(
+	handle: BehaviorHandle<any, any>,
+	options: BehaviorOptions,
+	enabled: boolean,
+): void {
+	if (handle.enabled) handle.disable();
+
+	const current = handle.getOptions() as BehaviorOptions;
+	for (const key of Object.keys(current)) {
+		if (!(key in options)) delete current[key];
+	}
+	handle.setOptions(deepCloneValue(options));
+
+	if (enabled) handle.enable();
+}
+
+/** Whether a behavior still has the options (compared one level deep) and enabled state recorded for it. */
+function behaviorStateMatches(
+	handle: BehaviorHandle<any, any>,
+	state: { options: BehaviorOptions; enabled: boolean },
+): boolean {
+	if (handle.enabled !== state.enabled) return false;
+	const current = handle.getOptions() as BehaviorOptions;
+	const keys = Object.keys(current);
+	return (
+		keys.length === Object.keys(state.options).length
+		&& keys.every((key) => JSON.stringify(current[key]) === JSON.stringify(state.options[key]))
+	);
 }
 
 function isShader(value: unknown): value is ZylemShader {
@@ -107,10 +161,10 @@ export class StageSwatchApplier {
 	/**
 	 * Undo or redo a `swatch` operation.
 	 *
-	 * With a snapshot the exact prior objects come back. Without one (the op
-	 * predates a stage reload, or was evicted) redo re-applies from the entry
-	 * payload and undo does its best: behaviors are removed by key, shaders fall
-	 * back to a plain default material.
+	 * With a snapshot the exact prior material and behavior state come back.
+	 * Without one (the op predates a stage reload, or was evicted) redo
+	 * re-applies from the entry payload and undo does its best: behaviors are
+	 * disabled by key, shaders fall back to a plain default material.
 	 */
 	applySceneOperation(op: SceneOperationPayload, direction: 'undo' | 'redo'): void {
 		if (op.kind !== 'swatch') return;
@@ -159,9 +213,8 @@ export class StageSwatchApplier {
 			return { result: { ...base, ok: false, reason: 'invalid-props' } };
 		}
 
-		const entitySnapshot = snapshot.get(uuid) ?? {
-			previousRefs: new Map<symbol, BehaviorRef>(),
-			appliedRefs: new Map<symbol, BehaviorRef>(),
+		const entitySnapshot: EntitySwatchSnapshot = snapshot.get(uuid) ?? {
+			behaviors: new Map(),
 		};
 
 		const outcome =
@@ -229,42 +282,94 @@ export class StageSwatchApplier {
 		const { descriptor } = source;
 		const key = descriptor.key;
 
-		let replaced = false;
-		let replacedSpec: { source: string; props: Record<string, unknown> } | undefined;
-		const existing = entity.getBehaviorRef(descriptor);
-		if (existing) {
-			entity.removeBehavior(existing);
-			this.stage.detachBehaviorLink(entity, existing);
-			const installedByThisOp = snapshot.appliedRefs.get(key) === existing;
-			if (!installedByThisOp) {
-				replaced = true;
-				replacedSpec = { source: spec.source, props: { ...existing.options } };
-				if (!snapshot.previousRefs.has(key)) {
-					snapshot.previousRefs.set(key, existing);
-				}
-			}
-		}
+		const recorded = snapshot.behaviors.get(key);
+		const handle = entity.getBehaviorHandle(descriptor);
+		const before = handle
+			? { options: deepCloneValue(handle.getOptions()) as BehaviorOptions, enabled: handle.enabled }
+			: null;
 
-		let ref: BehaviorRef | undefined;
 		try {
-			entity.use(descriptor, spec.props as Partial<Record<string, unknown>>);
-			ref = entity.getBehaviorRefs().at(-1);
+			if (handle) {
+				// A swatch is a whole configuration: keys it leaves out go back
+				// to the behavior's defaults.
+				writeBehaviorState(handle, { ...descriptor.defaultOptions, ...spec.props }, true);
+			} else {
+				entity.use(descriptor, spec.props as Partial<Record<string, unknown>>);
+			}
 		} catch (error) {
 			console.warn(`[zylem] swatch behavior "${spec.source}" failed to attach`, error);
-		}
-		if (!ref || ref.descriptor.key !== key) {
-			// Put the displaced ref back so a failed apply is not also a removal.
-			if (existing) {
-				entity.restoreBehaviorRef(existing);
-				this.stage.attachBehaviorLink(entity, existing);
-				if (snapshot.previousRefs.get(key) === existing) snapshot.previousRefs.delete(key);
-			}
+			this.rollBackBehavior(entity, descriptor, before);
 			return { ok: false, reason: 'invalid-props' };
 		}
 
-		this.stage.attachBehaviorLink(entity, ref);
-		snapshot.appliedRefs.set(key, ref);
-		return { ok: true, replaced, replacedSpec };
+		const applied = deepCloneValue(
+			entity.getBehaviorHandle(descriptor)!.getOptions(),
+		) as BehaviorOptions;
+		if (recorded) {
+			// A second swatch for this behavior in the same batch replaced our
+			// own install; what the op displaced is already recorded.
+			recorded.applied = applied;
+			return { ok: true, replaced: false };
+		}
+
+		snapshot.behaviors.set(key, { descriptor, previous: before, applied });
+		// Only a behavior that was running counts as replaced. One that was
+		// switched off goes back to off on undo, which needs no record.
+		if (before?.enabled) {
+			return {
+				ok: true,
+				replaced: true,
+				replacedSpec: { source: spec.source, props: { ...before.options } },
+			};
+		}
+		return { ok: true, replaced: false };
+	}
+
+	/** Put a behavior back the way a failed apply found it. */
+	private rollBackBehavior(
+		entity: GameEntity<any>,
+		descriptor: BehaviorDescriptor<any, any>,
+		before: BehaviorSwatchSnapshot['previous'],
+	): void {
+		try {
+			if (before) {
+				const handle = entity.getBehaviorHandle(descriptor);
+				if (handle && !behaviorStateMatches(handle, before)) {
+					writeBehaviorState(handle, before.options, before.enabled);
+				}
+			} else {
+				entity.unuse(descriptor);
+			}
+		} catch (error) {
+			console.warn('[zylem] could not roll back a failed swatch behavior', error);
+		}
+	}
+
+	/**
+	 * Write one side of a behavior snapshot back to the entity. Never throws:
+	 * a behavior that cannot be removed at runtime stays as it is, with a
+	 * warning.
+	 */
+	private restoreBehavior(
+		entity: GameEntity<any>,
+		behavior: BehaviorSwatchSnapshot,
+		direction: 'undo' | 'redo',
+	): void {
+		const handle = entity.getBehaviorHandle(behavior.descriptor);
+		try {
+			if (direction === 'redo') {
+				if (handle) writeBehaviorState(handle, behavior.applied, true);
+				else entity.use(behavior.descriptor, deepCloneValue(behavior.applied));
+			} else if (!handle) {
+				return;
+			} else if (behavior.previous) {
+				writeBehaviorState(handle, behavior.previous.options, behavior.previous.enabled);
+			} else {
+				handle.disable();
+			}
+		} catch (error) {
+			console.warn(`[zylem] could not ${direction} a swatch behavior`, error);
+		}
 	}
 
 	// ── Undo / redo ──────────────────────────────────────────────────────────
@@ -281,14 +386,8 @@ export class StageSwatchApplier {
 				if (current) entitySnapshot.redoMaterials = current;
 			}
 
-			for (const ref of entitySnapshot.appliedRefs.values()) {
-				if (entity.removeBehavior(ref)) {
-					this.stage.detachBehaviorLink(entity, ref);
-				}
-			}
-			for (const ref of entitySnapshot.previousRefs.values()) {
-				entity.restoreBehaviorRef(ref);
-				this.stage.attachBehaviorLink(entity, ref);
+			for (const behavior of [...entitySnapshot.behaviors.values()].reverse()) {
+				this.restoreBehavior(entity, behavior, 'undo');
 			}
 		}
 	}
@@ -302,14 +401,8 @@ export class StageSwatchApplier {
 				entity.replaceMaterials(entitySnapshot.redoMaterials, { disposePrevious: false });
 			}
 
-			for (const ref of entitySnapshot.previousRefs.values()) {
-				if (entity.removeBehavior(ref)) {
-					this.stage.detachBehaviorLink(entity, ref);
-				}
-			}
-			for (const ref of entitySnapshot.appliedRefs.values()) {
-				entity.restoreBehaviorRef(ref);
-				this.stage.attachBehaviorLink(entity, ref);
+			for (const behavior of entitySnapshot.behaviors.values()) {
+				this.restoreBehavior(entity, behavior, 'redo');
 			}
 		}
 	}
@@ -322,13 +415,21 @@ export class StageSwatchApplier {
 			if (entry.swatch.kind === 'behavior') {
 				const source = getSwatchSource('behavior', entry.swatch.source);
 				if (!source) continue;
-				const removed = entity.removeBehavior(source.descriptor);
-				if (removed) this.stage.detachBehaviorLink(entity, removed);
-				if (entry.replaced) {
-					entity.use(source.descriptor, entry.replaced.props);
-					const restored = entity.getBehaviorRefs().at(-1);
-					if (restored) this.stage.attachBehaviorLink(entity, restored);
-				}
+				const { descriptor } = source;
+				this.restoreBehavior(
+					entity,
+					{
+						descriptor,
+						previous: entry.replaced
+							? {
+								options: { ...descriptor.defaultOptions, ...entry.replaced.props },
+								enabled: true,
+							}
+							: null,
+						applied: entry.swatch.props,
+					},
+					'undo',
+				);
 				continue;
 			}
 

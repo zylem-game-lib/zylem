@@ -1,6 +1,6 @@
 import { Box3, Group, Quaternion, Vector3 } from 'three';
 
-import type { BehaviorHandle, BehaviorRef } from '@zylem/behaviors/core';
+import type { BehaviorHandle } from '@zylem/behaviors/core';
 import {
 	ParticleEmitterBehavior,
 	type ParticleEmitterBehaviorOptions,
@@ -225,28 +225,11 @@ export class ZylemParticleSystem extends GameEntity<ZylemParticleSystemOptions>
 			> & ParticleEmitterHandle;
 		}
 
-		const ref = this.getBehaviorRefs().find(
-			(candidate) => candidate.descriptor.key === ParticleEmitterBehavior.key,
-		) as BehaviorRef<ParticleEmitterBehaviorOptions> | undefined;
-		if (!ref) {
-			return null;
-		}
-
-		const baseHandle = {
-			getFSM: () => ref.fsm ?? null,
-			getOptions: () => ref.options,
-			ref,
-		};
-		const customMethods =
-			ParticleEmitterBehavior.createHandle?.(ref) ?? ({} as ParticleEmitterHandle);
-		this.particleHandle = {
-			...baseHandle,
-			...customMethods,
-		};
-		return this.particleHandle as BehaviorHandle<
-			ParticleEmitterBehaviorOptions,
-			ParticleEmitterHandle
-		> & ParticleEmitterHandle;
+		this.particleHandle = this.getBehaviorHandle(ParticleEmitterBehavior);
+		return this.particleHandle as
+			| (BehaviorHandle<ParticleEmitterBehaviorOptions, ParticleEmitterHandle>
+				& ParticleEmitterHandle)
+			| null;
 	}
 
 	play(): void {
