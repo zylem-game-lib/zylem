@@ -273,7 +273,8 @@
     "zw:prerelease": "pnpm -w run deps:latest --check",
     "test:graphics:space": "node tests/space-gpu.mjs",
     "test:graphics:ao": "node tests/ambient-occlusion-gpu.mjs",
-    "test:navigation:bundle": "node tests/navigation-bundle.mjs"
+    "test:navigation:bundle": "node tests/navigation-bundle.mjs",
+    "bench:behavior-toggling": "node tests/behavior-toggle-heap.mjs"
   },
   "dependencies": {
     "@dgreenheck/three-pinata": "^2.0.1",
