@@ -68,6 +68,7 @@ Also `@zylem/game-lib/core`.
 | [`onSetup`](/docs/api/entity/interfaces/GameEntity#onsetup), [`onUpdate`](/docs/api/entity/interfaces/GameEntity#onupdate), [`onDestroy`](/docs/api/entity/interfaces/GameEntity#ondestroy) | Entity hooks for spawn, each frame, and teardown. |
 | [`onLoaded`](/docs/api/entity/interfaces/GameEntity#onloaded), [`onUnload`](/docs/api/entity/interfaces/GameEntity#onunload) | Entity hooks for when its assets are ready, and for freeing what the stage session built. |
 | [`use`](/docs/api/entity/interfaces/GameEntity#use) | Attach a behavior and return its handle. |
+| [`unuse`](/docs/api/entity/interfaces/GameEntity#unuse), [`hasBehavior`](/docs/api/entity/interfaces/GameEntity#hasbehavior), [`getBehaviorHandle`](/docs/api/entity/interfaces/GameEntity#getbehaviorhandle) | Remove a behavior for good, ask whether one is enabled, or get its handle again. |
 | [`add`](/docs/api/entity/interfaces/GameEntity#add) | Attach mesh parts, colliders, or child entities. |
 | [`onCollision`](/docs/api/entity/interfaces/GameEntity#oncollision) | Run a callback when this entity’s collider hits another. |
 | [`runAction`](/docs/api/entity/interfaces/GameEntity#runaction), [`action`](/docs/api/entity/interfaces/GameEntity#action) | Play a timed action until it finishes, or keep a persistent action until you clear it. |
@@ -75,7 +76,7 @@ Also `@zylem/game-lib/core`.
 
 ## [Behaviors](/docs/behaviors/overview)
 
-`@zylem/game-lib/behavior`. Attach with `entity.use`.
+`@zylem/game-lib/behavior`. Attach with `entity.use`. Every handle has `enabled`, `enable()`, `disable()`, and `setOptions()`; see [Toggling behaviors at runtime](/docs/behaviors/overview#toggling-behaviors-at-runtime).
 
 | Name | What it does |
 | --- | --- |
