@@ -38,10 +38,16 @@ Entities inherit lifecycle registration from the shared node base type (`BaseNod
 | Hook | When it runs | Typical use |
 | --- | --- | --- |
 | `onSetup` | After the entity is wired into the stage, before the first update | Cache handles, `stage.getEntityByName`, camera targets |
-| `onLoaded` | After async assets for loadable entities finish | Start animations, flip UI state |
+| `onLoaded` | Once per spawn, when the entity is ready to use | Start animations, flip UI state |
 | `onUpdate` | Every frame (after internal action ticks) | Input, gameplay, `moveXY` |
 | `onDestroy` | User teardown begins | Score, audio, game logic cleanup |
-| `onCleanup` | Engine resource disposal | Rare in game code; entities like text use this internally |
+| `onUnload` | Right after `onDestroy` | Free what the stage session built; tidy game state kept outside the entity |
+
+`onLoaded` runs at the end of spawn for an entity with nothing to load. An actor waits for its model, the physics body built from that model, and its animation clips. If the model fails to load, `onLoaded` does not run. If only the clips fail, it still runs and the error is logged.
+
+`onCleanup` is a deprecated alias of `onUnload`.
+
+The stage runs these hooks for every entity it spawned, children included, and each callback receives its own entity as `me`. A parent does not run its children's setup or update. Destroying a parent destroys its children.
 
 Context objects match [SetupContext](/docs/api/core/interfaces/SetupContext), [UpdateContext](/docs/api/core/type-aliases/UpdateContext), and related types in the core module. Every update callback receives `me`, `delta`, `inputs`, `globals`, `camera`, and optional `stage` / `game`.
 
@@ -52,10 +58,12 @@ sequenceDiagram
   participant User as onSetup / onUpdate
   Stage->>Entity: spawn and attach
   Entity->>User: onSetup
+  Stage->>Entity: nodeLoaded once assets are in
+  Entity->>User: onLoaded
   Stage->>Entity: nodeUpdate each frame
   Entity->>User: onUpdate
   Stage->>Entity: nodeDestroy
-  Entity->>User: onDestroy then onCleanup
+  Entity->>User: onDestroy then onUnload
 ```
 
 ## Shared options

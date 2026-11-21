@@ -20,7 +20,7 @@ A **stage** is a scene slice: camera, lighting, background, entities, and stage-
 
 ## Entity
 
-An **entity** is a `GameEntity` subclass created by helpers such as [createSphere](/docs/api/entity/functions/createSphere), `createActor`, sprites, UI nodes, and zones. Entities have transforms, optional colliders, lifecycle callbacks (`onSetup`, `onUpdate`, `onDestroy`), and methods like `moveXY` for common motion.
+An **entity** is a `GameEntity` subclass created by helpers such as [createSphere](/docs/api/entity/functions/createSphere), `createActor`, sprites, UI nodes, and zones. Entities have transforms, optional colliders, lifecycle callbacks (`onSetup`, `onLoaded`, `onUpdate`, `onDestroy`, `onUnload`), and methods like `moveXY` for common motion.
 
 Entities are plain TypeScript objects you construct before `start()`; the stage spawns them into the scene graph and simulation registry when the game loads.
 

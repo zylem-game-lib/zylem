@@ -59,10 +59,12 @@ Use factories for wave spawns; use `clone` for one-off duplicates with tweaked `
 
 [destroy](/docs/api/entity/functions/destroy) delegates to the entity’s internal `nodeDestroy`:
 
-1. Child entities destroy first.
+1. Child entities destroy first, each with itself as `me`.
 2. **onDestroy** callbacks run (game logic).
 3. The node marks itself removed.
-4. **onCleanup** callbacks and engine disposal run (textures, behaviors, physics registration).
+4. **onUnload** callbacks and engine disposal run (textures, behaviors, physics registration).
+
+`onCleanup` is a deprecated alias of `onUnload`.
 
 Avoid calling `destroy` twice on the same entity; the node guards re-entry but your callbacks should still treat removal as idempotent.
 

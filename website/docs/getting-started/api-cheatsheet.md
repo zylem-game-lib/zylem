@@ -27,7 +27,7 @@ The calls most games make, grouped by import. Each name links to its signature i
 | [`getEntityByName`](/docs/api/core/functions/createStage) | Find a live entity on the loaded stage by name. |
 | [`addCamera`](/docs/api/core/functions/createStage), [`setActiveCamera`](/docs/api/core/functions/createStage) | Register a camera on the stage and choose which one draws. |
 | [`entitySpawner`](/docs/api/core/functions/entitySpawner) | Spawn a factory onto a live stage at absolute coordinates, or relative to another entity. |
-| [`vessel`](/docs/api/core/functions/vessel) | Empty group that forwards lifecycle events to its children. |
+| [`vessel`](/docs/api/core/functions/vessel) | Empty group that spawns and destroys its children with it. |
 | [`crossfadeTransitionShader`](/docs/api/core/variables/crossfadeTransitionShader) | Default blend when `nextStage`, `previousStage`, or `reset` passes a transition. |
 
 ## [Camera](/docs/camera/overview)
@@ -66,6 +66,7 @@ Also `@zylem/game-lib/core`.
 | [`createCooldownIcon`](/docs/api/entity/functions/createCooldownIcon) | HUD icon that sweeps from a named cooldown. |
 | [`destroy`](/docs/api/entity/functions/destroy) | Run the entity’s destroy lifecycle and release it. |
 | [`onSetup`](/docs/api/entity/interfaces/GameEntity#onsetup), [`onUpdate`](/docs/api/entity/interfaces/GameEntity#onupdate), [`onDestroy`](/docs/api/entity/interfaces/GameEntity#ondestroy) | Entity hooks for spawn, each frame, and teardown. |
+| [`onLoaded`](/docs/api/entity/interfaces/GameEntity#onloaded), [`onUnload`](/docs/api/entity/interfaces/GameEntity#onunload) | Entity hooks for when its assets are ready, and for freeing what the stage session built. |
 | [`use`](/docs/api/entity/interfaces/GameEntity#use) | Attach a behavior and return its handle. |
 | [`add`](/docs/api/entity/interfaces/GameEntity#add) | Attach mesh parts, colliders, or child entities. |
 | [`onCollision`](/docs/api/entity/interfaces/GameEntity#oncollision) | Run a callback when this entity’s collider hits another. |
