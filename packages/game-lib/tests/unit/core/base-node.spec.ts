@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BaseNode } from '../../../src/lib/core/base-node';
-import { SetupContext, UpdateContext, DestroyContext, LoadedContext, CleanupContext } from '../../../src/lib/core/base-node-life-cycle';
+import { SetupContext, UpdateContext, DestroyContext, LoadedContext, UnloadContext } from '../../../src/lib/core/base-node-life-cycle';
 import { NodeInterface } from '../../../src/lib/core/node-interface';
 
 class MockNode extends BaseNode {
     create() { return {}; }
     protected _setup(params: SetupContext<this>) { }
-    protected _loaded(params: LoadedContext<this>) { return Promise.resolve(); }
+    protected _loaded(params: LoadedContext<this>) { }
     protected _update(params: UpdateContext<this>) { }
     protected _destroy(params: DestroyContext<this>) { }
-    protected _cleanup(params: CleanupContext<this>) { }
+    protected _unload(params: UnloadContext<this>) { }
 }
 
 describe('BaseNode', () => {
@@ -126,23 +126,83 @@ describe('BaseNode', () => {
             expect(node.markedForRemoval).toBe(true);
         });
 
-        it('should propagate lifecycle events to children', () => {
+        it('should leave setup and update of children to the stage', () => {
             const child = new MockNode();
             const childSetupSpy = vi.spyOn(child as any, 'nodeSetup');
             const childUpdateSpy = vi.spyOn(child as any, 'nodeUpdate');
-            const childDestroySpy = vi.spyOn(child as any, 'nodeDestroy');
 
             node.add(child);
             const params = {} as any;
 
             node.nodeSetup(params);
-            expect(childSetupSpy).toHaveBeenCalledWith(params);
-
             node.nodeUpdate(params);
-            expect(childUpdateSpy).toHaveBeenCalledWith(params);
 
-            node.nodeDestroy(params);
-            expect(childDestroySpy).toHaveBeenCalledWith(params);
+            expect(childSetupSpy).not.toHaveBeenCalled();
+            expect(childUpdateSpy).not.toHaveBeenCalled();
+        });
+
+        it('should destroy children with the child as `me`', () => {
+            const child = new MockNode();
+            const childDestroySpy = vi.spyOn(child as any, 'nodeDestroy');
+
+            node.add(child);
+            node.nodeDestroy({ me: node, globals: { score: 1 } } as any);
+
+            expect(childDestroySpy).toHaveBeenCalledWith({ me: child, globals: { score: 1 } });
+            expect(child.markedForRemoval).toBe(true);
+        });
+
+        it('should run loaded callbacks once per setup', () => {
+            const loadedSpy = vi.spyOn(node as any, '_loaded');
+            const callbackSpy = vi.fn();
+            node.onLoaded(callbackSpy);
+            const params = {} as any;
+
+            node.nodeLoaded(params);
+            node.nodeLoaded(params);
+            expect(loadedSpy).toHaveBeenCalledTimes(1);
+            expect(callbackSpy).toHaveBeenCalledTimes(1);
+
+            node.nodeSetup(params);
+            node.nodeLoaded(params);
+            expect(callbackSpy).toHaveBeenCalledTimes(2);
+        });
+
+        it('should run unload callbacks after destroy callbacks', () => {
+            const order: string[] = [];
+            node.onUnload(() => order.push('unload'));
+            node.onDestroy(() => order.push('destroy'));
+
+            node.nodeDestroy({} as any);
+
+            expect(order).toEqual(['destroy', 'unload']);
+        });
+
+        it('should keep onCleanup as an alias of onUnload', () => {
+            const callbackSpy = vi.fn();
+            node.onCleanup(callbackSpy);
+
+            node.nodeDestroy({} as any);
+
+            expect(callbackSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it('should allocate a callback list only when a callback is registered', () => {
+            const callbacks = (node as any).lifecycleCallbacks;
+            expect(callbacks.update).toBeNull();
+
+            node.onUpdate(() => { });
+            expect(callbacks.update).toHaveLength(1);
+            expect(callbacks.setup).toBeNull();
+        });
+
+        it('should run a callback registered by another callback in the same pass', () => {
+            const late = vi.fn();
+            node.onUpdate(() => { node.onUpdate(late); });
+
+            node.nodeUpdate({} as any);
+
+            expect(late).toHaveBeenCalledTimes(1);
         });
     });
 });

@@ -50,7 +50,13 @@ export type EntityEvents = {
 		meshCount?: number;
 		errorMessage?: string;
 	};
-	'entity:animation:loaded': { entityId: string; animationCount: number };
+	'entity:animation:loaded': {
+		entityId: string;
+		animationCount: number;
+		/** `false` when the clips failed to load. Absent on success. */
+		success?: boolean;
+		errorMessage?: string;
+	};
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

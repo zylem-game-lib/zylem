@@ -176,9 +176,9 @@ try {
 	camera.position.x = 30;
 	camera.lookAt(0, 0, 0);
 	assert.ok(energy(await draw()) > 10000, 'Resize/camera move produced an empty frame');
-	planet.nodeCleanup({ me: planet, globals: {} });
+	planet.nodeDestroy({ me: planet, globals: {} });
 	planet = undefined;
-	for (const moon of moons.splice(0)) moon.nodeCleanup({ me: moon, globals: {} });
+	for (const moon of moons.splice(0)) moon.nodeDestroy({ me: moon, globals: {} });
 	background.dispose();
 	background = undefined;
 	assert.equal(scene.children.length, 0, 'Background or planet objects leaked');
@@ -214,9 +214,9 @@ try {
 		'Space GPU: solid/gradient/stars, camera translation, planet layers and two moons, animation, resize, sky day/night and teardown passed.'
 	);
 } finally {
-	for (const moon of moons) moon.nodeCleanup({ me: moon, globals: {} });
+	for (const moon of moons) moon.nodeDestroy({ me: moon, globals: {} });
 	simulation.dispose();
-	planet?.nodeCleanup({ me: planet, globals: {} });
+	planet?.nodeDestroy({ me: planet, globals: {} });
 	background?.dispose();
 	pipeline.dispose();
 	main.dispose();

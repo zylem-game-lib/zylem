@@ -10,7 +10,7 @@ import {
 	SpotLight,
 } from 'three';
 
-import type { CleanupContext } from '../core/base-node-life-cycle';
+import type { UnloadContext } from '../core/base-node-life-cycle';
 import { GameEntity, type GameEntityOptions } from './entity';
 
 type Vec3 = { x: number; y: number; z: number };
@@ -185,12 +185,12 @@ export class ZylemLight extends GameEntity<ZylemLightGameOptions> {
 	 * Dispose the shadow map render target before delegating to the engine's
 	 * standard cleanup (which removes the group from its parent scene).
 	 */
-	protected override _cleanup(params: CleanupContext<this>): void {
+	protected override _unload(params: UnloadContext<this>): void {
 		const shadowMap = (this.light as { shadow?: { map?: { dispose?: () => void } | null } } | null)?.shadow?.map;
 		shadowMap?.dispose?.();
 		this.light = null;
 		this.lightTarget = null;
-		super._cleanup(params);
+		super._unload(params);
 	}
 }
 

@@ -1,7 +1,7 @@
 import { GravitySourceBehavior, resolveGravitySource } from '@zylem/behaviors/celestial';
 import { sphereCollision } from '../../entities/parts/collision-factories';
 import { Vector3 } from 'three';
-import type { CleanupContext, SetupContext, UpdateContext } from '../../core/base-node-life-cycle';
+import type { SetupContext, UnloadContext, UpdateContext } from '../../core/base-node-life-cycle';
 import {
 	finalizeEntityCloneSupport,
 	GameEntity,
@@ -90,10 +90,10 @@ export class ZylemCelestialBody extends GameEntity<CelestialBodyOptions> {
 		this.elapsed = seconds;
 		this.visual?.update(seconds);
 	}
-	protected override _cleanup(context: CleanupContext<this>) {
+	protected override _unload(context: UnloadContext<this>) {
 		this.visual?.dispose();
 		this.visual = null;
-		super._cleanup(context);
+		super._unload(context);
 		this.group = undefined;
 		this.mesh = undefined;
 	}

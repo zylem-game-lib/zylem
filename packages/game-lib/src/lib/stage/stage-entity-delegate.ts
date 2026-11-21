@@ -185,6 +185,7 @@ export class StageEntityDelegate {
 			});
 
 			this.addEntityToStage(child);
+			this.notifyLoadedIfReady(child);
 			return;
 		}
 
@@ -216,6 +217,30 @@ export class StageEntityDelegate {
 		this.addEntityToStage(entity);
 		this.entityModelDelegate.observe(entity);
 		endSpawnPlacement(entity);
+		this.notifyLoadedIfReady(entity);
+	}
+
+	/**
+	 * A late asset (a model, or its animation clips) arrived for an entity.
+	 * Runs its loaded callbacks if that was the last thing it was waiting on.
+	 */
+	handleLoadSettled(entityId: string): void {
+		const entity = this.childrenMap.get(entityId);
+		if (entity) {
+			this.notifyLoadedIfReady(entity);
+		}
+	}
+
+	/**
+	 * Run a node's loaded callbacks once it is fully usable: spawned, and with
+	 * no asset still loading. `nodeLoaded` itself runs at most once per spawn,
+	 * so calling this again is harmless.
+	 */
+	private notifyLoadedIfReady(node: BaseNode): void {
+		if (node instanceof GameEntity) {
+			if (node._spawnInProgress || node.getLoadState() !== 'ready') return;
+		}
+		node.nodeLoaded({ me: node, globals: getGlobals() });
 	}
 
 	handleLateModelReady(entity: GameEntity<any>): void {

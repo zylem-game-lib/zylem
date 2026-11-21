@@ -19,7 +19,7 @@ import { DebugDelegate } from './delegates/debug';
 import { normalizeVec3, VEC3_ZERO, type Vec3Input } from '../core/vector';
 import { deepMergeValues } from '../core/clone-utils';
 import { buildLineGeometry, toFlatColors, toFlatPositions } from './line-geometry';
-import type { CleanupContext } from '../core/base-node-life-cycle';
+import type { UnloadContext } from '../core/base-node-life-cycle';
 
 export interface LinePickResult {
 	point: Vector3;
@@ -230,9 +230,9 @@ export class ZylemLine extends GameEntity<ZylemLineOptions> {
 		this.group.position.set(position.x, position.y, position.z);
 	}
 
-	protected override _cleanup(_params: CleanupContext<this>): void {
+	protected override _unload(_params: UnloadContext<this>): void {
 		this.disposeLineResources();
-		super._cleanup(_params);
+		super._unload(_params);
 	}
 
 	private disposeLineResources(): void {

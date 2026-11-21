@@ -4,7 +4,7 @@ import {
 	UpdateContext,
 	DestroyContext,
 	LoadedContext,
-	CleanupContext,
+	UnloadContext,
 } from './base-node-life-cycle';
 import type { NodeInterface } from './node-interface';
 
@@ -12,24 +12,26 @@ const VESSEL_TYPE = Symbol('vessel');
 
 /**
  * A Vessel is an empty container entity that holds child entities.
- * It has no geometry, physics, or rendering of its own, but propagates
- * lifecycle events to its children and provides a logical grouping mechanism.
+ * It has no geometry, physics, or rendering of its own; it is a logical
+ * grouping with its own lifecycle callbacks.
  *
- * Child entities added to a Vessel will be individually spawned into the
- * stage's physics world and render scene when the Vessel is spawned.
+ * Child entities added to a Vessel are individually spawned into the stage's
+ * physics world and render scene when the Vessel is spawned, and the stage
+ * runs each child's setup, loaded and update itself. Destroying the Vessel
+ * destroys its children.
  */
 export class Vessel extends BaseNode<{}, Vessel> {
 	static type = VESSEL_TYPE;
 
 	protected _setup(_params: SetupContext<this>): void { }
 
-	protected async _loaded(_params: LoadedContext<this>): Promise<void> { }
+	protected _loaded(_params: LoadedContext<this>): void { }
 
 	protected _update(_params: UpdateContext<this>): void { }
 
 	protected _destroy(_params: DestroyContext<this>): void { }
 
-	protected _cleanup(_params: CleanupContext<this>): void { }
+	protected _unload(_params: UnloadContext<this>): void { }
 
 	public create(): this {
 		return this;

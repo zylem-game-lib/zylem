@@ -103,12 +103,12 @@ describe('GameEntity.clone', () => {
 		const setupSpy = vi.fn();
 		const prependSpy = vi.fn();
 		const updateSpy = vi.fn();
-		const cleanupSpy = vi.fn();
+		const unloadSpy = vi.fn();
 
 		source.onSetup(setupSpy);
 		source.prependUpdate(prependSpy);
 		source.onUpdate(updateSpy);
-		source.onCleanup(cleanupSpy);
+		source.onUnload(unloadSpy);
 
 		const sourceCallbacks = (source as any).lifecycleCallbacks;
 		const clone = source.clone({ text: 'world' });
@@ -118,16 +118,16 @@ describe('GameEntity.clone', () => {
 		expect(clone.options.screenPosition).not.toBe(source.options.screenPosition);
 		expect(cloneCallbacks.setup).toHaveLength(sourceCallbacks.setup.length);
 		expect(cloneCallbacks.update).toHaveLength(sourceCallbacks.update.length);
-		expect(cloneCallbacks.cleanup).toHaveLength(sourceCallbacks.cleanup.length);
+		expect(cloneCallbacks.unload).toHaveLength(sourceCallbacks.unload.length);
 
 		clone.nodeSetup({ me: clone, globals: {}, camera: null } as any);
 		clone.nodeUpdate({ me: clone, delta: 1 / 60, globals: {} } as any);
-		clone.nodeCleanup({ me: clone, globals: {} } as any);
+		clone.nodeDestroy({ me: clone, globals: {} } as any);
 
 		expect(setupSpy).toHaveBeenCalledTimes(1);
 		expect(prependSpy).toHaveBeenCalledTimes(1);
 		expect(updateSpy).toHaveBeenCalledTimes(1);
-		expect(cleanupSpy).toHaveBeenCalledTimes(1);
+		expect(unloadSpy).toHaveBeenCalledTimes(1);
 	});
 
 	it('clones manual composition with distinct mesh and collision components', () => {

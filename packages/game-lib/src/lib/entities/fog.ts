@@ -7,7 +7,7 @@ import {
 	type Scene,
 } from 'three';
 
-import type { CleanupContext, UpdateContext } from '../core/base-node-life-cycle';
+import type { UnloadContext, UpdateContext } from '../core/base-node-life-cycle';
 import { FogTSLPatcher, type FogUniformValues } from '../graphics/fog/fog-tsl';
 import { GameEntity, type GameEntityOptions } from './entity';
 
@@ -85,7 +85,7 @@ const DEFAULT_NOISE_SPEED = 0.1;
  *   entity lifecycle, including the wasm-runtime-managed stages.
  *
  * The entity attaches a tiny empty {@link Group} to the scene so that the
- * standard {@link GameEntity#_cleanup} pathway removes it from its parent
+ * standard {@link GameEntity#_unload} pathway removes it from its parent
  * during destroy; the actual fog effect is wired up via
  * {@link attachToScene} which is invoked by `ZylemScene.addEntityGroup`.
  */
@@ -153,14 +153,14 @@ export class ZylemFog extends GameEntity<ZylemFogGameOptions> {
 		this.patcher.scan(this.attachedScene);
 	}
 
-	protected override _cleanup(params: CleanupContext<this>): void {
+	protected override _unload(params: UnloadContext<this>): void {
 		this.patcher.unpatchAll();
 		if (this.attachedScene && this.attachedScene.fog === this.threeFog) {
 			this.attachedScene.fog = null;
 		}
 		this.attachedScene = null;
 		this.threeFog = null;
-		super._cleanup(params);
+		super._unload(params);
 	}
 
 	private resolveUniformValues(options: ZylemFogOptions): FogUniformValues {

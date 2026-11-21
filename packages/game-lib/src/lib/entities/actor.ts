@@ -17,7 +17,7 @@ import { BaseNode } from '../core/base-node';
 import { GameEntityOptions, GameEntity } from './entity';
 import { createEntity } from './create';
 import {
-	CleanupContext,
+	UnloadContext,
 	UpdateContext,
 	UpdateFunction,
 } from '../core/base-node-life-cycle';
@@ -675,6 +675,10 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 	private _assetLoader: EntityAssetLoader = new EntityAssetLoader();
 	private _loadGeneration = 0;
 	private _loadStatus: 'idle' | 'loading' | 'loaded' = 'idle';
+	/** The model failed to load. Cleared by the next {@link load}. */
+	private _loadFailed = false;
+	/** The model is in, and its animation clips are still loading. */
+	private _animationsPending = false;
 
 	controlledRotation: boolean = false;
 	hasWarnedDynamicTrimesh = false;
@@ -705,7 +709,16 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 
 		this.disposeRuntimeState(true);
 		this._loadStatus = 'loading';
+		this._loadFailed = false;
+		this._animationsPending = false;
 		this.loadModelsDeferred(++this._loadGeneration);
+	}
+
+	/** Ready once the model is in and its animation clips have loaded or given up. */
+	override getLoadState(): 'ready' | 'pending' | 'failed' {
+		if (this._loadFailed) return 'failed';
+		if (this._loadStatus === 'loading' || this._animationsPending) return 'pending';
+		return 'ready';
 	}
 
 	data(): any {
@@ -767,12 +780,14 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 	actorDestroy(): void {
 		this._loadGeneration += 1;
 		this._loadStatus = 'idle';
+		this._loadFailed = false;
+		this._animationsPending = false;
 		this.disposeRuntimeState(true);
 		this._modelFileNames = [];
 	}
 
-	override _cleanup(params: CleanupContext<this>): void {
-		super._cleanup(params);
+	override _unload(params: UnloadContext<this>): void {
+		super._unload(params);
 		this.actorDestroy();
 	}
 
@@ -920,6 +935,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 					? this._object
 					: collisionSourceResult?.object ?? this._object;
 				this._loadStatus = this._object ? 'loaded' : 'idle';
+				this._loadFailed = !this._object;
 
 				let meshCount = 0;
 				if (this._object) {
@@ -946,7 +962,8 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 						animationPaths,
 					);
 					if (animations.length > 0) {
-						void this._animationDelegate.loadAnimations(
+						this._animationsPending = true;
+						this._animationDelegate.loadAnimations(
 							animations,
 							{
 								stripRootMotionY,
@@ -956,10 +973,25 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 							if (loadGeneration !== this._loadGeneration) {
 								return;
 							}
+							this._animationsPending = false;
 							this.alignVisualModelToGround();
 							this.dispatch('entity:animation:loaded', {
 								entityId: this.uuid,
 								animationCount: animations.length,
+							});
+						}, (error) => {
+							if (loadGeneration !== this._loadGeneration) {
+								return;
+							}
+							// The model is in and usable without its clips, so
+							// this settles the load rather than failing it.
+							this._animationsPending = false;
+							console.error('Failed to load actor animations', error);
+							this.dispatch('entity:animation:loaded', {
+								entityId: this.uuid,
+								animationCount: 0,
+								success: false,
+								errorMessage: error instanceof Error ? error.message : String(error),
 							});
 						});
 					} else {
@@ -978,6 +1010,7 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 					return;
 				}
 				this._loadStatus = 'idle';
+				this._loadFailed = true;
 				console.error('Failed to load actor model', error);
 				this.dispatch('entity:model:loaded', {
 					entityId: this.uuid,

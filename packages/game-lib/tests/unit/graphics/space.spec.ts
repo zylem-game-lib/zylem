@@ -139,7 +139,7 @@ describe('independent celestial bodies', () => {
 		expect(resolveCelestialBody().atmosphere).toBe(false);
 		expect(body.colliderDesc?.shape).toEqual({ type: 'sphere', radius: 1 });
 		expect(body.group!.children).toHaveLength(1);
-		body.nodeCleanup({ me: body, globals: {} });
+		body.nodeDestroy({ me: body, globals: {} });
 	});
 	it('pauses surface animation, disposes textures and recreates on stage reload', () => {
 		const body = createCelestialBody({
@@ -157,12 +157,12 @@ describe('independent celestial bodies', () => {
 		body._update({ delta: 4 } as any);
 		expect(body.mesh!.rotation.y).toBe(angle);
 		const dispose = vi.spyOn(clouds.material.map, 'dispose');
-		body.nodeCleanup({ me: body, globals: {} });
+		body.nodeDestroy({ me: body, globals: {} });
 		expect(dispose).toHaveBeenCalledOnce();
 		body.create();
-		body._setup({ me: body, globals: {} });
+		body.nodeSetup({ me: body, globals: {} } as any);
 		expect(body.group).not.toBe(old);
 		expect(body.mesh!.rotation.y).toBe(0);
-		body.nodeCleanup({ me: body, globals: {} });
+		body.nodeDestroy({ me: body, globals: {} });
 	});
 });

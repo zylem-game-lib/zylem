@@ -1,16 +1,15 @@
 import {
-	CleanupContext,
-	CleanupFunction,
 	DestroyContext,
 	DestroyFunction,
 	LoadedContext,
 	LoadedFunction,
 	SetupContext,
 	SetupFunction,
+	UnloadContext,
+	UnloadFunction,
 	UpdateContext,
 	UpdateFunction,
 } from "./base-node-life-cycle";
-import { DEBUG_FLAG } from "./flags";
 import { nanoid } from "nanoid";
 import { NodeInterface } from "./node-interface";
 
@@ -20,7 +19,7 @@ export type LifecycleRegistrationMethod =
 	| 'onLoaded'
 	| 'onUpdate'
 	| 'onDestroy'
-	| 'onCleanup'
+	| 'onUnload'
 	| 'prependSetup'
 	| 'prependUpdate';
 
@@ -31,14 +30,23 @@ export interface LifecycleRegistration {
 
 /**
  * Lifecycle callback arrays - each lifecycle event can have multiple callbacks
- * that execute in order.
+ * that execute in order. An array is `null` until its first callback is
+ * registered, so a node with no callbacks allocates none.
  */
 export interface LifecycleCallbacks<T> {
-	setup: Array<SetupFunction<T>>;
-	loaded: Array<LoadedFunction<T>>;
-	update: Array<UpdateFunction<T>>;
-	destroy: Array<DestroyFunction<T>>;
-	cleanup: Array<CleanupFunction<T>>;
+	setup: Array<SetupFunction<T>> | null;
+	loaded: Array<LoadedFunction<T>> | null;
+	update: Array<UpdateFunction<T>> | null;
+	destroy: Array<DestroyFunction<T>> | null;
+	unload: Array<UnloadFunction<T>> | null;
+}
+
+/** Run `callbacks` in order. Reads the length each step, so a callback may register another. */
+function runCallbacks<C>(callbacks: Array<(context: C) => void> | null, context: C): void {
+	if (callbacks === null) return;
+	for (let i = 0; i < callbacks.length; i++) {
+		callbacks[i]!(context);
+	}
 }
 
 export abstract class BaseNode<Options = any, T = any> implements NodeInterface {
@@ -56,12 +64,14 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 * onSetup/onUpdate/etc. methods which are typed with `this`.
 	 */
 	protected lifecycleCallbacks: LifecycleCallbacks<any> = {
-		setup: [],
-		loaded: [],
-		update: [],
-		destroy: [],
-		cleanup: [],
+		setup: null,
+		loaded: null,
+		update: null,
+		destroy: null,
+		unload: null,
 	};
+	/** Whether `nodeLoaded` has run since the last `nodeSetup`. */
+	private hasLoaded: boolean = false;
 	private trackLifecycleRegistrations: boolean = false;
 	private userLifecycleRegistrations: LifecycleRegistration[] = [];
 
@@ -81,16 +91,18 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 * Add setup callbacks to be executed in order during nodeSetup
 	 */
 	public onSetup(...callbacks: Array<SetupFunction<this>>): this {
-		this.lifecycleCallbacks.setup.push(...callbacks);
+		(this.lifecycleCallbacks.setup ??= []).push(...callbacks);
 		this.recordLifecycleRegistration('onSetup', callbacks);
 		return this;
 	}
 
 	/**
-	 * Add loaded callbacks to be executed in order during nodeLoaded
+	 * Add loaded callbacks, run in order once per spawn when the node is ready
+	 * to use: at the end of its spawn, or once a model that loads late and the
+	 * physics that depend on it are in place. Not run if the load fails.
 	 */
 	public onLoaded(...callbacks: Array<LoadedFunction<this>>): this {
-		this.lifecycleCallbacks.loaded.push(...callbacks);
+		(this.lifecycleCallbacks.loaded ??= []).push(...callbacks);
 		this.recordLifecycleRegistration('onLoaded', callbacks);
 		return this;
 	}
@@ -99,7 +111,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 * Add update callbacks to be executed in order during nodeUpdate
 	 */
 	public onUpdate(...callbacks: Array<UpdateFunction<this>>): this {
-		this.lifecycleCallbacks.update.push(...callbacks);
+		(this.lifecycleCallbacks.update ??= []).push(...callbacks);
 		this.recordLifecycleRegistration('onUpdate', callbacks);
 		return this;
 	}
@@ -108,25 +120,32 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 * Add destroy callbacks to be executed in order during nodeDestroy
 	 */
 	public onDestroy(...callbacks: Array<DestroyFunction<this>>): this {
-		this.lifecycleCallbacks.destroy.push(...callbacks);
+		(this.lifecycleCallbacks.destroy ??= []).push(...callbacks);
 		this.recordLifecycleRegistration('onDestroy', callbacks);
 		return this;
 	}
 
 	/**
-	 * Add cleanup callbacks to be executed in order during nodeCleanup
+	 * Add unload callbacks, run in order right after the destroy callbacks.
+	 * Use them to free what this stage session built, or to tidy game state
+	 * kept outside the node.
 	 */
-	public onCleanup(...callbacks: Array<CleanupFunction<this>>): this {
-		this.lifecycleCallbacks.cleanup.push(...callbacks);
-		this.recordLifecycleRegistration('onCleanup', callbacks);
+	public onUnload(...callbacks: Array<UnloadFunction<this>>): this {
+		(this.lifecycleCallbacks.unload ??= []).push(...callbacks);
+		this.recordLifecycleRegistration('onUnload', callbacks);
 		return this;
+	}
+
+	/** @deprecated Use {@link onUnload}. */
+	public onCleanup(...callbacks: Array<UnloadFunction<this>>): this {
+		return this.onUnload(...callbacks);
 	}
 
 	/**
 	 * Prepend setup callbacks (run before existing ones)
 	 */
 	public prependSetup(...callbacks: Array<SetupFunction<this>>): this {
-		this.lifecycleCallbacks.setup.unshift(...callbacks);
+		(this.lifecycleCallbacks.setup ??= []).unshift(...callbacks);
 		this.recordLifecycleRegistration('prependSetup', callbacks);
 		return this;
 	}
@@ -135,7 +154,7 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 	 * Prepend update callbacks (run before existing ones)
 	 */
 	public prependUpdate(...callbacks: Array<UpdateFunction<this>>): this {
-		this.lifecycleCallbacks.update.unshift(...callbacks);
+		(this.lifecycleCallbacks.update ??= []).unshift(...callbacks);
 		this.recordLifecycleRegistration('prependUpdate', callbacks);
 		return this;
 	}
@@ -199,8 +218,8 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 				case 'onDestroy':
 					target.onDestroy(...callbacks as Array<DestroyFunction<any>>);
 					break;
-				case 'onCleanup':
-					target.onCleanup(...callbacks as Array<CleanupFunction<any>>);
+				case 'onUnload':
+					target.onUnload(...callbacks as Array<UnloadFunction<any>>);
 					break;
 				case 'prependSetup':
 					target.prependSetup(...callbacks as Array<SetupFunction<any>>);
@@ -226,88 +245,68 @@ export abstract class BaseNode<Options = any, T = any> implements NodeInterface 
 
 	protected abstract _setup(params: SetupContext<this>): void;
 
-	protected abstract _loaded(params: LoadedContext<this>): Promise<void>;
+	protected abstract _loaded(params: LoadedContext<this>): void;
 
 	protected abstract _update(params: UpdateContext<this>): void;
 
 	protected abstract _destroy(params: DestroyContext<this>): void;
 
-	protected abstract _cleanup(params: CleanupContext<this>): void;
+	protected abstract _unload(params: UnloadContext<this>): void;
 
 	// ─────────────────────────────────────────────────────────────────────────────
 	// Node lifecycle execution - runs internal + callback arrays
+	//
+	// The stage drives setup, loaded and update for every node it spawned,
+	// children included, so a parent does not forward them. Destroy is the
+	// exception: a parent takes its children with it.
 	// ─────────────────────────────────────────────────────────────────────────────
 
-	public nodeSetup(params: SetupContext<this>) {
-		if (DEBUG_FLAG) { /**  */ }
+	public nodeSetup(params: SetupContext<this>): void {
 		this.markedForRemoval = false;
-		if (typeof this._setup === 'function') {
-			this._setup(params);
-		}
-		for (const callback of this.lifecycleCallbacks.setup) {
-			callback(params);
-		}
-		this.children.forEach(child => child.nodeSetup(params));
+		this.hasLoaded = false;
+		this._setup(params);
+		runCallbacks(this.lifecycleCallbacks.setup, params);
+	}
+
+	/** Runs at most once per setup; the stage calls it when the node is ready to use. */
+	public nodeLoaded(params: LoadedContext<this>): void {
+		if (this.hasLoaded) return;
+		this.hasLoaded = true;
+		this._loaded(params);
+		runCallbacks(this.lifecycleCallbacks.loaded, params);
 	}
 
 	public nodeUpdate(params: UpdateContext<this>): void {
 		if (this.markedForRemoval) {
 			return;
 		}
-		if (typeof this._update === 'function') {
-			this._update(params);
-		}
-		// Tick entity actions before user callbacks so state is fresh
-		if (typeof (this as any)._tickActions === 'function') {
-			(this as any)._tickActions(params.delta);
-		}
-		for (const callback of this.lifecycleCallbacks.update) {
-			callback(params);
-		}
-		this.children.forEach(child => child.nodeUpdate(params));
+		this._update(params);
+		this.runUpdateCallbacks(params);
+	}
+
+	/** The user `onUpdate` callbacks, for subclasses that reorder `nodeUpdate`. */
+	protected runUpdateCallbacks(params: UpdateContext<this>): void {
+		runCallbacks(this.lifecycleCallbacks.update, params);
 	}
 
 	public nodeDestroy(params: DestroyContext<this>): void {
 		// Guard against re-entry (e.g. destroy called twice during collision loop)
 		if (this.markedForRemoval) return;
 
-		this.children.forEach(child => child.nodeDestroy(params));
+		const children = this.children;
+		for (let i = 0; i < children.length; i++) {
+			const child = children[i]!;
+			child.nodeDestroy({ ...params, me: child });
+		}
 
 		// Destroy phase -- consumer game logic (onDestroy callbacks + _destroy override)
-		for (const callback of this.lifecycleCallbacks.destroy) {
-			callback(params);
-		}
-		if (typeof this._destroy === 'function') {
-			this._destroy(params);
-		}
+		runCallbacks(this.lifecycleCallbacks.destroy, params);
+		this._destroy(params);
 		this.markedForRemoval = true;
 
-		// Cleanup phase -- engine-internal resource disposal (onCleanup callbacks + _cleanup override)
-		for (const callback of this.lifecycleCallbacks.cleanup) {
-			callback(params);
-		}
-		if (typeof this._cleanup === 'function') {
-			this._cleanup(params);
-		}
-	}
-
-	public async nodeLoaded(params: LoadedContext<this>): Promise<void> {
-		if (typeof this._loaded === 'function') {
-			await this._loaded(params);
-		}
-		for (const callback of this.lifecycleCallbacks.loaded) {
-			callback(params);
-		}
-	}
-
-	public nodeCleanup(params: CleanupContext<this>): void {
-		this.children.forEach(child => (child as any).nodeCleanup?.(params));
-		for (const callback of this.lifecycleCallbacks.cleanup) {
-			callback(params);
-		}
-		if (typeof this._cleanup === 'function') {
-			this._cleanup(params);
-		}
+		// Unload phase -- frees what the stage session built (onUnload callbacks + _unload override)
+		runCallbacks(this.lifecycleCallbacks.unload, params);
+		this._unload(params);
 	}
 
 	// ─────────────────────────────────────────────────────────────────────────────

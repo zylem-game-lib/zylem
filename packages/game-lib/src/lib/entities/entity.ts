@@ -15,7 +15,7 @@ import {
 	SetupContext,
 	UpdateContext,
 	LoadedContext,
-	CleanupContext,
+	UnloadContext,
 } from '../core/base-node-life-cycle';
 import type { EntityMeshBuilder, EntityCollisionBuilder } from './builder';
 import {
@@ -937,7 +937,16 @@ export class GameEntity<O extends GameEntityOptions>
 		}
 	}
 
-	protected async _loaded(_params: LoadedContext<this>): Promise<void> { }
+	protected _loaded(_params: LoadedContext<this>): void { }
+
+	/**
+	 * Whether this entity's assets are ready. The stage runs the loaded
+	 * callbacks once this reads `'ready'`; an entity with nothing to load is
+	 * always ready, and one whose load `'failed'` never runs them.
+	 */
+	public getLoadState(): 'ready' | 'pending' | 'failed' {
+		return 'ready';
+	}
 
 	/**
 	 * Entity-specific update - updates materials.
@@ -948,21 +957,31 @@ export class GameEntity<O extends GameEntityOptions>
 		this.updateMaterials(params);
 	}
 
+	/** As {@link BaseNode.nodeUpdate}, with actions ticked before the user callbacks so their state is fresh. */
+	public override nodeUpdate(params: UpdateContext<this>): void {
+		if (this.markedForRemoval) {
+			return;
+		}
+		this._update(params);
+		this._tickActions(params.delta);
+		this.runUpdateCallbacks(params);
+	}
+
 	/**
 	 * Entity-specific destroy -- reserved for consumer game logic.
-	 * Engine-internal resource disposal runs in _cleanup() instead.
+	 * Engine-internal resource disposal runs in _unload() instead.
 	 */
 	public _destroy(params: DestroyContext<this>): void { }
 
 	/**
-	 * Engine-internal resource cleanup -- runs automatically after destroy.
+	 * Engine-internal resource unload -- runs automatically after destroy.
 	 * Disposes GPU/DOM resources (meshes, materials, debug material).
 	 *
 	 * Note: actions, collision callbacks, and behavior refs are intentionally
 	 * NOT cleared here -- they are registered by consumer code at module level
 	 * and must persist across stage reloads. Actions are reset in _setup().
 	 */
-	protected _cleanup(_params: CleanupContext<this>): void {
+	protected _unload(_params: UnloadContext<this>): void {
 		// Dispose entity event emitter & subscriptions
 		this.disposeEvents();
 

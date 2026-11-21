@@ -106,7 +106,7 @@ describe('createLine', () => {
 		const geometryDispose = vi.spyOn(geometry!, 'dispose');
 		const materialDispose = vi.spyOn(material as object, 'dispose');
 
-		(line as any)._cleanup({ me: line, globals: {} });
+		(line as any)._unload({ me: line, globals: {} });
 
 		expect(geometryDispose).toHaveBeenCalled();
 		expect(materialDispose).toHaveBeenCalled();

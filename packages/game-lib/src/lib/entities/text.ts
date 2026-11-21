@@ -94,7 +94,7 @@ export class ZylemText extends GameEntity<ZylemTextOptions> {
     // Add text-specific lifecycle callbacks (only registered once)
     this.prependSetup(this.textSetup.bind(this) as any);
     this.prependUpdate(this.textUpdate.bind(this) as any);
-    this.onCleanup(this.textDestroy.bind(this) as any);
+    this.onUnload(this.textDestroy.bind(this) as any);
   }
 
   public create(): this {

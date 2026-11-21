@@ -49,7 +49,7 @@ describe('createFog', () => {
 		expect(scene.fog).toBe(fog.threeFog);
 		expect((scene as any).fogNode).toBeTruthy();
 
-		(fog as any)._cleanup({ me: fog, globals: {} });
+		(fog as any)._unload({ me: fog, globals: {} });
 
 		expect(scene.fog).toBeNull();
 		expect((scene as any).fogNode).toBeNull();

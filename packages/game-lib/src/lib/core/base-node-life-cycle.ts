@@ -17,7 +17,7 @@ export interface SetupFunction<T, TGlobals extends GlobalRecord = any> {
 	(context: SetupContext<T, TGlobals>): void;
 }
 
-/** Loaded */
+/** Loaded: runs once per spawn, when the node and its assets are ready to use. */
 export interface LoadedContext<T, TGlobals extends GlobalRecord = any> {
 	me: T;
 	globals: TGlobals;
@@ -52,12 +52,12 @@ export interface DestroyFunction<T, TGlobals extends GlobalRecord = any> {
 	(context: DestroyContext<T, TGlobals>): void;
 }
 
-/** Cleanup */
-export interface CleanupContext<T, TGlobals extends GlobalRecord = any> {
+/** Unload: runs right after destroy, to free what the stage session built. */
+export interface UnloadContext<T, TGlobals extends GlobalRecord = any> {
 	me: T;
 	globals: TGlobals;
 }
 
-export interface CleanupFunction<T, TGlobals extends GlobalRecord = any> {
-	(context: CleanupContext<T, TGlobals>): void;
+export interface UnloadFunction<T, TGlobals extends GlobalRecord = any> {
+	(context: UnloadContext<T, TGlobals>): void;
 }

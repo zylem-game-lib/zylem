@@ -173,7 +173,7 @@ export class ZylemCooldownIcon extends GameEntity<ZylemCooldownIconOptions> {
     this.createSprite();
     this.prependSetup(this.iconSetup.bind(this) as any);
     this.prependUpdate(this.iconUpdate.bind(this) as any);
-    this.onCleanup(this.iconDestroy.bind(this) as any);
+    this.onUnload(this.iconDestroy.bind(this) as any);
   }
 
   private createSprite(): void {

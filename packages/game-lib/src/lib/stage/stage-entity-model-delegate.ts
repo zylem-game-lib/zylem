@@ -22,18 +22,36 @@ export class StageEntityModelDelegate {
 	private scene: ZylemScene | null = null;
 	private onEntityReady: ((entity: GameEntity<any>) => void) | null = null;
 	private pendingEntities: Map<string, GameEntity<any>> = new Map();
+	private onLoadSettled: ((entityId: string) => void) | null = null;
 	private modelLoadedHandler: ((payload: { entityId: string; success: boolean }) => void) | null = null;
+	private animationLoadedHandler: ((payload: { entityId: string }) => void) | null = null;
 
 	/**
 	 * Initialize the delegate with the scene reference and start listening.
+	 *
+	 * @param onEntityReady Called when a late model is in the scene, so deferred
+	 * physics and instancing can finish.
+	 * @param onLoadSettled Called after each late asset (model, then animation
+	 * clips) arrives, so the stage can run the entity's loaded callbacks once
+	 * nothing is pending.
 	 */
-	attach(scene: ZylemScene, onEntityReady?: (entity: GameEntity<any>) => void): void {
+	attach(
+		scene: ZylemScene,
+		onEntityReady?: (entity: GameEntity<any>) => void,
+		onLoadSettled?: (entityId: string) => void,
+	): void {
 		this.scene = scene;
 		this.onEntityReady = onEntityReady ?? null;
+		this.onLoadSettled = onLoadSettled ?? null;
 		this.modelLoadedHandler = (payload) => {
 			this.handleModelLoaded(payload.entityId, payload.success);
+			if (payload.success) this.onLoadSettled?.(payload.entityId);
+		};
+		this.animationLoadedHandler = (payload) => {
+			this.onLoadSettled?.(payload.entityId);
 		};
 		zylemEventBus.on('entity:model:loaded', this.modelLoadedHandler);
+		zylemEventBus.on('entity:animation:loaded', this.animationLoadedHandler);
 	}
 
 	/**
@@ -87,8 +105,13 @@ export class StageEntityModelDelegate {
 			zylemEventBus.off('entity:model:loaded', this.modelLoadedHandler);
 			this.modelLoadedHandler = null;
 		}
+		if (this.animationLoadedHandler) {
+			zylemEventBus.off('entity:animation:loaded', this.animationLoadedHandler);
+			this.animationLoadedHandler = null;
+		}
 		this.pendingEntities.clear();
 		this.onEntityReady = null;
+		this.onLoadSettled = null;
 		this.scene = null;
 	}
 }

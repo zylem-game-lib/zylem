@@ -292,6 +292,7 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 		this.entityModelDelegate.attach(
 			this.scene,
 			(entity) => this.entityDelegate.handleLateModelReady(entity),
+			(entityId) => this.entityDelegate.handleLoadSettled(entityId),
 		);
 
 		// Initialize managed render paths (bundles + instancing)
