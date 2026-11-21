@@ -102,6 +102,7 @@ export type {
 	Platformer3DMovementComponent,
 	Platformer3DStateComponent,
 	PlatformerCollisionContext,
+	PlatformerGroundSpringOptions,
 	TubeRail,
 	Vec3Like,
 } from '@zylem/behaviors/action/platform';

@@ -277,6 +277,7 @@ export type {
 	Platformer3DMovementComponent,
 	Platformer3DStateComponent,
 	PlatformerCollisionContext,
+	PlatformerGroundSpringOptions,
 	PlayerInput,
 	RhythmAbility,
 	RhythmAction,
