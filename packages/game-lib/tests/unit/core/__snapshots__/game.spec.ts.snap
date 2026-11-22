@@ -33,6 +33,7 @@ Game {
         "unsubscribes": [],
       },
       "inputConfig": null,
+      "levelDocument": null,
       "onInputConfigChanged": null,
       "options": [
         {
