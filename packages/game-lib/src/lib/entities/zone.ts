@@ -27,6 +27,12 @@ export type OnHeldParams = {
 export type OnEnterParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
 export type OnExitParams = Pick<OnHeldParams, 'self' | 'visitor' | 'globals'>;
 
+interface ZoneVisit {
+  visitor: GameEntity<any>;
+  heldTime: number;
+  seenThisFrame: boolean;
+}
+
 type ZylemZoneOptions = GameEntityOptions & {
   size?: Vec3Input;
   static?: boolean;
@@ -49,9 +55,7 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions>
   implements CollisionHandlerDelegate, SelectionBoundsProvider {
   static type = ZONE_TYPE;
 
-  private _enteredZone: Map<string, number> = new Map();
-  private _exitedZone: Map<string, number> = new Map();
-  private _zoneEntities: Map<string, any> = new Map();
+  private readonly visits = new Map<string, ZoneVisit>();
 
   constructor(options?: ZylemZoneOptions) {
     super();
@@ -74,23 +78,21 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions>
   }
 
   public handlePostCollision({ delta }: { delta: number }): boolean {
-    this._enteredZone.forEach((val, key) => {
+    for (const key of this.visits.keys()) {
       this.exited(delta, key);
-    });
-    return this._enteredZone.size > 0;
+    }
+    return this.visits.size > 0;
   }
 
   public handleIntersectionEvent({
     other,
     delta,
   }: {
-    other: any;
+    other: GameEntity<any>;
     delta: number;
   }) {
-    const hasEntered = this._enteredZone.get(other.uuid);
-    if (!hasEntered) {
+    if (!this.visits.has(other.uuid)) {
       this.entered(other);
-      this._zoneEntities.set(other.uuid, other);
     } else {
       this.held(delta, other);
     }
@@ -111,48 +113,34 @@ export class ZylemZone extends GameEntity<ZylemZoneOptions>
     return this;
   }
 
-  entered(other: any) {
-    this._enteredZone.set(other.uuid, 1);
-    if (this.options.onEnter) {
-      this.options.onEnter({
-        self: this,
-        visitor: other,
-        globals: state.globals,
-      });
-    }
+  entered(visitor: GameEntity<any>) {
+    this.visits.set(visitor.uuid, { visitor, heldTime: 0, seenThisFrame: true });
+    this.options.onEnter?.({ self: this, visitor, globals: state.globals });
   }
 
-  exited(delta: number, key: string) {
-    const hasExited = this._exitedZone.get(key);
-    if (hasExited && hasExited > 1 + delta) {
-      this._exitedZone.delete(key);
-      this._enteredZone.delete(key);
-      const other = this._zoneEntities.get(key);
-      if (this.options.onExit) {
-        this.options.onExit({
-          self: this,
-          visitor: other,
-          globals: state.globals,
-        });
-      }
+  exited(_delta: number, key: string) {
+    const visit = this.visits.get(key);
+    if (!visit) return;
+    if (visit.seenThisFrame) {
+      visit.seenThisFrame = false;
       return;
     }
-    this._exitedZone.set(key, 1 + delta);
+    this.visits.delete(key);
+    this.options.onExit?.({ self: this, visitor: visit.visitor, globals: state.globals });
   }
 
-  held(delta: number, other: any) {
-    const heldTime = this._enteredZone.get(other.uuid) ?? 0;
-    this._enteredZone.set(other.uuid, heldTime + delta);
-    this._exitedZone.set(other.uuid, 1);
-    if (this.options.onHeld) {
-      this.options.onHeld({
-        delta,
-        self: this,
-        visitor: other,
-        globals: state.globals,
-        heldTime,
-      });
-    }
+  held(delta: number, visitor: GameEntity<any>) {
+    const visit = this.visits.get(visitor.uuid);
+    if (!visit) return;
+    visit.seenThisFrame = true;
+    visit.heldTime += delta;
+    this.options.onHeld?.({
+      delta,
+      self: this,
+      visitor,
+      globals: state.globals,
+      heldTime: visit.heldTime,
+    });
   }
 }
 

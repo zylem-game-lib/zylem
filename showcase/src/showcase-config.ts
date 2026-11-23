@@ -31,7 +31,7 @@ const DEMOS_BY_SECTION: Record<SectionName, readonly string[]> = {
 	Featured: ['zylem-planet-demo'],
 	Stages: ['stage-test'],
 	Entities: ['entity-test'],
-	Camera: ['camera-test'],
+	Camera: ['camera-test', '2d-camera', 'first-person', 'second-person', 'third-person', 'isometric', 'top-down', 'waypoint-zones'],
 	Navigation: ['navigation-mesh'],
 	Actions: ['actions-test'],
 	Behaviors: ['behavior-toggling'],
@@ -61,7 +61,7 @@ const demoEntries = Object.entries(allModules)
 		if (!folder || folder !== file) return null;
 		const name = folder
 			.split('-')
-			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.map((word) => word === '2d' ? '2D' : word.charAt(0).toUpperCase() + word.slice(1))
 			.join(' ');
 		return {
 			id: folder,

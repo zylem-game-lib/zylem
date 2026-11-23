@@ -9,7 +9,7 @@ import { Vec3Input, toThreeVector3 } from '../../core/vector';
  * Nothing here reads player look input.
  */
 export interface SecondPersonOptions {
-	/** Key of the entity whose eyes the camera uses. Default 'anchor'. */
+	/** Key of the observer. Defaults to 'anchor', then the camera's second target. */
 	anchorKey?: string;
 	/** Key of the entity to look at. Default 'primary'. */
 	subjectKey?: string;
@@ -63,7 +63,8 @@ export class SecondPersonPerspective implements CameraPerspective {
 	}
 
 	getBasePose(ctx: CameraContext): CameraPose {
-		const anchor = ctx.targets[this.opts.anchorKey];
+		const anchor = ctx.targets[this.opts.anchorKey]
+			?? (this.opts.anchorKey === 'anchor' ? ctx.targets.target_1 : undefined);
 		if (!anchor) return this.staticPose();
 
 		const position = new Vector3(

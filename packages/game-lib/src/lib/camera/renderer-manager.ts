@@ -15,6 +15,7 @@ import {
 	uniform as uniformNode,
 } from 'three/tsl';
 import type { ZylemCamera } from './zylem-camera';
+import { effectsForCamera } from './camera-effects';
 import { installThreeConsoleFilter } from '../graphics/three-console-filter';
 import type { ResolvedStageTransition } from '../graphics/stage-transition';
 
@@ -52,6 +53,14 @@ export type ZylemPostEffect = (
 	inputNode: any,
 	ctx: { scenePass: any; scene: any; camera: any },
 ) => any;
+
+interface ViewPostProcessing {
+	scene: Scene;
+	revision: number;
+	linearOutput: boolean;
+	pipeline: RenderPipeline;
+	resources: Set<{ dispose(): void }>;
+}
 
 /**
  * Internal state of an in-flight stage transition. The `fromNode` is a
@@ -133,6 +142,9 @@ export class RendererManager {
 	private _ambientOcclusion: AmbientOcclusionOptions = false;
 	private _aoPass: ReturnType<typeof createAmbientOcclusion> = null;
 	private _ownedScenePass: { dispose(): void } | null = null;
+	private _ownedCameraEffectNodes = new Set<{ dispose(): void }>();
+	private readonly _viewPostProcessing = new Map<Camera, ViewPostProcessing>();
+	private _postEffectRevision = 0;
 	/** Scene/camera the current pipeline was built for (for rebuilds). */
 	private _postSceneRef: Scene | null = null;
 	private _postCameraRef: Camera | null = null;
@@ -208,6 +220,8 @@ export class RendererManager {
 		this.disposePostProcessing();
 		this._postSceneRef = scene;
 		this._postCameraRef = camera;
+		const cameraEffects = effectsForCamera(camera);
+		this._postEffectRevision = cameraEffects?.revision ?? 0;
 		const post = new RenderPipeline(this.renderer);
 		const scenePass = pass(scene, camera);
 		this._ownedScenePass = scenePass;
@@ -234,6 +248,11 @@ export class RendererManager {
 			} catch (error) {
 				console.error('RendererManager: post-processing effect failed, skipping.', error);
 			}
+		}
+		if (cameraEffects) {
+			pipelineNode = cameraEffects.compose(
+				pipelineNode, { scenePass, scene, camera }, this._ownedCameraEffectNodes,
+			);
 		}
 		// Apply the output color transform ourselves (tone map + sRGB) so the
 		// dither is added in display space, where it offsets by ~1 code value.
@@ -266,9 +285,59 @@ export class RendererManager {
 	 * No-ops when post-processing has not been set up; the next setup call
 	 * receives whatever camera the stage passes in.
 	 */
-	rebindPostProcessingCamera(camera: Camera): void {
+	rebindPostProcessingCamera(camera: Camera, previous?: Camera): void {
 		if (!this.postProcessing || !this._postSceneRef) return;
+		if (previous && previous !== this._postCameraRef) return;
 		this.setupPostProcessing(this._postSceneRef, camera);
+	}
+
+	private getFullscreenPostProcessing(scene: Scene, camera: Camera): RenderPipeline | null {
+		const effects = effectsForCamera(camera);
+		if (!this.postProcessing && !effects?.active) return null;
+		if (!this.postProcessing || this._postSceneRef !== scene || this._postCameraRef !== camera
+			|| this._postEffectRevision !== (effects?.revision ?? 0)) {
+			this.setupPostProcessing(scene, camera);
+		}
+		return this.postProcessing;
+	}
+
+	/** Build the camera's own passes for a viewport or offscreen feed. */
+	private getViewPostProcessing(scene: Scene, camera: Camera, linearOutput: boolean): RenderPipeline | null {
+		const effects = effectsForCamera(camera);
+		const cached = this._viewPostProcessing.get(camera);
+		if (!effects) return null;
+		if (cached?.scene === scene && cached.revision === effects.revision && cached.linearOutput === linearOutput) {
+			return cached.pipeline;
+		}
+		this.releaseViewPostProcessing(camera);
+		if (!effects.active) return null;
+
+		const pipeline = new RenderPipeline(this.renderer);
+		const scenePass = pass(scene, camera);
+		const resources: ViewPostProcessing['resources'] = new Set([scenePass]);
+		pipeline.outputColorTransform = !linearOutput;
+		pipeline.outputNode = effects.compose(scenePass, { scenePass, scene, camera }, resources);
+		this._viewPostProcessing.set(camera, { scene, revision: effects.revision, linearOutput, pipeline, resources });
+		return pipeline;
+	}
+
+	/** Release compiled passes when a camera leaves this renderer or changes projection. */
+	releaseViewPostProcessing(camera: Camera): void {
+		const view = this._viewPostProcessing.get(camera);
+		if (!view) return;
+		this._viewPostProcessing.delete(camera);
+		view.pipeline.dispose();
+		for (const resource of view.resources) resource.dispose();
+	}
+
+	private renderViewPostProcessing(pipeline: RenderPipeline): void {
+		const autoClear = this.renderer.autoClear;
+		this.renderer.autoClear = false;
+		try {
+			pipeline.render();
+		} finally {
+			this.renderer.autoClear = autoClear;
+		}
 	}
 
 	// ─── Stage transitions ──────────────────────────────────────────────────
@@ -416,6 +485,8 @@ export class RendererManager {
 			(this.postProcessing as any)?.dispose?.();
 		} catch { /* noop */ }
 		this.postProcessing = null;
+		for (const node of this._ownedCameraEffectNodes) node.dispose();
+		this._ownedCameraEffectNodes.clear();
 		this._aoPass?.dispose();
 		this._aoPass = null;
 		this._ownedScenePass?.dispose();
@@ -469,17 +540,22 @@ export class RendererManager {
 		this.renderer.setScissor(pixelX, pixelY, pixelW, pixelH);
 		this.renderer.setScissorTest(true);
 
-		if (usePostProcessing && this.postProcessing) {
-			this.postProcessing.render();
-		} else {
-			this.renderer.render(scene, camera.camera);
+		if (usePostProcessing) {
+			const pipeline = this.getFullscreenPostProcessing(scene, camera.camera);
+			if (pipeline) {
+				pipeline.render();
+				return;
+			}
 		}
+		const viewPipeline = this.getViewPostProcessing(scene, camera.camera, false);
+		if (viewPipeline) this.renderViewPostProcessing(viewPipeline);
+		else this.renderer.render(scene, camera.camera);
 	}
 
 	/**
 	 * Render a camera to its offscreen render target.
-	 * Bypasses post-processing since render-to-texture output is consumed by
-	 * an in-scene material (jumbotron / security-camera / portal effects).
+	 * Camera effects are applied in linear color space for the in-scene
+	 * material that samples this texture.
 	 *
 	 * The camera must have a non-null renderTarget.
 	 */
@@ -493,22 +569,25 @@ export class RendererManager {
 		const hidden = hideTextureConsumers(scene, target.texture);
 
 		const prevTarget = this.renderer.getRenderTarget();
-		this.renderer.setRenderTarget(target);
-		this.renderer.setScissorTest(false);
-		this.renderer.clear();
-		this.renderer.render(scene, camera.camera);
-		this.renderer.setRenderTarget(prevTarget);
-
-		for (const object of hidden) object.visible = true;
+		try {
+			this.renderer.setRenderTarget(target);
+			this.renderer.setScissorTest(false);
+			this.renderer.clear();
+			const pipeline = this.getViewPostProcessing(scene, camera.camera, true);
+			if (pipeline) this.renderViewPostProcessing(pipeline);
+			else this.renderer.render(scene, camera.camera);
+		} finally {
+			this.renderer.setRenderTarget(prevTarget);
+			for (const object of hidden) object.visible = true;
+		}
 	}
 
 	/**
 	 * Render a scene from multiple cameras, each with their own viewport.
 	 * Cameras are rendered in order (first = bottom layer, last = top layer).
 	 *
-	 * Post-processing is applied only when there is a single fullscreen
-	 * camera; split-screen layouts render directly per-viewport (a single
-	 * fullscreen post pass cannot honor per-camera scissor regions).
+	 * The stage graph is used for a single fullscreen camera. Each viewport
+	 * camera can also apply its own effects to its region.
 	 */
 	renderCameras(scene: Scene, cameras: ZylemCamera[]): void {
 		if (!scene || cameras.length === 0) return;
@@ -532,8 +611,9 @@ export class RendererManager {
 	 * Uses post-processing when configured.
 	 */
 	render(scene: Scene, camera: Camera): void {
-		if (this.postProcessing) {
-			this.postProcessing.render();
+		const pipeline = this.getFullscreenPostProcessing(scene, camera);
+		if (pipeline) {
+			pipeline.render();
 		} else {
 			this.renderer.render(scene, camera);
 		}
@@ -569,6 +649,7 @@ export class RendererManager {
 		this.stopRenderLoop();
 		this.cancelTransition();
 		this.disposePostProcessing();
+		for (const camera of this._viewPostProcessing.keys()) this.releaseViewPostProcessing(camera);
 		try {
 			this.renderer.dispose();
 		} catch { /* noop */ }

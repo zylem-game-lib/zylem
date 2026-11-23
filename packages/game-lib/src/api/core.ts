@@ -99,6 +99,12 @@ export { createCamera, CameraWrapper } from '../lib/camera/camera';
 /** @public */
 export type { CameraOptions } from '../lib/camera/camera';
 /** @public */
+export type { Pass, PassOptions } from '../lib/camera/camera-effects';
+/** @public */
+export type { CameraWaypoint, CameraWaypoints } from '../lib/camera/camera-waypoints';
+/** @public */
+export { createScreenShake, type ScreenShakeOptions } from '../lib/camera/screen-shake';
+/** @public */
 export type { PerspectiveType } from '../lib/camera/perspective';
 /** @public */
 export { Perspectives } from '../lib/camera/perspective';
@@ -116,6 +122,7 @@ export type {
 	PoseDelta,
 	CameraContext,
 	TransformLike,
+	CameraTarget,
 	CameraPerspective,
 	CameraBehavior,
 	CameraAction,

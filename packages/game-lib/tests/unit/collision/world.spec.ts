@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ZylemWorld, type CollisionPair } from '../../../src/lib/collision/world';
 import { createBox } from '../../../src/lib/entities/primitives/box';
 import { createSphere } from '../../../src/lib/entities/primitives/sphere';
+import { createZone } from '../../../src/lib/entities/zone';
 
 function registerEntities(world: ZylemWorld, ...entities: Array<ReturnType<typeof createSphere> | ReturnType<typeof createBox>>) {
 	for (const entity of entities) {
@@ -89,6 +90,45 @@ describe('ZylemWorld collision dispatch', () => {
 });
 
 describe('ZylemWorld simulation-backed physics', () => {
+	it('delivers Zone callbacks without an onCollision listener at a fixed frame duration', async () => {
+		const world = await ZylemWorld.create({ x: 0, y: 0, z: 0 }, 60);
+		try {
+			const enter = vi.fn();
+			const held = vi.fn();
+			const exit = vi.fn();
+			const zone = createZone({ size: { x: 2, y: 2, z: 2 } })
+				.onEnter(enter)
+				.onHeld(held)
+				.onExit(exit);
+			const visitor = createSphere({ position: { x: 5, y: 0, z: 0 } });
+			world.addEntity(zone);
+			world.addEntity(visitor);
+			const update = () => world.update({ delta: world.fixedTimestep } as any);
+
+			update();
+			expect(enter).not.toHaveBeenCalled();
+
+			visitor.body!.setTranslation({ x: 0, y: 0, z: 0 }, true);
+			update();
+			expect(enter).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ visitor, self: zone }));
+			update();
+			expect(held).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ visitor, heldTime: world.fixedTimestep }));
+			expect(exit).not.toHaveBeenCalled();
+
+			visitor.body!.setTranslation({ x: 5, y: 0, z: 0 }, true);
+			update();
+			expect(exit).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ visitor, self: zone }));
+			update();
+			expect(exit).toHaveBeenCalledTimes(1);
+
+			visitor.body!.setTranslation({ x: 0, y: 0, z: 0 }, true);
+			update();
+			expect(enter).toHaveBeenCalledTimes(2);
+		} finally {
+			world.destroy();
+		}
+	});
+
 	it('tracks previous and current poses for render interpolation', async () => {
 		const world = await ZylemWorld.create({ x: 0, y: -9.81, z: 0 }, 60);
 		const ball = createSphere({ name: 'ball' });

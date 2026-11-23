@@ -81,6 +81,43 @@ ball.onUpdate(({ me, inputs, delta }) => {
 createGame(ball).start();
 ```
 
+## Cameras
+
+Use a fixed 2D, first-person, second-person, third-person, isometric, or top-down camera. Add the subject first and the observer second for a second-person view. The first-person perspective exposes `look(yaw, pitch)` for player-controlled aim.
+
+```ts
+import { createCamera, createPlatformFollow, createScreenShake, Perspectives } from '@zylem/game-lib/core';
+
+const camera = createCamera({ perspective: Perspectives.ThirdPerson });
+camera.useBehavior('follow', createPlatformFollow());
+camera.addAction(createScreenShake({ duration: 0.35, amplitude: 0.3 }));
+
+camera.addWaypoints(
+  { position: [4, 5, 10], lookAt: [0, 1, 0], duration: 1 },
+  { position: [-4, 5, 10], lookAt: [0, 1, 0], duration: 1.5 },
+);
+```
+
+Waypoint durations are in seconds. The camera holds the final pose until you call `clearWaypoints()` or switch perspectives. Use `unuseBehavior(key)` to remove a keyed behavior.
+
+Camera effects compose TSL nodes through the WebGPU render pipeline. A pass can be an existing Zylem shader effect or a configurable pass with `options` and `apply`.
+
+```ts
+import { luminance, mix, vec3, vec4 } from 'three/tsl';
+
+camera.addEffect('monochrome', {
+  options: { amount: 0.4 },
+  apply(input, _context, { amount }) {
+    const color = vec4(input);
+    return vec4(mix(color.rgb, vec3(luminance(color.rgb)), amount), color.a);
+  },
+});
+camera.updateEffect('monochrome', { amount: 0.8 });
+camera.removeEffect('monochrome');
+```
+
+The Camera section in Zylem Showcase includes an exhibit for each perspective.
+
 ## Ambient occlusion
 
 Stages can select SSAO, GTAO, or the CORTAO TSL port through `ambientOcclusion`. It is off by default. See [configuration, examples, and port limitations](https://zylem-game-lib.github.io/zylem/docs/rendering/ambient-occlusion).

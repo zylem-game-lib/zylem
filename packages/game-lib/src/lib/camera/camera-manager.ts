@@ -289,6 +289,7 @@ export class CameraManager implements EditorCameraHost {
 		const camera = this.cameras.get(name);
 		if (!camera) return false;
 
+		if (camera.effects.revision > 0) this._rendererManager?.releaseViewPostProcessing(camera.camera);
 		this.cameras.delete(name);
 
 		const activeIndex = this._activeCameras.indexOf(camera);

@@ -7,11 +7,12 @@ import type {
 	CameraPipelineState,
 } from './types';
 import { defaultPose, clonePose, applyDelta, smoothPose } from './smoothing';
+import { CameraWaypointQueue, type CameraWaypoints } from './camera-waypoints';
 
 /**
  * CameraPipeline runs a deterministic per-frame update:
  *
- *   Perspective -> Behaviors (priority) -> Actions (deltas) -> Smoothing -> finalPose
+ *   Perspective -> Behaviors -> Waypoints -> Actions -> Smoothing -> finalPose
  *
  * It separates "desired pose" from "final pose". Everything writes to desired;
  * only smoothing converts desired into the final committed pose.
@@ -22,6 +23,9 @@ export class CameraPipeline {
 
 	/** Keyed behaviors, sorted by priority each frame. */
 	private behaviors: Map<string, CameraBehavior> = new Map();
+	private pendingAttachments = new Set<string>();
+	private context?: CameraContext;
+	private readonly waypoints = new CameraWaypointQueue();
 
 	/** Active transient actions. Expired actions are auto-removed. */
 	private actions: CameraAction[] = [];
@@ -52,6 +56,7 @@ export class CameraPipeline {
 	 * Returns the final pose that should be committed to the Three.js camera.
 	 */
 	run(ctx: CameraContext): CameraPose {
+		this.context = ctx;
 		// 1. Base pose from perspective
 		let pose: CameraPose = this.perspective
 			? this.perspective.getBasePose(ctx)
@@ -59,10 +64,13 @@ export class CameraPipeline {
 
 		// 2. Behaviors in priority order (low -> high)
 		const sorted = this.getSortedBehaviors();
-		for (const behavior of sorted) {
+		for (const [key, behavior] of sorted) {
+			if (this.pendingAttachments.delete(key)) behavior.onAttach?.(ctx);
 			if (behavior.enabled === false) continue;
 			pose = behavior.update(ctx, pose);
 		}
+		const waypointPose = this.waypoints.update(this._initialized ? this._finalPose : pose, ctx.dt);
+		if (waypointPose) pose = waypointPose;
 
 		// Store desired pose (before actions and smoothing)
 		this._desiredPose = clonePose(pose);
@@ -78,7 +86,7 @@ export class CameraPipeline {
 		}
 
 		// 4. Smoothing: interpolate from previous final pose toward computed pose
-		if (!this._initialized) {
+		if (!this._initialized || waypointPose) {
 			this._finalPose = clonePose(pose);
 			this._initialized = true;
 		} else {
@@ -94,27 +102,27 @@ export class CameraPipeline {
 	 * Add or replace a behavior by key (idempotent).
 	 * Calls onDetach on the old behavior and onAttach on the new one.
 	 */
-	addBehavior(key: string, behavior: CameraBehavior, ctx?: CameraContext): void {
+	addBehavior(key: string, behavior: CameraBehavior, ctx = this.context): void {
 		const existing = this.behaviors.get(key);
-		if (existing?.onDetach && ctx) {
-			existing.onDetach(ctx);
-		}
+		if (existing === behavior) return;
+		this.removeBehavior(key, ctx);
 		this.behaviors.set(key, behavior);
-		if (behavior.onAttach && ctx) {
-			behavior.onAttach(ctx);
-		}
+		if (ctx) {
+			this.context = ctx;
+			behavior.onAttach?.(ctx);
+		} else this.pendingAttachments.add(key);
 	}
 
 	/**
-	 * Remove a behavior by key. Calls onDetach if a context is provided.
+	 * Remove a behavior by key. Calls onDetach after the behavior has attached.
 	 */
-	removeBehavior(key: string, ctx?: CameraContext): boolean {
+	removeBehavior(key: string, ctx = this.context): boolean {
 		const existing = this.behaviors.get(key);
 		if (!existing) return false;
-		if (existing.onDetach && ctx) {
-			existing.onDetach(ctx);
-		}
-		return this.behaviors.delete(key);
+		const wasPending = this.pendingAttachments.delete(key);
+		this.behaviors.delete(key);
+		if (!wasPending && ctx) existing.onDetach?.(ctx);
+		return true;
 	}
 
 	/**
@@ -131,6 +139,15 @@ export class CameraPipeline {
 	 */
 	addAction(action: CameraAction): void {
 		this.actions.push(action);
+		this.actions.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+	}
+
+	addWaypoints(waypoints: CameraWaypoints): void {
+		this.waypoints.add(waypoints);
+	}
+
+	clearWaypoints(): void {
+		this.waypoints.clear();
 	}
 
 	// ─── State inspection ──────────────────────────────────────────────────
@@ -153,6 +170,7 @@ export class CameraPipeline {
 	 * first frame with the new perspective snaps instead of lerping from the old pose.
 	 */
 	setPerspective(perspective: CameraPerspective): void {
+		this.clearWaypoints();
 		this.perspective = perspective;
 		this._initialized = false;
 		if (perspective.defaults?.damping != null) {
@@ -162,9 +180,9 @@ export class CameraPipeline {
 
 	// ─── Internal helpers ──────────────────────────────────────────────────
 
-	private getSortedBehaviors(): CameraBehavior[] {
-		return Array.from(this.behaviors.values()).sort(
-			(a, b) => (a.priority ?? 0) - (b.priority ?? 0)
+	private getSortedBehaviors(): [string, CameraBehavior][] {
+		return Array.from(this.behaviors.entries()).sort(
+			([, a], [, b]) => (a.priority ?? 0) - (b.priority ?? 0)
 		);
 	}
 }

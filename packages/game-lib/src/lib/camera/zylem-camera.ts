@@ -1,12 +1,12 @@
-import { Vector2, Camera, PerspectiveCamera, Vector3, Object3D, OrthographicCamera, Scene, RenderTarget, Texture, LinearFilter } from 'three';
+import { Vector2, Camera, PerspectiveCamera, Vector3, Quaternion, Object3D, OrthographicCamera, Scene, RenderTarget, Texture, LinearFilter } from 'three';
 import { PerspectiveType, Perspectives, perspectiveProjection } from './perspective';
-import { StageEntity } from '../interfaces/entity';
 import { CameraOrbitController, CameraDebugDelegate } from './camera-debug-delegate';
 import { RendererManager, DEFAULT_VIEWPORT } from './renderer-manager';
 import type { ZylemRenderer, Viewport } from './renderer-manager';
 import { CameraPipeline } from './camera-pipeline';
+import { CameraEffects } from './camera-effects';
 import { createPerspective } from './perspectives';
-import type { CameraContext, CameraPerspective, CameraPose, CameraProjection, TransformLike } from './types';
+import type { CameraContext, CameraPerspective, CameraPose, CameraProjection, CameraTarget, TransformLike } from './types';
 
 // Re-export for backwards compatibility
 export type { CameraDebugState, CameraDebugDelegate } from './camera-debug-delegate';
@@ -18,7 +18,7 @@ export { isWebGPUSupported } from './renderer-manager';
  * the camera pose pipeline, and viewport configuration. Rendering is handled
  * by RendererManager.
  *
- * The pipeline runs: Perspective -> Behaviors -> Actions -> Smoothing -> Commit.
+ * The pipeline runs: Perspective -> Behaviors -> Waypoints -> Actions -> Smoothing -> Commit.
  * When orbit/debug controls are active, the pipeline is bypassed.
  */
 export class ZylemCamera {
@@ -46,13 +46,14 @@ export class ZylemCamera {
 	/**
 	 * Multiple targets for the camera to follow/frame.
 	 */
-	targets: StageEntity[] = [];
+	targets: CameraTarget[] = [];
 
 	/**
 	 * The camera pose pipeline.
 	 * Exposed so CameraWrapper can delegate addBehavior/addAction/getState.
 	 */
 	pipeline: CameraPipeline;
+	readonly effects = new CameraEffects();
 
 	/**
 	 * Offscreen render target for render-to-texture (RTT) cameras.
@@ -67,11 +68,11 @@ export class ZylemCamera {
 	/**
 	 * @deprecated Use `targets` array instead. Kept for backward compatibility.
 	 */
-	get target(): StageEntity | null {
+	get target(): CameraTarget | null {
 		return this.targets.length > 0 ? this.targets[0] : null;
 	}
 
-	set target(entity: StageEntity | null) {
+	set target(entity: CameraTarget | null) {
 		if (entity) {
 			if (this.targets.length === 0) {
 				this.targets.push(entity);
@@ -107,6 +108,7 @@ export class ZylemCamera {
 		// Create Three.js camera based on perspective
 		const aspectRatio = screenResolution.x / screenResolution.y;
 		this.camera = this.createCameraForPerspective(aspectRatio);
+		this.effects.bind(this.camera);
 
 		// Position camera directly (no rig)
 		this.camera.position.set(0, 0, 10);
@@ -186,7 +188,7 @@ export class ZylemCamera {
 	 *
 	 * When orbit/debug controls are active, the pipeline is skipped and
 	 * orbit controls manage the camera directly. Otherwise, the pipeline
-	 * runs: Perspective -> Behaviors -> Actions -> Smoothing -> Commit.
+	 * runs: Perspective -> Behaviors -> Waypoints -> Actions -> Smoothing -> Commit.
 	 */
 	update(delta: number): void {
 		// Orbit damping / target tracking: `updateOrbitControls()` (called from the
@@ -287,7 +289,7 @@ export class ZylemCamera {
 	/**
 	 * Add a target entity for the camera to follow/frame.
 	 */
-	addTarget(entity: StageEntity): void {
+	addTarget(entity: CameraTarget): void {
 		if (!this.targets.includes(entity)) {
 			this.targets.push(entity);
 		}
@@ -296,7 +298,7 @@ export class ZylemCamera {
 	/**
 	 * Remove a target entity.
 	 */
-	removeTarget(entity: StageEntity): void {
+	removeTarget(entity: CameraTarget): void {
 		const index = this.targets.indexOf(entity);
 		if (index !== -1) {
 			this.targets.splice(index, 1);
@@ -375,6 +377,7 @@ export class ZylemCamera {
 	 * Dispose camera resources.
 	 */
 	destroy(): void {
+		if (this.effects.revision > 0) this._rendererManager?.releaseViewPostProcessing(this.camera);
 		try {
 			this.orbitController?.dispose();
 		} catch { /* noop */ }
@@ -542,18 +545,19 @@ export class ZylemCamera {
 
 	/**
 	 * Build a CameraContext from current ZylemCamera state.
-	 * Converts StageEntity[] targets into Record<string, TransformLike>.
+	 * Converts the targets into named transforms for the pipeline.
 	 */
 	private buildContext(delta: number): CameraContext {
 		const targets: Record<string, TransformLike> = {};
 
 		for (let i = 0; i < this.targets.length; i++) {
 			const entity = this.targets[i];
+			const transform = entity.group ?? entity.mesh;
 			const key = i === 0 ? 'primary' : `target_${i}`;
-			if (entity.group) {
+			if (transform) {
 				targets[key] = {
-					position: entity.group.position,
-					rotation: entity.group.quaternion,
+					position: transform.getWorldPosition(new Vector3()),
+					rotation: transform.getWorldQuaternion(new Quaternion()),
 				};
 			}
 		}
@@ -632,6 +636,7 @@ export class ZylemCamera {
 			: 'perspective';
 		if (current === kind) return;
 
+		const previous = this.camera;
 		const aspect = this.screenResolution.x / Math.max(this.screenResolution.y, 1);
 		const next = kind === 'orthographic'
 			? this.createOrthographicCamera(aspect)
@@ -658,8 +663,10 @@ export class ZylemCamera {
 		}
 
 		this.camera = next;
+		this.effects.bind(next);
 		this.orbitController?.rebindCamera(next);
-		this._rendererManager?.rebindPostProcessingCamera(next);
+		if (this.effects.revision > 0) this._rendererManager?.releaseViewPostProcessing(previous);
+		this._rendererManager?.rebindPostProcessingCamera(next, previous);
 	}
 
 	/**

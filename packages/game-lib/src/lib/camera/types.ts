@@ -1,4 +1,4 @@
-import { Vector3, Quaternion } from 'three';
+import { Vector3, Quaternion, type Object3D } from 'three';
 
 /**
  * Represents a full camera pose: position, rotation, projection params, and optional lookAt.
@@ -32,6 +32,12 @@ export interface PoseDelta {
 export interface TransformLike {
 	position: Vector3;
 	rotation?: Quaternion;
+}
+
+/** An entity or rig the camera can track once its visible transform is available. */
+export interface CameraTarget {
+	readonly group?: Object3D | null;
+	readonly mesh?: Object3D | null;
 }
 
 /**

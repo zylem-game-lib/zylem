@@ -1,15 +1,17 @@
 import { Vector2, Vector3, Texture } from "three";
-import { PerspectiveType } from "./perspective";
+import { perspectiveProjection, type PerspectiveType } from "./perspective";
 import { ZylemCamera } from "./zylem-camera";
 import { Viewport, DEFAULT_VIEWPORT } from "./renderer-manager";
-import { StageEntity } from "../interfaces/entity";
-import type { CameraBehavior, CameraAction, CameraPerspective, CameraPipelineState } from "./types";
+import type { CameraBehavior, CameraAction, CameraPerspective, CameraPipelineState, CameraTarget } from "./types";
+import type { Pass, PassOptions } from './camera-effects';
+import type { CameraWaypoints } from './camera-waypoints';
 import { createPerspective } from "./perspectives";
 import type { PerspectiveOptions } from "./perspectives";
 import { Vec2Input, Vec3Input, VEC2_ZERO, VEC3_ZERO, toThreeVector2, toThreeVector3 } from "../core/vector";
 
 export interface CameraOptions {
 	perspective?: PerspectiveType;
+	perspectiveOptions?: PerspectiveOptions;
 	position?: Vec3Input;
 	target?: Vec3Input;
 	zoom?: number;
@@ -82,14 +84,14 @@ export class CameraWrapper {
 	 * Add a target entity for the camera to follow/frame.
 	 * With multiple targets, the camera auto-frames to include all of them.
 	 */
-	addTarget(entity: StageEntity): void {
+	addTarget(entity: CameraTarget): void {
 		this.cameraRef.addTarget(entity);
 	}
 
 	/**
 	 * Remove a target entity from the camera.
 	 */
-	removeTarget(entity: StageEntity): void {
+	removeTarget(entity: CameraTarget): void {
 		this.cameraRef.removeTarget(entity);
 	}
 
@@ -139,15 +141,40 @@ export class CameraWrapper {
 	 * @param key   Unique key for this behavior (used for replacement/removal).
 	 * @param behavior  The CameraBehavior implementation.
 	 */
-	addBehavior(key: string, behavior: CameraBehavior): void {
+	useBehavior(key: string, behavior: CameraBehavior): void {
 		this.cameraRef.pipeline.addBehavior(key, behavior);
 	}
 
 	/**
 	 * Remove a behavior by key.
 	 */
-	removeBehavior(key: string): boolean {
+	unuseBehavior(key: string): boolean {
 		return this.cameraRef.pipeline.removeBehavior(key);
+	}
+
+	/** Alias for {@link useBehavior}. */
+	addBehavior(key: string, behavior: CameraBehavior): void {
+		this.useBehavior(key, behavior);
+	}
+
+	/** Alias for {@link unuseBehavior}. */
+	removeBehavior(key: string): boolean {
+		return this.unuseBehavior(key);
+	}
+
+	/** Add or replace a keyed TSL effect on this camera. */
+	addEffect<Options extends object>(key: string, postProcessingPass: Pass<Options>): void {
+		this.cameraRef.effects.add(key, postProcessingPass);
+	}
+
+	/** Merge options into the registered pass. Returns false for an unknown key. */
+	updateEffect(key: string, options: PassOptions): boolean {
+		return this.cameraRef.effects.update(key, options);
+	}
+
+	/** Remove an effect by key. */
+	removeEffect(key: string): boolean {
+		return this.cameraRef.effects.remove(key);
 	}
 
 	// ─── Pipeline: Actions ──────────────────────────────────────────────────
@@ -158,6 +185,16 @@ export class CameraWrapper {
 	 */
 	addAction(action: CameraAction): void {
 		this.cameraRef.pipeline.addAction(action);
+	}
+
+	/** Queue timed moves from the current pose. The camera holds the last waypoint. */
+	addWaypoints(...waypoints: CameraWaypoints): void {
+		this.cameraRef.pipeline.addWaypoints(waypoints);
+	}
+
+	/** Cancel queued moves and return control to the perspective and its behaviors. */
+	clearWaypoints(): void {
+		this.cameraRef.pipeline.clearWaypoints();
 	}
 
 	// ─── Pipeline: Perspective ──────────────────────────────────────────────
@@ -216,16 +253,10 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 		x: window.innerWidth,
 		y: window.innerHeight,
 	});
-	let frustumSize = 10;
-	if (
-		options.perspective === 'fixed-2d'
-		|| options.perspective === 'isometric'
-		|| options.perspective === 'top-down'
-	) {
-		frustumSize = options.zoom || 10;
-	}
+	const perspType = options.perspective || 'third-person';
+	const frustumSize = perspectiveProjection(perspType) === 'orthographic' ? options.zoom || 10 : 10;
 	const zylemCamera = new ZylemCamera(
-		options.perspective || 'third-person',
+		perspType,
 		screenResolution,
 		frustumSize
 	);
@@ -244,11 +275,10 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 
 	// Reconfigure the perspective with user-specified options (position, zoom, etc.)
 	// so the pipeline produces the correct base pose from the first frame.
-	const perspType = options.perspective || 'third-person';
 	if (perspType === 'fixed-2d' || perspType === 'flat-2d') {
 		zylemCamera.applyPerspective(
 			perspType,
-			createPerspective(perspType, { zoom: frustumSize })
+			createPerspective(perspType, { position: options.position, zoom: frustumSize, ...options.perspectiveOptions })
 		);
 	} else if (perspType === 'isometric' || perspType === 'top-down') {
 		zylemCamera.applyPerspective(
@@ -257,6 +287,7 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 				zoom: frustumSize,
 				initialPosition: position.clone(),
 				initialLookAt: target.clone(),
+				...options.perspectiveOptions,
 			})
 		);
 	} else {
@@ -265,6 +296,7 @@ export function createCamera(options: CameraOptions): CameraWrapper {
 			createPerspective(perspType, {
 				initialPosition: position.clone(),
 				initialLookAt: target.clone(),
+				...options.perspectiveOptions,
 			})
 		);
 	}

@@ -258,7 +258,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		// a listener first appears still receives events. Once on, stays on
 		// (the wasm re-emits started edges for live overlaps when enabling,
 		// so late listeners observe current state).
-		const hasListeners = this.hasCollisionPhaseListeners();
+		const hasListeners = this.hasCollisionListeners();
 		if (hasListeners && !this.simulation.areEventsEnabled) {
 			this.simulation.setEventsEnabled?.(true);
 		}
@@ -273,9 +273,9 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 		}
 	}
 
-	private hasCollisionPhaseListeners(): boolean {
+	private hasCollisionListeners(): boolean {
 		for (const entity of this.collisionMap.values()) {
-			if (entity?.collisionDelegate?.collision?.length) {
+			if (entity?.collisionDelegate?.collision?.length || isCollisionHandlerDelegate(entity)) {
 				return true;
 			}
 		}
@@ -361,6 +361,7 @@ export class ZylemWorld implements Entity<ZylemWorld> {
 
 	private removeEntityFromTracking(uuid: string) {
 		this.collisionMap.delete(uuid);
+		this.collisionBehaviorMap.delete(uuid);
 		this._removalMap.delete(uuid);
 		this.pruneActiveCollisionPairs(uuid);
 	}
