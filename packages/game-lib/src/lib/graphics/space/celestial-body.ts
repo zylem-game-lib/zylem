@@ -1,5 +1,5 @@
 import { GravitySourceBehavior, resolveGravitySource } from '@zylem/behaviors/celestial';
-import { sphereCollision } from '../../entities/parts/collision-factories';
+import { sphereCollision } from '../../entities/primitives/parts/collision-factories';
 import { Vector3 } from 'three';
 import type { SetupContext, UnloadContext, UpdateContext } from '../../core/base-node-life-cycle';
 import {

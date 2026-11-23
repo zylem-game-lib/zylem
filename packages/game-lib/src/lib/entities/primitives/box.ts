@@ -1,10 +1,10 @@
 import { Vector3 } from 'three';
-import { BaseNode } from '../core/base-node';
-import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from './entity';
-import { DebugDelegate } from './delegates/debug';
-import { commonDefaults, mergeArgs } from './common';
+import { BaseNode } from '../../core/base-node';
+import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from '../entity';
+import { DebugDelegate } from '../delegates/debug';
+import { commonDefaults, mergeArgs } from '../common';
 import { boxMesh } from './parts/mesh-factories';
-import { boxCollision } from './parts/collision-factories';
+import { boxCollision, collisionBody } from './parts/collision-factories';
 
 type ZylemBoxOptions = GameEntityOptions;
 
@@ -45,15 +45,7 @@ export function createBox(...args: Array<BoxOptions>): ZylemBox {
 		boxMesh({ size: options.size, material: options.material, color: options.color }),
 		boxCollision({
 			size: options.size,
-			static: options.collision?.static,
-			sensor: options.collision?.sensor,
-			canSleep: options.collision?.canSleep,
-			ccdEnabled: options.collision?.ccdEnabled,
-			gravityScale: options.collision?.gravityScale,
-			lockRotations: options.collision?.lockRotations,
-			lockTranslations: options.collision?.lockTranslations,
-			collisionType: options.collisionType,
-			collisionFilter: options.collisionFilter,
+			...collisionBody(options),
 		}),
 	);
 	return finalizeEntityCloneSupport(

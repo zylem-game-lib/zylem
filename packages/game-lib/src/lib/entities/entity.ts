@@ -38,7 +38,7 @@ import {
 	cloneCollisionComponent,
 	isCollisionComponent,
 	type CollisionComponent,
-} from './parts/collision-factories';
+} from './primitives/parts/collision-factories';
 import type { NodeInterface } from '../core/node-interface';
 import { commonDefaults } from './common';
 import type { Action } from '../actions/action';

@@ -12,7 +12,7 @@ import {
 import { CollisionHandlerDelegate } from '../collision/world';
 import { state } from '../game/game-state';
 import { commonDefaults, mergeArgs } from './common';
-import { zoneCollision } from './parts/collision-factories';
+import { zoneCollision } from './primitives/parts/collision-factories';
 import { Vec3Input, VEC3_ZERO, normalizeVec3, toThreeVector3 } from '../core/vector';
 import { deepMergeValues } from '../core/clone-utils';
 

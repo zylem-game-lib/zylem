@@ -7,8 +7,8 @@
  * depend on `@zylem/shaders`, and behaviors are keyed by symbol rather than
  * string, so this map is how a bare name resolves back to something callable.
  * Hosts fill it at boot (typically by walking the module namespaces they
- * already import, see {@link registerSwatchSourcesFromModule}); game-lib
- * pre-registers its own re-exported behaviors via
+ * already import, see {@link registerSwatchSourcesFromModule}). Hosts that
+ * mount the editor register game-lib's re-exported behaviors via
  * {@link registerBuiltInBehaviorSwatchSources}.
  *
  * Mirrors `entity-registry.ts`: the factory stays on this side of the bridge
@@ -17,7 +17,7 @@
 
 import type { SwatchKind } from '@zylem/bridge';
 import type { BehaviorDescriptor } from '@zylem/behaviors/core';
-import type { ZylemShader } from '../graphics/material';
+import type { ZylemShader } from '../../graphics/material';
 
 /** A shader factory: turns catalog props into a `ZylemShader`. */
 export type SwatchShaderFactory = (props: Record<string, unknown>) => ZylemShader;

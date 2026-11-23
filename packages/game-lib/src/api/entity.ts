@@ -3,22 +3,22 @@
  * @public
  */
 // Entity factories
-export { createBox, ZylemBox, BOX_TYPE } from '../lib/entities/box';
-export { createSphere, ZylemSphere, SPHERE_TYPE } from '../lib/entities/sphere';
+export { createBox, ZylemBox, BOX_TYPE } from '../lib/entities/primitives/box';
+export { createSphere, ZylemSphere, SPHERE_TYPE } from '../lib/entities/primitives/sphere';
 export { createSprite, ZylemSprite, SPRITE_TYPE } from '../lib/entities/sprite';
 export type { SpriteImage, SpriteAnimation, SpriteSheet } from '../lib/entities/sprite';
-export { createPlane, ZylemPlane, PLANE_TYPE } from '../lib/entities/plane';
+export { createPlane, ZylemPlane, PLANE_TYPE } from '../lib/entities/primitives/plane';
 export { createZone, ZylemZone, ZONE_TYPE } from '../lib/entities/zone';
 export type { OnHeldParams, OnEnterParams, OnExitParams } from '../lib/entities/zone';
 export { createActor, ZylemActor, ACTOR_TYPE } from '../lib/entities/actor';
 export type { CollisionShapeType } from '../lib/entities/actor';
 export { createText, ZylemText, TEXT_TYPE } from '../lib/entities/text';
 export { createRect, ZylemRect, RECT_TYPE, type RectShape } from '../lib/entities/rect';
-export { createDisk, ZylemDisk, DISK_TYPE } from '../lib/entities/disk';
-export { createCone, ZylemCone, CONE_TYPE } from '../lib/entities/cone';
-export { createPyramid, ZylemPyramid, PYRAMID_TYPE } from '../lib/entities/pyramid';
-export { createCylinder, ZylemCylinder, CYLINDER_TYPE } from '../lib/entities/cylinder';
-export { createPill, ZylemPill, PILL_TYPE } from '../lib/entities/pill';
+export { createDisk, ZylemDisk, DISK_TYPE } from '../lib/entities/primitives/disk';
+export { createCone, ZylemCone, CONE_TYPE } from '../lib/entities/primitives/cone';
+export { createPyramid, ZylemPyramid, PYRAMID_TYPE } from '../lib/entities/primitives/pyramid';
+export { createCylinder, ZylemCylinder, CYLINDER_TYPE } from '../lib/entities/primitives/cylinder';
+export { createPill, ZylemPill, PILL_TYPE } from '../lib/entities/primitives/pill';
 export {
 	createParticleSystem,
 	ZylemParticleSystem,
@@ -75,7 +75,7 @@ export {
 	planeCollision,
 	zoneCollision,
 	type CollisionComponent,
-} from '../lib/entities/parts';
+} from '../lib/entities/primitives/parts';
 
 // Entity type symbols (consolidated map for getEntityByName type inference)
 export type { EntityTypeMap, EntityForType } from '../lib/types/entity-type-map';

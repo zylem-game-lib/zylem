@@ -1,9 +1,9 @@
-import { BaseNode } from '../core/base-node';
-import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from './entity';
-import { DebugDelegate } from './delegates/debug';
-import { commonDefaults, mergeArgs } from './common';
+import { BaseNode } from '../../core/base-node';
+import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from '../entity';
+import { DebugDelegate } from '../delegates/debug';
+import { commonDefaults, mergeArgs } from '../common';
 import { coneMesh } from './parts/mesh-factories';
-import { coneCollision } from './parts/collision-factories';
+import { collisionBody, coneCollision } from './parts/collision-factories';
 
 type ZylemConeOptions = GameEntityOptions & {
 	/** Base radius of the cone */
@@ -69,13 +69,7 @@ export function createCone(...args: Array<ConeOptions>): ZylemCone {
 		coneCollision({
 			radius: options.radius,
 			height: options.height,
-			static: options.collision?.static,
-			sensor: options.collision?.sensor,
-			gravityScale: options.collision?.gravityScale,
-			lockRotations: options.collision?.lockRotations,
-			lockTranslations: options.collision?.lockTranslations,
-			collisionType: options.collisionType,
-			collisionFilter: options.collisionFilter,
+			...collisionBody(options),
 		}),
 	);
 	return finalizeEntityCloneSupport(

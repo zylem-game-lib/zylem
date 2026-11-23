@@ -10,7 +10,7 @@ import { ThrusterBehavior } from '@zylem/behaviors/thruster';
 import { TopDownMovementBehavior } from '@zylem/behaviors/top-down-movement';
 import { WorldBoundary2DBehavior } from '@zylem/behaviors/world-boundary-2d';
 
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import { createRealStage } from '../../support/real-stage';
 
 const BOUNDS = { left: -2, right: 2, bottom: -2, top: 2 };

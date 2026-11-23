@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { ZylemWorld, type CollisionPair } from '../../../src/lib/collision/world';
-import { createBox } from '../../../src/lib/entities/box';
-import { createSphere } from '../../../src/lib/entities/sphere';
+import { createBox } from '../../../src/lib/entities/primitives/box';
+import { createSphere } from '../../../src/lib/entities/primitives/sphere';
 
 function registerEntities(world: ZylemWorld, ...entities: Array<ReturnType<typeof createSphere> | ReturnType<typeof createBox>>) {
 	for (const entity of entities) {

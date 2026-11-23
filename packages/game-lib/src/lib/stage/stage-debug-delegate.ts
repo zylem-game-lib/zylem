@@ -59,7 +59,12 @@ import {
 	StageTransformTool,
 	applySceneOperationPoses,
 } from './stage-transform-tool';
-import { StageSwatchApplier, type SwatchApplyOutcome } from './stage-swatch-applier';
+import type { SwatchApplyOutcome } from '../bridge/game-bridge';
+import {
+	createSwatchApplier,
+	emptySwatchApplyOutcome,
+	type InstalledSwatchApplier,
+} from './swatch-apply-hook';
 import { StageMarqueeSelect } from './stage-marquee-select';
 import { SelectionHighlight } from './selection-highlight';
 import { HudOutline, type HudMark } from './hud-outline';
@@ -110,7 +115,7 @@ export class StageDebugDelegate {
 	private lastDebugEnabled: boolean | null = null;
 	private warnedMissingAddFactory = false;
 	private transformTool: StageTransformTool;
-	private swatchApplier: StageSwatchApplier;
+	private swatchApplier: InstalledSwatchApplier | null = null;
 	private marquee: StageMarqueeSelect;
 	private selectionHighlight: SelectionHighlight | null = null;
 	private hudOutline = new HudOutline();
@@ -134,10 +139,6 @@ export class StageDebugDelegate {
 		this.transformTool = new StageTransformTool({
 			getScene: () => this.stage.scene?.scene ?? null,
 			getCamera: () => this.getDebugViewCamera()?.camera ?? null,
-			resolveEntity: (uuid) => this.resolveEntity(uuid),
-		});
-
-		this.swatchApplier = new StageSwatchApplier({
 			resolveEntity: (uuid) => this.resolveEntity(uuid),
 		});
 
@@ -766,7 +767,22 @@ export class StageDebugDelegate {
 	 * the operation can be undone exactly via {@link applySceneOperation}.
 	 */
 	applySwatches(payload: EntityApplySwatchPayload & { opId: string }): SwatchApplyOutcome {
-		return this.swatchApplier.applySwatches(payload);
+		const applier = this.ensureSwatchApplier();
+		if (!applier) return emptySwatchApplyOutcome(payload);
+		return applier.applySwatches(payload);
+	}
+
+	/**
+	 * The catalog entry installs the applier. A stage created before that
+	 * import still picks it up on the next apply.
+	 */
+	private ensureSwatchApplier(): InstalledSwatchApplier | null {
+		if (this.swatchApplier) return this.swatchApplier;
+		const created = createSwatchApplier({
+			resolveEntity: (uuid) => this.resolveEntity(uuid),
+		});
+		if (created) this.swatchApplier = created;
+		return created;
 	}
 
 	/** Collider wireframes, straight from the wasm simulation. */
@@ -880,7 +896,7 @@ export class StageDebugDelegate {
 		this.hudOutline.dispose();
 		this.marquee.dispose();
 		this.transformTool.dispose();
-		this.swatchApplier.dispose();
+		this.swatchApplier?.dispose();
 		this.grid.dispose();
 		this.deactivate();
 		// Not part of `deactivate()`: the cursor and ghost survive debug mode
@@ -925,7 +941,7 @@ export class StageDebugDelegate {
 				}
 				break;
 			case 'swatch':
-				this.swatchApplier.applySceneOperation(op, direction);
+				this.ensureSwatchApplier()?.applySceneOperation(op, direction);
 				break;
 		}
 	}

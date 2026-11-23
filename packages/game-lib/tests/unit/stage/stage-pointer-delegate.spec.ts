@@ -1,7 +1,7 @@
 import { Mesh, Scene, Vector3, type Group } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import { createHoverArea, createDroppableArea } from '../../../src/lib/entities/hover-area';
 import { debugState } from '../../../src/lib/debug/debug-state';
 import { entityRepresentative } from '../../../src/lib/stage/entity-representative';

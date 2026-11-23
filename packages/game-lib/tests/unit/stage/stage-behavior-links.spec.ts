@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { defineBehavior, type BehaviorEntityLink } from '@zylem/behaviors/core';
 
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import { StageEntityDelegate } from '../../../src/lib/stage/stage-entity-delegate';
 import { StageEntityModelDelegate } from '../../../src/lib/stage/stage-entity-model-delegate';
 import { StageLoadingDelegate } from '../../../src/lib/stage/stage-loading-delegate';

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { defineBehavior } from '@zylem/behaviors/core';
 import { color } from 'three/tsl';
 
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import { createZone } from '../../../src/lib/entities/zone';
 
 const Thruster = defineBehavior({

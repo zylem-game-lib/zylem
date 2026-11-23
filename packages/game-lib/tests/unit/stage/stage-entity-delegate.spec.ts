@@ -8,7 +8,7 @@ import {
 } from '@zylem/behaviors/destructible-3d';
 import { EntityAssetLoader } from '../../../src/lib/core/entity-asset-loader';
 import { createActor } from '../../../src/lib/entities/actor';
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import { RenderStrategyManager } from '../../../src/lib/graphics/render-strategy-manager';
 import { StageEntityDelegate } from '../../../src/lib/stage/stage-entity-delegate';
 import { StageEntityModelDelegate } from '../../../src/lib/stage/stage-entity-model-delegate';

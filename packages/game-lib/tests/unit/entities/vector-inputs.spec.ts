@@ -1,8 +1,8 @@
 import { Vector2, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 
-import { createBox } from '../../../src/lib/entities/box';
-import { createPlane } from '../../../src/lib/entities/plane';
+import { createBox } from '../../../src/lib/entities/primitives/box';
+import { createPlane } from '../../../src/lib/entities/primitives/plane';
 
 describe('entity vector inputs', () => {
 	it('merges partial entity vectors against per-field defaults', () => {

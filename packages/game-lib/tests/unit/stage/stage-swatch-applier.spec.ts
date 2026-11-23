@@ -4,18 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineBehavior, type BehaviorEntityLink } from '@zylem/behaviors/core';
 import type { SceneOperationPayload } from '@zylem/bridge';
 
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import { createZone } from '../../../src/lib/entities/zone';
 import type { BehaviorHost } from '../../../src/lib/entities/behavior-slots';
 import type { GameEntity } from '../../../src/lib/entities/entity';
 import {
 	clearSwatchRegistry,
 	registerSwatchSource,
-} from '../../../src/lib/entities/swatch-registry';
+} from '../../../src/lib/entities/editor/swatch-registry';
 import {
 	MAX_SWATCH_SNAPSHOTS,
 	StageSwatchApplier,
-} from '../../../src/lib/stage/stage-swatch-applier';
+} from '../../../src/lib/entities/editor/stage-swatch-applier';
 
 const Thruster = defineBehavior({
 	name: 'applier-thruster',

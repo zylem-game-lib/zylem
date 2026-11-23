@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Vector2, Vector3 } from 'three';
 
-import { createPlane, PlaneMeshBuilder } from '../../../src/lib/entities/plane';
+import { createPlane, PlaneMeshBuilder } from '../../../src/lib/entities/primitives/plane';
 
 /**
  * Regression coverage for a bug where `entity.options._builders` was

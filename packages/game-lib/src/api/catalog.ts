@@ -23,7 +23,7 @@ export {
 export {
 	registerBuiltInEntityTypes,
 	BUILT_IN_ENTITY_TYPES,
-} from '../lib/entities/entity-catalog';
+} from '../lib/entities/editor/entity-catalog';
 
 export {
 	registerSwatchSource,
@@ -38,8 +38,8 @@ export {
 	type ShaderSwatchSource,
 	type BehaviorSwatchSource,
 	type SwatchShaderFactory,
-} from '../lib/entities/swatch-registry';
+} from '../lib/entities/editor/swatch-registry';
 
-export { registerBuiltInBehaviorSwatchSources } from '../lib/entities/swatch-catalog';
+export { registerBuiltInBehaviorSwatchSources } from '../lib/entities/editor/swatch-catalog';
 
 export type { EntityTypeDescriptor, SwatchKind, SwatchSpec } from '@zylem/bridge';

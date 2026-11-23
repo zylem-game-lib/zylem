@@ -6,7 +6,7 @@ import {
 	syncRenderRotationFromBody,
 	type SpawnPlacementEntity,
 } from '../../../src/lib/entities/spawn-placement';
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 
 /** A quarter turn about Y, as a plain quaternion. */
 const QUARTER_TURN_Y = new Quaternion().setFromAxisAngle({ x: 0, y: 1, z: 0 } as any, Math.PI / 2);

@@ -4,7 +4,7 @@ import {
 	CollisionBuilder,
 	normalizeLockAxes,
 } from '../../../src/lib/collision/collision-builder';
-import { sphereCollision } from '../../../src/lib/entities/parts/collision-factories';
+import { sphereCollision } from '../../../src/lib/entities/primitives/parts/collision-factories';
 
 describe('CollisionBuilder vector inputs', () => {
 	it('normalizes tuple and object collision vectors', () => {

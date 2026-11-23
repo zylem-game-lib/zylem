@@ -39,8 +39,6 @@ import {
 	getEntityType,
 	onEntityRegistryChanged,
 } from '../entities/entity-registry';
-import { registerBuiltInEntityTypes } from '../entities/entity-catalog';
-import { registerBuiltInBehaviorSwatchSources } from '../entities/swatch-catalog';
 import { getZylemBridge, type BridgePose } from '@zylem/bridge';
 import { nanoid } from 'nanoid';
 import type {
@@ -167,8 +165,6 @@ export class ZylemGame<TGlobals extends BaseGlobals> {
 		});
 		this.loadDebugOptions(options);
 		this.setGlobals(options);
-		registerBuiltInEntityTypes();
-		registerBuiltInBehaviorSwatchSources();
 		this.gameBridge.connect({
 			navigation: () => this.currentStage()?.wrappedStage?.navigation ?? null,
 			resolveEntity: (uuid) =>

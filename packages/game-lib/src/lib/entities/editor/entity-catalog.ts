@@ -13,19 +13,21 @@
  */
 
 import { Vector3 } from 'three';
-import type { EntityTypeRegistration } from './entity-registry';
-import { registerEntityTypes } from './entity-registry';
-import { createBox } from './box';
-import { createSphere } from './sphere';
-import { createCone } from './cone';
-import { createPyramid } from './pyramid';
-import { createCylinder } from './cylinder';
-import { createPill } from './pill';
-import { createDisk } from './disk';
-import { createPlane } from './plane';
-import { createZone } from './zone';
-import { createRect } from './rect';
-import { createLight } from './light';
+import { installSwatchApplier } from '../../stage/swatch-apply-hook';
+import type { EntityTypeRegistration } from '../entity-registry';
+import { registerEntityTypes } from '../entity-registry';
+import { StageSwatchApplier } from './stage-swatch-applier';
+import { createBox } from '../primitives/box';
+import { createSphere } from '../primitives/sphere';
+import { createCone } from '../primitives/cone';
+import { createPyramid } from '../primitives/pyramid';
+import { createCylinder } from '../primitives/cylinder';
+import { createPill } from '../primitives/pill';
+import { createDisk } from '../primitives/disk';
+import { createPlane } from '../primitives/plane';
+import { createZone } from '../zone';
+import { createRect } from '../rect';
+import { createLight } from '../light';
 
 const SVG_OPEN =
 	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '
@@ -196,6 +198,7 @@ let registered: (() => void) | null = null;
  * not duplicate the palette.
  */
 export function registerBuiltInEntityTypes(): () => void {
+	installSwatchApplier((stage) => new StageSwatchApplier(stage));
 	if (registered) return registered;
 	registered = registerEntityTypes(BUILT_IN_ENTITY_TYPES);
 	return registered;

@@ -9,7 +9,7 @@ import {
 	onSwatchRegistryChanged,
 	registerSwatchSource,
 	registerSwatchSourcesFromModule,
-} from '../../../src/lib/entities/swatch-registry';
+} from '../../../src/lib/entities/editor/swatch-registry';
 
 const TestBehavior = defineBehavior({
 	name: 'swatch-registry-test',

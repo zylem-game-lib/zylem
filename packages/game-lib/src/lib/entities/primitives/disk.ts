@@ -1,13 +1,13 @@
 import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import { Group, RingGeometry } from 'three';
-import { BaseNode } from '../core/base-node';
-import { GameEntityOptions, GameEntity } from './entity';
-import { EntityBuilder } from './builder';
-import { EntityCollisionBuilder } from './builder';
-import { EntityMeshBuilder } from './builder';
-import { DebugDelegate } from './delegates/debug';
-import { createEntity } from './create';
-import { commonDefaults } from './common';
+import { BaseNode } from '../../core/base-node';
+import { GameEntityOptions, GameEntity } from '../entity';
+import { EntityBuilder } from '../builder';
+import { EntityCollisionBuilder } from '../builder';
+import { EntityMeshBuilder } from '../builder';
+import { DebugDelegate } from '../delegates/debug';
+import { createEntity } from '../create';
+import { commonDefaults } from '../common';
 
 type ZylemDiskOptions = GameEntityOptions & {
 	innerRadius?: number;

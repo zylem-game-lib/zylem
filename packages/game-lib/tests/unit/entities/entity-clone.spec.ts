@@ -2,16 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { Color, Vector2, Vector3 } from 'three';
 import { defineBehavior, type BehaviorRef } from '@zylem/behaviors/core';
 import { createEntityFactory } from '../../../src/lib/entities/entity-factory';
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import {
 	boxCollision,
 	sphereCollision,
-} from '../../../src/lib/entities/parts/collision-factories';
+} from '../../../src/lib/entities/primitives/parts/collision-factories';
 import {
 	boxMesh,
 	sphereMesh,
-} from '../../../src/lib/entities/parts/mesh-factories';
-import { createSphere } from '../../../src/lib/entities/sphere';
+} from '../../../src/lib/entities/primitives/parts/mesh-factories';
+import { createSphere } from '../../../src/lib/entities/primitives/sphere';
 import { createText } from '../../../src/lib/entities/text';
 import { create } from '../../../src/lib/entities/entity';
 

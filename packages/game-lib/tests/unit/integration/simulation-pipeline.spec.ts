@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TopDownMovementBehavior } from '@zylem/behaviors/top-down-movement';
 import { ZylemWorld } from '../../../src/lib/collision/world';
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import { StageEntityDelegate } from '../../../src/lib/stage/stage-entity-delegate';
 import { StageEntityModelDelegate } from '../../../src/lib/stage/stage-entity-model-delegate';
 import { StageLoadingDelegate } from '../../../src/lib/stage/stage-loading-delegate';

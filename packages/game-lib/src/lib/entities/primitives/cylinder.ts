@@ -1,9 +1,9 @@
-import { BaseNode } from '../core/base-node';
-import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from './entity';
-import { DebugDelegate } from './delegates/debug';
-import { commonDefaults, mergeArgs } from './common';
+import { BaseNode } from '../../core/base-node';
+import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from '../entity';
+import { DebugDelegate } from '../delegates/debug';
+import { commonDefaults, mergeArgs } from '../common';
 import { cylinderMesh } from './parts/mesh-factories';
-import { cylinderCollision } from './parts/collision-factories';
+import { collisionBody, cylinderCollision } from './parts/collision-factories';
 
 type ZylemCylinderOptions = GameEntityOptions & {
 	/** Top radius of the cylinder */
@@ -76,13 +76,7 @@ export function createCylinder(...args: Array<CylinderOptions>): ZylemCylinder {
 			radiusTop: options.radiusTop,
 			radiusBottom: options.radiusBottom,
 			height: options.height,
-			static: options.collision?.static,
-			sensor: options.collision?.sensor,
-			gravityScale: options.collision?.gravityScale,
-			lockRotations: options.collision?.lockRotations,
-			lockTranslations: options.collision?.lockTranslations,
-			collisionType: options.collisionType,
-			collisionFilter: options.collisionFilter,
+			...collisionBody(options),
 		}),
 	);
 	return finalizeEntityCloneSupport(

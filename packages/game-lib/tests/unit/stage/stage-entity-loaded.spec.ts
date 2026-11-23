@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EntityAssetLoader } from '../../../src/lib/core/entity-asset-loader';
 import { vessel } from '../../../src/lib/core/vessel';
 import { createActor } from '../../../src/lib/entities/actor';
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import { AnimationDelegate } from '../../../src/lib/entities/delegates/animation';
 import { StageEntityDelegate } from '../../../src/lib/stage/stage-entity-delegate';
 import { StageEntityModelDelegate } from '../../../src/lib/stage/stage-entity-model-delegate';

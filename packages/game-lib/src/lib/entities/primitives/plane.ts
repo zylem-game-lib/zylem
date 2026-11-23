@@ -1,15 +1,15 @@
 import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import { PlaneGeometry, Vector2, Vector3 } from 'three';
-import { TexturePath } from '../graphics/material';
-import { BaseNode } from '../core/base-node';
-import { GameEntityOptions, GameEntity } from './entity';
-import { EntityBuilder } from './builder';
-import { EntityCollisionBuilder } from './builder';
-import { EntityMeshBuilder } from './builder';
-import { XZPlaneGeometry } from '../graphics/geometries/XZPlaneGeometry';
-import { createEntity } from './create';
-import { Vec2Input, VEC2_ONE, toThreeVector2 } from '../core/vector';
-import { deepMergeValues } from '../core/clone-utils';
+import { TexturePath } from '../../graphics/material';
+import { BaseNode } from '../../core/base-node';
+import { GameEntityOptions, GameEntity } from '../entity';
+import { EntityBuilder } from '../builder';
+import { EntityCollisionBuilder } from '../builder';
+import { EntityMeshBuilder } from '../builder';
+import { XZPlaneGeometry } from '../../graphics/geometries/XZPlaneGeometry';
+import { createEntity } from '../create';
+import { Vec2Input, VEC2_ONE, toThreeVector2 } from '../../core/vector';
+import { deepMergeValues } from '../../core/clone-utils';
 
 type ZylemPlaneOptions = GameEntityOptions & {
   tile?: Vec2Input;
@@ -58,7 +58,7 @@ type ZylemPlaneOptions = GameEntityOptions & {
 
 const DEFAULT_SUBDIVISIONS = 4;
 
-import { commonDefaults } from './common';
+import { commonDefaults } from '../common';
 
 const planeDefaults: ZylemPlaneOptions = {
   ...commonDefaults,

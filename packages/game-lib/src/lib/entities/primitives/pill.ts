@@ -1,9 +1,9 @@
-import { BaseNode } from '../core/base-node';
-import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from './entity';
-import { DebugDelegate } from './delegates/debug';
-import { commonDefaults, mergeArgs } from './common';
+import { BaseNode } from '../../core/base-node';
+import { finalizeEntityCloneSupport, GameEntityOptions, GameEntity } from '../entity';
+import { DebugDelegate } from '../delegates/debug';
+import { commonDefaults, mergeArgs } from '../common';
 import { pillMesh } from './parts/mesh-factories';
-import { pillCollision } from './parts/collision-factories';
+import { collisionBody, pillCollision } from './parts/collision-factories';
 
 type ZylemPillOptions = GameEntityOptions & {
 	/** Radius of the capsule hemispheres */
@@ -73,13 +73,7 @@ export function createPill(...args: Array<PillOptions>): ZylemPill {
 		pillCollision({
 			radius: options.radius,
 			length: options.length,
-			static: options.collision?.static,
-			sensor: options.collision?.sensor,
-			gravityScale: options.collision?.gravityScale,
-			lockRotations: options.collision?.lockRotations,
-			lockTranslations: options.collision?.lockTranslations,
-			collisionType: options.collisionType,
-			collisionFilter: options.collisionFilter,
+			...collisionBody(options),
 		}),
 	);
 	return finalizeEntityCloneSupport(

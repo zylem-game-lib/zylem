@@ -27,10 +27,10 @@ import type {
 	SwatchApplyResult,
 	SwatchSpec,
 } from '@zylem/bridge';
-import { deepCloneValue } from '../core/clone-utils';
-import type { GameEntity } from '../entities/entity';
-import { getSwatchSource } from '../entities/swatch-registry';
-import { isGLSLShader, isTSLShader, type ZylemShader } from '../graphics/material';
+import { deepCloneValue } from '../../core/clone-utils';
+import type { GameEntity } from '../entity';
+import { getSwatchSource } from './swatch-registry';
+import { isGLSLShader, isTSLShader, type ZylemShader } from '../../graphics/material';
 
 /**
  * Upper bound on remembered operations. Each holds at most one material set

@@ -10,14 +10,14 @@ import {
 	type Vec3Input,
 	normalizeVec2,
 	normalizeVec3,
-} from '../../core/vector';
+} from '../../../core/vector';
 import {
 	normalizeLockAxes,
 	packCollisionGroups,
 	type CollisionOptions,
 	type LockAxesInput,
-} from '../../collision/collision-builder';
-import { deepCloneValue } from '../../core/clone-utils';
+} from '../../../collision/collision-builder';
+import { deepCloneValue } from '../../../core/clone-utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CollisionComponent type returned by all collision factories
@@ -122,6 +122,29 @@ function makeComponent(
 		bodyDesc: buildBodyDef(opts.static ?? false, opts),
 		colliderDesc: colliderDef,
 		cloneComponent: cloneComponentFactory,
+	};
+}
+
+/**
+ * Body flags shared by every analytic primitive. Shape fields (`size`,
+ * `radius`, `height`) stay on the collider call so each primitive keeps its
+ * own collider kind.
+ */
+export function collisionBody(options: {
+	collision?: Partial<CollisionOptions>;
+	collisionType?: string;
+	collisionFilter?: string[];
+}): BaseCollisionOptions {
+	return {
+		static: options.collision?.static,
+		sensor: options.collision?.sensor,
+		canSleep: options.collision?.canSleep,
+		ccdEnabled: options.collision?.ccdEnabled,
+		gravityScale: options.collision?.gravityScale,
+		lockRotations: options.collision?.lockRotations,
+		lockTranslations: options.collision?.lockTranslations,
+		collisionType: options.collisionType,
+		collisionFilter: options.collisionFilter,
 	};
 }
 

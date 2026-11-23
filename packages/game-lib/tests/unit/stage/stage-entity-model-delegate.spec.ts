@@ -2,7 +2,7 @@ import { Group } from 'three';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createActor } from '../../../src/lib/entities/actor';
-import { createBox } from '../../../src/lib/entities/box';
+import { createBox } from '../../../src/lib/entities/primitives/box';
 import { StageEntityModelDelegate } from '../../../src/lib/stage/stage-entity-model-delegate';
 
 describe('StageEntityModelDelegate', () => {

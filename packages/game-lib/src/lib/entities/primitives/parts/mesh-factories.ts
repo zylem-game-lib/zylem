@@ -8,13 +8,13 @@ import {
 	SphereGeometry,
 	type Color,
 } from 'three';
-import { MaterialBuilder, type MaterialOptions } from '../../graphics/material';
+import { MaterialBuilder, type MaterialOptions } from '../../../graphics/material';
 import {
 	VEC3_ONE,
 	VEC3_ZERO,
 	type Vec3Input,
 	normalizeVec3,
-} from '../../core/vector';
+} from '../../../core/vector';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared helpers
