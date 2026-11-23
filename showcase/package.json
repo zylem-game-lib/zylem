@@ -13,7 +13,7 @@
   "dependencies": {
     "@solidjs/router": "^0.14.10",
     "@zylem/game-lib": "workspace:*",
-    "@zylem/shaders": "^0.8.10",
+    "@zylem/shaders": "^0.8.11",
     "@zylem/ui": "^0.9.12",
     "howler": "^2.2.4",
     "nanoid": "^5.1.16",

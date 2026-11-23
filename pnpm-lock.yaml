@@ -227,8 +227,8 @@ importers:
         specifier: workspace:*
         version: link:../packages/game-lib
       '@zylem/shaders':
-        specifier: ^0.8.10
-        version: 0.8.10(three@0.187.0)
+        specifier: ^0.8.11
+        version: 0.8.11(three@0.187.0)
       '@zylem/ui':
         specifier: ^0.9.12
         version: 0.9.12(solid-js@1.9.14)
@@ -1068,6 +1068,10 @@ packages:
 
   '@babel/runtime@7.29.14':
     resolution: {integrity: sha512-Y5tqevQaUAZhhj82BpYMNC1ssvLQTVAfwKdm8iy8qwmhvC2/CpcAu8OC+QEtjM7pMk7knx83u1Qj8gzkicyelw==}
+    engines: {node: '>=6.9.0'}
+
+  '@babel/runtime@7.29.15':
+    resolution: {integrity: sha512-304gsbbGVmQc+cNGHzwHBlqepYdWLKj3VXCQBGt/EGcV7PUPfKI7kAUNW1FZEOCwlQiLvQjg1JEaAlRQ616h+Q==}
     engines: {node: '>=6.9.0'}
 
   '@babel/template@7.27.2':
@@ -3948,8 +3952,8 @@ packages:
     resolution: {integrity: sha512-R1y0jnxuZrVWOcVkHwCLNsxPLhsLF6JKiJswYSIHRcRMHw/fSA4Y64FwAntyQrTjIpMcWjEJz2e45be2+t59ZQ==}
     engines: {node: '>=20.10.0'}
 
-  '@zylem/shaders@0.8.10':
-    resolution: {integrity: sha512-XkaoWl+BqLsmDKL+6WXa0igfIlsttTRuJzjoOR+gTxk/fNuLzD20gTDcgcTwWu558hKMsqYKWbY4DnZ2XA0xYA==}
+  '@zylem/shaders@0.8.11':
+    resolution: {integrity: sha512-fWg9LMEn6YTnNMc8q7pgPMsTiTW+CDBx0y58IbUEPQ92uhT1X20x6w3MVrIYgtfY6lvFVhhy5Dr+AGRma7HhiA==}
     engines: {node: '>=22.12.0', pnpm: '>=10.32.1'}
     peerDependencies:
       three: 0.187.0
@@ -7238,8 +7242,8 @@ packages:
     peerDependencies:
       react: ^19.3.0
 
-  react-fast-compare@3.2.3:
-    resolution: {integrity: sha512-WY9YHI1jjYC5a2lNRfHbeaNVQqiY+mMKWBSw1mPU0FgevlxI6V7izhNYz7Vp5ieFxetuRb6RmihPQxXEzg7oWQ==}
+  react-fast-compare@3.2.4:
+    resolution: {integrity: sha512-YbkgZfjvuokdt6zR8Oki8Bt4QXAZim/9HKSUr5J23GVyX2o8sYD/JlKSFrJvEFIPjotWvkGY7DgUS+udyr8cEw==}
 
   react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -9498,6 +9502,8 @@ snapshots:
   '@babel/runtime@7.29.13': {}
 
   '@babel/runtime@7.29.14': {}
+
+  '@babel/runtime@7.29.15': {}
 
   '@babel/template@7.27.2':
     dependencies:
@@ -12243,12 +12249,12 @@ snapshots:
 
   '@slorber/react-helmet-async@1.3.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@babel/runtime': 7.29.14
+      '@babel/runtime': 7.29.15
       invariant: 2.2.4
       prop-types: 15.8.1
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
-      react-fast-compare: 3.2.3
+      react-fast-compare: 3.2.4
       shallowequal: 1.1.0
 
   '@slorber/remark-comment@1.0.0':
@@ -13011,7 +13017,7 @@ snapshots:
 
   '@zylem/runtime@0.8.19': {}
 
-  '@zylem/shaders@0.8.10(three@0.187.0)':
+  '@zylem/shaders@0.8.11(three@0.187.0)':
     dependencies:
       '@types/tsl-textures': 3.0.0
       three: 0.187.0
@@ -16818,7 +16824,7 @@ snapshots:
       react: 19.3.0
       scheduler: 0.28.0
 
-  react-fast-compare@3.2.3: {}
+  react-fast-compare@3.2.4: {}
 
   react-is@16.13.1: {}
 
