@@ -278,6 +278,21 @@ describe('navigationSourceHash', () => {
 });
 
 describe('builtin textures', () => {
+	it('recognizes the built-in ground texture ids that levels save', () => {
+		const keys = [
+			'grass',
+			'dirt',
+			'stone',
+			'martian-ground-red',
+			'martian-ground-orange',
+			'martian-ground-green',
+			'martian-ground-blue',
+			'futuristic-tile',
+			'asphalt',
+		];
+		for (const key of keys) expect(builtinTextureKey(`builtin:${key}`)).toBe(key);
+	});
+
 	it('name themselves with the builtin prefix', () => {
 		for (const texture of BUILTIN_TEXTURES) {
 			expect(texture.id).toBe(`builtin:${texture.key}`);

@@ -45,7 +45,9 @@ export { streamLevelOnStage } from '../lib/level/stream-level-stage';
 /** @public The level document currently previewed or playing, if level mode is on. */
 export { getActiveLevelDocument } from '../lib/level/level-session';
 /** @public */
-export type { LevelDocument } from '@zylem/bridge';
+export type { LevelDocument, TerrainPlane } from '@zylem/bridge';
+/** @public */
+export type { TerrainSurfaceHit } from '../lib/level/terrain-geometry';
 /** @public Brush helpers for authoring a level document's solids in code. */
 export { boxBrush, frameForPlane, wedgeBrush } from '@zylem/bridge';
 /** @public */

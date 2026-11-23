@@ -26,7 +26,7 @@ import type { EntityRepresentative } from './entity-representative';
 import type { ArmPlacementOptions, PlacementSession } from './placement-session';
 import { usesManagedRenderPath } from '../graphics/render-category';
 import type { BaseEntityInterface } from '../types/entity-types';
-import type { LevelDocument } from '@zylem/bridge';
+import type { BridgeVec3, LevelDocument } from '@zylem/bridge';
 
 type NodeLike = { create: Function };
 type AnyNode = NodeLike | Promise<NodeLike>;
@@ -296,6 +296,12 @@ export class Stage {
 		this.levelDocument = document;
 		this.wrappedStage?.playLevel(document);
 		return this;
+	}
+
+	/** Terrain directly below a player or NPC in world space. An unmarked cell has a null tag.
+	 * @example const surface = stage.terrainAt(playerPosition); */
+	terrainAt(position: BridgeVec3) {
+		return this.wrappedStage?.terrainAt(position) ?? null;
 	}
 
 	/** Remove the played level, its collision, and its navigation data. Stage entities stay. */

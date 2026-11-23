@@ -107,3 +107,4 @@ export {
 } from './instrumentation';
 
 export * from './navigation';
+export * from './level/terrain';

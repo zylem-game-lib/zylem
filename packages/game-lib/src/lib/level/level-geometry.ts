@@ -10,8 +10,34 @@
  * texture, with the bare faces first.
  */
 
-import { BufferGeometry, Float32BufferAttribute } from 'three';
-import { surfaceProjector, type BrushPlane, type CompiledBrush, type CompiledFace } from '@zylem/bridge';
+import { BufferGeometry, Float32BufferAttribute, type Object3D } from 'three';
+import {
+	surfaceProjector,
+	type BridgePose,
+	type BrushPlane,
+	type CompiledBrush,
+	type CompiledFace,
+} from '@zylem/bridge';
+
+/** Set every part of the pose so a visual a preview moved goes back exactly. */
+export function applyLevelPose(object: Object3D, pose: BridgePose): void {
+	const position = pose.position ?? { x: 0, y: 0, z: 0 };
+	object.position.set(position.x, position.y, position.z);
+	if (pose.quaternion) {
+		object.quaternion.set(
+			pose.quaternion.x,
+			pose.quaternion.y,
+			pose.quaternion.z,
+			pose.quaternion.w
+		);
+	} else if (pose.rotation) {
+		object.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z);
+	} else {
+		object.quaternion.identity();
+	}
+	const scale = pose.scale ?? { x: 1, y: 1, z: 1 };
+	object.scale.set(scale.x, scale.y, scale.z);
+}
 
 interface FaceEntry {
 	compiled: CompiledBrush;

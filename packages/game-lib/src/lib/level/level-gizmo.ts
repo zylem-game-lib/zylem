@@ -79,6 +79,7 @@ function centroid(points: readonly BrushVec3[]): BrushVec3 {
 /** A doodad's or entity's pose in the document. */
 export function documentPose(document: LevelDocument, id: string): BridgePose | null {
 	return (
+		document.terrain?.find((plane) => plane.id === id)?.pose ??
 		document.doodads.find((doodad) => doodad.id === id)?.pose ??
 		document.entities.find((entity) => entity.id === id)?.pose ??
 		null

@@ -28,6 +28,8 @@ import {
 } from 'three';
 import {
 	DEFAULT_DRAW_SHAPE,
+	DEFAULT_TERRAIN_BRUSH,
+	DEFAULT_TERRAIN_CELLS,
 	brushCenter,
 	brushTopology,
 	clipBrush,
@@ -35,7 +37,8 @@ import {
 	frameForPlane,
 	primitiveBrushes,
 	sectorSizeOf,
-	type BridgePose,
+	type TerrainBrush,
+	type TerrainPlane,
 	type BrushFrame,
 	type BrushPlane,
 	type BrushSurface,
@@ -52,7 +55,11 @@ import {
 import { getDebugTool, getSnapSettings, isTransformTool } from '../debug/debug-state';
 import { getEntityType } from '../entities/entity-registry';
 import type { GizmoRay } from '../debug/transform-gizmo';
-import { computePlacementPose, type PlacementHit } from '../stage/placement-geometry';
+import {
+	computePlacementPose,
+	resolvePlacementPoint,
+	type PlacementHit,
+} from '../stage/placement-geometry';
 import { LevelClipTool } from './level-clip-tool';
 import {
 	AxisDrag,
@@ -60,13 +67,14 @@ import {
 	fallbackDrawFrame,
 	framePlane,
 	rayHitPlane,
+	snapPoint,
 	snapOntoPlane,
 	type DrawRay,
 	type ViewBasis,
 } from './level-draw';
 import { LevelDrawTool } from './level-draw-tool';
 import { ElementMoveDrag, FaceDrag, ShearDrag, type ElementDrag } from './level-element-drag';
-import { brushGeometry, geometryTextures } from './level-geometry';
+import { applyLevelPose, brushGeometry, geometryTextures } from './level-geometry';
 import { LevelGizmo, documentPose, gizmoTarget, selectionPivot } from './level-gizmo';
 import {
 	HOVER_COLOR,
@@ -93,6 +101,14 @@ import { buildPlaySectors } from './level-play';
 import { buildSectorOverlay, solidSectorHidden, solidSectorTint } from './level-sectors';
 import { LevelTextures } from './level-textures';
 import { LevelToolPreview } from './level-tool-preview';
+import {
+	terrainAppearance,
+	terrainBrushOutline,
+	terrainSurfaceBelow,
+	terrainWorldGeometry,
+	type TerrainView,
+} from './terrain-geometry';
+import { TerrainStroke } from './terrain-stroke';
 
 export interface LevelZoneSpawn {
 	name: string;
@@ -115,7 +131,8 @@ export interface LevelSessionHost {
 	detach(uuid: string): void;
 	/** One static body, one convex hull per buffer. Null when physics is unavailable. */
 	spawnHulls(hulls: Float32Array[]): unknown | null;
-	despawnHulls(handle: unknown): void;
+	spawnTerrain(vertices: Float32Array, indices: Uint32Array): unknown | null;
+	despawnBody(handle: unknown): void;
 	publishGesture(gesture: LevelGesture): void;
 	publishSelect(payload: LevelSelectPayload): void;
 	publishNotice(message: string): void;
@@ -155,6 +172,7 @@ interface SolidView {
 
 /** The press the pointer holds, from down to up. */
 type Held =
+	| TerrainStroke
 	| { kind: 'draw' }
 	| {
 			kind: 'drag';
@@ -229,21 +247,6 @@ function visualForType(typeId: string, props: Record<string, unknown>): Object3D
 	);
 }
 
-/** Every part of the pose, so a visual a preview moved goes back exactly. */
-function applyPose(object: Object3D, pose: BridgePose): void {
-	const position = pose.position ?? { x: 0, y: 0, z: 0 };
-	object.position.set(position.x, position.y, position.z);
-	if (pose.quaternion) {
-		object.quaternion.set(pose.quaternion.x, pose.quaternion.y, pose.quaternion.z, pose.quaternion.w);
-	} else if (pose.rotation) {
-		object.rotation.set(pose.rotation.x, pose.rotation.y, pose.rotation.z);
-	} else {
-		object.quaternion.identity();
-	}
-	const scale = pose.scale ?? { x: 1, y: 1, z: 1 };
-	object.scale.set(scale.x, scale.y, scale.z);
-}
-
 function selectPayload(
 	id: string | null,
 	elements: LevelElementRef[] | undefined,
@@ -275,6 +278,7 @@ export class LevelSession {
 	private payload: LevelSyncPayload | null = null;
 	/** Solids in the edit preview, by id. Filled in place, since the picker and preview read it. */
 	private solids = new Map<string, SolidView>();
+	private terrain = new Map<string, TerrainView>();
 	/** Doodad and entity visuals in the edit preview, by id. */
 	private objects = new Map<string, Object3D>();
 	/** The selected elements, drawn over the solids. */
@@ -320,7 +324,7 @@ export class LevelSession {
 			half: (index) => this.textures.material(null, { tint: CLIP_TINTS[index % 2]! }),
 			restore: (id, object) => {
 				const pose = this.payload ? documentPose(this.payload.document, id) : null;
-				if (pose) applyPose(object, pose);
+				if (pose) applyLevelPose(object, pose);
 			},
 		});
 	}
@@ -375,6 +379,10 @@ export class LevelSession {
 		return this.picker.objectHit(ray)?.distance ?? null;
 	}
 
+	terrainAt(position: BrushVec3) {
+		return terrainSurfaceBelow(this.terrain.values(), position);
+	}
+
 	/** Drop the level selection, as a Select click on empty space does. */
 	selectNothing(): void {
 		if (!this.hasSelection) return;
@@ -410,6 +418,7 @@ export class LevelSession {
 
 	/** Show the document. A draw in progress carries on with the new payload's shape. */
 	sync(payload: LevelSyncPayload): void {
+		if (this.held?.kind === 'terrain') this.cancelHeld();
 		const previousMode = this.elementMode();
 		this.mode = 'edit';
 		this.payload = payload;
@@ -500,6 +509,30 @@ export class LevelSession {
 				return true;
 			case 'paint':
 				return this.pressPaint(ray, input);
+			case 'terrain-plane': {
+				const position = this.terrainPlacement(ray);
+				if (!position) return false;
+				this.held = { kind: 'press' };
+				this.host.publishGesture({
+					kind: 'terrain-plane',
+					position,
+					cells: this.payload?.terrainBrush?.cells ?? DEFAULT_TERRAIN_CELLS,
+				});
+				return true;
+			}
+			case 'terrain-raise':
+			case 'terrain-lower': {
+				const strength = this.payload?.terrainBrush?.strength ?? DEFAULT_TERRAIN_BRUSH.strength;
+				return this.pressTerrain(ray, {
+					kind: 'sculpt',
+					delta: getDebugTool() === 'terrain-raise' ? strength : -strength,
+				});
+			}
+			case 'terrain-tag':
+				return this.pressTerrain(ray, {
+					kind: 'tag',
+					tag: this.payload?.terrainBrush?.tag ?? null,
+				});
 			case 'add':
 				// Nothing of the level is armed, so the click is the stage's to place.
 				if (!this.payload?.placement) return false;
@@ -514,6 +547,10 @@ export class LevelSession {
 	pointerMove(ray: GizmoRay, input: LevelPointerInput = {}): void {
 		const held = this.held;
 		if (!held || !this.isEditing) return;
+		if (held.kind === 'terrain') {
+			this.moveTerrain(ray, held);
+			return;
+		}
 		if (held.kind === 'draw') {
 			this.drawTool.drag(toDrawRay(ray));
 			this.showDraw();
@@ -568,6 +605,41 @@ export class LevelSession {
 		}
 
 		const tool = getDebugTool();
+		if (tool === 'terrain-plane') {
+			this.setHover(null);
+			const point = this.terrainPlacement(ray);
+			const half = (this.payload?.terrainBrush?.cells ?? DEFAULT_TERRAIN_CELLS) / 2;
+			const corners =
+				point &&
+				[
+					[-half, -half],
+					[half, -half],
+					[half, half],
+					[-half, half],
+				].map(([x, z]) => ({ x: point.x + x!, y: point.y, z: point.z + z! }));
+			this.guideSlot.set(
+				corners
+					? edgeHighlight(
+							corners.map((p, i) => [p, corners[(i + 1) % 4]!]),
+							HOVER_COLOR
+						)
+					: null
+			);
+			return;
+		}
+		if (
+			tool === 'terrain-raise' ||
+			tool === 'terrain-lower' ||
+			tool === 'terrain-tag' ||
+			tool === 'paint'
+		) {
+			const hit = this.terrainHit(ray);
+			this.setHover(null);
+			this.guideSlot.set(
+				hit ? terrainBrushOutline(hit.view, hit.local, this.terrainRadius()) : null
+			);
+			if (hit || tool !== 'paint') return;
+		}
 		if (tool === 'brush' || tool === 'clip') {
 			this.setHover(null);
 			const point = this.surfacePoint(ray);
@@ -607,6 +679,12 @@ export class LevelSession {
 		const held = this.held;
 		this.held = null;
 		if (!held) return;
+		if (held.kind === 'terrain') {
+			this.moveTerrain(ray, held);
+			const gesture = held.finish();
+			if (gesture) this.host.publishGesture(gesture);
+			return;
+		}
 
 		if (held.kind === 'draw') {
 			if (this.drawTool.phase !== 'footprint') return;
@@ -642,6 +720,11 @@ export class LevelSession {
 				surface: this.paintSurface(),
 			});
 		}
+	}
+
+	pointerCancel(ray: GizmoRay): void {
+		if (this.held?.kind === 'terrain') this.cancelGesture();
+		else this.pointerUp(ray);
 	}
 
 	private elementMode(): LevelElementMode {
@@ -730,6 +813,7 @@ export class LevelSession {
 	 * can be turned with the brush armed.
 	 */
 	private pressPaint(ray: GizmoRay, input: LevelPointerInput): boolean {
+		if (this.pressTerrain(ray, { kind: 'texture', surface: this.paintSurface() })) return true;
 		if (!this.picker.face(ray)) return false;
 		const stroke: Extract<Held, { kind: 'paint' }> = {
 			kind: 'paint',
@@ -744,6 +828,7 @@ export class LevelSession {
 
 	/** Add the face under the pointer to the stroke, and show the stroke so far. */
 	private paintUnder(ray: GizmoRay, stroke: Extract<Held, { kind: 'paint' }>): void {
+		if (this.terrainHit(ray)) return;
 		const face = this.picker.face(ray);
 		if (!face) return;
 		const solid = this.solids.get(face.ref.brushId);
@@ -762,6 +847,63 @@ export class LevelSession {
 	/** What the armed brush puts on a face; `null` takes the texture off. */
 	private paintSurface(): BrushSurface | null {
 		return this.payload?.paintSurface ?? null;
+	}
+
+	private terrainRadius(): number {
+		return this.payload?.terrainBrush?.radius ?? DEFAULT_TERRAIN_BRUSH.radius;
+	}
+
+	private terrainPlacement(ray: GizmoRay): BrushVec3 | null {
+		const level = this.picker.objectHit(ray);
+		const physics = this.host.physicsHit(ray);
+		const point =
+			level && (!physics || level.distance <= physics.distance)
+				? level.point
+				: resolvePlacementPoint(ray, physics)?.position;
+		return point ? snapPoint(point, this.snapStep()) : null;
+	}
+
+	private terrainHit(ray: GizmoRay) {
+		if (!this.terrain.size) return null;
+		const hit = this.picker.objectHit(ray);
+		const view = hit && this.terrain.get(hit.id);
+		return view && hit ? { view, local: view.mesh.worldToLocal(hit.point) } : null;
+	}
+
+	private pressTerrain(ray: GizmoRay, brush: TerrainBrush): boolean {
+		const hit = this.terrainHit(ray);
+		if (!hit) return false;
+		const stroke = new TerrainStroke(hit.view.plane, brush, this.terrainRadius());
+		this.held = stroke;
+		this.setHover(null);
+		this.moveTerrain(ray, stroke, hit);
+		return true;
+	}
+
+	private moveTerrain(ray: GizmoRay, stroke: TerrainStroke, hit = this.terrainHit(ray)): void {
+		const local = hit?.view.plane.id === stroke.plane.id ? hit.local : null;
+		const preview = stroke.move(local);
+		if (preview) this.updateTerrainView(preview);
+		this.guideSlot.set(hit && local ? terrainBrushOutline(hit.view, local, stroke.radius) : null);
+	}
+
+	private terrainLook(plane: TerrainPlane) {
+		return terrainAppearance(
+			plane,
+			this.textures,
+			this.isEditing && this.isObjectSelected(plane.id),
+			this.isEditing && this.toolsEnabled && this.payload?.activeLayer === 'entity'
+		);
+	}
+
+	private updateTerrainView(plane: TerrainPlane): void {
+		const view = this.terrain.get(plane.id);
+		if (!view || view.plane === plane) return;
+		const { geometry, material } = this.terrainLook(plane);
+		view.mesh.geometry.dispose();
+		view.mesh.geometry = geometry;
+		view.mesh.material = material;
+		view.plane = plane;
 	}
 
 	/** Draw the stroke's solids as the paint would leave them. */
@@ -1047,6 +1189,15 @@ export class LevelSession {
 		if (this.mode !== 'play' && this.toolsEnabled) return;
 
 		this.spawnSectors(payload.document, this.mode === 'play');
+		for (const plane of payload.document.terrain ?? []) {
+			const geometry = terrainWorldGeometry(plane);
+			const body = this.host.spawnTerrain(
+				geometry.getAttribute('position').array as Float32Array,
+				Uint32Array.from(geometry.index!.array)
+			);
+			geometry.dispose();
+			if (body !== null) this.bodyHandles.push(body);
+		}
 		void this.spawnZones(payload.document, generation).catch((error: unknown) => {
 			console.error('Level triggers failed to spawn', error);
 		});
@@ -1099,6 +1250,19 @@ export class LevelSession {
 		const hidden = new Set(editing ? payload.hiddenLayers : []);
 		const elementMode = editing ? this.elementMode() : 'object';
 
+		if (!hidden.has('solid')) {
+			for (const plane of payload.document.terrain ?? []) {
+				const { geometry, material } = this.terrainLook(plane);
+				const mesh = new Mesh(geometry, material);
+				mesh.userData.levelId = plane.id;
+				mesh.name = `terrain:${plane.id}`;
+				applyLevelPose(mesh, plane.pose);
+				this.root.add(mesh);
+				this.objects.set(plane.id, mesh);
+				this.terrain.set(plane.id, { plane, mesh });
+			}
+		}
+
 		if (editing && !hidden.has('solid')) {
 			for (const solid of payload.document.solids) {
 				if (solidSectorHidden(solid.planes, payload)) continue;
@@ -1139,7 +1303,7 @@ export class LevelSession {
 		if (!hidden.has('doodad')) {
 			for (const doodad of payload.document.doodads) {
 				const visual = visualForType(doodad.typeId, doodad.props);
-				applyPose(visual, doodad.pose);
+				applyLevelPose(visual, doodad.pose);
 				visual.userData.levelId = doodad.id;
 				this.root.add(visual);
 				this.objects.set(doodad.id, visual);
@@ -1154,7 +1318,7 @@ export class LevelSession {
 						new OctahedronGeometry(0.3),
 						new MeshStandardMaterial({ color: 0xe36ad4 }),
 					);
-				applyPose(marker, entity.pose);
+				applyLevelPose(marker, entity.pose);
 				marker.userData.levelId = entity.id;
 				this.root.add(marker);
 				this.objects.set(entity.id, marker);
@@ -1190,7 +1354,12 @@ export class LevelSession {
 	private placeArmed(ray: GizmoRay): void {
 		const placement = this.payload?.placement;
 		if (!placement) return;
-		const landed = computePlacementPose(ray, this.host.physicsHit(ray), {
+		let hit = this.host.physicsHit(ray);
+		const surface = this.terrain.size ? this.picker.objectHit(ray) : null;
+		if (surface && this.terrain.has(surface.id) && (!hit || surface.distance < hit.distance)) {
+			hit = { distance: surface.distance, normal: [0, 1, 0] };
+		}
+		const landed = computePlacementPose(ray, hit, {
 			enabled: true,
 			translate: this.gridStep(),
 		});
@@ -1218,6 +1387,10 @@ export class LevelSession {
 	private cancelHeld(): void {
 		const held = this.held;
 		this.held = null;
+		if (held?.kind === 'terrain') {
+			this.updateTerrainView(held.plane);
+			this.guideSlot.clear();
+		}
 		if (this.gizmo.isDragging) this.gizmo.cancel();
 		if (held?.kind === 'drag' || held?.kind === 'gizmo' || held?.kind === 'paint') {
 			this.preview.show(null);
@@ -1262,9 +1435,10 @@ export class LevelSession {
 	private teardownOwned(): void {
 		for (const uuid of this.zoneIds) this.host.detach(uuid);
 		this.zoneIds = [];
-		for (const handle of this.bodyHandles) this.host.despawnHulls(handle);
+		for (const handle of this.bodyHandles) this.host.despawnBody(handle);
 		this.bodyHandles = [];
 		this.solids.clear();
+		this.terrain.clear();
 		this.objects.clear();
 		this.selectionView = null;
 		for (const child of [...this.root.children]) {

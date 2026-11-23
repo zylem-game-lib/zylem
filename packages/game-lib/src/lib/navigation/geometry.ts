@@ -1,6 +1,7 @@
 import { compileBrush, type LevelDocument } from '@zylem/bridge';
 import { Mesh, MeshBasicMaterial } from 'three';
 import { brushGeometry } from '../level/level-geometry';
+import { terrainWorldGeometry } from '../level/terrain-geometry';
 
 /** Compile document solids, independent of editor visibility and preview meshes. Caller owns meshes. */
 export function navigationSourceMeshes(document: LevelDocument): Mesh[] {
@@ -14,6 +15,9 @@ export function navigationSourceMeshes(document: LevelDocument): Mesh[] {
 			const mesh = new Mesh(brushGeometry(compiled), new MeshBasicMaterial());
 			mesh.updateMatrixWorld(true);
 			meshes.push(mesh);
+		}
+		for (const plane of document.terrain ?? []) {
+			if (!excluded.has(plane.id)) meshes.push(new Mesh(terrainWorldGeometry(plane), new MeshBasicMaterial()));
 		}
 		return meshes;
 	} catch (error) {

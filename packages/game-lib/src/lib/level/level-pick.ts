@@ -364,13 +364,13 @@ export class LevelPicker {
 	}
 
 	/** {@link object}, with how far along the ray it was hit. */
-	objectHit(ray: GizmoRay): { id: string; distance: number } | null {
+	objectHit(ray: GizmoRay): { id: string; distance: number; point: Vector3 } | null {
 		this.raycaster.set(ray.origin, ray.direction);
 		const pickables: Object3D[] = [...this.visibleMeshes(), ...this.objects.values()];
 		for (const hit of this.raycaster.intersectObjects(pickables, true)) {
 			if (!isShown(hit.object)) continue;
 			const id = levelIdOf(hit.object);
-			if (id) return { id, distance: hit.distance };
+			if (id) return { id, distance: hit.distance, point: hit.point };
 		}
 		return null;
 	}

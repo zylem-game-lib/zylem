@@ -13,6 +13,8 @@ import {
 	boxBrush,
 	brushBounds,
 	createSurface,
+	createTerrainPlane,
+	applyTerrainBrush,
 	frameForPlane,
 	primitiveBrushes,
 	type BrushSurface,
@@ -121,7 +123,8 @@ function rig(options: { camera?: Camera; cameraId?: string } = {}) {
 		spawnZone: async () => null,
 		detach: () => {},
 		spawnHulls: () => null,
-		despawnHulls: () => {},
+		spawnTerrain: () => null,
+		despawnBody: () => {},
 		publishGesture: (gesture) => gestures.push(gesture),
 		publishSelect: (select) => selects.push(select),
 		publishNotice: (message) => notices.push(message),
@@ -173,6 +176,68 @@ afterEach(() => {
 	for (const session of sessions.splice(0)) session.dispose();
 	debugState.tool = 'none';
 	setSnapSettings({ ...DEFAULT_SNAP_SETTINGS });
+});
+
+describe('terrain pointer tools', () => {
+	const origin = { x: 0, y: 0, z: 0 };
+	it('places a plane, previews and cancels a sculpt, and commits a complete drag once', () => {
+		const { session, gestures, rayAt, drag, click } = rig();
+		const plane = createTerrainPlane('land', origin, 8);
+		const document = { ...levelDocument(), solids: [], terrain: [plane] };
+		session.sync(payload({ document }));
+		arm('terrain-plane');
+		click({ x: 10.2, y: 0, z: 1.2 });
+		expect(gestures.shift()).toMatchObject({
+			kind: 'terrain-plane',
+			position: { x: 10, y: 0, z: 1 },
+		});
+		arm('terrain-lower');
+		expect(session.pointerDown(rayAt(origin))).toBe(true);
+		expect(session.terrainAt({ ...origin, y: 5 })?.height).toBeLessThan(0);
+		session.pointerCancel(rayAt(origin));
+		expect(gestures).toEqual([]);
+		expect(session.terrainAt({ ...origin, y: 5 })?.height).toBe(0);
+		arm('terrain-raise');
+		drag([
+			{ ...origin, x: -3 },
+			{ ...origin, x: 3 },
+		]);
+		expect(gestures).toHaveLength(1);
+		const [gesture] = gestures;
+		if (gesture?.kind !== 'terrain-stroke') throw new Error('Missing terrain stroke');
+		const edited = applyTerrainBrush(plane, gesture.brush, gesture.weights);
+		expect(edited.heights[40]).toBeGreaterThan(0);
+		expect(edited.heights[0]).toBe(0);
+	});
+	it('paints the nearest plane with the UV brush or tag brush, respecting solid occlusion', () => {
+		const { session, gestures, click } = rig();
+		const plane = createTerrainPlane('land', origin, 8);
+		const document = { ...levelDocument(), terrain: [plane] };
+		const surface = createSurface('builtin:brick');
+		session.sync(
+			payload({
+				document,
+				paintSurface: surface,
+				terrainBrush: { cells: 8, radius: 0.75, strength: 1, tag: 'mud' },
+			})
+		);
+		arm('paint');
+		click({ x: 2.5, y: 0, z: 0.5 });
+		expect(gestures.shift()).toMatchObject({
+			kind: 'terrain-stroke',
+			brush: { kind: 'texture', surface },
+			weights: [[38, 1]],
+		});
+		click(origin);
+		expect(gestures.shift()).toMatchObject({ kind: 'paint', faces: [TOP_FACE] });
+		arm('terrain-tag');
+		click({ x: 2.5, y: 0, z: 0.5 });
+		expect(gestures.shift()).toMatchObject({
+			kind: 'terrain-stroke',
+			brush: { kind: 'tag', tag: 'mud' },
+			weights: [[38, 1]],
+		});
+	});
 });
 
 describe('level select clicks', () => {

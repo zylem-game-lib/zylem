@@ -13,7 +13,7 @@
 import type { StageBackground } from '../graphics/space/background-config';
 import type { AmbientOcclusionOptions } from '../graphics/ambient-occlusion/config';
 import { NavigationSession } from '../navigation/navigation-session';
-import { getZylemBridge, type LevelDocument } from '@zylem/bridge';
+import { getZylemBridge, type BridgeVec3, type LevelDocument } from '@zylem/bridge';
 import { Color, Vector3 } from 'three';
 
 import { ZylemWorld } from '../collision/world';
@@ -357,6 +357,11 @@ export class ZylemStage extends LifeCycleBase<ZylemStage> {
 			return;
 		}
 		this.debugDelegate.playLevel(document);
+	}
+
+	/** The closest sculpted terrain below this world position, or null outside the terrain. */
+	terrainAt(position: BridgeVec3) {
+		return this.debugDelegate?.terrainAt(position) ?? null;
 	}
 
 	/** Remove the played level, its collision, and its navigation data. Stage entities stay. */

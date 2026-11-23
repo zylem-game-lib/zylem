@@ -1,18 +1,8 @@
+import type { BridgeDebugTool } from '@zylem/bridge';
 import { proxy } from 'valtio/vanilla';
 import type { GameEntity } from '../entities/entity';
 
-export type DebugTools =
-	| 'select'
-	| 'translate'
-	| 'rotate'
-	| 'scale'
-	| 'delete'
-	| 'add'
-	| 'brush'
-	| 'clip'
-	| 'shear'
-	| 'paint'
-	| 'none';
+export type DebugTools = BridgeDebugTool;
 
 /** Tools that manipulate a selected entity's transform via the gizmo. */
 export const TRANSFORM_TOOLS = ['translate', 'rotate', 'scale'] as const;

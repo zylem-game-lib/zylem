@@ -26,7 +26,7 @@ import {
 	type LevelSyncPayload,
 	type SceneOperationPayload,
 } from '@zylem/bridge';
-import { StageBodyKind, type EntityHandle } from '@zylem/behaviors/core';
+import { StageBodyKind, type EntityHandle, type StageColliderShape } from '@zylem/behaviors/core';
 import { EDITOR_CAMERAS, editorCamerasAreAttached } from '../camera/editor-camera-session';
 import { ZylemStage } from './zylem-stage';
 import {
@@ -225,6 +225,25 @@ export class StageDebugDelegate {
 		this.syncGrid();
 	}
 
+	terrainAt(position: { x: number; y: number; z: number }) {
+		return this.levelSession.terrainAt(position);
+	}
+
+	private spawnLevelBody(shapes: StageColliderShape[]) {
+		const simulation = this.stage.world?.simulation;
+		if (!simulation || !shapes.length) return null;
+		return simulation.spawn({
+			body: {
+				kind: StageBodyKind.Static,
+				position: [0, 0, 0],
+				rotation: [0, 0, 0, 1],
+				canSleep: true,
+				ccdEnabled: false,
+			},
+			colliders: shapes.map((shape) => ({ shape, friction: 0.5, restitution: 0, sensor: false })),
+		});
+	}
+
 	private levelSessionHost(): LevelSessionHost {
 		return {
 			getScene: () => this.stage.scene?.scene ?? null,
@@ -266,26 +285,11 @@ export class StageDebugDelegate {
 			detach: (uuid: string) => {
 				this.stage.entityDelegate.detachEntity(uuid);
 			},
-			spawnHulls: (hulls: Float32Array[]) => {
-				const simulation = this.stage.world?.simulation;
-				if (!simulation || hulls.length === 0) return null;
-				return simulation.spawn({
-					body: {
-						kind: StageBodyKind.Static,
-						position: [0, 0, 0],
-						rotation: [0, 0, 0, 1],
-						canSleep: true,
-						ccdEnabled: false,
-					},
-					colliders: hulls.map((vertices) => ({
-						shape: { type: 'convexHull' as const, vertices },
-						friction: 0.5,
-						restitution: 0,
-						sensor: false,
-					})),
-				});
-			},
-			despawnHulls: (handle: unknown) => {
+			spawnHulls: (hulls) =>
+				this.spawnLevelBody(hulls.map((vertices) => ({ type: 'convexHull', vertices }))),
+			spawnTerrain: (vertices, indices) =>
+				this.spawnLevelBody([{ type: 'trimesh', vertices, indices }]),
+			despawnBody: (handle: unknown) => {
 				if (!handle) return;
 				try {
 					this.stage.world?.simulation.despawn(handle as EntityHandle);
@@ -1232,7 +1236,7 @@ export class StageDebugDelegate {
 		const onPointerCancel = (e: PointerEvent) => {
 			if (this.levelPointer) {
 				this.levelPointer = false;
-				this.levelSession.pointerUp(this.currentRay());
+				this.levelSession.pointerCancel(this.currentRay());
 				this.endPointerCapture();
 				return;
 			}

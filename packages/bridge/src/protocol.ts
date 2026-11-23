@@ -8,6 +8,7 @@ import type {
 } from './navigation';
 import type { BrushPlane, BrushSurface } from './level/brush';
 import type { BrushElementKind } from './level/brush-edit';
+import type { TerrainBrush, TerrainBrushSettings, TerrainPlane } from './level/terrain';
 import type { BrushFootprint, BrushFrame, BrushShape } from './level/brush-shapes';
 
 /**
@@ -60,6 +61,10 @@ export type BridgeDebugTool =
 	| 'clip'
 	| 'shear'
 	| 'paint'
+	| 'terrain-plane'
+	| 'terrain-raise'
+	| 'terrain-lower'
+	| 'terrain-tag'
 	| 'none';
 
 /** Display / runtime configuration of the running game. */
@@ -462,6 +467,8 @@ export interface LevelDocument {
 	navigation?: LevelNavigation;
 	version: 2;
 	solids: BrushSolid[];
+	/** Sculptable planes with independent texture and gameplay-tag painting. */
+	terrain?: TerrainPlane[];
 	doodads: DoodadPlacement[];
 	entities: EntityPlacement[];
 	/** Absent means the default sector size. */
@@ -529,6 +536,7 @@ export interface LevelSyncPayload {
 	drawShape?: LevelDrawShape | null;
 	/** What the paint tool puts on a face. `null` or absent takes the texture off. */
 	paintSurface?: BrushSurface | null;
+	terrainBrush?: TerrainBrushSettings;
 	/**
 	 * Whether the level tools take the pointer. Absent means on. Off shows the
 	 * preview and lets Select pick it; every other tool leaves the press to
@@ -544,6 +552,8 @@ export interface LevelSyncPayload {
  * snaps back.
  */
 export type LevelGesture =
+	| { kind: 'terrain-plane'; position: BridgeVec3; cells: number }
+	| { kind: 'terrain-stroke'; planeId: string; brush: TerrainBrush; weights: [number, number][] }
 	/** A primitive drawn on a plane; see `primitiveBrushes`. */
 	| {
 			kind: 'primitive';

@@ -3,6 +3,7 @@
 import {
 	boxBrush,
 	createLevelNavigation,
+	createTerrainPlane,
 	type LevelDocument,
 	type LevelNavigation,
 	navigationSourceHash,
@@ -38,6 +39,17 @@ function session(document: LevelDocument) {
 const start = { x: -5, y: 0.1, z: 0 };
 const end = { x: 5, y: 0.1, z: 0 };
 describe('Recast navigation', () => {
+	it('bakes a path on sculpted terrain and keeps the bake across a tag edit', async () => {
+		const plane = createTerrainPlane('land', { x: 0, y: 0, z: 0 });
+		plane.heights = plane.heights.map((_, i) => (i % 17) * 0.1);
+		const doc = { ...level(), solids: [], terrain: [plane] };
+		const { nav } = session(doc);
+		const asset = await nav.bake();
+		expect(asset).toBeTruthy();
+		expect(nav.findPath({ ...start, y: 0.3 }, { ...end, y: 1.3 }).status).toBe('complete');
+		nav.sync({ ...doc, terrain: [{ ...plane, tags: { 0: 'ice' } }] });
+		expect(nav.status.state).toBe('ready');
+	});
 	it('bakes real geometry, reloads its binary, and queries a complete path', async () => {
 		const doc = level();
 		const { nav, scene } = session(doc);

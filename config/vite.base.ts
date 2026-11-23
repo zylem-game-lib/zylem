@@ -18,6 +18,7 @@ export async function createBaseConfig(_env: ConfigEnv): Promise<UserConfig> {
 		'@lib/ui': path.resolve(gameLibRoot, './src/lib/ui'),
 		'@lib': path.resolve(gameLibRoot, './src/lib'),
 		'@src': path.resolve(gameLibRoot, './src'),
+		'@zylem/bridge': path.resolve(projectRoot, 'packages/bridge/src/index.ts'),
 		'@zylem/utilities/workers/destructible-prebake': path.resolve(
 			utilitiesRoot,
 			'./workers/destructible-prebake/src/worker.ts',

@@ -84,6 +84,7 @@ export type NavigationEdit =
 export function navigationSourceHash(document: LevelDocument): string {
 	const nav = document.navigation ?? createLevelNavigation();
 	const excluded = new Set(nav.excludedSolidIds);
+	const terrain = document.terrain?.filter((plane) => !excluded.has(plane.id));
 	const input = JSON.stringify({
 		generator: NAVIGATION_GENERATOR,
 		settings: Object.keys(DEFAULT_NAVIGATION_SETTINGS).map(
@@ -93,6 +94,9 @@ export function navigationSourceHash(document: LevelDocument): string {
 		solids: document.solids
 			.filter((s) => !excluded.has(s.id))
 			.map((s) => s.planes.map(({ surface: _surface, ...shape }) => shape)),
+		...(terrain?.length
+			? { terrain: terrain.map(({ pose, cells, heights }) => [pose, cells, heights]) }
+			: {}),
 		obstacles: nav.obstacles.map((o) => [o.min.x, o.min.y, o.min.z, o.max.x, o.max.y, o.max.z]),
 		links: nav.links.map((l) => [
 			l.start.x,

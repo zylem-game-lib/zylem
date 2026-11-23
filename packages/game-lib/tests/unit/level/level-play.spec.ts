@@ -56,7 +56,8 @@ describe('level play', () => {
 				spawned.push(hulls);
 				return { body: spawned.length };
 			},
-			despawnHulls: (handle) => {
+			spawnTerrain: () => null,
+			despawnBody: (handle) => {
 				despawned.push(handle);
 			},
 			publishGesture: () => {},
@@ -122,7 +123,8 @@ describe('level preview bodies', () => {
 				spawned.push(hulls);
 				return { body: spawned.length };
 			},
-			despawnHulls: (handle) => {
+			spawnTerrain: () => null,
+			despawnBody: (handle) => {
 				despawned.push(handle);
 			},
 			publishGesture: () => {},

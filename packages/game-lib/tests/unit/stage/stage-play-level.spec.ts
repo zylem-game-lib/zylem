@@ -1,6 +1,6 @@
 import { Mesh, Scene } from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { boxBrush, type LevelDocument } from '@zylem/bridge';
+import { boxBrush, createTerrainPlane, type LevelDocument } from '@zylem/bridge';
 
 import { createStage } from '../../../src/lib/stage/stage';
 import { ZylemStage } from '../../../src/lib/stage/zylem-stage';
@@ -38,6 +38,47 @@ function sectorMeshes(scene: Scene): Mesh[] {
 }
 
 describe('ZylemStage.playLevel', () => {
+	it('looks up tags using the transformed triangles of a tilted, scaled plane', () => {
+		const { stage } = loadedStage();
+		const plane = createTerrainPlane('incline', { x: 3, y: 2, z: 4 }, 2);
+		plane.pose.rotation = { x: Math.PI / 6, y: 0, z: 0 };
+		plane.pose.scale = { x: 2, y: 1, z: 1 };
+		plane.tags = { 3: 'gravel' };
+		stage.playLevel({ version: 2, solids: [], doodads: [], entities: [], terrain: [plane] });
+		setup(stage);
+		const hit = stage.terrainAt({ x: 3.8, y: 3, z: 4 + Math.sqrt(3) / 4 });
+		expect(hit?.height).toBeCloseTo(1.75);
+		expect(hit?.tag).toBe('gravel');
+		stage.destroy();
+	});
+	it('plays the actual terrain triangles and queries the tagged surface below either character', () => {
+		const { stage, simulation } = loadedStage();
+		const lower = createTerrainPlane('valley', { x: 3, y: 2, z: 4 }, 2);
+		lower.heights[4] = -2;
+		lower.tags = { 3: 'mud' };
+		const upper = createTerrainPlane('bridge', { x: 3, y: 5, z: 4 }, 2);
+		stage.playLevel({ version: 2, solids: [], doodads: [], entities: [], terrain: [lower, upper] });
+		setup(stage);
+		const shape = (simulation.spawn.mock.calls as any)[0][0].colliders[0].shape;
+		expect(shape.type).toBe('trimesh');
+		expect(Array.from(shape.vertices.slice(12, 15))).toEqual([3, 0, 4]);
+		expect(shape.indices).toHaveLength(24);
+		expect(stage.terrainAt({ x: 3.25, y: 4, z: 4.25 })).toEqual({
+			planeId: 'valley',
+			height: 1,
+			tag: 'mud',
+		});
+		expect(stage.terrainAt({ x: 3.25, y: 6, z: 4.25 })).toEqual({
+			planeId: 'bridge',
+			height: 5,
+			tag: null,
+		});
+		expect(stage.terrainAt({ x: 10, y: 6, z: 4 })).toBeNull();
+		stage.closeLevel();
+		expect(stage.terrainAt({ x: 3, y: 6, z: 4 })).toBeNull();
+		expect(simulation.despawn).toHaveBeenCalledTimes(2);
+		stage.destroy();
+	});
 	it('holds a level played before setup and applies it ahead of the setup callbacks', () => {
 		const { stage, scene, simulation } = loadedStage();
 		const seenBySetup: number[] = [];
