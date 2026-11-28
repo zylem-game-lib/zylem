@@ -36,7 +36,7 @@ const DEMOS_BY_SECTION: Record<SectionName, readonly string[]> = {
 	Actions: ['actions-test'],
 	Behaviors: ['behavior-toggling'],
 	Effects: ['particle-effects'],
-	Rendering: ['ambient-occlusion'],
+	Rendering: ['ambient-occlusion', 'reflection-and-bubble'],
 	Performance: ['massive-instancing'],
 };
 

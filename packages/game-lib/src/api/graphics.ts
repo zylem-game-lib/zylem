@@ -8,10 +8,12 @@ export { objectVertexShader } from '../lib/graphics/shaders/vertex/object.shader
 
 // Material types and helpers
 export type {
+	MaterialOptions,
 	ZylemShaderObject,
 	ZylemTSLShader,
 	ZylemShader,
 } from '../lib/graphics/material';
+export type { EntityEnvironment } from '../lib/graphics/entity-environment';
 
 // Postprocessing effect contract (structurally compatible with @zylem/shaders)
 export type { ZylemPostEffect } from '../lib/camera/renderer-manager';

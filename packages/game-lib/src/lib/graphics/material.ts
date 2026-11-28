@@ -11,6 +11,7 @@ import { shortHash, sortedStringify } from '../core/utility/strings';
 import { standardShader } from './shaders/standard.shader';
 import { assetManager } from '../core/asset-manager';
 import { Vec2Input, VEC2_ONE, toThreeVector2 } from '../core/vector';
+import { EntityEnvironmentMaterial, type EntityEnvironment } from './entity-environment';
 import {
   applyEntityGlow,
   createEntityGlowMaterial,
@@ -82,6 +83,8 @@ function isDefaultStandardShader(
 }
 
 export interface MaterialOptions {
+  /** Use a live reflection or refractive bubble as the surface. Color tints it and opacity fades it. */
+  environment?: EntityEnvironment;
   path?: string;
   normalMap?: string;
   repeat?: Vec2Input;
@@ -166,6 +169,16 @@ export class MaterialBuilder {
   build(options: Partial<MaterialOptions>, entityType: symbol): void {
     const { path, normalMap, repeat, color, shader, opacity } = options;
     const glow = resolveEntityGlow(options.glow, color);
+
+    if (options.environment) {
+      const material = new EntityEnvironmentMaterial(options.environment);
+      if (color) material.color.copy(color);
+      this.applyOpacity(material, opacity);
+      if (glow) applyEntityGlow(material, glow);
+      this.materials.push(material);
+      // Each entity captures at its own position and owns its cube map.
+      return;
+    }
 
     // game-lib is WebGPU-only: always build TSL node materials.
     const usesDefaultStandardShader = isDefaultStandardShader(shader);

@@ -17,6 +17,7 @@ import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
 import { EntityAssetLoader } from '../../../src/lib/core/entity-asset-loader';
 import { createActor } from '../../../src/lib/entities/actor';
 import { AnimationDelegate } from '../../../src/lib/entities/delegates/animation';
+import { EntityEnvironmentMaterial } from '../../../src/lib/graphics/entity-environment';
 
 /**
  * Flatten a plain collider definition into the same shape/dimensions layout
@@ -121,6 +122,25 @@ function deferred<T>() {
 describe('ZylemActor', () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
+	});
+
+	it('shares one environment capture across loaded mesh slots and supports live material swaps', async () => {
+		const model = createModelWithOffsetMeshes();
+		const [first, second] = model.children as Mesh[];
+		first!.material = [new MeshStandardMaterial(), new MeshStandardMaterial()];
+		vi.spyOn(EntityAssetLoader.prototype, 'loadFile').mockResolvedValue({ object: model });
+		const actor = createActor({ models: ['prop.glb'], material: { environment: 'bubble' } });
+		await flushPromises();
+
+		const bubble = second!.material;
+		expect(bubble).toBeInstanceOf(EntityEnvironmentMaterial);
+		expect(first!.material).toEqual([bubble, bubble]);
+		const previous = actor.setMaterial({ environment: 'reflection' }, { disposePrevious: false });
+		expect(previous).toEqual([bubble, bubble, bubble]);
+		expect(second!.material).not.toBe(bubble);
+		actor.replaceMaterials(previous!);
+		expect(first!.material).toEqual([bubble, bubble]);
+		expect(second!.material).toBe(bubble);
 	});
 
 	it('builds capsule colliders from the first animation asset when animations exist', async () => {

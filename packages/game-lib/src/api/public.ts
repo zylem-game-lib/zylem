@@ -99,6 +99,8 @@ export type {
 	ZylemTSLShader,
 	ZylemShader,
 	ZylemPostEffect,
+	MaterialOptions,
+	EntityEnvironment,
 	EntityGlowOptions,
 	CelestialBodyOptions,
 	StageBackground,

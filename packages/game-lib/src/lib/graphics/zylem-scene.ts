@@ -18,6 +18,7 @@ import { Entity, LifecycleFunction } from '../interfaces/entity';
 import { GameEntity } from '../entities/entity';
 import { syncPendingPlacementVisibility } from '../entities/spawn-placement';
 import { isManagedRenderEntity } from './render-category';
+import { markEnvironmentCaptureRoot } from './entity-environment';
 import { FOG_TYPE, ZylemFog } from '../entities/fog';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { CameraManager } from '../camera/camera-manager';
@@ -302,7 +303,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 	 */
 	addEntity(entity: GameEntity<any>) {
 		const target = entity.group ?? entity.mesh;
-		if (!target || this.isAttachedOutsideScene(target)) return;
+		if (!target) return;
+		markEnvironmentCaptureRoot(target);
+		if (this.isAttachedOutsideScene(target)) return;
 		this.add(target, entity.options.position);
 	}
 
@@ -321,7 +324,9 @@ export class ZylemScene implements Entity<ZylemScene> {
 		}
 
 		const target = entity.group ?? entity.mesh;
-		if (!target || this.isAttachedOutsideScene(target)) return;
+		if (!target) return;
+		markEnvironmentCaptureRoot(target);
+		if (this.isAttachedOutsideScene(target)) return;
 
 		const fogEntity = asFogEntity(entity);
 		if (fogEntity) {

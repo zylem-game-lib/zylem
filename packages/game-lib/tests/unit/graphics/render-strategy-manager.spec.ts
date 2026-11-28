@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BoxGeometry, Mesh, MeshBasicMaterial, Scene } from 'three';
 import { RenderStrategyManager } from '../../../src/lib/graphics/render-strategy-manager';
 import { GameEntity } from '../../../src/lib/entities/entity';
@@ -52,6 +52,22 @@ describe('RenderStrategyManager', () => {
 		expect(placed).toBe(false);
 		expect(entity.isInstanced).toBe(false);
 		expect(entity.isBundled).toBe(false);
+	});
+
+	it.each(['pack', 'environment'] as const)('draws local captures individually for %s entities', category => {
+		const entity = makeEntity('mirror', category);
+		const peer = makeEntity('peer', category);
+		manager.register(entity);
+		manager.register(peer);
+		const dispose = vi.spyOn(entity.materials![0]!, 'dispose');
+
+		entity.setMaterial({ environment: 'reflection' });
+		expect(entity.mesh?.parent).toBe(scene);
+		expect(entity.mesh?.visible).toBe(true);
+		expect(entity.isInstanced || entity.isBundled).toBe(false);
+		expect(peer.isInstanced || peer.isBundled).toBe(true);
+		expect(manager.register(entity)).toBe(false);
+		if (category === 'pack') expect(dispose).not.toHaveBeenCalled();
 	});
 
 	it('unregisters from the correct path', () => {

@@ -12,7 +12,7 @@ import { ZylemWorld } from '../collision/world';
 import { ZylemScene } from '../graphics/zylem-scene';
 import { ZylemCamera } from '../camera/zylem-camera';
 import { RenderStrategyManager } from '../graphics/render-strategy-manager';
-import { resolveRenderCategory, isManagedRenderEntity } from '../graphics/render-category';
+import { isManagedRenderEntity } from '../graphics/render-category';
 import { StageBodyKind } from '@zylem/behaviors/core';
 import { clearVariables } from './stage-state';
 import { zylemEventBus } from '../events';
@@ -293,7 +293,7 @@ export class StageEntityDelegate implements BehaviorHost {
 	 * patch any already-built body description.
 	 */
 	private ensureEnvironmentStatic(entity: GameEntity<any>): void {
-		if (resolveRenderCategory(entity.options) !== 'environment') {
+		if (entity.options.category !== 'environment') {
 			return;
 		}
 

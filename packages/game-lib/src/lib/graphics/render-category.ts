@@ -3,12 +3,14 @@ import type { GameEntityOptions } from '../entities/entity';
 /** How an entity's mesh is drawn: scene-direct, WebGPU bundle, or instanced pack. */
 export type RenderCategory = 'none' | 'environment' | 'pack';
 
-type RenderCategoryOptions = Pick<GameEntityOptions, 'category'>;
+type RenderCategoryOptions = Pick<GameEntityOptions, 'category' | 'material'>;
 
 /** Resolve the render category for an entity. Defaults to `none`. */
 export function resolveRenderCategory(
 	options?: RenderCategoryOptions | null,
 ): RenderCategory {
+	// A local cube capture needs its own draw and visibility during capture.
+	if (options?.material?.environment) return 'none';
 	return options?.category ?? 'none';
 }
 

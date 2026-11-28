@@ -8,6 +8,7 @@ import type { SimulationBody } from '../collision/simulation-body';
 import type { Vector } from '@zylem/behaviors/core';
 import { Vec3, Vec3Input, VEC3_ZERO, normalizeVec3 } from '../core/vector';
 import { MaterialBuilder, MaterialOptions } from '../graphics/material';
+import { releaseBatchForEnvironment } from '../graphics/render-strategy-manager';
 import { CollisionOptions } from '../collision/collision-builder';
 import { BaseNode } from '../core/base-node';
 import {
@@ -1055,7 +1056,11 @@ export class GameEntity<O extends GameEntityOptions>
 	 * Lights, zones, and other mesh-less entities return `false`.
 	 */
 	public hasMaterial(): boolean {
-		return this.mesh !== undefined || this.compoundMeshes.length > 0;
+		return this.materialMeshes().length > 0;
+	}
+
+	protected materialMeshes(): Mesh[] {
+		return this.mesh ? [this.mesh, ...this.compoundMeshes] : this.compoundMeshes;
 	}
 
 	/** The materials currently driving this entity's meshes. */
@@ -1096,27 +1101,33 @@ export class GameEntity<O extends GameEntityOptions>
 		materials: Material[],
 		settings: { disposePrevious?: boolean } = {},
 	): Material[] | null {
-		if (!this.hasMaterial() || materials.length === 0) return null;
+		const meshes = this.materialMeshes();
+		if (meshes.length === 0 || materials.length === 0) return null;
 		const { disposePrevious = true } = settings;
-		const previous = this.materials ? [...this.materials] : [];
+		const previous = meshes.flatMap(mesh => mesh.material);
+		const packMaterial = releaseBatchForEnvironment(this, materials);
 
-		const assign = (mesh: Mesh) => {
+		// A complete slot list (e.g. editor undo on a model) restores each slot.
+		// A shorter palette repeats from the first slot of each mesh.
+		let offset = 0;
+		for (const mesh of meshes) {
+			const start = materials.length === previous.length ? offset : 0;
 			if (Array.isArray(mesh.material)) {
 				mesh.material = mesh.material.map(
-					(_slot, index) => materials[index % materials.length]!,
+					(_slot, index) => materials[(start + index) % materials.length]!,
 				);
+				offset += mesh.material.length;
 			} else {
-				mesh.material = materials[0]!;
+				mesh.material = materials[start]!;
+				offset++;
 			}
-		};
-		if (this.mesh) assign(this.mesh);
-		for (const mesh of this.compoundMeshes) assign(mesh);
+		}
 
 		this.materials = [...materials];
 
 		if (disposePrevious) {
-			for (const material of previous) {
-				if (!materials.includes(material)) material.dispose();
+			for (const material of new Set(previous)) {
+				if (material !== packMaterial && !materials.includes(material)) material.dispose();
 			}
 		}
 		return previous;

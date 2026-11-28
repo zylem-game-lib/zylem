@@ -124,7 +124,7 @@ export class InstanceManager {
 		return index;
 	}
 
-	unregister(entity: GameEntity<any>): void {
+	unregister(entity: GameEntity<any>): Material | undefined {
 		const packKey = this.entityToPack.get(entity.uuid);
 		if (!packKey) return;
 
@@ -152,6 +152,7 @@ export class InstanceManager {
 		matrix.makeScale(0, 0, 0);
 		pack.instancedMesh.setMatrixAt(index, matrix);
 		pack.instancedMesh.instanceMatrix.needsUpdate = true;
+		return pack.material;
 	}
 
 	markDirty(entity: GameEntity<any>): void {

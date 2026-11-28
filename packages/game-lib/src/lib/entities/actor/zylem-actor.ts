@@ -1,5 +1,5 @@
 import type { SimulationColliderDefinition } from '@zylem/behaviors/core';
-import { Group, Object3D, SkinnedMesh } from 'three';
+import { Group, type Mesh, Object3D, SkinnedMesh } from 'three';
 
 import { BaseNode } from '../../core/base-node';
 import { GameEntity } from '../entity';
@@ -13,6 +13,7 @@ import { AssetLoaderResult, EntityAssetLoader } from '../../core/entity-asset-lo
 import {
 	disposeGaussianSplatResources,
 	isExclusiveGaussianSplatModel,
+	isGaussianSplatNode,
 } from '../../core/loaders/gaussian-model';
 import { EntityLoaderDelegate } from '../delegates/loader';
 import { VEC3_ONE, normalizeVec3 } from '../../core/vector';
@@ -211,6 +212,14 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 		return this._object;
 	}
 
+	protected override materialMeshes(): Mesh[] {
+		const meshes = [...super.materialMeshes()];
+		this._object?.traverse(child => {
+			if ((child as Mesh).isMesh && !isGaussianSplatNode(child)) meshes.push(child as Mesh);
+		});
+		return meshes;
+	}
+
 	get collisionSource(): Object3D | null {
 		return this._collisionSource ?? this._object;
 	}
@@ -362,7 +371,14 @@ export class ZylemActor extends GameEntity<ZylemActorOptions> implements EntityL
 					this.group.scale.copy(getActorScale(this.options));
 					syncPendingPlacementVisibility(this);
 
-					applyActorMaterialOverrides(this._object, this.options.material);
+					if (this.options.material?.environment) {
+						// The entity builder prepared one capture material for the whole model.
+						if (this.materials?.length) this.replaceMaterials(this.materials);
+						else this.setMaterial(this.options.material);
+					} else {
+						applyActorMaterialOverrides(this._object, this.options.material);
+						this.materials = this.materialMeshes().flatMap(mesh => mesh.material);
+					}
 
 					this._animationDelegate = new AnimationDelegate(this._object);
 					const animations = this.options.animations || [];
